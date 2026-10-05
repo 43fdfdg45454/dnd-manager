@@ -1,6 +1,5 @@
 using Dnd.Application.Abstractions;
 using MailKit.Net.Smtp;
-using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MimeKit;
@@ -19,8 +18,8 @@ internal sealed class SmtpEmailSender(IOptions<SmtpOptions> options, ILogger<Smt
         mime.Subject = message.Subject;
         mime.Body = new BodyBuilder { HtmlBody = message.HtmlBody, TextBody = message.TextBody }.ToMessageBody();
 
-        using var client = new SmtpClient();
-        var socketOptions = _options.UseStartTls ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto;
+        using var client = new SmtpClient { CheckCertificateRevocation = _options.CheckCertificateRevocation };
+        var socketOptions = SmtpSecurityMapper.ToSecureSocketOptions(_options.Security, _options.UseStartTls);
         await client.ConnectAsync(_options.Host, _options.Port, socketOptions, cancellationToken);
 
         if (!string.IsNullOrEmpty(_options.Username))

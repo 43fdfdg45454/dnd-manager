@@ -16,7 +16,8 @@ public class InitialAdminTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
         var email = Assert.Single(factory.Emails.SentTo(ApiFactory.AdminEmail));
         Assert.Equal(AccountEmailTemplates.SetupSubject, email.Subject);
-        Assert.StartsWith($"{ApiFactory.PublicUrl}/set-password?token=", FakeEmailSender.ExtractLink(email));
+        // No request went through a proxy yet and App:PublicUrl is not set: the link is relative.
+        Assert.StartsWith("/set-password?token=", FakeEmailSender.ExtractLink(email));
 
         var set = await client.PostAsJsonAsync(
             "/api/v1/auth/password/set",

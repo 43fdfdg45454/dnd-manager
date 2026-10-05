@@ -3,6 +3,7 @@ using Dnd.Api.Endpoints;
 using Dnd.Api.Errors;
 using Dnd.Api.Hosting;
 using Dnd.Application;
+using Dnd.Application.Abstractions;
 using Dnd.Application.Common;
 using Dnd.Infrastructure;
 using Dnd.Infrastructure.Files;
@@ -22,6 +23,13 @@ builder.Host.UseSerilog((context, _, logger) => LoggingSetup.Configure(context, 
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// The public URL is decided by the reverse proxy of the operator: the API learns it from the (trusted)
+// X-Forwarded-* headers and the Host of the requests, and remembers the last one for background services.
+builder.Services.AddAppForwardedHeaders(builder.Configuration);
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<PublicOriginStore>();
+builder.Services.AddSingleton<IPublicUrlProvider, PublicUrlProvider>();
 
 // Uploads: Kestrel's default body limit (30 MB) and the multipart limit (128 MB) follow
 // FileStorage:MaxUploadMegabytes (plus room for the rest of the multipart body).
@@ -87,6 +95,10 @@ var app = builder.Build();
 
 // Migrations first, then the SRD catalog import and the initial admin bootstrap.
 await app.InitializeAsync();
+
+// First of all, so everything below (logging, links in emails) sees the scheme and host the client used.
+app.UseForwardedHeaders();
+app.UsePublicOriginTracking();
 
 app.UseRequestCorrelation();
 app.UseSerilogRequestLogging(options => options.GetLevel = LoggingSetup.RequestLevel);

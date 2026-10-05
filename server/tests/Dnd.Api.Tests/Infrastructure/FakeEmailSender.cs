@@ -56,9 +56,9 @@ public sealed partial class FakeEmailSender : IEmailSender
             : throw new InvalidOperationException("The email does not contain a session link.");
     }
 
-    [GeneratedRegex(@"https?://\S+/sessions/(?<id>[0-9a-fA-F\-]{36})\?token=(?<token>[A-Za-z0-9_\-.%]+)")]
+    [GeneratedRegex(@"(?:https?://\S+)?/sessions/(?<id>[0-9a-fA-F\-]{36})\?token=(?<token>[A-Za-z0-9_\-.%]+)")]
     private static partial Regex SessionLinkRegex();
 
-    [GeneratedRegex(@"https?://\S+/set-password\?token=(?<token>[A-Za-z0-9_\-%]+)")]
+    [GeneratedRegex(@"(?:https?://\S+)?/set-password\?token=(?<token>[A-Za-z0-9_\-%]+)")]
     private static partial Regex LinkRegex();
 }

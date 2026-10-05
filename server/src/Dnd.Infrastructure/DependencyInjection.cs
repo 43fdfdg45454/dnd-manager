@@ -46,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<ILibraryRepository, LibraryRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();
         services.AddScoped<IReleaseRepository, ReleaseRepository>();
+        services.AddScoped<IInstanceSettingsRepository, InstanceSettingsRepository>();
         services.AddScoped<IInstanceStatsRepository, InstanceStatsRepository>();
         services.AddScoped<ISrdSeeder, SrdSeeder>();
         services.AddScoped<SystemDocumentSeeder>();
@@ -56,7 +57,7 @@ public static class DependencyInjection
 
         services.AddOptions<AppOptions>()
             .Bind(configuration.GetSection(AppOptions.SectionName))
-            .Validate(o => Uri.TryCreate(o.PublicUrl, UriKind.Absolute, out _), "App:PublicUrl must be an absolute URL.")
+            .Validate(o => string.IsNullOrWhiteSpace(o.PublicUrl) || IsAbsoluteHttpUrl(o.PublicUrl), "App:PublicUrl, when set, must be an absolute http(s) URL.")
             .Validate(o => CampaignSchedule.IsValidTimeZone(o.DefaultTimeZone), "App:DefaultTimeZone must be a valid IANA time zone id, for example Europe/Madrid.")
             .ValidateOnStart();
 
@@ -72,6 +73,7 @@ public static class DependencyInjection
         services.AddSingleton<ITokenService, TokenService>();
         services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
         services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddScoped<PublicLinkBuilder>();
         services.AddScoped<IAccountEmailService, AccountEmailService>();
         services.AddSingleton<ISessionLinkTokens, SessionLinkTokens>();
         services.AddScoped<ISessionEmailService, SessionEmailService>();
@@ -79,4 +81,7 @@ public static class DependencyInjection
 
         return services;
     }
+
+    private static bool IsAbsoluteHttpUrl(string value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 }

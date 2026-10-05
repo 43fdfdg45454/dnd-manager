@@ -54,6 +54,7 @@ curl http://127.0.0.1:8080/health/ready
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base de datos (la contraseña es obligatoria) | `dnd`, `dnd`, — |
 | `PUBLIC_URL` | Respaldo opcional de la URL pública; normalmente vacío (la aporta tu proxy) | vacío |
 | `TRUSTED_PROXY_0..3` | Redes (CIDR) desde las que se aceptan las cabeceras `X-Forwarded-*` | loopback y redes privadas |
+| `ALLOWED_HOSTS` | Dominio(s) admitidos en la cabecera `Host`; ponlo al de tu proxy para que nadie pueda forjar enlaces | `*` |
 | `ADMIN_EMAIL` | Correo del administrador inicial | `admin@example.com` |
 | `JWT_SECRET` | Firma de los tokens y enlaces de asistencia (obligatoria) | — |
 | `MAX_UPLOAD_MB` | Tamaño máximo de subida en la API (ver [Límites de subida](#límites-de-subida)) | `200` |
@@ -62,6 +63,7 @@ curl http://127.0.0.1:8080/health/ready
 | `REMINDERS_POLL_SECONDS` | Cada cuántos segundos busca recordatorios pendientes | `60` |
 | `LOG_LEVEL` | Nivel mínimo de logs: `Trace`, `Debug`, `Information`, `Warning`, `Error` | `Information` |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_ADDRESS`, `SMTP_FROM_NAME` | Correo saliente. `SMTP_SECURITY`: `Auto` (465 → TLS implícito, 587 → STARTTLS), `SslOnConnect`, `StartTls` o `None` | puerto `465`, `Auto` |
+| `SMTP_CHECK_REVOCATION` | Comprobar revocación del certificado del SMTP; `false` solo si tu CA no publica CRL/OCSP | `true` |
 | `SSL_CERT_FILE` / `SSL_CERT_DIR` | CA propia para el SMTP u otras conexiones TLS salientes (variables estándar de OpenSSL que .NET respeta) | bundle del sistema |
 | `API_BIND`, `API_PORT` | Dirección y puerto del host en los que escucha la API (`127.0.0.1` solo para un proxy local; `0.0.0.0` para exponerla en la LAN/VPN) | `127.0.0.1`, `8080` |
 | `API_IMAGE` | Imagen de la API (por defecto se construye desde el código) | `dnd-companion-api:local` |

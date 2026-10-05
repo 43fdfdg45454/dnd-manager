@@ -118,7 +118,7 @@ public sealed class ReminderTests(ApiFactory factory) : IClassFixture<ApiFactory
 
         var (sessionId, token, url) = FakeEmailSender.ExtractSessionLink(toPlayer);
         Assert.Equal(session.Id, sessionId);
-        Assert.StartsWith($"{ApiFactory.PublicUrl}/sessions/{session.Id}?token=", url);
+        Assert.StartsWith($"{ApiFactory.TestOrigin}/sessions/{session.Id}?token=", url);
         Assert.NotEmpty(token);
 
         // A reminder that was sent is not sent again.

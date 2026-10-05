@@ -2,6 +2,7 @@ using Dnd.Application.Abstractions.Persistence;
 using Dnd.Domain.Campaigns;
 using Dnd.Domain.Catalog;
 using Dnd.Domain.Characters;
+using Dnd.Domain.Common;
 using Dnd.Domain.Files;
 using Dnd.Domain.Items;
 using Dnd.Domain.Library;
@@ -101,6 +102,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<SessionRsvp> SessionRsvps => Set<SessionRsvp>();
 
     public DbSet<Reminder> Reminders => Set<Reminder>();
+
+    public DbSet<InstanceSetting> InstanceSettings => Set<InstanceSetting>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

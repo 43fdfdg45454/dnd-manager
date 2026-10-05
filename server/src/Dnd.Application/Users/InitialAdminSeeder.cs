@@ -32,11 +32,16 @@ public sealed class InitialAdminSeeder(
         var token = await passwordTokens.IssueAsync(admin, PasswordTokenPurpose.Setup, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
+        // At first boot no request has gone through the proxy yet, so the origin is usually unknown and the
+        // link is relative: the operator prepends the URL of their reverse proxy.
+        var link = await emails.BuildSetPasswordLinkAsync(token, cancellationToken);
+        var note = link.StartsWith('/') ? " (relative link: prepend the public URL of your reverse proxy)" : string.Empty;
         logger.LogWarning(
-            "Initial admin {Email} created. Set its password with this link (valid for {Hours} h): {Link}",
+            "Initial admin {Email} created. Set its password with this link (valid for {Hours} h): {Link}{Note}",
             admin.Email,
             PasswordToken.SetupLifetime.TotalHours,
-            emails.BuildSetPasswordLink(token));
+            link,
+            note);
 
         try
         {

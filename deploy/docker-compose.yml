@@ -40,12 +40,16 @@ services:
       App__TrustedProxies__1: ${TRUSTED_PROXY_1:-172.16.0.0/12}
       App__TrustedProxies__2: ${TRUSTED_PROXY_2:-192.168.0.0/16}
       App__TrustedProxies__3: ${TRUSTED_PROXY_3:-10.0.0.0/8}
+      # Restrict the Host header to your proxy's domain so nothing else can forge links (e.g. dnd.example.com).
+      AllowedHosts: ${ALLOWED_HOSTS:-*}
       App__InitialAdminEmail: ${ADMIN_EMAIL:-admin@example.com}
       Jwt__Secret: ${JWT_SECRET:?Define JWT_SECRET en .env}
       Smtp__Host: ${SMTP_HOST:?Define SMTP_HOST en .env}
       Smtp__Port: ${SMTP_PORT:-465}
       # Auto (465 -> TLS implicito, 587 -> STARTTLS), SslOnConnect, StartTls o None.
       Smtp__Security: ${SMTP_SECURITY:-Auto}
+      # Set to false only if your private CA publishes no CRL/OCSP and MailKit rejects the certificate.
+      Smtp__CheckCertificateRevocation: ${SMTP_CHECK_REVOCATION:-true}
       Smtp__Username: ${SMTP_USERNAME:-}
       Smtp__Password: ${SMTP_PASSWORD:-}
       Smtp__FromAddress: ${SMTP_FROM_ADDRESS:-noreply@example.com}

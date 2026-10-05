@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using Dnd.Application.Abstractions;
 using Dnd.Application.Users;
 using Dnd.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -26,7 +27,9 @@ public class ApiFactory : WebApplicationFactory<Program>
 {
     public const string AdminEmail = "admin@example.com";
     public const string AdminPassword = "admin-password-1234";
-    public const string PublicUrl = "http://dnd.example.com";
+
+    /// <summary>Origin of the requests made with <c>CreateClient()</c> (the test server's base address).</summary>
+    public const string TestOrigin = "http://localhost";
 
     private readonly SqliteConnection _connection;
     private readonly string _filesRoot = Path.Combine(Path.GetTempPath(), $"dnd-tests-{Guid.NewGuid():N}");
@@ -56,6 +59,15 @@ public class ApiFactory : WebApplicationFactory<Program>
     /// <summary>Maximum upload size configured for the host (<c>FileStorage:MaxUploadMegabytes</c>).</summary>
     protected virtual int MaxUploadMegabytes => 200;
 
+    /// <summary>Optional <c>App:PublicUrl</c> fallback. Null by default: the API must work without it.</summary>
+    protected virtual string? PublicUrlFallback => null;
+
+    /// <summary>When not null, sets <c>App:TrustedProxies</c> (an empty string trusts no proxy).</summary>
+    protected virtual string? TrustedProxies => null;
+
+    /// <summary>Address the test server reports as the client's, i.e. the proxy the request came from.</summary>
+    protected virtual string RemoteIpAddress => "127.0.0.1";
+
     /// <summary>Temporary directory used as <c>FileStorage:RootPath</c>; removed when the factory is disposed.</summary>
     public string FilesRoot => _filesRoot;
 
@@ -63,7 +75,16 @@ public class ApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("Database:AutoMigrate", "false");
-        builder.UseSetting("App:PublicUrl", PublicUrl);
+        if (PublicUrlFallback is not null)
+        {
+            builder.UseSetting("App:PublicUrl", PublicUrlFallback);
+        }
+
+        if (TrustedProxies is not null)
+        {
+            builder.UseSetting("App:TrustedProxies", TrustedProxies);
+        }
+
         builder.UseSetting("App:InitialAdminEmail", AdminEmail);
         builder.UseSetting("App:SeedInitialAdmin", SeedInitialAdmin ? "true" : "false");
         builder.UseSetting("Reminders:Enabled", RunReminderDispatcher ? "true" : "false");
@@ -83,6 +104,9 @@ public class ApiFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IEmailSender>();
             services.AddSingleton<IEmailSender>(Emails);
+
+            // The test server has no client address: give it one so the forwarded headers logic can judge it.
+            services.AddSingleton<IStartupFilter>(new RemoteIpStartupFilter(IPAddress.Parse(RemoteIpAddress)));
         });
     }
 
@@ -183,6 +207,19 @@ public sealed class CatalogCollection : ICollectionFixture<CatalogApiFactory>
 public sealed class ApiFactoryWithoutInitialAdmin : ApiFactory
 {
     protected override bool SeedInitialAdmin => false;
+}
+
+internal sealed class RemoteIpStartupFilter(IPAddress address) : IStartupFilter
+{
+    public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+    {
+        app.Use((context, nextMiddleware) =>
+        {
+            context.Connection.RemoteIpAddress = address;
+            return nextMiddleware(context);
+        });
+        next(app);
+    };
 }
 
 public sealed record TestUser(UserDto User, string Password)
