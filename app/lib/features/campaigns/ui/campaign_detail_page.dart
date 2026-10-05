@@ -11,6 +11,11 @@ import '../../characters/ui/characters_tab.dart';
 import '../../items/ui/homebrew_tab.dart';
 import '../../lore/ui/lore_tab.dart';
 import '../../maps/ui/maps_tab.dart';
+import '../../sessions/domain/sessions_format.dart';
+import '../../sessions/ui/calendar_settings_dialog.dart';
+import '../../sessions/ui/journal_tab.dart';
+import '../../sessions/ui/session_widgets.dart';
+import '../../sessions/ui/sessions_tab.dart';
 import '../../items/ui/shops_tab.dart';
 import '../data/campaigns_controller.dart';
 import '../domain/campaign_models.dart';
@@ -21,7 +26,7 @@ import 'feedback.dart';
 import 'transfer_ownership_dialog.dart';
 
 /// Campaign detail with the "Resumen", "Miembros", "Personajes", "Tiendas",
-/// "Objetos", "Lore" and "Mapas" tabs.
+/// "Objetos", "Lore", "Mapas", "Sesiones" and "Diario" tabs.
 class CampaignDetailPage extends ConsumerWidget {
   const CampaignDetailPage({super.key, required this.campaignId});
 
@@ -32,7 +37,7 @@ class CampaignDetailPage extends ConsumerWidget {
     final detail = ref.watch(campaignDetailControllerProvider(campaignId));
 
     return DefaultTabController(
-      length: 7,
+      length: 9,
       child: Scaffold(
         appBar: AppBar(
           title: Text(detail.value?.name ?? 'Campaña'),
@@ -58,6 +63,8 @@ class CampaignDetailPage extends ConsumerWidget {
               Tab(key: Key('tab-objects'), text: 'Objetos'),
               Tab(key: Key('tab-lore'), text: 'Lore'),
               Tab(key: Key('tab-maps'), text: 'Mapas'),
+              Tab(key: Key('tab-sessions'), text: 'Sesiones'),
+              Tab(key: Key('tab-journal'), text: 'Diario'),
             ],
           ),
         ),
@@ -90,6 +97,8 @@ class CampaignDetailPage extends ConsumerWidget {
               HomebrewTab(campaign: campaign),
               LoreTab(campaign: campaign),
               MapsTab(campaign: campaign),
+              SessionsTab(campaign: campaign),
+              JournalTab(campaign: campaign),
             ],
           ),
         ),
@@ -146,6 +155,27 @@ class _SummaryTab extends ConsumerWidget {
       () => _controllerOf(ref, campaign.id).edit(name: data.name, description: data.description),
       success: 'Campaña actualizada.',
       errors: const {400: 'Datos no válidos. Revisa el nombre y la descripción.'},
+    );
+  }
+
+  Future<void> _editCalendarSettings(BuildContext context, WidgetRef ref) async {
+    final data = await showDialog<CalendarSettings>(
+      context: context,
+      builder: (_) => CalendarSettingsDialog(
+        initialTimeZoneId: campaign.timeZoneId,
+        initialOffsets: campaign.reminderOffsetsMinutes,
+      ),
+    );
+    if (data == null || !context.mounted) return;
+    await runAction(
+      context,
+      () => _controllerOf(ref, campaign.id).updateSettings(
+        timeZoneId: data.timeZoneId,
+        reminderOffsetsMinutes: data.reminderOffsetsMinutes,
+      ),
+      success: 'Ajustes del calendario guardados.',
+      errors: const {400: 'Zona horaria o recordatorios no válidos.'},
+      describe: describeSessionError,
     );
   }
 
@@ -233,6 +263,27 @@ class _SummaryTab extends ConsumerWidget {
                       key: const Key('campaign-description-text'),
                     ),
             ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: ListTile(
+            key: const Key('campaign-calendar-info'),
+            leading: const Icon(Icons.event_outlined),
+            title: Text('Zona horaria: ${campaign.timeZoneId}'),
+            subtitle: Text(
+              campaign.reminderOffsetsMinutes.isEmpty
+                  ? 'Sin recordatorios por correo.'
+                  : 'Recordatorios: ${campaign.reminderOffsetsMinutes.map(formatOffsetBefore).join(', ')}.',
+            ),
+            trailing: role.isAtLeastDm
+                ? IconButton(
+                    key: const Key('campaign-calendar-settings'),
+                    tooltip: 'Ajustes del calendario',
+                    onPressed: () => _editCalendarSettings(context, ref),
+                    icon: const Icon(Icons.tune),
+                  )
+                : null,
           ),
         ),
         const SizedBox(height: 16),

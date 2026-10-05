@@ -38,6 +38,19 @@ class CampaignsRepository {
     return CampaignDetail.fromJson(response.data!);
   }
 
+  /// Changes the calendar settings; only the non-null fields are sent.
+  Future<CampaignDetail> updateSettings(
+    String id, {
+    String? timeZoneId,
+    List<int>? reminderOffsetsMinutes,
+  }) async {
+    final response = await _client.dio.patch<Map<String, dynamic>>(
+      '$_base/$id/settings',
+      data: {'timeZoneId': ?timeZoneId, 'reminderOffsetsMinutes': ?reminderOffsetsMinutes},
+    );
+    return CampaignDetail.fromJson(response.data!);
+  }
+
   Future<void> delete(String id) async {
     await _client.dio.delete<void>('$_base/$id');
   }

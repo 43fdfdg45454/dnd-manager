@@ -52,6 +52,16 @@ class AuthController extends Notifier<AuthState> {
     if (ref.mounted) state = const AuthSignedOut();
   }
 
+  /// Edits the display name and/or the email preference of the signed-in user.
+  /// Errors are rethrown for the UI.
+  Future<void> updateProfile({String? displayName, bool? notificationsEnabled}) async {
+    final user = await _repository.updateProfile(
+      displayName: displayName,
+      notificationsEnabled: notificationsEnabled,
+    );
+    updateUser(user);
+  }
+
   /// Refreshes the cached user (e.g. after a token refresh returned a newer one).
   void updateUser(UserDto user) {
     if (ref.mounted && state is AuthSignedIn) state = AuthSignedIn(user);

@@ -60,6 +60,18 @@ class CampaignDetailController extends AsyncNotifier<CampaignDetail> {
     _refreshList();
   }
 
+  /// Changes the time zone and the reminder offsets (at least DM).
+  Future<void> updateSettings({String? timeZoneId, List<int>? reminderOffsetsMinutes}) async {
+    final updated = await _repository.updateSettings(
+      id,
+      timeZoneId: timeZoneId,
+      reminderOffsetsMinutes: reminderOffsetsMinutes,
+    );
+    // The server answers with the whole campaign; keep the members already loaded
+    // in case the answer omits them.
+    state = AsyncData(updated);
+  }
+
   Future<void> addMember(String userId, CampaignRole role) async {
     await _repository.addMember(id, userId: userId, role: role);
     await _reloadMembers();

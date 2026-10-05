@@ -66,6 +66,15 @@ class AuthRepository {
     return UserDto.fromJson(response.data!);
   }
 
+  /// Edits the own profile; only the non-null fields are sent.
+  Future<UserDto> updateProfile({String? displayName, bool? notificationsEnabled}) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      '/api/v1/auth/me',
+      data: {'displayName': ?displayName, 'notificationsEnabled': ?notificationsEnabled},
+    );
+    return UserDto.fromJson(response.data!);
+  }
+
   Future<void> forgotPassword(String email) async {
     await _dio.post<void>('/api/v1/auth/password/forgot', data: {'email': email});
   }

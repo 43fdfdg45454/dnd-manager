@@ -106,6 +106,12 @@ class CampaignSummary {
   final DateTime createdAt;
 }
 
+/// Used when the server does not send the campaign's time zone.
+const defaultCampaignTimeZone = 'UTC';
+
+/// Server default: reminders 24 h and 2 h before a session.
+const defaultReminderOffsets = <int>[1440, 120];
+
 class CampaignDetail {
   const CampaignDetail({
     required this.id,
@@ -117,6 +123,8 @@ class CampaignDetail {
     required this.members,
     required this.createdAt,
     required this.updatedAt,
+    this.timeZoneId = defaultCampaignTimeZone,
+    this.reminderOffsetsMinutes = defaultReminderOffsets,
   });
 
   factory CampaignDetail.fromJson(Map<String, dynamic> json) => CampaignDetail(
@@ -131,6 +139,11 @@ class CampaignDetail {
         .toList(),
     createdAt: DateTime.parse(json['createdAt'] as String),
     updatedAt: DateTime.parse(json['updatedAt'] as String),
+    timeZoneId: json['timeZoneId'] as String? ?? defaultCampaignTimeZone,
+    reminderOffsetsMinutes: [
+      for (final o in (json['reminderOffsetsMinutes'] as List<dynamic>? ?? defaultReminderOffsets))
+        (o as num).toInt(),
+    ],
   );
 
   final String id;
@@ -143,6 +156,12 @@ class CampaignDetail {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  /// IANA identifier of the zone in which the sessions of the campaign are scheduled.
+  final String timeZoneId;
+
+  /// Minutes before a session at which reminder emails are sent.
+  final List<int> reminderOffsetsMinutes;
+
   CampaignDetail copyWith({
     String? name,
     String? description,
@@ -150,6 +169,8 @@ class CampaignDetail {
     String? ownerDisplayName,
     CampaignRole? myRole,
     List<Member>? members,
+    String? timeZoneId,
+    List<int>? reminderOffsetsMinutes,
   }) => CampaignDetail(
     id: id,
     name: name ?? this.name,
@@ -160,6 +181,8 @@ class CampaignDetail {
     members: members ?? this.members,
     createdAt: createdAt,
     updatedAt: updatedAt,
+    timeZoneId: timeZoneId ?? this.timeZoneId,
+    reminderOffsetsMinutes: reminderOffsetsMinutes ?? this.reminderOffsetsMinutes,
   );
 }
 

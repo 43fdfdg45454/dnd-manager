@@ -25,6 +25,7 @@ class UserDto {
     required this.hasPassword,
     required this.createdAt,
     this.lastLoginAt,
+    this.notificationsEnabled = true,
   });
 
   factory UserDto.fromJson(Map<String, dynamic> json) => UserDto(
@@ -36,6 +37,7 @@ class UserDto {
     hasPassword: json['hasPassword'] as bool,
     createdAt: DateTime.parse(json['createdAt'] as String),
     lastLoginAt: json['lastLoginAt'] == null ? null : DateTime.parse(json['lastLoginAt'] as String),
+    notificationsEnabled: json['notificationsEnabled'] as bool? ?? true,
   );
 
   final String id;
@@ -46,6 +48,9 @@ class UserDto {
   final bool hasPassword;
   final DateTime createdAt;
   final DateTime? lastLoginAt;
+
+  /// Whether the user receives reminder and notice emails.
+  final bool notificationsEnabled;
 
   bool get isAdmin => role == UserRole.admin;
 
@@ -58,9 +63,15 @@ class UserDto {
     'hasPassword': hasPassword,
     'createdAt': createdAt.toIso8601String(),
     'lastLoginAt': lastLoginAt?.toIso8601String(),
+    'notificationsEnabled': notificationsEnabled,
   };
 
-  UserDto copyWith({String? displayName, UserRole? role, bool? isActive}) => UserDto(
+  UserDto copyWith({
+    String? displayName,
+    UserRole? role,
+    bool? isActive,
+    bool? notificationsEnabled,
+  }) => UserDto(
     id: id,
     email: email,
     displayName: displayName ?? this.displayName,
@@ -69,5 +80,6 @@ class UserDto {
     hasPassword: hasPassword,
     createdAt: createdAt,
     lastLoginAt: lastLoginAt,
+    notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
   );
 }

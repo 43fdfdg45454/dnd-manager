@@ -5,20 +5,51 @@ import 'package:go_router/go_router.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/config/app_config.dart';
+import '../../../core/auth/user_dto.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/server/server_config_controller.dart';
 import '../../../core/router/app_router.dart';
 import '../../campaigns/ui/campaigns_page.dart';
+import '../../campaigns/ui/feedback.dart';
+import '../../sessions/ui/next_session_card.dart';
+import 'edit_name_dialog.dart';
 import '../data/server_info_repository.dart';
 
-enum _HomeAction { library, adminUsers, server, logout }
+enum _HomeAction { editName, notifications, library, adminUsers, server, logout }
 
 /// Landing page after login: the list of campaigns, with the user menu in the
 /// app bar and the server status as a footer.
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
-  void _onAction(BuildContext context, WidgetRef ref, _HomeAction action) {
+  Future<void> _editName(BuildContext context, WidgetRef ref, String current) async {
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => EditNameDialog(initialName: current),
+    );
+    if (name == null || name == current || !context.mounted) return;
+    await runAction(
+      context,
+      () => ref.read(authControllerProvider.notifier).updateProfile(displayName: name),
+      success: 'Nombre actualizado.',
+      errors: const {400: 'El nombre no es válido.'},
+      describe: describeApiError,
+    );
+  }
+
+  Future<void> _toggleNotifications(BuildContext context, WidgetRef ref, bool enabled) => runAction(
+    context,
+    () => ref.read(authControllerProvider.notifier).updateProfile(notificationsEnabled: enabled),
+    success: enabled ? 'Recibirás correos de la campaña.' : 'No recibirás correos de la campaña.',
+    describe: describeApiError,
+  );
+
+  void _onAction(BuildContext context, WidgetRef ref, _HomeAction action, UserDto user) {
     switch (action) {
+      case _HomeAction.editName:
+        _editName(context, ref, user.displayName);
+      case _HomeAction.notifications:
+        _toggleNotifications(context, ref, !user.notificationsEnabled);
       case _HomeAction.library:
         context.push(AppRoutes.library);
       case _HomeAction.adminUsers:
@@ -50,7 +81,7 @@ class HomePage extends ConsumerWidget {
             PopupMenuButton<_HomeAction>(
               key: const Key('home-user-menu'),
               tooltip: 'Menú de usuario',
-              onSelected: (action) => _onAction(context, ref, action),
+              onSelected: (action) => _onAction(context, ref, action, user),
               itemBuilder: (_) => [
                 PopupMenuItem(
                   enabled: false,
@@ -66,6 +97,28 @@ class HomePage extends ConsumerWidget {
                         user.role.label,
                         key: const Key('home-role'),
                         style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
+                const PopupMenuItem(
+                  key: Key('home-edit-name'),
+                  value: _HomeAction.editName,
+                  child: Text('Editar nombre'),
+                ),
+                PopupMenuItem(
+                  key: const Key('home-notifications'),
+                  value: _HomeAction.notifications,
+                  child: Row(
+                    children: [
+                      const Expanded(child: Text('Recibir correos')),
+                      IgnorePointer(
+                        child: Switch(
+                          key: const Key('home-notifications-switch'),
+                          value: user.notificationsEnabled,
+                          onChanged: (_) {},
+                        ),
                       ),
                     ],
                   ),
@@ -112,6 +165,7 @@ class HomePage extends ConsumerWidget {
       ),
       body: const Column(
         children: [
+          NextSessionCard(),
           Expanded(child: CampaignsPage()),
           _ServerStatus(),
         ],

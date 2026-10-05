@@ -22,6 +22,9 @@ import '../../features/lore/ui/lore_editor_page.dart';
 import '../../features/lore/ui/lore_entry_page.dart';
 import '../../features/maps/ui/map_viewer_page.dart';
 import '../../features/server/ui/server_page.dart';
+import '../../features/sessions/ui/session_form_page.dart';
+import '../../features/sessions/ui/session_page.dart';
+import '../../features/sessions/ui/summary_editor_page.dart';
 import '../../features/items/ui/shop_page.dart';
 import '../../features/items/ui/transactions_page.dart';
 import '../auth/auth_controller.dart';
@@ -45,6 +48,10 @@ abstract final class AppRoutes {
   static const campaignLoreEntry = '/campaigns/:id/lore/:entryId';
   static const campaignLoreEdit = '/campaigns/:id/lore/:entryId/edit';
   static const campaignMap = '/campaigns/:id/maps/:mapId';
+  static const campaignSessionNew = '/campaigns/:id/sessions/new';
+  static const campaignSession = '/campaigns/:id/sessions/:sessionId';
+  static const campaignSessionEdit = '/campaigns/:id/sessions/:sessionId/edit';
+  static const campaignSessionSummary = '/campaigns/:id/sessions/:sessionId/summary';
   static const campaignLibrary = '/campaigns/:id/library';
   static const library = '/library';
   static const libraryViewer = '/library/:docId/view';
@@ -76,6 +83,20 @@ abstract final class AppRoutes {
 
   static String loreEdit(String campaignId, String entryId) =>
       '/campaigns/$campaignId/lore/$entryId/edit';
+
+  /// A session of the campaign.
+  static String session(String campaignId, String sessionId) =>
+      '/campaigns/$campaignId/sessions/$sessionId';
+
+  /// Form to schedule a new session.
+  static String sessionNew(String campaignId) => '/campaigns/$campaignId/sessions/new';
+
+  static String sessionEdit(String campaignId, String sessionId) =>
+      '/campaigns/$campaignId/sessions/$sessionId/edit';
+
+  /// Editor of the journal summary of a session.
+  static String sessionSummary(String campaignId, String sessionId) =>
+      '/campaigns/$campaignId/sessions/$sessionId/summary';
 
   /// A map of the campaign.
   static String map(String campaignId, String mapId) => '/campaigns/$campaignId/maps/$mapId';
@@ -190,6 +211,31 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => MapViewerPage(
           campaignId: state.pathParameters['id']!,
           mapId: state.pathParameters['mapId']!,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.campaignSessionNew,
+        builder: (context, state) => SessionFormPage(campaignId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.campaignSession,
+        builder: (context, state) => SessionPage(
+          campaignId: state.pathParameters['id']!,
+          sessionId: state.pathParameters['sessionId']!,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.campaignSessionEdit,
+        builder: (context, state) => SessionFormPage(
+          campaignId: state.pathParameters['id']!,
+          sessionId: state.pathParameters['sessionId'],
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.campaignSessionSummary,
+        builder: (context, state) => SummaryEditorPage(
+          campaignId: state.pathParameters['id']!,
+          sessionId: state.pathParameters['sessionId']!,
         ),
       ),
       GoRoute(

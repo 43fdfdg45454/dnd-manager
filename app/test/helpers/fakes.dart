@@ -23,6 +23,7 @@ UserDto makeUser({
   UserRole role = UserRole.user,
   bool isActive = true,
   bool hasPassword = true,
+  bool notificationsEnabled = true,
 }) => UserDto(
   id: id,
   email: email,
@@ -31,6 +32,7 @@ UserDto makeUser({
   isActive: isActive,
   hasPassword: hasPassword,
   createdAt: DateTime.utc(2026, 1, 1),
+  notificationsEnabled: notificationsEnabled,
 );
 
 AuthResponse makeAuthResponse(UserDto user, {String suffix = '1'}) => AuthResponse(
@@ -107,6 +109,20 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> logout() async {
     logoutCalls++;
     await storage.clear();
+  }
+
+  Object? profileError;
+  final List<({String? displayName, bool? notificationsEnabled})> profileUpdates = [];
+
+  @override
+  Future<UserDto> updateProfile({String? displayName, bool? notificationsEnabled}) async {
+    if (profileError != null) throw profileError!;
+    profileUpdates.add((displayName: displayName, notificationsEnabled: notificationsEnabled));
+    meUser = (meUser ?? loginUser ?? makeUser()).copyWith(
+      displayName: displayName,
+      notificationsEnabled: notificationsEnabled,
+    );
+    return meUser!;
   }
 
   @override
@@ -249,6 +265,8 @@ CampaignDetail makeCampaign({
   String description = 'Una aventura para niveles 1 a 3.',
   CampaignRole myRole = CampaignRole.owner,
   List<Member>? members,
+  String timeZoneId = 'Europe/Madrid',
+  List<int> reminderOffsetsMinutes = const [1440, 120],
 }) {
   final list =
       members ??
@@ -269,6 +287,8 @@ CampaignDetail makeCampaign({
     members: list,
     createdAt: DateTime.utc(2026, 1, 1),
     updatedAt: DateTime.utc(2026, 1, 1),
+    timeZoneId: timeZoneId,
+    reminderOffsetsMinutes: reminderOffsetsMinutes,
   );
 }
 
@@ -341,6 +361,21 @@ class FakeCampaignsRepository implements CampaignsRepository {
   Future<CampaignDetail> update(String id, {String? name, String? description}) async {
     _fail();
     final updated = _byId(id).copyWith(name: name, description: description);
+    campaigns[_index(id)] = updated;
+    return updated;
+  }
+
+  @override
+  Future<CampaignDetail> updateSettings(
+    String id, {
+    String? timeZoneId,
+    List<int>? reminderOffsetsMinutes,
+  }) async {
+    _fail();
+    final updated = _byId(id).copyWith(
+      timeZoneId: timeZoneId,
+      reminderOffsetsMinutes: reminderOffsetsMinutes,
+    );
     campaigns[_index(id)] = updated;
     return updated;
   }
