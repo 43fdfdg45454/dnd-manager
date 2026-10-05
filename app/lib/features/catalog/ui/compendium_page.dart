@@ -4,9 +4,12 @@ import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/cache/stale_data.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../data/catalog_controllers.dart';
+import '../data/catalog_repository.dart';
 import '../data/models.dart';
 import '../domain/catalog_format.dart';
 import 'condition_sheet.dart';
@@ -90,9 +93,10 @@ class _CompendiumPageState extends ConsumerState<CompendiumPage> {
             ],
           ),
         ),
-        body: const Column(
+        body: Column(
           children: [
-            Expanded(
+            OfflineBanner(scopes: [staleTree(CatalogRepository.rootPath)]),
+            const Expanded(
               child: TabBarView(
                 children: [
                   _KeepAlive(child: _SpellsTab()),
@@ -103,7 +107,7 @@ class _CompendiumPageState extends ConsumerState<CompendiumPage> {
                 ],
               ),
             ),
-            _AttributionFooter(),
+            const _AttributionFooter(),
           ],
         ),
       ),

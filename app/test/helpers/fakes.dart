@@ -85,12 +85,22 @@ class FakeTokenStorage implements TokenStorage {
 }
 
 class FakeAuthRepository implements AuthRepository {
-  FakeAuthRepository({required this.storage, this.loginUser, this.meUser, this.loginError});
+  FakeAuthRepository({
+    required this.storage,
+    this.loginUser,
+    this.meUser,
+    this.loginError,
+    this.meError,
+  });
 
   final FakeTokenStorage storage;
   UserDto? loginUser;
   UserDto? meUser;
   Object? loginError;
+
+  /// Thrown by [me] when set (e.g. `dioError(null)` for no connection).
+  Object? meError;
+  int meCalls = 0;
   final List<String> forgotRequests = [];
   int logoutCalls = 0;
 
@@ -103,7 +113,11 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<UserDto> me() async => meUser!;
+  Future<UserDto> me() async {
+    meCalls++;
+    if (meError != null) throw meError!;
+    return meUser!;
+  }
 
   @override
   Future<void> logout() async {

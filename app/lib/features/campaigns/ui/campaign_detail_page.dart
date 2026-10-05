@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
+import '../../../core/cache/stale_data.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../../characters/data/characters_controller.dart';
 import '../../characters/ui/characters_tab.dart';
 import '../../items/ui/homebrew_tab.dart';
@@ -18,6 +20,7 @@ import '../../sessions/ui/session_widgets.dart';
 import '../../sessions/ui/sessions_tab.dart';
 import '../../items/ui/shops_tab.dart';
 import '../data/campaigns_controller.dart';
+import '../data/campaigns_repository.dart';
 import '../domain/campaign_models.dart';
 import 'add_member_dialog.dart';
 import 'campaign_form_dialog.dart';
@@ -68,38 +71,41 @@ class CampaignDetailPage extends ConsumerWidget {
             ],
           ),
         ),
-        body: detail.when(
-          skipLoadingOnReload: true,
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(describeCampaignError(error), textAlign: TextAlign.center),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: () => ref.invalidate(campaignDetailControllerProvider(campaignId)),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Reintentar'),
-                  ),
-                ],
+        body: OfflineBannerLayout(
+          scopes: [staleTree(CampaignsRepository.campaignPath(campaignId))],
+          child: detail.when(
+            skipLoadingOnReload: true,
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(describeCampaignError(error), textAlign: TextAlign.center),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: () => ref.invalidate(campaignDetailControllerProvider(campaignId)),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Reintentar'),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          data: (campaign) => TabBarView(
-            children: [
-              _SummaryTab(campaign: campaign),
-              _MembersTab(campaign: campaign),
-              CharactersTab(campaign: campaign),
-              ShopsTab(campaign: campaign),
-              HomebrewTab(campaign: campaign),
-              LoreTab(campaign: campaign),
-              MapsTab(campaign: campaign),
-              SessionsTab(campaign: campaign),
-              JournalTab(campaign: campaign),
-            ],
+            data: (campaign) => TabBarView(
+              children: [
+                _SummaryTab(campaign: campaign),
+                _MembersTab(campaign: campaign),
+                CharactersTab(campaign: campaign),
+                ShopsTab(campaign: campaign),
+                HomebrewTab(campaign: campaign),
+                LoreTab(campaign: campaign),
+                MapsTab(campaign: campaign),
+                SessionsTab(campaign: campaign),
+                JournalTab(campaign: campaign),
+              ],
+            ),
           ),
         ),
       ),
@@ -300,11 +306,13 @@ class _SummaryTab extends ConsumerWidget {
         if (role.isAtLeastDm)
           Align(
             alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
-              key: const Key('campaign-edit'),
-              onPressed: () => _edit(context, ref),
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Editar'),
+            child: OfflineAware(
+              builder: (context, canWrite) => OutlinedButton.icon(
+                key: const Key('campaign-edit'),
+                onPressed: !canWrite ? null : () => _edit(context, ref),
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Editar'),
+              ),
             ),
           ),
         if (role.isOwner) ...[
@@ -418,11 +426,13 @@ class _MembersTab extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: FilledButton.tonalIcon(
-                key: const Key('members-add'),
-                onPressed: () => _add(context, ref),
-                icon: const Icon(Icons.person_add_alt_1),
-                label: const Text('Añadir'),
+              child: OfflineAware(
+                builder: (context, canWrite) => FilledButton.tonalIcon(
+                  key: const Key('members-add'),
+                  onPressed: !canWrite ? null : () => _add(context, ref),
+                  icon: const Icon(Icons.person_add_alt_1),
+                  label: const Text('Añadir'),
+                ),
               ),
             ),
           ),

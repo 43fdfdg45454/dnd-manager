@@ -5,8 +5,11 @@ import 'package:intl/intl.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
+import '../../../core/cache/stale_data.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
+import '../../campaigns/data/campaigns_repository.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
 import '../../campaigns/ui/feedback.dart';
 import '../../characters/data/characters_controller.dart';
@@ -50,74 +53,79 @@ class _ChangeRequestsPageState extends ConsumerState<ChangeRequestsPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Solicitudes de cambio')),
-      body: Column(
-        children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                for (final (label, status) in _filters)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      key: Key('filter-${status?.apiValue ?? 'all'}'),
-                      label: Text(label),
-                      selected: _status == status,
-                      onSelected: (_) => setState(() => _status = status),
+      body: OfflineBannerLayout(
+        scopes: [
+          staleTree('${CampaignsRepository.campaignPath(widget.campaignId)}/change-requests'),
+        ],
+        child: Column(
+          children: [
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  for (final (label, status) in _filters)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        key: Key('filter-${status?.apiValue ?? 'all'}'),
+                        label: Text(label),
+                        selected: _status == status,
+                        onSelected: (_) => setState(() => _status = status),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: requests.when(
+                skipLoadingOnReload: true,
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(describeCharacterError(error), textAlign: TextAlign.center),
+                        const SizedBox(height: 12),
+                        FilledButton.icon(
+                          onPressed: () => ref.invalidate(changeRequestsControllerProvider(_key)),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Reintentar'),
+                        ),
+                      ],
                     ),
                   ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: requests.when(
-              skipLoadingOnReload: true,
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(describeCharacterError(error), textAlign: TextAlign.center),
-                      const SizedBox(height: 12),
-                      FilledButton.icon(
-                        onPressed: () => ref.invalidate(changeRequestsControllerProvider(_key)),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Reintentar'),
-                      ),
-                    ],
-                  ),
+                ),
+                data: (list) => RefreshIndicator(
+                  onRefresh: () async => ref.invalidate(changeRequestsControllerProvider(_key)),
+                  child: list.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: const [
+                            SizedBox(height: 96),
+                            Center(child: Text('No hay solicitudes en esta lista')),
+                          ],
+                        )
+                      : ListView(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          children: [
+                            for (final request in list)
+                              _RequestCard(
+                                key: Key('change-request-${request.id}'),
+                                request: request,
+                                listKey: _key,
+                                isDm: isDm,
+                                myUserId: myUserId,
+                              ),
+                          ],
+                        ),
                 ),
               ),
-              data: (list) => RefreshIndicator(
-                onRefresh: () async => ref.invalidate(changeRequestsControllerProvider(_key)),
-                child: list.isEmpty
-                    ? ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: const [
-                          SizedBox(height: 96),
-                          Center(child: Text('No hay solicitudes en esta lista')),
-                        ],
-                      )
-                    : ListView(
-                        padding: const EdgeInsets.only(bottom: 24),
-                        children: [
-                          for (final request in list)
-                            _RequestCard(
-                              key: Key('change-request-${request.id}'),
-                              request: request,
-                              listKey: _key,
-                              isDm: isDm,
-                              myUserId: myUserId,
-                            ),
-                        ],
-                      ),
-              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

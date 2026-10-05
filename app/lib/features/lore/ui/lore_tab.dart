@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/files/authenticated_image.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/ui/content_widgets.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/domain/campaign_models.dart';
 import '../data/lore_controllers.dart';
 import '../data/models.dart';
@@ -33,8 +34,8 @@ class _LoreTabState extends ConsumerState<LoreTab> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       floatingActionButton: isDm
-          ? FloatingActionButton.extended(
-              key: const Key('lore-new'),
+          ? OfflineAwareFab(
+              fabKey: const Key('lore-new'),
               onPressed: () => context.push(AppRoutes.loreNew(campaign.id)),
               icon: const Icon(Icons.post_add_outlined),
               label: const Text('Nueva entrada'),

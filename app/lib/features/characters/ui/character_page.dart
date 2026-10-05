@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
+import '../../../core/cache/stale_data.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
 import '../../campaigns/ui/feedback.dart';
@@ -13,6 +15,7 @@ import '../../catalog/data/models.dart' show titleFromIndex;
 import '../../dice/ui/dice_sheet.dart';
 import '../../items/ui/inventory_tab.dart';
 import '../data/characters_controller.dart';
+import '../data/characters_repository.dart';
 import '../data/models.dart';
 import '../data/view_mode_controller.dart';
 import '../domain/character_format.dart';
@@ -142,47 +145,50 @@ class _CharacterView extends ConsumerWidget {
           onPressed: () => showDiceSheet(context),
           child: const Icon(Icons.casino_outlined),
         ),
-        body: combat
-            ? CombatView(
-                character: character,
-                canEdit: permissions.canEdit,
-                header: _CombatHeader(character: character, switcher: switcher),
-              )
-            : NestedScrollView(
-                headerSliverBuilder: (context, _) => [
-                  SliverToBoxAdapter(
-                    child: _Header(
-                      character: character,
-                      permissions: permissions,
-                      switcher: switcher,
-                      onSubmit: () => runAction(
-                        context,
-                        () async {
-                          await _controller(ref).submit();
-                        },
-                        success: 'Enviado al DM para aprobación',
-                        describe: describeCharacterError,
-                      ),
-                      onActivate: () => runAction(
-                        context,
-                        () => _controller(ref).activate(),
-                        success: 'Personaje activado.',
-                        describe: describeCharacterError,
+        body: OfflineBannerLayout(
+          scopes: [staleTree(CharactersRepository.characterPath(character.id))],
+          child: combat
+              ? CombatView(
+                  character: character,
+                  canEdit: permissions.canEdit,
+                  header: _CombatHeader(character: character, switcher: switcher),
+                )
+              : NestedScrollView(
+                  headerSliverBuilder: (context, _) => [
+                    SliverToBoxAdapter(
+                      child: _Header(
+                        character: character,
+                        permissions: permissions,
+                        switcher: switcher,
+                        onSubmit: () => runAction(
+                          context,
+                          () async {
+                            await _controller(ref).submit();
+                          },
+                          success: 'Enviado al DM para aprobación',
+                          describe: describeCharacterError,
+                        ),
+                        onActivate: () => runAction(
+                          context,
+                          () => _controller(ref).activate(),
+                          success: 'Personaje activado.',
+                          describe: describeCharacterError,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-                body: TabBarView(
-                  children: [
-                    SummaryTab(character: character),
-                    SkillsTab(character: character),
-                    TraitsTab(character: character),
-                    SpellsTab(character: character),
-                    InventoryTab(character: character),
-                    NotesTab(character: character),
                   ],
+                  body: TabBarView(
+                    children: [
+                      SummaryTab(character: character),
+                      SkillsTab(character: character),
+                      TraitsTab(character: character),
+                      SpellsTab(character: character),
+                      InventoryTab(character: character),
+                      NotesTab(character: character),
+                    ],
+                  ),
                 ),
-              ),
+        ),
       ),
     );
   }
@@ -348,11 +354,13 @@ class _Header extends StatelessWidget {
             runSpacing: 8,
             children: [
               if (permissions.canEdit)
-                FilledButton.tonalIcon(
-                  key: const Key('character-edit'),
-                  onPressed: () => context.push(AppRoutes.characterEdit(c.id)),
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Editar hoja'),
+                OfflineAware(
+                  builder: (context, canWrite) => FilledButton.tonalIcon(
+                    key: const Key('character-edit'),
+                    onPressed: !canWrite ? null : () => context.push(AppRoutes.characterEdit(c.id)),
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Editar hoja'),
+                  ),
                 ),
               if (permissions.canSubmit)
                 FilledButton.icon(

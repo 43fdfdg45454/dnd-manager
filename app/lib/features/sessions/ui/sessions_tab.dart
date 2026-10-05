@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/domain/campaign_models.dart';
 import '../data/models.dart';
 import '../data/sessions_controllers.dart';
@@ -36,8 +37,8 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       floatingActionButton: isDm
-          ? FloatingActionButton.extended(
-              key: const Key('sessions-new'),
+          ? OfflineAwareFab(
+              fabKey: const Key('sessions-new'),
               onPressed: () => context.push(AppRoutes.sessionNew(campaign.id)),
               icon: const Icon(Icons.event_available_outlined),
               label: const Text('Nueva sesión'),

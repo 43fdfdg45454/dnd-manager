@@ -6,16 +6,32 @@ import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/auth/user_dto.dart';
+import '../../../core/cache/cache_maintenance.dart';
+import '../../../core/cache/stale_data.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/server/server_config_controller.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/ui/offline_widgets.dart';
+import '../../../core/update/update_ui.dart';
+import '../../campaigns/data/campaigns_repository.dart';
 import '../../campaigns/ui/campaigns_page.dart';
+import '../../campaigns/ui/confirm_dialog.dart';
 import '../../campaigns/ui/feedback.dart';
+import '../../sessions/data/sessions_repository.dart';
 import '../../sessions/ui/next_session_card.dart';
 import 'edit_name_dialog.dart';
 import '../data/server_info_repository.dart';
 
-enum _HomeAction { editName, notifications, library, adminUsers, server, logout }
+enum _HomeAction {
+  editName,
+  notifications,
+  library,
+  adminUsers,
+  clearCache,
+  checkUpdates,
+  server,
+  logout,
+}
 
 /// Landing page after login: the list of campaigns, with the user menu in the
 /// app bar and the server status as a footer.
@@ -44,6 +60,22 @@ class HomePage extends ConsumerWidget {
     describe: describeApiError,
   );
 
+  /// Empties the offline data after confirming; the screens reload it.
+  Future<void> _clearCache(BuildContext context, WidgetRef ref) async {
+    final confirmed = await confirmAction(
+      context,
+      title: 'Vaciar caché',
+      message:
+          'Se borrarán los datos guardados para usar la app sin conexión y las imágenes '
+          'descargadas. Los PDF descargados de la biblioteca se conservan.',
+      confirmLabel: 'Vaciar',
+    );
+    if (!confirmed || !context.mounted) return;
+    await ref.read(cacheMaintenanceProvider).clearAll();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Caché vaciada.')));
+  }
+
   void _onAction(BuildContext context, WidgetRef ref, _HomeAction action, UserDto user) {
     switch (action) {
       case _HomeAction.editName:
@@ -54,6 +86,10 @@ class HomePage extends ConsumerWidget {
         context.push(AppRoutes.library);
       case _HomeAction.adminUsers:
         context.push(AppRoutes.adminUsers);
+      case _HomeAction.clearCache:
+        _clearCache(context, ref);
+      case _HomeAction.checkUpdates:
+        checkForUpdatesFromMenu(context, ref);
       case _HomeAction.server:
         context.push(AppRoutes.server);
       case _HomeAction.logout:
@@ -136,6 +172,16 @@ class HomePage extends ConsumerWidget {
                     child: Text('Usuarios'),
                   ),
                 const PopupMenuItem(
+                  key: Key('home-clear-cache'),
+                  value: _HomeAction.clearCache,
+                  child: Text('Vaciar caché'),
+                ),
+                const PopupMenuItem(
+                  key: Key('home-check-updates'),
+                  value: _HomeAction.checkUpdates,
+                  child: Text('Buscar actualizaciones'),
+                ),
+                const PopupMenuItem(
                   key: Key('home-server'),
                   value: _HomeAction.server,
                   child: Text('Servidor'),
@@ -163,11 +209,17 @@ class HomePage extends ConsumerWidget {
             ),
         ],
       ),
-      body: const Column(
+      body: Column(
         children: [
-          NextSessionCard(),
-          Expanded(child: CampaignsPage()),
-          _ServerStatus(),
+          OfflineBanner(
+            scopes: [
+              staleExact(CampaignsRepository.listPath),
+              staleTree(SessionsRepository.mySessionsPath),
+            ],
+          ),
+          const NextSessionCard(),
+          const Expanded(child: CampaignsPage()),
+          const _ServerStatus(),
         ],
       ),
     );

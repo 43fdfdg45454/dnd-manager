@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/cache/cached_result.dart';
 import '../../../core/network/api_client.dart';
 import '../domain/campaign_models.dart';
 
@@ -11,10 +12,13 @@ class CampaignsRepository {
 
   static const _base = '/api/v1/campaigns';
 
-  Future<List<CampaignSummary>> list() async {
-    final response = await _client.dio.get<List<dynamic>>(_base);
-    return response.data!.map((e) => CampaignSummary.fromJson(e as Map<String, dynamic>)).toList();
-  }
+  /// Cache key of the campaign list (exact) and root of everything cached for
+  /// the campaign [id] (see `staleSinceProvider`).
+  static const listPath = _base;
+  static String campaignPath(String id) => '$_base/$id';
+
+  Future<List<CampaignSummary>> list() async =>
+      (await _client.getCached(_base, parse: parseList(CampaignSummary.fromJson))).data;
 
   Future<CampaignDetail> create({required String name, required String description}) async {
     final response = await _client.dio.post<Map<String, dynamic>>(
@@ -24,10 +28,8 @@ class CampaignsRepository {
     return CampaignDetail.fromJson(response.data!);
   }
 
-  Future<CampaignDetail> get(String id) async {
-    final response = await _client.dio.get<Map<String, dynamic>>('$_base/$id');
-    return CampaignDetail.fromJson(response.data!);
-  }
+  Future<CampaignDetail> get(String id) async =>
+      (await _client.getCached('$_base/$id', parse: parseObject(CampaignDetail.fromJson))).data;
 
   /// Only the non-null fields are sent.
   Future<CampaignDetail> update(String id, {String? name, String? description}) async {
@@ -55,10 +57,8 @@ class CampaignsRepository {
     await _client.dio.delete<void>('$_base/$id');
   }
 
-  Future<List<Member>> members(String id) async {
-    final response = await _client.dio.get<List<dynamic>>('$_base/$id/members');
-    return response.data!.map((e) => Member.fromJson(e as Map<String, dynamic>)).toList();
-  }
+  Future<List<Member>> members(String id) async =>
+      (await _client.getCached('$_base/$id/members', parse: parseList(Member.fromJson))).data;
 
   Future<Member> addMember(String id, {required String userId, required CampaignRole role}) async {
     final response = await _client.dio.post<Map<String, dynamic>>(

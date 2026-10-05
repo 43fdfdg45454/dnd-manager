@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/domain/campaign_models.dart';
 import '../data/items_controllers.dart';
 import '../data/models.dart';
@@ -50,8 +51,8 @@ class ShopsTab extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       floatingActionButton: isDm
-          ? FloatingActionButton.extended(
-              key: const Key('shops-new'),
+          ? OfflineAwareFab(
+              fabKey: const Key('shops-new'),
               onPressed: () => _create(context, ref),
               icon: const Icon(Icons.add_business_outlined),
               label: const Text('Nueva tienda'),

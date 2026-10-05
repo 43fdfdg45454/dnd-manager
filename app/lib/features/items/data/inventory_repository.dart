@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/cache/cached_result.dart';
 import '../../../core/network/api_client.dart';
 import '../../characters/data/models.dart' show ChangeRequest;
 import 'models.dart';
@@ -12,10 +13,10 @@ class InventoryRepository {
 
   static const _api = '/api/v1/characters';
 
-  Future<Inventory> get(String characterId) async {
-    final response = await _client.dio.get<Map<String, dynamic>>('$_api/$characterId/inventory');
-    return Inventory.fromJson(response.data!);
-  }
+  Future<Inventory> get(String characterId) async => (await _client.getCached(
+    '$_api/$characterId/inventory',
+    parse: parseObject(Inventory.fromJson),
+  )).data;
 
   /// 201 -> [InventoryApplied]; 202 -> [InventoryPending] with the change
   /// request the DM must approve. [templateId] null creates a custom item from

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/cache/stale_data.dart';
+import '../../../core/ui/offline_widgets.dart';
+import '../../campaigns/data/campaigns_repository.dart';
 import '../data/items_controllers.dart';
 import '../data/models.dart';
 import '../../catalog/domain/catalog_format.dart';
@@ -19,43 +22,48 @@ class TransactionsPage extends ConsumerWidget {
     final transactions = ref.watch(transactionsControllerProvider(campaignId));
     return Scaffold(
       appBar: AppBar(title: const Text('Transacciones')),
-      body: transactions.when(
-        skipLoadingOnReload: true,
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => ItemsErrorView(
-          error: error,
-          onRetry: () => ref.invalidate(transactionsControllerProvider(campaignId)),
-        ),
-        data: (page) => RefreshIndicator(
-          onRefresh: () async => ref.invalidate(transactionsControllerProvider(campaignId)),
-          child: page.items.isEmpty
-              ? ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: const [
-                    SizedBox(height: 96),
-                    Center(child: Text('Aún no hay transacciones', key: Key('transactions-empty'))),
-                  ],
-                )
-              : ListView.builder(
-                  itemCount: page.items.length + (page.hasMore ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index >= page.items.length) {
-                      return Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Center(
-                          child: TextButton(
-                            key: const Key('transactions-more'),
-                            onPressed: () => ref
-                                .read(transactionsControllerProvider(campaignId).notifier)
-                                .loadMore(),
-                            child: const Text('Cargar más'),
+      body: OfflineBannerLayout(
+        scopes: [staleTree('${CampaignsRepository.campaignPath(campaignId)}/transactions')],
+        child: transactions.when(
+          skipLoadingOnReload: true,
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => ItemsErrorView(
+            error: error,
+            onRetry: () => ref.invalidate(transactionsControllerProvider(campaignId)),
+          ),
+          data: (page) => RefreshIndicator(
+            onRefresh: () async => ref.invalidate(transactionsControllerProvider(campaignId)),
+            child: page.items.isEmpty
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: const [
+                      SizedBox(height: 96),
+                      Center(
+                        child: Text('Aún no hay transacciones', key: Key('transactions-empty')),
+                      ),
+                    ],
+                  )
+                : ListView.builder(
+                    itemCount: page.items.length + (page.hasMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index >= page.items.length) {
+                        return Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Center(
+                            child: TextButton(
+                              key: const Key('transactions-more'),
+                              onPressed: () => ref
+                                  .read(transactionsControllerProvider(campaignId).notifier)
+                                  .loadMore(),
+                              child: const Text('Cargar más'),
+                            ),
                           ),
-                        ),
-                      );
-                    }
-                    return _TransactionTile(transaction: page.items[index]);
-                  },
-                ),
+                        );
+                      }
+                      return _TransactionTile(transaction: page.items[index]);
+                    },
+                  ),
+          ),
         ),
       ),
     );

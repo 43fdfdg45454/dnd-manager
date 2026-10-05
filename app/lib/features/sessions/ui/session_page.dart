@@ -4,14 +4,17 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
+import '../../../core/cache/stale_data.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/ui/markdown_view.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/domain/campaign_models.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
 import '../../campaigns/ui/feedback.dart';
 import '../data/models.dart';
 import '../data/sessions_controllers.dart';
+import '../data/sessions_repository.dart';
 import '../domain/sessions_format.dart';
 import 'notify_dialog.dart';
 import 'session_widgets.dart';
@@ -44,49 +47,52 @@ class SessionPage extends ConsumerWidget {
             _ActionsMenu(campaignId: campaignId, session: session.requireValue),
         ],
       ),
-      body: session.when(
-        skipLoadingOnReload: true,
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(describeSessionError(error), textAlign: TextAlign.center),
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: () => ref.invalidate(sessionControllerProvider(sessionId)),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Reintentar'),
-                ),
-              ],
+      body: OfflineBannerLayout(
+        scopes: [staleTree(SessionsRepository.sessionPath(sessionId))],
+        child: session.when(
+          skipLoadingOnReload: true,
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(describeSessionError(error), textAlign: TextAlign.center),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: () => ref.invalidate(sessionControllerProvider(sessionId)),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Reintentar'),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        data: (s) => RefreshIndicator(
-          onRefresh: () async => ref.invalidate(sessionControllerProvider(sessionId)),
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _Header(session: s),
-              if (s.notes != null) ...[
+          data: (s) => RefreshIndicator(
+            onRefresh: () async => ref.invalidate(sessionControllerProvider(sessionId)),
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _Header(session: s),
+                if (s.notes != null) ...[
+                  const SizedBox(height: 16),
+                  Text('Notas', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 4),
+                  MarkdownView(key: const Key('session-notes'), data: s.notes!),
+                ],
                 const SizedBox(height: 16),
-                Text('Notas', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 4),
-                MarkdownView(key: const Key('session-notes'), data: s.notes!),
-              ],
-              const SizedBox(height: 16),
-              _RsvpSection(session: s),
-              const SizedBox(height: 16),
-              _ResponsesSection(session: s, members: campaign?.members ?? const []),
-              if (isDm && s.reminders != null) ...[
+                _RsvpSection(session: s),
                 const SizedBox(height: 16),
-                _RemindersSection(session: s),
+                _ResponsesSection(session: s, members: campaign?.members ?? const []),
+                if (isDm && s.reminders != null) ...[
+                  const SizedBox(height: 16),
+                  _RemindersSection(session: s),
+                ],
+                const SizedBox(height: 16),
+                _SummarySection(campaignId: campaignId, session: s, isDm: isDm),
               ],
-              const SizedBox(height: 16),
-              _SummarySection(campaignId: campaignId, session: s, isDm: isDm),
-            ],
+            ),
           ),
         ),
       ),
@@ -116,7 +122,10 @@ class _ActionsMenu extends ConsumerWidget {
   );
 
   Future<void> _notify(BuildContext context, WidgetRef ref) async {
-    final data = await showDialog<NoticeData>(context: context, builder: (_) => const NotifyDialog());
+    final data = await showDialog<NoticeData>(
+      context: context,
+      builder: (_) => const NotifyDialog(),
+    );
     if (data == null || !context.mounted) return;
     await runAction(
       context,
@@ -229,7 +238,11 @@ class _Header extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Text(s.title, key: const Key('session-title'), style: theme.textTheme.headlineSmall),
+              child: Text(
+                s.title,
+                key: const Key('session-title'),
+                style: theme.textTheme.headlineSmall,
+              ),
             ),
             SessionStatusBadge(status: s.status),
           ],
@@ -358,8 +371,7 @@ class _RsvpSectionState extends ConsumerState<_RsvpSection> {
                   child: const Text('Guardar comentario'),
                 ),
               ),
-            if (cancelled)
-              Text('La sesión está cancelada.', style: theme.textTheme.bodySmall),
+            if (cancelled) Text('La sesión está cancelada.', style: theme.textTheme.bodySmall),
           ],
         ),
       ),
@@ -475,11 +487,15 @@ class _SummarySection extends StatelessWidget {
           children: [
             Expanded(child: Text('Resumen', style: theme.textTheme.titleMedium)),
             if (isDm)
-              TextButton.icon(
-                key: const Key('session-summary-edit'),
-                onPressed: () => context.push(AppRoutes.sessionSummary(campaignId, session.id)),
-                icon: const Icon(Icons.edit_outlined),
-                label: Text(session.hasSummary ? 'Editar resumen' : 'Escribir resumen'),
+              OfflineAware(
+                builder: (context, canWrite) => TextButton.icon(
+                  key: const Key('session-summary-edit'),
+                  onPressed: !canWrite
+                      ? null
+                      : () => context.push(AppRoutes.sessionSummary(campaignId, session.id)),
+                  icon: const Icon(Icons.edit_outlined),
+                  label: Text(session.hasSummary ? 'Editar resumen' : 'Escribir resumen'),
+                ),
               ),
           ],
         ),

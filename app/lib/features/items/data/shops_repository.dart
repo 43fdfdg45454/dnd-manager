@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/cache/cached_result.dart';
 import '../../../core/network/api_client.dart';
 import '../../catalog/data/models.dart' show Page;
 import 'models.dart';
@@ -15,10 +16,13 @@ class ShopsRepository {
   // -- Shops ------------------------------------------------------------------
 
   /// Players only get the open shops.
-  Future<List<ShopSummary>> list(String campaignId) async {
-    final response = await _client.dio.get<List<dynamic>>('$_api/campaigns/$campaignId/shops');
-    return response.data!.map((e) => ShopSummary.fromJson(e as Map<String, dynamic>)).toList();
-  }
+  Future<List<ShopSummary>> list(String campaignId) async => (await _client.getCached(
+    '$_api/campaigns/$campaignId/shops',
+    parse: parseList(ShopSummary.fromJson),
+  )).data;
+
+  /// Root of everything cached for the shop [shopId].
+  static String shopPath(String shopId) => '$_api/shops/$shopId';
 
   Future<ShopSummary> create(
     String campaignId, {
@@ -34,10 +38,8 @@ class ShopsRepository {
   }
 
   /// 404 when a player asks for a closed shop.
-  Future<Shop> get(String shopId) async {
-    final response = await _client.dio.get<Map<String, dynamic>>('$_api/shops/$shopId');
-    return Shop.fromJson(response.data!);
-  }
+  Future<Shop> get(String shopId) async =>
+      (await _client.getCached('$_api/shops/$shopId', parse: parseObject(Shop.fromJson))).data;
 
   Future<ShopSummary> update(String shopId, ShopPatch patch) async {
     final response = await _client.dio.patch<Map<String, dynamic>>(
@@ -113,11 +115,12 @@ class ShopsRepository {
     int page = 1,
     int pageSize = 30,
   }) async {
-    final response = await _client.dio.get<Map<String, dynamic>>(
+    final result = await _client.getCached(
       '$_api/campaigns/$campaignId/transactions',
-      queryParameters: {'characterId': ?characterId, 'page': page, 'pageSize': pageSize},
+      query: {'characterId': characterId, 'page': page, 'pageSize': pageSize},
+      parse: (json) => Page.fromJson(json as Map<String, dynamic>, Transaction.fromJson),
     );
-    return Page.fromJson(response.data!, Transaction.fromJson);
+    return result.data;
   }
 }
 

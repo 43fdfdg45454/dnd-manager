@@ -9,6 +9,7 @@ import '../../../core/files/stored_file.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/ui/content_widgets.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/domain/campaign_models.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
 import '../../campaigns/ui/feedback.dart';
@@ -94,8 +95,8 @@ class MapsTab extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       floatingActionButton: isDm
-          ? FloatingActionButton.extended(
-              key: const Key('maps-new'),
+          ? OfflineAwareFab(
+              fabKey: const Key('maps-new'),
               onPressed: () => _upload(context, ref),
               icon: const Icon(Icons.add_photo_alternate_outlined),
               label: const Text('Subir mapa'),

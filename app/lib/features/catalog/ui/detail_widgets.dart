@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/cache/stale_data.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/ui/offline_widgets.dart';
+import '../data/catalog_repository.dart';
 import '../domain/catalog_format.dart';
 
 const _notFoundMessage = 'No se encontró este elemento del compendio.';
@@ -24,7 +27,10 @@ class CatalogAsyncBody<T> extends StatelessWidget {
     return value.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => CatalogErrorView(error: error, onRetry: onRetry),
-      data: builder,
+      data: (data) => OfflineBannerLayout(
+        scopes: [staleTree(CatalogRepository.rootPath)],
+        child: builder(data),
+      ),
     );
   }
 }

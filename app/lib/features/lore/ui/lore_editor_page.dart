@@ -9,6 +9,7 @@ import '../../../core/files/stored_file.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/ui/content_widgets.dart';
 import '../../../core/ui/markdown_view.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/ui/feedback.dart';
 import '../data/lore_controllers.dart';
@@ -179,10 +180,12 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
         appBar: AppBar(
           title: Text(entry == null ? 'Nueva entrada' : 'Editar entrada'),
           actions: [
-            TextButton(
-              key: const Key('lore-save'),
-              onPressed: _saving ? null : _save,
-              child: const Text('Guardar'),
+            OfflineAware(
+              builder: (context, canWrite) => TextButton(
+                key: const Key('lore-save'),
+                onPressed: _saving || !canWrite ? null : _save,
+                child: const Text('Guardar'),
+              ),
             ),
           ],
           bottom: const TabBar(

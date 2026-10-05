@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/cache/stale_data.dart';
 import '../../../core/files/files_repository.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/server/app_session_epoch.dart';
@@ -43,6 +44,9 @@ class LibraryController extends AsyncNotifier<LibraryListState> {
     final prefs = ref.read(localPreferencesProvider);
     try {
       final documents = await _repository.list();
+      // The response cache answered for an unreachable server.
+      final stale = ref.read(staleSinceProvider(staleExact(LibraryRepository.libraryPath))) != null;
+      if (stale) return LibraryListState(documents, offline: true);
       await prefs?.setString(_cacheKey, jsonEncode([for (final d in documents) d.toJson()]));
       return LibraryListState(documents);
     } catch (error) {

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../data/campaigns_controller.dart';
 import '../domain/campaign_models.dart';
 import 'campaign_form_dialog.dart';
@@ -35,8 +36,8 @@ class CampaignsPage extends ConsumerWidget {
     final campaigns = ref.watch(campaignsControllerProvider);
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('campaigns-new'),
+      floatingActionButton: OfflineAwareFab(
+        fabKey: const Key('campaigns-new'),
         onPressed: () => _createCampaign(context, ref),
         icon: const Icon(Icons.add),
         label: const Text('Nueva campaña'),

@@ -5,15 +5,18 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
+import '../../../core/cache/stale_data.dart';
 import '../../../core/files/image_upload.dart';
 import '../../../core/files/stored_file.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/ui/content_widgets.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
 import '../../campaigns/ui/feedback.dart';
 import '../data/library_controllers.dart';
+import '../data/library_repository.dart';
 import '../data/models.dart';
 
 /// The PDF library of the instance, with search, category filter and a
@@ -131,125 +134,132 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     return Scaffold(
       appBar: AppBar(title: Text(campaignId == null ? 'Biblioteca' : 'Documentos de la campaña')),
       floatingActionButton: isAdmin
-          ? FloatingActionButton.extended(
-              key: const Key('library-upload'),
+          ? OfflineAwareFab(
+              fabKey: const Key('library-upload'),
               onPressed: _upload,
               icon: const Icon(Icons.upload_file),
               label: const Text('Subir PDF'),
             )
           : null,
-      body: library.when(
-        skipLoadingOnReload: true,
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => ContentErrorView(
-          error: error,
-          onRetry: () => ref.invalidate(libraryControllerProvider),
-        ),
-        data: (state) {
-          var documents = filterLibrary(state.documents, query: _query, category: _category);
-          if (state.offline) {
-            documents = documents
-                .where((d) => downloads[d.id]?.status == DownloadStatus.available)
-                .toList();
-          }
-          if (_onlyRecommended) {
-            documents = documents.where((d) => recommendedIds.contains(d.id)).toList();
-          }
-          return RefreshIndicator(
-            onRefresh: () => ref.read(libraryControllerProvider.notifier).reload(),
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(bottom: 96),
-              children: [
-                if (state.offline)
-                  const MaterialBanner(
-                    key: Key('library-offline'),
-                    content: Text('Sin conexión: solo se muestran los documentos descargados.'),
-                    actions: [SizedBox.shrink()],
-                  ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: TextField(
-                    key: const Key('library-search'),
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.search),
-                      hintText: 'Buscar documentos',
-                      border: OutlineInputBorder(),
-                      isDense: true,
+      body: OfflineBannerLayout(
+        scopes: [
+          staleTree(LibraryRepository.libraryPath),
+          if (campaignId != null) staleTree(LibraryRepository.campaignDocumentsPath(campaignId)),
+        ],
+        child: library.when(
+          skipLoadingOnReload: true,
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => ContentErrorView(
+            error: error,
+            onRetry: () => ref.invalidate(libraryControllerProvider),
+          ),
+          data: (state) {
+            var documents = filterLibrary(state.documents, query: _query, category: _category);
+            if (state.offline) {
+              documents = documents
+                  .where((d) => downloads[d.id]?.status == DownloadStatus.available)
+                  .toList();
+            }
+            if (_onlyRecommended) {
+              documents = documents.where((d) => recommendedIds.contains(d.id)).toList();
+            }
+            return RefreshIndicator(
+              onRefresh: () => ref.read(libraryControllerProvider.notifier).reload(),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 96),
+                children: [
+                  if (state.offline)
+                    const MaterialBanner(
+                      key: Key('library-offline'),
+                      content: Text('Sin conexión: solo se muestran los documentos descargados.'),
+                      actions: [SizedBox.shrink()],
                     ),
-                    onChanged: (value) => setState(() => _query = value),
-                  ),
-                ),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    children: [
-                      if (campaignId != null)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: FilterChip(
-                            key: const Key('library-filter-recommended'),
-                            avatar: const Icon(Icons.star_outline, size: 18),
-                            label: const Text('Recomendados'),
-                            selected: _onlyRecommended,
-                            onSelected: (v) => setState(() => _onlyRecommended = v),
-                          ),
-                        ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: ChoiceChip(
-                          key: const Key('library-category-all'),
-                          label: const Text('Todas'),
-                          selected: _category == null,
-                          onSelected: (_) => setState(() => _category = null),
-                        ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: TextField(
+                      key: const Key('library-search'),
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.search),
+                        hintText: 'Buscar documentos',
+                        border: OutlineInputBorder(),
+                        isDense: true,
                       ),
-                      for (final c in LibraryCategory.values)
+                      onChanged: (value) => setState(() => _query = value),
+                    ),
+                  ),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        if (campaignId != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: FilterChip(
+                              key: const Key('library-filter-recommended'),
+                              avatar: const Icon(Icons.star_outline, size: 18),
+                              label: const Text('Recomendados'),
+                              selected: _onlyRecommended,
+                              onSelected: (v) => setState(() => _onlyRecommended = v),
+                            ),
+                          ),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4),
                           child: ChoiceChip(
-                            key: Key('library-category-${c.apiValue}'),
-                            label: Text(c.label),
-                            selected: _category == c,
-                            onSelected: (_) => setState(() => _category = c),
+                            key: const Key('library-category-all'),
+                            label: const Text('Todas'),
+                            selected: _category == null,
+                            onSelected: (_) => setState(() => _category = null),
                           ),
                         ),
-                    ],
-                  ),
-                ),
-                if (documents.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 72),
-                    child: Center(
-                      child: Text(
-                        state.documents.isEmpty
-                            ? 'La biblioteca aún no tiene documentos'
-                            : 'Ningún documento coincide con el filtro',
-                        key: const Key('library-empty'),
-                        textAlign: TextAlign.center,
-                      ),
+                        for (final c in LibraryCategory.values)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: ChoiceChip(
+                              key: Key('library-category-${c.apiValue}'),
+                              label: Text(c.label),
+                              selected: _category == c,
+                              onSelected: (_) => setState(() => _category = c),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                for (final document in documents)
-                  _DocumentTile(
-                    document: document,
-                    download: downloads[document.id] ?? DocumentDownload.idle,
-                    recommended: recommendedIds.contains(document.id),
-                    note: notes[document.id],
-                    showRecommend: isDm && !state.offline,
-                    canDelete: isAdmin && !document.isSystem && !state.offline,
-                    onOpen: () => context.push(AppRoutes.libraryDocument(document.id)),
-                    onDownload: () => _download(document),
-                    onCancel: () => ref.read(libraryDownloadsProvider.notifier).cancel(document.id),
-                    onRemoveDownload: () => _removeDownload(document),
-                    onToggleRecommended: (value) => _toggleRecommended(document, value),
-                    onDelete: () => _delete(document),
-                  ),
-              ],
-            ),
-          );
-        },
+                  if (documents.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 72),
+                      child: Center(
+                        child: Text(
+                          state.documents.isEmpty
+                              ? 'La biblioteca aún no tiene documentos'
+                              : 'Ningún documento coincide con el filtro',
+                          key: const Key('library-empty'),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  for (final document in documents)
+                    _DocumentTile(
+                      document: document,
+                      download: downloads[document.id] ?? DocumentDownload.idle,
+                      recommended: recommendedIds.contains(document.id),
+                      note: notes[document.id],
+                      showRecommend: isDm && !state.offline,
+                      canDelete: isAdmin && !document.isSystem && !state.offline,
+                      onOpen: () => context.push(AppRoutes.libraryDocument(document.id)),
+                      onDownload: () => _download(document),
+                      onCancel: () =>
+                          ref.read(libraryDownloadsProvider.notifier).cancel(document.id),
+                      onRemoveDownload: () => _removeDownload(document),
+                      onToggleRecommended: (value) => _toggleRecommended(document, value),
+                      onDelete: () => _delete(document),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

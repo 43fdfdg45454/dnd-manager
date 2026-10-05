@@ -7,6 +7,7 @@ import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/auth/user_dto.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../data/admin_users_controller.dart';
 import 'create_user_dialog.dart';
 
@@ -123,8 +124,8 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Usuarios')),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('admin-new-user'),
+      floatingActionButton: OfflineAwareFab(
+        fabKey: const Key('admin-new-user'),
         onPressed: _createUser,
         icon: const Icon(Icons.person_add_alt_1),
         label: const Text('Nuevo usuario'),

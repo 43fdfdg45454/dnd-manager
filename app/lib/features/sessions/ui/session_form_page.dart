@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/ui/markdown_view.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/ui/feedback.dart';
 import '../data/models.dart';
@@ -219,10 +220,12 @@ class _SessionFormState extends ConsumerState<_SessionForm> {
         appBar: AppBar(
           title: Text(editing ? 'Editar sesión' : 'Nueva sesión'),
           actions: [
-            TextButton(
-              key: const Key('session-save'),
-              onPressed: _saving ? null : _save,
-              child: const Text('Guardar'),
+            OfflineAware(
+              builder: (context, canWrite) => TextButton(
+                key: const Key('session-save'),
+                onPressed: _saving || !canWrite ? null : _save,
+                child: const Text('Guardar'),
+              ),
             ),
           ],
           bottom: const TabBar(

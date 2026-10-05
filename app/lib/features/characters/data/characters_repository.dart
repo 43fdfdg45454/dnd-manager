@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart' show Options;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/cache/cached_result.dart';
 import '../../../core/network/api_client.dart';
 import 'models.dart';
 
@@ -23,10 +24,14 @@ class CharactersRepository {
 
   // -- Characters -----------------------------------------------------------
 
-  Future<List<CharacterSummary>> listByCampaign(String campaignId) async {
-    final response = await _client.dio.get<List<dynamic>>('$_api/campaigns/$campaignId/characters');
-    return response.data!.map((e) => CharacterSummary.fromJson(e as Map<String, dynamic>)).toList();
-  }
+  /// Root of everything cached for the character [id] (sheet and inventory).
+  static String characterPath(String id) => '$_api/characters/$id';
+
+  Future<List<CharacterSummary>> listByCampaign(String campaignId) async =>
+      (await _client.getCached(
+        '$_api/campaigns/$campaignId/characters',
+        parse: parseList(CharacterSummary.fromJson),
+      )).data;
 
   /// [owner] is omitted from the body when null; `(userId: null)` sends an
   /// explicit `ownerUserId: null` (NPC without an owner).
@@ -43,8 +48,10 @@ class CharactersRepository {
     return CharacterDetail.fromJson(json);
   }
 
-  Future<CharacterDetail> get(String id) async =>
-      CharacterDetail.fromJson(await _json('GET', '$_api/characters/$id'));
+  Future<CharacterDetail> get(String id) async => (await _client.getCached(
+    '$_api/characters/$id',
+    parse: parseObject(CharacterDetail.fromJson),
+  )).data;
 
   /// 200 -> [Saved] with the updated sheet; 202 -> [PendingApproval] with the
   /// change request the DM must approve.
@@ -181,11 +188,12 @@ class CharactersRepository {
     String campaignId, {
     ChangeRequestStatus? status,
   }) async {
-    final response = await _client.dio.get<List<dynamic>>(
+    final result = await _client.getCached(
       '$_api/campaigns/$campaignId/change-requests',
-      queryParameters: {'status': ?status?.apiValue},
+      query: {'status': status?.apiValue},
+      parse: parseList(ChangeRequest.fromJson),
     );
-    return response.data!.map((e) => ChangeRequest.fromJson(e as Map<String, dynamic>)).toList();
+    return result.data;
   }
 
   Future<ChangeRequest> changeRequest(String id) async =>

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/cache/cached_result.dart';
 import '../../../core/network/api_client.dart';
 import 'models.dart';
 
@@ -11,30 +12,30 @@ class CatalogRepository {
 
   static const _base = '/api/v1/catalog';
 
-  Future<List<T>> _list<T>(String path, T Function(Map<String, dynamic>) parse) async {
-    final response = await _client.dio.get<List<dynamic>>('$_base/$path');
-    return response.data!.map((e) => parse(e as Map<String, dynamic>)).toList();
-  }
+  /// Root of every cached catalog answer (see `staleSinceProvider`).
+  static const rootPath = _base;
 
-  Future<T> _one<T>(String path, T Function(Map<String, dynamic>) parse) async {
-    final response = await _client.dio.get<Map<String, dynamic>>('$_base/$path');
-    return parse(response.data!);
-  }
+  Future<List<T>> _list<T>(String path, T Function(Map<String, dynamic>) parse) async =>
+      (await _client.getCached('$_base/$path', parse: parseList(parse))).data;
+
+  Future<T> _one<T>(String path, T Function(Map<String, dynamic>) parse) async =>
+      (await _client.getCached('$_base/$path', parse: parseObject(parse))).data;
 
   Future<Page<T>> _page<T>(
     String path,
     Map<String, Object?> query,
     T Function(Map<String, dynamic>) parse,
   ) async {
-    final response = await _client.dio.get<Map<String, dynamic>>(
+    final result = await _client.getCached(
       '$_base/$path',
       // Unset and blank filters are not sent.
-      queryParameters: {
+      query: {
         for (final e in query.entries)
           if (e.value != null && e.value != '') e.key: e.value,
       },
+      parse: (json) => Page.fromJson(json as Map<String, dynamic>, parse),
     );
-    return Page.fromJson(response.data!, parse);
+    return result.data;
   }
 
   Future<Attribution> attribution() => _one('attribution', Attribution.fromJson);

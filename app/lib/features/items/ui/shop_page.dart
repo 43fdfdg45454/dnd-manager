@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
+import '../../../core/cache/stale_data.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
 import '../../catalog/domain/catalog_format.dart';
@@ -12,6 +14,7 @@ import '../../characters/data/characters_controller.dart';
 import '../../characters/data/models.dart' show CharacterSummary;
 import '../data/items_controllers.dart';
 import '../data/models.dart';
+import '../data/shops_repository.dart';
 import '../domain/items_format.dart';
 import 'effective_item_page.dart';
 import 'item_composer.dart';
@@ -197,31 +200,34 @@ class _ShopPageState extends ConsumerState<ShopPage> {
         ],
       ),
       floatingActionButton: isDm && shop.hasValue
-          ? FloatingActionButton.extended(
-              key: const Key('shop-add-item'),
+          ? OfflineAwareFab(
+              fabKey: const Key('shop-add-item'),
               onPressed: _addItem,
               icon: const Icon(Icons.add),
               label: const Text('Añadir objeto'),
             )
           : null,
-      body: shop.when(
-        skipLoadingOnReload: true,
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => ItemsErrorView(
-          error: error,
-          byStatus: const {404: _shopMissing},
-          onRetry: () => ref.invalidate(shopControllerProvider(widget.shopId)),
-        ),
-        data: (data) => _ShopBody(
-          shop: data,
-          isDm: isDm,
-          mine: mine,
-          characterId: _characterId,
-          onBuy: (item) => _buy(data, item, mine),
-          onSetOpen: _setOpen,
-          onEditItem: _editItem,
-          onRemoveItem: _removeItem,
-          onOpenDetail: _openDetail,
+      body: OfflineBannerLayout(
+        scopes: [staleTree(ShopsRepository.shopPath(widget.shopId))],
+        child: shop.when(
+          skipLoadingOnReload: true,
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => ItemsErrorView(
+            error: error,
+            byStatus: const {404: _shopMissing},
+            onRetry: () => ref.invalidate(shopControllerProvider(widget.shopId)),
+          ),
+          data: (data) => _ShopBody(
+            shop: data,
+            isDm: isDm,
+            mine: mine,
+            characterId: _characterId,
+            onBuy: (item) => _buy(data, item, mine),
+            onSetOpen: _setOpen,
+            onEditItem: _editItem,
+            onRemoveItem: _removeItem,
+            onOpenDetail: _openDetail,
+          ),
         ),
       ),
     );

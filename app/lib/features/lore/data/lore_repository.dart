@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/cache/cached_result.dart';
 import '../../../core/network/api_client.dart';
 import 'models.dart';
 
@@ -12,10 +13,13 @@ class LoreRepository {
   static const _api = '/api/v1';
 
   /// The flat tree of the campaign (players only receive the `Players` entries).
-  Future<List<LoreSummary>> list(String campaignId) async {
-    final response = await _client.dio.get<List<dynamic>>('$_api/campaigns/$campaignId/lore');
-    return response.data!.map((e) => LoreSummary.fromJson(e as Map<String, dynamic>)).toList();
-  }
+  Future<List<LoreSummary>> list(String campaignId) async => (await _client.getCached(
+    '$_api/campaigns/$campaignId/lore',
+    parse: parseList(LoreSummary.fromJson),
+  )).data;
+
+  /// Root of everything cached for the lore entry [id].
+  static String entryPath(String id) => '$_api/lore/$id';
 
   Future<LoreEntry> create(String campaignId, LoreDraft draft) async {
     final response = await _client.dio.post<Map<String, dynamic>>(
@@ -25,10 +29,8 @@ class LoreRepository {
     return LoreEntry.fromJson(response.data!);
   }
 
-  Future<LoreEntry> get(String id) async {
-    final response = await _client.dio.get<Map<String, dynamic>>('$_api/lore/$id');
-    return LoreEntry.fromJson(response.data!);
-  }
+  Future<LoreEntry> get(String id) async =>
+      (await _client.getCached('$_api/lore/$id', parse: parseObject(LoreEntry.fromJson))).data;
 
   Future<LoreEntry> update(String id, LoreDraft draft) async {
     final response = await _client.dio.patch<Map<String, dynamic>>(

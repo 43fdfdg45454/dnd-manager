@@ -37,6 +37,16 @@ class FileDiskCache {
     }
   }
 
+  /// Deletes every cached file. Best effort: errors are ignored.
+  Future<void> clear() async {
+    try {
+      final directory = await _directory();
+      if (await directory.exists()) await directory.delete(recursive: true);
+    } catch (_) {
+      // Nothing to clear, or no file system (tests).
+    }
+  }
+
   Future<void> write(String url, Uint8List bytes) async {
     try {
       final file = await _file(url);

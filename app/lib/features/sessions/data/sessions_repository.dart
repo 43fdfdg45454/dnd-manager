@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/cache/cached_result.dart';
 import '../../../core/network/api_client.dart';
 import '../../catalog/data/models.dart' show Page;
 import 'models.dart';
@@ -13,9 +14,11 @@ class SessionsRepository {
 
   static const _api = '/api/v1';
 
-  List<T> _list<T>(List<dynamic> data, T Function(Map<String, dynamic>) parse) => [
-    for (final e in data) parse(e as Map<String, dynamic>),
-  ];
+  /// Root of everything cached for the session [id].
+  static String sessionPath(String id) => '$_api/sessions/$id';
+
+  /// Cache key of the upcoming sessions of the signed-in user.
+  static const mySessionsPath = '$_api/me/sessions';
 
   /// Sessions of the campaign ordered by date. With [includePast] the ones that
   /// already took place are included; [to] is exclusive.
@@ -25,15 +28,16 @@ class SessionsRepository {
     DateTime? to,
     bool includePast = true,
   }) async {
-    final response = await _client.dio.get<List<dynamic>>(
+    final result = await _client.getCached(
       '$_api/campaigns/$campaignId/sessions',
-      queryParameters: {
+      query: {
         if (from != null) 'from': from.toUtc().toIso8601String(),
         if (to != null) 'to': to.toUtc().toIso8601String(),
         'includePast': includePast,
       },
+      parse: parseList(Session.fromJson),
     );
-    return _list(response.data!, Session.fromJson);
+    return result.data;
   }
 
   Future<Session> create(String campaignId, SessionDraft draft) async {
@@ -44,10 +48,8 @@ class SessionsRepository {
     return Session.fromJson(response.data!);
   }
 
-  Future<Session> get(String id) async {
-    final response = await _client.dio.get<Map<String, dynamic>>('$_api/sessions/$id');
-    return Session.fromJson(response.data!);
-  }
+  Future<Session> get(String id) async =>
+      (await _client.getCached('$_api/sessions/$id', parse: parseObject(Session.fromJson))).data;
 
   Future<Session> patch(String id, SessionPatch patch) async {
     final response = await _client.dio.patch<Map<String, dynamic>>(
@@ -91,24 +93,30 @@ class SessionsRepository {
   }
 
   /// One page of the journal: sessions with a summary, oldest first.
-  Future<Page<SessionSummary>> journal(String campaignId, {int page = 1, int pageSize = 100}) async {
-    final response = await _client.dio.get<Map<String, dynamic>>(
+  Future<Page<SessionSummary>> journal(
+    String campaignId, {
+    int page = 1,
+    int pageSize = 100,
+  }) async {
+    final result = await _client.getCached(
       '$_api/campaigns/$campaignId/journal',
-      queryParameters: {'page': page, 'pageSize': pageSize},
+      query: {'page': page, 'pageSize': pageSize},
+      parse: (json) => Page.fromJson(json as Map<String, dynamic>, SessionSummary.fromJson),
     );
-    return Page.fromJson(response.data!, SessionSummary.fromJson);
+    return result.data;
   }
 
   /// Upcoming scheduled sessions of every campaign of the signed-in user.
   Future<List<Session>> mySessions({DateTime? from, DateTime? to}) async {
-    final response = await _client.dio.get<List<dynamic>>(
-      '$_api/me/sessions',
-      queryParameters: {
+    final result = await _client.getCached(
+      mySessionsPath,
+      query: {
         if (from != null) 'from': from.toUtc().toIso8601String(),
         if (to != null) 'to': to.toUtc().toIso8601String(),
       },
+      parse: parseList(Session.fromJson),
     );
-    return _list(response.data!, Session.fromJson);
+    return result.data;
   }
 }
 

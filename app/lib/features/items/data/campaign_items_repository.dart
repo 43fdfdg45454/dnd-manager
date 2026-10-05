@@ -35,18 +35,19 @@ class CampaignItemsRepository {
     int pageSize = 30,
   }) async {
     final text = search?.trim();
-    final response = await _client.dio.get<Map<String, dynamic>>(
+    final result = await _client.getCached(
       '$_api/$campaignId/items',
-      queryParameters: {
+      query: {
         if (text != null && text.isNotEmpty) 'search': text,
-        'category': ?category,
-        'rarity': ?rarity,
+        'category': category,
+        'rarity': rarity,
         'source': source.apiValue,
         'page': page,
         'pageSize': pageSize,
       },
+      parse: (json) => Page.fromJson(json as Map<String, dynamic>, ItemSummary.fromJson),
     );
-    return Page.fromJson(response.data!, ItemSummary.fromJson);
+    return result.data;
   }
 
   Future<ItemDetail> create(String campaignId, ItemTemplateInput input) async {

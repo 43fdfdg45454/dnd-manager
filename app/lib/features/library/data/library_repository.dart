@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/cache/cached_result.dart';
 import '../../../core/network/api_client.dart';
 import 'models.dart';
 
@@ -11,10 +12,11 @@ class LibraryRepository {
 
   static const _api = '/api/v1';
 
-  Future<List<LibraryDocument>> list() async {
-    final response = await _client.dio.get<List<dynamic>>('$_api/library');
-    return response.data!.map((e) => LibraryDocument.fromJson(e as Map<String, dynamic>)).toList();
-  }
+  /// Root of the cached library list.
+  static const libraryPath = '$_api/library';
+
+  Future<List<LibraryDocument>> list() async =>
+      (await _client.getCached(libraryPath, parse: parseList(LibraryDocument.fromJson))).data;
 
   /// Admin only: publishes an uploaded `LibraryDocument` PDF.
   Future<LibraryDocument> create({
@@ -41,10 +43,14 @@ class LibraryRepository {
   }
 
   /// Documents the DMs recommend in a campaign.
-  Future<List<LibraryDocument>> campaignDocuments(String campaignId) async {
-    final response = await _client.dio.get<List<dynamic>>('$_api/campaigns/$campaignId/library');
-    return response.data!.map((e) => LibraryDocument.fromJson(e as Map<String, dynamic>)).toList();
-  }
+  /// Cache key of the documents recommended in the campaign [campaignId].
+  static String campaignDocumentsPath(String campaignId) => '$_api/campaigns/$campaignId/library';
+
+  Future<List<LibraryDocument>> campaignDocuments(String campaignId) async =>
+      (await _client.getCached(
+        campaignDocumentsPath(campaignId),
+        parse: parseList(LibraryDocument.fromJson),
+      )).data;
 
   Future<void> recommend(String campaignId, String documentId, {String? note}) async {
     await _client.dio.put<void>(

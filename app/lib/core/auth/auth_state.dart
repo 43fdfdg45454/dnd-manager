@@ -14,7 +14,11 @@ class AuthSignedOut extends AuthState {
 }
 
 class AuthSignedIn extends AuthState {
-  const AuthSignedIn(this.user);
+  const AuthSignedIn(this.user, {this.isOffline = false});
 
   final UserDto user;
+
+  /// The session was restored without reaching the server: [user] is the one
+  /// saved on this device. It is checked again once the server answers.
+  final bool isOffline;
 }

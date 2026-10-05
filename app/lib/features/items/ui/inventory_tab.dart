@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/ui/offline_widgets.dart';
 import '../../catalog/domain/catalog_format.dart';
 import '../../characters/data/models.dart' show CharacterDetail;
 import '../data/items_controllers.dart';
@@ -91,11 +92,13 @@ class _InventoryView extends ConsumerWidget {
                         style: theme.textTheme.titleMedium,
                       ),
                     ),
-                    IconButton(
-                      key: const Key('inventory-money-edit'),
-                      tooltip: 'Editar dinero',
-                      onPressed: () => _editMoney(context, ref),
-                      icon: const Icon(Icons.edit_outlined),
+                    OfflineAware(
+                      builder: (context, canWrite) => IconButton(
+                        key: const Key('inventory-money-edit'),
+                        tooltip: 'Editar dinero',
+                        onPressed: !canWrite ? null : () => _editMoney(context, ref),
+                        icon: const Icon(Icons.edit_outlined),
+                      ),
                     ),
                   ],
                 ),
@@ -119,11 +122,13 @@ class _InventoryView extends ConsumerWidget {
         const SizedBox(height: 8),
         Align(
           alignment: Alignment.centerLeft,
-          child: FilledButton.tonalIcon(
-            key: const Key('inventory-add'),
-            onPressed: () => _add(context),
-            icon: const Icon(Icons.add),
-            label: const Text('Añadir objeto'),
+          child: OfflineAware(
+            builder: (context, canWrite) => FilledButton.tonalIcon(
+              key: const Key('inventory-add'),
+              onPressed: !canWrite ? null : () => _add(context),
+              icon: const Icon(Icons.add),
+              label: const Text('Añadir objeto'),
+            ),
           ),
         ),
         if (inventory.items.isEmpty) ...[

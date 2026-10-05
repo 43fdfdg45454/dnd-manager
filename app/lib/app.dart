@@ -5,12 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/config/app_config.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/update/update_ui.dart';
 
 class DndCompanionApp extends ConsumerWidget {
   const DndCompanionApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: AppConfig.appName,
       theme: AppTheme.light(),
@@ -23,7 +25,11 @@ class DndCompanionApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      routerConfig: ref.watch(routerProvider),
+      routerConfig: router,
+      builder: (context, child) => UpdateGate(
+        navigatorKey: router.routerDelegate.navigatorKey,
+        child: child ?? const SizedBox.shrink(),
+      ),
     );
   }
 }

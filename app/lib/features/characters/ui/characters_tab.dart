@@ -6,6 +6,7 @@ import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/domain/campaign_models.dart';
 import '../../campaigns/ui/feedback.dart';
 import '../data/characters_controller.dart';
@@ -48,8 +49,8 @@ class CharactersTab extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('characters-new'),
+      floatingActionButton: OfflineAwareFab(
+        fabKey: const Key('characters-new'),
         onPressed: () => _create(context, ref, myUserId),
         icon: const Icon(Icons.person_add_alt_1),
         label: const Text('Nuevo personaje'),

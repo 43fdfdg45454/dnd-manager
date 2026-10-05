@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/cache/stale_data.dart';
 import '../../../core/files/authenticated_image.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/ui/content_widgets.dart';
 import '../../../core/ui/markdown_view.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
 import '../../campaigns/ui/feedback.dart';
@@ -16,6 +18,7 @@ import '../../lore/data/lore_controllers.dart';
 import '../../lore/data/models.dart';
 import '../../lore/ui/lore_entry_page.dart' show findLoreBySlug;
 import '../data/maps_controllers.dart';
+import '../data/maps_repository.dart';
 import '../data/models.dart';
 import 'pin_form_dialog.dart';
 
@@ -178,11 +181,13 @@ class _MapViewerPageState extends ConsumerState<MapViewerPage> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      FilledButton.tonalIcon(
-                        key: const Key('pin-edit'),
-                        onPressed: () => closeThen(() => _editPin(pin)),
-                        icon: const Icon(Icons.edit_outlined),
-                        label: const Text('Editar'),
+                      OfflineAware(
+                        builder: (context, canWrite) => FilledButton.tonalIcon(
+                          key: const Key('pin-edit'),
+                          onPressed: !canWrite ? null : () => closeThen(() => _editPin(pin)),
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('Editar'),
+                        ),
                       ),
                       const SizedBox(width: 8),
                       OutlinedButton.icon(
@@ -214,74 +219,78 @@ class _MapViewerPageState extends ConsumerState<MapViewerPage> {
 
     return Scaffold(
       appBar: AppBar(title: Text(map.value?.name ?? 'Mapa')),
-      body: map.when(
-        skipLoadingOnReload: true,
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => ContentErrorView(
-          error: error,
-          onRetry: () => ref.invalidate(mapDetailControllerProvider(widget.mapId)),
-        ),
-        data: (map) => LayoutBuilder(
-          builder: (context, constraints) {
-            final viewport = constraints.biggest;
-            final image = _fit(viewport, map.aspectRatio);
-            return Stack(
-              children: [
-                InteractiveViewer(
-                  transformationController: _transform,
-                  minScale: 1,
-                  maxScale: 8,
-                  panEnabled: _draggingId == null,
-                  scaleEnabled: _draggingId == null,
-                  child: SizedBox(
-                    width: viewport.width,
-                    height: viewport.height,
-                    child: Center(
-                      child: _MapCanvas(
-                        map: map,
-                        size: image,
-                        isDm: isDm,
-                        transform: _transform,
-                        draggingId: _draggingId,
-                        dragPosition: _dragPosition,
-                        onLongPress: (x, y) => _addPin(x, y),
-                        onTapPin: (pin) => _showPin(pin, isDm: isDm),
-                        onDragStart: (pin) => setState(() {
-                          _draggingId = pin.id;
-                          _dragPosition = Offset(pin.x, pin.y);
-                        }),
-                        onDragUpdate: (delta) => setState(() {
-                          _dragPosition = Offset(
-                            (_dragPosition.dx + delta.dx / image.width).clamp(0.0, 1.0),
-                            (_dragPosition.dy + delta.dy / image.height).clamp(0.0, 1.0),
-                          );
-                        }),
-                        onDragEnd: _endDrag,
+      body: OfflineBannerLayout(
+        scopes: [staleTree(MapsRepository.mapPath(widget.mapId))],
+        child: map.when(
+          skipLoadingOnReload: true,
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => ContentErrorView(
+            error: error,
+            onRetry: () => ref.invalidate(mapDetailControllerProvider(widget.mapId)),
+          ),
+          data: (map) => LayoutBuilder(
+            builder: (context, constraints) {
+              final viewport = constraints.biggest;
+              final image = _fit(viewport, map.aspectRatio);
+              return Stack(
+                children: [
+                  InteractiveViewer(
+                    transformationController: _transform,
+                    minScale: 1,
+                    maxScale: 8,
+                    panEnabled: _draggingId == null,
+                    scaleEnabled: _draggingId == null,
+                    child: SizedBox(
+                      width: viewport.width,
+                      height: viewport.height,
+                      child: Center(
+                        child: _MapCanvas(
+                          map: map,
+                          size: image,
+                          isDm: isDm,
+                          transform: _transform,
+                          draggingId: _draggingId,
+                          dragPosition: _dragPosition,
+                          onLongPress: (x, y) => _addPin(x, y),
+                          onTapPin: (pin) => _showPin(pin, isDm: isDm),
+                          onDragStart: (pin) => setState(() {
+                            _draggingId = pin.id;
+                            _dragPosition = Offset(pin.x, pin.y);
+                          }),
+                          onDragUpdate: (delta) => setState(() {
+                            _dragPosition = Offset(
+                              (_dragPosition.dx + delta.dx / image.width).clamp(0.0, 1.0),
+                              (_dragPosition.dy + delta.dy / image.height).clamp(0.0, 1.0),
+                            );
+                          }),
+                          onDragEnd: _endDrag,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                if (isDm)
-                  Positioned(
-                    right: 16,
-                    bottom: 16,
-                    child: FloatingActionButton.extended(
-                      key: const Key('map-add-pin'),
-                      onPressed: () {
-                        final center = _transform.toScene(
-                          Offset(viewport.width / 2, viewport.height / 2),
-                        );
-                        final x = (center.dx - (viewport.width - image.width) / 2) / image.width;
-                        final y = (center.dy - (viewport.height - image.height) / 2) / image.height;
-                        _addPin(x.clamp(0.0, 1.0), y.clamp(0.0, 1.0));
-                      },
-                      icon: const Icon(Icons.add_location_alt_outlined),
-                      label: const Text('Añadir pin'),
+                  if (isDm)
+                    Positioned(
+                      right: 16,
+                      bottom: 16,
+                      child: OfflineAwareFab(
+                        fabKey: const Key('map-add-pin'),
+                        onPressed: () {
+                          final center = _transform.toScene(
+                            Offset(viewport.width / 2, viewport.height / 2),
+                          );
+                          final x = (center.dx - (viewport.width - image.width) / 2) / image.width;
+                          final y =
+                              (center.dy - (viewport.height - image.height) / 2) / image.height;
+                          _addPin(x.clamp(0.0, 1.0), y.clamp(0.0, 1.0));
+                        },
+                        icon: const Icon(Icons.add_location_alt_outlined),
+                        label: const Text('Añadir pin'),
+                      ),
                     ),
-                  ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
     );

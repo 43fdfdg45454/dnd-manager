@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/content/content_visibility.dart';
+import '../../../core/cache/cached_result.dart';
 import '../../../core/network/api_client.dart';
 import 'models.dart';
 
@@ -12,10 +13,13 @@ class MapsRepository {
 
   static const _api = '/api/v1';
 
-  Future<List<MapSummary>> list(String campaignId) async {
-    final response = await _client.dio.get<List<dynamic>>('$_api/campaigns/$campaignId/maps');
-    return response.data!.map((e) => MapSummary.fromJson(e as Map<String, dynamic>)).toList();
-  }
+  Future<List<MapSummary>> list(String campaignId) async => (await _client.getCached(
+    '$_api/campaigns/$campaignId/maps',
+    parse: parseList(MapSummary.fromJson),
+  )).data;
+
+  /// Root of everything cached for the map [id].
+  static String mapPath(String id) => '$_api/maps/$id';
 
   /// Creates a map from an image uploaded as `MapImage`.
   Future<MapDetail> create(
@@ -31,10 +35,8 @@ class MapsRepository {
     return MapDetail.fromJson(response.data!);
   }
 
-  Future<MapDetail> get(String id) async {
-    final response = await _client.dio.get<Map<String, dynamic>>('$_api/maps/$id');
-    return MapDetail.fromJson(response.data!);
-  }
+  Future<MapDetail> get(String id) async =>
+      (await _client.getCached('$_api/maps/$id', parse: parseObject(MapDetail.fromJson))).data;
 
   /// Only the non-null fields are sent.
   Future<MapDetail> update(String id, {String? name, ContentVisibility? visibility}) async {

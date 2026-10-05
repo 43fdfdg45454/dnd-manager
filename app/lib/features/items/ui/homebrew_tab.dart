@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/domain/campaign_models.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
 import '../../catalog/data/catalog_controllers.dart';
@@ -50,8 +51,8 @@ class HomebrewTab extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       floatingActionButton: isDm
-          ? FloatingActionButton.extended(
-              key: const Key('homebrew-new'),
+          ? OfflineAwareFab(
+              fabKey: const Key('homebrew-new'),
               onPressed: () => _openForm(context),
               icon: const Icon(Icons.add),
               label: const Text('Nuevo objeto'),

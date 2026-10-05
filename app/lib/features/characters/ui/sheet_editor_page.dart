@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_error.dart';
+import '../../../core/ui/offline_widgets.dart';
 import '../../catalog/data/catalog_controllers.dart';
 import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models.dart' show ClassSummary, titleFromIndex;
@@ -440,10 +441,12 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
       appBar: AppBar(
         title: const Text('Editar hoja'),
         actions: [
-          TextButton(
-            key: const Key('editor-save'),
-            onPressed: _saving ? null : _save,
-            child: const Text('Guardar'),
+          OfflineAware(
+            builder: (context, canWrite) => TextButton(
+              key: const Key('editor-save'),
+              onPressed: _saving || !canWrite ? null : _save,
+              child: const Text('Guardar'),
+            ),
           ),
         ],
       ),
@@ -532,10 +535,12 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
-                child: FilledButton(
-                  key: const Key('editor-save-bottom'),
-                  onPressed: _saving ? null : _save,
-                  child: const Text('Guardar'),
+                child: OfflineAware(
+                  builder: (context, canWrite) => FilledButton(
+                    key: const Key('editor-save-bottom'),
+                    onPressed: _saving || !canWrite ? null : _save,
+                    child: const Text('Guardar'),
+                  ),
                 ),
               ),
             ],
