@@ -5,6 +5,10 @@ using Dnd.Application.Campaigns;
 using Dnd.Application.Catalog;
 using Dnd.Application.ChangeRequests;
 using Dnd.Application.Characters;
+using Dnd.Application.Files;
+using Dnd.Application.Library;
+using Dnd.Application.Lore;
+using Dnd.Application.Maps;
 using Dnd.Application.Items;
 using Dnd.Application.Users;
 using Dnd.Domain.Characters;
@@ -116,6 +120,40 @@ public static class DependencyInjection
         services.AddScoped<BuyHandler>();
         services.AddScoped<SellHandler>();
         services.AddScoped<ListTransactionsHandler>();
+
+        services.AddScoped<FileCleanup>();
+        services.AddScoped<CampaignFileGuard>();
+        services.AddScoped<UploadFileHandler>();
+        services.AddScoped<GetFileHandler>();
+        services.AddScoped<SetPortraitHandler>();
+
+        services.AddScoped<LoreLoader>();
+        services.AddScoped<ListLoreHandler>();
+        services.AddScoped<CreateLoreHandler>();
+        services.AddScoped<GetLoreHandler>();
+        services.AddScoped<UpdateLoreHandler>();
+        services.AddScoped<DeleteLoreHandler>();
+        services.AddScoped<AddLoreAttachmentHandler>();
+        services.AddScoped<DeleteLoreAttachmentHandler>();
+
+        services.AddScoped<MapLoader>();
+        services.AddScoped<ListMapsHandler>();
+        services.AddScoped<CreateMapHandler>();
+        services.AddScoped<GetMapHandler>();
+        services.AddScoped<UpdateMapHandler>();
+        services.AddScoped<DeleteMapHandler>();
+        services.AddScoped<CreatePinHandler>();
+        services.AddScoped<UpdatePinHandler>();
+        services.AddScoped<DeletePinHandler>();
+
+        services.AddScoped<LibraryDocumentMapper>();
+        services.AddScoped<ListLibraryHandler>();
+        services.AddScoped<CreateLibraryDocumentHandler>();
+        services.AddScoped<UpdateLibraryDocumentHandler>();
+        services.AddScoped<DeleteLibraryDocumentHandler>();
+        services.AddScoped<ListCampaignLibraryHandler>();
+        services.AddScoped<RecommendDocumentHandler>();
+        services.AddScoped<RemoveRecommendationHandler>();
 
         return services;
     }

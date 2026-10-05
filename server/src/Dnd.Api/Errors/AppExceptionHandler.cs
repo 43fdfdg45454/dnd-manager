@@ -44,6 +44,7 @@ internal sealed class AppExceptionHandler(IProblemDetailsService problemDetailsS
             AppErrorKind.Forbidden => (StatusCodes.Status403Forbidden, "Acceso denegado."),
             AppErrorKind.NotFound => (StatusCodes.Status404NotFound, "No encontrado."),
             AppErrorKind.Conflict => (StatusCodes.Status409Conflict, "Conflicto."),
+            AppErrorKind.PayloadTooLarge => (StatusCodes.Status413PayloadTooLarge, "El fichero es demasiado grande."),
             _ => (StatusCodes.Status500InternalServerError, "Error inesperado."),
         };
 

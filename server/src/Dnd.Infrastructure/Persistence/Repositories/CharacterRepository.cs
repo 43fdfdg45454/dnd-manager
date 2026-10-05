@@ -22,6 +22,13 @@ internal sealed class CharacterRepository(AppDbContext db) : ICharacterRepositor
             .OrderBy(x => x.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
+    public Task<CharacterOwnership?> GetOwnershipAsync(Guid id, CancellationToken cancellationToken = default) =>
+        db.Characters
+            .AsNoTracking()
+            .Where(x => x.Id == id)
+            .Select(x => new CharacterOwnership(x.CampaignId, x.OwnerUserId))
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task<IReadOnlyList<Character>> ListByCampaignAsync(Guid campaignId, CancellationToken cancellationToken = default) =>
         await db.Characters
             .AsNoTracking()

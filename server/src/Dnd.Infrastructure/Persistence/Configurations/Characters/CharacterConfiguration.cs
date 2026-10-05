@@ -1,5 +1,6 @@
 using Dnd.Domain.Campaigns;
 using Dnd.Domain.Characters;
+using Dnd.Domain.Files;
 using Dnd.Domain.Items;
 using Dnd.Domain.Users;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,10 @@ internal sealed class CharacterConfiguration : IEntityTypeConfiguration<Characte
         // Users are never deleted (they are deactivated); null owner = non-player character.
         builder.HasOne<User>().WithMany().HasForeignKey(x => x.OwnerUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(x => x.OwnerUserId);
+
+        // The portrait is an uploaded file; the application deletes it only once nothing refers to it.
+        builder.HasOne<StoredFile>().WithMany().HasForeignKey(x => x.PortraitFileId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+        builder.HasIndex(x => x.PortraitFileId);
 
         ConfigureChildren<CharacterClassLevel>(builder, nameof(Character.Classes), "_classes");
         ConfigureChildren<CharacterProficiency>(builder, nameof(Character.Proficiencies), "_proficiencies");

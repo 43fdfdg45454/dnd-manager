@@ -3,8 +3,14 @@ using Dnd.Domain.Items;
 
 namespace Dnd.Application.Abstractions.Persistence;
 
+/// <summary>Campaign and owner of a character (null owner = non-player character).</summary>
+public sealed record CharacterOwnership(Guid CampaignId, Guid? OwnerUserId);
+
 public interface ICharacterRepository
 {
+    /// <summary>Campaign and owner of a character without loading it, or null when it does not exist.</summary>
+    Task<CharacterOwnership?> GetOwnershipAsync(Guid id, CancellationToken cancellationToken = default);
+
     /// <summary>Tracked character with every child collection (inventory included) loaded, ready to be modified.</summary>
     Task<Character?> GetWithDetailsAsync(Guid id, CancellationToken cancellationToken = default);
 

@@ -911,6 +911,8 @@ namespace Dnd.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OwnerUserId");
 
+                    b.HasIndex("PortraitFileId");
+
                     b.ToTable("Characters", (string)null);
                 });
 
@@ -1099,6 +1101,66 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                     b.ToTable("CharacterSpellSlots", (string)null);
                 });
 
+            modelBuilder.Entity("Dnd.Domain.Files.StoredFile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int?>("HeightPx")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid?>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<int?>("WidthPx")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CampaignId");
+
+                    b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("StoragePath")
+                        .IsUnique();
+
+                    b.ToTable("StoredFiles", (string)null);
+                });
+
             modelBuilder.Entity("Dnd.Domain.Items.CharacterItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1266,6 +1328,265 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                     b.HasIndex("ShopId");
 
                     b.ToTable("Transactions", (string)null);
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Library.CampaignDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentId");
+
+                    b.HasIndex("CampaignId", "DocumentId")
+                        .IsUnique();
+
+                    b.ToTable("CampaignDocuments", (string)null);
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Library.LibraryDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("PageCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("UploadedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileId");
+
+                    b.HasIndex("UploadedByUserId");
+
+                    b.ToTable("LibraryDocuments", (string)null);
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Lore.LoreAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Caption")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LoreEntryId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileId");
+
+                    b.HasIndex("LoreEntryId");
+
+                    b.ToTable("LoreAttachments", (string)null);
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Lore.LoreEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("ContentMarkdown")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("CoverFileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Visibility")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CoverFileId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("CampaignId", "Slug")
+                        .IsUnique();
+
+                    b.ToTable("LoreEntries", (string)null);
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Maps.Map", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("HeightPx")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Visibility")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<int>("WidthPx")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CampaignId");
+
+                    b.HasIndex("FileId");
+
+                    b.ToTable("Maps", (string)null);
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Maps.MapPin", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(9)
+                        .HasColumnType("character varying(9)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid?>("LoreEntryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MapId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Visibility")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<double>("X")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("Y")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LoreEntryId");
+
+                    b.HasIndex("MapId");
+
+                    b.ToTable("MapPins", (string)null);
                 });
 
             modelBuilder.Entity("Dnd.Domain.Users.PasswordToken", b =>
@@ -1523,6 +1844,11 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("OwnerUserId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Dnd.Domain.Files.StoredFile", null)
+                        .WithMany()
+                        .HasForeignKey("PortraitFileId")
+                        .OnDelete(DeleteBehavior.NoAction);
                 });
 
             modelBuilder.Entity("Dnd.Domain.Characters.CharacterClassLevel", b =>
@@ -1577,6 +1903,19 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                         .HasForeignKey("CharacterId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Files.StoredFile", b =>
+                {
+                    b.HasOne("Dnd.Domain.Campaigns.Campaign", null)
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Dnd.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Dnd.Domain.Items.CharacterItem", b =>
@@ -1849,6 +2188,104 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Dnd.Domain.Library.CampaignDocument", b =>
+                {
+                    b.HasOne("Dnd.Domain.Campaigns.Campaign", null)
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Library.LibraryDocument", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Library.LibraryDocument", b =>
+                {
+                    b.HasOne("Dnd.Domain.Files.StoredFile", null)
+                        .WithMany()
+                        .HasForeignKey("FileId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UploadedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Lore.LoreAttachment", b =>
+                {
+                    b.HasOne("Dnd.Domain.Files.StoredFile", null)
+                        .WithMany()
+                        .HasForeignKey("FileId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Lore.LoreEntry", null)
+                        .WithMany("Attachments")
+                        .HasForeignKey("LoreEntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Lore.LoreEntry", b =>
+                {
+                    b.HasOne("Dnd.Domain.Campaigns.Campaign", null)
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Files.StoredFile", null)
+                        .WithMany()
+                        .HasForeignKey("CoverFileId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("Dnd.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Lore.LoreEntry", null)
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Maps.Map", b =>
+                {
+                    b.HasOne("Dnd.Domain.Campaigns.Campaign", null)
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Files.StoredFile", null)
+                        .WithMany()
+                        .HasForeignKey("FileId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Maps.MapPin", b =>
+                {
+                    b.HasOne("Dnd.Domain.Lore.LoreEntry", null)
+                        .WithMany()
+                        .HasForeignKey("LoreEntryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Dnd.Domain.Maps.Map", null)
+                        .WithMany("Pins")
+                        .HasForeignKey("MapId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Dnd.Domain.Users.PasswordToken", b =>
                 {
                     b.HasOne("Dnd.Domain.Users.User", null)
@@ -1892,6 +2329,16 @@ namespace Dnd.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Dnd.Domain.Items.Shop", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Lore.LoreEntry", b =>
+                {
+                    b.Navigation("Attachments");
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Maps.Map", b =>
+                {
+                    b.Navigation("Pins");
                 });
 #pragma warning restore 612, 618
         }

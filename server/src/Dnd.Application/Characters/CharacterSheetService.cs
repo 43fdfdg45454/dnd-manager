@@ -2,6 +2,7 @@ using Dnd.Application.Abstractions;
 using Dnd.Application.Abstractions.Persistence;
 using Dnd.Application.ChangeRequests;
 using Dnd.Application.Common;
+using Dnd.Application.Files;
 using Dnd.Application.Items;
 using Dnd.Domain.Characters;
 
@@ -183,7 +184,7 @@ public sealed class CharacterSheetService(
             Notes = character.Notes,
             Backstory = character.Backstory,
             PortraitFileId = character.PortraitFileId,
-            PortraitUrl = null,
+            PortraitUrl = FileUrls.For(character.PortraitFileId),
             CreatedAt = character.CreatedAt,
             UpdatedAt = character.UpdatedAt,
             Classes = character.OrderedClasses
@@ -266,7 +267,7 @@ public sealed class CharacterSheetService(
                     c.TotalLevel,
                     showHp ? c.HitPointsCurrent : null,
                     hitPointsMax,
-                    null);
+                    FileUrls.For(c.PortraitFileId));
             })
             .ToList();
     }

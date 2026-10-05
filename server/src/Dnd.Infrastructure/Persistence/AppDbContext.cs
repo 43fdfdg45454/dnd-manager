@@ -2,7 +2,11 @@ using Dnd.Application.Abstractions.Persistence;
 using Dnd.Domain.Campaigns;
 using Dnd.Domain.Catalog;
 using Dnd.Domain.Characters;
+using Dnd.Domain.Files;
 using Dnd.Domain.Items;
+using Dnd.Domain.Library;
+using Dnd.Domain.Lore;
+using Dnd.Domain.Maps;
 using Dnd.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 
@@ -73,6 +77,20 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ShopItem> ShopItems => Set<ShopItem>();
 
     public DbSet<Transaction> Transactions => Set<Transaction>();
+
+    public DbSet<StoredFile> StoredFiles => Set<StoredFile>();
+
+    public DbSet<LoreEntry> LoreEntries => Set<LoreEntry>();
+
+    public DbSet<LoreAttachment> LoreAttachments => Set<LoreAttachment>();
+
+    public DbSet<Map> Maps => Set<Map>();
+
+    public DbSet<MapPin> MapPins => Set<MapPin>();
+
+    public DbSet<LibraryDocument> LibraryDocuments => Set<LibraryDocument>();
+
+    public DbSet<CampaignDocument> CampaignDocuments => Set<CampaignDocument>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

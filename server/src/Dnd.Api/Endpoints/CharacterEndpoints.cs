@@ -73,6 +73,12 @@ public static class CharacterEndpoints
             .WithSummary("Un DM activa el personaje directamente; entra en juego con los PG al máximo.")
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        group.MapPatch("/portrait", async (Guid id, SetPortraitRequest request, ClaimsPrincipal user, SetPortraitHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, request, ct)))
+            .WithName("SetCharacterPortrait")
+            .WithSummary("Fija (o quita, con fileId: null) el retrato del personaje con un fichero Portrait de la campaña. Dueño o DM.")
+            .ProducesValidationProblem();
+
         group.MapDelete("", async (Guid id, ClaimsPrincipal user, DeleteCharacterHandler handler, CancellationToken ct) =>
             {
                 await handler.HandleAsync(user.GetUserId(), id, ct);

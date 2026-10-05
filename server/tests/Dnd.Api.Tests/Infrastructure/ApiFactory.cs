@@ -29,6 +29,7 @@ public class ApiFactory : WebApplicationFactory<Program>
     public const string PublicUrl = "http://dnd.example.com";
 
     private readonly SqliteConnection _connection;
+    private readonly string _filesRoot = Path.Combine(Path.GetTempPath(), $"dnd-tests-{Guid.NewGuid():N}");
     private readonly SemaphoreSlim _adminLock = new(1, 1);
     private bool _adminPasswordSet;
 
@@ -49,6 +50,12 @@ public class ApiFactory : WebApplicationFactory<Program>
 
     protected virtual bool SeedCatalog => false;
 
+    /// <summary>Maximum upload size configured for the host (<c>FileStorage:MaxUploadMegabytes</c>).</summary>
+    protected virtual int MaxUploadMegabytes => 200;
+
+    /// <summary>Temporary directory used as <c>FileStorage:RootPath</c>; removed when the factory is disposed.</summary>
+    public string FilesRoot => _filesRoot;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -57,6 +64,8 @@ public class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("App:InitialAdminEmail", AdminEmail);
         builder.UseSetting("App:SeedInitialAdmin", SeedInitialAdmin ? "true" : "false");
         builder.UseSetting("Catalog:SeedOnStartup", SeedCatalog ? "true" : "false");
+        builder.UseSetting("FileStorage:RootPath", _filesRoot);
+        builder.UseSetting("FileStorage:MaxUploadMegabytes", MaxUploadMegabytes.ToString(System.Globalization.CultureInfo.InvariantCulture));
         builder.UseSetting("Jwt:Secret", "test-only-secret-that-is-long-enough-0123456789");
 
         builder.ConfigureLogging(logging => logging.AddProvider(Logs));
@@ -138,6 +147,14 @@ public class ApiFactory : WebApplicationFactory<Program>
         {
             _connection.Dispose();
             _adminLock.Dispose();
+            try
+            {
+                Directory.Delete(_filesRoot, recursive: true);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                // Nothing was stored.
+            }
         }
     }
 }

@@ -38,7 +38,12 @@ public static class DependencyInjection
         services.AddScoped<IItemTemplateRepository, ItemTemplateRepository>();
         services.AddScoped<IShopRepository, ShopRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
+        services.AddScoped<IFileRepository, FileRepository>();
+        services.AddScoped<ILoreRepository, LoreRepository>();
+        services.AddScoped<IMapRepository, MapRepository>();
+        services.AddScoped<ILibraryRepository, LibraryRepository>();
         services.AddScoped<ISrdSeeder, SrdSeeder>();
+        services.AddScoped<SystemDocumentSeeder>();
 
         services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
         services.Configure<CatalogOptions>(configuration.GetSection(CatalogOptions.SectionName));
@@ -57,6 +62,7 @@ public static class DependencyInjection
             .ValidateOnStart();
 
         services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
+        services.AddSingleton<IFileStorage, DiskFileStorage>();
         services.AddSingleton<ITokenService, TokenService>();
         services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
         services.AddScoped<IEmailSender, SmtpEmailSender>();

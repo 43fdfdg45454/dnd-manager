@@ -137,7 +137,7 @@ public sealed record CharacterDetailDto
 
     public required Guid? PortraitFileId { get; init; }
 
-    /// <summary>Always null until file storage arrives (phase 7).</summary>
+    /// <summary>Relative download URL (<c>/api/v1/files/{id}</c>) of the portrait, or null when there is none.</summary>
     public required string? PortraitUrl { get; init; }
 
     public required DateTimeOffset CreatedAt { get; init; }

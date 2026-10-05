@@ -7,6 +7,7 @@ public enum AppErrorKind
     Forbidden,
     NotFound,
     Conflict,
+    PayloadTooLarge,
 }
 
 /// <summary>
@@ -37,4 +38,6 @@ public sealed class AppException : Exception
     public static AppException NotFound(string message) => new(AppErrorKind.NotFound, message, null);
 
     public static AppException Conflict(string message) => new(AppErrorKind.Conflict, message, null);
+
+    public static AppException PayloadTooLarge(string message) => new(AppErrorKind.PayloadTooLarge, message, null);
 }

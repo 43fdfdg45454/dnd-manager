@@ -5,13 +5,24 @@ using Dnd.Api.Hosting;
 using Dnd.Application;
 using Dnd.Application.Common;
 using Dnd.Infrastructure;
+using Dnd.Infrastructure.Files;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// Uploads: Kestrel's default body limit (30 MB) and the multipart limit (128 MB) follow
+// FileStorage:MaxUploadMegabytes (plus room for the rest of the multipart body).
+builder.Services.AddOptions<KestrelServerOptions>().Configure<IOptions<FileStorageOptions>>((kestrel, files) =>
+    kestrel.Limits.MaxRequestBodySize = files.Value.MaxUploadMegabytes * 1024L * 1024L + FileEndpoints.MultipartOverheadBytes);
+builder.Services.AddOptions<FormOptions>().Configure<IOptions<FileStorageOptions>>((form, files) =>
+    form.MultipartBodyLengthLimit = files.Value.MaxUploadMegabytes * 1024L * 1024L + FileEndpoints.MultipartOverheadBytes);
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<AppExceptionHandler>();
@@ -90,6 +101,10 @@ app.MapChangeRequestEndpoints();
 app.MapItemEndpoints();
 app.MapInventoryEndpoints();
 app.MapShopEndpoints();
+app.MapFileEndpoints();
+app.MapLoreEndpoints();
+app.MapMapEndpoints();
+app.MapLibraryEndpoints();
 app.MapPageEndpoints();
 
 await app.RunAsync();
