@@ -81,3 +81,9 @@ cd deploy && docker compose --profile dev up -d        # añade MailHog para pro
   Riverpod para estado, `dio` para HTTP, `drift` para caché. Textos de UI en `lib/l10n`.
 - Nombres de código, entidades y endpoints en inglés; textos visibles al usuario en español.
 - Commits en imperativo, descriptivos, sin identificadores de modelos de IA.
+
+## Uso de modelos
+
+Ver "Asignación de modelos por tarea" en `docs/PLAN.md`. La sesión principal (Fable) diseña y
+revisa; la implementación se delega a subagentes Opus/Sonnet/Haiku según esa tabla, siempre con
+un contrato escrito en `docs/specs/<fase>.md`.

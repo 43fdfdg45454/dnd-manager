@@ -86,6 +86,35 @@ Android (Flutter) ──HTTPS/JSON──▶ Nginx ──▶ API ASP.NET Core (.N
 - **Dados**: parser (`2d6+3`, `1d20 adv/dis`, `4d6kh3`), tiradas desde la hoja; historial local.
 - **Offline**: caché local (drift) por pantalla; aviso "sin conexión"; escrituras deshabilitadas.
 
+## Asignación de modelos por tarea
+
+No es viable ejecutar todo con Fable. Regla general: **Fable** diseña contratos, decide y revisa;
+**Opus** implementa la lógica con reglas de negocio o seguridad; **Sonnet** implementa CRUD, UI y
+tests convencionales; **Haiku** hace lo mecánico (DTOs, textos, plantillas, documentación).
+
+| Tipo de tarea | Modelo | Motivo |
+|---------------|--------|--------|
+| Orquestación, diseño de dominio y contratos de API, revisión de cada fase, decisiones de seguridad | Fable 5.1 | Requiere criterio global y detectar errores sutiles |
+| Auth/JWT, autorización por rol, `ChangeRequest`, cálculos de hoja, compra atómica, seed SRD, paneles por clase, caché offline | Opus 5.5 | Lógica con muchas ramas donde un error cuesta caro |
+| CRUD de campañas/lore/mapas/calendario, pantallas Flutter, tests de integración, Docker/CI | Sonnet 5.5 | Trabajo estándar con patrón claro |
+| DTOs y modelos Dart desde OpenAPI, textos de UI, plantillas de email, README, migraciones triviales | Haiku 4.5 | Mecánico y voluminoso |
+
+| Fase | Fable | Opus | Sonnet | Haiku |
+|------|-------|------|--------|-------|
+| 1 Auth + admin | Contrato y revisión de seguridad | Servidor: usuarios, JWT, refresh, tokens de alta/reset | Flutter: login, sesión, pantalla admin | Plantillas de email |
+| 2 Campañas | Reglas de roles y transferencia | Autorización por rol | CRUD servidor + Flutter | DTOs |
+| 3 Catálogo SRD | Mapeo dataset → entidades | Importador y seed | Endpoints de consulta + buscador Flutter | Modelos Dart |
+| 4 Personajes | Modelo de cálculo y overrides | Cálculos, `ChangeRequest`, creación semiautomática | Vista detallada Flutter | Textos |
+| 5 Ítems y tiendas | Contrato de overrides | Compra/venta atómica, homebrew | UI inventario y tiendas | DTOs |
+| 6 Combate y dados | Diseño de la vista | Paneles Bárbaro/Mago/Paladín, rests | Vista genérica, parser de dados | Textos |
+| 7 Lore, mapas, biblioteca | Revisión | — | Todo (servidor + Flutter + visor PDF) | README |
+| 8 Calendario y correos | Revisión | — | Sesiones, RSVP, worker SMTP | Plantillas |
+| 9 Offline, APK, backups | Revisión | Caché offline (drift) | Aviso de versión, backups | README de despliegue |
+
+Cómo se aplica en la práctica: la sesión principal corre con Fable y lanza subagentes con el modelo
+indicado (`Agent` con `model: opus | sonnet | haiku`), dándoles el contrato escrito en
+`docs/specs/` y revisando su resultado antes de confirmar.
+
 ## Fases
 
 | Fase | Entregable | Verificación |
