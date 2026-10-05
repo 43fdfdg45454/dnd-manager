@@ -1,0 +1,30 @@
+using Dnd.Application.Abstractions.Persistence;
+
+namespace Dnd.Application.Catalog;
+
+public sealed class GetSpellHandler(ICatalogRepository catalog)
+{
+    public async Task<SpellDetailDto> HandleAsync(string index, CancellationToken cancellationToken = default)
+    {
+        var s = await catalog.GetSpellAsync(index, cancellationToken) ?? throw CatalogErrors.SpellNotFound();
+        return new SpellDetailDto(
+            s.Index,
+            s.Name,
+            s.Level,
+            s.School,
+            s.CastingTime,
+            s.Range,
+            s.Components,
+            s.Material,
+            s.Duration,
+            s.Concentration,
+            s.Ritual,
+            s.Description,
+            s.HigherLevel,
+            s.ClassIndexes,
+            s.SubclassIndexes,
+            s.AttackType,
+            CatalogJson.SpellDamage(s.DamageJson),
+            s.DcAbility);
+    }
+}

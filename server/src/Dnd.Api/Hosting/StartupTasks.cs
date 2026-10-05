@@ -1,4 +1,6 @@
+using Dnd.Application.Abstractions;
 using Dnd.Application.Users;
+using Dnd.Infrastructure.Catalog;
 using Dnd.Infrastructure.Options;
 using Dnd.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +10,10 @@ namespace Dnd.Api.Hosting;
 
 public static class StartupTasks
 {
-    /// <summary>Applies migrations (if enabled) and then bootstraps the initial admin (if enabled).</summary>
+    /// <summary>
+    /// Applies migrations (if enabled), imports the SRD catalog (if enabled and not imported yet) and
+    /// then bootstraps the initial admin (if enabled).
+    /// </summary>
     public static async Task InitializeAsync(this WebApplication app, CancellationToken cancellationToken = default)
     {
         using var scope = app.Services.CreateScope();
@@ -17,6 +22,11 @@ public static class StartupTasks
         if (app.Configuration.GetValue<bool>("Database:AutoMigrate"))
         {
             await services.GetRequiredService<AppDbContext>().Database.MigrateAsync(cancellationToken);
+        }
+
+        if (services.GetRequiredService<IOptions<CatalogOptions>>().Value.SeedOnStartup)
+        {
+            await services.GetRequiredService<ISrdSeeder>().SeedAsync(cancellationToken);
         }
 
         var appOptions = services.GetRequiredService<IOptions<AppOptions>>().Value;

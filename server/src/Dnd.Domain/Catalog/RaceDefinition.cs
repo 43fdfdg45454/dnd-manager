@@ -1,0 +1,28 @@
+namespace Dnd.Domain.Catalog;
+
+public sealed class RaceDefinition
+{
+    public required string Index { get; init; }
+
+    public required string Name { get; init; }
+
+    public int Speed { get; init; }
+
+    public string Size { get; init; } = string.Empty;
+
+    /// <summary>JSON array of <see cref="AbilityBonus"/> (<c>[{"ability":"con","bonus":2}]</c>).</summary>
+    public string AbilityBonusesJson { get; init; } = "[]";
+
+    public IReadOnlyList<string> TraitIndexes { get; init; } = [];
+
+    /// <summary>Language names, e.g. "Common".</summary>
+    public IReadOnlyList<string> Languages { get; init; } = [];
+
+    public string Age { get; init; } = string.Empty;
+
+    public string Alignment { get; init; } = string.Empty;
+
+    public string SizeDescription { get; init; } = string.Empty;
+
+    public IReadOnlyList<string> SubraceIndexes { get; init; } = [];
+}

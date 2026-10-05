@@ -19,7 +19,8 @@ namespace Dnd.Api.Tests;
 /// <summary>
 /// Boots the API against an in-memory SQLite database (one open connection per factory, schema
 /// created with <c>EnsureCreated</c>) and a fake email sender. The initial admin bootstrap runs
-/// with <see cref="AdminEmail"/> unless a subclass disables it.
+/// with <see cref="AdminEmail"/> unless a subclass disables it. The SRD catalog import is off by
+/// default to keep unrelated tests fast; <see cref="CatalogApiFactory"/> turns it on.
 /// </summary>
 public class ApiFactory : WebApplicationFactory<Program>
 {
@@ -46,6 +47,8 @@ public class ApiFactory : WebApplicationFactory<Program>
 
     protected virtual bool SeedInitialAdmin => true;
 
+    protected virtual bool SeedCatalog => false;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -53,6 +56,7 @@ public class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("App:PublicUrl", PublicUrl);
         builder.UseSetting("App:InitialAdminEmail", AdminEmail);
         builder.UseSetting("App:SeedInitialAdmin", SeedInitialAdmin ? "true" : "false");
+        builder.UseSetting("Catalog:SeedOnStartup", SeedCatalog ? "true" : "false");
         builder.UseSetting("Jwt:Secret", "test-only-secret-that-is-long-enough-0123456789");
 
         builder.ConfigureLogging(logging => logging.AddProvider(Logs));
@@ -136,6 +140,21 @@ public class ApiFactory : WebApplicationFactory<Program>
             _adminLock.Dispose();
         }
     }
+}
+
+/// <summary>
+/// Factory that imports the SRD catalog at startup. Shared by every catalog test class through the
+/// <see cref="CatalogCollection"/> so the import runs once.
+/// </summary>
+public sealed class CatalogApiFactory : ApiFactory
+{
+    protected override bool SeedCatalog => true;
+}
+
+[CollectionDefinition(Name)]
+public sealed class CatalogCollection : ICollectionFixture<CatalogApiFactory>
+{
+    public const string Name = "Catalog";
 }
 
 /// <summary>Factory whose initial admin bootstrap is turned off.</summary>

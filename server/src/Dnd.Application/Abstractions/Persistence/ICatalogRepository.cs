@@ -1,0 +1,48 @@
+using Dnd.Application.Catalog;
+using Dnd.Domain.Catalog;
+
+namespace Dnd.Application.Abstractions.Persistence;
+
+/// <summary>Read-only access to the rules catalog. Every result is untracked.</summary>
+public interface ICatalogRepository
+{
+    Task<IReadOnlyList<ClassDefinition>> ListClassesAsync(CancellationToken cancellationToken = default);
+
+    Task<ClassDefinition?> GetClassAsync(string index, CancellationToken cancellationToken = default);
+
+    /// <summary>Levels of the class ordered by level.</summary>
+    Task<IReadOnlyList<ClassLevel>> ListClassLevelsAsync(string classIndex, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SubclassDefinition>> ListSubclassesAsync(string classIndex, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SubclassLevel>> ListSubclassLevelsAsync(IReadOnlyCollection<string> subclassIndexes, CancellationToken cancellationToken = default);
+
+    /// <summary>Features of the class, including those of its subclasses.</summary>
+    Task<IReadOnlyList<FeatureDefinition>> ListFeaturesByClassAsync(string classIndex, CancellationToken cancellationToken = default);
+
+    Task<FeatureDefinition?> GetFeatureAsync(string index, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<RaceDefinition>> ListRacesAsync(CancellationToken cancellationToken = default);
+
+    Task<RaceDefinition?> GetRaceAsync(string index, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SubraceDefinition>> ListSubracesAsync(string raceIndex, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<TraitDefinition>> ListTraitsAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default);
+
+    /// <summary>Spells matching the filter, ordered by level and name.</summary>
+    Task<(IReadOnlyList<SpellDefinition> Items, int Total)> SearchSpellsAsync(SpellFilter filter, int skip, int take, CancellationToken cancellationToken = default);
+
+    Task<SpellDefinition?> GetSpellAsync(string index, CancellationToken cancellationToken = default);
+
+    /// <summary>SRD items (no campaign) matching the filter, ordered by name.</summary>
+    Task<(IReadOnlyList<ItemTemplate> Items, int Total)> SearchSrdItemsAsync(ItemFilter filter, int skip, int take, CancellationToken cancellationToken = default);
+
+    Task<ItemTemplate?> GetSrdItemAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ConditionDefinition>> ListConditionsAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SkillDefinition>> ListSkillsAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<BackgroundDefinition>> ListBackgroundsAsync(CancellationToken cancellationToken = default);
+}

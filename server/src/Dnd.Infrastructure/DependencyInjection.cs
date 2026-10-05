@@ -2,6 +2,7 @@ using Dnd.Application.Abstractions;
 using Dnd.Application.Abstractions.Persistence;
 using Dnd.Infrastructure.Auth;
 using Dnd.Infrastructure.Campaigns;
+using Dnd.Infrastructure.Catalog;
 using Dnd.Infrastructure.Email;
 using Dnd.Infrastructure.Files;
 using Dnd.Infrastructure.Options;
@@ -31,8 +32,11 @@ public static class DependencyInjection
         services.AddScoped<IPasswordTokenRepository, PasswordTokenRepository>();
         services.AddScoped<ICampaignRepository, CampaignRepository>();
         services.AddScoped<ICampaignAccess, CampaignAccess>();
+        services.AddScoped<ICatalogRepository, CatalogRepository>();
+        services.AddScoped<ISrdSeeder, SrdSeeder>();
 
         services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
+        services.Configure<CatalogOptions>(configuration.GetSection(CatalogOptions.SectionName));
         services.Configure<FileStorageOptions>(configuration.GetSection(FileStorageOptions.SectionName));
 
         services.AddOptions<AppOptions>()

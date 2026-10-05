@@ -8,6 +8,8 @@ COPY src/Dnd.Infrastructure/Dnd.Infrastructure.csproj src/Dnd.Infrastructure/
 COPY src/Dnd.Api/Dnd.Api.csproj src/Dnd.Api/
 RUN dotnet restore src/Dnd.Api/Dnd.Api.csproj
 
+# The SRD dataset is embedded into Dnd.Infrastructure from ../../seed/srd.
+COPY seed/ seed/
 COPY src/ src/
 RUN dotnet publish src/Dnd.Api/Dnd.Api.csproj -c Release -o /app/publish --no-restore
 

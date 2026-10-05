@@ -48,7 +48,7 @@ builder.Services
 
 var app = builder.Build();
 
-// Migrations first, then the initial admin bootstrap.
+// Migrations first, then the SRD catalog import and the initial admin bootstrap.
 await app.InitializeAsync();
 
 app.UseExceptionHandler();
@@ -71,6 +71,7 @@ app.MapAuthEndpoints();
 app.MapAdminUserEndpoints();
 app.MapUserEndpoints();
 app.MapCampaignEndpoints();
+app.MapCatalogEndpoints();
 app.MapPageEndpoints();
 
 await app.RunAsync();

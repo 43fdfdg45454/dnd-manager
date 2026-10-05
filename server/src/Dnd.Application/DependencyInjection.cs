@@ -1,6 +1,7 @@
 using System.Globalization;
 using Dnd.Application.Auth;
 using Dnd.Application.Campaigns;
+using Dnd.Application.Catalog;
 using Dnd.Application.Users;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,6 +44,20 @@ public static class DependencyInjection
         services.AddScoped<RemoveMemberHandler>();
         services.AddScoped<LeaveCampaignHandler>();
         services.AddScoped<TransferOwnershipHandler>();
+
+        services.AddSingleton<GetAttributionHandler>();
+        services.AddScoped<ListClassesHandler>();
+        services.AddScoped<GetClassHandler>();
+        services.AddScoped<GetFeatureHandler>();
+        services.AddScoped<ListRacesHandler>();
+        services.AddScoped<GetRaceHandler>();
+        services.AddScoped<SearchSpellsHandler>();
+        services.AddScoped<GetSpellHandler>();
+        services.AddScoped<SearchItemsHandler>();
+        services.AddScoped<GetItemHandler>();
+        services.AddScoped<ListConditionsHandler>();
+        services.AddScoped<ListSkillsHandler>();
+        services.AddScoped<ListBackgroundsHandler>();
 
         return services;
     }
