@@ -66,7 +66,7 @@ Android (Flutter) ──HTTPS/JSON──▶ Nginx ──▶ API ASP.NET Core (.N
   o ítem sin plantilla.
 - `ChangeRequest`, `Shop`, `ShopItem`, `Transaction`.
 - `LoreEntry` (markdown, visibilidad Player/DM, adjuntos), `LibraryDocument`, `Map`, `MapPin`.
-- `Session`, `Reminder`, `SessionRsvp`, `AppRelease`.
+- `GameSession` (numerada por campaña, con `SummaryMarkdown` que solo el DM edita), `Reminder`, `SessionRsvp`, `AppRelease`.
 
 ## Vistas del personaje
 
@@ -79,6 +79,8 @@ Android (Flutter) ──HTTPS/JSON──▶ Nginx ──▶ API ASP.NET Core (.N
 
 ## Otras funcionalidades
 
+- **Diario de sesiones**: solo el DM crea sesiones y escribe el resumen de cada una; todos los
+  miembros lo leen en la pestaña "Diario" de la campaña, en orden cronológico.
 - **Recordatorios**: `BackgroundService` que envía por SMTP (MailKit) los `Reminder` vencidos;
   offsets por defecto 24 h y 2 h, editables por campaña; zona horaria por campaña.
 - **Biblioteca**: SRD en PDF como documento de sistema; el admin sube PDF (límite configurable);
@@ -127,7 +129,7 @@ indicado (`Agent` con `model: opus | sonnet | haiku`), dándoles el contrato esc
 | 5 | Ítems: inventario, creación rápida/avanzada, homebrew, tiendas y compra | Compra atómica |
 | 6 | Vista de combate + paneles Bárbaro/Mago/Paladín + rests + dados | Prueba en emulador |
 | 7 | Lore + mapas con pines + biblioteca de documentos | Pin oculto invisible al jugador; PDF offline |
-| 8 | Calendario, RSVP, recordatorios SMTP | Reminder en MailHog |
+| 8 | Calendario, RSVP, recordatorios SMTP, diario de sesiones con resumen del DM | Reminder en MailHog; jugador lee el resumen y no lo edita |
 | 9 | Caché offline, aviso de actualización de APK, backups, README de despliegue | Modo avión muestra la hoja |
 
 ## Verificación end-to-end
