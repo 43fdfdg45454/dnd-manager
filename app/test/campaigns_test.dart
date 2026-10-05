@@ -4,11 +4,13 @@ import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart'
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
 import 'package:dnd_companion/features/campaigns/ui/campaign_detail_page.dart';
 import 'package:dnd_companion/features/campaigns/ui/campaigns_page.dart';
+import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
 
 final _directory = [
@@ -22,6 +24,7 @@ Widget _providerScope(FakeCampaignsRepository repository, Widget child) => Provi
   overrides: [
     authControllerProvider.overrideWith(() => FixedAuthController(AuthSignedIn(makeUser()))),
     campaignsRepositoryProvider.overrideWithValue(repository),
+    charactersRepositoryProvider.overrideWithValue(FakeCharactersRepository()),
   ],
   child: child,
 );

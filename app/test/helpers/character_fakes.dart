@@ -1,0 +1,340 @@
+import 'package:dnd_companion/features/characters/data/characters_repository.dart';
+import 'package:dnd_companion/features/characters/data/models.dart';
+
+import 'fakes.dart';
+
+/// A character detail as the server would send it. Defaults: a level 3 human
+/// Fighter with Str 16 (modifier +3), owned by `u1`.
+Map<String, dynamic> makeCharacterJson({
+  String id = 'ch1',
+  String campaignId = 'c1',
+  String? ownerUserId = 'u1',
+  String ownerDisplayName = 'Usuario Demo',
+  String name = 'Thorin',
+  String status = 'Draft',
+  List<Map<String, dynamic>> overrides = const [],
+  List<String> overriddenFields = const [],
+  List<Map<String, dynamic>> pending = const [],
+  List<Map<String, dynamic>> proficiencies = const [],
+  List<Map<String, dynamic>> spells = const [],
+  String notes = '',
+  List<Map<String, dynamic>>? classes,
+  List<Map<String, dynamic>> spellSlots = const [],
+}) => {
+  'id': id,
+  'campaignId': campaignId,
+  'ownerUserId': ownerUserId,
+  'ownerDisplayName': ownerDisplayName,
+  'name': name,
+  'status': status,
+  'raceIndex': 'human',
+  'raceName': 'Human',
+  'applyRacialBonuses': true,
+  'hpMode': 'Average',
+  'baseStr': 15,
+  'baseDex': 14,
+  'baseCon': 13,
+  'baseInt': 10,
+  'baseWis': 12,
+  'baseCha': 8,
+  'hitPointsCurrent': 20,
+  'temporaryHitPoints': 3,
+  'deathSaveSuccesses': 0,
+  'deathSaveFailures': 0,
+  'exhaustionLevel': 0,
+  'conditions': <Object>[],
+  'inspiration': true,
+  'copperPieces': 1550,
+  'notes': notes,
+  'backstory': '',
+  'classes':
+      classes ??
+      [
+        {'classIndex': 'fighter', 'className': 'Fighter', 'level': 3},
+      ],
+  'proficiencies': proficiencies,
+  'spells': spells,
+  'overrides': overrides,
+  'resources': <Object>[],
+  'spellSlots': spellSlots,
+  'sheet': {
+    'abilities': {
+      'str': {'score': 16, 'modifier': 3, 'overridden': false},
+      'dex': {'score': 15, 'modifier': 2, 'overridden': false},
+      'con': {'score': 14, 'modifier': 2, 'overridden': false},
+      'int': {'score': 11, 'modifier': 0, 'overridden': false},
+      'wis': {'score': 13, 'modifier': 1, 'overridden': false},
+      'cha': {'score': 9, 'modifier': -1, 'overridden': false},
+    },
+    'proficiencyBonus': 2,
+    'savingThrows': {
+      'str': {'value': 5, 'proficient': true},
+      'dex': {'value': 2, 'proficient': false},
+      'con': {'value': 4, 'proficient': true},
+      'int': {'value': 0, 'proficient': false},
+      'wis': {'value': 1, 'proficient': false},
+      'cha': {'value': -1, 'proficient': false},
+    },
+    'skills': [
+      {
+        'index': 'athletics',
+        'name': 'Athletics',
+        'ability': 'str',
+        'value': 5,
+        'proficient': true,
+        'expertise': false,
+      },
+      {
+        'index': 'stealth',
+        'name': 'Stealth',
+        'ability': 'dex',
+        'value': 2,
+        'proficient': false,
+        'expertise': false,
+      },
+    ],
+    'passivePerception': 11,
+    'initiative': 2,
+    'armorClass': 17,
+    'speed': 30,
+    'hitPointsMax': 28,
+    'hitDice': [
+      {'classIndex': 'fighter', 'die': 10, 'total': 3, 'remaining': 3},
+    ],
+    'spellcasting': <Object>[],
+    'overriddenFields': overriddenFields,
+  },
+  'pendingChangeRequests': pending,
+};
+
+Map<String, dynamic> makeChangeRequestJson({
+  String id = 'cr1',
+  String campaignId = 'c1',
+  String characterId = 'ch1',
+  String characterName = 'Thorin',
+  String requestedByUserId = 'p2',
+  String requestedByDisplayName = 'Beto',
+  String type = 'EditSheet',
+  Map<String, dynamic> payload = const {'name': 'Thorin II'},
+  String status = 'Pending',
+}) => {
+  'id': id,
+  'campaignId': campaignId,
+  'characterId': characterId,
+  'characterName': characterName,
+  'requestedByUserId': requestedByUserId,
+  'requestedByDisplayName': requestedByDisplayName,
+  'type': type,
+  'payload': payload,
+  'status': status,
+  'createdAt': '2026-10-01T10:00:00Z',
+};
+
+ChangeRequest makeChangeRequest({
+  String id = 'cr1',
+  String requestedByUserId = 'p2',
+  String type = 'EditSheet',
+  Map<String, dynamic> payload = const {'name': 'Thorin II'},
+  String status = 'Pending',
+}) => ChangeRequest.fromJson(
+  makeChangeRequestJson(
+    id: id,
+    requestedByUserId: requestedByUserId,
+    type: type,
+    payload: payload,
+    status: status,
+  ),
+);
+
+/// In-memory characters backend. [isDm] decides whether a sheet edit on an
+/// Active character is applied (200) or becomes a change request (202).
+class FakeCharactersRepository implements CharactersRepository {
+  FakeCharactersRepository({
+    List<Map<String, dynamic>> characters = const [],
+    List<ChangeRequest> requests = const [],
+    this.currentUserId = 'u1',
+    this.isDm = false,
+  }) : _characters = {for (final c in characters) c['id'] as String: Map.of(c)},
+       requests = [...requests];
+
+  final Map<String, Map<String, dynamic>> _characters;
+  final List<ChangeRequest> requests;
+  final String currentUserId;
+  final bool isDm;
+  Object? error;
+
+  final List<({String name, ({String? userId})? owner})> created = [];
+  final List<SheetPatch> patches = [];
+  final List<String> activated = [];
+  final List<String> submitted = [];
+  final List<String> deleted = [];
+
+  void _fail() {
+    if (error != null) throw error!;
+  }
+
+  Map<String, dynamic> _json(String id) => _characters[id] ?? (throw dioError(404));
+
+  @override
+  Future<List<CharacterSummary>> listByCampaign(String campaignId) async {
+    _fail();
+    return [
+      for (final json in _characters.values)
+        if (json['campaignId'] == campaignId)
+          CharacterSummary.fromJson({
+            ...json,
+            'hitPointsMax': (json['sheet'] as Map)['hitPointsMax'],
+            'hitPointsCurrent': json['hitPointsCurrent'],
+          }),
+    ];
+  }
+
+  @override
+  Future<CharacterDetail> create(
+    String campaignId, {
+    required String name,
+    ({String? userId})? owner,
+  }) async {
+    _fail();
+    created.add((name: name, owner: owner));
+    final id = 'new${created.length}';
+    _characters[id] = makeCharacterJson(
+      id: id,
+      campaignId: campaignId,
+      name: name,
+      ownerUserId: owner == null ? currentUserId : owner.userId,
+    );
+    return CharacterDetail.fromJson(_characters[id]!);
+  }
+
+  @override
+  Future<CharacterDetail> get(String id) async {
+    _fail();
+    final json = _json(id);
+    return CharacterDetail.fromJson({
+      ...json,
+      'pendingChangeRequests': [
+        for (final r in requests)
+          if (r.characterId == id && r.isPending)
+            makeChangeRequestJson(
+              id: r.id,
+              characterId: id,
+              type: r.type.apiValue,
+              payload: r.payload,
+            ),
+      ],
+    });
+  }
+
+  @override
+  Future<SheetSaveResult> patchSheet(String id, SheetPatch patch) async {
+    _fail();
+    patches.add(patch);
+    final json = _json(id);
+    if (json['status'] == 'Active' && !isDm) {
+      final request = makeChangeRequest(
+        id: 'cr${requests.length + 1}',
+        requestedByUserId: currentUserId,
+        payload: patch.toJson(),
+      );
+      requests.add(request);
+      return PendingApproval(request);
+    }
+    if (patch.name != null) json['name'] = patch.name;
+    return Saved(CharacterDetail.fromJson(json));
+  }
+
+  @override
+  Future<ChangeRequest> submit(String id) async {
+    _fail();
+    submitted.add(id);
+    final request = makeChangeRequest(
+      id: 'cr${requests.length + 1}',
+      requestedByUserId: currentUserId,
+      type: 'Activate',
+      payload: const {},
+    );
+    requests.add(request);
+    return request;
+  }
+
+  @override
+  Future<CharacterDetail> activate(String id) async {
+    _fail();
+    activated.add(id);
+    _json(id)['status'] = 'Active';
+    return get(id);
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    _fail();
+    deleted.add(id);
+    _characters.remove(id);
+  }
+
+  @override
+  Future<List<ChangeRequest>> changeRequests(
+    String campaignId, {
+    ChangeRequestStatus? status,
+  }) async {
+    _fail();
+    return [
+      for (final r in requests)
+        if (r.campaignId == campaignId &&
+            (status == null || r.status == status) &&
+            (isDm || r.requestedByUserId == currentUserId))
+          r,
+    ];
+  }
+
+  ChangeRequest _resolve(String id, ChangeRequestStatus status, String? comment) {
+    final index = requests.indexWhere((r) => r.id == id);
+    if (index < 0) throw dioError(404);
+    final old = requests[index];
+    if (!old.isPending) throw dioError(409);
+    final json = makeChangeRequestJson(
+      id: old.id,
+      characterId: old.characterId,
+      requestedByUserId: old.requestedByUserId,
+      type: old.type.apiValue,
+      payload: old.payload,
+      status: status.apiValue,
+    )..['comment'] = comment;
+    requests[index] = ChangeRequest.fromJson(json);
+    return requests[index];
+  }
+
+  final List<({String id, String? comment})> approvals = [];
+  final List<({String id, String comment})> rejections = [];
+  final List<String> cancellations = [];
+
+  @override
+  Future<ChangeRequest> approve(String id, {String? comment}) async {
+    _fail();
+    approvals.add((id: id, comment: comment));
+    final request = _resolve(id, ChangeRequestStatus.approved, comment);
+    final name = request.payload['name'];
+    if (name is String && _characters.containsKey(request.characterId)) {
+      _characters[request.characterId]!['name'] = name;
+    }
+    return request;
+  }
+
+  @override
+  Future<ChangeRequest> reject(String id, {required String comment}) async {
+    _fail();
+    rejections.add((id: id, comment: comment));
+    return _resolve(id, ChangeRequestStatus.rejected, comment);
+  }
+
+  @override
+  Future<ChangeRequest> cancel(String id) async {
+    _fail();
+    cancellations.add(id);
+    return _resolve(id, ChangeRequestStatus.cancelled, null);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}

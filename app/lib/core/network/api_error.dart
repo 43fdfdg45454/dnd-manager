@@ -50,3 +50,16 @@ const campaignErrorMessages = <int, String>{
 /// takes precedence over [campaignErrorMessages].
 String describeCampaignError(Object error, {Map<int, String> byStatus = const {}}) =>
     describeApiError(error, byStatus: {...campaignErrorMessages, ...byStatus});
+
+/// Status-specific messages for the character and change-request endpoints.
+const characterErrorMessages = <int, String>{
+  400: 'Los datos enviados no son válidos para este personaje.',
+  403: 'No tienes permiso para hacer eso con este personaje.',
+  404: 'El personaje o la solicitud no existe, o no tienes acceso.',
+  409: 'La solicitud ya no está pendiente.',
+};
+
+/// Like [describeApiError] but with the character-specific texts. [byStatus]
+/// takes precedence over [characterErrorMessages].
+String describeCharacterError(Object error, {Map<int, String> byStatus = const {}}) =>
+    describeApiError(error, byStatus: {...characterErrorMessages, ...byStatus});

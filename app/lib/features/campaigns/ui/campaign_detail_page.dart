@@ -6,6 +6,8 @@ import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
+import '../../characters/data/characters_controller.dart';
+import '../../characters/ui/characters_tab.dart';
 import '../data/campaigns_controller.dart';
 import '../domain/campaign_models.dart';
 import 'add_member_dialog.dart';
@@ -14,7 +16,7 @@ import 'confirm_dialog.dart';
 import 'feedback.dart';
 import 'transfer_ownership_dialog.dart';
 
-/// Campaign detail with the "Resumen" and "Miembros" tabs.
+/// Campaign detail with the "Resumen", "Miembros" and "Personajes" tabs.
 class CampaignDetailPage extends ConsumerWidget {
   const CampaignDetailPage({super.key, required this.campaignId});
 
@@ -25,14 +27,16 @@ class CampaignDetailPage extends ConsumerWidget {
     final detail = ref.watch(campaignDetailControllerProvider(campaignId));
 
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: Text(detail.value?.name ?? 'Campaña'),
+          actions: [if (detail.value != null) _ChangeRequestsButton(campaign: detail.value!)],
           bottom: const TabBar(
             tabs: [
               Tab(key: Key('tab-summary'), text: 'Resumen'),
               Tab(key: Key('tab-members'), text: 'Miembros'),
+              Tab(key: Key('tab-characters'), text: 'Personajes'),
             ],
           ),
         ),
@@ -60,9 +64,34 @@ class CampaignDetailPage extends ConsumerWidget {
             children: [
               _SummaryTab(campaign: campaign),
               _MembersTab(campaign: campaign),
+              CharactersTab(campaign: campaign),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// App bar shortcut to the change requests; DMs see the pending count as a badge.
+class _ChangeRequestsButton extends ConsumerWidget {
+  const _ChangeRequestsButton({required this.campaign});
+
+  final CampaignDetail campaign;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDm = campaign.myRole.isAtLeastDm;
+    final pending = isDm ? ref.watch(pendingChangeRequestCountProvider(campaign.id)) : 0;
+    return IconButton(
+      key: const Key('change-requests-button'),
+      tooltip: 'Solicitudes de cambio',
+      onPressed: () => context.push(AppRoutes.changeRequests(campaign.id)),
+      icon: Badge(
+        key: const Key('change-requests-badge'),
+        isLabelVisible: pending > 0,
+        label: Text('$pending'),
+        child: const Icon(Icons.fact_check_outlined),
       ),
     );
   }

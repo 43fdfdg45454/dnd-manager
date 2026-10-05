@@ -142,6 +142,11 @@ final racesProvider = FutureProvider.autoDispose<List<RaceSummary>>(
   retry: _noRetry,
 );
 
+final backgroundsProvider = FutureProvider.autoDispose<List<Background>>(
+  (ref) => ref.watch(catalogRepositoryProvider).backgrounds(),
+  retry: _noRetry,
+);
+
 final conditionsProvider = FutureProvider.autoDispose<List<Condition>>(
   (ref) => ref.watch(catalogRepositoryProvider).conditions(),
   retry: _noRetry,

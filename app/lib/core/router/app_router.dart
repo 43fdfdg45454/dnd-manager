@@ -7,6 +7,9 @@ import '../../features/auth/ui/forgot_password_page.dart';
 import '../../features/auth/ui/login_page.dart';
 import '../../features/auth/ui/splash_page.dart';
 import '../../features/campaigns/ui/campaign_detail_page.dart';
+import '../../features/change_requests/ui/change_requests_page.dart';
+import '../../features/characters/ui/character_page.dart';
+import '../../features/characters/ui/sheet_editor_page.dart';
 import '../../features/catalog/ui/class_detail_page.dart';
 import '../../features/catalog/ui/compendium_page.dart';
 import '../../features/catalog/ui/item_detail_page.dart';
@@ -23,6 +26,9 @@ abstract final class AppRoutes {
   static const home = '/';
   static const adminUsers = '/admin/users';
   static const campaignDetail = '/campaigns/:id';
+  static const campaignChangeRequests = '/campaigns/:id/change-requests';
+  static const characterDetail = '/characters/:id';
+  static const characterEditor = '/characters/:id/edit';
   static const compendium = '/compendium';
   static const spellDetail = '/compendium/spells/:index';
   static const itemDetail = '/compendium/items/:id';
@@ -31,6 +37,13 @@ abstract final class AppRoutes {
 
   /// Location of the campaign with the given [id].
   static String campaign(String id) => '/campaigns/$id';
+
+  /// Change requests of the campaign with the given [id].
+  static String changeRequests(String id) => '/campaigns/$id/change-requests';
+
+  static String character(String id) => '/characters/$id';
+
+  static String characterEdit(String id) => '/characters/$id/edit';
 
   static String spell(String index) => '/compendium/spells/${Uri.encodeComponent(index)}';
 
@@ -79,6 +92,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.campaignDetail,
         builder: (context, state) => CampaignDetailPage(campaignId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.campaignChangeRequests,
+        builder: (context, state) => ChangeRequestsPage(campaignId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.characterDetail,
+        builder: (context, state) => CharacterPage(characterId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.characterEditor,
+        builder: (context, state) => SheetEditorPage(characterId: state.pathParameters['id']!),
       ),
       GoRoute(path: AppRoutes.compendium, builder: (context, state) => const CompendiumPage()),
       GoRoute(
