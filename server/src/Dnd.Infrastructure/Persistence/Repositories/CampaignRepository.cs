@@ -1,0 +1,69 @@
+using Dnd.Application.Abstractions.Persistence;
+using Dnd.Application.Campaigns;
+using Dnd.Domain.Campaigns;
+using Microsoft.EntityFrameworkCore;
+
+namespace Dnd.Infrastructure.Persistence.Repositories;
+
+internal sealed class CampaignRepository(AppDbContext db) : ICampaignRepository
+{
+    public Task<Campaign?> GetWithMembersAsync(Guid id, CancellationToken cancellationToken = default) =>
+        db.Campaigns.Include(x => x.Members).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+    public Task<Campaign?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        db.Campaigns.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+    public async Task<IReadOnlyList<CampaignSummaryDto>> ListSummariesForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var rows = await (
+                from membership in db.CampaignMembers
+                where membership.UserId == userId
+                join campaign in db.Campaigns on membership.CampaignId equals campaign.Id
+                join owner in db.Users on campaign.OwnerId equals owner.Id
+                select new
+                {
+                    campaign.Id,
+                    campaign.Name,
+                    campaign.Description,
+                    campaign.OwnerId,
+                    OwnerDisplayName = owner.DisplayName,
+                    MyRole = membership.Role,
+                    MemberCount = db.CampaignMembers.Count(m => m.CampaignId == campaign.Id),
+                    campaign.CreatedAt,
+                })
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        // Sorted in memory so the order does not depend on the database collation.
+        return rows
+            .OrderBy(r => r.Name, StringComparer.InvariantCultureIgnoreCase)
+            .ThenBy(r => r.Id)
+            .Select(r => new CampaignSummaryDto(
+                r.Id, r.Name, r.Description, r.OwnerId, r.OwnerDisplayName, r.MyRole.ToString(), r.MemberCount, r.CreatedAt))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<MemberDto>> ListMembersAsync(Guid campaignId, CancellationToken cancellationToken = default)
+    {
+        var rows = await (
+                from member in db.CampaignMembers
+                where member.CampaignId == campaignId
+                join user in db.Users on member.UserId equals user.Id
+                select new { user.Id, user.DisplayName, user.Email, member.Role, member.JoinedAt })
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .OrderByDescending(r => r.Role)
+            .ThenBy(r => r.DisplayName, StringComparer.InvariantCultureIgnoreCase)
+            .ThenBy(r => r.Email, StringComparer.Ordinal)
+            .Select(r => new MemberDto(r.Id, r.DisplayName, r.Email, r.Role.ToString(), r.JoinedAt))
+            .ToList();
+    }
+
+    public void Add(Campaign campaign) => db.Campaigns.Add(campaign);
+
+    public void Remove(Campaign campaign) => db.Campaigns.Remove(campaign);
+
+    public void AddOwnershipTransfer(OwnershipTransfer transfer) => db.OwnershipTransfers.Add(transfer);
+}

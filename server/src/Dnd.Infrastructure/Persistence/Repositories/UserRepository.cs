@@ -32,5 +32,17 @@ internal sealed class UserRepository(AppDbContext db) : IUserRepository
         return (items, total);
     }
 
+    public async Task<IReadOnlyList<User>> SearchActiveAsync(string term, int take, CancellationToken cancellationToken = default)
+    {
+        var lowered = term.ToLowerInvariant();
+        return await db.Users
+            .AsNoTracking()
+            .Where(x => x.IsActive && (x.Email.Contains(lowered) || x.DisplayName.ToLower().Contains(lowered)))
+            .OrderBy(x => x.DisplayName)
+            .ThenBy(x => x.Email)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
     public void Add(User user) => db.Users.Add(user);
 }

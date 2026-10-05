@@ -69,6 +69,8 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check 
 app.MapAppEndpoints();
 app.MapAuthEndpoints();
 app.MapAdminUserEndpoints();
+app.MapUserEndpoints();
+app.MapCampaignEndpoints();
 app.MapPageEndpoints();
 
 await app.RunAsync();
