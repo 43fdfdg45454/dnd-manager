@@ -13,7 +13,7 @@ usuarios. Servidor .NET autohospedado con Docker.
 | Reglas / contenido | SRD 5.1 (2014), importado desde el dataset JSON de `5e-database` (MIT; contenido CC-BY 4.0 con atribución) |
 | Hoja | Semiautomática: clase/raza/nivel → cálculo de modificadores, competencias, slots y rasgos; todo sobreescribible |
 | Dados | Privados, sin tiempo real; historial local en el móvil |
-| Email | SMTP genérico por variables de entorno |
+| Email | SMTP del operador por variables de entorno (465 TLS implícito o 587 STARTTLS; CA propia con `SSL_CERT_FILE`) |
 | Idioma | UI en español, contenido SRD en inglés (el DM puede renombrar) |
 | Distribución | APK directo; endpoint de "última versión" para avisar de actualizaciones |
 | Servidor en el cliente | URL configurable desde la app (LAN, VPN o dominio), con HTTP permitido y lista de servidores recientes; ver `docs/specs/cliente-servidor-configurable.md` |
@@ -133,7 +133,7 @@ de `docs/specs/`.
 | Fase | Entregable | Verificación |
 |------|------------|--------------|
 | 0 | Esqueleto: solución .NET, Flutter, Docker Compose + Nginx, CI, CLAUDE.md, ADRs | `docker compose up` sirve `/health`; CI verde |
-| 1 | Auth + admin: crear usuarios, email de alta, login/refresh, pantalla admin | Integración de alta y login; email en MailHog |
+| 1 | Auth + admin: crear usuarios, email de alta, login/refresh, pantalla admin | Integración de alta y login; email capturado por el sender falso de los tests |
 | 2 | Campañas: CRUD, miembros, roles, transferir ownership | Tests de autorización por rol |
 | 3 | Catálogo SRD: seed + endpoints de consulta; buscador en la app | Conteo de hechizos/ítems tras seed |
 | 4 | Personajes: creación semiautomática, cálculos, vista detallada, overrides, `ChangeRequest` | Tests de cálculo |
@@ -141,14 +141,14 @@ de `docs/specs/`.
 | 5b | Cliente: URL del servidor configurable en la app (LAN/VPN, HTTP permitido, certificado fijado opcional) | Cambiar servidor cierra sesión; probar conexión muestra versión |
 | 6 | Vista de combate + paneles Bárbaro/Mago/Paladín + rests + dados | Prueba en emulador |
 | 7 | Lore + mapas con pines + biblioteca de documentos | Pin oculto invisible al jugador; PDF offline |
-| 8 | Calendario, RSVP, recordatorios SMTP, diario de sesiones con resumen del DM | Reminder en MailHog; jugador lee el resumen y no lo edita |
+| 8 | Calendario, RSVP, recordatorios SMTP, diario de sesiones con resumen del DM | Reminder enviado por el sender falso; jugador lee el resumen y no lo edita |
 | 9 | Caché offline, aviso de actualización de APK, backups, README de despliegue | Modo avión muestra la hoja |
 
 ## Verificación end-to-end
 
 1. `cd server && dotnet build && dotnet test`.
 2. `cd app && flutter analyze && flutter test`.
-3. `cd deploy && cp .env.example .env && docker compose --profile dev up -d`, abrir `/swagger`,
-   crear usuario desde el admin inicial, recibir email en MailHog.
+3. `cd deploy && cp .env.example .env && docker compose up -d --build`, abrir `/swagger` a través del
+   proxy, crear usuario desde el admin inicial y recibir el correo en tu SMTP.
 4. `flutter build apk --release`, instalar en emulador, crear personaje, comprar en tienda, modo
    combate, gastar un slot; modo avión y comprobar que la hoja sigue visible.

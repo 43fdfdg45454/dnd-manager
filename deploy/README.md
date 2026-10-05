@@ -19,16 +19,20 @@ que está en `.gitignore` y nunca debe subirse al repositorio.
 
 ```bash
 cd deploy
-cp .env.example .env     # rellenar POSTGRES_PASSWORD, JWT_SECRET, PUBLIC_URL, ADMIN_EMAIL y SMTP_*
+cp .env.example .env     # rellenar POSTGRES_PASSWORD, JWT_SECRET, ADMIN_EMAIL y SMTP_*
 docker compose up -d --build
 docker compose ps        # api y postgres deben quedar "healthy"
 curl http://127.0.0.1:8080/health/ready
 ```
 
 - `JWT_SECRET`: genera uno con `openssl rand -base64 48`. Debe tener al menos 32 caracteres.
-- `PUBLIC_URL`: la URL con la que se llega a la API a través de tu proxy (`https://dnd.example.com`,
-  o `http://192.168.1.50:8080` en una LAN sin proxy). Se usa en los enlaces de los correos y es la
-  que hay que escribir en la pantalla «Servidor» de la app.
+- **URL pública**: la decide tu reverse proxy. La API toma el esquema y el host de las cabeceras
+  `X-Forwarded-Proto` y `X-Forwarded-Host` (solo si llegan desde `TRUSTED_PROXY_*`) y los usa en los
+  enlaces de los correos. Recuerda el último origen visto, así los recordatorios que se envían en
+  segundo plano también llevan la URL correcta. `PUBLIC_URL` queda como respaldo opcional para los
+  correos enviados antes de la primera petición a través del proxy (p. ej. el del administrador
+  inicial): si no lo informas, ese primer enlace sale en los logs como ruta relativa y basta con
+  anteponerle tu URL.
 - **Administrador inicial**: cuando la base de datos no tiene usuarios, la API crea un administrador
   con `ADMIN_EMAIL`, le envía el correo de alta y además escribe el enlace para fijar su contraseña en
   los logs (válido 48 h), por si el SMTP aún no funciona:
@@ -42,15 +46,14 @@ curl http://127.0.0.1:8080/health/ready
   contraseña» (necesita SMTP).
 - Las **migraciones de base de datos se aplican solas** al arrancar la API
   (`Database__AutoMigrate=true`), igual que la importación del catálogo SRD.
-- Perfil de desarrollo con bandeja de correo: `docker compose --profile dev up -d` y abrir
-  `http://localhost:8025`. En `.env` deja `SMTP_HOST=mailhog` y `SMTP_PORT=1025`.
 
 ## Variables de `.env`
 
 | Variable | Para qué sirve | Por defecto |
 |----------|----------------|-------------|
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base de datos (la contraseña es obligatoria) | `dnd`, `dnd`, — |
-| `PUBLIC_URL` | URL pública, para los enlaces de los correos | `https://localhost` |
+| `PUBLIC_URL` | Respaldo opcional de la URL pública; normalmente vacío (la aporta tu proxy) | vacío |
+| `TRUSTED_PROXY_0..3` | Redes (CIDR) desde las que se aceptan las cabeceras `X-Forwarded-*` | loopback y redes privadas |
 | `ADMIN_EMAIL` | Correo del administrador inicial | `admin@example.com` |
 | `JWT_SECRET` | Firma de los tokens y enlaces de asistencia (obligatoria) | — |
 | `MAX_UPLOAD_MB` | Tamaño máximo de subida en la API (ver [Límites de subida](#límites-de-subida)) | `200` |
@@ -58,7 +61,8 @@ curl http://127.0.0.1:8080/health/ready
 | `REMINDERS_ENABLED` | Activa el envío de recordatorios de sesión por correo | `true` |
 | `REMINDERS_POLL_SECONDS` | Cada cuántos segundos busca recordatorios pendientes | `60` |
 | `LOG_LEVEL` | Nivel mínimo de logs: `Trace`, `Debug`, `Information`, `Warning`, `Error` | `Information` |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USE_STARTTLS`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_ADDRESS`, `SMTP_FROM_NAME` | Correo saliente | — |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_ADDRESS`, `SMTP_FROM_NAME` | Correo saliente. `SMTP_SECURITY`: `Auto` (465 → TLS implícito, 587 → STARTTLS), `SslOnConnect`, `StartTls` o `None` | puerto `465`, `Auto` |
+| `SSL_CERT_FILE` / `SSL_CERT_DIR` | CA propia para el SMTP u otras conexiones TLS salientes (variables estándar de OpenSSL que .NET respeta) | bundle del sistema |
 | `API_BIND`, `API_PORT` | Dirección y puerto del host en los que escucha la API (`127.0.0.1` solo para un proxy local; `0.0.0.0` para exponerla en la LAN/VPN) | `127.0.0.1`, `8080` |
 | `API_IMAGE` | Imagen de la API (por defecto se construye desde el código) | `dnd-companion-api:local` |
 | `BACKUP_RETENTION_DAYS` | Días que `backup.sh` conserva las copias | `14` |
@@ -66,6 +70,30 @@ curl http://127.0.0.1:8080/health/ready
 Cada recordatorio se calcula en la zona horaria de su campaña y los avisos (24 h y 2 h antes por
 defecto) los ajusta el DM en los ajustes de la campaña. Con `REMINDERS_ENABLED=false` no se envía
 ninguno.
+
+## Correo con tu propio SMTP
+
+La API envía los correos de alta, recuperación de contraseña y recordatorios con MailKit. Con
+`SMTP_PORT=465` y `SMTP_SECURITY=Auto` conecta con TLS implícito; con `587` usa STARTTLS.
+
+Si tu servidor de correo presenta un certificado firmado por **tu propia CA**, el contenedor debe
+confiar en ella. .NET en Linux respeta las variables estándar de OpenSSL, así que basta con montar
+el fichero y apuntar la variable:
+
+```yaml
+# docker-compose.yml (servicio api)
+    environment:
+      SSL_CERT_FILE: /certs/ca.pem        # un bundle PEM; las CA públicas siguen cargándose del directorio por defecto
+    volumes:
+      - ./certs/ca.pem:/certs/ca.pem:ro
+```
+
+Alternativa con directorio: `SSL_CERT_DIR=/certs` con los PEM procesados por `openssl rehash /certs`
+(los nombres deben ser los hashes que genera ese comando). Nunca se desactiva la validación del
+certificado.
+
+Prueba rápida tras arrancar: crea un usuario desde la app o pide «He olvidado mi contraseña»; si el
+envío falla, `docker compose logs api | grep -i smtp` muestra el motivo.
 
 ## Reverse proxy
 
@@ -108,7 +136,8 @@ certificado desde la pantalla «Servidor» de la app). Con Caddy basta `reverse_
 dentro de su bloque de sitio.
 
 **LAN o VPN sin TLS**: puedes prescindir del proxy y exponer la API directamente con
-`API_BIND=0.0.0.0` y `PUBLIC_URL=http://192.168.1.50:8080`. No lo hagas en Internet: contraseñas y
+`API_BIND=0.0.0.0`; sin proxy, la API usa el `Host` de cada petición (p. ej. `http://192.168.1.50:8080`)
+para los enlaces. No lo hagas en Internet: contraseñas y
 tokens viajarían en claro.
 
 ## Actualización

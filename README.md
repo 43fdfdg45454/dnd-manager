@@ -14,7 +14,7 @@ calendario. El servidor es ASP.NET Core y se autohospeda con Docker.
 |---------|-----------|
 | `server/` | Solución .NET 10: `Dnd.Domain`, `Dnd.Application`, `Dnd.Infrastructure`, `Dnd.Api` y tests |
 | `app/` | Cliente Flutter (Android) |
-| `deploy/` | Docker Compose con `api` y `postgres` (reverse proxy a cargo del operador); perfil `dev` con MailHog |
+| `deploy/` | Docker Compose con `api` y `postgres`; reverse proxy y SMTP a cargo del operador |
 | `docs/` | Plan y ADR |
 
 ## Puesta en marcha rápida

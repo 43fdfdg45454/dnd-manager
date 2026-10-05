@@ -32,12 +32,20 @@ services:
       Logging__LogLevel__Default: ${LOG_LEVEL:-Information}
       ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB:-dnd};Username=${POSTGRES_USER:-dnd};Password=${POSTGRES_PASSWORD}
       Database__AutoMigrate: "true"
-      App__PublicUrl: ${PUBLIC_URL:-https://localhost}
+      # The public URL is taken from the X-Forwarded-Proto/Host headers your reverse proxy sends
+      # (only from App__TrustedProxies). PUBLIC_URL is an optional fallback for emails sent before
+      # the API has seen a request through the proxy.
+      App__PublicUrl: ${PUBLIC_URL:-}
+      App__TrustedProxies__0: ${TRUSTED_PROXY_0:-127.0.0.1/32}
+      App__TrustedProxies__1: ${TRUSTED_PROXY_1:-172.16.0.0/12}
+      App__TrustedProxies__2: ${TRUSTED_PROXY_2:-192.168.0.0/16}
+      App__TrustedProxies__3: ${TRUSTED_PROXY_3:-10.0.0.0/8}
       App__InitialAdminEmail: ${ADMIN_EMAIL:-admin@example.com}
       Jwt__Secret: ${JWT_SECRET:?Define JWT_SECRET en .env}
-      Smtp__Host: ${SMTP_HOST:-mailhog}
-      Smtp__Port: ${SMTP_PORT:-1025}
-      Smtp__UseStartTls: ${SMTP_USE_STARTTLS:-false}
+      Smtp__Host: ${SMTP_HOST:?Define SMTP_HOST en .env}
+      Smtp__Port: ${SMTP_PORT:-465}
+      # Auto (465 -> TLS implicito, 587 -> STARTTLS), SslOnConnect, StartTls o None.
+      Smtp__Security: ${SMTP_SECURITY:-Auto}
       Smtp__Username: ${SMTP_USERNAME:-}
       Smtp__Password: ${SMTP_PASSWORD:-}
       Smtp__FromAddress: ${SMTP_FROM_ADDRESS:-noreply@example.com}
@@ -46,12 +54,19 @@ services:
       App__DefaultTimeZone: ${DEFAULT_TIME_ZONE:-Europe/Madrid}
       Reminders__Enabled: ${REMINDERS_ENABLED:-true}
       Reminders__PollSeconds: ${REMINDERS_POLL_SECONDS:-60}
+      # Extra CA for your own SMTP (or any outbound TLS). .NET on Linux honours the OpenSSL variables:
+      # SSL_CERT_FILE = one PEM bundle (public roots are still loaded from the default directory),
+      # SSL_CERT_DIR  = a directory of PEM files hashed with `c_rehash` / `openssl rehash`.
+      SSL_CERT_FILE: ${SSL_CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}
+      # SSL_CERT_DIR: /certs
     # The API listens directly; put your own reverse proxy (nginx, Caddy, Traefik) in front of it.
     # API_BIND=127.0.0.1 keeps it reachable only from this host; use 0.0.0.0 for a proxy elsewhere.
     ports:
       - "${API_BIND:-127.0.0.1}:${API_PORT:-8080}:8080"
     volumes:
       - files:/data/files
+      # Mount your CA bundle and point SSL_CERT_FILE at it, e.g.:
+      # - ./certs/ca.pem:/certs/ca.pem:ro
     healthcheck:
       # Readiness: the API is up and PostgreSQL answers.
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health/ready || exit 1"]
@@ -60,12 +75,6 @@ services:
       retries: 5
       start_period: 60s
 
-  # Solo para desarrollo: bandeja de correo en http://localhost:8025
-  mailhog:
-    image: mailhog/mailhog:v1.0.1
-    profiles: ["dev"]
-    ports:
-      - "8025:8025"
 
 volumes:
   pgdata:
