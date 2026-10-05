@@ -1,5 +1,6 @@
 using Dnd.Domain.Campaigns;
 using Dnd.Domain.Characters;
+using Dnd.Domain.Items;
 using Dnd.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -29,12 +30,16 @@ internal sealed class CharacterConfiguration : IEntityTypeConfiguration<Characte
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.UpdatedAt).IsRequired();
 
+        // Bumped by the domain on every change; portable optimistic concurrency (no provider row version).
+        builder.Property(x => x.Version).IsConcurrencyToken();
+
         // Calculated (read-only) views over the stored data.
         builder.Ignore(x => x.OrderedClasses);
         builder.Ignore(x => x.BaseAbilities);
         builder.Ignore(x => x.TotalLevel);
         builder.Ignore(x => x.Conditions);
         builder.Ignore(x => x.HitDiceUsed);
+        builder.Ignore(x => x.AttunedCount);
 
         builder.HasOne<Campaign>().WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(x => x.CampaignId);
@@ -49,6 +54,7 @@ internal sealed class CharacterConfiguration : IEntityTypeConfiguration<Characte
         ConfigureChildren<SpellSlotState>(builder, nameof(Character.SpellSlots), "_spellSlots");
         ConfigureChildren<CharacterResource>(builder, nameof(Character.Resources), "_resources");
         ConfigureChildren<CharacterOverride>(builder, nameof(Character.Overrides), "_overrides");
+        ConfigureChildren<CharacterItem>(builder, nameof(Character.Items), "_items");
     }
 
     private static void ConfigureChildren<TChild>(EntityTypeBuilder<Character> builder, string navigationName, string fieldName)

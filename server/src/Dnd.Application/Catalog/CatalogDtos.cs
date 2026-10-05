@@ -151,6 +151,16 @@ public sealed record SpellDetailDto(
     SpellDamageDto? Damage,
     string? DcAbility);
 
+/// <summary>Origin of an item template as shown by the API.</summary>
+public static class ItemSources
+{
+    public const string Srd = "srd";
+    public const string Homebrew = "homebrew";
+
+    public static string Of(ItemTemplate item) => item.IsSrd ? Srd : Homebrew;
+}
+
+/// <param name="Source">"srd" or "homebrew" (campaign item).</param>
 public sealed record ItemSummaryDto(
     Guid Id,
     string? Index,
@@ -160,10 +170,11 @@ public sealed record ItemSummaryDto(
     string? Rarity,
     bool RequiresAttunement,
     int? CostCp,
-    decimal? WeightLb)
+    decimal? WeightLb,
+    string Source)
 {
     public static ItemSummaryDto From(ItemTemplate i) => new(
-        i.Id, i.Index, i.Name, i.Category.ToString(), i.Subcategory, i.Rarity?.ToString(), i.RequiresAttunement, i.CostCp, i.WeightLb);
+        i.Id, i.Index, i.Name, i.Category.ToString(), i.Subcategory, i.Rarity?.ToString(), i.RequiresAttunement, i.CostCp, i.WeightLb, ItemSources.Of(i));
 }
 
 public sealed record ItemDetailDto(
@@ -190,12 +201,15 @@ public sealed record ItemDetailDto(
     bool StealthDisadvantage,
     IReadOnlyList<string> Description,
     bool IsSrd,
-    DateTimeOffset CreatedAt)
+    DateTimeOffset CreatedAt,
+    IReadOnlyList<string> Effects,
+    string Source)
 {
     public static ItemDetailDto From(ItemTemplate i) => new(
         i.Id, i.CampaignId, i.Index, i.Name, i.Category.ToString(), i.Subcategory, i.Rarity?.ToString(), i.RequiresAttunement,
         i.CostCp, i.WeightLb, i.DamageDice, i.DamageType, i.VersatileDice, i.Properties, i.RangeNormal, i.RangeLong,
-        i.ArmorClassBase, i.AddDexModifier, i.MaxDexBonus, i.StrengthMinimum, i.StealthDisadvantage, i.Description, i.IsSrd, i.CreatedAt);
+        i.ArmorClassBase, i.AddDexModifier, i.MaxDexBonus, i.StrengthMinimum, i.StealthDisadvantage, i.Description, i.IsSrd, i.CreatedAt,
+        i.Effects, ItemSources.Of(i));
 }
 
 public sealed record ConditionDto(string Index, string Name, IReadOnlyList<string> Description)

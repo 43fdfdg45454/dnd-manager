@@ -1,6 +1,6 @@
 namespace Dnd.Domain.Catalog;
 
-/// <summary>Rules data of an item template, shared by the SRD import and (later) homebrew items.</summary>
+/// <summary>Rules data of an item template, shared by the SRD import and campaign homebrew items.</summary>
 public sealed record ItemTemplateData
 {
     public required string Name { get; init; }
@@ -44,4 +44,7 @@ public sealed record ItemTemplateData
     public bool StealthDisadvantage { get; init; }
 
     public IReadOnlyList<string> Description { get; init; } = [];
+
+    /// <summary>Free-text effects ("+1 to attack and damage rolls", "Light 20 ft"); empty for SRD items.</summary>
+    public IReadOnlyList<string> Effects { get; init; } = [];
 }

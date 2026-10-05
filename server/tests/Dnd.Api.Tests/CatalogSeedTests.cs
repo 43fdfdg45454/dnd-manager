@@ -34,7 +34,7 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
             var srdItems = await db.ItemTemplates.CountAsync(x => x.CampaignId == null);
             Assert.True(srdItems >= 590, $"Expected at least 590 SRD items, got {srdItems}.");
             Assert.Equal(237 + 362, srdItems);
-            Assert.Equal(237, await db.ItemTemplates.CountAsync(x => x.Category != ItemCategory.MagicItem && x.Rarity == null));
+            Assert.Equal(237, await db.ItemTemplates.CountAsync(x => x.CampaignId == null && x.Category != ItemCategory.MagicItem && x.Rarity == null));
 
             var import = await db.CatalogImports.SingleAsync();
             Assert.Equal(CatalogImport.SrdRuleset, import.Ruleset);
@@ -56,7 +56,7 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
         {
             Assert.Equal(1, await db.CatalogImports.CountAsync());
             Assert.Equal(319, await db.CatalogSpells.CountAsync());
-            Assert.Equal(599, await db.ItemTemplates.CountAsync());
+            Assert.Equal(599, await db.ItemTemplates.CountAsync(x => x.CampaignId == null));
         });
     }
 

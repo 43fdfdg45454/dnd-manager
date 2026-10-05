@@ -3,9 +3,8 @@ using Dnd.Domain.Characters;
 namespace Dnd.Application.Abstractions;
 
 /// <summary>
-/// Equipped armor and shield of characters, as needed by the armor class calculation. Extension
-/// point for the inventory (phase 5); until then every character wears nothing
-/// (<see cref="EquippedGear.None"/>).
+/// Equipped armor and shield of characters, as needed by the armor class calculation (implemented
+/// over the inventory by <c>InventoryEquippedGearProvider</c>).
 /// </summary>
 public interface IEquippedGearProvider
 {

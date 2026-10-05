@@ -1,16 +1,20 @@
 using System.Text.Json;
+using Dnd.Domain.Catalog;
 using Dnd.Domain.Common;
+using Dnd.Domain.Items;
 using Dnd.Domain.Rules;
 
 namespace Dnd.Domain.Characters;
 
 /// <summary>
 /// Character aggregate: stored sheet data, combat tracking state and its child collections (classes,
-/// proficiencies, spells, spent slots, resources, overrides). Calculated values live in
+/// proficiencies, spells, spent slots, resources, overrides, inventory). Calculated values live in
 /// <see cref="CharacterSheet"/> (see <see cref="SheetCalculator"/>); operations that need one of them
 /// (maximum hit points, slot maxima, hit die sizes) take it as a parameter.
 /// Campaign roles are resolved outside the aggregate: permission helpers take <c>actorIsDm</c>
 /// (true when the actor is at least DM in the campaign).
+/// Every change goes through <see cref="Touch"/>, which bumps <see cref="Version"/> (optimistic
+/// concurrency token: two concurrent purchases cannot both spend the same money).
 /// </summary>
 public sealed class Character : EntityBase
 {
@@ -33,6 +37,7 @@ public sealed class Character : EntityBase
     private readonly List<SpellSlotState> _spellSlots = [];
     private readonly List<CharacterResource> _resources = [];
     private readonly List<CharacterOverride> _overrides = [];
+    private readonly List<CharacterItem> _items = [];
 
     private Character()
     {
@@ -102,6 +107,9 @@ public sealed class Character : EntityBase
 
     public DateTimeOffset UpdatedAt { get; private set; }
 
+    /// <summary>Incremented on every change; optimistic concurrency token.</summary>
+    public int Version { get; private set; }
+
     public IReadOnlyCollection<CharacterClassLevel> Classes => _classes;
 
     public IReadOnlyCollection<CharacterProficiency> Proficiencies => _proficiencies;
@@ -113,6 +121,8 @@ public sealed class Character : EntityBase
     public IReadOnlyCollection<CharacterResource> Resources => _resources;
 
     public IReadOnlyCollection<CharacterOverride> Overrides => _overrides;
+
+    public IReadOnlyCollection<CharacterItem> Items => _items;
 
     /// <summary>Classes sorted by <see cref="CharacterClassLevel.Order"/> (main class first).</summary>
     public IReadOnlyList<CharacterClassLevel> OrderedClasses => [.. _classes.OrderBy(c => c.Order)];
@@ -221,7 +231,7 @@ public sealed class Character : EntityBase
 
         Status = CharacterStatus.Active;
         HitPointsCurrent = Math.Max(0, maxHp);
-        UpdatedAt = now;
+        Touch(now);
     }
 
     /// <summary>
@@ -237,7 +247,7 @@ public sealed class Character : EntityBase
     public void SetPortrait(Guid? fileId, DateTimeOffset now)
     {
         PortraitFileId = fileId;
-        UpdatedAt = now;
+        Touch(now);
     }
 
     // ---- Sheet edits ---------------------------------------------------------------------------
@@ -312,13 +322,13 @@ public sealed class Character : EntityBase
         Notes = notes;
         Backstory = backstory;
         CopperPieces = edit.CopperPieces ?? CopperPieces;
-        UpdatedAt = now;
+        Touch(now);
     }
 
     public void Rename(string name, DateTimeOffset now)
     {
         Name = NormalizeName(name);
-        UpdatedAt = now;
+        Touch(now);
     }
 
     public void SetBaseAbilities(AbilityScores abilities, DateTimeOffset now)
@@ -326,7 +336,7 @@ public sealed class Character : EntityBase
         ArgumentNullException.ThrowIfNull(abilities);
         abilities.Validate();
         ApplyBaseAbilities(abilities);
-        UpdatedAt = now;
+        Touch(now);
     }
 
     /// <summary>Switching to <see cref="HpMode.Manual"/> requires an existing <c>hitPointsMax</c> override.</summary>
@@ -334,7 +344,7 @@ public sealed class Character : EntityBase
     {
         EnsureHpModeConsistent(mode, _overrides.Select(o => o.Field));
         HpMode = mode;
-        UpdatedAt = now;
+        Touch(now);
     }
 
     /// <summary>
@@ -344,19 +354,19 @@ public sealed class Character : EntityBase
     public void ReplaceClasses(IEnumerable<ClassEntry> classes, DateTimeOffset now)
     {
         ApplyClasses(NormalizeClasses(classes));
-        UpdatedAt = now;
+        Touch(now);
     }
 
     public void ReplaceProficiencies(IEnumerable<ProficiencyEntry> proficiencies, DateTimeOffset now)
     {
         ApplyProficiencies(NormalizeProficiencies(proficiencies));
-        UpdatedAt = now;
+        Touch(now);
     }
 
     public void ReplaceSpells(IEnumerable<SpellEntry> spells, DateTimeOffset now)
     {
         ApplySpells(NormalizeSpells(spells));
-        UpdatedAt = now;
+        Touch(now);
     }
 
     /// <summary>Replaces the overrides. Removing <c>hitPointsMax</c> while in <see cref="HpMode.Manual"/> is rejected.</summary>
@@ -365,7 +375,7 @@ public sealed class Character : EntityBase
         var normalized = NormalizeOverrides(overrides);
         EnsureHpModeConsistent(HpMode, normalized.Select(o => o.Field));
         ApplyOverrides(normalized);
-        UpdatedAt = now;
+        Touch(now);
     }
 
     // ---- Combat tracking -----------------------------------------------------------------------
@@ -409,14 +419,14 @@ public sealed class Character : EntityBase
             ConditionsJson = JsonSerializer.Serialize(conditions, JsonOptions);
         }
 
-        UpdatedAt = now;
+        Touch(now);
     }
 
     /// <summary>Starts concentrating on a spell, or stops when <paramref name="spellIndex"/> is null or empty.</summary>
     public void SetConcentration(string? spellIndex, DateTimeOffset now)
     {
         ConcentratingOnSpellIndex = spellIndex is null ? null : NormalizeOptional(spellIndex, IndexMaxLength, "conjuro");
-        UpdatedAt = now;
+        Touch(now);
     }
 
     /// <summary>Spent slots of a level (0 = pact).</summary>
@@ -441,7 +451,7 @@ public sealed class Character : EntityBase
 
         var slot = GetOrCreateSlot(level);
         slot.SetUsed(used + amount);
-        UpdatedAt = now;
+        Touch(now);
         return slot;
     }
 
@@ -461,7 +471,7 @@ public sealed class Character : EntityBase
 
         var slot = GetOrCreateSlot(level);
         slot.SetUsed(used - amount);
-        UpdatedAt = now;
+        Touch(now);
         return slot;
     }
 
@@ -475,7 +485,7 @@ public sealed class Character : EntityBase
         }
 
         resource.SetUsed(resource.Used + amount);
-        UpdatedAt = now;
+        Touch(now);
         return resource;
     }
 
@@ -489,7 +499,7 @@ public sealed class Character : EntityBase
         }
 
         resource.SetUsed(resource.Used - amount);
-        UpdatedAt = now;
+        Touch(now);
         return resource;
     }
 
@@ -513,7 +523,7 @@ public sealed class Character : EntityBase
 
         var resource = CharacterResource.CreateManual(Id, trimmed, max, recharge);
         _resources.Add(resource);
-        UpdatedAt = now;
+        Touch(now);
         return resource;
     }
 
@@ -527,7 +537,7 @@ public sealed class Character : EntityBase
         }
 
         _resources.Remove(resource);
-        UpdatedAt = now;
+        Touch(now);
     }
 
     /// <summary>
@@ -641,7 +651,7 @@ public sealed class Character : EntityBase
         }
 
         _spellSlots.FirstOrDefault(s => s.Level == SpellSlotState.PactLevel)?.SetUsed(0);
-        UpdatedAt = now;
+        Touch(now);
         return new ShortRestResult(rolls, restored);
     }
 
@@ -697,10 +707,206 @@ public sealed class Character : EntityBase
         DeathSaveSuccesses = 0;
         DeathSaveFailures = 0;
         ConcentratingOnSpellIndex = null;
-        UpdatedAt = now;
+        Touch(now);
+    }
+
+    // ---- Inventory and money -------------------------------------------------------------------
+
+    public int AttunedCount => _items.Count(i => i.Attuned);
+
+    public CharacterItem FindItem(Guid itemId) =>
+        _items.FirstOrDefault(i => i.Id == itemId) ?? throw DomainException.NotFound("El objeto no está en el inventario.");
+
+    /// <summary>
+    /// Adds an item. A stackable item (<see cref="EffectiveItem.IsStackable"/>) with a template and no
+    /// overrides is added to an existing entry of the same template; otherwise a new entry is created at
+    /// the end of the list. <paramref name="overrides"/> must be an instance owned by nobody else.
+    /// </summary>
+    public CharacterItem AddItem(Guid? templateId, ItemOverrides overrides, int quantity, EffectiveItem effective, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(overrides);
+        ArgumentNullException.ThrowIfNull(effective);
+        ValidateQuantity(quantity);
+        var normalized = overrides.Normalize();
+        if (templateId is null && normalized.Name is null)
+        {
+            throw DomainException.RuleViolation("Un objeto sin plantilla necesita un nombre.");
+        }
+
+        var stack = effective.IsStackable ? _items.FirstOrDefault(i => i.CanStackWith(templateId, normalized)) : null;
+        if (stack is not null)
+        {
+            stack.AddQuantity(quantity, now);
+            Touch(now);
+            return stack;
+        }
+
+        var sortOrder = _items.Count == 0 ? 0 : _items.Max(i => i.SortOrder) + 1;
+        var item = CharacterItem.Create(Id, CampaignId, templateId, normalized, quantity, sortOrder, now);
+        _items.Add(item);
+        Touch(now);
+        return item;
+    }
+
+    /// <summary>Removes <paramref name="quantity"/> units (all of them when null); the entry goes away at 0.</summary>
+    public void RemoveItem(Guid itemId, int? quantity, DateTimeOffset now)
+    {
+        var item = FindItem(itemId);
+        var amount = quantity ?? item.Quantity;
+        ValidateQuantity(amount);
+        item.RemoveQuantity(amount, now);
+        if (item.Quantity == 0)
+        {
+            _items.Remove(item);
+        }
+
+        Touch(now);
+    }
+
+    /// <summary>
+    /// Changes the play state of an entry. Equipping requires a weapon, armor or shield; equipping an
+    /// armor (or a shield) unequips the one worn before. Attuning requires an item that needs it and at
+    /// most <see cref="ItemLimits.MaxAttunedItems"/> attuned items. Everything is checked before anything
+    /// changes. <paramref name="resolve"/> gives the effective item of any entry.
+    /// </summary>
+    public CharacterItem UpdateItem(Guid itemId, ItemUpdate update, Func<CharacterItem, EffectiveItem> resolve, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        ArgumentNullException.ThrowIfNull(resolve);
+
+        var item = FindItem(itemId);
+        var effective = resolve(item);
+        if (update.Equipped == true && !item.Equipped && !effective.IsEquippable)
+        {
+            throw DomainException.RuleViolation("Solo se pueden equipar armas, armaduras y escudos.");
+        }
+
+        if (update.Attuned == true && !item.Attuned)
+        {
+            if (!effective.RequiresAttunement)
+            {
+                throw DomainException.RuleViolation("Este objeto no requiere sintonización.");
+            }
+
+            if (AttunedCount >= ItemLimits.MaxAttunedItems)
+            {
+                throw DomainException.RuleViolation($"No se pueden tener más de {ItemLimits.MaxAttunedItems} objetos sintonizados.");
+            }
+        }
+
+        if (update.SetNotes && update.Notes?.Trim() is { Length: > ItemLimits.NotesMaxLength })
+        {
+            throw DomainException.RuleViolation($"Las notas no pueden superar los {ItemLimits.NotesMaxLength} caracteres.");
+        }
+
+        if (update.SetCharges && update.Charges is { } charges && (charges < 0 || charges > (item.ChargesMax ?? ItemLimits.MaxCharges)))
+        {
+            throw DomainException.RuleViolation($"Las cargas deben estar entre 0 y {item.ChargesMax ?? ItemLimits.MaxCharges}.");
+        }
+
+        if (update.Equipped is { } equipped && equipped != item.Equipped)
+        {
+            if (equipped && effective.Category is ItemCategory.Armor or ItemCategory.Shield)
+            {
+                foreach (var other in _items.Where(i => i.Id != item.Id && i.Equipped && resolve(i).Category == effective.Category))
+                {
+                    other.SetEquipped(false, now);
+                }
+            }
+
+            item.SetEquipped(equipped, now);
+        }
+
+        if (update.Attuned is { } attuned && attuned != item.Attuned)
+        {
+            item.SetAttuned(attuned, now);
+        }
+
+        if (update.SetNotes)
+        {
+            item.SetNotes(update.Notes, now);
+        }
+
+        if (update.SortOrder is { } sortOrder)
+        {
+            item.SetSortOrder(sortOrder, now);
+        }
+
+        if (update.SetCharges)
+        {
+            item.SetCharges(update.Charges, now);
+        }
+
+        Touch(now);
+        return item;
+    }
+
+    /// <summary>
+    /// Uses an item: an item with charges spends <paramref name="amount"/> charges; a consumable
+    /// without charges loses <paramref name="amount"/> units and is removed at 0. Returns the entry, or
+    /// null when it was used up and removed.
+    /// </summary>
+    public CharacterItem? UseItem(Guid itemId, int amount, EffectiveItem effective, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(effective);
+        ValidateAmount(amount);
+        var item = FindItem(itemId);
+        if (item.HasCharges)
+        {
+            item.SpendCharges(amount, now);
+            Touch(now);
+            return item;
+        }
+
+        if (!effective.IsConsumable)
+        {
+            throw DomainException.RuleViolation("Este objeto no es consumible ni tiene cargas.");
+        }
+
+        item.RemoveQuantity(amount, now);
+        Touch(now);
+        if (item.Quantity > 0)
+        {
+            return item;
+        }
+
+        _items.Remove(item);
+        return null;
+    }
+
+    /// <summary>Adds (or, when negative, subtracts) money. The result must stay between 0 and <see cref="MaxCopperPieces"/>.</summary>
+    public void AdjustMoney(long deltaCp, DateTimeOffset now)
+    {
+        var result = CopperPieces + deltaCp;
+        if (result < 0)
+        {
+            throw DomainException.RuleViolation("No hay dinero suficiente.");
+        }
+
+        if (result > MaxCopperPieces)
+        {
+            throw DomainException.RuleViolation($"El dinero no puede superar {MaxCopperPieces} pc.");
+        }
+
+        CopperPieces = (int)result;
+        Touch(now);
     }
 
     // ---- Helpers -------------------------------------------------------------------------------
+
+    private static void ValidateQuantity(int quantity)
+    {
+        if (quantity is < 1 or > ItemLimits.MaxQuantity)
+        {
+            throw DomainException.RuleViolation($"La cantidad debe estar entre 1 y {ItemLimits.MaxQuantity}.");
+        }
+    }
+
+    private void Touch(DateTimeOffset now)
+    {
+        UpdatedAt = now;
+        Version++;
+    }
 
     private static string NormalizeName(string name)
     {

@@ -2,6 +2,7 @@ using Dnd.Application.Abstractions;
 using Dnd.Application.Abstractions.Persistence;
 using Dnd.Application.ChangeRequests;
 using Dnd.Application.Common;
+using Dnd.Application.Items;
 using Dnd.Domain.Characters;
 
 namespace Dnd.Application.Characters;
@@ -43,7 +44,8 @@ public sealed class CharacterSheetService(
     ICatalogRepository catalog,
     IEquippedGearProvider gearProvider,
     IUserRepository users,
-    IChangeRequestRepository changeRequests) : ICharacterSheetService
+    IChangeRequestRepository changeRequests,
+    IItemTemplateRepository itemTemplates) : ICharacterSheetService
 {
     public async Task<CharacterSheet> CalculateAsync(Character character, CancellationToken cancellationToken = default)
     {
@@ -138,6 +140,7 @@ public sealed class CharacterSheetService(
         var pending = await changeRequests.ListViewsAsync(
             new ChangeRequestQuery(CharacterId: character.Id, Status: ChangeRequestStatus.Pending),
             cancellationToken);
+        var templates = await InventoryView.LoadTemplatesAsync(itemTemplates, character.Items.Select(i => i.TemplateId), cancellationToken);
 
         return new CharacterDetailDto
         {
@@ -218,6 +221,7 @@ public sealed class CharacterSheetService(
             SpellSlots = SpellSlots(character, sheet),
             Sheet = ToDto(sheet),
             PendingChangeRequests = pending.Select(ChangeRequestDto.From).ToList(),
+            Inventory = InventoryView.Build(character, templates, sheet.Abilities[Abilities.Str].Score),
         };
     }
 

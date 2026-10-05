@@ -33,6 +33,7 @@ internal sealed class ItemTemplateConfiguration : IEntityTypeConfiguration<ItemT
         builder.Property(x => x.VersatileDice).HasMaxLength(32);
         builder.Property(x => x.Properties).HasJsonListConversion();
         builder.Property(x => x.Description).HasJsonListConversion();
+        builder.Property(x => x.Effects).HasJsonListConversion();
         builder.Property(x => x.CreatedAt).IsRequired();
 
         builder.Ignore(x => x.IsSrd);

@@ -1,10 +1,11 @@
 using Dnd.Domain.Characters;
+using Dnd.Domain.Items;
 
 namespace Dnd.Application.Abstractions.Persistence;
 
 public interface ICharacterRepository
 {
-    /// <summary>Tracked character with every child collection loaded, ready to be modified.</summary>
+    /// <summary>Tracked character with every child collection (inventory included) loaded, ready to be modified.</summary>
     Task<Character?> GetWithDetailsAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -12,6 +13,9 @@ public interface ICharacterRepository
     /// summaries need, maximum hit points included).
     /// </summary>
     Task<IReadOnlyList<Character>> ListByCampaignAsync(Guid campaignId, CancellationToken cancellationToken = default);
+
+    /// <summary>Read-only equipped inventory entries of the given characters.</summary>
+    Task<IReadOnlyList<CharacterItem>> ListEquippedItemsAsync(IReadOnlyCollection<Guid> characterIds, CancellationToken cancellationToken = default);
 
     void Add(Character character);
 

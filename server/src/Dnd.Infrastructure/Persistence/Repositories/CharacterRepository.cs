@@ -1,5 +1,6 @@
 using Dnd.Application.Abstractions.Persistence;
 using Dnd.Domain.Characters;
+using Dnd.Domain.Items;
 using Microsoft.EntityFrameworkCore;
 
 namespace Dnd.Infrastructure.Persistence.Repositories;
@@ -14,6 +15,7 @@ internal sealed class CharacterRepository(AppDbContext db) : ICharacterRepositor
             .Include(x => x.SpellSlots)
             .Include(x => x.Resources)
             .Include(x => x.Overrides)
+            .Include(x => x.Items)
             // One query per collection instead of their cartesian product.
             .AsSplitQuery()
             .Where(x => x.Id == id)
@@ -29,6 +31,11 @@ internal sealed class CharacterRepository(AppDbContext db) : ICharacterRepositor
             .Where(x => x.CampaignId == campaignId)
             .OrderBy(x => x.Id)
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<CharacterItem>> ListEquippedItemsAsync(IReadOnlyCollection<Guid> characterIds, CancellationToken cancellationToken = default) =>
+        characterIds.Count == 0
+            ? []
+            : await db.CharacterItems.AsNoTracking().Where(x => x.Equipped && characterIds.Contains(x.CharacterId)).ToListAsync(cancellationToken);
 
     public void Add(Character character) => db.Characters.Add(character);
 

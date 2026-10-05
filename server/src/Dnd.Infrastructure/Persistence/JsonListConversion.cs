@@ -28,6 +28,22 @@ internal static class JsonListConversion
         return builder.HasConversion(converter, comparer).IsRequired();
     }
 
+    /// <summary>Optional list: null is stored as SQL NULL (distinct from an empty array).</summary>
+    public static PropertyBuilder<IReadOnlyList<T>?> HasNullableJsonListConversion<T>(this PropertyBuilder<IReadOnlyList<T>?> builder)
+    {
+        // Value converters are not invoked for nulls: the database NULL maps straight to a null list.
+        var converter = new ValueConverter<IReadOnlyList<T>?, string?>(
+            list => JsonSerializer.Serialize(list, Options),
+            json => Deserialize<T>(json!));
+
+        var comparer = new ValueComparer<IReadOnlyList<T>?>(
+            (a, b) => a == null ? b == null : b != null && a.SequenceEqual(b),
+            list => list == null ? 0 : list.Aggregate(0, (hash, item) => HashCode.Combine(hash, item == null ? 0 : item.GetHashCode())),
+            list => list == null ? null : list.ToArray());
+
+        return builder.HasConversion(converter, comparer).IsRequired(false);
+    }
+
     private static T[] Deserialize<T>(string json) =>
         string.IsNullOrEmpty(json) ? [] : JsonSerializer.Deserialize<T[]>(json, Options) ?? [];
 }

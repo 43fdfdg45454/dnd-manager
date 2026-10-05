@@ -5,6 +5,7 @@ using Dnd.Application.Campaigns;
 using Dnd.Application.Catalog;
 using Dnd.Application.ChangeRequests;
 using Dnd.Application.Characters;
+using Dnd.Application.Items;
 using Dnd.Application.Users;
 using Dnd.Domain.Characters;
 using FluentValidation;
@@ -63,8 +64,7 @@ public static class DependencyInjection
         services.AddScoped<ListSkillsHandler>();
         services.AddScoped<ListBackgroundsHandler>();
 
-        // Phase 5 replaces this provider with one backed by the inventory.
-        services.AddScoped<IEquippedGearProvider, NoEquippedGearProvider>();
+        services.AddScoped<IEquippedGearProvider, InventoryEquippedGearProvider>();
         services.AddSingleton<IDiceRoller>(RandomDiceRoller.Instance);
         services.AddScoped<ICharacterSheetService, CharacterSheetService>();
         services.AddScoped<CharacterLoader>();
@@ -88,6 +88,33 @@ public static class DependencyInjection
         services.AddScoped<ApproveChangeRequestHandler>();
         services.AddScoped<RejectChangeRequestHandler>();
         services.AddScoped<CancelChangeRequestHandler>();
+
+        services.AddScoped<SearchCampaignItemsHandler>();
+        services.AddScoped<GetCampaignItemHandler>();
+        services.AddScoped<CreateHomebrewItemHandler>();
+        services.AddScoped<UpdateHomebrewItemHandler>();
+        services.AddScoped<DeleteHomebrewItemHandler>();
+        services.AddScoped<InventoryReader>();
+        services.AddScoped<InventoryOperations>();
+        services.AddScoped<GetInventoryHandler>();
+        services.AddScoped<AddInventoryItemHandler>();
+        services.AddScoped<UpdateInventoryItemHandler>();
+        services.AddScoped<UseInventoryItemHandler>();
+        services.AddScoped<RemoveInventoryItemHandler>();
+        services.AddScoped<AdjustMoneyHandler>();
+        services.AddScoped<ShopLoader>();
+        services.AddScoped<TradeLoader>();
+        services.AddScoped<ListShopsHandler>();
+        services.AddScoped<CreateShopHandler>();
+        services.AddScoped<GetShopHandler>();
+        services.AddScoped<UpdateShopHandler>();
+        services.AddScoped<DeleteShopHandler>();
+        services.AddScoped<AddShopItemHandler>();
+        services.AddScoped<UpdateShopItemHandler>();
+        services.AddScoped<DeleteShopItemHandler>();
+        services.AddScoped<BuyHandler>();
+        services.AddScoped<SellHandler>();
+        services.AddScoped<ListTransactionsHandler>();
 
         return services;
     }

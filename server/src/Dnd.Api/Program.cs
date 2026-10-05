@@ -30,6 +30,14 @@ builder.Services.AddSwaggerGen(options =>
     // Optional<T> request fields are plain (nullable) values on the wire.
     options.MapType<Optional<string?>>(() => new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null });
     options.MapType<Optional<Guid?>>(() => new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null, Format = "uuid" });
+    options.MapType<Optional<int?>>(() => new OpenApiSchema { Type = JsonSchemaType.Integer | JsonSchemaType.Null, Format = "int32" });
+    options.MapType<Optional<bool?>>(() => new OpenApiSchema { Type = JsonSchemaType.Boolean | JsonSchemaType.Null });
+    options.MapType<Optional<decimal?>>(() => new OpenApiSchema { Type = JsonSchemaType.Number | JsonSchemaType.Null, Format = "double" });
+    options.MapType<Optional<IReadOnlyList<string>?>>(() => new OpenApiSchema
+    {
+        Type = JsonSchemaType.Array | JsonSchemaType.Null,
+        Items = new OpenApiSchema { Type = JsonSchemaType.String },
+    });
 
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -79,6 +87,9 @@ app.MapCampaignEndpoints();
 app.MapCatalogEndpoints();
 app.MapCharacterEndpoints();
 app.MapChangeRequestEndpoints();
+app.MapItemEndpoints();
+app.MapInventoryEndpoints();
+app.MapShopEndpoints();
 app.MapPageEndpoints();
 
 await app.RunAsync();

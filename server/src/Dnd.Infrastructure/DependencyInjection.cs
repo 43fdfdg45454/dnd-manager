@@ -35,6 +35,9 @@ public static class DependencyInjection
         services.AddScoped<ICatalogRepository, CatalogRepository>();
         services.AddScoped<ICharacterRepository, CharacterRepository>();
         services.AddScoped<IChangeRequestRepository, ChangeRequestRepository>();
+        services.AddScoped<IItemTemplateRepository, ItemTemplateRepository>();
+        services.AddScoped<IShopRepository, ShopRepository>();
+        services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<ISrdSeeder, SrdSeeder>();
 
         services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));

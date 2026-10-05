@@ -1,0 +1,18 @@
+using Dnd.Domain.Items;
+
+namespace Dnd.Application.Abstractions.Persistence;
+
+/// <summary>Filter of transaction listings; null fields do not filter.</summary>
+/// <param name="CharacterOwnerUserId">Only transactions of characters owned by this user.</param>
+public sealed record TransactionQuery(Guid CampaignId, Guid? CharacterId = null, Guid? CharacterOwnerUserId = null);
+
+/// <summary>A transaction with the names the API shows next to it.</summary>
+public sealed record TransactionView(Transaction Transaction, string ShopName, string CharacterName);
+
+public interface ITransactionRepository
+{
+    /// <summary>Read-only page of transactions matching the query, newest first.</summary>
+    Task<(IReadOnlyList<TransactionView> Items, int Total)> ListViewsAsync(TransactionQuery query, int skip, int take, CancellationToken cancellationToken = default);
+
+    void Add(Transaction transaction);
+}

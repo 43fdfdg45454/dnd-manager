@@ -59,7 +59,13 @@ public sealed class ItemTemplate : EntityBase
 
     public IReadOnlyList<string> Description { get; private set; } = [];
 
+    /// <summary>Free-text effects of homebrew items; empty for SRD items.</summary>
+    public IReadOnlyList<string> Effects { get; private set; } = [];
+
     public bool IsSrd => CampaignId is null;
+
+    /// <summary>True when the item can be used inside the campaign: SRD items and the campaign's own homebrew.</summary>
+    public bool IsVisibleIn(Guid campaignId) => CampaignId is null || CampaignId == campaignId;
 
     public static ItemTemplate CreateSrd(string index, ItemTemplateData data, DateTimeOffset now)
     {
@@ -67,6 +73,50 @@ public sealed class ItemTemplate : EntityBase
         item.Apply(data);
         return item;
     }
+
+    /// <summary>Creates a homebrew item that belongs to a campaign (it has no dataset index).</summary>
+    public static ItemTemplate CreateHomebrew(Guid campaignId, ItemTemplateData data, DateTimeOffset now)
+    {
+        var item = new ItemTemplate { CampaignId = campaignId, CreatedAt = now };
+        item.Apply(data);
+        return item;
+    }
+
+    /// <summary>Replaces the rules data of a homebrew item.</summary>
+    public void UpdateHomebrew(ItemTemplateData data)
+    {
+        if (IsSrd)
+        {
+            throw DomainException.RuleViolation("Los objetos del SRD no se pueden editar.");
+        }
+
+        Apply(data);
+    }
+
+    /// <summary>Snapshot of the rules data (e.g. to merge a partial edit).</summary>
+    public ItemTemplateData ToData() => new()
+    {
+        Name = Name,
+        Category = Category,
+        Subcategory = Subcategory,
+        Rarity = Rarity,
+        RequiresAttunement = RequiresAttunement,
+        CostCp = CostCp,
+        WeightLb = WeightLb,
+        DamageDice = DamageDice,
+        DamageType = DamageType,
+        VersatileDice = VersatileDice,
+        Properties = Properties,
+        RangeNormal = RangeNormal,
+        RangeLong = RangeLong,
+        ArmorClassBase = ArmorClassBase,
+        AddDexModifier = AddDexModifier,
+        MaxDexBonus = MaxDexBonus,
+        StrengthMinimum = StrengthMinimum,
+        StealthDisadvantage = StealthDisadvantage,
+        Description = Description,
+        Effects = Effects,
+    };
 
     /// <summary>Replaces the rules data of an SRD item with a newer version of the dataset.</summary>
     public void UpdateSrd(ItemTemplateData data)
@@ -85,6 +135,11 @@ public sealed class ItemTemplate : EntityBase
         if (name.Length is 0 or > NameMaxLength)
         {
             throw DomainException.RuleViolation($"El nombre debe tener entre 1 y {NameMaxLength} caracteres.");
+        }
+
+        if (!Enum.IsDefined(data.Category) || (data.Rarity is { } rarity && !Enum.IsDefined(rarity)))
+        {
+            throw DomainException.RuleViolation("La categoría o la rareza del objeto no son válidas.");
         }
 
         Name = name;
@@ -106,5 +161,6 @@ public sealed class ItemTemplate : EntityBase
         StrengthMinimum = data.StrengthMinimum;
         StealthDisadvantage = data.StealthDisadvantage;
         Description = data.Description;
+        Effects = data.Effects;
     }
 }

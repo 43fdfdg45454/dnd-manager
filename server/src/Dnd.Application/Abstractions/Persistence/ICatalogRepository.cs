@@ -38,8 +38,6 @@ public interface ICatalogRepository
     /// <summary>SRD items (no campaign) matching the filter, ordered by name.</summary>
     Task<(IReadOnlyList<ItemTemplate> Items, int Total)> SearchSrdItemsAsync(ItemFilter filter, int skip, int take, CancellationToken cancellationToken = default);
 
-    Task<ItemTemplate?> GetSrdItemAsync(Guid id, CancellationToken cancellationToken = default);
-
     Task<IReadOnlyList<ConditionDefinition>> ListConditionsAsync(CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<SkillDefinition>> ListSkillsAsync(CancellationToken cancellationToken = default);

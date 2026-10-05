@@ -2,6 +2,7 @@ using Dnd.Application.Abstractions.Persistence;
 using Dnd.Domain.Campaigns;
 using Dnd.Domain.Catalog;
 using Dnd.Domain.Characters;
+using Dnd.Domain.Items;
 using Dnd.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 
@@ -64,6 +65,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<CharacterOverride> CharacterOverrides => Set<CharacterOverride>();
 
     public DbSet<ChangeRequest> ChangeRequests => Set<ChangeRequest>();
+
+    public DbSet<CharacterItem> CharacterItems => Set<CharacterItem>();
+
+    public DbSet<Shop> Shops => Set<Shop>();
+
+    public DbSet<ShopItem> ShopItems => Set<ShopItem>();
+
+    public DbSet<Transaction> Transactions => Set<Transaction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

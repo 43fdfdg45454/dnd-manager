@@ -1,4 +1,5 @@
 using Dnd.Application.ChangeRequests;
+using Dnd.Application.Items;
 
 namespace Dnd.Application.Characters;
 
@@ -64,7 +65,7 @@ public sealed record CharacterSheetDto(
     int? PactSlotLevel,
     IReadOnlyList<string> OverriddenFields);
 
-/// <summary>Full character: stored fields, child collections, calculated sheet and pending change requests.</summary>
+/// <summary>Full character: stored fields, child collections, calculated sheet, inventory and pending change requests.</summary>
 public sealed record CharacterDetailDto
 {
     public required Guid Id { get; init; }
@@ -158,4 +159,6 @@ public sealed record CharacterDetailDto
     public required CharacterSheetDto Sheet { get; init; }
 
     public required IReadOnlyList<ChangeRequestDto> PendingChangeRequests { get; init; }
+
+    public required InventoryDto Inventory { get; init; }
 }

@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Dnd.Api.Auth;
 using Dnd.Api.Filters;
 using Dnd.Application.Catalog;
 
@@ -57,10 +59,10 @@ public static class CatalogEndpoints
             .WithSummary("Objetos del SRD paginados con búsqueda por nombre y filtros de categoría y rareza.")
             .ProducesValidationProblem();
 
-        group.MapGet("/items/{id:guid}", async (Guid id, GetItemHandler handler, CancellationToken ct) =>
-                TypedResults.Ok(await handler.HandleAsync(id, ct)))
+        group.MapGet("/items/{id:guid}", async (Guid id, ClaimsPrincipal user, GetItemHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, ct)))
             .WithName("GetCatalogItem")
-            .WithSummary("Detalle de un objeto del SRD.")
+            .WithSummary("Detalle de un objeto del SRD, o de un objeto homebrew si eres miembro de su campaña (404 si no).")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapGet("/conditions", async (ListConditionsHandler handler, CancellationToken ct) =>

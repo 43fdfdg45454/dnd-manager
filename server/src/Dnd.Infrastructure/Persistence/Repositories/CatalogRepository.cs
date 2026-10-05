@@ -119,9 +119,6 @@ internal sealed class CatalogRepository(AppDbContext db) : ICatalogRepository
         return (items, total);
     }
 
-    public Task<ItemTemplate?> GetSrdItemAsync(Guid id, CancellationToken cancellationToken = default) =>
-        db.ItemTemplates.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.CampaignId == null, cancellationToken);
-
     public async Task<IReadOnlyList<ConditionDefinition>> ListConditionsAsync(CancellationToken cancellationToken = default) =>
         await db.CatalogConditions.AsNoTracking().OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
 

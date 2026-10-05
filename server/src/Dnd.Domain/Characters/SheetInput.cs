@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Dnd.Domain.Catalog;
+using Dnd.Domain.Items;
 
 namespace Dnd.Domain.Characters;
 
@@ -98,7 +99,7 @@ public sealed record SkillInfo(string Index, string Name, string Ability)
 
 /// <summary>
 /// Equipped armor and shield as seen by the armor class rule. <see cref="ArmorClassBase"/> null means
-/// no armor. Inventory arrives in phase 5; until then use <see cref="None"/>.
+/// no armor. Built from the equipped inventory entries (<see cref="From(EffectiveItem?, bool)"/>).
 /// </summary>
 public sealed record EquippedGear(int? ArmorClassBase, bool AddDexModifier, int? MaxDexBonus, bool HasShield)
 {
@@ -110,6 +111,19 @@ public sealed record EquippedGear(int? ArmorClassBase, bool AddDexModifier, int?
     public static EquippedGear From(ItemTemplate? armor, bool hasShield) => armor?.ArmorClassBase is { } armorClass
         ? new EquippedGear(armorClass, armor.AddDexModifier ?? false, armor.MaxDexBonus, hasShield)
         : None with { HasShield = hasShield };
+
+    /// <summary>Gear from an equipped effective armor (overrides applied; null for none) and whether a shield is equipped.</summary>
+    public static EquippedGear From(EffectiveItem? armor, bool hasShield) => armor?.ArmorClassBase is { } armorClass
+        ? new EquippedGear(armorClass, armor.AddDexModifier, armor.MaxDexBonus, hasShield)
+        : None with { HasShield = hasShield };
+
+    /// <summary>Gear from the effective items a character has equipped: the first armor and whether any shield is among them.</summary>
+    public static EquippedGear FromEquipped(IEnumerable<EffectiveItem> equipped)
+    {
+        ArgumentNullException.ThrowIfNull(equipped);
+        var items = equipped.ToList();
+        return From(items.FirstOrDefault(i => i.Category == ItemCategory.Armor), items.Any(i => i.Category == ItemCategory.Shield));
+    }
 }
 
 internal static class AbilityBonusJson

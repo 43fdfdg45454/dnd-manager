@@ -377,6 +377,10 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Effects")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Index")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -897,6 +901,10 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CampaignId");
@@ -1089,6 +1097,175 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("CharacterSpellSlots", (string)null);
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Items.CharacterItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Attuned")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CharacterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Charges")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ChargesMax")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Equipped")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CampaignId");
+
+                    b.HasIndex("CharacterId");
+
+                    b.HasIndex("TemplateId");
+
+                    b.ToTable("CharacterItems", (string)null);
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Items.Shop", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("BuybackPercent")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)");
+
+                    b.Property<bool>("IsOpen")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CampaignId", "Name");
+
+                    b.ToTable("Shops", (string)null);
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Items.ShopItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("PriceCp")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ShopId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Stock")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShopId");
+
+                    b.HasIndex("TemplateId");
+
+                    b.ToTable("ShopItems", (string)null);
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Items.Transaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CharacterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ItemName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ShopId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TotalCp")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CampaignId");
+
+                    b.HasIndex("CharacterId");
+
+                    b.HasIndex("ShopId");
+
+                    b.ToTable("Transactions", (string)null);
                 });
 
             modelBuilder.Entity("Dnd.Domain.Users.PasswordToken", b =>
@@ -1402,6 +1579,276 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Dnd.Domain.Items.CharacterItem", b =>
+                {
+                    b.HasOne("Dnd.Domain.Campaigns.Campaign", null)
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Characters.Character", null)
+                        .WithMany("Items")
+                        .HasForeignKey("CharacterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Catalog.ItemTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.OwnsOne("Dnd.Domain.Items.ItemOverrides", "Overrides", b1 =>
+                        {
+                            b1.Property<Guid>("CharacterItemId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<bool?>("AddDexModifier")
+                                .HasColumnType("boolean")
+                                .HasColumnName("OverrideAddDexModifier");
+
+                            b1.Property<int?>("ArmorClassBase")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideArmorClassBase");
+
+                            b1.Property<int?>("AttackBonus")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideAttackBonus");
+
+                            b1.Property<string>("Category")
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("OverrideCategory");
+
+                            b1.Property<int?>("DamageBonus")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideDamageBonus");
+
+                            b1.Property<string>("DamageDice")
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("OverrideDamageDice");
+
+                            b1.Property<string>("DamageType")
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("OverrideDamageType");
+
+                            b1.Property<string>("Description")
+                                .HasColumnType("text")
+                                .HasColumnName("OverrideDescription");
+
+                            b1.Property<string>("Effects")
+                                .HasColumnType("text")
+                                .HasColumnName("OverrideEffects");
+
+                            b1.Property<int?>("MaxDexBonus")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideMaxDexBonus");
+
+                            b1.Property<string>("Name")
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("OverrideName");
+
+                            b1.Property<string>("Properties")
+                                .HasColumnType("text")
+                                .HasColumnName("OverrideProperties");
+
+                            b1.Property<int?>("RangeLong")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideRangeLong");
+
+                            b1.Property<int?>("RangeNormal")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideRangeNormal");
+
+                            b1.Property<string>("Rarity")
+                                .HasMaxLength(16)
+                                .HasColumnType("character varying(16)")
+                                .HasColumnName("OverrideRarity");
+
+                            b1.Property<bool?>("RequiresAttunement")
+                                .HasColumnType("boolean")
+                                .HasColumnName("OverrideRequiresAttunement");
+
+                            b1.Property<bool?>("StealthDisadvantage")
+                                .HasColumnType("boolean")
+                                .HasColumnName("OverrideStealthDisadvantage");
+
+                            b1.Property<int?>("StrengthMinimum")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideStrengthMinimum");
+
+                            b1.Property<string>("VersatileDice")
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("OverrideVersatileDice");
+
+                            b1.Property<decimal?>("WeightLb")
+                                .HasPrecision(10, 2)
+                                .HasColumnType("numeric(10,2)")
+                                .HasColumnName("OverrideWeightLb");
+
+                            b1.HasKey("CharacterItemId");
+
+                            b1.ToTable("CharacterItems");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CharacterItemId");
+                        });
+
+                    b.Navigation("Overrides")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Items.Shop", b =>
+                {
+                    b.HasOne("Dnd.Domain.Campaigns.Campaign", null)
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Items.ShopItem", b =>
+                {
+                    b.HasOne("Dnd.Domain.Items.Shop", null)
+                        .WithMany("Items")
+                        .HasForeignKey("ShopId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Catalog.ItemTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.OwnsOne("Dnd.Domain.Items.ItemOverrides", "Overrides", b1 =>
+                        {
+                            b1.Property<Guid>("ShopItemId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<bool?>("AddDexModifier")
+                                .HasColumnType("boolean")
+                                .HasColumnName("OverrideAddDexModifier");
+
+                            b1.Property<int?>("ArmorClassBase")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideArmorClassBase");
+
+                            b1.Property<int?>("AttackBonus")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideAttackBonus");
+
+                            b1.Property<string>("Category")
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("OverrideCategory");
+
+                            b1.Property<int?>("DamageBonus")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideDamageBonus");
+
+                            b1.Property<string>("DamageDice")
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("OverrideDamageDice");
+
+                            b1.Property<string>("DamageType")
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("OverrideDamageType");
+
+                            b1.Property<string>("Description")
+                                .HasColumnType("text")
+                                .HasColumnName("OverrideDescription");
+
+                            b1.Property<string>("Effects")
+                                .HasColumnType("text")
+                                .HasColumnName("OverrideEffects");
+
+                            b1.Property<int?>("MaxDexBonus")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideMaxDexBonus");
+
+                            b1.Property<string>("Name")
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("OverrideName");
+
+                            b1.Property<string>("Properties")
+                                .HasColumnType("text")
+                                .HasColumnName("OverrideProperties");
+
+                            b1.Property<int?>("RangeLong")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideRangeLong");
+
+                            b1.Property<int?>("RangeNormal")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideRangeNormal");
+
+                            b1.Property<string>("Rarity")
+                                .HasMaxLength(16)
+                                .HasColumnType("character varying(16)")
+                                .HasColumnName("OverrideRarity");
+
+                            b1.Property<bool?>("RequiresAttunement")
+                                .HasColumnType("boolean")
+                                .HasColumnName("OverrideRequiresAttunement");
+
+                            b1.Property<bool?>("StealthDisadvantage")
+                                .HasColumnType("boolean")
+                                .HasColumnName("OverrideStealthDisadvantage");
+
+                            b1.Property<int?>("StrengthMinimum")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideStrengthMinimum");
+
+                            b1.Property<string>("VersatileDice")
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("OverrideVersatileDice");
+
+                            b1.Property<decimal?>("WeightLb")
+                                .HasPrecision(10, 2)
+                                .HasColumnType("numeric(10,2)")
+                                .HasColumnName("OverrideWeightLb");
+
+                            b1.HasKey("ShopItemId");
+
+                            b1.ToTable("ShopItems");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ShopItemId");
+                        });
+
+                    b.Navigation("Overrides")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Items.Transaction", b =>
+                {
+                    b.HasOne("Dnd.Domain.Campaigns.Campaign", null)
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Characters.Character", null)
+                        .WithMany()
+                        .HasForeignKey("CharacterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Items.Shop", null)
+                        .WithMany()
+                        .HasForeignKey("ShopId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Dnd.Domain.Users.PasswordToken", b =>
                 {
                     b.HasOne("Dnd.Domain.Users.User", null)
@@ -1429,6 +1876,8 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                 {
                     b.Navigation("Classes");
 
+                    b.Navigation("Items");
+
                     b.Navigation("Overrides");
 
                     b.Navigation("Proficiencies");
@@ -1438,6 +1887,11 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                     b.Navigation("SpellSlots");
 
                     b.Navigation("Spells");
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Items.Shop", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

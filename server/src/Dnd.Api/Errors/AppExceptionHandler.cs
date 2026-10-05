@@ -2,18 +2,24 @@ using Dnd.Application.Common;
 using Dnd.Domain.Common;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Dnd.Api.Errors;
 
 /// <summary>
 /// Maps <see cref="AppException"/> and <see cref="DomainException"/> to a ProblemDetails (RFC 9457) response.
+/// A <see cref="DbUpdateConcurrencyException"/> (optimistic concurrency token changed by another
+/// request, e.g. two purchases of the last unit) becomes a 409.
 /// </summary>
 internal sealed class AppExceptionHandler(IProblemDetailsService problemDetailsService) : IExceptionHandler
 {
+    public const string ConcurrencyMessage = "Los datos han cambiado mientras se procesaba la operación. Vuelve a intentarlo.";
+
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
         AppErrorKind kind;
         IReadOnlyDictionary<string, string[]>? errors = null;
+        var detail = exception.Message;
         switch (exception)
         {
             case AppException app:
@@ -22,6 +28,10 @@ internal sealed class AppExceptionHandler(IProblemDetailsService problemDetailsS
                 break;
             case DomainException domain:
                 kind = ToAppErrorKind(domain.Kind);
+                break;
+            case DbUpdateConcurrencyException:
+                kind = AppErrorKind.Conflict;
+                detail = ConcurrencyMessage;
                 break;
             default:
                 return false;
@@ -42,7 +52,7 @@ internal sealed class AppExceptionHandler(IProblemDetailsService problemDetailsS
             : new ProblemDetails();
         problem.Status = status;
         problem.Title = title;
-        problem.Detail = exception.Message;
+        problem.Detail = detail;
 
         httpContext.Response.StatusCode = status;
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext

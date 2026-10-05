@@ -2,6 +2,7 @@ using Dnd.Application.Abstractions;
 using Dnd.Application.Abstractions.Persistence;
 using Dnd.Application.Characters;
 using Dnd.Application.Common;
+using Dnd.Application.Items;
 using Dnd.Domain.Campaigns;
 using Dnd.Domain.Characters;
 using FluentValidation;
@@ -89,13 +90,14 @@ public sealed class ApproveChangeRequestRequestValidator : AbstractValidator<App
 
 /// <summary>
 /// A DM approves a pending request and its payload is applied in the same transaction, with the
-/// same logic as a direct edit. Types of later phases are not supported yet (409).
+/// same logic as a direct edit. "Other" requests carry nothing to apply (409).
 /// </summary>
 public sealed class ApproveChangeRequestHandler(
     ChangeRequestLoader loader,
     ICharacterRepository characters,
     ICharacterSheetService sheets,
     IValidator<SheetPatch> patchValidator,
+    InventoryOperations inventory,
     IUnitOfWork unitOfWork,
     IDateTimeProvider clock)
 {
@@ -122,6 +124,9 @@ public sealed class ApproveChangeRequestHandler(
                 break;
             case ChangeRequestType.EditSheet:
                 await ApplySheetPatchAsync(character, request.PayloadJson, now, cancellationToken);
+                break;
+            case ChangeRequestType.AddItem or ChangeRequestType.CustomItem or ChangeRequestType.RemoveItem or ChangeRequestType.AdjustMoney:
+                await inventory.ApplyApprovedAsync(character, request, now, cancellationToken);
                 break;
             default:
                 throw AppException.Conflict("Este tipo de solicitud todavía no está soportado.");
