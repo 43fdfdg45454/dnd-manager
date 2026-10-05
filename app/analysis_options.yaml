@@ -4,3 +4,6 @@ analyzer:
   exclude:
     - build/**
     - android/**
+
+formatter:
+  page_width: 100
