@@ -35,7 +35,7 @@ cd server && dotnet ef migrations add <Nombre> -p src/Dnd.Infrastructure -s src/
 
 # Cliente
 cd app && flutter pub get && flutter analyze && flutter test
-cd app && flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080   # emulador Android
+cd app && flutter run   # la URL del servidor se configura dentro de la app (pantalla "Servidor")
 cd app && flutter build apk --release --dart-define=API_BASE_URL=https://dnd.example.com
 
 # Despliegue

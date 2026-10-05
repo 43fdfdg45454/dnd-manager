@@ -16,6 +16,7 @@ usuarios. Servidor .NET autohospedado con Docker.
 | Email | SMTP genérico por variables de entorno |
 | Idioma | UI en español, contenido SRD en inglés (el DM puede renombrar) |
 | Distribución | APK directo; endpoint de "última versión" para avisar de actualizaciones |
+| Servidor en el cliente | URL configurable desde la app (LAN, VPN o dominio), con HTTP permitido y lista de servidores recientes; ver `docs/specs/cliente-servidor-configurable.md` |
 | Mapas | Imagen con zoom + pines con notas enlazadas al lore; pines visibles u ocultos |
 | Tiendas | Compra directa: descuenta oro, baja stock, ítem al inventario; DM abre/cierra tienda |
 | Hosting | Docker Compose + Nginx (api, postgres, nginx); certificado TLS montado por el operador |
@@ -127,6 +128,7 @@ indicado (`Agent` con `model: opus | sonnet | haiku`), dándoles el contrato esc
 | 3 | Catálogo SRD: seed + endpoints de consulta; buscador en la app | Conteo de hechizos/ítems tras seed |
 | 4 | Personajes: creación semiautomática, cálculos, vista detallada, overrides, `ChangeRequest` | Tests de cálculo |
 | 5 | Ítems: inventario, creación rápida/avanzada, homebrew, tiendas y compra | Compra atómica |
+| 5b | Cliente: URL del servidor configurable en la app (LAN/VPN, HTTP permitido, certificado fijado opcional) | Cambiar servidor cierra sesión; probar conexión muestra versión |
 | 6 | Vista de combate + paneles Bárbaro/Mago/Paladín + rests + dados | Prueba en emulador |
 | 7 | Lore + mapas con pines + biblioteca de documentos | Pin oculto invisible al jugador; PDF offline |
 | 8 | Calendario, RSVP, recordatorios SMTP, diario de sesiones con resumen del DM | Reminder en MailHog; jugador lee el resumen y no lo edita |
