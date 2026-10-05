@@ -143,6 +143,36 @@ public static class CharacterEndpoints
             .WithName("LongRest")
             .WithSummary("Descanso largo: PG al máximo, slots y recursos repuestos, recupera dados de golpe y reduce el agotamiento.");
 
+        var classActions = group.MapGroup("/class-actions").ProducesProblem(StatusCodes.Status400BadRequest);
+
+        classActions.MapPost($"/{ClassActionHandler.Rage}", async (Guid id, ClaimsPrincipal user, ClassActionHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.RageAsync(user.GetUserId(), id, ct)))
+            .WithName("ClassActionRage")
+            .WithSummary("Bárbaro: entra en furia (gasta un uso de Furia). 400 si no es bárbaro o no quedan usos.");
+
+        classActions.MapPost($"/{ClassActionHandler.LayOnHands}", async (Guid id, LayOnHandsRequest request, ClaimsPrincipal user, ClassActionHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.LayOnHandsAsync(user.GetUserId(), id, request, ct)))
+            .WithName("ClassActionLayOnHands")
+            .WithSummary("Paladín: Imposición de manos ({ amount, targetSelf = true }). Resta del pool y, si targetSelf, cura al personaje sin superar el máximo.")
+            .ProducesValidationProblem();
+
+        classActions.MapPost($"/{ClassActionHandler.DivineSmite}", async (Guid id, DivineSmiteRequest request, ClaimsPrincipal user, ClassActionHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.DivineSmiteAsync(user.GetUserId(), id, request, ct)))
+            .WithName("ClassActionDivineSmite")
+            .WithSummary("Paladín: Castigo divino ({ slotLevel }). Gasta el espacio y devuelve { character, damageDice } (2d8 a nivel 1, +1d8 por nivel, máx. 5d8).")
+            .ProducesValidationProblem();
+
+        classActions.MapPost($"/{ClassActionHandler.ArcaneRecovery}", async (Guid id, ArcaneRecoveryRequest request, ClaimsPrincipal user, ClassActionHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.ArcaneRecoveryAsync(user.GetUserId(), id, request, ct)))
+            .WithName("ClassActionArcaneRecovery")
+            .WithSummary("Mago: Recuperación arcana ({ slotLevels: [..] }). Suma ≤ mitad del nivel de mago (redondeo arriba), ningún espacio > 5; una vez por descanso largo.")
+            .ProducesValidationProblem();
+
+        classActions.MapPost("/{action}", IResult (string action) => throw ClassActionHandler.UnknownAction(action))
+            .WithName("ClassActionUnknown")
+            .WithSummary("Acción de clase desconocida: 404.")
+            .ExcludeFromDescription();
+
         return app;
     }
 }

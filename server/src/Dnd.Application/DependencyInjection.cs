@@ -81,6 +81,7 @@ public static class DependencyInjection
         services.AddScoped<SpellSlotHandler>();
         services.AddScoped<ResourceHandler>();
         services.AddScoped<RestHandler>();
+        services.AddScoped<ClassActionHandler>();
 
         services.AddScoped<ChangeRequestLoader>();
         services.AddScoped<ListChangeRequestsHandler>();

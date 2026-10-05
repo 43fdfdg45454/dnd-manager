@@ -1,0 +1,134 @@
+using Dnd.Application.Items;
+using Dnd.Domain.Catalog;
+using Dnd.Domain.Characters;
+using Dnd.Domain.Items;
+
+namespace Dnd.Application.Characters;
+
+/// <summary>Builds the <see cref="CombatSummaryDto"/> of a character from its calculated sheet and inventory.</summary>
+public static class CombatSummaryBuilder
+{
+    private const string Barbarian = "barbarian";
+    private const string Wizard = "wizard";
+    private const string Paladin = "paladin";
+
+    /// <summary>Reckless Attack is gained at barbarian level 2.</summary>
+    private const int RecklessAttackLevel = 2;
+
+    /// <param name="catalog">Catalog with the character's spells loaded (spell levels for the wizard panel).</param>
+    /// <param name="templates">Templates of the character's inventory entries.</param>
+    public static CombatSummaryDto Build(
+        Character character,
+        CharacterSheet sheet,
+        SheetCatalog catalog,
+        IReadOnlyDictionary<Guid, ItemTemplate> templates,
+        IReadOnlyList<CharacterResourceDto> resources)
+    {
+        var items = character.Items
+            .Select(i => (Entry: i, Template: InventoryView.TemplateOf(templates, i.TemplateId), Effective: InventoryView.Resolve(templates, i)))
+            .OrderBy(i => i.Entry.SortOrder)
+            .ThenBy(i => i.Effective.Name, StringComparer.InvariantCultureIgnoreCase)
+            .ThenBy(i => i.Entry.Id)
+            .ToList();
+        var equipped = items.Where(i => i.Entry.Equipped).ToList();
+
+        var attacks = CombatCalculator.Attacks(
+                character,
+                sheet,
+                equipped.Select(i => new EquippedWeapon(i.Entry.Id, i.Template?.Index, i.Effective)))
+            .Select(a => new AttackDto(a.ItemId, a.Name, a.AttackBonus, a.Damage, a.DamageType, a.VersatileDamage, a.Range, a.Properties, a.Notes))
+            .ToList();
+
+        var spellSlots = Enumerable.Range(1, 9)
+            .Select(level => new SpellSlotDto(level, sheet.SpellSlotMax(level), character.SpellSlotsUsed(level)))
+            .Where(s => s.Max > 0 || s.Used > 0)
+            .ToList();
+        var pactSlots = sheet.PactMagic is { } pact
+            ? new SpellSlotDto(pact.SlotLevel, pact.Slots, character.SpellSlotsUsed(SpellSlotState.PactLevel))
+            : null;
+
+        var quickConsumables = items
+            .Where(i => i.Effective.IsConsumable)
+            .Select(i => new QuickConsumableDto(i.Entry.Id, i.Effective.Name, i.Entry.Quantity, i.Entry.Charges))
+            .ToList();
+
+        var hasShield = EquippedGear.FromEquipped(equipped.Select(i => i.Effective)).HasShield;
+        var classPanels = character.OrderedClasses
+            .Select(c => Panel(character, sheet, catalog, c, spellSlots, hasShield))
+            .OfType<ClassPanelDto>()
+            .ToList();
+
+        var onceSinceLongRest = character.Resources
+            .Where(r => r.Recharge == ResourceRecharge.LongRest && r.Max == 1)
+            .OrderBy(r => r.IsAuto ? 0 : 1)
+            .ThenBy(r => r.Name, StringComparer.Ordinal)
+            .Select(r => new OnceSinceLongRestDto(r.Key, r.Name, r.Used >= r.Max))
+            .ToList();
+
+        return new CombatSummaryDto(attacks, spellSlots, pactSlots, resources, quickConsumables, classPanels, onceSinceLongRest);
+    }
+
+    private static ClassPanelDto? Panel(
+        Character character,
+        CharacterSheet sheet,
+        SheetCatalog catalog,
+        CharacterClassLevel characterClass,
+        IReadOnlyList<SpellSlotDto> spellSlots,
+        bool hasShield)
+    {
+        var level = characterClass.Level;
+        object? data = characterClass.ClassIndex switch
+        {
+            Barbarian => new BarbarianPanelData(
+                CombatCalculator.RageDamageBonus(level),
+                Uses(character, ClassResourceRules.Rage),
+                level >= RecklessAttackLevel,
+                CombatCalculator.BrutalCriticalDice(level),
+                10 + sheet.Modifier(Abilities.Dex) + sheet.Modifier(Abilities.Con) + (hasShield ? SheetCalculator.ShieldBonus : 0)),
+            Wizard => WizardPanel(character, sheet, catalog, level),
+            Paladin => PaladinPanel(character, spellSlots, level),
+            _ => null,
+        };
+
+        return data is null ? null : new ClassPanelDto(characterClass.ClassIndex, level, data);
+    }
+
+    private static WizardPanelData WizardPanel(Character character, CharacterSheet sheet, SheetCatalog catalog, int level)
+    {
+        // Cantrips are not part of the spellbook nor count as prepared spells.
+        var spells = character.Spells
+            .Where(s => s.ClassIndex == Wizard && catalog.Spell(s.SpellIndex)?.Level != 0)
+            .OrderBy(s => catalog.Spell(s.SpellIndex)?.Level ?? int.MaxValue)
+            .ThenBy(s => s.SpellIndex, StringComparer.Ordinal)
+            .ToList();
+        var arcaneRecovery = character.Resources.FirstOrDefault(r => r.IsAuto && r.Key == ClassResourceRules.ArcaneRecovery);
+
+        return new WizardPanelData(
+            spells.Select(s => s.SpellIndex).ToList(),
+            spells.Where(s => s.IsPrepared).Select(s => s.SpellIndex).ToList(),
+            sheet.Spellcasting.FirstOrDefault(s => s.ClassIndex == Wizard)?.PreparedMax ?? 0,
+            new ArcaneRecoveryPanelDto(arcaneRecovery is { } r && r.Used >= r.Max, CombatCalculator.ArcaneRecoveryLevels(level)));
+    }
+
+    private static PaladinPanelData PaladinPanel(Character character, IReadOnlyList<SpellSlotDto> spellSlots, int level)
+    {
+        var pool = Uses(character, ClassResourceRules.LayOnHands);
+        var smiteSlots = level >= Character.DivineSmiteMinLevel
+            ? spellSlots
+                .Where(s => s.Max > 0)
+                .Select(s => new SmiteSlotDto(s.Level, Math.Max(0, s.Max - s.Used), CombatCalculator.DivineSmiteDice(s.Level)))
+                .ToList()
+            : [];
+
+        return new PaladinPanelData(
+            new LayOnHandsPanelDto(pool.Max, pool.Used),
+            new DivineSmitePanelDto(smiteSlots),
+            Uses(character, ClassResourceRules.ChannelDivinity),
+            CombatCalculator.AuraRange(level));
+    }
+
+    private static UsesDto Uses(Character character, string key) =>
+        character.Resources.FirstOrDefault(r => r.IsAuto && r.Key == key) is { } resource
+            ? new UsesDto(resource.Max, resource.Used)
+            : new UsesDto(0, 0);
+}

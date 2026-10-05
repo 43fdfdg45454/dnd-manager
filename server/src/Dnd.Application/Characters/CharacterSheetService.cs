@@ -141,6 +141,11 @@ public sealed class CharacterSheetService(
             new ChangeRequestQuery(CharacterId: character.Id, Status: ChangeRequestStatus.Pending),
             cancellationToken);
         var templates = await InventoryView.LoadTemplatesAsync(itemTemplates, character.Items.Select(i => i.TemplateId), cancellationToken);
+        var resources = character.Resources
+            .OrderBy(r => r.IsAuto ? 0 : 1)
+            .ThenBy(r => r.Name, StringComparer.Ordinal)
+            .Select(ToDto)
+            .ToList();
 
         return new CharacterDetailDto
         {
@@ -213,15 +218,12 @@ public sealed class CharacterSheetService(
                 .OrderBy(o => o.Field, StringComparer.Ordinal)
                 .Select(o => new CharacterOverrideDto(o.Field, o.Value, o.Note))
                 .ToList(),
-            Resources = character.Resources
-                .OrderBy(r => r.IsAuto ? 0 : 1)
-                .ThenBy(r => r.Name, StringComparer.Ordinal)
-                .Select(ToDto)
-                .ToList(),
+            Resources = resources,
             SpellSlots = SpellSlots(character, sheet),
             Sheet = ToDto(sheet),
             PendingChangeRequests = pending.Select(ChangeRequestDto.From).ToList(),
             Inventory = InventoryView.Build(character, templates, sheet.Abilities[Abilities.Str].Score),
+            Combat = CombatSummaryBuilder.Build(character, sheet, sheetCatalog, templates, resources),
         };
     }
 

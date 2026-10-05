@@ -16,7 +16,7 @@ namespace Dnd.Domain.Characters;
 /// Every change goes through <see cref="Touch"/>, which bumps <see cref="Version"/> (optimistic
 /// concurrency token: two concurrent purchases cannot both spend the same money).
 /// </summary>
-public sealed class Character : EntityBase
+public sealed partial class Character : EntityBase
 {
     public const int NameMaxLength = 100;
     public const int IndexMaxLength = 100;

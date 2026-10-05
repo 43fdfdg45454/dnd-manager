@@ -161,4 +161,65 @@ public sealed record CharacterDetailDto
     public required IReadOnlyList<ChangeRequestDto> PendingChangeRequests { get; init; }
 
     public required InventoryDto Inventory { get; init; }
+
+    /// <summary>Precalculated data of the combat view.</summary>
+    public required CombatSummaryDto Combat { get; init; }
 }
+
+// ---- Combat view (phase 6) -------------------------------------------------------------------
+
+/// <summary>One attack: equipped weapon (with <see cref="ItemId"/>) or the unarmed strike. Damage like "1d8+3".</summary>
+public sealed record AttackDto(
+    Guid? ItemId,
+    string Name,
+    int AttackBonus,
+    string Damage,
+    string? DamageType,
+    string? VersatileDamage,
+    string? Range,
+    IReadOnlyList<string> Properties,
+    string? Notes);
+
+/// <summary>A consumable of the inventory (potions, scrolls, ammunition...) for the quick-use list.</summary>
+public sealed record QuickConsumableDto(Guid ItemId, string Name, int Quantity, int? Charges);
+
+/// <summary>Class panel of the combat view; <see cref="Data"/> depends on <see cref="ClassIndex"/> (barbarian, wizard, paladin).</summary>
+public sealed record ClassPanelDto(string ClassIndex, int Level, object Data);
+
+/// <summary>A once-per-long-rest feature (long rest resource with one use).</summary>
+public sealed record OnceSinceLongRestDto(string? Key, string Name, bool Used);
+
+/// <summary>Everything the combat view needs, precalculated.</summary>
+/// <param name="SpellSlots">Regular slots, levels 1-9 with a maximum (or spent ones).</param>
+/// <param name="PactSlots">Pact Magic slots (level = pact slot level), or null.</param>
+public sealed record CombatSummaryDto(
+    IReadOnlyList<AttackDto> Attacks,
+    IReadOnlyList<SpellSlotDto> SpellSlots,
+    SpellSlotDto? PactSlots,
+    IReadOnlyList<CharacterResourceDto> Resources,
+    IReadOnlyList<QuickConsumableDto> QuickConsumables,
+    IReadOnlyList<ClassPanelDto> ClassPanels,
+    IReadOnlyList<OnceSinceLongRestDto> OnceSinceLongRest);
+
+public sealed record UsesDto(int Max, int Used);
+
+public sealed record BarbarianPanelData(int RageDamageBonus, UsesDto RageUses, bool RecklessAttack, int BrutalCriticalDice, int UnarmoredDefenseAc);
+
+public sealed record ArcaneRecoveryPanelDto(bool Used, int SlotLevelsRecoverable);
+
+/// <param name="Spellbook">Wizard spells (cantrips excluded), by index.</param>
+/// <param name="Prepared">Prepared wizard spells (cantrips excluded), by index.</param>
+public sealed record WizardPanelData(IReadOnlyList<string> Spellbook, IReadOnlyList<string> Prepared, int PreparedMax, ArcaneRecoveryPanelDto ArcaneRecovery);
+
+public sealed record LayOnHandsPanelDto(int Pool, int Used);
+
+/// <param name="ExtraDice">Divine Smite dice for a slot of that level, e.g. "2d8".</param>
+public sealed record SmiteSlotDto(int Level, int Available, string ExtraDice);
+
+public sealed record DivineSmitePanelDto(IReadOnlyList<SmiteSlotDto> SlotsByLevel);
+
+/// <param name="AuraRange">Aura range in feet (0 before paladin level 6).</param>
+public sealed record PaladinPanelData(LayOnHandsPanelDto LayOnHands, DivineSmitePanelDto DivineSmite, UsesDto ChannelDivinity, int AuraRange);
+
+/// <summary>Result of Divine Smite: the updated character and the extra damage dice ("2d8").</summary>
+public sealed record DivineSmiteResultDto(CharacterDetailDto Character, string DamageDice);

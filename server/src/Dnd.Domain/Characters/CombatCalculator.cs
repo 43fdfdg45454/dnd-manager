@@ -1,0 +1,251 @@
+using System.Globalization;
+using System.Text;
+using Dnd.Domain.Catalog;
+using Dnd.Domain.Items;
+
+namespace Dnd.Domain.Characters;
+
+/// <summary>An equipped weapon as seen by <see cref="CombatCalculator"/>.</summary>
+/// <param name="ItemId">Inventory entry id.</param>
+/// <param name="TemplateIndex">Dataset index of the template ("longsword"); null for homebrew or hand-made items.</param>
+/// <param name="Item">The effective item (overrides applied).</param>
+public sealed record EquippedWeapon(Guid? ItemId, string? TemplateIndex, EffectiveItem Item);
+
+/// <summary>One attack of the combat view. <see cref="Damage"/> reads like "1d8+3".</summary>
+public sealed record AttackValue(
+    Guid? ItemId,
+    string Name,
+    int AttackBonus,
+    string Damage,
+    string? DamageType,
+    string? VersatileDamage,
+    string? Range,
+    IReadOnlyList<string> Properties,
+    string? Notes);
+
+/// <summary>
+/// Pure combat numbers (SRD 5.1): attacks of the equipped weapons plus the unarmed strike, and the
+/// class feature values shown by the class panels and used by the class actions.
+/// </summary>
+public static class CombatCalculator
+{
+    public const string UnarmedStrikeName = "Ataque sin armas";
+    public const string UnarmedDamageType = "Bludgeoning";
+
+    public const string SimpleWeapons = "simple-weapons";
+    public const string MartialWeapons = "martial-weapons";
+
+    /// <summary>Highest slot level Arcane Recovery can recover.</summary>
+    public const int ArcaneRecoveryMaxSlotLevel = 5;
+
+    /// <summary>Divine Smite deals at most 5d8 (6d8 against undead and fiends, left to the player).</summary>
+    public const int DivineSmiteMaxDice = 5;
+
+    private const string Monk = "monk";
+    private const string Finesse = "finesse";
+    private const string Ammunition = "ammunition";
+    private const string Heavy = "heavy";
+    private const string TwoHanded = "two-handed";
+    private const string Shortsword = "shortsword";
+
+    /// <summary>
+    /// Attacks of the equipped weapons (in the given order) followed by the unarmed strike.
+    /// Ability: Dex for ranged weapons and for finesse weapons when Dex is higher, Str otherwise.
+    /// Proficiency: a weapon proficiency with the weapon (index, its plural or its name) or with its
+    /// category ("simple-weapons", "martial-weapons"). Item overrides add attack and damage bonuses.
+    /// Monks use Martial Arts with the unarmed strike and monk weapons. Rage is not added.
+    /// </summary>
+    public static IReadOnlyList<AttackValue> Attacks(Character character, CharacterSheet sheet, IEnumerable<EquippedWeapon> weapons)
+    {
+        ArgumentNullException.ThrowIfNull(character);
+        ArgumentNullException.ThrowIfNull(sheet);
+        ArgumentNullException.ThrowIfNull(weapons);
+
+        var str = sheet.Modifier(Abilities.Str);
+        var dex = sheet.Modifier(Abilities.Dex);
+        var monkLevel = ClassLevel(character, Monk);
+        var martialArtsDie = MartialArtsDie(monkLevel);
+        var weaponKeys = character.Proficiencies
+            .Where(p => p.Type == ProficiencyType.Weapon)
+            .Select(p => Slug(p.Key))
+            .ToHashSet(StringComparer.Ordinal);
+
+        var attacks = new List<AttackValue>();
+        foreach (var weapon in weapons.Where(w => w.Item.Category == ItemCategory.Weapon))
+        {
+            var item = weapon.Item;
+            var monkWeapon = martialArtsDie is not null && IsMonkWeapon(weapon);
+            var useDex = IsRanged(item) || ((HasProperty(item, Finesse) || monkWeapon) && dex > str);
+            var mod = useDex ? dex : str;
+            var proficient = IsProficient(weaponKeys, weapon);
+            var damageBonus = mod + item.DamageBonus;
+            var dice = monkWeapon ? AtLeastDie(item.DamageDice, martialArtsDie!.Value) : item.DamageDice;
+
+            attacks.Add(new AttackValue(
+                weapon.ItemId,
+                item.Name,
+                mod + (proficient ? sheet.ProficiencyBonus : 0) + item.AttackBonus,
+                string.IsNullOrWhiteSpace(dice) ? "0" : FormatDamage(dice, damageBonus),
+                item.DamageType,
+                string.IsNullOrWhiteSpace(item.VersatileDice) ? null : FormatDamage(item.VersatileDice, damageBonus),
+                FormatRange(item.RangeNormal, item.RangeLong),
+                item.Properties,
+                item.Effects.Count == 0 ? null : string.Join("; ", item.Effects)));
+        }
+
+        var unarmedMod = martialArtsDie is not null ? Math.Max(str, dex) : str;
+        attacks.Add(new AttackValue(
+            null,
+            UnarmedStrikeName,
+            unarmedMod + sheet.ProficiencyBonus,
+            FormatDamage(martialArtsDie is { } die ? $"1d{die}" : "1", unarmedMod),
+            UnarmedDamageType,
+            null,
+            null,
+            [],
+            null));
+
+        return attacks;
+    }
+
+    /// <summary>"1d8" + 3 → "1d8+3"; 0 → "1d8"; −1 → "1d8-1".</summary>
+    public static string FormatDamage(string dice, int bonus) => bonus switch
+    {
+        0 => dice,
+        > 0 => $"{dice}+{bonus.ToString(CultureInfo.InvariantCulture)}",
+        _ => $"{dice}{bonus.ToString(CultureInfo.InvariantCulture)}",
+    };
+
+    /// <summary>Martial Arts die by monk level: d4 (1), d6 (5), d8 (11), d10 (17); null without monk levels.</summary>
+    public static int? MartialArtsDie(int monkLevel) => monkLevel switch
+    {
+        <= 0 => null,
+        >= 17 => 10,
+        >= 11 => 8,
+        >= 5 => 6,
+        _ => 4,
+    };
+
+    /// <summary>Rage damage bonus by barbarian level: +2, +3 (9), +4 (16).</summary>
+    public static int RageDamageBonus(int barbarianLevel) => barbarianLevel >= 16 ? 4 : barbarianLevel >= 9 ? 3 : 2;
+
+    /// <summary>Extra weapon dice of Brutal Critical: 1 (9), 2 (13), 3 (17); 0 before.</summary>
+    public static int BrutalCriticalDice(int barbarianLevel) => barbarianLevel >= 17 ? 3 : barbarianLevel >= 13 ? 2 : barbarianLevel >= 9 ? 1 : 0;
+
+    /// <summary>Paladin aura range in feet: 10 from level 6, 30 from level 18, 0 before.</summary>
+    public static int AuraRange(int paladinLevel) => paladinLevel >= 18 ? 30 : paladinLevel >= 6 ? 10 : 0;
+
+    /// <summary>Sum of slot levels Arcane Recovery restores: half the wizard level, rounded up.</summary>
+    public static int ArcaneRecoveryLevels(int wizardLevel) => Math.Max(0, (wizardLevel + 1) / 2);
+
+    /// <summary>Divine Smite extra damage for a slot level: 2d8 at 1st, +1d8 per level above, at most 5d8.</summary>
+    public static string DivineSmiteDice(int slotLevel) =>
+        $"{Math.Clamp(slotLevel + 1, 2, DivineSmiteMaxDice).ToString(CultureInfo.InvariantCulture)}d8";
+
+    /// <summary>Level of the character in a class (0 without it).</summary>
+    public static int ClassLevel(Character character, string classIndex)
+    {
+        ArgumentNullException.ThrowIfNull(character);
+        return character.Classes.FirstOrDefault(c => c.ClassIndex == classIndex)?.Level ?? 0;
+    }
+
+    /// <summary>Ranged weapons: those with ammunition or a "Ranged" subcategory (thrown melee weapons are melee).</summary>
+    public static bool IsRanged(EffectiveItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        return HasProperty(item, Ammunition)
+            || (item.Subcategory?.Contains("Ranged", StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private static bool IsProficient(HashSet<string> weaponKeys, EquippedWeapon weapon)
+    {
+        if (weaponKeys.Count == 0)
+        {
+            return false;
+        }
+
+        var subcategory = weapon.Item.Subcategory ?? string.Empty;
+        if ((subcategory.StartsWith("Simple", StringComparison.OrdinalIgnoreCase) && weaponKeys.Contains(SimpleWeapons))
+            || (subcategory.StartsWith("Martial", StringComparison.OrdinalIgnoreCase) && weaponKeys.Contains(MartialWeapons)))
+        {
+            return true;
+        }
+
+        return WeaponKeys(weapon).Any(weaponKeys.Contains);
+    }
+
+    /// <summary>
+    /// Keys that name the weapon itself: the index and the name, singular and plural; the dataset uses
+    /// plural proficiency indexes ("longswords", "crossbows-light" for "crossbow-light").
+    /// </summary>
+    private static IEnumerable<string> WeaponKeys(EquippedWeapon weapon)
+    {
+        foreach (var key in new[] { weapon.TemplateIndex, weapon.Item.Name }.Where(k => !string.IsNullOrWhiteSpace(k)).Select(k => Slug(k!)))
+        {
+            yield return key;
+            yield return key + "s";
+            var dash = key.IndexOf('-', StringComparison.Ordinal);
+            if (dash > 0)
+            {
+                yield return key[..dash] + "s" + key[dash..];
+            }
+        }
+    }
+
+    /// <summary>Shortswords and simple melee weapons without the heavy or two-handed property.</summary>
+    private static bool IsMonkWeapon(EquippedWeapon weapon)
+    {
+        var item = weapon.Item;
+        if (weapon.TemplateIndex == Shortsword || Slug(item.Name) == Shortsword)
+        {
+            return true;
+        }
+
+        return string.Equals(item.Subcategory, "Simple Melee", StringComparison.OrdinalIgnoreCase)
+            && !HasProperty(item, Heavy)
+            && !HasProperty(item, TwoHanded);
+    }
+
+    /// <summary>Replaces a single die ("1d4") by the Martial Arts die when that is larger.</summary>
+    private static string? AtLeastDie(string? dice, int die)
+    {
+        if (string.IsNullOrWhiteSpace(dice))
+        {
+            return $"1d{die}";
+        }
+
+        var parts = dice.Trim().Split('d');
+        return parts.Length == 2 && parts[0] == "1" && int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var sides) && sides < die
+            ? $"1d{die}"
+            : dice;
+    }
+
+    private static string? FormatRange(int? normal, int? @long) => (normal, @long) switch
+    {
+        ({ } n, { } l) => $"{n}/{l}",
+        ({ } n, null) => n.ToString(CultureInfo.InvariantCulture),
+        _ => null,
+    };
+
+    private static bool HasProperty(EffectiveItem item, string property) =>
+        item.Properties.Any(p => Slug(p) == property);
+
+    /// <summary>"Martial Weapons" → "martial-weapons"; "Crossbow, light" → "crossbow-light".</summary>
+    private static string Slug(string value)
+    {
+        var builder = new StringBuilder(value.Length);
+        foreach (var c in value.Trim().ToLowerInvariant())
+        {
+            if (char.IsLetterOrDigit(c))
+            {
+                builder.Append(c);
+            }
+            else if (builder.Length > 0 && builder[^1] != '-')
+            {
+                builder.Append('-');
+            }
+        }
+
+        return builder.ToString().TrimEnd('-');
+    }
+}
