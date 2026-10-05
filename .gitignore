@@ -1,0 +1,35 @@
+# Secretos y datos locales
+deploy/.env
+deploy/certs/
+deploy/backups/
+deploy/data/
+
+# .NET
+server/**/bin/
+server/**/obj/
+server/**/*.user
+server/.vs/
+server/TestResults/
+
+# Flutter / Dart
+app/.dart_tool/
+app/.packages
+app/build/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/android/.gradle/
+app/android/local.properties
+app/android/key.properties
+app/android/**/*.jks
+app/android/**/*.keystore
+app/ios/
+app/macos/
+app/windows/
+app/linux/
+app/web/
+
+# IDE / SO
+.idea/
+.vscode/
+*.swp
+.DS_Store

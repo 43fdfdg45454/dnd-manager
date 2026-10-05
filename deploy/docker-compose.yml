@@ -1,0 +1,70 @@
+name: dnd-companion
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dnd}
+      POSTGRES_USER: ${POSTGRES_USER:-dnd}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dnd} -d ${POSTGRES_DB:-dnd}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ../server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB:-dnd};Username=${POSTGRES_USER:-dnd};Password=${POSTGRES_PASSWORD}
+      Database__AutoMigrate: "true"
+      App__PublicUrl: ${PUBLIC_URL:-https://localhost}
+      App__InitialAdminEmail: ${ADMIN_EMAIL:-admin@example.com}
+      Jwt__Secret: ${JWT_SECRET:?Define JWT_SECRET en .env}
+      Smtp__Host: ${SMTP_HOST:-mailhog}
+      Smtp__Port: ${SMTP_PORT:-1025}
+      Smtp__UseStartTls: ${SMTP_USE_STARTTLS:-false}
+      Smtp__Username: ${SMTP_USERNAME:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      Smtp__FromAddress: ${SMTP_FROM_ADDRESS:-noreply@example.com}
+      Smtp__FromName: ${SMTP_FROM_NAME:-D&D Companion}
+      FileStorage__MaxUploadMegabytes: ${MAX_UPLOAD_MB:-200}
+    volumes:
+      - files:/data/files
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+
+  # Solo para desarrollo: bandeja de correo en http://localhost:8025
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    profiles: ["dev"]
+    ports:
+      - "8025:8025"
+
+volumes:
+  pgdata:
+  files:
