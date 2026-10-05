@@ -1,0 +1,113 @@
+using Dnd.Domain.Rules;
+
+namespace Dnd.Domain.Characters;
+
+/// <summary>An automatic class resource as derived from class and level (see <see cref="ClassResourceRules"/>).</summary>
+public sealed record ResourceTemplate(string Key, string Name, int Max, ResourceRecharge Recharge);
+
+/// <summary>
+/// Automatic limited-use resources by class and level (SRD 5.1). Each resource appears from the level
+/// at which the class gains the feature. Warlocks have none (pact slots cover them); rogues and rangers neither.
+/// </summary>
+public static class ClassResourceRules
+{
+    /// <summary>Maximum used for "unlimited" (rage at barbarian level 20).</summary>
+    public const int Unlimited = 999;
+
+    public const string Rage = "rage";
+    public const string BardicInspiration = "bardic-inspiration";
+    public const string ChannelDivinity = "channel-divinity";
+    public const string WildShape = "wild-shape";
+    public const string SecondWind = "second-wind";
+    public const string ActionSurge = "action-surge";
+    public const string Indomitable = "indomitable";
+    public const string Ki = "ki";
+    public const string LayOnHands = "lay-on-hands";
+    public const string SorceryPoints = "sorcery-points";
+    public const string ArcaneRecovery = "arcane-recovery";
+
+    /// <summary>Rages per long rest by barbarian level 1-20 (SRD <c>class_specific.rage_count</c>).</summary>
+    private static readonly int[] RageCount = [2, 2, 3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, Unlimited];
+
+    /// <summary>Resources granted by one class at a class level.</summary>
+    /// <param name="abilityModifiers">Final ability modifiers by index (<see cref="CharacterSheet.AbilityModifiers"/>); missing ones count as 0.</param>
+    public static IReadOnlyList<ResourceTemplate> For(string classIndex, int level, IReadOnlyDictionary<string, int> abilityModifiers)
+    {
+        ArgumentNullException.ThrowIfNull(abilityModifiers);
+        if (level is < AbilityRules.MinLevel or > AbilityRules.MaxLevel)
+        {
+            throw new ArgumentOutOfRangeException(nameof(level), level, $"Class level must be between {AbilityRules.MinLevel} and {AbilityRules.MaxLevel}.");
+        }
+
+        var result = new List<ResourceTemplate>();
+        void Add(string key, string name, int max, ResourceRecharge recharge) => result.Add(new ResourceTemplate(key, name, max, recharge));
+
+        switch (classIndex)
+        {
+            case "barbarian":
+                Add(Rage, "Rage", RageCount[level - 1], ResourceRecharge.LongRest);
+                break;
+            case "bard":
+                Add(
+                    BardicInspiration,
+                    "Bardic Inspiration",
+                    Math.Max(1, abilityModifiers.GetValueOrDefault(Abilities.Cha)),
+                    level >= 5 ? ResourceRecharge.ShortRest : ResourceRecharge.LongRest);
+                break;
+            case "cleric" when level >= 2:
+                Add(ChannelDivinity, "Channel Divinity", level >= 18 ? 3 : level >= 6 ? 2 : 1, ResourceRecharge.ShortRest);
+                break;
+            case "druid" when level >= 2:
+                Add(WildShape, "Wild Shape", 2, ResourceRecharge.ShortRest);
+                break;
+            case "fighter":
+                Add(SecondWind, "Second Wind", 1, ResourceRecharge.ShortRest);
+                if (level >= 2)
+                {
+                    Add(ActionSurge, "Action Surge", level >= 17 ? 2 : 1, ResourceRecharge.ShortRest);
+                }
+
+                if (level >= 9)
+                {
+                    Add(Indomitable, "Indomitable", level >= 17 ? 3 : level >= 13 ? 2 : 1, ResourceRecharge.LongRest);
+                }
+
+                break;
+            case "monk" when level >= 2:
+                Add(Ki, "Ki", level, ResourceRecharge.ShortRest);
+                break;
+            case "paladin":
+                Add(LayOnHands, "Lay on Hands", 5 * level, ResourceRecharge.LongRest);
+                if (level >= 3)
+                {
+                    Add(ChannelDivinity, "Channel Divinity", 1, ResourceRecharge.ShortRest);
+                }
+
+                break;
+            case "sorcerer" when level >= 2:
+                Add(SorceryPoints, "Sorcery Points", level, ResourceRecharge.LongRest);
+                break;
+            case "wizard":
+                Add(ArcaneRecovery, "Arcane Recovery", 1, ResourceRecharge.LongRest);
+                break;
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Resources of every class of a character, ready for <see cref="Character.SyncAutoResources"/>.
+    /// A key granted by several classes (cleric and paladin Channel Divinity) does not stack: the highest maximum wins.
+    /// </summary>
+    public static IReadOnlyList<ResourceTemplate> ForClasses(IEnumerable<CharacterClassLevel> classes, IReadOnlyDictionary<string, int> abilityModifiers)
+    {
+        ArgumentNullException.ThrowIfNull(classes);
+
+        return classes
+            .OrderBy(c => c.Order)
+            .SelectMany(c => For(c.ClassIndex, c.Level, abilityModifiers))
+            .GroupBy(t => t.Key, StringComparer.Ordinal)
+            .Select(g => g.MaxBy(t => t.Max)!)
+            .ToList();
+    }
+}
