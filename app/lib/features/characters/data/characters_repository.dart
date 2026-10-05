@@ -138,6 +138,35 @@ class CharactersRepository {
   Future<CharacterDetail> longRest(String id) async =>
       CharacterDetail.fromJson(await _json('POST', '$_api/characters/$id/rest/long'));
 
+  // -- Class actions (phase 6, no approval) ----------------------------------
+
+  /// `POST /characters/{id}/class-actions/{action}`: `rage` (`{}`),
+  /// `lay-on-hands` (`{amount, targetSelf}`) or `arcane-recovery`
+  /// (`{slotLevels: [..]}`). Responds with the updated character.
+  Future<CharacterDetail> classAction(
+    String id,
+    String action, [
+    Map<String, dynamic> body = const {},
+  ]) async => CharacterDetail.fromJson(
+    await _json('POST', '$_api/characters/$id/class-actions/$action', data: body),
+  );
+
+  /// `divine-smite`: spends the slot and answers with the extra damage dice.
+  Future<DivineSmiteResult> divineSmite(String id, int slotLevel) async {
+    final json = await _json(
+      'POST',
+      '$_api/characters/$id/class-actions/divine-smite',
+      data: {'slotLevel': slotLevel},
+    );
+    final character = json['character'];
+    return DivineSmiteResult(
+      character: CharacterDetail.fromJson(
+        character is Map ? Map<String, dynamic>.from(character) : json,
+      ),
+      damageDice: json['damageDice'] is String ? json['damageDice'] as String : '',
+    );
+  }
+
   // -- Change requests ------------------------------------------------------
 
   /// DMs get every request of the campaign, players only their own. A null

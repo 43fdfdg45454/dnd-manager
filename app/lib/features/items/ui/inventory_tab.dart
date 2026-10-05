@@ -72,7 +72,7 @@ class _InventoryView extends ConsumerWidget {
         inventory.carryCapacityLb > 0 && inventory.totalWeightLb > inventory.carryCapacityLb;
 
     return ListView(
-      padding: EdgeInsets.fromLTRB(16, 8, 16, 24 + MediaQuery.paddingOf(context).bottom),
+      padding: EdgeInsets.fromLTRB(16, 8, 16, 88 + MediaQuery.paddingOf(context).bottom),
       children: [
         Card(
           child: Padding(

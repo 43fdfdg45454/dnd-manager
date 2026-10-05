@@ -6,6 +6,8 @@ import '../../catalog/data/catalog_controllers.dart';
 import '../../catalog/data/models.dart' show ClassDetail, Feature, RaceDetail, Trait;
 import '../../catalog/domain/catalog_format.dart';
 import '../../catalog/ui/detail_widgets.dart';
+import '../../dice/domain/dice_expression.dart';
+import '../../dice/ui/dice_sheet.dart';
 import '../data/characters_controller.dart';
 import '../data/models.dart';
 import '../domain/character_format.dart';
@@ -50,7 +52,7 @@ class _TabList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: EdgeInsets.fromLTRB(16, 8, 16, 24 + MediaQuery.paddingOf(context).bottom),
+      padding: EdgeInsets.fromLTRB(16, 8, 16, 88 + MediaQuery.paddingOf(context).bottom),
       children: children,
     );
   }
@@ -162,21 +164,29 @@ class _AbilityCard extends StatelessWidget {
     return Card(
       key: Key('ability-$abilityKey'),
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(abilityLabel(abilityKey), style: theme.textTheme.labelMedium),
-            Text(formatModifier(ability.modifier), style: theme.textTheme.headlineSmall),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('${ability.score}', style: theme.textTheme.bodyMedium),
-                OverrideMark(character: character, field: 'ability.$abilityKey'),
-              ],
-            ),
-          ],
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => rollAndShow(
+          context,
+          d20Expression(ability.modifier),
+          label: 'Prueba de ${abilityLabel(abilityKey)}',
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(abilityLabel(abilityKey), style: theme.textTheme.labelMedium),
+              Text(formatModifier(ability.modifier), style: theme.textTheme.headlineSmall),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('${ability.score}', style: theme.textTheme.bodyMedium),
+                  OverrideMark(character: character, field: 'ability.$abilityKey'),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -238,6 +248,11 @@ class _SavingThrowRow extends StatelessWidget {
       key: Key('save-$abilityKey'),
       dense: true,
       contentPadding: EdgeInsets.zero,
+      onTap: () => rollAndShow(
+        context,
+        d20Expression(save?.value ?? 0),
+        label: 'Salvación de ${abilityLabel(abilityKey)}',
+      ),
       leading: Icon(
         proficient ? Icons.circle : Icons.radio_button_unchecked,
         key: Key(proficient ? 'save-proficient-$abilityKey' : 'save-plain-$abilityKey'),
@@ -248,6 +263,8 @@ class _SavingThrowRow extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          const Icon(Icons.casino_outlined, size: 16),
+          const SizedBox(width: 8),
           Text(formatModifier(save?.value ?? 0)),
           OverrideMark(character: character, field: 'save.$abilityKey'),
         ],
@@ -290,6 +307,11 @@ class SkillsTab extends StatelessWidget {
             key: Key('skill-${skill.index}'),
             dense: true,
             contentPadding: EdgeInsets.zero,
+            onTap: () => rollAndShow(
+              context,
+              d20Expression(skill.value),
+              label: skillLabel(skill.index, skill.name),
+            ),
             leading: Icon(
               skill.expertise
                   ? Icons.stars
@@ -313,6 +335,8 @@ class SkillsTab extends StatelessWidget {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                const Icon(Icons.casino_outlined, size: 16),
+                const SizedBox(width: 8),
                 Text(formatModifier(skill.value)),
                 OverrideMark(character: character, field: 'skill.${skill.index}'),
               ],

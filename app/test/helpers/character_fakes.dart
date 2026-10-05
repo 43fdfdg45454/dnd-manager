@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:dnd_companion/features/characters/data/models.dart';
 
@@ -20,6 +22,9 @@ Map<String, dynamic> makeCharacterJson({
   String notes = '',
   List<Map<String, dynamic>>? classes,
   List<Map<String, dynamic>> spellSlots = const [],
+  int hitPointsCurrent = 20,
+  int temporaryHitPoints = 3,
+  Map<String, dynamic>? combat,
 }) => {
   'id': id,
   'campaignId': campaignId,
@@ -37,8 +42,8 @@ Map<String, dynamic> makeCharacterJson({
   'baseInt': 10,
   'baseWis': 12,
   'baseCha': 8,
-  'hitPointsCurrent': 20,
-  'temporaryHitPoints': 3,
+  'hitPointsCurrent': hitPointsCurrent,
+  'temporaryHitPoints': temporaryHitPoints,
   'deathSaveSuccesses': 0,
   'deathSaveFailures': 0,
   'exhaustionLevel': 0,
@@ -57,6 +62,7 @@ Map<String, dynamic> makeCharacterJson({
   'overrides': overrides,
   'resources': <Object>[],
   'spellSlots': spellSlots,
+  'combat': ?combat,
   'sheet': {
     'abilities': {
       'str': {'score': 16, 'modifier': 3, 'overridden': false},
@@ -105,6 +111,54 @@ Map<String, dynamic> makeCharacterJson({
     'overriddenFields': overriddenFields,
   },
   'pendingChangeRequests': pending,
+};
+
+/// A `combat` block as the server would send it: a longsword attack, two level
+/// 1 slots and a short-rest resource. Pass the lists to override the defaults.
+Map<String, dynamic> makeCombatJson({
+  List<Map<String, dynamic>>? attacks,
+  List<Map<String, dynamic>>? spellSlots,
+  Map<String, dynamic>? pactSlots,
+  List<Map<String, dynamic>>? resources,
+  List<Map<String, dynamic>> quickConsumables = const [],
+  List<Map<String, dynamic>> classPanels = const [],
+  List<Map<String, dynamic>> onceSinceLongRest = const [],
+}) => {
+  'attacks':
+      attacks ??
+      [
+        {
+          'itemId': 'it1',
+          'name': 'Longsword',
+          'attackBonus': 5,
+          'damage': '1d8+3',
+          'damageType': 'Slashing',
+          'versatileDamage': '1d10+3',
+          'properties': ['Versatile'],
+        },
+      ],
+  'spellSlots':
+      spellSlots ??
+      [
+        {'level': 1, 'max': 2, 'used': 0},
+      ],
+  'pactSlots': ?pactSlots,
+  'resources':
+      resources ??
+      [
+        {
+          'id': 'r1',
+          'key': 'second-wind',
+          'name': 'Second Wind',
+          'max': 1,
+          'used': 0,
+          'recharge': 'ShortRest',
+          'isAuto': true,
+        },
+      ],
+  'quickConsumables': quickConsumables,
+  'classPanels': classPanels,
+  'onceSinceLongRest': onceSinceLongRest,
 };
 
 Map<String, dynamic> makeChangeRequestJson({
@@ -271,6 +325,128 @@ class FakeCharactersRepository implements CharactersRepository {
     _fail();
     deleted.add(id);
     _characters.remove(id);
+  }
+
+  // -- Combat tracking ------------------------------------------------------
+
+  final List<CombatPatch> combatPatches = [];
+  final List<String?> concentrationCalls = [];
+  final List<({int level, int amount})> slotSpends = [];
+  final List<({int level, int amount})> slotRestores = [];
+  final List<({String id, int amount})> resourceSpends = [];
+  final List<({String id, int amount})> resourceRestores = [];
+  final List<Map<String, int>> shortRests = [];
+  int longRests = 0;
+  final List<({String action, Map<String, dynamic> body})> classActions = [];
+  final List<int> smites = [];
+
+  /// Extra dice answered by `divine-smite`: level + 1 d8 unless set.
+  String? smiteDice;
+
+  /// Applies [change] to a deep copy of the character's `combat` block.
+  void _combat(String id, void Function(Map<String, dynamic> combat) change) {
+    final json = _json(id);
+    final combat = jsonDecode(jsonEncode(json['combat'] ?? <String, dynamic>{}));
+    change(combat as Map<String, dynamic>);
+    json['combat'] = combat;
+  }
+
+  @override
+  Future<CharacterDetail> patchCombat(String id, CombatPatch patch) async {
+    _fail();
+    combatPatches.add(patch);
+    final json = _json(id);
+    final body = patch.toJson();
+    for (final key in body.keys) {
+      json[key] = body[key];
+    }
+    return get(id);
+  }
+
+  @override
+  Future<void> setConcentration(String id, String? spellIndex) async {
+    _fail();
+    concentrationCalls.add(spellIndex);
+    _json(id)['concentratingOnSpellIndex'] = spellIndex;
+  }
+
+  @override
+  Future<void> spendSpellSlot(String id, int level, {int amount = 1}) async {
+    _fail();
+    slotSpends.add((level: level, amount: amount));
+    _combat(id, (combat) {
+      for (final slot in (combat['spellSlots'] as List? ?? const [])) {
+        if (slot['level'] == level) slot['used'] = (slot['used'] as int) + amount;
+      }
+    });
+  }
+
+  @override
+  Future<void> restoreSpellSlot(String id, int level, {int amount = 1}) async {
+    _fail();
+    slotRestores.add((level: level, amount: amount));
+    _combat(id, (combat) {
+      for (final slot in (combat['spellSlots'] as List? ?? const [])) {
+        if (slot['level'] == level) slot['used'] = (slot['used'] as int) - amount;
+      }
+    });
+  }
+
+  @override
+  Future<void> spendResource(String id, String resourceId, {int amount = 1}) async {
+    _fail();
+    resourceSpends.add((id: resourceId, amount: amount));
+    _combat(id, (combat) {
+      for (final r in (combat['resources'] as List? ?? const [])) {
+        if (r['id'] == resourceId) r['used'] = (r['used'] as int) + amount;
+      }
+    });
+  }
+
+  @override
+  Future<void> restoreResource(String id, String resourceId, {int amount = 1}) async {
+    _fail();
+    resourceRestores.add((id: resourceId, amount: amount));
+    _combat(id, (combat) {
+      for (final r in (combat['resources'] as List? ?? const [])) {
+        if (r['id'] == resourceId) r['used'] = (r['used'] as int) - amount;
+      }
+    });
+  }
+
+  @override
+  Future<CharacterDetail> shortRest(String id, {Map<String, int> hitDice = const {}}) async {
+    _fail();
+    shortRests.add(hitDice);
+    return get(id);
+  }
+
+  @override
+  Future<CharacterDetail> longRest(String id) async {
+    _fail();
+    longRests++;
+    return get(id);
+  }
+
+  @override
+  Future<CharacterDetail> classAction(
+    String id,
+    String action, [
+    Map<String, dynamic> body = const {},
+  ]) async {
+    _fail();
+    classActions.add((action: action, body: body));
+    return get(id);
+  }
+
+  @override
+  Future<DivineSmiteResult> divineSmite(String id, int slotLevel) async {
+    _fail();
+    smites.add(slotLevel);
+    return DivineSmiteResult(
+      character: await get(id),
+      damageDice: smiteDice ?? '${slotLevel + 1}d8',
+    );
   }
 
   @override

@@ -10,14 +10,18 @@ import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
 import '../../campaigns/ui/feedback.dart';
 import '../../catalog/data/models.dart' show titleFromIndex;
+import '../../dice/ui/dice_sheet.dart';
 import '../../items/ui/inventory_tab.dart';
 import '../data/characters_controller.dart';
 import '../data/models.dart';
+import '../data/view_mode_controller.dart';
 import '../domain/character_format.dart';
 import 'character_tabs.dart';
+import 'combat/combat_view.dart';
 
-/// Detailed view of a character: header with actions and the sheet tabs.
-/// The combat view is phase 6; its toggle is disabled for now.
+/// A character: the detailed view (header with actions and the sheet tabs) or
+/// the combat view, chosen with the switch of the header and remembered per
+/// character. A dice button floats over both.
 class CharacterPage extends ConsumerWidget {
   const CharacterPage({super.key, required this.characterId});
 
@@ -108,6 +112,12 @@ class _CharacterView extends ConsumerWidget {
       myRole: campaign.value?.myRole,
     );
 
+    final combat = ref.watch(characterViewModeProvider(character.id)) == CharacterViewMode.combat;
+    final switcher = _ViewSwitch(
+      combat: combat,
+      onChanged: (next) => ref.read(characterViewModeProvider(character.id).notifier).select(next),
+    );
+
     return DefaultTabController(
       length: _tabs.length,
       child: Scaffold(
@@ -121,42 +131,110 @@ class _CharacterView extends ConsumerWidget {
                 itemBuilder: (_) => const [PopupMenuItem(value: 'delete', child: Text('Eliminar'))],
               ),
           ],
-          bottom: const TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: _tabs),
+          bottom: combat
+              ? null
+              : const TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: _tabs),
         ),
-        body: NestedScrollView(
-          headerSliverBuilder: (context, _) => [
-            SliverToBoxAdapter(
-              child: _Header(
+        floatingActionButton: FloatingActionButton(
+          key: const Key('dice-fab'),
+          tooltip: 'Dados',
+          onPressed: () => showDiceSheet(context),
+          child: const Icon(Icons.casino_outlined),
+        ),
+        body: combat
+            ? CombatView(
                 character: character,
-                permissions: permissions,
-                onSubmit: () => runAction(
-                  context,
-                  () async {
-                    await _controller(ref).submit();
-                  },
-                  success: 'Enviado al DM para aprobación',
-                  describe: describeCharacterError,
-                ),
-                onActivate: () => runAction(
-                  context,
-                  () => _controller(ref).activate(),
-                  success: 'Personaje activado.',
-                  describe: describeCharacterError,
+                canEdit: permissions.canEdit,
+                header: _CombatHeader(character: character, switcher: switcher),
+              )
+            : NestedScrollView(
+                headerSliverBuilder: (context, _) => [
+                  SliverToBoxAdapter(
+                    child: _Header(
+                      character: character,
+                      permissions: permissions,
+                      switcher: switcher,
+                      onSubmit: () => runAction(
+                        context,
+                        () async {
+                          await _controller(ref).submit();
+                        },
+                        success: 'Enviado al DM para aprobación',
+                        describe: describeCharacterError,
+                      ),
+                      onActivate: () => runAction(
+                        context,
+                        () => _controller(ref).activate(),
+                        success: 'Personaje activado.',
+                        describe: describeCharacterError,
+                      ),
+                    ),
+                  ),
+                ],
+                body: TabBarView(
+                  children: [
+                    SummaryTab(character: character),
+                    SkillsTab(character: character),
+                    TraitsTab(character: character),
+                    SpellsTab(character: character),
+                    InventoryTab(character: character),
+                    NotesTab(character: character),
+                  ],
                 ),
               ),
+      ),
+    );
+  }
+}
+
+/// The Detallado / Combate switch.
+class _ViewSwitch extends StatelessWidget {
+  const _ViewSwitch({required this.combat, required this.onChanged});
+
+  final bool combat;
+  final ValueChanged<CharacterViewMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SegmentedButton<CharacterViewMode>(
+      key: const Key('view-mode'),
+      showSelectedIcon: false,
+      segments: const [
+        ButtonSegment(value: CharacterViewMode.detailed, label: Text('Detallado')),
+        ButtonSegment(value: CharacterViewMode.combat, label: Text('Combate')),
+      ],
+      selected: {combat ? CharacterViewMode.combat : CharacterViewMode.detailed},
+      onSelectionChanged: (selection) => onChanged(selection.first),
+    );
+  }
+}
+
+/// Compact header of the combat view: name, class summary and the view switch.
+class _CombatHeader extends StatelessWidget {
+  const _CombatHeader({required this.character, required this.switcher});
+
+  final CharacterDetail character;
+  final Widget switcher;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = character;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(c.name, key: const Key('character-title'), style: theme.textTheme.headlineSmall),
+          if (c.classes.isNotEmpty)
+            Text(
+              '${classesLabel(c.classes)} · Nivel ${c.totalLevel}',
+              key: const Key('character-subtitle'),
+              style: theme.textTheme.bodyMedium,
             ),
-          ],
-          body: TabBarView(
-            children: [
-              SummaryTab(character: character),
-              SkillsTab(character: character),
-              TraitsTab(character: character),
-              SpellsTab(character: character),
-              InventoryTab(character: character),
-              NotesTab(character: character),
-            ],
-          ),
-        ),
+          const SizedBox(height: 8),
+          switcher,
+        ],
       ),
     );
   }
@@ -166,12 +244,14 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.character,
     required this.permissions,
+    required this.switcher,
     required this.onSubmit,
     required this.onActivate,
   });
 
   final CharacterDetail character;
   final CharacterPermissions permissions;
+  final Widget switcher;
   final VoidCallback onSubmit;
   final VoidCallback onActivate;
 
@@ -256,21 +336,7 @@ class _Header extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          SegmentedButton<int>(
-            key: const Key('view-mode'),
-            showSelectedIcon: false,
-            segments: const [
-              ButtonSegment(value: 0, label: Text('Detallado')),
-              ButtonSegment(
-                value: 1,
-                label: Text('Combate'),
-                enabled: false,
-                tooltip: 'Próximamente',
-              ),
-            ],
-            selected: const {0},
-            onSelectionChanged: (_) {},
-          ),
+          switcher,
         ],
       ),
     );

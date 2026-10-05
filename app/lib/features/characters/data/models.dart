@@ -563,6 +563,166 @@ class CharacterSheet {
   bool isOverridden(String field) => overriddenFields.contains(field);
 }
 
+// -- Combat summary (phase 6) -------------------------------------------------
+
+/// One entry of `combat.attacks` (`AttackDto`): a weapon or the unarmed strike
+/// with its precomputed bonus and damage.
+class CombatAttack {
+  const CombatAttack({
+    this.itemId,
+    required this.name,
+    this.attackBonus = 0,
+    this.damage = '',
+    this.damageType = '',
+    this.versatileDamage,
+    this.range,
+    this.properties = const [],
+    this.notes,
+  });
+
+  factory CombatAttack.fromJson(Map<String, dynamic> json) => CombatAttack(
+    itemId: _strOrNull(json['itemId']),
+    name: _str(json['name']),
+    attackBonus: _int(json['attackBonus']) ?? 0,
+    damage: _str(json['damage']),
+    damageType: _str(json['damageType']),
+    versatileDamage: _strOrNull(json['versatileDamage']),
+    range: _strOrNull(json['range']),
+    properties: [for (final p in (json['properties'] as List? ?? const [])) _str(p)],
+    notes: _strOrNull(json['notes']),
+  );
+
+  final String? itemId;
+  final String name;
+  final int attackBonus;
+
+  /// Dice with the damage bonus included: "1d8+3".
+  final String damage;
+  final String damageType;
+  final String? versatileDamage;
+  final String? range;
+  final List<String> properties;
+  final String? notes;
+
+  bool hasProperty(String property) =>
+      properties.any((p) => p.toLowerCase() == property.toLowerCase());
+
+  /// Ammunition weapons and weapons with a range that are not thrown are
+  /// ranged; the rest are melee (a rage damage bonus applies to those).
+  bool get isRanged =>
+      hasProperty('ammunition') || ((range?.contains('/') ?? false) && !hasProperty('thrown'));
+}
+
+/// One entry of `combat.quickConsumables`: a potion or similar item.
+class QuickConsumable {
+  const QuickConsumable({
+    required this.itemId,
+    required this.name,
+    this.quantity = 1,
+    this.charges,
+  });
+
+  factory QuickConsumable.fromJson(Map<String, dynamic> json) => QuickConsumable(
+    itemId: _str(json['itemId']),
+    name: _str(json['name']),
+    quantity: _int(json['quantity']) ?? 1,
+    charges: _int(json['charges']),
+  );
+
+  final String itemId;
+  final String name;
+  final int quantity;
+  final int? charges;
+}
+
+/// One entry of `combat.classPanels`: per-class data for the combat view.
+/// [data] depends on the class (see `docs/specs/fase-6-combate-dados.md`).
+class ClassPanel {
+  const ClassPanel({required this.classIndex, this.level = 1, this.data = const {}});
+
+  factory ClassPanel.fromJson(Map<String, dynamic> json) => ClassPanel(
+    classIndex: _str(json['classIndex']),
+    level: _int(json['level']) ?? 1,
+    data: _map(json['data']) ?? const {},
+  );
+
+  final String classIndex;
+  final int level;
+  final Map<String, dynamic> data;
+}
+
+/// A feature usable once between long rests (`combat.onceSinceLongRest`).
+class OnceSinceLongRest {
+  const OnceSinceLongRest({required this.key, required this.name, this.used = false});
+
+  factory OnceSinceLongRest.fromJson(Map<String, dynamic> json) => OnceSinceLongRest(
+    key: _str(json['key']),
+    name: _str(json['name'], _str(json['key'])),
+    used: _bool(json['used']),
+  );
+
+  final String key;
+  final String name;
+  final bool used;
+}
+
+/// The precomputed combat data of a character (`CombatSummaryDto`). Missing
+/// from older servers, in which case every list is empty.
+class CombatSummary {
+  const CombatSummary({
+    this.attacks = const [],
+    this.spellSlots = const [],
+    this.pactSlots,
+    this.resources = const [],
+    this.quickConsumables = const [],
+    this.classPanels = const [],
+    this.onceSinceLongRest = const [],
+  });
+
+  factory CombatSummary.fromJson(Object? raw) {
+    final json = _map(raw);
+    if (json == null) return const CombatSummary();
+    final pact = _map(json['pactSlots']);
+    return CombatSummary(
+      attacks: _objects(json['attacks'], CombatAttack.fromJson),
+      spellSlots: _objects(json['spellSlots'], SpellSlot.fromJson),
+      pactSlots: pact == null ? null : SpellSlot.fromJson(pact),
+      resources: _objects(json['resources'], CharacterResource.fromJson),
+      quickConsumables: _objects(json['quickConsumables'], QuickConsumable.fromJson),
+      classPanels: _objects(json['classPanels'], ClassPanel.fromJson),
+      onceSinceLongRest: _objects(json['onceSinceLongRest'], OnceSinceLongRest.fromJson),
+    );
+  }
+
+  final List<CombatAttack> attacks;
+  final List<SpellSlot> spellSlots;
+
+  /// Warlock pact slots (all of one level); null for other classes.
+  final SpellSlot? pactSlots;
+  final List<CharacterResource> resources;
+  final List<QuickConsumable> quickConsumables;
+  final List<ClassPanel> classPanels;
+  final List<OnceSinceLongRest> onceSinceLongRest;
+
+  /// The panel of [classIndex], or null.
+  ClassPanel? panelOf(String classIndex) {
+    for (final p in classPanels) {
+      if (p.classIndex == classIndex) return p;
+    }
+    return null;
+  }
+}
+
+/// Response of `divine-smite`: the updated character and the extra damage dice.
+class DivineSmiteResult {
+  const DivineSmiteResult({required this.character, required this.damageDice});
+
+  final CharacterDetail character;
+
+  /// "2d8".
+  final String damageDice;
+}
+
 class CharacterDetail {
   const CharacterDetail({
     required this.id,
@@ -600,6 +760,7 @@ class CharacterDetail {
     this.overrides = const [],
     this.resources = const [],
     this.spellSlots = const [],
+    this.combat = const CombatSummary(),
     this.sheet = const CharacterSheet(),
     this.pendingChangeRequests = const [],
     this.createdAt,
@@ -647,6 +808,7 @@ class CharacterDetail {
       overrides: _objects(json['overrides'], CharacterOverride.fromJson),
       resources: _objects(json['resources'], CharacterResource.fromJson),
       spellSlots: _objects(json['spellSlots'], SpellSlot.fromJson),
+      combat: CombatSummary.fromJson(json['combat']),
       sheet: CharacterSheet.fromJson(_map(json['sheet']) ?? const {}),
       pendingChangeRequests: _objects(json['pendingChangeRequests'], ChangeRequest.fromJson),
       createdAt: _date(json['createdAt']),
@@ -693,6 +855,9 @@ class CharacterDetail {
   final List<CharacterOverride> overrides;
   final List<CharacterResource> resources;
   final List<SpellSlot> spellSlots;
+
+  /// Precomputed combat data; empty when the server does not send it.
+  final CombatSummary combat;
   final CharacterSheet sheet;
   final List<ChangeRequest> pendingChangeRequests;
   final DateTime? createdAt;

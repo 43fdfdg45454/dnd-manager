@@ -14,6 +14,7 @@ import 'package:dnd_companion/features/catalog/data/models.dart';
 import 'package:dnd_companion/features/change_requests/ui/change_requests_page.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:dnd_companion/features/characters/data/models.dart';
+import 'package:dnd_companion/features/characters/data/view_mode_controller.dart';
 import 'package:dnd_companion/features/characters/domain/character_format.dart';
 import 'package:dnd_companion/features/characters/domain/payload_format.dart';
 import 'package:dnd_companion/features/characters/ui/character_page.dart';
@@ -367,15 +368,17 @@ void main() {
       expect(find.text('Sin historia.'), findsOneWidget);
     });
 
-    testWidgets('el modo Combate está deshabilitado con tooltip Próximamente', (tester) async {
+    testWidgets('el conmutador Detallado / Combate está habilitado', (tester) async {
       final repository = FakeCharactersRepository(characters: [makeCharacterJson()]);
       await _pumpApp(tester, characters: repository, location: '/characters/ch1');
 
       expect(find.text('Detallado'), findsOneWidget);
       expect(find.text('Combate'), findsWidgets);
-      expect(find.byTooltip('Próximamente'), findsOneWidget);
-      final segmented = tester.widget<SegmentedButton<int>>(find.byKey(const Key('view-mode')));
-      expect(segmented.segments.last.enabled, isFalse);
+      final segmented = tester.widget<SegmentedButton<CharacterViewMode>>(
+        find.byKey(const Key('view-mode')),
+      );
+      expect(segmented.segments.every((s) => s.enabled), isTrue);
+      expect(find.byKey(const Key('dice-fab')), findsOneWidget);
     });
 
     testWidgets('el dueño en Draft ve Enviar al DM; un Player no ve Activar', (tester) async {

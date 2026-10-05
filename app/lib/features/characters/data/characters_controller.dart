@@ -93,7 +93,7 @@ class CharacterController extends AsyncNotifier<CharacterDetail> {
     if (campaignId != null) _invalidateLists(campaignId);
   }
 
-  // Combat tracking (no approval). The combat view itself is phase 6.
+  // Combat tracking (no approval).
 
   Future<void> patchCombat(CombatPatch patch) async =>
       _apply(await _repository.patchCombat(id, patch));
@@ -127,6 +127,26 @@ class CharacterController extends AsyncNotifier<CharacterDetail> {
       _apply(await _repository.shortRest(id, hitDice: hitDice));
 
   Future<void> longRest() async => _apply(await _repository.longRest(id));
+
+  // Class actions (phase 6).
+
+  Future<void> classAction(String action, [Map<String, dynamic> body = const {}]) async =>
+      _apply(await _repository.classAction(id, action, body));
+
+  Future<void> rage() => classAction('rage');
+
+  Future<void> layOnHands(int amount, {bool targetSelf = true}) =>
+      classAction('lay-on-hands', {'amount': amount, 'targetSelf': targetSelf});
+
+  Future<void> arcaneRecovery(List<int> slotLevels) =>
+      classAction('arcane-recovery', {'slotLevels': slotLevels});
+
+  /// Spends a slot of [slotLevel] and returns the extra damage dice ("2d8").
+  Future<String> divineSmite(int slotLevel) async {
+    final result = await _repository.divineSmite(id, slotLevel);
+    _apply(result.character);
+    return result.damageDice;
+  }
 }
 
 final characterControllerProvider = AsyncNotifierProvider.autoDispose
