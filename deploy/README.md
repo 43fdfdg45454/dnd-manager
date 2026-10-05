@@ -1,7 +1,8 @@
 # Despliegue y operación
 
-Guía para alojar tu propia instancia del servidor con Docker Compose: `postgres` (datos), `api`
-(ASP.NET Core) y `nginx` (proxy con TLS). Todos los dominios y correos de los ejemplos
+Guía para alojar tu propia instancia del servidor con Docker Compose: `postgres` (datos) y `api`
+(ASP.NET Core). La API escucha directamente en un puerto del host y **tú pones delante tu propio
+reverse proxy** (nginx, Caddy, Traefik...) con TLS; el Compose no levanta ninguno. Todos los dominios y correos de los ejemplos
 (`dnd.example.com`, `admin@example.com`) son ficticios: sustitúyelos por los tuyos en `deploy/.env`,
 que está en `.gitignore` y nunca debe subirse al repositorio.
 
@@ -9,8 +10,8 @@ que está en `.gitignore` y nunca debe subirse al repositorio.
 
 - Un host Linux con **Docker Engine 24+** y el plugin **Docker Compose v2** (`docker compose version`).
 - 1 vCPU, 1 GB de RAM y espacio para la base de datos, los ficheros subidos (mapas, PDF, APK) y las copias.
-- Un nombre de DNS apuntando al host y los puertos 80 y 443 libres (o una LAN/VPN, ver
-  [Sin TLS](#lan-o-vpn-sin-tls)).
+- Un reverse proxy propio con TLS (ver [Reverse proxy](#reverse-proxy)) o una LAN/VPN de
+  confianza donde sirvas la API por HTTP.
 - Un servidor SMTP para los correos de alta, recuperación de contraseña y recordatorios de sesión
   (cualquiera: tu proveedor de correo, un relay propio...).
 
@@ -19,14 +20,15 @@ que está en `.gitignore` y nunca debe subirse al repositorio.
 ```bash
 cd deploy
 cp .env.example .env     # rellenar POSTGRES_PASSWORD, JWT_SECRET, PUBLIC_URL, ADMIN_EMAIL y SMTP_*
-mkdir -p certs           # fullchain.pem y privkey.pem (ver "Certificados")
 docker compose up -d --build
 docker compose ps        # api y postgres deben quedar "healthy"
-curl -k https://localhost/health/ready
+curl http://127.0.0.1:8080/health/ready
 ```
 
 - `JWT_SECRET`: genera uno con `openssl rand -base64 48`. Debe tener al menos 32 caracteres.
-- `PUBLIC_URL`: la URL pública (`https://dnd.example.com`). Se usa en los enlaces de los correos.
+- `PUBLIC_URL`: la URL con la que se llega a la API a través de tu proxy (`https://dnd.example.com`,
+  o `http://192.168.1.50:8080` en una LAN sin proxy). Se usa en los enlaces de los correos y es la
+  que hay que escribir en la pantalla «Servidor» de la app.
 - **Administrador inicial**: cuando la base de datos no tiene usuarios, la API crea un administrador
   con `ADMIN_EMAIL`, le envía el correo de alta y además escribe el enlace para fijar su contraseña en
   los logs (válido 48 h), por si el SMTP aún no funciona:
@@ -57,80 +59,57 @@ curl -k https://localhost/health/ready
 | `REMINDERS_POLL_SECONDS` | Cada cuántos segundos busca recordatorios pendientes | `60` |
 | `LOG_LEVEL` | Nivel mínimo de logs: `Trace`, `Debug`, `Information`, `Warning`, `Error` | `Information` |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USE_STARTTLS`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_ADDRESS`, `SMTP_FROM_NAME` | Correo saliente | — |
-| `HTTP_PORT`, `HTTPS_PORT` | Puertos publicados por nginx | `80`, `443` |
+| `API_BIND`, `API_PORT` | Dirección y puerto del host en los que escucha la API (`127.0.0.1` solo para un proxy local; `0.0.0.0` para exponerla en la LAN/VPN) | `127.0.0.1`, `8080` |
 | `API_IMAGE` | Imagen de la API (por defecto se construye desde el código) | `dnd-companion-api:local` |
-| `NGINX_CONF` | Configuración de nginx (`./nginx/nginx.http.conf` para LAN/VPN sin TLS) | `./nginx/nginx.conf` |
 | `BACKUP_RETENTION_DAYS` | Días que `backup.sh` conserva las copias | `14` |
 
 Cada recordatorio se calcula en la zona horaria de su campaña y los avisos (24 h y 2 h antes por
 defecto) los ajusta el DM en los ajustes de la campaña. Con `REMINDERS_ENABLED=false` no se envía
 ninguno.
 
-## Certificados
+## Reverse proxy
 
-nginx espera `deploy/certs/fullchain.pem` y `deploy/certs/privkey.pem` (la carpeta está en
-`.gitignore`).
+La API escucha en `http://API_BIND:API_PORT` (por defecto `127.0.0.1:8080`). Un solo bloque en tu
+nginx la expone con TLS; los certificados los gestionas tú como con cualquier otro sitio (certbot,
+tu CA interna, etc.):
 
-### Opción A: Let's Encrypt con certbot en el host
+```nginx
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name dnd.example.com;
 
-Con el DNS ya apuntando al host. nginx ocupa el puerto 80, así que certbot lo para mientras valida:
+    ssl_certificate     /ruta/a/fullchain.pem;
+    ssl_certificate_key /ruta/a/privkey.pem;
 
-```bash
-sudo certbot certonly --standalone -d dnd.example.com \
-  --pre-hook "docker compose -f /ruta/al/repo/deploy/docker-compose.yml stop nginx" \
-  --post-hook "docker compose -f /ruta/al/repo/deploy/docker-compose.yml start nginx"
+    # Igual o mayor que MAX_UPLOAD_MB (mapas, PDF y APK).
+    client_max_body_size 200m;
 
-sudo cp /etc/letsencrypt/live/dnd.example.com/fullchain.pem /ruta/al/repo/deploy/certs/
-sudo cp /etc/letsencrypt/live/dnd.example.com/privkey.pem   /ruta/al/repo/deploy/certs/
-docker compose up -d
+    location / {
+        proxy_pass         http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+}
 ```
 
-Los hooks se guardan en la configuración de renovación de certbot, de modo que `certbot renew`
-(el temporizador del paquete lo ejecuta dos veces al día) también para y arranca nginx. Después de
-cada renovación hay que copiar los certificados; automatízalo con un hook de despliegue:
+Todo va bajo `location /`: además de `/api`, la API sirve en la raíz las páginas de contraseña
+(`/set-password`) y de asistencia (`/sessions/{id}`) y Swagger (`/swagger`). Si el proxy corre en otra
+máquina, pon `API_BIND=0.0.0.0` y apunta `proxy_pass` a la IP del host.
 
-```bash
-sudo tee /etc/letsencrypt/renewal-hooks/deploy/dnd-companion.sh > /dev/null <<'HOOK'
-#!/usr/bin/env bash
-set -euo pipefail
-cp /etc/letsencrypt/live/dnd.example.com/fullchain.pem /ruta/al/repo/deploy/certs/
-cp /etc/letsencrypt/live/dnd.example.com/privkey.pem   /ruta/al/repo/deploy/certs/
-HOOK
-sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/dnd-companion.sh
-```
+**CA propia o certificado autofirmado**: la app Android confía en los certificados de usuario del
+dispositivo. Instala tu CA en Ajustes → Seguridad → Credenciales de usuario (o fija la huella del
+certificado desde la pantalla «Servidor» de la app). Con Caddy basta `reverse_proxy 127.0.0.1:8080`
+dentro de su bloque de sitio.
 
-### Opción B: certificado manual
-
-Copia a `deploy/certs/` el certificado completo (con la cadena intermedia) y la clave privada que te
-haya dado tu proveedor, con esos dos nombres. Para una prueba rápida puedes generar uno
-autofirmado (la app Android **no** lo aceptará; sirve para `curl -k`):
-
-```bash
-mkdir -p certs
-openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
-  -keyout certs/privkey.pem -out certs/fullchain.pem -subj "/CN=dnd.example.com"
-```
-
-Tras cambiar los certificados: `docker compose restart nginx`.
-
-## LAN o VPN sin TLS
-
-Para una red de confianza (casa, VPN tipo WireGuard) puedes prescindir de certificados con la
-variante `nginx/nginx.http.conf`: escucha solo en el puerto 80 y no redirige a HTTPS. **No la uses
-expuesta a Internet**: contraseñas y tokens viajarían en claro.
-
-```bash
-# En .env
-NGINX_CONF=./nginx/nginx.http.conf
-PUBLIC_URL=http://192.168.1.50        # el host o la IP con la que se accede desde la LAN/VPN
-HTTP_PORT=80
-
-docker compose up -d
-curl http://192.168.1.50/health/ready
-```
-
-`PUBLIC_URL` debe empezar por `http://` para que los enlaces de los correos funcionen. En la app,
-configura esa misma URL en la pantalla «Servidor».
+**LAN o VPN sin TLS**: puedes prescindir del proxy y exponer la API directamente con
+`API_BIND=0.0.0.0` y `PUBLIC_URL=http://192.168.1.50:8080`. No lo hagas en Internet: contraseñas y
+tokens viajarían en claro.
 
 ## Actualización
 
@@ -246,11 +225,11 @@ El tamaño máximo de un fichero (mapa, PDF, APK) es `MAX_UPLOAD_MB` (200 MB por
 en dos sitios que deben coincidir:
 
 1. **API**: `MAX_UPLOAD_MB` en `.env` (`FileStorage__MaxUploadMegabytes`). Responde `413` por encima.
-2. **nginx**: `client_max_body_size` en `nginx/nginx.conf` (y en `nginx/nginx.http.conf` si lo usas).
-   nginx responde `413` antes de que la petición llegue a la API.
+2. **Tu reverse proxy**: `client_max_body_size` en nginx (Caddy no limita por defecto). El proxy
+   responde `413` antes de que la petición llegue a la API.
 
-Para cambiarlo, edita ambos y aplica: `docker compose up -d` y `docker compose restart nginx`. Deja
-siempre nginx con el mismo valor o más que la API.
+Para cambiarlo, edita ambos y aplica: `docker compose up -d` y recarga tu proxy. Deja siempre el
+proxy con el mismo valor o más que la API.
 
 ## SRD en PDF para la biblioteca
 

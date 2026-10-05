@@ -19,7 +19,7 @@ usuarios. Servidor .NET autohospedado con Docker.
 | Servidor en el cliente | URL configurable desde la app (LAN, VPN o dominio), con HTTP permitido y lista de servidores recientes; ver `docs/specs/cliente-servidor-configurable.md` |
 | Mapas | Imagen con zoom + pines con notas enlazadas al lore; pines visibles u ocultos |
 | Tiendas | Compra directa: descuenta oro, baja stock, ítem al inventario; DM abre/cierra tienda |
-| Hosting | Docker Compose + Nginx (api, postgres, nginx); certificado TLS montado por el operador |
+| Hosting | Docker Compose (api + postgres); la API escucha en un puerto del host y el operador pone delante su propio reverse proxy con TLS |
 | Documentación | SRD 5.1 en PDF empaquetado (CC-BY); el admin sube otros PDF a la biblioteca de la instancia |
 
 Los ADR en `docs/ADR/` detallan las decisiones con más impacto.
@@ -41,7 +41,7 @@ Los ADR en `docs/ADR/` detallan las decisiones con más impacto.
 ## Arquitectura
 
 ```
-Android (Flutter) ──HTTPS/JSON──▶ Nginx ──▶ API ASP.NET Core (.NET 10 LTS)
+Android (Flutter) ──HTTPS/JSON──▶ Proxy del operador ──▶ API ASP.NET Core (.NET 10 LTS)
                                               ├─ PostgreSQL 17 (EF Core)
                                               ├─ Volumen /data/files (mapas, retratos, PDF, APK)
                                               └─ Worker (recordatorios → SMTP)

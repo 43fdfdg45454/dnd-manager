@@ -1,6 +1,5 @@
 # Secretos y datos locales
 deploy/.env
-deploy/certs/
 deploy/backups/
 deploy/data/
 

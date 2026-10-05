@@ -21,7 +21,7 @@ en `.gitignore`.
 ```
 server/   solución .NET (Dnd.Domain, Dnd.Application, Dnd.Infrastructure, Dnd.Api, tests/)
 app/      proyecto Flutter (lib/core, lib/features/<feature>)
-deploy/   docker-compose.yml, nginx/, .env.example, backup.sh
+deploy/   docker-compose.yml, .env.example, backup.sh, README.md (reverse proxy del operador)
 docs/     PLAN.md (plan maestro) y ADR/ (decisiones de arquitectura)
 ```
 
@@ -51,7 +51,10 @@ cd deploy && docker compose --profile dev up -d        # añade MailHog para pro
   valor calculado puede sobreescribirse (`CharacterOverride`) y la UI lo marca.
 - **Sin tiempo real**: dados privados con historial local. No usar SignalR.
 - **Offline solo lectura**: la app cachea el último estado; las escrituras se deshabilitan sin red.
-- Hosting: Docker Compose + Nginx. Email por **SMTP genérico** configurado por variables de entorno.
+- Hosting: Docker Compose solo con `api` y `postgres`; la API escucha en un puerto del host y el
+  operador pone su propio reverse proxy con TLS. Email por **SMTP genérico** por variables de entorno.
+- La app Android confía en los certificados de usuario del dispositivo (CA propia) y permite fijar
+  la huella de un certificado por host.
 - Distribución: APK directo; la API expone la última versión disponible.
 - Documentación oficial: **solo el SRD en PDF** (CC-BY) se empaqueta. Nada con copyright de
   Wizards of the Coast en el repo. El administrador puede subir otros PDF a la biblioteca de la

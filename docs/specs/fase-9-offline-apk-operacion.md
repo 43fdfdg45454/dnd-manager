@@ -41,7 +41,7 @@ Contrato cerrado.
 ## Operación
 
 - `deploy/README.md` completo: requisitos, primer arranque (admin inicial y enlace en logs),
-  certificados (Let's Encrypt con certbot en el host o `deploy/certs` manual), actualización
+  bloque de reverse proxy para el nginx del operador (la API escucha directamente), actualización
   (`docker compose pull/build`, migraciones automáticas), copias (`backup.sh` + volumen de ficheros
   con `tar`), restauración, rotación de `JWT_SECRET` (invalida sesiones), límites de subida,
   colocar el SRD en PDF en `system/`.

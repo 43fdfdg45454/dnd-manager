@@ -14,7 +14,7 @@ calendario. El servidor es ASP.NET Core y se autohospeda con Docker.
 |---------|-----------|
 | `server/` | Solución .NET 10: `Dnd.Domain`, `Dnd.Application`, `Dnd.Infrastructure`, `Dnd.Api` y tests |
 | `app/` | Cliente Flutter (Android) |
-| `deploy/` | Docker Compose con `api`, `postgres` y `nginx`; perfil `dev` con MailHog |
+| `deploy/` | Docker Compose con `api` y `postgres` (reverse proxy a cargo del operador); perfil `dev` con MailHog |
 | `docs/` | Plan y ADR |
 
 ## Puesta en marcha rápida
@@ -30,7 +30,7 @@ dotnet run --project src/Dnd.Api      # Swagger en http://localhost:8080/swagger
 cd deploy
 cp .env.example .env                  # editar valores
 docker compose up -d --build
-curl -k https://localhost/health
+curl http://127.0.0.1:8080/health/ready
 
 # Cliente
 cd app

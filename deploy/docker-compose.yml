@@ -46,6 +46,10 @@ services:
       App__DefaultTimeZone: ${DEFAULT_TIME_ZONE:-Europe/Madrid}
       Reminders__Enabled: ${REMINDERS_ENABLED:-true}
       Reminders__PollSeconds: ${REMINDERS_POLL_SECONDS:-60}
+    # The API listens directly; put your own reverse proxy (nginx, Caddy, Traefik) in front of it.
+    # API_BIND=127.0.0.1 keeps it reachable only from this host; use 0.0.0.0 for a proxy elsewhere.
+    ports:
+      - "${API_BIND:-127.0.0.1}:${API_PORT:-8080}:8080"
     volumes:
       - files:/data/files
     healthcheck:
@@ -55,19 +59,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
-
-  nginx:
-    image: nginx:1.27-alpine
-    restart: unless-stopped
-    depends_on:
-      - api
-    ports:
-      - "${HTTP_PORT:-80}:80"
-      - "${HTTPS_PORT:-443}:443"
-    volumes:
-      # nginx.conf (HTTPS) by default; nginx/nginx.http.conf for a LAN/VPN without TLS (see README).
-      - ${NGINX_CONF:-./nginx/nginx.conf}:/etc/nginx/nginx.conf:ro
-      - ./certs:/etc/nginx/certs:ro
 
   # Solo para desarrollo: bandeja de correo en http://localhost:8025
   mailhog:
