@@ -9,6 +9,8 @@ import '../../../core/router/app_router.dart';
 import '../../characters/data/characters_controller.dart';
 import '../../characters/ui/characters_tab.dart';
 import '../../items/ui/homebrew_tab.dart';
+import '../../lore/ui/lore_tab.dart';
+import '../../maps/ui/maps_tab.dart';
 import '../../items/ui/shops_tab.dart';
 import '../data/campaigns_controller.dart';
 import '../domain/campaign_models.dart';
@@ -18,8 +20,8 @@ import 'confirm_dialog.dart';
 import 'feedback.dart';
 import 'transfer_ownership_dialog.dart';
 
-/// Campaign detail with the "Resumen", "Miembros", "Personajes", "Tiendas" and
-/// "Objetos" tabs.
+/// Campaign detail with the "Resumen", "Miembros", "Personajes", "Tiendas",
+/// "Objetos", "Lore" and "Mapas" tabs.
 class CampaignDetailPage extends ConsumerWidget {
   const CampaignDetailPage({super.key, required this.campaignId});
 
@@ -30,7 +32,7 @@ class CampaignDetailPage extends ConsumerWidget {
     final detail = ref.watch(campaignDetailControllerProvider(campaignId));
 
     return DefaultTabController(
-      length: 5,
+      length: 7,
       child: Scaffold(
         appBar: AppBar(
           title: Text(detail.value?.name ?? 'Campaña'),
@@ -54,6 +56,8 @@ class CampaignDetailPage extends ConsumerWidget {
               Tab(key: Key('tab-characters'), text: 'Personajes'),
               Tab(key: Key('tab-shops'), text: 'Tiendas'),
               Tab(key: Key('tab-objects'), text: 'Objetos'),
+              Tab(key: Key('tab-lore'), text: 'Lore'),
+              Tab(key: Key('tab-maps'), text: 'Mapas'),
             ],
           ),
         ),
@@ -84,6 +88,8 @@ class CampaignDetailPage extends ConsumerWidget {
               CharactersTab(campaign: campaign),
               ShopsTab(campaign: campaign),
               HomebrewTab(campaign: campaign),
+              LoreTab(campaign: campaign),
+              MapsTab(campaign: campaign),
             ],
           ),
         ),
@@ -230,6 +236,16 @@ class _SummaryTab extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 16),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            key: const Key('campaign-documents'),
+            onPressed: () => context.push(AppRoutes.campaignDocuments(campaign.id)),
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            label: const Text('Documentos recomendados'),
+          ),
+        ),
+        const SizedBox(height: 8),
         if (role.isAtLeastDm)
           Align(
             alignment: Alignment.centerLeft,

@@ -16,6 +16,7 @@ import '../data/characters_controller.dart';
 import '../data/models.dart';
 import '../data/view_mode_controller.dart';
 import '../domain/character_format.dart';
+import 'character_avatar.dart';
 import 'character_tabs.dart';
 import 'combat/combat_view.dart';
 
@@ -225,13 +226,30 @@ class _CombatHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(c.name, key: const Key('character-title'), style: theme.textTheme.headlineSmall),
-          if (c.classes.isNotEmpty)
-            Text(
-              '${classesLabel(c.classes)} · Nivel ${c.totalLevel}',
-              key: const Key('character-subtitle'),
-              style: theme.textTheme.bodyMedium,
-            ),
+          Row(
+            children: [
+              CharacterAvatar(character: c, radius: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      c.name,
+                      key: const Key('character-title'),
+                      style: theme.textTheme.headlineSmall,
+                    ),
+                    if (c.classes.isNotEmpty)
+                      Text(
+                        '${classesLabel(c.classes)} · Nivel ${c.totalLevel}',
+                        key: const Key('character-subtitle'),
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           switcher,
         ],
@@ -278,12 +296,29 @@ class _Header extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(c.name, key: const Key('character-title'), style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 2),
-          Text(
-            '$_race · $classes${c.classes.isEmpty ? '' : ' · Nivel ${c.totalLevel}'}',
-            key: const Key('character-subtitle'),
-            style: theme.textTheme.bodyMedium,
+          Row(
+            children: [
+              CharacterAvatar(character: c, canEdit: permissions.canEdit),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      c.name,
+                      key: const Key('character-title'),
+                      style: theme.textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$_race · $classes${c.classes.isEmpty ? '' : ' · Nivel ${c.totalLevel}'}',
+                      key: const Key('character-subtitle'),
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Wrap(

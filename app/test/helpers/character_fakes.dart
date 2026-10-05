@@ -222,6 +222,7 @@ class FakeCharactersRepository implements CharactersRepository {
   final List<String> activated = [];
   final List<String> submitted = [];
   final List<String> deleted = [];
+  final List<String?> portraits = [];
 
   void _fail() {
     if (error != null) throw error!;
@@ -317,6 +318,14 @@ class FakeCharactersRepository implements CharactersRepository {
     _fail();
     activated.add(id);
     _json(id)['status'] = 'Active';
+    return get(id);
+  }
+
+  @override
+  Future<CharacterDetail> setPortrait(String id, String? fileId) async {
+    _fail();
+    portraits.add(fileId);
+    _json(id)['portraitUrl'] = fileId == null ? null : '/api/v1/files/$fileId';
     return get(id);
   }
 

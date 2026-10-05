@@ -54,6 +54,15 @@ void main() {
     expect(find.text('Usuarios'), findsNothing);
   });
 
+  testWidgets('el menú de usuario da acceso a la Biblioteca', (tester) async {
+    await tester.pumpWidget(_app(user: makeUser()));
+    await tester.pumpAndSettle();
+    await _openUserMenu(tester);
+
+    expect(find.byKey(const Key('home-library')), findsOneWidget);
+    expect(find.text('Biblioteca'), findsOneWidget);
+  });
+
   testWidgets('un Admin ve el acceso a Usuarios', (tester) async {
     await tester.pumpWidget(
       _app(

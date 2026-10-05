@@ -10,7 +10,7 @@ import '../../../core/router/app_router.dart';
 import '../../campaigns/ui/campaigns_page.dart';
 import '../data/server_info_repository.dart';
 
-enum _HomeAction { adminUsers, server, logout }
+enum _HomeAction { library, adminUsers, server, logout }
 
 /// Landing page after login: the list of campaigns, with the user menu in the
 /// app bar and the server status as a footer.
@@ -19,6 +19,8 @@ class HomePage extends ConsumerWidget {
 
   void _onAction(BuildContext context, WidgetRef ref, _HomeAction action) {
     switch (action) {
+      case _HomeAction.library:
+        context.push(AppRoutes.library);
       case _HomeAction.adminUsers:
         context.push(AppRoutes.adminUsers);
       case _HomeAction.server:
@@ -69,6 +71,11 @@ class HomePage extends ConsumerWidget {
                   ),
                 ),
                 const PopupMenuDivider(),
+                const PopupMenuItem(
+                  key: Key('home-library'),
+                  value: _HomeAction.library,
+                  child: Text('Biblioteca'),
+                ),
                 if (user.isAdmin)
                   const PopupMenuItem(
                     key: Key('home-admin-users'),

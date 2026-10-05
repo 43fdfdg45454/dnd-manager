@@ -16,6 +16,11 @@ import '../../features/catalog/ui/item_detail_page.dart';
 import '../../features/catalog/ui/race_detail_page.dart';
 import '../../features/catalog/ui/spell_detail_page.dart';
 import '../../features/home/ui/home_page.dart';
+import '../../features/library/ui/library_page.dart';
+import '../../features/library/ui/pdf_viewer_page.dart';
+import '../../features/lore/ui/lore_editor_page.dart';
+import '../../features/lore/ui/lore_entry_page.dart';
+import '../../features/maps/ui/map_viewer_page.dart';
 import '../../features/server/ui/server_page.dart';
 import '../../features/items/ui/shop_page.dart';
 import '../../features/items/ui/transactions_page.dart';
@@ -36,6 +41,13 @@ abstract final class AppRoutes {
   static const campaignTransactions = '/campaigns/:id/transactions';
   static const characterDetail = '/characters/:id';
   static const characterEditor = '/characters/:id/edit';
+  static const campaignLoreNew = '/campaigns/:id/lore/new';
+  static const campaignLoreEntry = '/campaigns/:id/lore/:entryId';
+  static const campaignLoreEdit = '/campaigns/:id/lore/:entryId/edit';
+  static const campaignMap = '/campaigns/:id/maps/:mapId';
+  static const campaignLibrary = '/campaigns/:id/library';
+  static const library = '/library';
+  static const libraryViewer = '/library/:docId/view';
   static const compendium = '/compendium';
   static const spellDetail = '/compendium/spells/:index';
   static const itemDetail = '/compendium/items/:id';
@@ -53,6 +65,26 @@ abstract final class AppRoutes {
 
   /// Transaction history of the campaign.
   static String transactions(String campaignId) => '/campaigns/$campaignId/transactions';
+
+  /// A lore entry of the campaign.
+  static String loreEntry(String campaignId, String entryId) =>
+      '/campaigns/$campaignId/lore/$entryId';
+
+  /// Editor of a new lore entry; [parentId] preselects its parent.
+  static String loreNew(String campaignId, {String? parentId}) =>
+      '/campaigns/$campaignId/lore/new${parentId == null ? '' : '?parentId=$parentId'}';
+
+  static String loreEdit(String campaignId, String entryId) =>
+      '/campaigns/$campaignId/lore/$entryId/edit';
+
+  /// A map of the campaign.
+  static String map(String campaignId, String mapId) => '/campaigns/$campaignId/maps/$mapId';
+
+  /// Documents recommended in the campaign (on top of the whole library).
+  static String campaignDocuments(String campaignId) => '/campaigns/$campaignId/library';
+
+  /// PDF viewer of the library document [docId].
+  static String libraryDocument(String docId) => '/library/$docId/view';
 
   static String character(String id) => '/characters/$id';
 
@@ -131,6 +163,43 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.campaignTransactions,
         builder: (context, state) => TransactionsPage(campaignId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.campaignLoreNew,
+        builder: (context, state) => LoreEditorPage(
+          campaignId: state.pathParameters['id']!,
+          initialParentId: state.uri.queryParameters['parentId'],
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.campaignLoreEntry,
+        builder: (context, state) => LoreEntryPage(
+          campaignId: state.pathParameters['id']!,
+          entryId: state.pathParameters['entryId']!,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.campaignLoreEdit,
+        builder: (context, state) => LoreEditorPage(
+          campaignId: state.pathParameters['id']!,
+          entryId: state.pathParameters['entryId'],
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.campaignMap,
+        builder: (context, state) => MapViewerPage(
+          campaignId: state.pathParameters['id']!,
+          mapId: state.pathParameters['mapId']!,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.campaignLibrary,
+        builder: (context, state) => LibraryPage(campaignId: state.pathParameters['id']),
+      ),
+      GoRoute(path: AppRoutes.library, builder: (context, state) => const LibraryPage()),
+      GoRoute(
+        path: AppRoutes.libraryViewer,
+        builder: (context, state) => PdfViewerPage(documentId: state.pathParameters['docId']!),
       ),
       GoRoute(
         path: AppRoutes.characterDetail,

@@ -66,6 +66,12 @@ class CharactersRepository {
   Future<CharacterDetail> activate(String id) async =>
       CharacterDetail.fromJson(await _json('POST', '$_api/characters/$id/activate'));
 
+  /// Sets (or, with a null [fileId], removes) the portrait: [fileId] is a
+  /// `Portrait` file uploaded for this character's campaign.
+  Future<CharacterDetail> setPortrait(String id, String? fileId) async => CharacterDetail.fromJson(
+    await _json('PATCH', '$_api/characters/$id/portrait', data: {'fileId': fileId}),
+  );
+
   Future<void> delete(String id) async {
     await _client.dio.delete<void>('$_api/characters/$id');
   }

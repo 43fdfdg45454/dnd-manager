@@ -6,6 +6,18 @@ import 'api_client.dart';
 
 const networkErrorMessage = 'No se pudo conectar con el servidor. Revisa tu conexión.';
 
+const _networkTypes = {
+  DioExceptionType.connectionError,
+  DioExceptionType.connectionTimeout,
+  DioExceptionType.sendTimeout,
+  DioExceptionType.receiveTimeout,
+  DioExceptionType.badCertificate,
+};
+
+/// True when [error] means the server could not be reached (no response).
+bool isNetworkFailure(Object error) =>
+    error is DioException && (_networkTypes.contains(error.type) || error.error is SocketException);
+
 /// Maps an error to a Spanish message for the UI. [byStatus] overrides the
 /// default text for specific HTTP status codes.
 String describeApiError(Object error, {Map<int, String> byStatus = const {}}) {
@@ -21,16 +33,7 @@ String describeApiError(Object error, {Map<int, String> byStatus = const {}}) {
     return byStatus[status]!;
   }
 
-  const networkTypes = {
-    DioExceptionType.connectionError,
-    DioExceptionType.connectionTimeout,
-    DioExceptionType.sendTimeout,
-    DioExceptionType.receiveTimeout,
-    DioExceptionType.badCertificate,
-  };
-  if (networkTypes.contains(error.type) || error.error is SocketException) {
-    return networkErrorMessage;
-  }
+  if (isNetworkFailure(error)) return networkErrorMessage;
 
   return switch (status) {
     400 => 'Los datos enviados no son válidos.',
@@ -95,4 +98,22 @@ String describeItemError(Object error, {Map<int, String> byStatus = const {}}) {
     if (detail != null) return detail;
   }
   return describeApiError(error, byStatus: {...itemErrorMessages, ...byStatus});
+}
+
+/// Status-specific messages for files, lore, maps and the library.
+const contentErrorMessages = <int, String>{
+  403: 'No tienes permiso para hacer eso.',
+  404: 'El contenido no existe o no tienes acceso.',
+  413: 'El fichero supera el tamaño máximo permitido.',
+};
+
+/// Like [describeApiError] but with the lore, maps and library texts. A 400
+/// shows the server's ProblemDetails `detail` (already in Spanish) when it has
+/// one; [byStatus] takes precedence over [contentErrorMessages].
+String describeContentError(Object error, {Map<int, String> byStatus = const {}}) {
+  if (error is DioException && error.response?.statusCode == 400) {
+    final detail = problemDetail(error);
+    if (detail != null && !byStatus.containsKey(400)) return detail;
+  }
+  return describeApiError(error, byStatus: {...contentErrorMessages, ...byStatus});
 }

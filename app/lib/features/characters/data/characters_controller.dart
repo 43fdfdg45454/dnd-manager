@@ -87,6 +87,10 @@ class CharacterController extends AsyncNotifier<CharacterDetail> {
 
   Future<void> activate() async => _apply(await _repository.activate(id));
 
+  /// Sets the portrait to the uploaded `Portrait` file [fileId] (null removes it).
+  Future<void> setPortrait(String? fileId) async =>
+      _apply(await _repository.setPortrait(id, fileId));
+
   Future<void> delete() async {
     final campaignId = state.value?.campaignId;
     await _repository.delete(id);
