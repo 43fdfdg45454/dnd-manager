@@ -24,6 +24,13 @@ builder.Services.AddOptions<KestrelServerOptions>().Configure<IOptions<FileStora
 builder.Services.AddOptions<FormOptions>().Configure<IOptions<FileStorageOptions>>((form, files) =>
     form.MultipartBodyLengthLimit = files.Value.MaxUploadMegabytes * 1024L * 1024L + FileEndpoints.MultipartOverheadBytes);
 
+// Background sender of the session reminders (Reminders:Enabled / Reminders:PollSeconds).
+builder.Services.AddOptions<ReminderOptions>()
+    .Bind(builder.Configuration.GetSection(ReminderOptions.SectionName))
+    .Validate(o => o.PollSeconds >= 1, "Reminders:PollSeconds must be at least 1.")
+    .ValidateOnStart();
+builder.Services.AddHostedService<ReminderDispatcher>();
+
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<AppExceptionHandler>();
 builder.Services.AddJwtAuthentication();
@@ -105,6 +112,8 @@ app.MapFileEndpoints();
 app.MapLoreEndpoints();
 app.MapMapEndpoints();
 app.MapLibraryEndpoints();
+app.MapSessionEndpoints();
+app.MapPublicSessionEndpoints();
 app.MapPageEndpoints();
 
 await app.RunAsync();

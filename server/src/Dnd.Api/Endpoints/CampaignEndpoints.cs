@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Dnd.Api.Auth;
 using Dnd.Api.Filters;
 using Dnd.Application.Campaigns;
+using Dnd.Application.Sessions;
 
 namespace Dnd.Api.Endpoints;
 
@@ -40,6 +41,14 @@ public static class CampaignEndpoints
                 TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, request, ct)))
             .WithName("UpdateCampaign")
             .WithSummary("Cambia nombre o descripción. Requiere al menos DM.")
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPatch("/{id:guid}/settings", async (Guid id, UpdateCampaignSettingsRequest request, ClaimsPrincipal user, UpdateCampaignSettingsHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, request, ct)))
+            .WithName("UpdateCampaignSettings")
+            .WithSummary("Cambia la zona horaria (IANA) y los recordatorios (minutos antes de cada sesión). Requiere al menos DM.")
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);

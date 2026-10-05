@@ -21,7 +21,9 @@ public sealed record CampaignDto(
     string MyRole,
     IReadOnlyList<MemberDto> Members,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt)
+    DateTimeOffset UpdatedAt,
+    string TimeZoneId,
+    IReadOnlyList<int> ReminderOffsetsMinutes)
 {
     /// <param name="members">Current members of the campaign, as returned by the repository.</param>
     public static CampaignDto From(Campaign campaign, IReadOnlyList<MemberDto> members, Guid currentUserId) => new(
@@ -33,7 +35,9 @@ public sealed record CampaignDto(
         members.FirstOrDefault(m => m.UserId == currentUserId)?.Role ?? string.Empty,
         members,
         campaign.CreatedAt,
-        campaign.UpdatedAt);
+        campaign.UpdatedAt,
+        campaign.TimeZoneId,
+        campaign.ReminderOffsetsMinutes);
 }
 
 public sealed record MemberDto(Guid UserId, string DisplayName, string Email, string Role, DateTimeOffset JoinedAt);

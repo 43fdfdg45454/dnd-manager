@@ -43,6 +43,16 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ReminderOffsetsMinutesJson")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1589,6 +1599,137 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                     b.ToTable("MapPins", (string)null);
                 });
 
+            modelBuilder.Entity("Dnd.Domain.Sessions.GameSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("DurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("StartsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("SummaryMarkdown")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("SummaryUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("CampaignId", "Number")
+                        .IsUnique();
+
+                    b.ToTable("GameSessions", (string)null);
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Sessions.Reminder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("FailedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("LastAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("OffsetMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("SendAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId");
+
+                    b.HasIndex("SentAt", "FailedAt", "SendAt");
+
+                    b.ToTable("Reminders", (string)null);
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Sessions.SessionRsvp", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("SessionId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("SessionRsvps", (string)null);
+                });
+
             modelBuilder.Entity("Dnd.Domain.Users.PasswordToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1685,6 +1826,9 @@ namespace Dnd.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset?>("LastLoginAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("NotificationsEnabled")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("PasswordHash")
                         .HasMaxLength(512)
@@ -2286,6 +2430,45 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Dnd.Domain.Sessions.GameSession", b =>
+                {
+                    b.HasOne("Dnd.Domain.Campaigns.Campaign", null)
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Sessions.Reminder", b =>
+                {
+                    b.HasOne("Dnd.Domain.Sessions.GameSession", null)
+                        .WithMany("Reminders")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Sessions.SessionRsvp", b =>
+                {
+                    b.HasOne("Dnd.Domain.Sessions.GameSession", null)
+                        .WithMany("Rsvps")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Dnd.Domain.Users.PasswordToken", b =>
                 {
                     b.HasOne("Dnd.Domain.Users.User", null)
@@ -2339,6 +2522,13 @@ namespace Dnd.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Dnd.Domain.Maps.Map", b =>
                 {
                     b.Navigation("Pins");
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Sessions.GameSession", b =>
+                {
+                    b.Navigation("Reminders");
+
+                    b.Navigation("Rsvps");
                 });
 #pragma warning restore 612, 618
         }

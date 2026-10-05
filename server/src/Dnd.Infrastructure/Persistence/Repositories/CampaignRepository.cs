@@ -1,6 +1,7 @@
 using Dnd.Application.Abstractions.Persistence;
 using Dnd.Application.Campaigns;
 using Dnd.Domain.Campaigns;
+using Dnd.Domain.Sessions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Dnd.Infrastructure.Persistence.Repositories;
@@ -60,6 +61,37 @@ internal sealed class CampaignRepository(AppDbContext db) : ICampaignRepository
             .Select(r => new MemberDto(r.Id, r.DisplayName, r.Email, r.Role.ToString(), r.JoinedAt))
             .ToList();
     }
+
+    public async Task<IReadOnlyList<MemberContact>> ListMemberContactsAsync(IReadOnlyCollection<Guid> campaignIds, CancellationToken cancellationToken = default)
+    {
+        var rows = await (
+                from member in db.CampaignMembers
+                where campaignIds.Contains(member.CampaignId)
+                join user in db.Users on member.UserId equals user.Id
+                select new { member.CampaignId, user.Id, member.Role, user.DisplayName, user.Email, user.NotificationsEnabled, user.IsActive })
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .OrderBy(r => r.DisplayName, StringComparer.InvariantCultureIgnoreCase)
+            .ThenBy(r => r.Email, StringComparer.Ordinal)
+            .Select(r => new MemberContact(r.CampaignId, r.Id, r.Role, r.DisplayName, r.Email, r.NotificationsEnabled, r.IsActive))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<CampaignScheduleInfo>> ListScheduleInfoAsync(IReadOnlyCollection<Guid> campaignIds, CancellationToken cancellationToken = default)
+    {
+        var rows = await db.Campaigns.AsNoTracking()
+            .Where(x => campaignIds.Contains(x.Id))
+            .Select(x => new { x.Id, x.Name, x.TimeZoneId, x.ReminderOffsetsMinutesJson })
+            .ToListAsync(cancellationToken);
+        return rows
+            .Select(r => new CampaignScheduleInfo(r.Id, r.Name, r.TimeZoneId, CampaignSchedule.ParseOffsets(r.ReminderOffsetsMinutesJson)))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<Guid>> ListCampaignIdsOfUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        await db.CampaignMembers.AsNoTracking().Where(m => m.UserId == userId).Select(m => m.CampaignId).ToListAsync(cancellationToken);
 
     public void Add(Campaign campaign) => db.Campaigns.Add(campaign);
 

@@ -8,7 +8,9 @@ using Dnd.Infrastructure.Files;
 using Dnd.Infrastructure.Options;
 using Dnd.Infrastructure.Persistence;
 using Dnd.Infrastructure.Persistence.Repositories;
+using Dnd.Infrastructure.Sessions;
 using Dnd.Infrastructure.Time;
+using Dnd.Domain.Sessions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<ILoreRepository, LoreRepository>();
         services.AddScoped<IMapRepository, MapRepository>();
         services.AddScoped<ILibraryRepository, LibraryRepository>();
+        services.AddScoped<ISessionRepository, SessionRepository>();
         services.AddScoped<ISrdSeeder, SrdSeeder>();
         services.AddScoped<SystemDocumentSeeder>();
 
@@ -52,6 +55,7 @@ public static class DependencyInjection
         services.AddOptions<AppOptions>()
             .Bind(configuration.GetSection(AppOptions.SectionName))
             .Validate(o => Uri.TryCreate(o.PublicUrl, UriKind.Absolute, out _), "App:PublicUrl must be an absolute URL.")
+            .Validate(o => CampaignSchedule.IsValidTimeZone(o.DefaultTimeZone), "App:DefaultTimeZone must be a valid IANA time zone id, for example Europe/Madrid.")
             .ValidateOnStart();
 
         services.AddOptions<JwtOptions>()
@@ -67,6 +71,9 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
         services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddScoped<IAccountEmailService, AccountEmailService>();
+        services.AddSingleton<ISessionLinkTokens, SessionLinkTokens>();
+        services.AddScoped<ISessionEmailService, SessionEmailService>();
+        services.AddSingleton<ICampaignDefaults, CampaignDefaults>();
 
         return services;
     }

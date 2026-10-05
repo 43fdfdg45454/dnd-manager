@@ -26,6 +26,7 @@ public sealed class CreateCampaignRequestValidator : AbstractValidator<CreateCam
 public sealed class CreateCampaignHandler(
     ICampaignRepository campaigns,
     IUserRepository users,
+    ICampaignDefaults defaults,
     IUnitOfWork unitOfWork,
     IDateTimeProvider clock)
 {
@@ -38,7 +39,7 @@ public sealed class CreateCampaignHandler(
             throw AppException.Forbidden("Tu cuenta está desactivada.");
         }
 
-        var campaign = Campaign.Create(request.Name, request.Description, user.Id, clock.UtcNow);
+        var campaign = Campaign.Create(request.Name, request.Description, user.Id, clock.UtcNow, defaults.TimeZoneId);
         campaigns.Add(campaign);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

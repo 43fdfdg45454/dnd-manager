@@ -1,4 +1,5 @@
 using Dnd.Domain.Campaigns;
+using Dnd.Domain.Sessions;
 using Dnd.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -17,6 +18,9 @@ internal sealed class CampaignConfiguration : IEntityTypeConfiguration<Campaign>
         builder.Property(x => x.Description).HasMaxLength(Campaign.DescriptionMaxLength).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.UpdatedAt).IsRequired();
+        builder.Property(x => x.TimeZoneId).HasMaxLength(CampaignSchedule.TimeZoneIdMaxLength).IsRequired();
+        builder.Property(x => x.ReminderOffsetsMinutesJson).HasMaxLength(256).IsRequired();
+        builder.Ignore(x => x.ReminderOffsetsMinutes);
 
         // Users are never deleted while they own campaigns (they are deactivated instead).
         builder.HasOne<User>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);

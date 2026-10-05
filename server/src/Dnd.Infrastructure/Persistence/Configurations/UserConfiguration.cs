@@ -21,6 +21,7 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.IsActive).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.LastLoginAt);
+        builder.Property(x => x.NotificationsEnabled).IsRequired();
 
         builder.Ignore(x => x.HasPassword);
     }

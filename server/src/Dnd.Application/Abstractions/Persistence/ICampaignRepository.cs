@@ -3,6 +3,16 @@ using Dnd.Domain.Campaigns;
 
 namespace Dnd.Application.Abstractions.Persistence;
 
+/// <summary>A member with what is needed to email them and to show their name.</summary>
+public sealed record MemberContact(Guid CampaignId, Guid UserId, CampaignRole Role, string DisplayName, string Email, bool NotificationsEnabled, bool IsActive)
+{
+    /// <summary>Whether session emails go to this member: an active account that has not opted out.</summary>
+    public bool WantsEmails => NotificationsEnabled && IsActive;
+}
+
+/// <summary>Name and time zone of a campaign, as needed to render its sessions.</summary>
+public sealed record CampaignScheduleInfo(Guid Id, string Name, string TimeZoneId, IReadOnlyList<int> ReminderOffsetsMinutes);
+
 public interface ICampaignRepository
 {
     /// <summary>Tracked campaign with its members loaded, ready to be modified.</summary>
@@ -16,6 +26,14 @@ public interface ICampaignRepository
 
     /// <summary>Members with their user data, ordered by role (Owner, DM, Player) and display name.</summary>
     Task<IReadOnlyList<MemberDto>> ListMembersAsync(Guid campaignId, CancellationToken cancellationToken = default);
+
+    /// <summary>Members of the given campaigns with their account data (read-only).</summary>
+    Task<IReadOnlyList<MemberContact>> ListMemberContactsAsync(IReadOnlyCollection<Guid> campaignIds, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<CampaignScheduleInfo>> ListScheduleInfoAsync(IReadOnlyCollection<Guid> campaignIds, CancellationToken cancellationToken = default);
+
+    /// <summary>Ids of the campaigns where the user is a member.</summary>
+    Task<IReadOnlyList<Guid>> ListCampaignIdsOfUserAsync(Guid userId, CancellationToken cancellationToken = default);
 
     void Add(Campaign campaign);
 

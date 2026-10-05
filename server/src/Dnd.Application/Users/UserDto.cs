@@ -10,7 +10,8 @@ public sealed record UserDto(
     bool IsActive,
     bool HasPassword,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? LastLoginAt)
+    DateTimeOffset? LastLoginAt,
+    bool NotificationsEnabled)
 {
     public static UserDto From(User user) => new(
         user.Id,
@@ -20,5 +21,6 @@ public sealed record UserDto(
         user.IsActive,
         user.HasPassword,
         user.CreatedAt,
-        user.LastLoginAt);
+        user.LastLoginAt,
+        user.NotificationsEnabled);
 }

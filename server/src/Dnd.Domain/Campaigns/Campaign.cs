@@ -1,4 +1,5 @@
 using Dnd.Domain.Common;
+using Dnd.Domain.Sessions;
 
 namespace Dnd.Domain.Campaigns;
 
@@ -27,16 +28,28 @@ public sealed class Campaign : EntityBase
 
     public DateTimeOffset UpdatedAt { get; private set; }
 
+    /// <summary>IANA time zone (for example <c>Europe/Madrid</c>) in which the campaign's sessions are shown and announced.</summary>
+    public string TimeZoneId { get; private set; } = CampaignSchedule.FallbackTimeZoneId;
+
+    /// <summary>JSON array of minutes before a session at which email reminders are sent.</summary>
+    public string ReminderOffsetsMinutesJson { get; private set; } = CampaignSchedule.SerializeOffsets(CampaignSchedule.DefaultOffsetsMinutes);
+
+    public IReadOnlyList<int> ReminderOffsetsMinutes => CampaignSchedule.ParseOffsets(ReminderOffsetsMinutesJson);
+
     public IReadOnlyCollection<CampaignMember> Members => _members;
 
-    /// <summary>Creates a campaign whose creator becomes its owner (and only member).</summary>
-    public static Campaign Create(string name, string? description, Guid ownerId, DateTimeOffset now)
+    /// <summary>
+    /// Creates a campaign whose creator becomes its owner (and only member). A null time zone uses
+    /// <see cref="CampaignSchedule.FallbackTimeZoneId"/>.
+    /// </summary>
+    public static Campaign Create(string name, string? description, Guid ownerId, DateTimeOffset now, string? timeZoneId = null)
     {
         var campaign = new Campaign
         {
             OwnerId = ownerId,
             CreatedAt = now,
             UpdatedAt = now,
+            TimeZoneId = CampaignSchedule.RequireTimeZone(timeZoneId ?? CampaignSchedule.FallbackTimeZoneId),
         };
         campaign.SetName(name);
         campaign.SetDescription(description);
@@ -64,6 +77,26 @@ public sealed class Campaign : EntityBase
         }
 
         UpdatedAt = now;
+    }
+
+    /// <summary>
+    /// Changes the time zone and/or the reminder offsets (null keeps the current value). Requires at
+    /// least DM. Returns true when the offsets changed, so pending reminders must be regenerated.
+    /// </summary>
+    public bool UpdateSettings(Guid actorUserId, string? timeZoneId, IReadOnlyCollection<int>? reminderOffsetsMinutes, DateTimeOffset now)
+    {
+        RequireActor(actorUserId, CampaignRole.DM, "Solo el propietario o un DM pueden editar los ajustes de la campaña.");
+
+        var newZone = timeZoneId is null ? TimeZoneId : CampaignSchedule.RequireTimeZone(timeZoneId);
+        var newOffsetsJson = reminderOffsetsMinutes is null
+            ? ReminderOffsetsMinutesJson
+            : CampaignSchedule.SerializeOffsets(CampaignSchedule.RequireOffsets(reminderOffsetsMinutes));
+
+        var offsetsChanged = newOffsetsJson != ReminderOffsetsMinutesJson;
+        TimeZoneId = newZone;
+        ReminderOffsetsMinutesJson = newOffsetsJson;
+        UpdatedAt = now;
+        return offsetsChanged;
     }
 
     /// <summary>

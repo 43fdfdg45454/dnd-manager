@@ -11,8 +11,16 @@ public sealed partial class FakeEmailSender : IEmailSender
 
     public IReadOnlyList<EmailMessage> Messages => _messages.ToList();
 
+    /// <summary>When set, sending a message for which it returns an exception throws it instead of capturing the message.</summary>
+    public Func<EmailMessage, Exception?>? FailWhen { get; set; }
+
     public Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
     {
+        if (FailWhen?.Invoke(message) is { } failure)
+        {
+            throw failure;
+        }
+
         _messages.Enqueue(message);
         return Task.CompletedTask;
     }
@@ -38,6 +46,18 @@ public sealed partial class FakeEmailSender : IEmailSender
             ? Uri.UnescapeDataString(match.Groups["token"].Value)
             : throw new InvalidOperationException("The email does not contain a set-password link.");
     }
+
+    /// <summary>Link of the public session page in a session email: <c>(sessionId, token, url)</c>.</summary>
+    public static (Guid SessionId, string Token, string Url) ExtractSessionLink(EmailMessage message)
+    {
+        var match = SessionLinkRegex().Match(message.TextBody ?? message.HtmlBody);
+        return match.Success
+            ? (Guid.Parse(match.Groups["id"].Value), Uri.UnescapeDataString(match.Groups["token"].Value), match.Value)
+            : throw new InvalidOperationException("The email does not contain a session link.");
+    }
+
+    [GeneratedRegex(@"https?://\S+/sessions/(?<id>[0-9a-fA-F\-]{36})\?token=(?<token>[A-Za-z0-9_\-.%]+)")]
+    private static partial Regex SessionLinkRegex();
 
     [GeneratedRegex(@"https?://\S+/set-password\?token=(?<token>[A-Za-z0-9_\-%]+)")]
     private static partial Regex LinkRegex();

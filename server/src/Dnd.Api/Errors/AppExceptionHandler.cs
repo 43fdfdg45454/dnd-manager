@@ -3,16 +3,20 @@ using Dnd.Domain.Common;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Dnd.Api.Errors;
 
 /// <summary>
 /// Maps <see cref="AppException"/> and <see cref="DomainException"/> to a ProblemDetails (RFC 9457) response.
 /// A <see cref="DbUpdateConcurrencyException"/> (optimistic concurrency token changed by another
-/// request, e.g. two purchases of the last unit) becomes a 409.
+/// request, e.g. two purchases of the last unit) becomes a 409, and so does a unique index violation
+/// (e.g. two sessions created at the same time getting the same number): the client retries.
 /// </summary>
 internal sealed class AppExceptionHandler(IProblemDetailsService problemDetailsService) : IExceptionHandler
 {
+    public const string UniqueViolationMessage = "Otra operación simultánea ha creado el mismo dato. Vuelve a intentarlo.";
+
     public const string ConcurrencyMessage = "Los datos han cambiado mientras se procesaba la operación. Vuelve a intentarlo.";
 
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
@@ -32,6 +36,10 @@ internal sealed class AppExceptionHandler(IProblemDetailsService problemDetailsS
             case DbUpdateConcurrencyException:
                 kind = AppErrorKind.Conflict;
                 detail = ConcurrencyMessage;
+                break;
+            case DbUpdateException update when IsUniqueViolation(update):
+                kind = AppErrorKind.Conflict;
+                detail = UniqueViolationMessage;
                 break;
             default:
                 return false;
@@ -63,6 +71,14 @@ internal sealed class AppExceptionHandler(IProblemDetailsService problemDetailsS
             Exception = exception,
         });
     }
+
+    /// <summary>PostgreSQL error 23505, or the equivalent SQLite constraint failure (used by the tests).</summary>
+    private static bool IsUniqueViolation(DbUpdateException exception) => exception.InnerException switch
+    {
+        PostgresException postgres => postgres.SqlState == PostgresErrorCodes.UniqueViolation,
+        { } inner when inner.GetType().Name == "SqliteException" => inner.Message.Contains("UNIQUE constraint failed", StringComparison.Ordinal),
+        _ => false,
+    };
 
     private static AppErrorKind ToAppErrorKind(DomainErrorKind kind) => kind switch
     {

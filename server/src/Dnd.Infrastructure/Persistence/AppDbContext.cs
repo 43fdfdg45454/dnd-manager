@@ -7,6 +7,7 @@ using Dnd.Domain.Items;
 using Dnd.Domain.Library;
 using Dnd.Domain.Lore;
 using Dnd.Domain.Maps;
+using Dnd.Domain.Sessions;
 using Dnd.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 
@@ -91,6 +92,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<LibraryDocument> LibraryDocuments => Set<LibraryDocument>();
 
     public DbSet<CampaignDocument> CampaignDocuments => Set<CampaignDocument>();
+
+    public DbSet<GameSession> GameSessions => Set<GameSession>();
+
+    public DbSet<SessionRsvp> SessionRsvps => Set<SessionRsvp>();
+
+    public DbSet<Reminder> Reminders => Set<Reminder>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

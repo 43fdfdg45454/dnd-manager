@@ -25,6 +25,9 @@ public sealed class User : EntityBase
 
     public DateTimeOffset? LastLoginAt { get; private set; }
 
+    /// <summary>Whether the user receives session reminders and DM notices by email. On by default.</summary>
+    public bool NotificationsEnabled { get; private set; } = true;
+
     public bool HasPassword => PasswordHash is not null;
 
     public static User Create(string email, string displayName, UserRole role, DateTimeOffset now) => new()
@@ -47,4 +50,6 @@ public sealed class User : EntityBase
     public void ChangeRole(UserRole role) => Role = role;
 
     public void SetActive(bool isActive) => IsActive = isActive;
+
+    public void SetNotificationsEnabled(bool enabled) => NotificationsEnabled = enabled;
 }

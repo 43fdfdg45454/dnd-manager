@@ -50,6 +50,9 @@ public class ApiFactory : WebApplicationFactory<Program>
 
     protected virtual bool SeedCatalog => false;
 
+    /// <summary>Whether the background <c>ReminderDispatcher</c> runs. Off by default: tests call the processor directly.</summary>
+    protected virtual bool RunReminderDispatcher => false;
+
     /// <summary>Maximum upload size configured for the host (<c>FileStorage:MaxUploadMegabytes</c>).</summary>
     protected virtual int MaxUploadMegabytes => 200;
 
@@ -63,6 +66,8 @@ public class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("App:PublicUrl", PublicUrl);
         builder.UseSetting("App:InitialAdminEmail", AdminEmail);
         builder.UseSetting("App:SeedInitialAdmin", SeedInitialAdmin ? "true" : "false");
+        builder.UseSetting("Reminders:Enabled", RunReminderDispatcher ? "true" : "false");
+        builder.UseSetting("Reminders:PollSeconds", "1");
         builder.UseSetting("Catalog:SeedOnStartup", SeedCatalog ? "true" : "false");
         builder.UseSetting("FileStorage:RootPath", _filesRoot);
         builder.UseSetting("FileStorage:MaxUploadMegabytes", MaxUploadMegabytes.ToString(System.Globalization.CultureInfo.InvariantCulture));

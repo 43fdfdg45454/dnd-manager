@@ -67,6 +67,14 @@ public static class AuthEndpoints
             .WithSummary("Usuario autenticado.")
             .ProducesProblem(StatusCodes.Status401Unauthorized);
 
+        group.MapPatch("/me", async (UpdateProfileRequest request, ClaimsPrincipal user, UpdateProfileHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), request, ct)))
+            .RequireAuthorization()
+            .WithName("UpdateMe")
+            .WithSummary("Edita el nombre visible y si el usuario recibe correos (notificationsEnabled).")
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
+
         return app;
     }
 }

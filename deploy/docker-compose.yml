@@ -38,6 +38,9 @@ services:
       Smtp__FromAddress: ${SMTP_FROM_ADDRESS:-noreply@example.com}
       Smtp__FromName: ${SMTP_FROM_NAME:-D&D Companion}
       FileStorage__MaxUploadMegabytes: ${MAX_UPLOAD_MB:-200}
+      App__DefaultTimeZone: ${DEFAULT_TIME_ZONE:-Europe/Madrid}
+      Reminders__Enabled: ${REMINDERS_ENABLED:-true}
+      Reminders__PollSeconds: ${REMINDERS_POLL_SECONDS:-60}
     volumes:
       - files:/data/files
     healthcheck:

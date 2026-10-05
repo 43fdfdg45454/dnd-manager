@@ -9,6 +9,7 @@ using Dnd.Application.Files;
 using Dnd.Application.Library;
 using Dnd.Application.Lore;
 using Dnd.Application.Maps;
+using Dnd.Application.Sessions;
 using Dnd.Application.Items;
 using Dnd.Application.Users;
 using Dnd.Domain.Characters;
@@ -34,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<ForgotPasswordHandler>();
         services.AddScoped<SetPasswordHandler>();
         services.AddScoped<GetMeHandler>();
+        services.AddScoped<UpdateProfileHandler>();
 
         services.AddScoped<ListUsersHandler>();
         services.AddScoped<CreateUserHandler>();
@@ -154,6 +156,24 @@ public static class DependencyInjection
         services.AddScoped<ListCampaignLibraryHandler>();
         services.AddScoped<RecommendDocumentHandler>();
         services.AddScoped<RemoveRecommendationHandler>();
+
+        services.AddScoped<SessionLoader>();
+        services.AddScoped<SessionViewBuilder>();
+        services.AddScoped<PublicSessionLoader>();
+        services.AddScoped<ListSessionsHandler>();
+        services.AddScoped<CreateSessionHandler>();
+        services.AddScoped<GetSessionHandler>();
+        services.AddScoped<UpdateSessionHandler>();
+        services.AddScoped<DeleteSessionHandler>();
+        services.AddScoped<RespondToSessionHandler>();
+        services.AddScoped<SetSessionSummaryHandler>();
+        services.AddScoped<GetJournalHandler>();
+        services.AddScoped<ListMySessionsHandler>();
+        services.AddScoped<NotifySessionHandler>();
+        services.AddScoped<UpdateCampaignSettingsHandler>();
+        services.AddScoped<GetPublicSessionHandler>();
+        services.AddScoped<PublicRsvpHandler>();
+        services.AddScoped<ReminderProcessor>();
 
         return services;
     }

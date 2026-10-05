@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <title>Sesión · D&amp;D Companion</title>
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --card: #ffffff;
+      --text: #1f1b16;
+      --muted: #6b6259;
+      --border: #d8d0c4;
+      --accent: #8b1e1e;
+      --accent-text: #ffffff;
+      --ok-bg: #e6f4ea;
+      --ok-text: #1e5b2e;
+      --err-bg: #fbe9e7;
+      --err-text: #8b1e1e;
+      --warn-bg: #fff4d6;
+      --warn-text: #7a5a00;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #171512;
+        --card: #221f1b;
+        --text: #eee8df;
+        --muted: #a89f94;
+        --border: #3a352f;
+        --accent: #c2413b;
+        --accent-text: #ffffff;
+        --ok-bg: #1d3324;
+        --ok-text: #a6d9b3;
+        --err-bg: #3a1f1d;
+        --err-text: #f2b8b2;
+        --warn-bg: #3a3017;
+        --warn-text: #f0d98a;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.5;
+    }
+    main {
+      width: 100%;
+      max-width: 480px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    h1 { font-size: 1.4rem; margin: 0 0 4px; }
+    p.lead { margin: 0 0 16px; color: var(--muted); }
+    dl { margin: 0 0 16px; }
+    dt { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-top: 12px; }
+    dd { margin: 2px 0 0; }
+    .notes { white-space: pre-wrap; word-wrap: break-word; }
+    h2 { font-size: 1rem; margin: 20px 0 8px; }
+    .choices { display: flex; gap: 8px; }
+    .choices button {
+      flex: 1;
+      padding: 12px 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--accent);
+      cursor: pointer;
+    }
+    .choices button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
+    .choices button:disabled { opacity: 0.6; cursor: default; }
+    .message { margin-top: 16px; padding: 12px; border-radius: 8px; }
+    .message.ok { background: var(--ok-bg); color: var(--ok-text); }
+    .message.error { background: var(--err-bg); color: var(--err-text); }
+    .message.warn { background: var(--warn-bg); color: var(--warn-text); }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <div id="loading" role="status">Cargando sesión…</div>
+
+    <section id="session" hidden>
+      <h1 id="title"></h1>
+      <p class="lead" id="campaign"></p>
+      <div id="cancelled" class="message warn" hidden>Esta sesión ha sido cancelada.</div>
+
+      <dl>
+        <dt>Cuándo</dt>
+        <dd id="when"></dd>
+        <div id="duration-row" hidden><dt>Duración</dt><dd id="duration"></dd></div>
+        <div id="location-row" hidden><dt>Dónde</dt><dd id="location"></dd></div>
+        <div id="notes-row" hidden><dt>Notas</dt><dd id="notes" class="notes"></dd></div>
+      </dl>
+
+      <div id="rsvp">
+        <h2 id="rsvp-label">¿Vas a asistir?</h2>
+        <div class="choices" role="group" aria-labelledby="rsvp-label">
+          <button type="button" data-status="Yes" aria-pressed="false">Sí</button>
+          <button type="button" data-status="Maybe" aria-pressed="false">Quizá</button>
+          <button type="button" data-status="No" aria-pressed="false">No</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="message" class="message" role="status" aria-live="polite" hidden></div>
+  </main>
+
+  <script>
+    (function () {
+      var segments = window.location.pathname.split('/').filter(Boolean);
+      var sessionId = segments[segments.length - 1];
+      var token = new URLSearchParams(window.location.search).get('token');
+      var api = '/api/v1/public/sessions/' + encodeURIComponent(sessionId);
+
+      var loading = document.getElementById('loading');
+      var section = document.getElementById('session');
+      var message = document.getElementById('message');
+      var buttons = Array.prototype.slice.call(document.querySelectorAll('.choices button'));
+      var LABELS = { Yes: 'Sí', Maybe: 'Quizá', No: 'No' };
+
+      function show(text, kind) {
+        message.textContent = text;
+        message.className = 'message ' + kind;
+        message.hidden = false;
+      }
+
+      function setRow(rowId, valueId, text) {
+        document.getElementById(rowId).hidden = !text;
+        if (text) { document.getElementById(valueId).textContent = text; }
+      }
+
+      function formatDuration(minutes) {
+        if (minutes < 60) { return minutes + ' min'; }
+        var hours = Math.floor(minutes / 60);
+        var rest = minutes % 60;
+        return rest ? hours + ' h ' + rest + ' min' : hours + ' h';
+      }
+
+      function formatWhen(dto) {
+        // Always shown in the campaign's time zone, whatever the zone of the device.
+        try {
+          return new Intl.DateTimeFormat('es-ES', {
+            dateStyle: 'full',
+            timeStyle: 'short',
+            timeZone: dto.timeZoneId
+          }).format(new Date(dto.startsAt)) + ' (' + dto.timeZoneId + ')';
+        } catch (e) {
+          return dto.startsAtLocal;
+        }
+      }
+
+      function render(dto) {
+        document.title = dto.title + ' · D&D Companion';
+        document.getElementById('title').textContent = 'Sesión ' + dto.number + ' · ' + dto.title;
+        document.getElementById('campaign').textContent = dto.campaignName;
+        document.getElementById('when').textContent = formatWhen(dto);
+        setRow('duration-row', 'duration', dto.durationMinutes ? formatDuration(dto.durationMinutes) : '');
+        setRow('location-row', 'location', dto.location);
+        setRow('notes-row', 'notes', dto.notes);
+
+        var cancelled = dto.status === 'Cancelled';
+        document.getElementById('cancelled').hidden = !cancelled;
+        document.getElementById('rsvp').hidden = cancelled;
+        buttons.forEach(function (button) {
+          button.setAttribute('aria-pressed', button.getAttribute('data-status') === dto.myRsvp ? 'true' : 'false');
+          button.disabled = false;
+        });
+
+        loading.hidden = true;
+        section.hidden = false;
+      }
+
+      function problemText(problem, fallback) {
+        return (problem && (problem.detail || problem.title)) || fallback;
+      }
+
+      function request(method, body) {
+        var options = { method: method, headers: { 'Accept': 'application/json' } };
+        if (body) {
+          options.headers['Content-Type'] = 'application/json';
+          options.body = JSON.stringify(body);
+        }
+        return fetch(api + (method === 'GET' ? '' : '/rsvp') + '?token=' + encodeURIComponent(token), options);
+      }
+
+      if (!token) {
+        loading.hidden = true;
+        show('El enlace no es válido: falta el token. Abre de nuevo el enlace del correo.', 'error');
+        return;
+      }
+
+      request('GET')
+        .then(function (response) {
+          if (response.ok) { return response.json().then(render); }
+          return response.json().catch(function () { return null; }).then(function (problem) {
+            loading.hidden = true;
+            show(response.status === 401
+              ? 'El enlace no es válido o ha caducado. Abre de nuevo el enlace del correo.'
+              : problemText(problem, 'No se ha podido cargar la sesión.'), 'error');
+          });
+        })
+        .catch(function () {
+          loading.hidden = true;
+          show('No se ha podido conectar con el servidor. Inténtalo de nuevo.', 'error');
+        });
+
+      buttons.forEach(function (button) {
+        button.addEventListener('click', function () {
+          var status = button.getAttribute('data-status');
+          message.hidden = true;
+          buttons.forEach(function (b) { b.disabled = true; });
+          request('POST', { status: status })
+            .then(function (response) {
+              if (response.ok) {
+                return response.json().then(function (dto) {
+                  render(dto);
+                  show('Respuesta guardada: ' + LABELS[status] + '.', 'ok');
+                });
+              }
+              return response.json().catch(function () { return null; }).then(function (problem) {
+                show(problemText(problem, 'No se ha podido guardar tu respuesta.'), 'error');
+                buttons.forEach(function (b) { b.disabled = false; });
+              });
+            })
+            .catch(function () {
+              show('No se ha podido conectar con el servidor. Inténtalo de nuevo.', 'error');
+              buttons.forEach(function (b) { b.disabled = false; });
+            });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
