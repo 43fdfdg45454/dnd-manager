@@ -12,6 +12,7 @@ import 'helpers/fakes.dart';
 Widget _app({required UserDto user, bool serverUp = true}) => ProviderScope(
   overrides: [
     authControllerProvider.overrideWith(() => FixedAuthController(AuthSignedIn(user))),
+    fakeCampaignsOverride,
     if (serverUp)
       fakeServerInfoOverride
     else
@@ -19,6 +20,11 @@ Widget _app({required UserDto user, bool serverUp = true}) => ProviderScope(
   ],
   child: const MaterialApp(home: HomePage()),
 );
+
+Future<void> _openUserMenu(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('home-user-menu')));
+  await tester.pumpAndSettle();
+}
 
 void main() {
   testWidgets('muestra el nombre y la versión del servidor', (tester) async {
@@ -39,6 +45,7 @@ void main() {
   testWidgets('muestra nombre y rol, y oculta Usuarios a un User', (tester) async {
     await tester.pumpWidget(_app(user: makeUser()));
     await tester.pumpAndSettle();
+    await _openUserMenu(tester);
 
     expect(find.text('Hola, Usuario Demo'), findsOneWidget);
     expect(find.text('Usuario'), findsOneWidget);
@@ -53,8 +60,17 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await _openUserMenu(tester);
 
     expect(find.text('Administrador'), findsOneWidget);
     expect(find.text('Usuarios'), findsOneWidget);
+  });
+
+  testWidgets('el cuerpo muestra la lista de campañas', (tester) async {
+    await tester.pumpWidget(_app(user: makeUser()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Aún no tienes campañas'), findsOneWidget);
+    expect(find.text('Nueva campaña'), findsOneWidget);
   });
 }

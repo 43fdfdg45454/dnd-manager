@@ -7,6 +7,8 @@ import 'package:dnd_companion/core/auth/token_storage.dart';
 import 'package:dnd_companion/core/auth/user_dto.dart';
 import 'package:dnd_companion/features/admin/data/admin_users_repository.dart';
 import 'package:dnd_companion/features/admin/domain/paged_users.dart';
+import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart';
+import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
 import 'package:dnd_companion/features/home/data/server_info.dart';
 import 'package:dnd_companion/features/home/data/server_info_repository.dart';
 
@@ -170,4 +172,220 @@ class FixedAuthController extends AuthController {
 
 final fakeServerInfoOverride = serverInfoProvider.overrideWith(
   (ref) async => const ServerInfo(name: 'dnd-companion-api', version: '0.1.0'),
+);
+
+Member makeMember({
+  String userId = 'u1',
+  String displayName = 'Usuario Demo',
+  String? email,
+  CampaignRole role = CampaignRole.player,
+}) => Member(
+  userId: userId,
+  displayName: displayName,
+  email: email ?? '$userId@example.com',
+  role: role,
+  joinedAt: DateTime.utc(2026, 1, 1),
+);
+
+/// A campaign where the signed-in user ([myRole]) is a member. [members] must
+/// include that user; by default it is the user `u1` plus an Owner `owner`.
+CampaignDetail makeCampaign({
+  String id = 'c1',
+  String name = 'La Mina Perdida',
+  String description = 'Una aventura para niveles 1 a 3.',
+  CampaignRole myRole = CampaignRole.owner,
+  List<Member>? members,
+}) {
+  final list =
+      members ??
+      [
+        makeMember(userId: 'u1', displayName: 'Usuario Demo', role: myRole),
+        if (myRole != CampaignRole.owner)
+          makeMember(userId: 'owner', displayName: 'Dueña Demo', role: CampaignRole.owner),
+        makeMember(userId: 'p2', displayName: 'Beto', role: CampaignRole.player),
+      ];
+  final owner = list.firstWhere((m) => m.role.isOwner);
+  return CampaignDetail(
+    id: id,
+    name: name,
+    description: description,
+    ownerId: owner.userId,
+    ownerDisplayName: owner.displayName,
+    myRole: myRole,
+    members: list,
+    createdAt: DateTime.utc(2026, 1, 1),
+    updatedAt: DateTime.utc(2026, 1, 1),
+  );
+}
+
+/// In-memory campaigns backend. [currentUserId] is the signed-in user.
+class FakeCampaignsRepository implements CampaignsRepository {
+  FakeCampaignsRepository({
+    List<CampaignDetail>? campaigns,
+    this.directory = const [],
+    this.currentUserId = 'u1',
+  }) : campaigns = [...?campaigns];
+
+  final List<CampaignDetail> campaigns;
+
+  /// Users returned by the search (filtered by name or email).
+  final List<UserSummary> directory;
+  final String currentUserId;
+  Object? error;
+  final List<String> searches = [];
+
+  void _fail() {
+    if (error != null) throw error!;
+  }
+
+  int _index(String id) => campaigns.indexWhere((c) => c.id == id);
+
+  CampaignDetail _byId(String id) {
+    final index = _index(id);
+    if (index < 0) throw dioError(404);
+    return campaigns[index];
+  }
+
+  @override
+  Future<List<CampaignSummary>> list() async {
+    _fail();
+    return [
+      for (final c in campaigns)
+        CampaignSummary(
+          id: c.id,
+          name: c.name,
+          description: c.description,
+          ownerId: c.ownerId,
+          ownerDisplayName: c.ownerDisplayName,
+          myRole: c.myRole,
+          memberCount: c.members.length,
+          createdAt: c.createdAt,
+        ),
+    ];
+  }
+
+  @override
+  Future<CampaignDetail> create({required String name, required String description}) async {
+    _fail();
+    final created = makeCampaign(
+      id: 'c${campaigns.length + 1}',
+      name: name,
+      description: description,
+      members: [makeMember(userId: currentUserId, role: CampaignRole.owner)],
+    );
+    campaigns.add(created);
+    return created;
+  }
+
+  @override
+  Future<CampaignDetail> get(String id) async {
+    _fail();
+    return _byId(id);
+  }
+
+  @override
+  Future<CampaignDetail> update(String id, {String? name, String? description}) async {
+    _fail();
+    final updated = _byId(id).copyWith(name: name, description: description);
+    campaigns[_index(id)] = updated;
+    return updated;
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    _fail();
+    campaigns.removeAt(_index(id));
+  }
+
+  @override
+  Future<List<Member>> members(String id) async {
+    _fail();
+    return _byId(id).members;
+  }
+
+  @override
+  Future<Member> addMember(String id, {required String userId, required CampaignRole role}) async {
+    _fail();
+    final campaign = _byId(id);
+    if (campaign.members.any((m) => m.userId == userId)) throw dioError(409);
+    final user = directory.firstWhere((u) => u.id == userId);
+    final member = makeMember(
+      userId: user.id,
+      displayName: user.displayName,
+      email: user.email,
+      role: role,
+    );
+    campaigns[_index(id)] = campaign.copyWith(members: [...campaign.members, member]);
+    return member;
+  }
+
+  @override
+  Future<Member> changeMemberRole(String id, String userId, {required CampaignRole role}) async {
+    _fail();
+    final campaign = _byId(id);
+    final members = [
+      for (final m in campaign.members) m.userId == userId ? m.copyWith(role: role) : m,
+    ];
+    campaigns[_index(id)] = campaign.copyWith(members: members);
+    return members.firstWhere((m) => m.userId == userId);
+  }
+
+  @override
+  Future<void> removeMember(String id, String userId) async {
+    _fail();
+    final campaign = _byId(id);
+    campaigns[_index(id)] = campaign.copyWith(
+      members: campaign.members.where((m) => m.userId != userId).toList(),
+    );
+  }
+
+  @override
+  Future<void> leave(String id) async {
+    _fail();
+    campaigns.removeAt(_index(id));
+  }
+
+  @override
+  Future<CampaignDetail> transferOwnership(
+    String id, {
+    required String toUserId,
+    required CampaignRole previousOwnerRole,
+  }) async {
+    _fail();
+    final campaign = _byId(id);
+    final target = campaign.members.firstWhere((m) => m.userId == toUserId);
+    final members = [
+      for (final m in campaign.members)
+        if (m.userId == toUserId)
+          m.copyWith(role: CampaignRole.owner)
+        else if (m.userId == currentUserId)
+          m.copyWith(role: previousOwnerRole)
+        else
+          m,
+    ];
+    final updated = campaign.copyWith(
+      ownerId: target.userId,
+      ownerDisplayName: target.displayName,
+      myRole: previousOwnerRole,
+      members: members,
+    );
+    campaigns[_index(id)] = updated;
+    return updated;
+  }
+
+  @override
+  Future<List<UserSummary>> searchUsers(String query, {int limit = 10}) async {
+    _fail();
+    searches.add(query);
+    final q = query.toLowerCase();
+    return directory
+        .where((u) => u.displayName.toLowerCase().contains(q) || u.email.toLowerCase().contains(q))
+        .take(limit)
+        .toList();
+  }
+}
+
+/// Overrides the campaigns backend with an empty in-memory one.
+final fakeCampaignsOverride = campaignsRepositoryProvider.overrideWithValue(
+  FakeCampaignsRepository(),
 );

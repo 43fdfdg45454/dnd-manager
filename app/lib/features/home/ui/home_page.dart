@@ -6,11 +6,24 @@ import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/router/app_router.dart';
+import '../../campaigns/ui/campaigns_page.dart';
 import '../data/server_info_repository.dart';
 
-/// Landing page after login: shows the user, their role and the server status.
+enum _HomeAction { adminUsers, logout }
+
+/// Landing page after login: the list of campaigns, with the user menu in the
+/// app bar and the server status as a footer.
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
+
+  void _onAction(BuildContext context, WidgetRef ref, _HomeAction action) {
+    switch (action) {
+      case _HomeAction.adminUsers:
+        context.push(AppRoutes.adminUsers);
+      case _HomeAction.logout:
+        ref.read(authControllerProvider.notifier).logout();
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,97 +32,130 @@ class HomePage extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text(AppConfig.appName)),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.casino_outlined, size: 72),
-              const SizedBox(height: 16),
-              if (user != null) ...[
-                Text(
-                  'Hola, ${user.displayName}',
-                  key: const Key('home-greeting'),
-                  style: theme.textTheme.headlineSmall,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  user.role.label,
-                  key: const Key('home-role'),
-                  style: theme.textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 24),
-                if (user.isAdmin) ...[
-                  FilledButton.tonalIcon(
-                    key: const Key('home-admin-users'),
-                    onPressed: () => context.push(AppRoutes.adminUsers),
-                    icon: const Icon(Icons.group_outlined),
-                    label: const Text('Usuarios'),
+      appBar: AppBar(
+        title: const Text(AppConfig.appName),
+        actions: [
+          if (user != null)
+            PopupMenuButton<_HomeAction>(
+              key: const Key('home-user-menu'),
+              tooltip: 'Menú de usuario',
+              onSelected: (action) => _onAction(context, ref, action),
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  enabled: false,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Hola, ${user.displayName}',
+                        key: const Key('home-greeting'),
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      Text(
+                        user.role.label,
+                        key: const Key('home-role'),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                ],
-                OutlinedButton.icon(
-                  key: const Key('home-logout'),
-                  onPressed: () => ref.read(authControllerProvider.notifier).logout(),
-                  icon: const Icon(Icons.logout),
-                  label: const Text('Cerrar sesión'),
                 ),
-                const SizedBox(height: 32),
+                const PopupMenuDivider(),
+                if (user.isAdmin)
+                  const PopupMenuItem(
+                    key: Key('home-admin-users'),
+                    value: _HomeAction.adminUsers,
+                    child: Text('Usuarios'),
+                  ),
+                const PopupMenuItem(
+                  key: Key('home-logout'),
+                  value: _HomeAction.logout,
+                  child: Text('Cerrar sesión'),
+                ),
               ],
-              const _ServerStatus(),
-            ],
-          ),
-        ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.account_circle_outlined),
+                    const SizedBox(width: 6),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 140),
+                      child: Text(user.displayName, overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+      body: const Column(
+        children: [
+          Expanded(child: CampaignsPage()),
+          _ServerStatus(),
+        ],
       ),
     );
   }
 }
 
-/// Connection indicator backed by `/api/v1/app/info`.
+/// Compact connection indicator backed by `/api/v1/app/info`.
 class _ServerStatus extends ConsumerWidget {
   const _ServerStatus();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final serverInfo = ref.watch(serverInfoProvider);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          'Servidor: ${AppConfig.apiBaseUrl}',
-          style: Theme.of(context).textTheme.bodySmall,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        serverInfo.when(
-          loading: () => const CircularProgressIndicator(),
-          data: (info) => Text(
-            'Conectado a ${info.name} v${info.version}',
-            key: const Key('server-status'),
-            textAlign: TextAlign.center,
-          ),
-          error: (error, _) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'No se pudo conectar con el servidor.',
+    final theme = Theme.of(context);
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Servidor: ${AppConfig.apiBaseUrl}',
+              style: theme.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+            serverInfo.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.only(top: 4),
+                child: SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+              data: (info) => Text(
+                'Conectado a ${info.name} v${info.version}',
                 key: const Key('server-status'),
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+                style: theme.textTheme.bodySmall,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 12),
-              FilledButton.icon(
-                onPressed: () => ref.invalidate(serverInfoProvider),
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
+              error: (error, _) => Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(
+                      'No se pudo conectar con el servidor.',
+                      key: const Key('server-status'),
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => ref.invalidate(serverInfoProvider),
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Reintentar'),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

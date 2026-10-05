@@ -21,6 +21,7 @@ Future<void> _pumpApp(
         tokenStorageProvider.overrideWithValue(storage),
         authRepositoryProvider.overrideWithValue(repository),
         fakeServerInfoOverride,
+        fakeCampaignsOverride,
       ],
       child: const DndCompanionApp(),
     ),
@@ -55,6 +56,8 @@ void main() {
 
     await _fillAndSubmit(tester);
 
+    await tester.tap(find.byKey(const Key('home-user-menu')));
+    await tester.pumpAndSettle();
     expect(find.text('Hola, Usuario Demo'), findsOneWidget);
     expect(find.text('Entrar'), findsNothing);
     expect(storage.refresh, isNotNull);
@@ -99,6 +102,8 @@ void main() {
     final repository = FakeAuthRepository(storage: storage, meUser: makeUser());
     await _pumpApp(tester, storage: storage, repository: repository);
 
+    await tester.tap(find.byKey(const Key('home-user-menu')));
+    await tester.pumpAndSettle();
     expect(find.text('Hola, Usuario Demo'), findsOneWidget);
   });
 
@@ -107,6 +112,8 @@ void main() {
     final repository = FakeAuthRepository(storage: storage, meUser: makeUser());
     await _pumpApp(tester, storage: storage, repository: repository);
 
+    await tester.tap(find.byKey(const Key('home-user-menu')));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Cerrar sesión'));
     await tester.pumpAndSettle();
 
