@@ -3,6 +3,7 @@ using Dnd.Api.Endpoints;
 using Dnd.Api.Errors;
 using Dnd.Api.Hosting;
 using Dnd.Application;
+using Dnd.Application.Common;
 using Dnd.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.OpenApi;
@@ -25,6 +26,10 @@ builder.Services.AddSwaggerGen(options =>
         Version = "v1",
         Description = "API del companion para campañas de D&D 5e.",
     });
+
+    // Optional<T> request fields are plain (nullable) values on the wire.
+    options.MapType<Optional<string?>>(() => new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null });
+    options.MapType<Optional<Guid?>>(() => new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null, Format = "uuid" });
 
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -72,6 +77,8 @@ app.MapAdminUserEndpoints();
 app.MapUserEndpoints();
 app.MapCampaignEndpoints();
 app.MapCatalogEndpoints();
+app.MapCharacterEndpoints();
+app.MapChangeRequestEndpoints();
 app.MapPageEndpoints();
 
 await app.RunAsync();

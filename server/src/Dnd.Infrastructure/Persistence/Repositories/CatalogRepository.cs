@@ -130,4 +130,31 @@ internal sealed class CatalogRepository(AppDbContext db) : ICatalogRepository
 
     public async Task<IReadOnlyList<BackgroundDefinition>> ListBackgroundsAsync(CancellationToken cancellationToken = default) =>
         await db.CatalogBackgrounds.AsNoTracking().OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<ClassDefinition>> ListClassesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
+        indexes.Count == 0 ? [] : await db.CatalogClasses.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<ClassLevel>> ListClassLevelsByClassAsync(IReadOnlyCollection<string> classIndexes, CancellationToken cancellationToken = default) =>
+        classIndexes.Count == 0
+            ? []
+            : await db.CatalogClassLevels.AsNoTracking()
+                .Where(x => classIndexes.Contains(x.ClassIndex))
+                .OrderBy(x => x.ClassIndex)
+                .ThenBy(x => x.Level)
+                .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<SubclassDefinition>> ListSubclassesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
+        indexes.Count == 0 ? [] : await db.CatalogSubclasses.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<RaceDefinition>> ListRacesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
+        indexes.Count == 0 ? [] : await db.CatalogRaces.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<SubraceDefinition>> ListSubracesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
+        indexes.Count == 0 ? [] : await db.CatalogSubraces.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<BackgroundDefinition>> ListBackgroundsByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
+        indexes.Count == 0 ? [] : await db.CatalogBackgrounds.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<SpellDefinition>> ListSpellsByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
+        indexes.Count == 0 ? [] : await db.CatalogSpells.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
 }

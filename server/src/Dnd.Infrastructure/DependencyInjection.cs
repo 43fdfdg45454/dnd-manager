@@ -33,6 +33,8 @@ public static class DependencyInjection
         services.AddScoped<ICampaignRepository, CampaignRepository>();
         services.AddScoped<ICampaignAccess, CampaignAccess>();
         services.AddScoped<ICatalogRepository, CatalogRepository>();
+        services.AddScoped<ICharacterRepository, CharacterRepository>();
+        services.AddScoped<IChangeRequestRepository, ChangeRequestRepository>();
         services.AddScoped<ISrdSeeder, SrdSeeder>();
 
         services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));

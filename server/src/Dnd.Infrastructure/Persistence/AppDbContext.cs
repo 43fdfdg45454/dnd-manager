@@ -1,6 +1,7 @@
 using Dnd.Application.Abstractions.Persistence;
 using Dnd.Domain.Campaigns;
 using Dnd.Domain.Catalog;
+using Dnd.Domain.Characters;
 using Dnd.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 
@@ -47,6 +48,22 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<BackgroundDefinition> CatalogBackgrounds => Set<BackgroundDefinition>();
 
     public DbSet<CatalogImport> CatalogImports => Set<CatalogImport>();
+
+    public DbSet<Character> Characters => Set<Character>();
+
+    public DbSet<CharacterClassLevel> CharacterClassLevels => Set<CharacterClassLevel>();
+
+    public DbSet<CharacterProficiency> CharacterProficiencies => Set<CharacterProficiency>();
+
+    public DbSet<CharacterSpell> CharacterSpells => Set<CharacterSpell>();
+
+    public DbSet<SpellSlotState> CharacterSpellSlots => Set<SpellSlotState>();
+
+    public DbSet<CharacterResource> CharacterResources => Set<CharacterResource>();
+
+    public DbSet<CharacterOverride> CharacterOverrides => Set<CharacterOverride>();
+
+    public DbSet<ChangeRequest> ChangeRequests => Set<ChangeRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

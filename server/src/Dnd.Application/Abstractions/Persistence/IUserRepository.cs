@@ -22,5 +22,8 @@ public interface IUserRepository
     /// </summary>
     Task<IReadOnlyList<User>> SearchActiveAsync(string term, int take, CancellationToken cancellationToken = default);
 
+    /// <summary>Display names by user id; unknown ids are left out.</summary>
+    Task<IReadOnlyDictionary<Guid, string>> GetDisplayNamesAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default);
+
     void Add(User user);
 }

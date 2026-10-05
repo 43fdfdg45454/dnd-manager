@@ -44,5 +44,10 @@ internal sealed class UserRepository(AppDbContext db) : IUserRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, string>> GetDisplayNamesAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default) =>
+        ids.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await db.Users.AsNoTracking().Where(x => ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, x => x.DisplayName, cancellationToken);
+
     public void Add(User user) => db.Users.Add(user);
 }

@@ -1,8 +1,12 @@
 using System.Globalization;
+using Dnd.Application.Abstractions;
 using Dnd.Application.Auth;
 using Dnd.Application.Campaigns;
 using Dnd.Application.Catalog;
+using Dnd.Application.ChangeRequests;
+using Dnd.Application.Characters;
 using Dnd.Application.Users;
+using Dnd.Domain.Characters;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -58,6 +62,32 @@ public static class DependencyInjection
         services.AddScoped<ListConditionsHandler>();
         services.AddScoped<ListSkillsHandler>();
         services.AddScoped<ListBackgroundsHandler>();
+
+        // Phase 5 replaces this provider with one backed by the inventory.
+        services.AddScoped<IEquippedGearProvider, NoEquippedGearProvider>();
+        services.AddSingleton<IDiceRoller>(RandomDiceRoller.Instance);
+        services.AddScoped<ICharacterSheetService, CharacterSheetService>();
+        services.AddScoped<CharacterLoader>();
+        services.AddScoped<CharacterTracker>();
+        services.AddScoped<ListCharactersHandler>();
+        services.AddScoped<CreateCharacterHandler>();
+        services.AddScoped<GetCharacterHandler>();
+        services.AddScoped<UpdateSheetHandler>();
+        services.AddScoped<SubmitCharacterHandler>();
+        services.AddScoped<ActivateCharacterHandler>();
+        services.AddScoped<DeleteCharacterHandler>();
+        services.AddScoped<UpdateCombatHandler>();
+        services.AddScoped<SetConcentrationHandler>();
+        services.AddScoped<SpellSlotHandler>();
+        services.AddScoped<ResourceHandler>();
+        services.AddScoped<RestHandler>();
+
+        services.AddScoped<ChangeRequestLoader>();
+        services.AddScoped<ListChangeRequestsHandler>();
+        services.AddScoped<GetChangeRequestHandler>();
+        services.AddScoped<ApproveChangeRequestHandler>();
+        services.AddScoped<RejectChangeRequestHandler>();
+        services.AddScoped<CancelChangeRequestHandler>();
 
         return services;
     }
