@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Trust user-installed CAs (Settings > Security > User credentials) for the Java HTTP stack.
+     Dart's HttpClient ignores this file; see lib/core/network/trust_store.dart. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system"/>
+            <certificates src="user"/>
+        </trust-anchors>
+    </base-config>
+</network-security-config>

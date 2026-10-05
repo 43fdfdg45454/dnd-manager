@@ -7,12 +7,15 @@ import 'app.dart';
 import 'core/cache/cache_database.dart';
 import 'core/cache/response_cache.dart';
 import 'core/network/connectivity.dart';
+import 'core/network/trust_store.dart';
 import 'core/server/server_config_repository.dart';
 import 'core/storage/local_preferences.dart';
 import 'core/update/update_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Must run before any HttpClient is created so user-installed CAs are trusted.
+  final trustStore = await installGlobalHttpOverrides();
   final prefs = await SharedPreferences.getInstance();
   final responseCache = DriftResponseCache(CacheDatabase.open());
   // Old searches and pages add up; trimming is best effort.
@@ -24,6 +27,7 @@ Future<void> main() async {
         localPreferencesProvider.overrideWithValue(prefs),
         responseCacheProvider.overrideWithValue(responseCache),
         connectivitySourceProvider.overrideWithValue(PlatformConnectivitySource()),
+        trustedUserCertificateCountProvider.overrideWithValue(trustStore.certificateCount),
         installedBuildProvider.overrideWithValue(await _installedBuild()),
       ],
       child: const DndCompanionApp(),

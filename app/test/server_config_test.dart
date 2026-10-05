@@ -545,6 +545,8 @@ void main() {
 
       expect(find.text('El certificado del servidor no es de confianza.'), findsOneWidget);
       expect(find.text(_fingerprint), findsOneWidget);
+      expect(find.byKey(const Key('server-ca-hint')), findsOneWidget);
+      expect(find.textContaining('Credenciales de usuario'), findsOneWidget);
 
       await tester.ensureVisible(find.byKey(const Key('server-trust')));
       await tester.tap(find.byKey(const Key('server-trust')));
@@ -553,6 +555,11 @@ void main() {
       expect(config.stored.trustedFingerprints, {'dnd.example.com': _fingerprint});
       expect(probe.calls.last.pinned, _fingerprint);
       expect(find.text('Conectado a Taberna v1.2.3'), findsOneWidget);
+    });
+
+    testWidgets('muestra cuántos certificados de usuario se reconocen', (tester) async {
+      await _pumpApp(tester, config: FakeServerConfigRepository());
+      expect(find.text('Certificados de usuario reconocidos: 0'), findsOneWidget);
     });
 
     testWidgets('guardar y continuar guarda la URL y lleva al login', (tester) async {

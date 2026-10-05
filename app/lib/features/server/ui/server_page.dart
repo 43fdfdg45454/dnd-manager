@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
+import '../../../core/network/trust_store.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/server/server_config_controller.dart';
 import '../../../core/server/server_probe.dart';
@@ -130,6 +131,12 @@ class _ServerPageState extends ConsumerState<ServerPage> {
                     validator: validateServerUrl,
                   ),
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  'Certificados de usuario reconocidos: ${ref.watch(trustedUserCertificateCountProvider)}',
+                  key: const Key('server-user-certs'),
+                  style: theme.textTheme.bodySmall,
+                ),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   key: const Key('server-test'),
@@ -209,6 +216,15 @@ class _ServerPageState extends ConsumerState<ServerPage> {
         key: const Key('server-error'),
         style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
       ),
+      if (failure.failure == ServerProbeFailure.certificate) ...[
+        const SizedBox(height: 8),
+        Text(
+          'Si tu servidor usa una CA propia, instálala en Ajustes → Seguridad → '
+          'Credenciales de usuario y vuelve a abrir la app, o confía en este certificado.',
+          key: const Key('server-ca-hint'),
+          style: theme.textTheme.bodySmall,
+        ),
+      ],
       if (failure.failure == ServerProbeFailure.certificate && fingerprint != null) ...[
         const SizedBox(height: 12),
         Text('Huella SHA-256 del certificado:', style: theme.textTheme.bodySmall),
