@@ -17,6 +17,9 @@ services:
       retries: 5
 
   api:
+    # Build from the sources (docker compose up -d --build) or set API_IMAGE in .env to a published
+    # image (ghcr.io/<owner>/dnd-companion-api:<version>) and run docker compose pull api.
+    image: ${API_IMAGE:-dnd-companion-api:local}
     build:
       context: ../server
     restart: unless-stopped
@@ -25,6 +28,8 @@ services:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      # Minimum log level (Trace, Debug, Information, Warning, Error). Logs are JSON, one event per line.
+      Logging__LogLevel__Default: ${LOG_LEVEL:-Information}
       ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB:-dnd};Username=${POSTGRES_USER:-dnd};Password=${POSTGRES_PASSWORD}
       Database__AutoMigrate: "true"
       App__PublicUrl: ${PUBLIC_URL:-https://localhost}
@@ -44,10 +49,12 @@ services:
     volumes:
       - files:/data/files
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      # Readiness: the API is up and PostgreSQL answers.
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health/ready || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
+      start_period: 60s
 
   nginx:
     image: nginx:1.27-alpine
@@ -58,7 +65,8 @@ services:
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-443}:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # nginx.conf (HTTPS) by default; nginx/nginx.http.conf for a LAN/VPN without TLS (see README).
+      - ${NGINX_CONF:-./nginx/nginx.conf}:/etc/nginx/nginx.conf:ro
       - ./certs:/etc/nginx/certs:ro
 
   # Solo para desarrollo: bandeja de correo en http://localhost:8025

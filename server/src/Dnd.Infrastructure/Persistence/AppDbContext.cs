@@ -7,6 +7,7 @@ using Dnd.Domain.Items;
 using Dnd.Domain.Library;
 using Dnd.Domain.Lore;
 using Dnd.Domain.Maps;
+using Dnd.Domain.Releases;
 using Dnd.Domain.Sessions;
 using Dnd.Domain.Users;
 using Microsoft.EntityFrameworkCore;
@@ -92,6 +93,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<LibraryDocument> LibraryDocuments => Set<LibraryDocument>();
 
     public DbSet<CampaignDocument> CampaignDocuments => Set<CampaignDocument>();
+
+    public DbSet<AppRelease> AppReleases => Set<AppRelease>();
 
     public DbSet<GameSession> GameSessions => Set<GameSession>();
 

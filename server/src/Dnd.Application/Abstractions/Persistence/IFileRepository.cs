@@ -13,7 +13,7 @@ public interface IFileRepository
     /// <summary>Storage paths of every file of the campaign.</summary>
     Task<IReadOnlyList<string>> ListStoragePathsByCampaignAsync(Guid campaignId, CancellationToken cancellationToken = default);
 
-    /// <summary>True when a map, lore entry (cover or attachment), library document or character portrait uses the file.</summary>
+    /// <summary>True when a map, lore entry (cover or attachment), library document, character portrait or app release uses the file.</summary>
     Task<bool> IsReferencedAsync(Guid fileId, CancellationToken cancellationToken = default);
 
     void Add(StoredFile file);

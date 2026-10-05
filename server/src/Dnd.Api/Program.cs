@@ -11,8 +11,14 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Console logging with Serilog (JSON outside Development). The default console provider is removed so
+// events are not printed twice; providers added later (for example by tests) still receive the events.
+builder.Logging.ClearProviders();
+builder.Host.UseSerilog((context, _, logger) => LoggingSetup.Configure(context, logger), writeToProviders: true);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -82,6 +88,9 @@ var app = builder.Build();
 // Migrations first, then the SRD catalog import and the initial admin bootstrap.
 await app.InitializeAsync();
 
+app.UseRequestCorrelation();
+app.UseSerilogRequestLogging(options => options.GetLevel = LoggingSetup.RequestLevel);
+
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
@@ -100,6 +109,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check 
 app.MapAppEndpoints();
 app.MapAuthEndpoints();
 app.MapAdminUserEndpoints();
+app.MapAdminReleaseEndpoints();
 app.MapUserEndpoints();
 app.MapCampaignEndpoints();
 app.MapCatalogEndpoints();

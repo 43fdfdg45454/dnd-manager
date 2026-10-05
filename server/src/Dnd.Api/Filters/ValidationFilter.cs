@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using FluentValidation;
+using FluentValidation.Results;
 
 namespace Dnd.Api.Filters;
 
@@ -32,14 +33,23 @@ internal sealed class ValidationFilter : IEndpointFilter
             var result = await validator.ValidateAsync(new ValidationContext<object>(argument), context.HttpContext.RequestAborted);
             if (!result.IsValid)
             {
-                var errors = result.Errors
-                    .GroupBy(e => JsonNamingPolicy.CamelCase.ConvertName(e.PropertyName))
-                    .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).Distinct().ToArray());
-
-                return TypedResults.ValidationProblem(errors, title: "Uno o más campos no son válidos.");
+                return ValidationProblems.From(result);
             }
         }
 
         return await next(context);
+    }
+}
+
+/// <summary>The <c>400</c> ProblemDetails for a failed FluentValidation result (camelCase field keys).</summary>
+internal static class ValidationProblems
+{
+    public static IResult From(ValidationResult result)
+    {
+        var errors = result.Errors
+            .GroupBy(e => JsonNamingPolicy.CamelCase.ConvertName(e.PropertyName))
+            .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).Distinct().ToArray());
+
+        return TypedResults.ValidationProblem(errors, title: "Uno o más campos no son válidos.");
     }
 }

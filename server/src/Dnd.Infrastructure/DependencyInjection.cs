@@ -45,6 +45,8 @@ public static class DependencyInjection
         services.AddScoped<IMapRepository, MapRepository>();
         services.AddScoped<ILibraryRepository, LibraryRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();
+        services.AddScoped<IReleaseRepository, ReleaseRepository>();
+        services.AddScoped<IInstanceStatsRepository, InstanceStatsRepository>();
         services.AddScoped<ISrdSeeder, SrdSeeder>();
         services.AddScoped<SystemDocumentSeeder>();
 

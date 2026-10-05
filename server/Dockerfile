@@ -11,10 +11,17 @@ RUN dotnet restore src/Dnd.Api/Dnd.Api.csproj
 # The SRD dataset is embedded into Dnd.Infrastructure from ../../seed/srd.
 COPY seed/ seed/
 COPY src/ src/
-RUN dotnet publish src/Dnd.Api/Dnd.Api.csproj -c Release -o /app/publish --no-restore
+# Version reported by GET /api/v1/app/info and the admin stats (release builds pass the release version).
+ARG VERSION=0.1.0
+RUN dotnet publish src/Dnd.Api/Dnd.Api.csproj -c Release -o /app/publish --no-restore \
+    -p:AssemblyVersion=${VERSION}.0 -p:FileVersion=${VERSION}.0
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
+# curl is used by the compose healthcheck (the base image ships neither curl nor wget).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 RUN mkdir -p /data/files && chown -R "$APP_UID" /data
 COPY --from=build /app/publish .
 

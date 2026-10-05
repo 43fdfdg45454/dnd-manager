@@ -118,6 +118,16 @@ Cómo se aplica en la práctica: la sesión principal corre con Fable y lanza su
 indicado (`Agent` con `model: opus | sonnet | haiku`), dándoles el contrato escrito en
 `docs/specs/` y revisando su resultado antes de confirmar.
 
+## Estado (fin de la sesión de implementación)
+
+Las nueve fases están implementadas y subidas. Verificado en este entorno: servidor compila sin
+avisos y pasa 600 tests (SQLite en memoria); cliente sin incidencias de análisis y 369 tests.
+**No verificado aquí** (sin Docker, PostgreSQL ni Android SDK): construcción de la imagen Docker,
+migraciones contra PostgreSQL real, `flutter build apk`, visor PDF y selectores de ficheros en
+dispositivo, envío SMTP real. Primeros pasos recomendados: levantar `deploy/` con el perfil `dev`,
+compilar el APK y hacer una partida de prueba; cualquier desviación se corrige sobre los contratos
+de `docs/specs/`.
+
 ## Fases
 
 | Fase | Entregable | Verificación |

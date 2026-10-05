@@ -9,6 +9,7 @@ using Dnd.Application.Files;
 using Dnd.Application.Library;
 using Dnd.Application.Lore;
 using Dnd.Application.Maps;
+using Dnd.Application.Releases;
 using Dnd.Application.Sessions;
 using Dnd.Application.Items;
 using Dnd.Application.Users;
@@ -174,6 +175,13 @@ public static class DependencyInjection
         services.AddScoped<GetPublicSessionHandler>();
         services.AddScoped<PublicRsvpHandler>();
         services.AddScoped<ReminderProcessor>();
+
+        services.AddScoped<GetLatestReleaseHandler>();
+        services.AddScoped<DownloadReleaseHandler>();
+        services.AddScoped<ListReleasesHandler>();
+        services.AddScoped<PublishReleaseHandler>();
+        services.AddScoped<DeleteReleaseHandler>();
+        services.AddScoped<GetAdminStatsHandler>();
 
         return services;
     }

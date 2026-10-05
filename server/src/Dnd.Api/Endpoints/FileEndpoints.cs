@@ -55,36 +55,7 @@ public static class FileEndpoints
         UploadFileHandler handler,
         CancellationToken cancellationToken)
     {
-        var tooLarge = $"El fichero supera el tamaño máximo permitido ({storage.MaxUploadBytes / (1024 * 1024)} MB).";
-        if (request.ContentLength > storage.MaxUploadBytes + MultipartOverheadBytes)
-        {
-            throw AppException.PayloadTooLarge(tooLarge);
-        }
-
-        if (!request.HasFormContentType)
-        {
-            throw AppException.Validation("file", "La petición debe ser multipart/form-data.");
-        }
-
-        IFormCollection form;
-        try
-        {
-            form = await request.ReadFormAsync(cancellationToken);
-        }
-        catch (InvalidDataException) when (request.ContentLength is null)
-        {
-            // The multipart reader refused a part larger than its limit (set from the maximum upload size).
-            throw AppException.PayloadTooLarge(tooLarge);
-        }
-        catch (InvalidDataException)
-        {
-            throw AppException.Validation("file", "El formulario no es válido.");
-        }
-        catch (BadHttpRequestException exception) when (exception.StatusCode == StatusCodes.Status413PayloadTooLarge)
-        {
-            throw AppException.PayloadTooLarge(tooLarge);
-        }
-
+        var form = await ReadUploadFormAsync(request, storage, cancellationToken);
         var file = form.Files.GetFile("file") ?? throw AppException.Validation("file", "Falta el fichero.");
         var command = new UploadFileCommand(
             file.OpenReadStream(),
@@ -98,6 +69,42 @@ public static class FileEndpoints
         {
             var stored = await handler.HandleAsync(user.GetUserId(), command, cancellationToken);
             return TypedResults.Created(FileUrls.For(stored.Id), stored);
+        }
+    }
+
+    /// <summary>
+    /// Reads a multipart upload, answering 413 when it exceeds the maximum upload size and 400 when the
+    /// request is not a valid multipart form. Shared by the endpoints that accept a file.
+    /// </summary>
+    internal static async Task<IFormCollection> ReadUploadFormAsync(HttpRequest request, IFileStorage storage, CancellationToken cancellationToken)
+    {
+        var tooLarge = $"El fichero supera el tamaño máximo permitido ({storage.MaxUploadBytes / (1024 * 1024)} MB).";
+        if (request.ContentLength > storage.MaxUploadBytes + MultipartOverheadBytes)
+        {
+            throw AppException.PayloadTooLarge(tooLarge);
+        }
+
+        if (!request.HasFormContentType)
+        {
+            throw AppException.Validation("file", "La petición debe ser multipart/form-data.");
+        }
+
+        try
+        {
+            return await request.ReadFormAsync(cancellationToken);
+        }
+        catch (InvalidDataException) when (request.ContentLength is null)
+        {
+            // The multipart reader refused a part larger than its limit (set from the maximum upload size).
+            throw AppException.PayloadTooLarge(tooLarge);
+        }
+        catch (InvalidDataException)
+        {
+            throw AppException.Validation("file", "El formulario no es válido.");
+        }
+        catch (BadHttpRequestException exception) when (exception.StatusCode == StatusCodes.Status413PayloadTooLarge)
+        {
+            throw AppException.PayloadTooLarge(tooLarge);
         }
     }
 

@@ -22,7 +22,8 @@ internal sealed class FileRepository(AppDbContext db) : IFileRepository
         || await db.LoreEntries.AnyAsync(x => x.CoverFileId == fileId, cancellationToken)
         || await db.LoreAttachments.AnyAsync(x => x.FileId == fileId, cancellationToken)
         || await db.LibraryDocuments.AnyAsync(x => x.FileId == fileId, cancellationToken)
-        || await db.Characters.AnyAsync(x => x.PortraitFileId == fileId, cancellationToken);
+        || await db.Characters.AnyAsync(x => x.PortraitFileId == fileId, cancellationToken)
+        || await db.AppReleases.AnyAsync(x => x.FileId == fileId, cancellationToken);
 
     public void Add(StoredFile file) => db.StoredFiles.Add(file);
 
