@@ -660,6 +660,7 @@ class ItemDetail extends ItemSummary {
     this.rangeLong,
     this.properties = const [],
     this.description = const [],
+    this.effects = const [],
   });
 
   factory ItemDetail.fromJson(Map<String, dynamic> json) {
@@ -713,6 +714,7 @@ class ItemDetail extends ItemSummary {
       rangeLong: _int(rangeJson?['long'] ?? json['rangeLong']),
       properties: _nameList(json['properties']),
       description: _strList(json['description']),
+      effects: _strList(json['effects']),
     );
   }
 
@@ -724,6 +726,10 @@ class ItemDetail extends ItemSummary {
   /// Weapon property names ("Finesse", "Light", ...).
   final List<String> properties;
   final List<String> description;
+
+  /// Free-text effects ("+1 a ataque y daño"); only homebrew and magic items
+  /// have them.
+  final List<String> effects;
 }
 
 bool? _boolOrNull(Object? value) => value == null ? null : _bool(value);

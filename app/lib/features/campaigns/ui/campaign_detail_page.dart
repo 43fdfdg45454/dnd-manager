@@ -8,6 +8,8 @@ import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
 import '../../characters/data/characters_controller.dart';
 import '../../characters/ui/characters_tab.dart';
+import '../../items/ui/homebrew_tab.dart';
+import '../../items/ui/shops_tab.dart';
 import '../data/campaigns_controller.dart';
 import '../domain/campaign_models.dart';
 import 'add_member_dialog.dart';
@@ -16,7 +18,8 @@ import 'confirm_dialog.dart';
 import 'feedback.dart';
 import 'transfer_ownership_dialog.dart';
 
-/// Campaign detail with the "Resumen", "Miembros" and "Personajes" tabs.
+/// Campaign detail with the "Resumen", "Miembros", "Personajes", "Tiendas" and
+/// "Objetos" tabs.
 class CampaignDetailPage extends ConsumerWidget {
   const CampaignDetailPage({super.key, required this.campaignId});
 
@@ -27,16 +30,30 @@ class CampaignDetailPage extends ConsumerWidget {
     final detail = ref.watch(campaignDetailControllerProvider(campaignId));
 
     return DefaultTabController(
-      length: 3,
+      length: 5,
       child: Scaffold(
         appBar: AppBar(
           title: Text(detail.value?.name ?? 'Campaña'),
-          actions: [if (detail.value != null) _ChangeRequestsButton(campaign: detail.value!)],
+          actions: [
+            if (detail.value != null) ...[
+              IconButton(
+                key: const Key('transactions-button'),
+                tooltip: 'Transacciones',
+                onPressed: () => context.push(AppRoutes.transactions(campaignId)),
+                icon: const Icon(Icons.receipt_long_outlined),
+              ),
+              _ChangeRequestsButton(campaign: detail.value!),
+            ],
+          ],
           bottom: const TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             tabs: [
               Tab(key: Key('tab-summary'), text: 'Resumen'),
               Tab(key: Key('tab-members'), text: 'Miembros'),
               Tab(key: Key('tab-characters'), text: 'Personajes'),
+              Tab(key: Key('tab-shops'), text: 'Tiendas'),
+              Tab(key: Key('tab-objects'), text: 'Objetos'),
             ],
           ),
         ),
@@ -65,6 +82,8 @@ class CampaignDetailPage extends ConsumerWidget {
               _SummaryTab(campaign: campaign),
               _MembersTab(campaign: campaign),
               CharactersTab(campaign: campaign),
+              ShopsTab(campaign: campaign),
+              HomebrewTab(campaign: campaign),
             ],
           ),
         ),

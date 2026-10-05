@@ -16,6 +16,8 @@ import '../../features/catalog/ui/item_detail_page.dart';
 import '../../features/catalog/ui/race_detail_page.dart';
 import '../../features/catalog/ui/spell_detail_page.dart';
 import '../../features/home/ui/home_page.dart';
+import '../../features/items/ui/shop_page.dart';
+import '../../features/items/ui/transactions_page.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 
@@ -27,6 +29,8 @@ abstract final class AppRoutes {
   static const adminUsers = '/admin/users';
   static const campaignDetail = '/campaigns/:id';
   static const campaignChangeRequests = '/campaigns/:id/change-requests';
+  static const campaignShop = '/campaigns/:id/shops/:shopId';
+  static const campaignTransactions = '/campaigns/:id/transactions';
   static const characterDetail = '/characters/:id';
   static const characterEditor = '/characters/:id/edit';
   static const compendium = '/compendium';
@@ -40,6 +44,12 @@ abstract final class AppRoutes {
 
   /// Change requests of the campaign with the given [id].
   static String changeRequests(String id) => '/campaigns/$id/change-requests';
+
+  /// One shop of the campaign.
+  static String shop(String campaignId, String shopId) => '/campaigns/$campaignId/shops/$shopId';
+
+  /// Transaction history of the campaign.
+  static String transactions(String campaignId) => '/campaigns/$campaignId/transactions';
 
   static String character(String id) => '/characters/$id';
 
@@ -96,6 +106,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.campaignChangeRequests,
         builder: (context, state) => ChangeRequestsPage(campaignId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.campaignShop,
+        builder: (context, state) => ShopPage(
+          campaignId: state.pathParameters['id']!,
+          shopId: state.pathParameters['shopId']!,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.campaignTransactions,
+        builder: (context, state) => TransactionsPage(campaignId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: AppRoutes.characterDetail,

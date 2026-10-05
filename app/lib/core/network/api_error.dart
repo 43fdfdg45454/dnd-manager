@@ -63,3 +63,31 @@ const characterErrorMessages = <int, String>{
 /// takes precedence over [characterErrorMessages].
 String describeCharacterError(Object error, {Map<int, String> byStatus = const {}}) =>
     describeApiError(error, byStatus: {...characterErrorMessages, ...byStatus});
+
+/// The `detail` of a ProblemDetails response body, when the server sent one.
+String? problemDetail(Object error) {
+  if (error is! DioException) return null;
+  final data = error.response?.data;
+  if (data is! Map) return null;
+  final detail = data['detail'];
+  return detail is String && detail.trim().isNotEmpty ? detail.trim() : null;
+}
+
+/// Status-specific messages for the items, inventory and shop endpoints.
+const itemErrorMessages = <int, String>{
+  400: 'La operación no es válida para este objeto.',
+  403: 'No tienes permiso para hacer eso.',
+  404: 'El objeto, la tienda o el personaje no existe, o no tienes acceso.',
+  409: 'La operación entra en conflicto con datos existentes.',
+};
+
+/// Like [describeApiError] but with the items and shops texts. A 400 shows the
+/// server's ProblemDetails `detail` when it has one ("No tienes suficiente
+/// dinero"); otherwise [byStatus] and [itemErrorMessages] apply.
+String describeItemError(Object error, {Map<int, String> byStatus = const {}}) {
+  if (error is DioException && error.response?.statusCode == 400) {
+    final detail = problemDetail(error);
+    if (detail != null) return detail;
+  }
+  return describeApiError(error, byStatus: {...itemErrorMessages, ...byStatus});
+}

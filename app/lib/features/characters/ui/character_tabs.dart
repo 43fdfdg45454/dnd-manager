@@ -558,32 +558,8 @@ String titleFromSpellIndex(String index) {
 }
 
 // ---------------------------------------------------------------------------
-// Inventario y notas
+// Notas
 // ---------------------------------------------------------------------------
-
-class InventoryTab extends StatelessWidget {
-  const InventoryTab({super.key, required this.character});
-
-  final CharacterDetail character;
-
-  @override
-  Widget build(BuildContext context) {
-    return _TabList(
-      children: [
-        FactRow('Dinero', formatCostCp(character.copperPieces)),
-        const SizedBox(height: 32),
-        const Icon(Icons.backpack_outlined, size: 48),
-        const SizedBox(height: 12),
-        Text(
-          'Disponible en la fase 5',
-          key: const Key('inventory-placeholder'),
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-      ],
-    );
-  }
-}
 
 class NotesTab extends StatelessWidget {
   const NotesTab({super.key, required this.character});

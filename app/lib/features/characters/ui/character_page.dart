@@ -10,6 +10,7 @@ import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
 import '../../campaigns/ui/feedback.dart';
 import '../../catalog/data/models.dart' show titleFromIndex;
+import '../../items/ui/inventory_tab.dart';
 import '../data/characters_controller.dart';
 import '../data/models.dart';
 import '../domain/character_format.dart';

@@ -18,6 +18,7 @@ import 'package:dnd_companion/features/characters/domain/character_format.dart';
 import 'package:dnd_companion/features/characters/domain/payload_format.dart';
 import 'package:dnd_companion/features/characters/ui/character_page.dart';
 import 'package:dnd_companion/features/characters/ui/sheet_editor_page.dart';
+import 'package:dnd_companion/features/items/data/inventory_repository.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +27,7 @@ import 'package:go_router/go_router.dart';
 import 'helpers/catalog_fakes.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
+import 'helpers/item_fakes.dart';
 
 FakeCatalogRepository _catalog() => FakeCatalogRepository(
   classList: [
@@ -128,6 +130,7 @@ Future<void> _pumpApp(
           FakeCampaignsRepository(campaigns: [makeCampaign(myRole: role)]),
         ),
         charactersRepositoryProvider.overrideWithValue(characters),
+        inventoryRepositoryProvider.overrideWithValue(FakeInventoryRepository()),
         catalogRepositoryProvider.overrideWithValue(catalog ?? _catalog()),
       ],
       child: MaterialApp.router(routerConfig: router),
@@ -355,8 +358,8 @@ void main() {
 
       await tester.tap(find.byKey(const Key('tab-inventory')));
       await tester.pumpAndSettle();
-      expect(find.text('Disponible en la fase 5'), findsOneWidget);
-      expect(find.textContaining('15 gp 5 sp'), findsOneWidget);
+      expect(find.byKey(const Key('inventory-money')), findsOneWidget);
+      expect(find.byKey(const Key('inventory-add')), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('tab-notes')));
       await tester.pumpAndSettle();
