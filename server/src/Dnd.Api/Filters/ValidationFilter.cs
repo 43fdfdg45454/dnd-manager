@@ -1,0 +1,45 @@
+using System.Collections.Concurrent;
+using System.Text.Json;
+using FluentValidation;
+
+namespace Dnd.Api.Filters;
+
+/// <summary>
+/// Validates every endpoint argument that has a registered FluentValidation validator and returns
+/// <c>400</c> ProblemDetails with field errors (camelCase keys) when validation fails.
+/// </summary>
+internal sealed class ValidationFilter : IEndpointFilter
+{
+    private static readonly ConcurrentDictionary<Type, Type> ValidatorTypes = new();
+
+    public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        var services = context.HttpContext.RequestServices;
+
+        foreach (var argument in context.Arguments)
+        {
+            if (argument is null)
+            {
+                continue;
+            }
+
+            var validatorType = ValidatorTypes.GetOrAdd(argument.GetType(), t => typeof(IValidator<>).MakeGenericType(t));
+            if (services.GetService(validatorType) is not IValidator validator)
+            {
+                continue;
+            }
+
+            var result = await validator.ValidateAsync(new ValidationContext<object>(argument), context.HttpContext.RequestAborted);
+            if (!result.IsValid)
+            {
+                var errors = result.Errors
+                    .GroupBy(e => JsonNamingPolicy.CamelCase.ConvertName(e.PropertyName))
+                    .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).Distinct().ToArray());
+
+                return TypedResults.ValidationProblem(errors, title: "Uno o más campos no son válidos.");
+            }
+        }
+
+        return await next(context);
+    }
+}

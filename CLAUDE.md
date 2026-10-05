@@ -75,7 +75,7 @@ cd deploy && docker compose --profile dev up -d        # añade MailHog para pro
   DTOs y validación (FluentValidation); `Infrastructure` con EF Core/Npgsql, SMTP y ficheros;
   `Api` solo con endpoints, auth y hosting. Nunca exponer entidades EF en la API.
 - Migraciones EF con nombre descriptivo en PascalCase. Seed del SRD idempotente.
-- Tests: xUnit. Cálculos de hoja en `Dnd.Domain.Tests`; integración con Testcontainers en
+- Tests: xUnit. Cálculos de hoja en `Dnd.Domain.Tests`; integración con SQLite en memoria en
   `Dnd.Api.Tests`.
 - Flutter: `lib/core` (http, auth, caché, tema, i18n) y `lib/features/<feature>/{data,domain,ui}`.
   Riverpod para estado, `dio` para HTTP, `drift` para caché. Textos de UI en `lib/l10n`.

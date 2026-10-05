@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY Dnd.sln Directory.Build.props ./
+COPY Dnd.slnx Directory.Build.props ./
 COPY src/Dnd.Domain/Dnd.Domain.csproj src/Dnd.Domain/
 COPY src/Dnd.Application/Dnd.Application.csproj src/Dnd.Application/
 COPY src/Dnd.Infrastructure/Dnd.Infrastructure.csproj src/Dnd.Infrastructure/

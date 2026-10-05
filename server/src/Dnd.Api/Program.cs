@@ -1,15 +1,20 @@
+using Dnd.Api.Auth;
 using Dnd.Api.Endpoints;
+using Dnd.Api.Errors;
+using Dnd.Api.Hosting;
 using Dnd.Application;
 using Dnd.Infrastructure;
-using Dnd.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<AppExceptionHandler>();
+builder.Services.AddJwtAuthentication();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -19,6 +24,18 @@ builder.Services.AddSwaggerGen(options =>
         Title = "D&D Companion API",
         Version = "v1",
         Description = "API del companion para campañas de D&D 5e.",
+    });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Description = "Access token obtenido en POST /api/v1/auth/login.",
+    });
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("Bearer", document)] = [],
     });
 });
 
@@ -31,20 +48,28 @@ builder.Services
 
 var app = builder.Build();
 
-if (app.Configuration.GetValue<bool>("Database:AutoMigrate"))
-{
-    using var scope = app.Services.CreateScope();
-    await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
-}
+// Migrations first, then the initial admin bootstrap.
+await app.InitializeAsync();
+
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 
 app.UseSwagger();
 app.UseSwaggerUI();
+
+app.UseStaticFiles();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 // Liveness: the process is up. Readiness: dependencies (PostgreSQL) answer.
 app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 
 app.MapAppEndpoints();
+app.MapAuthEndpoints();
+app.MapAdminUserEndpoints();
+app.MapPageEndpoints();
 
 await app.RunAsync();
 
