@@ -7,6 +7,11 @@ import '../../features/auth/ui/forgot_password_page.dart';
 import '../../features/auth/ui/login_page.dart';
 import '../../features/auth/ui/splash_page.dart';
 import '../../features/campaigns/ui/campaign_detail_page.dart';
+import '../../features/catalog/ui/class_detail_page.dart';
+import '../../features/catalog/ui/compendium_page.dart';
+import '../../features/catalog/ui/item_detail_page.dart';
+import '../../features/catalog/ui/race_detail_page.dart';
+import '../../features/catalog/ui/spell_detail_page.dart';
 import '../../features/home/ui/home_page.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
@@ -18,9 +23,22 @@ abstract final class AppRoutes {
   static const home = '/';
   static const adminUsers = '/admin/users';
   static const campaignDetail = '/campaigns/:id';
+  static const compendium = '/compendium';
+  static const spellDetail = '/compendium/spells/:index';
+  static const itemDetail = '/compendium/items/:id';
+  static const classDetail = '/compendium/classes/:index';
+  static const raceDetail = '/compendium/races/:index';
 
   /// Location of the campaign with the given [id].
   static String campaign(String id) => '/campaigns/$id';
+
+  static String spell(String index) => '/compendium/spells/${Uri.encodeComponent(index)}';
+
+  static String item(String id) => '/compendium/items/${Uri.encodeComponent(id)}';
+
+  static String dndClass(String index) => '/compendium/classes/${Uri.encodeComponent(index)}';
+
+  static String race(String index) => '/compendium/races/${Uri.encodeComponent(index)}';
 }
 
 /// Computes the redirect target for [location] given the session [auth] state,
@@ -61,6 +79,23 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.campaignDetail,
         builder: (context, state) => CampaignDetailPage(campaignId: state.pathParameters['id']!),
+      ),
+      GoRoute(path: AppRoutes.compendium, builder: (context, state) => const CompendiumPage()),
+      GoRoute(
+        path: AppRoutes.spellDetail,
+        builder: (context, state) => SpellDetailPage(index: state.pathParameters['index']!),
+      ),
+      GoRoute(
+        path: AppRoutes.itemDetail,
+        builder: (context, state) => ItemDetailPage(id: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.classDetail,
+        builder: (context, state) => ClassDetailPage(index: state.pathParameters['index']!),
+      ),
+      GoRoute(
+        path: AppRoutes.raceDetail,
+        builder: (context, state) => RaceDetailPage(index: state.pathParameters['index']!),
       ),
     ],
   );

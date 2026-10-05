@@ -35,6 +35,12 @@ class HomePage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text(AppConfig.appName),
         actions: [
+          IconButton(
+            key: const Key('home-compendium'),
+            tooltip: 'Compendio',
+            icon: const Icon(Icons.menu_book_outlined),
+            onPressed: () => context.push(AppRoutes.compendium),
+          ),
           if (user != null)
             PopupMenuButton<_HomeAction>(
               key: const Key('home-user-menu'),

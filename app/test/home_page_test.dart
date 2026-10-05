@@ -73,4 +73,12 @@ void main() {
     expect(find.text('Aún no tienes campañas'), findsOneWidget);
     expect(find.text('Nueva campaña'), findsOneWidget);
   });
+
+  testWidgets('la barra tiene el acceso al Compendio', (tester) async {
+    await tester.pumpWidget(_app(user: makeUser()));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('home-compendium')), findsOneWidget);
+    expect(find.byTooltip('Compendio'), findsOneWidget);
+  });
 }
