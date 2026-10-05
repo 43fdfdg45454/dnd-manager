@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/user_dto.dart';
+import '../../../core/server/app_session_epoch.dart';
 import '../domain/paged_users.dart';
 import 'admin_users_repository.dart';
 
@@ -11,7 +12,12 @@ class AdminUsersController extends AsyncNotifier<PagedUsers> {
   AdminUsersRepository get _repository => ref.read(adminUsersRepositoryProvider);
 
   @override
-  Future<PagedUsers> build() => _repository.list();
+  Future<PagedUsers> build() {
+    // Reload from scratch after a server switch.
+    ref.watch(appSessionEpochProvider);
+    _search = '';
+    return _repository.list();
+  }
 
   /// Runs a new search from the first page, keeping the old list while loading.
   Future<void> search(String query) {

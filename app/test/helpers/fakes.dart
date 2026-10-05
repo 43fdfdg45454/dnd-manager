@@ -1,10 +1,14 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:dnd_companion/core/auth/auth_controller.dart';
 import 'package:dnd_companion/core/auth/auth_repository.dart';
 import 'package:dnd_companion/core/auth/auth_response.dart';
 import 'package:dnd_companion/core/auth/auth_state.dart';
 import 'package:dnd_companion/core/auth/token_storage.dart';
 import 'package:dnd_companion/core/auth/user_dto.dart';
+import 'package:dnd_companion/core/server/server_config.dart';
+import 'package:dnd_companion/core/server/server_config_repository.dart';
+import 'package:dnd_companion/core/server/server_probe.dart';
 import 'package:dnd_companion/features/admin/data/admin_users_repository.dart';
 import 'package:dnd_companion/features/admin/domain/paged_users.dart';
 import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart';
@@ -168,6 +172,56 @@ class FixedAuthController extends AuthController {
 
   @override
   AuthState build() => fixed;
+}
+
+/// In-memory replacement for the `shared_preferences` backed repository.
+class FakeServerConfigRepository implements ServerConfigRepository {
+  FakeServerConfigRepository([ServerConfig? initial]) : stored = initial ?? ServerConfig();
+
+  ServerConfig stored;
+
+  @override
+  ServerConfig load() => stored;
+
+  @override
+  Future<void> save(ServerConfig config) async => stored = config;
+}
+
+/// Server used by the tests that need one configured.
+const testServerUrl = 'http://dnd.example.com:8080';
+
+/// Provides a configured server so the router does not send the app to `/server`.
+Override fakeServerConfigOverride({String baseUrl = testServerUrl}) =>
+    serverConfigRepositoryProvider.overrideWithValue(
+      FakeServerConfigRepository(ServerConfig(baseUrl: baseUrl)),
+    );
+
+/// Probe whose answer is scripted by the test.
+class FakeServerProbe implements ServerProbe {
+  FakeServerProbe({this.result, this.failure});
+
+  ServerProbeResult? result;
+  ServerProbeException? failure;
+  final List<({String url, String? pinned})> calls = [];
+
+  @override
+  HttpClientAdapter Function()? get adapterFactory => null;
+
+  @override
+  Future<ServerProbeResult> check(String baseUrl, {String? pinnedFingerprint}) async {
+    calls.add((url: baseUrl, pinned: pinnedFingerprint));
+    if (failure != null) {
+      // A trusted fingerprint makes the scripted certificate error go away.
+      final f = failure!;
+      if (f.failure == ServerProbeFailure.certificate &&
+          pinnedFingerprint != null &&
+          pinnedFingerprint == f.fingerprint) {
+        return result!;
+      }
+      throw f;
+    }
+    return result!;
+  }
 }
 
 final fakeServerInfoOverride = serverInfoProvider.overrideWith(

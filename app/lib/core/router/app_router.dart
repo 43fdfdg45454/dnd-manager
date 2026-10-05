@@ -16,13 +16,16 @@ import '../../features/catalog/ui/item_detail_page.dart';
 import '../../features/catalog/ui/race_detail_page.dart';
 import '../../features/catalog/ui/spell_detail_page.dart';
 import '../../features/home/ui/home_page.dart';
+import '../../features/server/ui/server_page.dart';
 import '../../features/items/ui/shop_page.dart';
 import '../../features/items/ui/transactions_page.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
+import '../server/server_config_controller.dart';
 
 abstract final class AppRoutes {
   static const splash = '/splash';
+  static const server = '/server';
   static const login = '/login';
   static const forgotPassword = '/forgot-password';
   static const home = '/';
@@ -65,8 +68,12 @@ abstract final class AppRoutes {
 }
 
 /// Computes the redirect target for [location] given the session [auth] state,
-/// or null when the location is allowed.
-String? authRedirect(AuthState auth, String location) {
+/// or null when the location is allowed. Without a configured server
+/// ([hasServer] false) everything goes to the server screen, which is otherwise
+/// reachable in every session state.
+String? authRedirect(AuthState auth, String location, {bool hasServer = true}) {
+  if (!hasServer) return location == AppRoutes.server ? null : AppRoutes.server;
+  if (location == AppRoutes.server) return null;
   switch (auth) {
     case AuthUnknown():
       return location == AppRoutes.splash ? null : AppRoutes.splash;
@@ -82,15 +89,22 @@ String? authRedirect(AuthState auth, String location) {
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
-  // Re-evaluates the redirect whenever the session state changes.
-  final refresh = ValueNotifier<AuthState>(ref.read(authControllerProvider));
-  ref.listen<AuthState>(authControllerProvider, (_, next) => refresh.value = next);
+  // Re-evaluates the redirect whenever the session or the server changes.
+  bool hasServer() => ref.read(serverConfigProvider).isConfigured;
+  final refresh = ValueNotifier<(AuthState, bool)>((ref.read(authControllerProvider), hasServer()));
+  ref.listen<AuthState>(authControllerProvider, (_, next) => refresh.value = (next, hasServer()));
+  ref.listen<bool>(
+    serverConfigProvider.select((config) => config.isConfigured),
+    (_, next) => refresh.value = (ref.read(authControllerProvider), next),
+  );
 
   final router = GoRouter(
     initialLocation: AppRoutes.home,
     refreshListenable: refresh,
-    redirect: (context, state) => authRedirect(ref.read(authControllerProvider), state.uri.path),
+    redirect: (context, state) =>
+        authRedirect(ref.read(authControllerProvider), state.uri.path, hasServer: hasServer()),
     routes: [
+      GoRoute(path: AppRoutes.server, builder: (context, state) => const ServerPage()),
       GoRoute(path: AppRoutes.splash, builder: (context, state) => const SplashPage()),
       GoRoute(path: AppRoutes.login, builder: (context, state) => const LoginPage()),
       GoRoute(

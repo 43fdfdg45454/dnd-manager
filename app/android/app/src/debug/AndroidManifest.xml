@@ -1,6 +1,4 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- INTERNET es necesario para hot reload y depuración. -->
     <uses-permission android:name="android.permission.INTERNET"/>
-    <!-- Solo en debug: permite hablar por HTTP con la API local (10.0.2.2:8080 en el emulador). -->
-    <application android:usesCleartextTraffic="true"/>
 </manifest>

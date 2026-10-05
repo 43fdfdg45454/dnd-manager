@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/config/app_config.dart';
+import '../../../core/server/server_config_controller.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
 import 'validators.dart';
@@ -131,6 +132,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     TextButton(
                       onPressed: () => context.push(AppRoutes.forgotPassword),
                       child: const Text('¿Olvidaste tu contraseña?'),
+                    ),
+                    TextButton(
+                      key: const Key('login-change-server'),
+                      onPressed: () => context.push(AppRoutes.server),
+                      child: Text(
+                        'Cambiar servidor · ${ref.watch(serverConfigProvider).baseUrl}',
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ],
                 ),

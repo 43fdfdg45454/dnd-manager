@@ -13,6 +13,7 @@ Widget _app({required UserDto user, bool serverUp = true}) => ProviderScope(
   overrides: [
     authControllerProvider.overrideWith(() => FixedAuthController(AuthSignedIn(user))),
     fakeCampaignsOverride,
+    fakeServerConfigOverride(),
     if (serverUp)
       fakeServerInfoOverride
     else

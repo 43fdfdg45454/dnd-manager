@@ -5,11 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/config/app_config.dart';
+import '../../../core/server/server_config_controller.dart';
 import '../../../core/router/app_router.dart';
 import '../../campaigns/ui/campaigns_page.dart';
 import '../data/server_info_repository.dart';
 
-enum _HomeAction { adminUsers, logout }
+enum _HomeAction { adminUsers, server, logout }
 
 /// Landing page after login: the list of campaigns, with the user menu in the
 /// app bar and the server status as a footer.
@@ -20,6 +21,8 @@ class HomePage extends ConsumerWidget {
     switch (action) {
       case _HomeAction.adminUsers:
         context.push(AppRoutes.adminUsers);
+      case _HomeAction.server:
+        context.push(AppRoutes.server);
       case _HomeAction.logout:
         ref.read(authControllerProvider.notifier).logout();
     }
@@ -73,6 +76,11 @@ class HomePage extends ConsumerWidget {
                     child: Text('Usuarios'),
                   ),
                 const PopupMenuItem(
+                  key: Key('home-server'),
+                  value: _HomeAction.server,
+                  child: Text('Servidor'),
+                ),
+                const PopupMenuItem(
                   key: Key('home-logout'),
                   value: _HomeAction.logout,
                   child: Text('Cerrar sesión'),
@@ -121,7 +129,7 @@ class _ServerStatus extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Servidor: ${AppConfig.apiBaseUrl}',
+              'Servidor: ${ref.watch(serverConfigProvider).baseUrl}',
               style: theme.textTheme.bodySmall,
               textAlign: TextAlign.center,
             ),

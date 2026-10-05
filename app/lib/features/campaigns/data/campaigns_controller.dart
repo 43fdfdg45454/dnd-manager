@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/server/app_session_epoch.dart';
 import '../domain/campaign_models.dart';
 import 'campaigns_repository.dart';
 
@@ -8,7 +9,11 @@ class CampaignsController extends AsyncNotifier<List<CampaignSummary>> {
   CampaignsRepository get _repository => ref.read(campaignsRepositoryProvider);
 
   @override
-  Future<List<CampaignSummary>> build() => _repository.list();
+  Future<List<CampaignSummary>> build() {
+    // Reload from scratch after a server switch.
+    ref.watch(appSessionEpochProvider);
+    return _repository.list();
+  }
 
   Future<void> reload() async {
     state = await AsyncValue.guard(_repository.list);

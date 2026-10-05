@@ -40,6 +40,13 @@ class AuthController extends Notifier<AuthState> {
     if (ref.mounted) state = const AuthSignedOut();
   }
 
+  /// Ends the session on this device only: no request is made (used when the
+  /// server changes, because the tokens belong to the previous one).
+  Future<void> signOutLocally() async {
+    await ref.read(tokenStorageProvider).clear();
+    if (ref.mounted) state = const AuthSignedOut();
+  }
+
   /// Called by the HTTP layer once the session has been cleared.
   void onSessionExpired() {
     if (ref.mounted) state = const AuthSignedOut();

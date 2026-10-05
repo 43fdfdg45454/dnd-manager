@@ -21,6 +21,7 @@ Future<void> _pumpApp(
         tokenStorageProvider.overrideWithValue(storage),
         authRepositoryProvider.overrideWithValue(repository),
         fakeServerInfoOverride,
+        fakeServerConfigOverride(),
         fakeCampaignsOverride,
       ],
       child: const DndCompanionApp(),

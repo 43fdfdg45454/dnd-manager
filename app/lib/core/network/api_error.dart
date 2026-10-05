@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 
+import 'api_client.dart';
+
 const networkErrorMessage = 'No se pudo conectar con el servidor. Revisa tu conexión.';
 
 /// Maps an error to a Spanish message for the UI. [byStatus] overrides the
@@ -9,6 +11,9 @@ const networkErrorMessage = 'No se pudo conectar con el servidor. Revisa tu cone
 String describeApiError(Object error, {Map<int, String> byStatus = const {}}) {
   if (error is! DioException) {
     return 'Ocurrió un error inesperado. Inténtalo de nuevo.';
+  }
+  if (error.error is ServerNotConfiguredException) {
+    return ServerNotConfiguredException.message;
   }
 
   final status = error.response?.statusCode;
