@@ -12,15 +12,10 @@ public sealed class AppOptions
     /// </summary>
     public string? PublicUrl { get; set; }
 
-    /// <summary>
-    /// Proxies whose <c>X-Forwarded-*</c> headers are trusted (<c>App:TrustedProxies</c>): CIDR ranges or single
-    /// IPs, as a list (<c>App:TrustedProxies:0</c>, ...) or a comma-separated string
-    /// (<c>App__TrustedProxies=10.0.0.0/8,192.168.0.0/16</c>). Absent: loopback and the private ranges
-    /// (127.0.0.1/32, ::1/128, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16). Present but empty: none, forwarded
-    /// headers are ignored. It is resolved straight from configuration at startup (see
-    /// <c>ForwardedHeadersSetup</c> in Dnd.Api); the property only documents the key.
-    /// </summary>
-    public string? TrustedProxies { get; set; }
+    // App:TrustedProxies (the proxies whose X-Forwarded-* headers are trusted) is intentionally NOT a property:
+    // it may be given as a list (App__TrustedProxies__0=...) or as a comma-separated string, and a string
+    // property would make the options binder fail on the list form. It is read straight from configuration
+    // by ForwardedHeadersSetup in Dnd.Api.
 
     /// <summary>Email of the Admin created on first boot when there are no users. Empty disables it.</summary>
     public string? InitialAdminEmail { get; set; }

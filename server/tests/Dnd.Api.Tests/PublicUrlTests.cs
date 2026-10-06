@@ -210,6 +210,21 @@ public class PublicUrlTests
         Assert.Contains("App:PublicUrl", exception.ToString());
     }
 
+    [Fact]
+    public async Task Trusted_proxies_can_be_given_as_an_indexed_list_like_docker_compose_does()
+    {
+        // App__TrustedProxies__0=... is a section with children: the options binder must not choke on it.
+        using var factory = new IndexedProxyListFactory();
+
+        var link = await CreateUserAndGetLinkAsync(factory, r =>
+        {
+            r.Headers.Add("X-Forwarded-Proto", "https");
+            r.Headers.Add("X-Forwarded-Host", "dnd.example.com");
+        });
+
+        Assert.StartsWith("https://dnd.example.com/set-password?token=", link);
+    }
+
     private sealed class NoTrustedProxiesFactory : ApiFactory
     {
         protected override string? TrustedProxies => string.Empty;
@@ -225,6 +240,18 @@ public class PublicUrlTests
         protected override string? TrustedProxies => "203.0.113.0/24, 2001:db8::/32";
 
         protected override string RemoteIpAddress => "203.0.113.9";
+    }
+
+    private sealed class IndexedProxyListFactory : ApiFactory
+    {
+        protected override string RemoteIpAddress => "203.0.113.9";
+
+        protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
+        {
+            base.ConfigureWebHost(builder);
+            builder.UseSetting("App:TrustedProxies:0", "203.0.113.0/24");
+            builder.UseSetting("App:TrustedProxies:1", "10.0.0.0/8");
+        }
     }
 
     private sealed class FallbackFactory : ApiFactory
