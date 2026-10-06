@@ -5,7 +5,9 @@ import '../../../core/cache/stale_data.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../data/catalog_repository.dart';
+import '../data/models.dart' show ItemModifier;
 import '../domain/catalog_format.dart';
+import '../domain/item_modifier_format.dart';
 
 const _notFoundMessage = 'No se encontró este elemento del compendio.';
 
@@ -141,6 +143,32 @@ class Paragraphs extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: SelectableText(cleanText(text), style: style),
+          ),
+      ],
+    );
+  }
+}
+
+/// One readable line per item modifier ("+3 Destreza", "Fuerza 19", "+1 CA").
+class ModifierLines extends StatelessWidget {
+  const ModifierLines(this.modifiers, {super.key});
+
+  final List<ItemModifier> modifiers;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.bodyMedium;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < modifiers.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              '• ${describeItemModifier(modifiers[i])}',
+              key: Key('item-modifier-$i'),
+              style: style,
+            ),
           ),
       ],
     );

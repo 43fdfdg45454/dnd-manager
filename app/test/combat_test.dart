@@ -464,6 +464,71 @@ void main() {
   });
 
   group('ataques y dados', () {
+    test('CombatAttack.fromJson lee attackBreakdown y damageBreakdown', () {
+      final attack = CombatAttack.fromJson({
+        'name': 'Longsword',
+        'attackBonus': 6,
+        'damage': '1d8+4',
+        'attackBreakdown': makeBreakdownJson([
+          ('ability', 'Fuerza', 3),
+          ('proficiency', 'Competencia', 2),
+          ('item', 'Espada +1', 1),
+        ]),
+        'damageBreakdown': makeBreakdownJson([('ability', 'Fuerza', 3), ('item', 'Espada +1', 1)]),
+      });
+      expect(attack.attackBreakdown!.total, 6);
+      expect(attack.attackBreakdown!.parts.last.source, 'item');
+      expect(attack.damageBreakdown!.total, 4);
+      expect(attack.damageBreakdown!.parts, hasLength(2));
+      expect(CombatAttack.fromJson({'name': 'Dagger'}).attackBreakdown, isNull);
+    });
+
+    testWidgets('tocar el bono o el daño de un ataque abre su desglose', (tester) async {
+      await _pump(
+        tester,
+        characters: _repo(
+          combat: makeCombatJson(
+            attacks: [
+              {
+                'name': 'Longsword',
+                'attackBonus': 6,
+                'damage': '1d8+4',
+                'damageType': 'Slashing',
+                'properties': <String>[],
+                'attackBreakdown': makeBreakdownJson([
+                  ('ability', 'Fuerza', 3),
+                  ('proficiency', 'Competencia', 2),
+                  ('item', 'Espada +1', 1),
+                ]),
+                'damageBreakdown': makeBreakdownJson([
+                  ('ability', 'Fuerza', 3),
+                  ('item', 'Espada +1', 1),
+                ]),
+              },
+            ],
+          ),
+        ),
+      );
+
+      // The attack is affected by an item: gold dot on both values.
+      expect(find.byKey(const Key('stat-mark-attack.0.bonus')), findsOneWidget);
+      expect(find.byKey(const Key('stat-mark-attack.0.damage')), findsOneWidget);
+
+      await _tap(tester, 'stat-attack.0.bonus');
+      expect(find.byKey(const Key('breakdown-sheet')), findsOneWidget);
+      final sheet = find.byKey(const Key('breakdown-sheet'));
+      expect(find.descendant(of: sheet, matching: find.text('Competencia')), findsOneWidget);
+      expect(find.descendant(of: sheet, matching: find.text('Espada +1')), findsOneWidget);
+      expect(find.text('Ataque: Longsword'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('breakdown-total'))).data, '+6');
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      await _tap(tester, 'stat-attack.0.damage');
+      expect(find.text('Daño: Longsword'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('breakdown-total'))).data, '+4');
+    });
+
     testWidgets('muestra los ataques del DTO con su bono', (tester) async {
       await _pump(
         tester,

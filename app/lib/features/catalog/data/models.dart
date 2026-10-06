@@ -706,6 +706,7 @@ class ItemDetail extends ItemSummary {
     this.properties = const [],
     this.description = const [],
     this.effects = const [],
+    this.modifiers = const [],
   });
 
   factory ItemDetail.fromJson(Map<String, dynamic> json) {
@@ -760,6 +761,7 @@ class ItemDetail extends ItemSummary {
       properties: _nameList(json['properties']),
       description: _strList(json['description']),
       effects: _strList(json['effects']),
+      modifiers: ItemModifier.listFromJson(json['modifiers']),
     );
   }
 
@@ -775,6 +777,56 @@ class ItemDetail extends ItemSummary {
   /// Free-text effects ("+1 a ataque y daño"); only homebrew and magic items
   /// have them.
   final List<String> effects;
+
+  /// Structured modifiers applied to the character while the item is worn.
+  final List<ItemModifier> modifiers;
+}
+
+/// Modifier kinds as the API spells them (`ItemModifierKind`).
+const itemModifierKinds = <String>[
+  'AbilityBonus',
+  'AbilitySet',
+  'SaveBonus',
+  'SkillBonus',
+  'ArmorClassBonus',
+  'AttackBonus',
+  'DamageBonus',
+  'SpeedBonus',
+  'HitPointsMaxBonus',
+  'InitiativeBonus',
+];
+
+/// A structured item modifier (`ItemModifierDto`): [kind] is an
+/// `ItemModifierKind` name; [target] an ability index ("str".."cha") for the
+/// ability and save kinds, a skill index for `SkillBonus`, or null (all saves
+/// or skills, or a kind without target).
+class ItemModifier {
+  const ItemModifier({required this.kind, this.target, required this.value});
+
+  factory ItemModifier.fromJson(Map<String, dynamic> json) => ItemModifier(
+    kind: _str(json['kind']),
+    target: _strOrNull(json['target']),
+    value: _int(json['value']) ?? 0,
+  );
+
+  /// Tolerant list parser: anything but a list gives an empty list.
+  static List<ItemModifier> listFromJson(Object? value) => _objects(value, ItemModifier.fromJson);
+
+  final String kind;
+  final String? target;
+  final int value;
+
+  Map<String, dynamic> toJson() => {'kind': kind, 'target': ?target, 'value': value};
+
+  @override
+  bool operator ==(Object other) =>
+      other is ItemModifier && other.kind == kind && other.target == target && other.value == value;
+
+  @override
+  int get hashCode => Object.hash(kind, target, value);
+
+  @override
+  String toString() => 'ItemModifier($kind, $target, $value)';
 }
 
 bool? _boolOrNull(Object? value) => value == null ? null : _bool(value);

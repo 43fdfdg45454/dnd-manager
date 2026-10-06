@@ -28,10 +28,12 @@ EffectiveItem makeEffective({
   String category = 'Weapon',
   String? damageDice = '1d8',
   bool requiresAttunement = false,
+  List<ItemModifier> modifiers = const [],
 }) => EffectiveItem(
   name: name,
   category: category,
   requiresAttunement: requiresAttunement,
+  modifiers: modifiers,
   damage: damageDice == null ? null : ItemDamage(dice: damageDice, type: 'Slashing'),
 );
 

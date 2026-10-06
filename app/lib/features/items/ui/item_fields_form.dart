@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../catalog/data/models.dart' show ItemModifier, itemModifierKinds;
 import '../../catalog/domain/catalog_format.dart';
-import '../../characters/domain/character_format.dart' show copperToGoldText;
+import '../../catalog/domain/item_modifier_format.dart';
+import '../../characters/data/models.dart' show abilityKeys;
+import '../../characters/domain/character_format.dart' show copperToGoldText, skillLabel;
 import '../domain/item_form_data.dart';
 import '../domain/items_format.dart';
 
@@ -15,12 +18,25 @@ class ItemFieldsForm extends StatefulWidget {
 
   final ItemFormData initial;
 
-  /// Shows the template-only fields (subcategory, cost) and hides the bonuses
-  /// that only exist as overrides.
+  /// Shows the template-only fields (subcategory, cost).
   final bool templateMode;
 
   @override
   State<ItemFieldsForm> createState() => ItemFieldsFormState();
+}
+
+/// Maximum number of modifiers per item (server limit).
+const maxItemModifiers = 10;
+
+/// Editable state of one modifier row.
+class _ModifierRow {
+  _ModifierRow(this.kind, this.target, String value) : value = TextEditingController(text: value);
+
+  String kind;
+  String? target;
+  final TextEditingController value;
+
+  void dispose() => value.dispose();
 }
 
 class ItemFieldsFormState extends State<ItemFieldsForm> {
@@ -39,8 +55,6 @@ class ItemFieldsFormState extends State<ItemFieldsForm> {
   late final TextEditingController _armorClass;
   late final TextEditingController _maxDex;
   late final TextEditingController _strength;
-  late final TextEditingController _attackBonus;
-  late final TextEditingController _damageBonus;
   late final TextEditingController _description;
   late final TextEditingController _effects;
 
@@ -68,8 +82,6 @@ class ItemFieldsFormState extends State<ItemFieldsForm> {
     _armorClass = TextEditingController(text: text(d.armorClassBase));
     _maxDex = TextEditingController(text: text(d.maxDexBonus));
     _strength = TextEditingController(text: text(d.strengthMinimum));
-    _attackBonus = TextEditingController(text: d.attackBonus == 0 ? '' : '${d.attackBonus}');
-    _damageBonus = TextEditingController(text: d.damageBonus == 0 ? '' : '${d.damageBonus}');
     _description = TextEditingController(text: d.description.join('\n'));
     _effects = TextEditingController(text: d.effects.join('\n'));
     _category = itemCategories.containsKey(d.category) ? d.category : 'Other';
@@ -77,6 +89,9 @@ class ItemFieldsFormState extends State<ItemFieldsForm> {
     _attunement = d.requiresAttunement;
     _addDex = d.addDexModifier;
     _stealth = d.stealthDisadvantage;
+    for (final m in d.modifiers) {
+      _modifiers.add(_ModifierRow(m.kind, m.target, '${m.value}'));
+    }
   }
 
   @override
@@ -95,12 +110,13 @@ class ItemFieldsFormState extends State<ItemFieldsForm> {
       _armorClass,
       _maxDex,
       _strength,
-      _attackBonus,
-      _damageBonus,
       _description,
       _effects,
     ]) {
       c.dispose();
+    }
+    for (final row in _modifiers) {
+      row.dispose();
     }
     super.dispose();
   }
@@ -132,8 +148,171 @@ class ItemFieldsFormState extends State<ItemFieldsForm> {
       stealthDisadvantage: _stealth,
       description: splitLines(_description.text),
       effects: splitLines(_effects.text),
-      attackBonus: widget.templateMode ? 0 : (integer(_attackBonus) ?? 0),
-      damageBonus: widget.templateMode ? 0 : (integer(_damageBonus) ?? 0),
+      modifiers: [
+        for (final row in _modifiers)
+          ItemModifier(
+            kind: row.kind,
+            target: row.target,
+            value: int.tryParse(row.value.text.trim()) ?? 0,
+          ),
+      ],
+    );
+  }
+
+  final List<_ModifierRow> _modifiers = [];
+
+  void _addModifier() =>
+      setState(() => _modifiers.add(_ModifierRow('AbilityBonus', abilityKeys.first, '1')));
+
+  void _removeModifier(int index) => setState(() => _modifiers.removeAt(index).dispose());
+
+  void _setModifierKind(_ModifierRow row, String kind) => setState(() {
+    row.kind = kind;
+    // Keep the target only while it still makes sense for the new kind.
+    if (modifierTargetsAbility(kind)) {
+      row.target = abilityKeys.contains(row.target) ? row.target : abilityKeys.first;
+    } else if (modifierTargetsSave(kind)) {
+      row.target = abilityKeys.contains(row.target) ? row.target : null;
+    } else if (modifierTargetsSkill(kind)) {
+      row.target = modifierSkillIndexes.contains(row.target) ? row.target : null;
+    } else {
+      row.target = null;
+    }
+  });
+
+  String? _modifierValue(String kind, String? value) {
+    final parsed = int.tryParse(value?.trim() ?? '');
+    final min = kind == 'AbilitySet' ? 1 : -10;
+    if (parsed == null || parsed < min || parsed > 30) return 'Entre $min y 30';
+    return null;
+  }
+
+  Widget _modifierRow(BuildContext context, int index, _ModifierRow row) {
+    final targetItems = <DropdownMenuItem<String?>>[
+      if (!modifierTargetsAbility(row.kind))
+        DropdownMenuItem<String?>(
+          value: null,
+          child: Text(modifierTargetsSkill(row.kind) ? 'Todas las habilidades' : 'Todas'),
+        ),
+      if (modifierTargetsSkill(row.kind))
+        for (final skill in modifierSkillIndexes)
+          DropdownMenuItem<String?>(value: skill, child: Text(skillLabel(skill)))
+      else
+        for (final ability in abilityKeys)
+          DropdownMenuItem<String?>(value: ability, child: Text(abilityLabel(ability))),
+    ];
+    return Card(
+      key: ObjectKey(row),
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 4, 4),
+        child: Column(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: DropdownButtonFormField<String>(
+                      key: Key('modifier-kind-$index'),
+                      initialValue: row.kind,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Tipo',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        for (final kind in itemModifierKinds)
+                          DropdownMenuItem(value: kind, child: Text(itemModifierKindLabel(kind))),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) _setModifierKind(row, value);
+                      },
+                    ),
+                  ),
+                ),
+                IconButton(
+                  key: Key('modifier-remove-$index'),
+                  tooltip: 'Quitar modificador',
+                  onPressed: () => _removeModifier(index),
+                  icon: const Icon(Icons.delete_outline),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (modifierHasTarget(row.kind)) ...[
+                    Expanded(
+                      flex: 3,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        // Rebuilt when the kind changes: the dropdown keeps its own value.
+                        child: KeyedSubtree(
+                          key: ValueKey('${row.kind}-target'),
+                          child: DropdownButtonFormField<String?>(
+                            key: Key('modifier-target-$index'),
+                            initialValue: row.target,
+                            isExpanded: true,
+                            decoration: InputDecoration(
+                              labelText: modifierTargetsSkill(row.kind)
+                                  ? 'Habilidad'
+                                  : modifierTargetsSave(row.kind)
+                                  ? 'Salvación'
+                                  : 'Característica',
+                              border: const OutlineInputBorder(),
+                            ),
+                            items: targetItems,
+                            onChanged: (value) => setState(() => row.target = value),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: TextFormField(
+                        key: Key('modifier-value-$index'),
+                        onChanged: (_) => setState(() {}),
+                        controller: row.value,
+                        keyboardType: const TextInputType.numberWithOptions(signed: true),
+                        validator: (v) => _modifierValue(row.kind, v),
+                        decoration: InputDecoration(
+                          labelText: row.kind == 'AbilitySet' ? 'Puntuación' : 'Valor',
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  describeItemModifier(
+                    ItemModifier(
+                      kind: row.kind,
+                      target: row.target,
+                      value: int.tryParse(row.value.text.trim()) ?? 0,
+                    ),
+                  ),
+                  key: Key('modifier-summary-$index'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -305,15 +484,6 @@ class ItemFieldsFormState extends State<ItemFieldsForm> {
               _number('item-form-range-long', _rangeLong, 'Alcance largo'),
             ],
           ),
-          if (!widget.templateMode)
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _number('item-form-attack-bonus', _attackBonus, 'Bono de ataque', signed: true),
-                const SizedBox(width: 12),
-                _number('item-form-damage-bonus', _damageBonus, 'Bono de daño', signed: true),
-              ],
-            ),
           Text('Armadura', style: theme.textTheme.titleSmall),
           const SizedBox(height: 8),
           Row(
@@ -341,6 +511,25 @@ class ItemFieldsFormState extends State<ItemFieldsForm> {
             onChanged: (value) => setState(() => _stealth = value),
           ),
           const SizedBox(height: 8),
+          Text('Modificadores', style: theme.textTheme.titleSmall),
+          const SizedBox(height: 4),
+          Text(
+            'Se aplican al personaje mientras el objeto está equipado '
+            '(y sintonizado, si lo requiere).',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 8),
+          for (var i = 0; i < _modifiers.length; i++) _modifierRow(context, i, _modifiers[i]),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              key: const Key('modifier-add'),
+              onPressed: _modifiers.length >= maxItemModifiers ? null : _addModifier,
+              icon: const Icon(Icons.add),
+              label: const Text('Añadir modificador'),
+            ),
+          ),
+          const SizedBox(height: 16),
           Text('Texto', style: theme.textTheme.titleSmall),
           const SizedBox(height: 8),
           _field(

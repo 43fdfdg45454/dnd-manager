@@ -252,11 +252,11 @@ void main() {
       expect(inCard('ability-str', '+3'), findsOneWidget);
       expect(inCard('ability-str', '16'), findsOneWidget);
       expect(inCard('ability-cha', '-1'), findsOneWidget);
-      expect(inCard('stat-armor-class', '17'), findsOneWidget);
-      expect(inCard('stat-initiative', '+2'), findsOneWidget);
-      expect(inCard('stat-hp', '20 / 28'), findsOneWidget);
-      expect(inCard('stat-temp-hp', '3'), findsOneWidget);
-      expect(inCard('stat-passive-perception', '11'), findsOneWidget);
+      expect(inCard('tile-armor-class', '17'), findsOneWidget);
+      expect(inCard('tile-initiative', '+2'), findsOneWidget);
+      expect(inCard('tile-hp', '20 / 28'), findsOneWidget);
+      expect(inCard('tile-temp-hp', '3'), findsOneWidget);
+      expect(inCard('tile-passive-perception', '11'), findsOneWidget);
       expect(inCard('save-str', '+5'), findsOneWidget);
       expect(find.byKey(const Key('save-proficient-str')), findsOneWidget);
       expect(find.byKey(const Key('save-plain-dex')), findsOneWidget);
@@ -281,6 +281,154 @@ void main() {
       await tester.longPress(find.byKey(const Key('override-armorClass')));
       await tester.pumpAndSettle();
       expect(find.text('Armadura encantada'), findsOneWidget);
+    });
+
+    test('CharacterSheet.fromJson lee breakdowns e itemEffects', () {
+      final sheet = CharacterSheet.fromJson({
+        'itemEffects': [
+          {'itemName': 'Guantes ágiles', 'kind': 'AbilityBonus', 'target': 'dex', 'value': 3},
+          {'itemName': 'Capa', 'kind': 'SaveBonus', 'target': null, 'value': 1},
+        ],
+        'breakdowns': {
+          'ability.dex': makeBreakdownJson([('base', 'Base', 14), ('item', 'Guantes ágiles', 3)]),
+          'armorClass': {'total': 12, 'parts': <Object>[]},
+        },
+      });
+      expect(sheet.itemEffects, hasLength(2));
+      expect(sheet.itemEffects.first.itemName, 'Guantes ágiles');
+      expect(sheet.itemEffects.first.kind, 'AbilityBonus');
+      expect(sheet.itemEffects.first.target, 'dex');
+      expect(sheet.itemEffects.first.value, 3);
+      expect(sheet.itemEffects.last.target, isNull);
+      final dex = sheet.breakdown('ability.dex')!;
+      expect(dex.total, 17);
+      expect(dex.parts.map((p) => (p.source, p.label, p.value)), [
+        ('base', 'Base', 14),
+        ('item', 'Guantes ágiles', 3),
+      ]);
+      expect(dex.hasItemOrOverride, isTrue);
+      expect(sheet.breakdown('armorClass')!.hasItemOrOverride, isFalse);
+      expect(sheet.breakdown('speed'), isNull);
+      // Older servers send neither.
+      final bare = CharacterSheet.fromJson(const {});
+      expect(bare.itemEffects, isEmpty);
+      expect(bare.breakdowns, isEmpty);
+    });
+
+    testWidgets('tocar un valor abre el desglose con sus partes y el total', (tester) async {
+      final repository = FakeCharactersRepository(
+        characters: [
+          makeCharacterJson(
+            breakdowns: {
+              'ability.str': makeBreakdownJson([('base', 'Base', 15), ('race', 'Humano', 1)]),
+              'armorClass': makeBreakdownJson([
+                ('base', 'Armadura de cuero', 11),
+                ('ability', 'Destreza', 2),
+                ('shield', 'Escudo', 2),
+                ('override', 'Ajuste manual: bendición', 2),
+              ]),
+            },
+          ),
+        ],
+      );
+      await _pumpApp(tester, characters: repository, location: '/characters/ch1');
+
+      expect(find.byKey(const Key('breakdown-sheet')), findsNothing);
+      await tester.tap(find.byKey(const Key('stat-ability.str')));
+      await tester.pumpAndSettle();
+
+      final sheet = find.byKey(const Key('breakdown-sheet'));
+      expect(sheet, findsOneWidget);
+      expect(find.descendant(of: sheet, matching: find.text('Fuerza')), findsOneWidget);
+      expect(find.descendant(of: sheet, matching: find.text('Base')), findsOneWidget);
+      expect(find.descendant(of: sheet, matching: find.text('15')), findsOneWidget);
+      expect(find.descendant(of: sheet, matching: find.text('Humano')), findsOneWidget);
+      expect(find.descendant(of: sheet, matching: find.text('+1')), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('breakdown-total'))).data, '16');
+      // Without items or overrides there is no gold dot.
+      expect(find.byKey(const Key('stat-mark-ability.str')), findsNothing);
+
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('breakdown-sheet')), findsNothing);
+
+      await _tap(tester, find.byKey(const Key('stat-armorClass')));
+      expect(find.byKey(const Key('breakdown-sheet')), findsOneWidget);
+      expect(find.text('Ajuste manual: bendición'), findsOneWidget);
+      expect(find.text('Armadura de cuero'), findsOneWidget);
+      expect(find.text('Escudo'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('breakdown-total'))).data, '17');
+      // Override parts do mark the value.
+      expect(find.byKey(const Key('stat-mark-armorClass')), findsOneWidget);
+    });
+
+    testWidgets('un valor afectado por un objeto muestra el punto dorado', (tester) async {
+      final repository = FakeCharactersRepository(
+        characters: [
+          makeCharacterJson(
+            itemEffects: [
+              {'itemName': 'Guantes ágiles', 'kind': 'AbilityBonus', 'target': 'dex', 'value': 3},
+            ],
+            breakdowns: {
+              'ability.dex': makeBreakdownJson([
+                ('base', 'Base', 14),
+                ('item', 'Guantes ágiles', 3),
+              ]),
+              'ability.str': makeBreakdownJson([('base', 'Base', 16)]),
+            },
+          ),
+        ],
+      );
+      await _pumpApp(tester, characters: repository, location: '/characters/ch1');
+
+      expect(find.byKey(const Key('stat-mark-ability.dex')), findsOneWidget);
+      expect(find.byKey(const Key('stat-mark-ability.str')), findsNothing);
+      expect(find.text('Guantes ágiles: +3 Destreza'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('stat-ability.dex')));
+      await tester.pumpAndSettle();
+      expect(find.text('Guantes ágiles'), findsOneWidget);
+      expect(find.text('+3'), findsWidgets);
+      expect(tester.widget<Text>(find.byKey(const Key('breakdown-total'))).data, '15');
+    });
+
+    testWidgets('salvaciones, habilidades y velocidad también tienen desglose', (tester) async {
+      final repository = FakeCharactersRepository(
+        characters: [
+          makeCharacterJson(
+            breakdowns: {
+              'save.str': makeBreakdownJson([
+                ('ability', 'Fuerza', 3),
+                ('proficiency', 'Competencia', 2),
+              ]),
+              'speed': makeBreakdownJson([('base', 'Humano', 30)]),
+              'skill.stealth': makeBreakdownJson([
+                ('ability', 'Destreza', 2),
+                ('item', 'Botas élficas', 2),
+              ]),
+            },
+          ),
+        ],
+      );
+      await _pumpApp(tester, characters: repository, location: '/characters/ch1');
+
+      await _tap(tester, find.byKey(const Key('stat-save.str')));
+      expect(find.text('Salvación de Fuerza'), findsWidgets);
+      expect(find.text('Competencia'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('breakdown-total'))).data, '+5');
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      await _tap(tester, find.byKey(const Key('stat-speed')));
+      expect(tester.widget<Text>(find.byKey(const Key('breakdown-total'))).data, '30 pies');
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      await _tap(tester, find.byKey(const Key('tab-skills')));
+      expect(find.byKey(const Key('stat-mark-skill.stealth')), findsOneWidget);
+      await _tap(tester, find.byKey(const Key('stat-skill.stealth')));
+      expect(find.text('Botas élficas'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('breakdown-total'))).data, '+2');
     });
 
     testWidgets('Habilidades muestra valor y competencia', (tester) async {

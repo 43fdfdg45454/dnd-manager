@@ -417,6 +417,35 @@ void main() {
     });
   });
 
+  group('modificadores de objetos', () {
+    testWidgets('el detalle del objeto lista los modificadores legibles', (tester) async {
+      final repository = FakeCatalogRepository(
+        itemDetails: {
+          'i2': const ItemDetail(
+            id: 'i2',
+            name: 'Guanteletes de Ogro',
+            category: 'MagicItem',
+            requiresAttunement: true,
+            modifiers: [
+              ItemModifier(kind: 'AbilitySet', target: 'str', value: 19),
+              ItemModifier(kind: 'ArmorClassBonus', value: 1),
+              ItemModifier(kind: 'SaveBonus', value: 1),
+            ],
+          ),
+        },
+      );
+      await tester.pumpWidget(
+        _scope(repository, const MaterialApp(home: ItemDetailPage(id: 'i2'))),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Efectos'), findsOneWidget);
+      expect(find.text('• Fuerza 19'), findsOneWidget);
+      expect(find.text('• +1 CA'), findsOneWidget);
+      expect(find.text('• +1 a todas las salvaciones'), findsOneWidget);
+    });
+  });
+
   group('formato', () {
     test('formatCostCp usa gp, sp y cp', () {
       expect(formatCostCp(100), '1 gp');

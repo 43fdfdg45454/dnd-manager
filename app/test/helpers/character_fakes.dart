@@ -25,6 +25,8 @@ Map<String, dynamic> makeCharacterJson({
   int hitPointsCurrent = 20,
   int temporaryHitPoints = 3,
   Map<String, dynamic>? combat,
+  List<Map<String, dynamic>> itemEffects = const [],
+  Map<String, dynamic> breakdowns = const {},
 }) => {
   'id': id,
   'campaignId': campaignId,
@@ -109,8 +111,19 @@ Map<String, dynamic> makeCharacterJson({
     ],
     'spellcasting': <Object>[],
     'overriddenFields': overriddenFields,
+    'itemEffects': itemEffects,
+    'breakdowns': breakdowns,
   },
   'pendingChangeRequests': pending,
+};
+
+/// A `ValueBreakdownDto` as JSON: [parts] are `(source, label, value)`; the
+/// total is their sum, like the server's.
+Map<String, dynamic> makeBreakdownJson(List<(String, String, int)> parts) => {
+  'total': parts.fold<int>(0, (sum, p) => sum + p.$3),
+  'parts': [
+    for (final (source, label, value) in parts) {'source': source, 'label': label, 'value': value},
+  ],
 };
 
 /// A `combat` block as the server would send it: a longsword attack, two level

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/ui/stat_value.dart';
 import '../../../catalog/ui/detail_widgets.dart' show SectionTitle;
 import '../../../dice/domain/dice_expression.dart';
 import '../../../dice/ui/dice_sheet.dart';
@@ -122,20 +123,27 @@ class _AttackCardState extends State<AttackCard> {
     final details = [if (a.range != null) 'Alcance ${a.range}', ...a.properties].join(' · ');
     return CombatCard(
       title: a.name,
-      trailing: Text(
-        formatModifier(a.attackBonus),
-        key: Key('attack-bonus-${widget.index}'),
+      trailing: StatValue(
+        statKey: 'attack.${widget.index}.bonus',
+        textKey: Key('attack-bonus-${widget.index}'),
+        title: 'Ataque: ${a.name}',
+        text: formatModifier(a.attackBonus),
+        breakdown: a.attackBreakdown,
         style: theme.textTheme.headlineSmall,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            [
+          StatValue(
+            statKey: 'attack.${widget.index}.damage',
+            textKey: Key('attack-damage-text-${widget.index}'),
+            title: 'Daño: ${a.name}',
+            text: [
               a.damage.isEmpty ? 'Sin daño' : a.damage,
               if (a.damageType.isNotEmpty) a.damageType,
             ].join(' '),
-            key: Key('attack-damage-text-${widget.index}'),
+            totalText: a.damageBreakdown == null ? null : formatModifier(a.damageBreakdown!.total),
+            breakdown: a.damage.isEmpty ? null : a.damageBreakdown,
             style: theme.textTheme.bodyLarge,
           ),
           if (details.isNotEmpty) Text(details, style: theme.textTheme.bodySmall),

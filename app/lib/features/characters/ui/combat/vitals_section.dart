@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/ui/stat_value.dart';
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/data/models.dart' show Condition;
 import '../../../dice/domain/dice_expression.dart';
@@ -364,7 +365,14 @@ class StatsCard extends ConsumerWidget {
         : ref.watch(spellInfoProvider(spellInfoKey([concentrating]))).value?[concentrating]?.name ??
               titleFromSpellIndex(concentrating);
 
-    Widget tile(String key, String label, String value, {Widget? action}) => Card(
+    Widget tile(
+      String key,
+      String label,
+      String value, {
+      Widget? action,
+      required String breakdownKey,
+      String? totalText,
+    }) => Card(
       key: Key('combat-$key'),
       margin: EdgeInsets.zero,
       child: Padding(
@@ -373,7 +381,14 @@ class StatsCard extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(label, style: theme.textTheme.labelMedium),
-            Text(value, style: theme.textTheme.headlineSmall),
+            StatValue(
+              statKey: breakdownKey,
+              title: label,
+              text: value,
+              totalText: totalText,
+              breakdown: sheet.breakdown(breakdownKey),
+              style: theme.textTheme.headlineSmall,
+            ),
             ?action,
           ],
         ),
@@ -388,11 +403,12 @@ class StatsCard extends ConsumerWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              tile('ac', 'CA', '${sheet.armorClass}'),
+              tile('ac', 'CA', '${sheet.armorClass}', breakdownKey: 'armorClass'),
               tile(
                 'initiative',
                 'Iniciativa',
                 formatModifier(sheet.initiative),
+                breakdownKey: 'initiative',
                 action: TextButton(
                   key: const Key('roll-initiative'),
                   onPressed: () =>
@@ -400,7 +416,19 @@ class StatsCard extends ConsumerWidget {
                   child: const Text('Tirar'),
                 ),
               ),
-              tile('speed', 'Velocidad', '${sheet.speed} pies'),
+              tile('speed', 'Velocidad', '${sheet.speed} pies', breakdownKey: 'speed'),
+              tile(
+                'perception',
+                'Percepción pasiva',
+                '${sheet.passivePerception}',
+                breakdownKey: 'passivePerception',
+              ),
+              tile(
+                'proficiency',
+                'Competencia',
+                formatModifier(sheet.proficiencyBonus),
+                breakdownKey: 'proficiencyBonus',
+              ),
               FilterChip(
                 key: const Key('inspiration'),
                 avatar: const Icon(Icons.auto_awesome, size: 18),

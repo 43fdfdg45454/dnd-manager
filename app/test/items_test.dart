@@ -7,6 +7,7 @@ import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
 import 'package:dnd_companion/features/campaigns/ui/campaign_detail_page.dart';
 import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
 import 'package:dnd_companion/features/catalog/data/models.dart' hide Page;
+import 'package:dnd_companion/features/catalog/domain/item_modifier_format.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:dnd_companion/features/characters/ui/character_page.dart';
 import 'package:dnd_companion/features/items/data/campaign_items_repository.dart';
@@ -29,6 +30,7 @@ import 'helpers/item_fakes.dart';
 
 const _sword = ItemSummary(id: 't-sword', name: 'Longsword', category: 'Weapon', costCp: 1500);
 const _rope = ItemSummary(id: 't-rope', name: 'Rope', category: 'AdventuringGear', costCp: 100);
+const _ring = ItemSummary(id: 't-ring', name: 'Anillo veloz', category: 'MagicItem', costCp: 5000);
 
 FakeCatalogRepository _catalog() => FakeCatalogRepository(
   itemDetails: {
@@ -40,6 +42,16 @@ FakeCatalogRepository _catalog() => FakeCatalogRepository(
       weightLb: 3,
       damage: ItemDamage(dice: '1d8', type: 'Slashing'),
       properties: ['Versatile'],
+    ),
+    't-ring': ItemDetail(
+      id: 't-ring',
+      name: 'Anillo veloz',
+      category: 'MagicItem',
+      costCp: 5000,
+      modifiers: [
+        ItemModifier(kind: 'AbilityBonus', target: 'dex', value: 2),
+        ItemModifier(kind: 'SpeedBonus', value: 10),
+      ],
     ),
   },
 );
@@ -216,16 +228,110 @@ void main() {
       expect(item.effective.attackBonus, 1);
     });
 
+    test('los modificadores se leen de ItemDetail, EffectiveItem y ItemOverrides', () {
+      final modifiersJson = [
+        {'kind': 'AbilityBonus', 'target': 'dex', 'value': 3},
+        {'kind': 'SaveBonus', 'target': null, 'value': 1},
+        {'kind': 'ArmorClassBonus', 'value': 1},
+      ];
+      final expected = [
+        const ItemModifier(kind: 'AbilityBonus', target: 'dex', value: 3),
+        const ItemModifier(kind: 'SaveBonus', value: 1),
+        const ItemModifier(kind: 'ArmorClassBonus', value: 1),
+      ];
+      expect(
+        ItemDetail.fromJson({'id': 'i', 'name': 'Guantes', 'modifiers': modifiersJson}).modifiers,
+        expected,
+      );
+      expect(
+        EffectiveItem.fromJson({'name': 'Guantes', 'modifiers': modifiersJson}).modifiers,
+        expected,
+      );
+      expect(EffectiveItem.fromJson({'name': 'Guantes'}).modifiers, isEmpty);
+      expect(ItemOverrides.fromJson({'modifiers': modifiersJson}).modifiers, expected);
+    });
+
+    test('ItemOverrides distingue modificadores ausentes (null) de vacíos ([])', () {
+      final keep = ItemOverrides.fromJson({'name': 'X'});
+      expect(keep.modifiers, isNull);
+      expect(keep.toJson().containsKey('modifiers'), isFalse);
+
+      final remove = ItemOverrides.fromJson({'modifiers': <Object>[]});
+      expect(remove.modifiers, isEmpty);
+      expect(remove.isEmpty, isFalse);
+      expect(remove.toJson(), {'modifiers': <Object>[]});
+      expect(remove.definedFields, {'modifiers'});
+
+      const some = ItemOverrides(
+        modifiers: [ItemModifier(kind: 'AbilitySet', target: 'str', value: 19)],
+      );
+      expect(some.toJson(), {
+        'modifiers': [
+          {'kind': 'AbilitySet', 'target': 'str', 'value': 19},
+        ],
+      });
+    });
+
+    test('describeItemModifier da líneas legibles en español', () {
+      String d(String kind, int value, [String? target]) =>
+          describeItemModifier(ItemModifier(kind: kind, target: target, value: value));
+      expect(d('AbilityBonus', 3, 'dex'), '+3 Destreza');
+      expect(d('AbilitySet', 19, 'str'), 'Fuerza 19');
+      expect(d('ArmorClassBonus', 1), '+1 CA');
+      expect(d('SaveBonus', 1), '+1 a todas las salvaciones');
+      expect(d('SaveBonus', 2, 'wis'), '+2 a la salvación de Sabiduría');
+      expect(d('SkillBonus', 2, 'stealth'), '+2 Sigilo');
+      expect(d('SkillBonus', 1), '+1 a todas las habilidades');
+      expect(d('SpeedBonus', 10), '+10 pies de velocidad');
+      expect(d('HitPointsMaxBonus', -2), '-2 PG máximos');
+    });
+
+    test('ItemFormData: modificadores iguales a la plantilla no se envían; quitarlos envía []', () {
+      const ring = ItemModifier(kind: 'AbilityBonus', target: 'dex', value: 2);
+      const base = ItemFormData(name: 'Anillo', category: 'MagicItem', modifiers: [ring]);
+      expect(base.toOverrides(base: base).modifiers, isNull);
+      expect(base.toOverrides(base: base).isEmpty, isTrue);
+
+      const stripped = ItemFormData(name: 'Anillo', category: 'MagicItem');
+      expect(stripped.toOverrides(base: base).modifiers, isEmpty);
+      expect(stripped.toOverrides(base: base).toJson(), {'modifiers': <Object>[]});
+
+      const extra = ItemFormData(
+        name: 'Anillo',
+        category: 'MagicItem',
+        modifiers: [
+          ring,
+          ItemModifier(kind: 'SpeedBonus', value: 10),
+        ],
+      );
+      expect(extra.toOverrides(base: base).modifiers, hasLength(2));
+
+      // From scratch: nothing to send without modifiers.
+      expect(stripped.toOverrides().modifiers, isNull);
+      expect(extra.toOverrides().modifiers, hasLength(2));
+      // The template body always carries the list (an empty one clears on PATCH).
+      expect(stripped.toInput().toJson()['modifiers'], <Object>[]);
+      expect(extra.toInput().toJson()['modifiers'], [
+        {'kind': 'AbilityBonus', 'target': 'dex', 'value': 2},
+        {'kind': 'SpeedBonus', 'value': 10},
+      ]);
+    });
+
     test('ItemFormData.toOverrides compara con la plantilla', () {
       const base = ItemFormData(name: 'Longsword', category: 'Weapon', damageDice: '1d8');
       const edited = ItemFormData(
         name: 'Longsword',
         category: 'Weapon',
         damageDice: '1d10',
-        attackBonus: 1,
+        modifiers: [ItemModifier(kind: 'AttackBonus', value: 1)],
       );
       final overrides = edited.toOverrides(base: base);
-      expect(overrides.toJson(), {'damageDice': '1d10', 'attackBonus': 1});
+      expect(overrides.toJson(), {
+        'damageDice': '1d10',
+        'modifiers': [
+          {'kind': 'AttackBonus', 'value': 1},
+        ],
+      });
       expect(base.toOverrides(base: base).isEmpty, isTrue);
     });
 
@@ -516,6 +622,191 @@ void main() {
       final added = inventory.added.single;
       expect(added.templateId, 't-sword');
       expect(added.overrides.toJson(), {'damageDice': '1d10'});
+    });
+
+    testWidgets('el formulario añade y quita filas de modificadores y las serializa', (
+      tester,
+    ) async {
+      final inventory = FakeInventoryRepository();
+      await _pumpApp(
+        tester,
+        location: '/characters/ch1',
+        inventory: inventory,
+        role: CampaignRole.dm,
+      );
+      await _openInventory(tester);
+      await _tap(tester, find.byKey(const Key('inventory-add')));
+      await _tap(tester, find.byKey(const Key('tab-add-advanced')));
+      await tester.enterText(find.byKey(const Key('item-form-name')), 'Guantes ágiles');
+
+      expect(find.byKey(const Key('modifier-kind-0')), findsNothing);
+      await _tap(tester, find.byKey(const Key('modifier-add')));
+      await _tap(tester, find.byKey(const Key('modifier-add')));
+      expect(find.byKey(const Key('modifier-kind-1')), findsOneWidget);
+
+      // Row 0: ability bonus to Dexterity +3.
+      await _tap(tester, find.byKey(const Key('modifier-target-0')));
+      await tester.tap(find.text('Destreza').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('modifier-value-0')), '3');
+      await tester.pumpAndSettle();
+      expect(find.text('+3 Destreza'), findsOneWidget);
+
+      // Row 1: a kind without target.
+      await _tap(tester, find.byKey(const Key('modifier-kind-1')));
+      await tester.tap(find.text('Bonus a CA').last);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('modifier-target-1')), findsNothing);
+      await tester.enterText(find.byKey(const Key('modifier-value-1')), '1');
+      await tester.pumpAndSettle();
+
+      // A third row that is removed again.
+      await _tap(tester, find.byKey(const Key('modifier-add')));
+      expect(find.byKey(const Key('modifier-kind-2')), findsOneWidget);
+      await _tap(tester, find.byKey(const Key('modifier-remove-2')));
+      expect(find.byKey(const Key('modifier-kind-2')), findsNothing);
+
+      await _tapVisible(tester, find.byKey(const Key('composer-submit')));
+
+      final modifiers = inventory.added.single.overrides.modifiers!;
+      expect(modifiers, [
+        const ItemModifier(kind: 'AbilityBonus', target: 'dex', value: 3),
+        const ItemModifier(kind: 'ArmorClassBonus', value: 1),
+      ]);
+      expect(inventory.added.single.overrides.toJson()['modifiers'], [
+        {'kind': 'AbilityBonus', 'target': 'dex', 'value': 3},
+        {'kind': 'ArmorClassBonus', 'value': 1},
+      ]);
+    });
+
+    testWidgets('con plantilla: sin cambios no envía modificadores; quitarlos envía []', (
+      tester,
+    ) async {
+      Future<FakeInventoryRepository> run({required bool remove}) async {
+        final inventory = FakeInventoryRepository();
+        await _pumpApp(
+          tester,
+          location: '/characters/ch1',
+          inventory: inventory,
+          role: CampaignRole.dm,
+          campaignItems: FakeCampaignItemsRepository(srd: [_sword, _ring]),
+        );
+        await _openInventory(tester);
+        await _tap(tester, find.byKey(const Key('inventory-add')));
+        await _tap(tester, find.byKey(const Key('tab-add-advanced')));
+        await _tap(tester, find.byKey(const Key('composer-pick')));
+        await _tap(tester, find.byKey(const Key('item-t-ring')));
+
+        // The template's modifiers preload the rows.
+        expect(find.byKey(const Key('modifier-kind-1')), findsOneWidget);
+        expect(find.text('+2 Destreza'), findsOneWidget);
+        expect(find.text('+10 pies de velocidad'), findsOneWidget);
+        if (remove) {
+          await _tap(tester, find.byKey(const Key('modifier-remove-1')));
+          await _tap(tester, find.byKey(const Key('modifier-remove-0')));
+        }
+        await _tapVisible(tester, find.byKey(const Key('composer-submit')));
+        return inventory;
+      }
+
+      final untouched = await run(remove: false);
+      expect(untouched.added.single.templateId, 't-ring');
+      expect(untouched.added.single.overrides.modifiers, isNull);
+      expect(untouched.added.single.overrides.isEmpty, isTrue);
+
+      final removed = await run(remove: true);
+      expect(removed.added.single.overrides.modifiers, isEmpty);
+      expect(removed.added.single.overrides.toJson(), {'modifiers': <Object>[]});
+    });
+
+    testWidgets('el DM crea un objeto con modificadores en el formulario de plantilla', (
+      tester,
+    ) async {
+      final items = FakeCampaignItemsRepository();
+      await _pumpApp(
+        tester,
+        location: '/campaigns/c1',
+        inventory: FakeInventoryRepository(),
+        campaignItems: items,
+        role: CampaignRole.dm,
+      );
+      await _tap(tester, find.byKey(const Key('tab-objects')));
+      await _tap(tester, find.byKey(const Key('homebrew-new')));
+      await tester.enterText(find.byKey(const Key('item-form-name')), 'Cinturón de gigante');
+      // The loose attack and damage bonus fields are gone.
+      expect(find.byKey(const Key('item-form-attack-bonus')), findsNothing);
+      expect(find.byKey(const Key('item-form-damage-bonus')), findsNothing);
+
+      await _tap(tester, find.byKey(const Key('modifier-add')));
+      await _tap(tester, find.byKey(const Key('modifier-kind-0')));
+      await tester.tap(find.text('Fijar característica').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('modifier-value-0')), '21');
+      await _tapVisible(tester, find.byKey(const Key('homebrew-save')));
+
+      expect(items.created.single.modifiers, [
+        const ItemModifier(kind: 'AbilitySet', target: 'str', value: 21),
+      ]);
+    });
+
+    testWidgets('un valor de modificador fuera de rango no deja guardar', (tester) async {
+      final inventory = FakeInventoryRepository();
+      await _pumpApp(
+        tester,
+        location: '/characters/ch1',
+        inventory: inventory,
+        role: CampaignRole.dm,
+      );
+      await _openInventory(tester);
+      await _tap(tester, find.byKey(const Key('inventory-add')));
+      await _tap(tester, find.byKey(const Key('tab-add-advanced')));
+      await tester.enterText(find.byKey(const Key('item-form-name')), 'Anillo roto');
+      await _tap(tester, find.byKey(const Key('modifier-add')));
+      await tester.enterText(find.byKey(const Key('modifier-value-0')), '99');
+      await _tapVisible(tester, find.byKey(const Key('composer-submit')));
+
+      expect(find.text('Entre -10 y 30'), findsOneWidget);
+      expect(inventory.added, isEmpty);
+    });
+
+    testWidgets('el detalle del ítem lista los modificadores con su marca de override', (
+      tester,
+    ) async {
+      final inventory = FakeInventoryRepository(
+        items: {
+          'ch1': [
+            makeCharacterItem(
+              id: 'gloves',
+              overrides: const ItemOverrides(
+                modifiers: [ItemModifier(kind: 'AbilityBonus', target: 'dex', value: 3)],
+              ),
+              effective: makeEffective(
+                name: 'Guantes ágiles',
+                category: 'MagicItem',
+                damageDice: null,
+                modifiers: const [
+                  ItemModifier(kind: 'AbilityBonus', target: 'dex', value: 3),
+                  ItemModifier(kind: 'AbilitySet', target: 'str', value: 19),
+                  ItemModifier(kind: 'SaveBonus', value: 1),
+                  ItemModifier(kind: 'SkillBonus', target: 'stealth', value: 2),
+                  ItemModifier(kind: 'ArmorClassBonus', value: 1),
+                ],
+              ),
+            ),
+          ],
+        },
+      );
+      await _pumpApp(tester, location: '/characters/ch1', inventory: inventory);
+      await _openInventory(tester);
+      await _menu(tester, 'gloves', 'Ver detalle');
+
+      expect(find.text('Efectos'), findsOneWidget);
+      expect(find.text('• +3 Destreza'), findsOneWidget);
+      expect(find.text('• Fuerza 19'), findsOneWidget);
+      expect(find.text('• +1 a todas las salvaciones'), findsOneWidget);
+      expect(find.text('• +2 Sigilo'), findsOneWidget);
+      expect(find.text('• +1 CA'), findsOneWidget);
+      expect(find.byKey(const Key('override-mark-modifiers')), findsOneWidget);
     });
 
     testWidgets('avanzado desde cero envía el nombre y la categoría', (tester) async {

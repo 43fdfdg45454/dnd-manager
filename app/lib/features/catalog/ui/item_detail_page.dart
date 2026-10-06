@@ -41,6 +41,11 @@ class ItemDetailPage extends ConsumerWidget {
             FactRow('Clase de armadura', _armorClass(i.armor)),
             FactRow('Fuerza mínima', i.armor?.strengthMinimum?.toString()),
             if (i.armor?.stealthDisadvantage ?? false) const FactRow('Sigilo', 'Desventaja'),
+            if (i.modifiers.isNotEmpty || i.effects.isNotEmpty) ...[
+              const SectionTitle('Efectos'),
+              ModifierLines(i.modifiers),
+              Paragraphs(i.effects),
+            ],
             if (i.description.isNotEmpty) ...[
               const SectionTitle('Descripción'),
               Paragraphs(i.description),

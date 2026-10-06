@@ -1,4 +1,4 @@
-import '../../catalog/data/models.dart' show ItemArmor, ItemDamage;
+import '../../catalog/data/models.dart' show ItemArmor, ItemDamage, ItemModifier;
 import '../../characters/data/models.dart' show ChangeRequest;
 
 // Hand-written models for the items, inventory and shops API (phase 5).
@@ -86,6 +86,7 @@ class ItemOverrides {
     this.attackBonus,
     this.damageBonus,
     this.effects,
+    this.modifiers,
   });
 
   factory ItemOverrides.fromJson(Object? raw) {
@@ -111,6 +112,7 @@ class ItemOverrides {
       attackBonus: _int(json['attackBonus']),
       damageBonus: _int(json['damageBonus']),
       effects: _strListOrNull(json['effects']),
+      modifiers: json['modifiers'] is List ? ItemModifier.listFromJson(json['modifiers']) : null,
     );
   }
 
@@ -135,7 +137,11 @@ class ItemOverrides {
   final int? damageBonus;
   final List<String>? effects;
 
-  /// Only the defined fields.
+  /// Null keeps the template's modifiers; an empty list removes them all.
+  final List<ItemModifier>? modifiers;
+
+  /// Only the defined fields. A defined empty `modifiers` list is kept: it
+  /// means "remove the template's modifiers".
   Map<String, dynamic> toJson() => {
     'name': ?name,
     'description': ?description,
@@ -157,6 +163,7 @@ class ItemOverrides {
     'attackBonus': ?attackBonus,
     'damageBonus': ?damageBonus,
     'effects': ?effects,
+    if (modifiers != null) 'modifiers': [for (final m in modifiers!) m.toJson()],
   };
 
   bool get isEmpty => toJson().isEmpty;
@@ -185,6 +192,7 @@ class EffectiveItem {
     this.damageBonus = 0,
     this.effects = const [],
     this.description = const [],
+    this.modifiers = const [],
   });
 
   factory EffectiveItem.fromJson(Object? raw) {
@@ -225,6 +233,7 @@ class EffectiveItem {
       damageBonus: _int(json['damageBonus']) ?? 0,
       effects: _strList(json['effects']),
       description: _strList(json['description']),
+      modifiers: ItemModifier.listFromJson(json['modifiers']),
     );
   }
 
@@ -248,6 +257,9 @@ class EffectiveItem {
   final int damageBonus;
   final List<String> effects;
   final List<String> description;
+
+  /// Structured modifiers (the legacy attack/damage bonuses are already in).
+  final List<ItemModifier> modifiers;
 
   bool get isConsumable => category.toLowerCase() == 'consumable';
 }
@@ -433,6 +445,7 @@ class ItemTemplateInput {
     this.stealthDisadvantage = false,
     this.description = const [],
     this.effects = const [],
+    this.modifiers = const [],
   });
 
   final String name;
@@ -456,6 +469,9 @@ class ItemTemplateInput {
   final List<String> description;
   final List<String> effects;
 
+  /// Always sent: an empty list removes the modifiers of an edited template.
+  final List<ItemModifier> modifiers;
+
   Map<String, dynamic> toJson() => {
     'name': name,
     'category': category,
@@ -477,6 +493,7 @@ class ItemTemplateInput {
     'stealthDisadvantage': stealthDisadvantage,
     'description': description,
     'effects': effects,
+    'modifiers': [for (final m in modifiers) m.toJson()],
   };
 }
 

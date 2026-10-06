@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_error.dart';
+import '../../../core/ui/stat_value.dart';
 import '../../catalog/data/catalog_controllers.dart';
-import '../../catalog/data/models.dart' show ClassDetail, Feature, RaceDetail, Trait;
+import '../../catalog/data/models.dart' show ClassDetail, Feature, ItemModifier, RaceDetail, Trait;
 import '../../catalog/domain/catalog_format.dart';
+import '../../catalog/domain/item_modifier_format.dart';
 import '../../catalog/ui/detail_widgets.dart';
 import '../../dice/domain/dice_expression.dart';
 import '../../dice/ui/dice_sheet.dart';
@@ -90,6 +92,7 @@ class SummaryTab extends StatelessWidget {
           children: [
             _StatTile(
               statKey: 'proficiency',
+              breakdownKey: 'proficiencyBonus',
               label: 'Bonificador de competencia',
               value: formatModifier(sheet.proficiencyBonus),
               character: c,
@@ -97,6 +100,7 @@ class SummaryTab extends StatelessWidget {
             ),
             _StatTile(
               statKey: 'armor-class',
+              breakdownKey: 'armorClass',
               label: 'CA',
               value: '${sheet.armorClass}',
               character: c,
@@ -104,6 +108,7 @@ class SummaryTab extends StatelessWidget {
             ),
             _StatTile(
               statKey: 'initiative',
+              breakdownKey: 'initiative',
               label: 'Iniciativa',
               value: formatModifier(sheet.initiative),
               character: c,
@@ -111,6 +116,8 @@ class SummaryTab extends StatelessWidget {
             ),
             _StatTile(
               statKey: 'speed',
+              breakdownKey: 'speed',
+              totalText: '${sheet.speed} pies',
               label: 'Velocidad',
               value: '${sheet.speed} pies',
               character: c,
@@ -118,6 +125,8 @@ class SummaryTab extends StatelessWidget {
             ),
             _StatTile(
               statKey: 'hp',
+              breakdownKey: 'hitPointsMax',
+              totalText: '${sheet.hitPointsMax}',
               label: 'PG',
               value: '${c.hitPointsCurrent} / ${sheet.hitPointsMax}',
               character: c,
@@ -137,6 +146,7 @@ class SummaryTab extends StatelessWidget {
             ),
             _StatTile(
               statKey: 'passive-perception',
+              breakdownKey: 'passivePerception',
               label: 'Percepción pasiva',
               value: '${sheet.passivePerception}',
               character: c,
@@ -146,6 +156,17 @@ class SummaryTab extends StatelessWidget {
         ),
         const SectionTitle('Salvaciones'),
         for (final key in abilityKeys) _SavingThrowRow(character: c, abilityKey: key),
+        if (sheet.itemEffects.isNotEmpty) ...[
+          const SectionTitle('Efectos de objetos'),
+          for (var i = 0; i < sheet.itemEffects.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                '${sheet.itemEffects[i].itemName}: ${describeItemModifier(ItemModifier(kind: sheet.itemEffects[i].kind, target: sheet.itemEffects[i].target, value: sheet.itemEffects[i].value))}',
+                key: Key('item-effect-$i'),
+              ),
+            ),
+        ],
       ],
     );
   }
@@ -181,7 +202,13 @@ class _AbilityCard extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('${ability.score}', style: theme.textTheme.bodyMedium),
+                  StatValue(
+                    statKey: 'ability.$abilityKey',
+                    title: abilityLabel(abilityKey),
+                    text: '${ability.score}',
+                    breakdown: character.sheet.breakdown('ability.$abilityKey'),
+                    style: theme.textTheme.bodyMedium,
+                  ),
                   OverrideMark(character: character, field: 'ability.$abilityKey'),
                 ],
               ),
@@ -200,6 +227,8 @@ class _StatTile extends StatelessWidget {
     required this.value,
     required this.character,
     this.field,
+    this.breakdownKey,
+    this.totalText,
   });
 
   final String statKey;
@@ -208,11 +237,17 @@ class _StatTile extends StatelessWidget {
   final CharacterDetail character;
   final String? field;
 
+  /// Key in `sheet.breakdowns`; null for values without breakdown.
+  final String? breakdownKey;
+
+  /// Total line of the breakdown sheet when it differs from [value].
+  final String? totalText;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Card(
-      key: Key('stat-$statKey'),
+      key: Key('tile-$statKey'),
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -223,7 +258,14 @@ class _StatTile extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(value, style: theme.textTheme.titleLarge),
+                StatValue(
+                  statKey: breakdownKey ?? statKey,
+                  title: label,
+                  text: value,
+                  totalText: totalText,
+                  breakdown: breakdownKey == null ? null : character.sheet.breakdown(breakdownKey!),
+                  style: theme.textTheme.titleLarge,
+                ),
                 if (field != null) OverrideMark(character: character, field: field!),
               ],
             ),
@@ -265,7 +307,12 @@ class _SavingThrowRow extends StatelessWidget {
         children: [
           const Icon(Icons.casino_outlined, size: 16),
           const SizedBox(width: 8),
-          Text(formatModifier(save?.value ?? 0)),
+          StatValue(
+            statKey: 'save.$abilityKey',
+            title: 'Salvación de ${abilityLabel(abilityKey)}',
+            text: formatModifier(save?.value ?? 0),
+            breakdown: character.sheet.breakdown('save.$abilityKey'),
+          ),
           OverrideMark(character: character, field: 'save.$abilityKey'),
         ],
       ),
@@ -337,7 +384,12 @@ class SkillsTab extends StatelessWidget {
               children: [
                 const Icon(Icons.casino_outlined, size: 16),
                 const SizedBox(width: 8),
-                Text(formatModifier(skill.value)),
+                StatValue(
+                  statKey: 'skill.${skill.index}',
+                  title: skillLabel(skill.index, skill.name),
+                  text: formatModifier(skill.value),
+                  breakdown: character.sheet.breakdown('skill.${skill.index}'),
+                ),
                 OverrideMark(character: character, field: 'skill.${skill.index}'),
               ],
             ),
@@ -525,12 +577,7 @@ class SpellsTab extends ConsumerWidget {
 
     return _TabList(
       children: [
-        for (final sc in c.sheet.spellcasting)
-          FactRow(
-            titleFromSpellIndex(sc.classIndex),
-            'CD ${sc.saveDc} · Ataque ${formatModifier(sc.attackBonus)}'
-            '${sc.preparedMax == null ? '' : ' · Preparados máx. ${sc.preparedMax}'}',
-          ),
+        for (final sc in c.sheet.spellcasting) _SpellcastingRow(character: c, spellcasting: sc),
         if (concentrating != null)
           FactRow(
             'Concentración',
@@ -571,6 +618,50 @@ class SpellsTab extends ConsumerWidget {
             ),
         ],
       ],
+    );
+  }
+}
+
+/// "Clase: CD 14 · Ataque +6 · Preparados máx. 5", with the DC and the attack
+/// bonus tappable to see where they come from.
+class _SpellcastingRow extends StatelessWidget {
+  const _SpellcastingRow({required this.character, required this.spellcasting});
+
+  final CharacterDetail character;
+  final Spellcasting spellcasting;
+
+  @override
+  Widget build(BuildContext context) {
+    final sc = spellcasting;
+    final className = titleFromSpellIndex(sc.classIndex);
+    final sheet = character.sheet;
+    final style = Theme.of(context).textTheme.bodyMedium;
+    final bold = style?.copyWith(fontWeight: FontWeight.w600);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text('$className: ', style: bold),
+          Text('CD ', style: style),
+          StatValue(
+            statKey: 'spellSaveDc.${sc.classIndex}',
+            title: 'CD de conjuros ($className)',
+            text: '${sc.saveDc}',
+            breakdown: sheet.breakdown('spellSaveDc.${sc.classIndex}'),
+            style: style,
+          ),
+          Text(' · Ataque ', style: style),
+          StatValue(
+            statKey: 'spellAttackBonus.${sc.classIndex}',
+            title: 'Ataque de conjuros ($className)',
+            text: formatModifier(sc.attackBonus),
+            breakdown: sheet.breakdown('spellAttackBonus.${sc.classIndex}'),
+            style: style,
+          ),
+          if (sc.preparedMax != null) Text(' · Preparados máx. ${sc.preparedMax}', style: style),
+        ],
+      ),
     );
   }
 }

@@ -499,6 +499,65 @@ class Spellcasting {
   final int? preparedMax;
 }
 
+/// One term of a calculated value (`BreakdownPartDto`). [source] is one of
+/// base, race, subrace, ability, proficiency, expertise, class, armor, shield,
+/// item, override or feature.
+class BreakdownPart {
+  const BreakdownPart({required this.source, required this.label, required this.value});
+
+  factory BreakdownPart.fromJson(Map<String, dynamic> json) => BreakdownPart(
+    source: _str(json['source']),
+    label: _str(json['label']),
+    value: _int(json['value']) ?? 0,
+  );
+
+  final String source;
+  final String label;
+  final int value;
+}
+
+/// A calculated value explained point by point (`ValueBreakdownDto`): the
+/// [parts] add up to [total].
+class ValueBreakdown {
+  const ValueBreakdown({this.total = 0, this.parts = const []});
+
+  factory ValueBreakdown.fromJson(Object? raw) {
+    final json = _map(raw);
+    if (json == null) return const ValueBreakdown();
+    return ValueBreakdown(
+      total: _int(json['total']) ?? 0,
+      parts: _objects(json['parts'], BreakdownPart.fromJson),
+    );
+  }
+
+  /// Null when [raw] is not an object (older servers).
+  static ValueBreakdown? maybeFromJson(Object? raw) =>
+      raw is Map ? ValueBreakdown.fromJson(raw) : null;
+
+  final int total;
+  final List<BreakdownPart> parts;
+
+  /// True when an item or a manual override contributes to the value.
+  bool get hasItemOrOverride => parts.any((p) => p.source == 'item' || p.source == 'override');
+}
+
+/// An item modifier applied to the sheet (`ItemEffectDto`).
+class ItemEffect {
+  const ItemEffect({required this.itemName, required this.kind, this.target, this.value = 0});
+
+  factory ItemEffect.fromJson(Map<String, dynamic> json) => ItemEffect(
+    itemName: _str(json['itemName']),
+    kind: _str(json['kind']),
+    target: _strOrNull(json['target']),
+    value: _int(json['value']) ?? 0,
+  );
+
+  final String itemName;
+  final String kind;
+  final String? target;
+  final int value;
+}
+
 /// The computed sheet (`CharacterSheetDto`). The client never recomputes it.
 class CharacterSheet {
   const CharacterSheet({
@@ -514,6 +573,8 @@ class CharacterSheet {
     this.hitDice = const [],
     this.spellcasting = const [],
     this.overriddenFields = const [],
+    this.itemEffects = const [],
+    this.breakdowns = const {},
   });
 
   factory CharacterSheet.fromJson(Map<String, dynamic> json) {
@@ -540,6 +601,11 @@ class CharacterSheet {
       hitDice: _objects(json['hitDice'], HitDice.fromJson),
       spellcasting: _objects(json['spellcasting'], Spellcasting.fromJson),
       overriddenFields: [for (final f in (json['overriddenFields'] as List? ?? const [])) _str(f)],
+      itemEffects: _objects(json['itemEffects'], ItemEffect.fromJson),
+      breakdowns: {
+        for (final e in (_map(json['breakdowns']) ?? const {}).entries)
+          if (e.value is Map) e.key: ValueBreakdown.fromJson(e.value),
+      },
     );
   }
 
@@ -557,6 +623,17 @@ class CharacterSheet {
 
   /// Override field names such as `armorClass` or `ability.str`.
   final List<String> overriddenFields;
+
+  /// Item modifiers currently applied to the sheet.
+  final List<ItemEffect> itemEffects;
+
+  /// How each value was obtained, by key: `ability.dex`, `save.wis`,
+  /// `skill.stealth`, `armorClass`, `initiative`, `speed`, `hitPointsMax`,
+  /// `passivePerception`, `proficiencyBonus`, `spellSaveDc.<class>`,
+  /// `spellAttackBonus.<class>`. Empty when the server does not send them.
+  final Map<String, ValueBreakdown> breakdowns;
+
+  ValueBreakdown? breakdown(String key) => breakdowns[key];
 
   AbilityScore ability(String key) => abilities[key] ?? const AbilityScore(score: 10, modifier: 0);
 
@@ -578,6 +655,8 @@ class CombatAttack {
     this.range,
     this.properties = const [],
     this.notes,
+    this.attackBreakdown,
+    this.damageBreakdown,
   });
 
   factory CombatAttack.fromJson(Map<String, dynamic> json) => CombatAttack(
@@ -590,6 +669,8 @@ class CombatAttack {
     range: _strOrNull(json['range']),
     properties: [for (final p in (json['properties'] as List? ?? const [])) _str(p)],
     notes: _strOrNull(json['notes']),
+    attackBreakdown: ValueBreakdown.maybeFromJson(json['attackBreakdown']),
+    damageBreakdown: ValueBreakdown.maybeFromJson(json['damageBreakdown']),
   );
 
   final String? itemId;
@@ -603,6 +684,11 @@ class CombatAttack {
   final String? range;
   final List<String> properties;
   final String? notes;
+
+  /// How the attack bonus and the flat damage bonus were obtained; null when
+  /// the server does not send them.
+  final ValueBreakdown? attackBreakdown;
+  final ValueBreakdown? damageBreakdown;
 
   bool hasProperty(String property) =>
       properties.any((p) => p.toLowerCase() == property.toLowerCase());

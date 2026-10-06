@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../catalog/data/models.dart' show ItemArmor, ItemDamage;
+import '../../catalog/data/models.dart' show ItemArmor, ItemDamage, ItemModifier;
 import '../../catalog/domain/catalog_format.dart';
 import '../../catalog/ui/detail_widgets.dart';
 import '../data/models.dart';
@@ -80,11 +80,23 @@ class EffectiveItemPage extends StatelessWidget {
     return max == null ? '$base + mod. Des' : '$base + mod. Des (máx. $max)';
   }
 
-  static String? _bonus(int value) => value == 0 ? null : (value > 0 ? '+$value' : '$value');
+  /// The modifiers to list. Servers that predate the structured modifiers only
+  /// send the attack and damage bonuses, which are shown as modifiers too.
+  List<ItemModifier> get _modifiers {
+    final i = effective;
+    return [
+      ...i.modifiers,
+      if (i.attackBonus != 0 && !i.modifiers.any((m) => m.kind == 'AttackBonus'))
+        ItemModifier(kind: 'AttackBonus', value: i.attackBonus),
+      if (i.damageBonus != 0 && !i.modifiers.any((m) => m.kind == 'DamageBonus'))
+        ItemModifier(kind: 'DamageBonus', value: i.damageBonus),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     final i = effective;
+    final modifiers = _modifiers;
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(i.name, key: const Key('effective-title'))),
@@ -135,12 +147,15 @@ class EffectiveItemPage extends StatelessWidget {
           _row('Sigilo', (i.armor?.stealthDisadvantage ?? false) ? 'Desventaja' : null, const [
             'stealthDisadvantage',
           ]),
-          _row('Bono de ataque', _bonus(i.attackBonus), const ['attackBonus']),
-          _row('Bono de daño', _bonus(i.damageBonus), const ['damageBonus']),
-          if (i.effects.isNotEmpty) ...[
+          if (modifiers.isNotEmpty || i.effects.isNotEmpty) ...[
             Row(
               children: [
                 const Expanded(child: SectionTitle('Efectos')),
+                if (_marked(const ['modifiers', 'attackBonus', 'damageBonus']))
+                  KeyedSubtree(
+                    key: const Key('override-mark-modifiers'),
+                    child: const OverrideBadge(),
+                  ),
                 if (_marked(const ['effects']))
                   KeyedSubtree(
                     key: const Key('override-mark-effects'),
@@ -148,6 +163,7 @@ class EffectiveItemPage extends StatelessWidget {
                   ),
               ],
             ),
+            ModifierLines(modifiers),
             Paragraphs(i.effects),
           ],
           if (i.description.isNotEmpty) ...[

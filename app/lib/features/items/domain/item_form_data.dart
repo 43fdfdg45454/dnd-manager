@@ -1,7 +1,7 @@
-import '../../catalog/data/models.dart' show ItemDetail;
+import '../../catalog/data/models.dart' show ItemDetail, ItemModifier;
 import '../data/models.dart';
 
-bool _sameList(List<String> a, List<String> b) {
+bool _sameList<T>(List<T> a, List<T> b) {
   if (a.length != b.length) return false;
   for (var i = 0; i < a.length; i++) {
     if (a[i] != b[i]) return false;
@@ -35,8 +35,7 @@ class ItemFormData {
     this.stealthDisadvantage = false,
     this.description = const [],
     this.effects = const [],
-    this.attackBonus = 0,
-    this.damageBonus = 0,
+    this.modifiers = const [],
   });
 
   /// Values of a catalog template.
@@ -61,6 +60,7 @@ class ItemFormData {
     stealthDisadvantage: d.armor?.stealthDisadvantage ?? false,
     description: d.description,
     effects: d.effects,
+    modifiers: d.modifiers,
   );
 
   final String name;
@@ -83,8 +83,10 @@ class ItemFormData {
   final bool stealthDisadvantage;
   final List<String> description;
   final List<String> effects;
-  final int attackBonus;
-  final int damageBonus;
+
+  /// Structured modifiers (ability, save, AC, attack bonuses...). The loose
+  /// attack and damage bonuses of old overrides arrive here as modifiers.
+  final List<ItemModifier> modifiers;
 
   ItemTemplateInput toInput() => ItemTemplateInput(
     name: name.trim(),
@@ -107,6 +109,7 @@ class ItemFormData {
     stealthDisadvantage: stealthDisadvantage,
     description: description,
     effects: effects,
+    modifiers: modifiers,
   );
 
   /// The overrides this form represents.
@@ -157,10 +160,11 @@ class ItemFormData {
       weightLb: number(weightLb, b?.weightLb),
       rarity: rarity == null || (b != null && rarity == b.rarity) ? null : rarity,
       requiresAttunement: flag(requiresAttunement, b?.requiresAttunement ?? false),
-      // Templates never carry a bonus, so any non-zero value is an override.
-      attackBonus: attackBonus == 0 ? null : attackBonus,
-      damageBonus: damageBonus == 0 ? null : damageBonus,
       effects: list(effects, b?.effects ?? const []),
+      // Null keeps the template's modifiers; an empty list removes them.
+      modifiers: b != null
+          ? (_sameList(modifiers, b.modifiers) ? null : modifiers)
+          : (modifiers.isEmpty ? null : modifiers),
     );
   }
 }
