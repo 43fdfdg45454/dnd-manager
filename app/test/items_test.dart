@@ -26,6 +26,7 @@ import 'package:go_router/go_router.dart';
 import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';
 import 'helpers/character_fakes.dart';
+import 'helpers/fake_realtime_hub.dart';
 import 'helpers/fakes.dart';
 import 'helpers/party_fakes.dart';
 import 'helpers/item_fakes.dart';
@@ -117,6 +118,7 @@ Future<void> _pumpApp(
     ProviderScope(
       overrides: [
         messagesRepositoryProvider.overrideWithValue(FakeMessagesRepository()),
+        fakeRealtimeOverride(),
         authControllerProvider.overrideWith(() => FixedAuthController(AuthSignedIn(makeUser()))),
         campaignsRepositoryProvider.overrideWithValue(
           FakeCampaignsRepository(campaigns: [makeCampaign(myRole: role)]),

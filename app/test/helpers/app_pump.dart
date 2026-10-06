@@ -21,6 +21,7 @@ import 'package:go_router/go_router.dart';
 
 import 'catalog_fakes.dart';
 import 'character_fakes.dart';
+import 'fake_realtime_hub.dart';
 import 'fakes.dart';
 import 'item_fakes.dart';
 import 'party_fakes.dart';
@@ -97,12 +98,14 @@ class AppFakes {
 /// Pumps the whole app with the real router (`routerProvider`, with its auth
 /// and campaign-role redirects) starting at [location], signed in as [user]
 /// (`u1` by default) against a configured server and the in-memory [fakes].
+/// The realtime hub is [realtime] (a fresh [FakeRealtimeHub] by default).
 /// Returns the router so tests can check `routeInformationProvider.value`.
 Future<GoRouter> pumpRealApp(
   WidgetTester tester, {
   required String location,
   AppFakes? fakes,
   UserDto? user,
+  FakeRealtimeHub? realtime,
   List<Override> overrides = const [],
   Size size = const Size(800, 2400),
 }) async {
@@ -121,6 +124,7 @@ Future<GoRouter> pumpRealApp(
         fakeServerInfoOverride,
         routerInitialLocationProvider.overrideWithValue(location),
         ...backends.overrides,
+        fakeRealtimeOverride(realtime),
         ...overrides,
       ],
       child: Consumer(

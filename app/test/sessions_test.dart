@@ -26,6 +26,7 @@ import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import 'helpers/app_pump.dart';
+import 'helpers/fake_realtime_hub.dart';
 import 'helpers/fakes.dart';
 import 'helpers/party_fakes.dart';
 import 'helpers/session_fakes.dart';
@@ -78,6 +79,7 @@ Future<GoRouter> _pumpApp(
     ProviderScope(
       overrides: [
         messagesRepositoryProvider.overrideWithValue(FakeMessagesRepository()),
+        fakeRealtimeOverride(),
         authControllerProvider.overrideWith(() => FixedAuthController(AuthSignedIn(user))),
         authRepositoryProvider.overrideWithValue(
           authRepository ?? FakeAuthRepository(storage: FakeTokenStorage(), meUser: user),

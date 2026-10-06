@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/cache/stale_data.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/realtime/realtime_events.dart';
+import '../../../core/realtime/realtime_provider.dart';
 import '../../../core/realtime/realtime_status_icon.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_icon.dart';
@@ -28,11 +32,86 @@ enum _MenuAction { settings, documents }
 /// Frame of a campaign: app bar (name, real-time status, transactions, change
 /// requests and menu) and a navigation bar with "General" plus "Mesa del DM"
 /// (DM and Owner) or "Mi sesión" (Player).
-class CampaignShell extends ConsumerWidget {
+///
+/// While mounted it keeps the realtime connection of the campaign open
+/// ([campaignRealtimeProvider]) and tells players when the DM forces a rest or
+/// sends them a secret message.
+class CampaignShell extends ConsumerStatefulWidget {
   const CampaignShell({super.key, required this.campaignId, required this.navigationShell});
 
   final String campaignId;
   final StatefulNavigationShell navigationShell;
+
+  @override
+  ConsumerState<CampaignShell> createState() => _CampaignShellState();
+}
+
+class _CampaignShellState extends ConsumerState<CampaignShell> {
+  ProviderSubscription<Object?>? _realtime;
+  StreamSubscription<CampaignEvent>? _notices;
+
+  String get campaignId => widget.campaignId;
+  StatefulNavigationShell get navigationShell => widget.navigationShell;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenRealtime();
+  }
+
+  @override
+  void didUpdateWidget(CampaignShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.campaignId != widget.campaignId) {
+      _stopRealtime();
+      _listenRealtime();
+    }
+  }
+
+  @override
+  void dispose() {
+    _stopRealtime();
+    super.dispose();
+  }
+
+  void _listenRealtime() {
+    _realtime = ref.listenManual(campaignRealtimeProvider(campaignId), (_, _) {});
+    _notices = ref.read(realtimeHubProvider).events.listen(_onRealtimeEvent);
+  }
+
+  void _stopRealtime() {
+    _realtime?.close();
+    _realtime = null;
+    unawaited(_notices?.cancel());
+    _notices = null;
+  }
+
+  /// Banner for players (the DM is the one who caused these events).
+  void _onRealtimeEvent(CampaignEvent event) {
+    if (!mounted || !event.isFor(campaignId)) return;
+    final role = ref.read(campaignDetailControllerProvider(campaignId)).value?.myRole;
+    if (role == null || role.isAtLeastDm) return;
+    final (key, text) = switch (event) {
+      MessageReceived() => ('realtime-notice-message', 'Mensaje del DM'),
+      PartyRest() => ('realtime-notice-rest', 'El DM ha declarado un descanso'),
+      _ => (null, null),
+    };
+    if (key == null || text == null) return;
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          key: Key(key),
+          content: Text(text),
+          action: event is MessageReceived
+              ? SnackBarAction(
+                  label: 'Ver',
+                  onPressed: () => navigationShell.goBranch(CampaignBranches.player),
+                )
+              : null,
+        ),
+      );
+  }
 
   void _onMenu(BuildContext context, _MenuAction action) => switch (action) {
     _MenuAction.settings => context.push(
@@ -42,7 +121,7 @@ class CampaignShell extends ConsumerWidget {
   };
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final detail = ref.watch(campaignDetailControllerProvider(campaignId));
     final campaign = detail.value;
     final role = campaign?.myRole;
