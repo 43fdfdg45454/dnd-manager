@@ -39,7 +39,7 @@ cd app && flutter run   # la URL del servidor se configura dentro de la app (pan
 cd app && flutter build apk --release --dart-define=API_BASE_URL=https://dnd.example.com
 
 # Despliegue
-cd deploy && cp .env.sample .env && docker compose up -d --build
+cd deploy && cp .env.sample .env && docker compose pull && docker compose up -d
 ```
 
 ## Decisiones fijadas (ver docs/ADR)

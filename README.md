@@ -29,7 +29,7 @@ dotnet run --project src/Dnd.Api      # Swagger en http://localhost:8080/swagger
 # Despliegue con Docker
 cd deploy
 cp .env.sample .env                  # editar valores
-docker compose up -d --build
+docker compose pull && docker compose up -d
 curl http://127.0.0.1:8080/health/ready
 
 # Cliente
