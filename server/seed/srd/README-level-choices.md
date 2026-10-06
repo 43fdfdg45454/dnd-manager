@@ -24,8 +24,8 @@ cada instancia.
 | `prerequisitesText` | `string?` | Prerrequisito literal del SRD ("Prerequisite: 5th level, Pact of the Blade feature"). |
 | `prerequisites` | `object?` | Versión estructurada: `minLevel` (nivel de la clase), `pactBoon` (índice del don), `cantrip` (índice del truco), `abilities` (`{ "str": 13 }`). |
 | `modifiers` | `Modifier[]` | Solo efectos numéricos; `[]` si la opción es solo texto. |
-| `abilityIncrease` | `object?` | Aumento de característica (ninguna opción SRD lo usa; previsto para dotes de paquetes). |
-| `grants` | `object?` | `{ "skills": ["deception"], "cantrips": ["..."], "spells": [{ "index": "hold-person", "minLevel": 3 }] }`. `minLevel` (opcional) es el nivel de clase a partir del cual se concede. |
+| `abilityIncrease` | `object?` | Aumento de característica: `{ "amount": 1, "from": ["str", "dex"] }` (`from` vacío = cualquiera). Ninguna opción SRD lo usa; previsto para dotes de paquetes. |
+| `grants` | `object?` | `{ "skills": ["deception"], "cantrips": ["..."], "spells": [{ "index": "hold-person", "minLevel": 3 }] }`. `minLevel` (opcional) es el nivel de clase a partir del cual se concede. El servidor admite además `armor`, `weapons`, `tools`, `languages` y `savingThrows`. |
 | `resource` | `object?` | Recurso de usos limitados: `{ "key", "name", "max": 1, "recharge": "ShortRest" \| "LongRest" }`. `max` puede ser un entero o una fórmula en texto. |
 
 `Modifier`: `{ "kind", "target", "value", "condition"? }`. `kind` ∈ `AbilityBonus`, `AbilitySet`,

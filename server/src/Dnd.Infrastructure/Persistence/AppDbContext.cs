@@ -58,6 +58,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<CatalogImport> CatalogImports => Set<CatalogImport>();
 
+    public DbSet<OptionSetDefinition> CatalogOptionSets => Set<OptionSetDefinition>();
+
+    public DbSet<OptionDefinition> CatalogOptions => Set<OptionDefinition>();
+
+    public DbSet<LevelChoiceRule> CatalogLevelChoiceRules => Set<LevelChoiceRule>();
+
     public DbSet<Character> Characters => Set<Character>();
 
     public DbSet<CharacterClassLevel> CharacterClassLevels => Set<CharacterClassLevel>();
@@ -71,6 +77,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<CharacterResource> CharacterResources => Set<CharacterResource>();
 
     public DbSet<CharacterOverride> CharacterOverrides => Set<CharacterOverride>();
+
+    public DbSet<CharacterChoice> CharacterChoices => Set<CharacterChoice>();
 
     public DbSet<ChangeRequest> ChangeRequests => Set<ChangeRequest>();
 

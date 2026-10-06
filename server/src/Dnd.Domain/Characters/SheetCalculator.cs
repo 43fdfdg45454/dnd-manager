@@ -1,3 +1,4 @@
+using Dnd.Domain.Catalog;
 using Dnd.Domain.Items;
 using Dnd.Domain.Rules;
 
@@ -17,6 +18,9 @@ public static class SheetCalculator
 
     /// <summary>Armor class of a shield without an armor class of its own.</summary>
     public const int ShieldBonus = 2;
+
+    /// <summary>Ability Score Improvements and feats cannot raise a score above 20.</summary>
+    public const int ImprovementMaxScore = 20;
 
     private const string Barbarian = "barbarian";
     private const string Monk = "monk";
@@ -41,6 +45,7 @@ public static class SheetCalculator
         var overrides = character.Overrides.ToDictionary(o => o.Field, StringComparer.Ordinal);
         var classes = ResolveClasses(character, input.Classes);
         var gear = input.Gear ?? EquippedGear.None;
+        var choices = input.Choices ?? ChoiceEffects.None;
         var breakdowns = new Dictionary<string, ValueBreakdown>(StringComparer.Ordinal);
 
         // Attack and damage bonuses of weapons apply only to the weapon's own attack (CombatCalculator).
@@ -58,6 +63,21 @@ public static class SheetCalculator
             return builder;
         }
 
+        // Modifiers of chosen options: unconditional ones, and "wearingArmor" ones while armor is worn. Attack and
+        // damage bonuses go to the attacks (CombatCalculator).
+        bool FeatureApplies(FeatureModifier m) =>
+            m.Condition is null || (m.Condition == ModifierConditions.WearingArmor && gear.WearsArmor);
+
+        BreakdownBuilder Bonuses(BreakdownBuilder builder, ItemModifierKind kind, string? target = null)
+        {
+            foreach (var m in choices.Modifiers.Where(m => m.Kind == kind && (m.Target is null || m.Target == target) && FeatureApplies(m)))
+            {
+                builder.Add(BreakdownSources.Feature, m.Label, m.Value);
+            }
+
+            return Items(builder, kind, target);
+        }
+
         BreakdownBuilder WithOverride(BreakdownBuilder builder, string field) =>
             overrides.TryGetValue(field, out var o) ? builder.SetTo(BreakdownSources.Override, BreakdownLabels.Override(o.Note), o.Value) : builder;
 
@@ -73,7 +93,7 @@ public static class SheetCalculator
             a =>
             {
                 var field = OverrideFields.Ability(a);
-                var builder = AbilityScore(character, a, input.Race, input.Subrace, modifiers, appliedSets);
+                var builder = AbilityScore(character, a, input.Race, input.Subrace, choices, modifiers, appliedSets);
                 var score = Record(field, WithOverride(builder, field).Clamp(AbilityRules.MinScore, AbilityRules.MaxScore, BreakdownLabels.ScoreLimit));
                 return new AbilityValue(score, AbilityRules.Modifier(score), overrides.ContainsKey(field));
             });
@@ -101,7 +121,7 @@ public static class SheetCalculator
                     builder.Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus);
                 }
 
-                var value = Record(field, WithOverride(Items(builder, ItemModifierKind.SaveBonus, a), field));
+                var value = Record(field, WithOverride(Bonuses(builder, ItemModifierKind.SaveBonus, a), field));
                 return new SavingThrowValue(value, proficient, overrides.ContainsKey(field));
             });
 
@@ -121,7 +141,7 @@ public static class SheetCalculator
                 builder.Add(BreakdownSources.Expertise, BreakdownLabels.Expertise, proficiencyBonus);
             }
 
-            var value = Record(field, WithOverride(Items(builder, ItemModifierKind.SkillBonus, index), field));
+            var value = Record(field, WithOverride(Bonuses(builder, ItemModifierKind.SkillBonus, index), field));
             return new SkillValue(index, name, ability, value, proficiency is not null, expertise, overrides.ContainsKey(field));
         }
 
@@ -138,23 +158,25 @@ public static class SheetCalculator
 
         var initiative = Record(
             OverrideFields.Initiative,
-            WithOverride(Items(FromAbility(Abilities.Dex), ItemModifierKind.InitiativeBonus), OverrideFields.Initiative));
+            WithOverride(Bonuses(FromAbility(Abilities.Dex), ItemModifierKind.InitiativeBonus), OverrideFields.Initiative));
 
         var armorClass = Record(
             OverrideFields.ArmorClass,
-            WithOverride(Items(ArmorClass(classes, gear, Mod), ItemModifierKind.ArmorClassBonus), OverrideFields.ArmorClass));
+            WithOverride(Bonuses(ArmorClass(classes, gear, Mod), ItemModifierKind.ArmorClassBonus), OverrideFields.ArmorClass));
 
         var speedBuilder = input.Race is { } race
             ? new BreakdownBuilder().Add(BreakdownSources.Race, BreakdownLabels.Race, race.Speed)
             : new BreakdownBuilder().Add(BreakdownSources.Base, BreakdownLabels.BaseSpeed, DefaultSpeed);
         var speed = Record(
             OverrideFields.Speed,
-            WithOverride(Items(speedBuilder, ItemModifierKind.SpeedBonus).Clamp(0, int.MaxValue, BreakdownLabels.Minimum), OverrideFields.Speed));
+            WithOverride(Bonuses(speedBuilder, ItemModifierKind.SpeedBonus).Clamp(0, int.MaxValue, BreakdownLabels.Minimum), OverrideFields.Speed));
 
-        var hitPointsBuilder = character.HpMode == HpMode.Average ? AverageHitPoints(classes, Mod(Abilities.Con)) : new BreakdownBuilder();
+        var hitPointsBuilder = character.HpMode == HpMode.Average
+            ? AverageHitPoints(classes, Mod(Abilities.Con), character.HitPointRolls())
+            : new BreakdownBuilder();
         var hitPointsMax = Record(
             OverrideFields.HitPointsMax,
-            Items(WithOverride(hitPointsBuilder, OverrideFields.HitPointsMax), ItemModifierKind.HitPointsMaxBonus)
+            Bonuses(WithOverride(hitPointsBuilder, OverrideFields.HitPointsMax), ItemModifierKind.HitPointsMaxBonus)
                 .Clamp(0, int.MaxValue, BreakdownLabels.Minimum));
 
         var spellcasting = classes
@@ -183,6 +205,11 @@ public static class SheetCalculator
             .ToList();
 
         var (spellSlots, casterLevel) = CalculateSpellSlots(classes);
+        var choiceResources = choices.Resources
+            .Select(r => (r.Resource, ClassLevel: classes.FirstOrDefault(c => c.Level.ClassIndex == r.ClassIndex)?.Level.Level ?? 0))
+            .Where(r => r.ClassLevel > 0)
+            .Select(r => new ResourceTemplate(r.Resource.Key, r.Resource.Name, r.Resource.Evaluate(proficiencyBonus, r.ClassLevel, Mod), r.Resource.Recharge))
+            .ToList();
 
         return new CharacterSheet
         {
@@ -209,6 +236,9 @@ public static class SheetCalculator
                 .Select(m => new AppliedItemEffect(m.ItemName, m.Modifier.Kind, m.Modifier.Target, m.Modifier.Value))
                 .ToList(),
             Breakdowns = breakdowns,
+            FeatureModifiers = choices.Modifiers,
+            ChoiceResources = choiceResources,
+            WearsArmor = gear.WearsArmor,
         };
     }
 
@@ -232,14 +262,16 @@ public static class SheetCalculator
     }
 
     /// <summary>
-    /// Base score + racial bonuses + item bonuses, raised by the highest item set when it is higher
-    /// (recorded in <paramref name="appliedSets"/>). Before the override and the 1-30 limit.
+    /// Base score + racial bonuses + level choice increases (Ability Score Improvements and feats, which cannot
+    /// raise the score above 20) + item bonuses, raised by the highest item set when it is higher (recorded in
+    /// <paramref name="appliedSets"/>). Before the override and the 1-30 limit.
     /// </summary>
     private static BreakdownBuilder AbilityScore(
         Character character,
         string ability,
         RaceInfo? race,
         SubraceInfo? subrace,
+        ChoiceEffects choices,
         List<ActiveModifier> modifiers,
         HashSet<ActiveModifier> appliedSets)
     {
@@ -257,6 +289,22 @@ public static class SheetCalculator
             {
                 builder.Add(BreakdownSources.Subrace, BreakdownLabels.Subrace, subraceBonus);
             }
+        }
+
+        var natural = builder.Total;
+        foreach (var increase in choices.AbilityIncreases.Where(i => i.Ability == ability))
+        {
+            builder.Add(BreakdownSources.Feature, increase.Label, increase.Amount);
+        }
+
+        foreach (var m in choices.Modifiers.Where(m => m.Kind == ItemModifierKind.AbilityBonus && m.Target == ability && m.Condition is null))
+        {
+            builder.Add(BreakdownSources.Feature, m.Label, m.Value);
+        }
+
+        if (builder.Total > ImprovementMaxScore && builder.Total > natural)
+        {
+            builder.SetTo(BreakdownSources.Feature, BreakdownLabels.ImprovementLimit, Math.Max(ImprovementMaxScore, natural));
         }
 
         foreach (var m in modifiers.Where(m => m.Modifier.Kind == ItemModifierKind.AbilityBonus && m.Modifier.Target == ability))
@@ -327,31 +375,43 @@ public static class SheetCalculator
     }
 
     /// <summary>
-    /// Max die + Con at 1st level of the main class; (die / 2 + 1) + Con per other level; at least 1 per
-    /// level. One part per class (its dice) and one part for Constitution.
+    /// Max die + Con at 1st level of the main class; for every other level the roll made when it was gained
+    /// (<paramref name="rolls"/>) or, without one, (die / 2 + 1); plus Con; at least 1 per level. One part per
+    /// class (its dice, naming the rolls) and one part for Constitution.
     /// </summary>
-    private static BreakdownBuilder AverageHitPoints(List<ResolvedClass> classes, int conModifier)
+    private static BreakdownBuilder AverageHitPoints(List<ResolvedClass> classes, int conModifier, IReadOnlyDictionary<(string ClassIndex, int Level), int> rolls)
     {
         var builder = new BreakdownBuilder();
         var conTotal = 0;
         for (var i = 0; i < classes.Count; i++)
         {
             var die = classes[i].Info.HitDie;
-            var perLevel = Math.Max(1, die / 2 + 1 + conModifier);
-            var levels = classes[i].Level.Level;
+            var classIndex = classes[i].Level.ClassIndex;
+            var classLevel = classes[i].Level.Level;
             var total = 0;
-            if (i == 0)
+            var rolled = new List<int>();
+            for (var level = 1; level <= classLevel; level++)
             {
-                total += Math.Max(1, die + conModifier);
-                levels--;
+                if (i == 0 && level == 1)
+                {
+                    total += Math.Max(1, die + conModifier);
+                }
+                else if (rolls.TryGetValue((classIndex, level), out var roll))
+                {
+                    rolled.Add(roll);
+                    total += Math.Max(1, roll + conModifier);
+                }
+                else
+                {
+                    total += Math.Max(1, die / 2 + 1 + conModifier);
+                }
             }
 
-            total += levels * perLevel;
-            var classLevel = classes[i].Level.Level;
             conTotal += classLevel * conModifier;
+            var rollsText = rolled.Count == 0 ? string.Empty : $"; tiradas {string.Join(", ", rolled)}";
             builder.Add(
                 BreakdownSources.Class,
-                $"{BreakdownLabels.Class(classes[i].Level.ClassIndex)} {classLevel} (d{die})",
+                $"{BreakdownLabels.Class(classIndex)} {classLevel} (d{die}{rollsText})",
                 total - classLevel * conModifier);
         }
 

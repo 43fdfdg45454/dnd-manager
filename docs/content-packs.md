@@ -158,7 +158,7 @@ Notación: `string?` admite `null` o ausencia; **obligatorio** indica que no pue
 
 | Campo | Tipo | Reglas |
 | --- | --- | --- |
-| `formatVersion` | `int?` | Versión del formato. Opcional; si se indica, debe ser `1`. |
+| `formatVersion` | `int?` | Versión del formato: `1` (por defecto) o `2`. El formato 2 añade `optionSets`, `levelChoices` y `grants` ([ver abajo](#formato-2-elecciones-por-nivel)). |
 | `id` | `string` | **Obligatorio**. `[a-z0-9-]{3,40}`. Identifica el paquete y es el prefijo de sus índices. `srd` y `homebrew` están reservados. |
 | `name` | `string` | **Obligatorio**, ≤ 200. Nombre visible ("Reinos de Ejemplo"). |
 | `version` | `string` | **Obligatorio**, ≤ 40. Versión libre del paquete (`1.0.0`). |
@@ -167,6 +167,7 @@ Notación: `string?` admite `null` o ausencia; **obligatorio** indica que no pue
 | `spells` | `Spell[]?` | Conjuros. |
 | `races` | `Race[]?` | Razas con sus rasgos y subrazas. |
 | `backgrounds` | `Background[]?` | Trasfondos. |
+| `optionSets` | `OptionSet[]?` | Formato 2. Conjuntos de opciones (dotes, estilos de combate, invocaciones...). |
 
 ### `ClassExtension`
 
@@ -338,7 +339,7 @@ Solo el administrador de la instancia.
 | `GET /api/v1/catalog/sources` (cualquier usuario) | `200 [{ id, name, version }]`: `srd` y los paquetes, para etiquetar el contenido |
 
 `counts` tiene el número de `subclasses`, `features`, `items`, `spells`, `races`, `subraces`,
-`traits` y `backgrounds` importados.
+`traits`, `backgrounds`, `optionSets`, `options` y `levelChoices` importados.
 
 **Reimportar** (mismo `id`, misma u otra `version`) reemplaza todo el contenido del paquete en una
 transacción. Los objetos se actualizan por `index` y **conservan su identificador**, así que los
@@ -354,3 +355,174 @@ de aparecer en el catálogo. Reimportar el paquete lo restaura todo.
 El contenido del catálogo indica su origen en `source` (`srd`, `homebrew` para objetos de campaña o
 el `id` del paquete). Actualizar el SRD (nueva versión del servidor) no toca los paquetes, y las
 copias de seguridad de la base de datos los incluyen.
+
+## Formato 2: elecciones por nivel
+
+Con `"formatVersion": 2` un paquete puede ampliar el **asistente de subida de nivel**: añadir opciones
+a los conjuntos del SRD (dotes a `feats`, estilos a `fighting-styles`, invocaciones a
+`eldritch-invocations`...), crear conjuntos nuevos, declarar las elecciones de sus subclases (y de las
+clases base) y lo que conceden. Sin `formatVersion: 2`, los campos de esta sección son un error. El
+formato 1 sigue aceptándose tal cual.
+
+### Ejemplo ficticio
+
+Añade una dote al conjunto `feats` del SRD y una subclase de guerrero con una elección de nivel 3 de
+un conjunto nuevo:
+
+```json
+{
+  "formatVersion": 2,
+  "id": "tierras-ejemplo",
+  "name": "Tierras de Ejemplo",
+  "version": "2.0.0",
+  "optionSets": [
+    {
+      "setId": "feats",
+      "options": [
+        {
+          "index": "tierras-ejemplo-vigia-incansable",
+          "name": "Vigía incansable",
+          "description": ["Texto de ejemplo: nunca bajas la guardia. Ganas +1 a Sabiduría y +2 a la iniciativa."],
+          "prerequisitesText": "Prerrequisito: Sabiduría 13 o más",
+          "prerequisites": { "abilities": { "wis": 13 } },
+          "modifiers": [{ "kind": "InitiativeBonus", "value": 2 }],
+          "abilityIncrease": { "amount": 1, "from": ["wis"] }
+        }
+      ]
+    },
+    {
+      "setId": "tierras-ejemplo-juramentos",
+      "name": "Juramentos de la Guardia",
+      "options": [
+        {
+          "index": "tierras-ejemplo-juramento-del-muro",
+          "name": "Juramento del Muro",
+          "description": ["Texto de ejemplo: mientras lleves armadura, ganas +1 a la CA."],
+          "modifiers": [{ "kind": "ArmorClassBonus", "value": 1, "condition": "wearingArmor" }]
+        },
+        {
+          "index": "tierras-ejemplo-juramento-del-faro",
+          "name": "Juramento del Faro",
+          "description": ["Texto de ejemplo: conoces el truco luz y puedes lanzar un destello tantas veces como tu bonificador por competencia."],
+          "grants": { "cantrips": ["light"] },
+          "resource": { "key": "tierras-ejemplo-destello", "name": "Destello", "max": "proficiencyBonus", "recharge": "LongRest" }
+        }
+      ]
+    }
+  ],
+  "classesExtended": [
+    {
+      "classIndex": "fighter",
+      "subclasses": [
+        {
+          "index": "tierras-ejemplo-guardia",
+          "name": "Guardia de las Tierras",
+          "flavor": "Arquetipo marcial",
+          "description": ["Guardianes ficticios que juran proteger los caminos de las Tierras de Ejemplo."],
+          "levels": [
+            {
+              "level": 3,
+              "features": [
+                { "index": "tierras-ejemplo-juramento", "name": "Juramento", "description": ["Texto de ejemplo: al entrar en la Guardia pronuncias un juramento."] }
+              ],
+              "grants": { "skills": ["perception"] }
+            }
+          ],
+          "levelChoices": [
+            {
+              "level": 3,
+              "key": "juramento",
+              "name": "Juramento",
+              "kind": "OptionSet",
+              "setId": "tierras-ejemplo-juramentos",
+              "choose": 1,
+              "note": "Elige el juramento de tu Guardia."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+El mismo fichero se usa en los tests: `server/tests/Dnd.Api.Tests/Fixtures/content-pack-v2-example.json`.
+Al subir a guerrero 3, el asistente ofrece la subclase "Guardia de las Tierras" junto a las del SRD y,
+si se elige, también el "Juramento"; al subir a nivel 4, la dote aparece junto a Grappler.
+
+### `OptionSet`
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `setId` | `string` | **Obligatorio**. Si ya existe en el SRD o en otro paquete (`feats`, `fighting-styles`, `eldritch-invocations`, `metamagic`, `pact-boons`, `favored-enemies`...), las opciones se **añaden** a ese conjunto. Si no, es un conjunto nuevo y su id lleva el prefijo del paquete. |
+| `name` | `string` | **Obligatorio** en los conjuntos nuevos (≤ 200); se ignora en los existentes. |
+| `options` | `Option[]?` | Opciones del conjunto. |
+
+### `Option`
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `index` | `string` | **Obligatorio**, con prefijo (también al añadir a conjuntos del SRD). |
+| `name` | `string` | **Obligatorio**, ≤ 200. |
+| `description` | `string[]?` | Párrafos. |
+| `prerequisitesText` | `string?` | ≤ 2000. Texto literal del prerrequisito. |
+| `prerequisites` | `Prerequisites?` | Versión que la app comprueba (ver abajo). |
+| `modifiers` | `Modifier[]?` | ≤ 10 efectos numéricos: los de los objetos más `condition`. |
+| `abilityIncrease` | `AbilityIncrease?` | Dotes: `{ "amount": 1-2, "from": ["str", "dex"] }`. `from` vacío = cualquier característica; con una sola, se aplica sin preguntar. El tope de 20 se respeta. |
+| `grants` | `Grants?` | Competencias y conjuros que concede. |
+| `resource` | `Resource?` | Recurso de usos limitados que aparece como recurso automático del personaje. |
+
+**`Prerequisites`** (todas las condiciones dadas deben cumplirse): `minLevel` (1–20, nivel en la
+clase de la elección), `pactBoon` (índice del don del pacto elegido, p. ej. `pact-of-the-blade`),
+`cantrip` (índice de un truco que el personaje conozca), `abilities` (`{ "str": 13 }`, 1–30). Las
+opciones sin cumplir aparecen en el asistente como no elegibles, con el motivo.
+
+**`Modifier`**: `kind`, `target` y `value` como en los objetos, más `condition` opcional:
+
+| `condition` | Se aplica cuando… | Cálculo |
+| --- | --- | --- |
+| *(ausente)* | siempre | hoja y ataques |
+| `wearingArmor` | lleva armadura | hoja (CA, salvaciones...) |
+| `rangedWeapon` | ataca con un arma a distancia (munición o subcategoría "Ranged") | ataques |
+| `oneHandedMeleeNoOtherWeapon` | arma cuerpo a cuerpo sin la propiedad "two-handed" y ninguna otra arma equipada (no se suma al daño a dos manos de una versátil) | ataques |
+| `twoHandedMelee` | arma cuerpo a cuerpo "two-handed", o el daño a dos manos de una versátil | ataques |
+| `twoWeaponFighting` | segunda arma al combatir con dos armas | solo texto (no hay línea de ataque de la segunda arma) |
+
+Los bonos aparecen en los desgloses con el nombre de la opción y el nivel: "Juramento del Muro (nivel 3)".
+
+**`Grants`**: `skills` (índices de habilidad), `armor`, `weapons`, `tools`, `languages` (textos ≤ 100),
+`savingThrows` (características), `cantrips` (índices de conjuro) y `spells`
+(`[{ "index": "hold-person", "minLevel": 3 }]`, `minLevel` opcional: nivel de la clase desde el que se
+concede). Las competencias se añaden con origen "Clase"; los conjuros, siempre preparados. Los
+conjuros y trucos deben existir en el SRD o en el paquete.
+
+**`Resource`**: `key` (índice, sin prefijo obligatorio), `name` (**obligatorio**, ≤ 100), `max` (entero
+1–999 o fórmula: `proficiencyBonus`, `classLevel`, `halfClassLevel`, `mod:cha`... mínimo 1) y
+`recharge` (`ShortRest`, `LongRest` por defecto, `Dawn` o `Manual`).
+
+### `levelChoices`
+
+En `classesExtended[].levelChoices` (elecciones de la clase base) y en
+`classesExtended[].subclasses[].levelChoices` (de la subclase). Cada una:
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `level` | `int` | **Obligatorio**, 1–20: nivel de la clase en que se elige. |
+| `key` | `string` | **Obligatorio**, minúsculas, números y guiones, ≤ 100. Única por clase, subclase y nivel; no puede coincidir con una elección del SRD o de otro paquete (p. ej. `asi` del guerrero 4). |
+| `name` | `string` | **Obligatorio**, ≤ 200. |
+| `kind` | `string` | **Obligatorio**: `Subclass`, `OptionSet`, `AsiOrFeat`, `Expertise`, `Skill`, `Language`, `Tool`, `CantripsKnown`, `SpellsKnown`, `SpellbookSpells` o `Custom`. |
+| `setId` | `string?` | Conjunto de donde salen las opciones; **obligatorio** en `OptionSet`. Puede ser del SRD, de otro paquete o del propio paquete. |
+| `choose` | `int` | **Obligatorio**, 0–20: cuántas elecciones da este nivel. |
+| `from` | `string[]?` | Subconjunto permitido del conjunto (índices de opciones que deben existir en él) o, en `Language`/`Tool`, los valores posibles. Sin `from`, todo el conjunto (o texto libre). |
+| `replaces` | `bool?` | Desde este nivel, en cada nivel de la clase se puede sustituir una elección ya hecha. |
+| `cumulative` | `bool?` | Se suma a lo elegido en niveles anteriores. |
+| `note` | `string?` | ≤ 2000. Aclaración para la interfaz. |
+| `filter` | `Filter?` | Conjuros: `spellList` (clase o `any`), `spellLevels` (`[1, 2]`), `maxSpellLevelBySlots`, `source` (`list`, `spellbook` o `known`), `cantripsOnly`. |
+
+`AsiOrFeat` ofrece siempre la mejora de característica y las dotes del conjunto `feats`. Las
+elecciones `Custom` se validan solo por número.
+
+### `levels[].grants`
+
+Cada nivel de una subclase puede llevar `grants` (mismo formato): se aplican al alcanzar ese nivel de
+la clase con la subclase elegida (dominios con conjuros siempre preparados, competencias extra...).

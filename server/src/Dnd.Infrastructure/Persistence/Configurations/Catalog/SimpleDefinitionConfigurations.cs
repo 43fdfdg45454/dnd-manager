@@ -58,7 +58,7 @@ internal sealed class CatalogImportConfiguration : IEntityTypeConfiguration<Cata
         builder.Property(x => x.Id).ValueGeneratedNever();
         builder.Property(x => x.Ruleset).HasMaxLength(CatalogImport.RulesetMaxLength).IsRequired();
         builder.Property(x => x.Name).HasMaxLength(CatalogColumns.NameMaxLength);
-        builder.Property(x => x.DatasetVersion).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.DatasetVersion).HasMaxLength(200).IsRequired();
         builder.HasIndex(x => new { x.Ruleset, x.DatasetVersion }).IsUnique();
         builder.Property(x => x.ImportedAt).IsRequired();
         builder.Property(x => x.CountsJson).IsRequired();

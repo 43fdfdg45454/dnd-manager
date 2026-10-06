@@ -29,7 +29,7 @@ internal sealed record SrdCatalog(
 internal static class SrdDataset
 {
     /// <summary>Commit and date of the 5e-database snapshot in <c>server/seed/srd</c>.</summary>
-    public const string Version = "5e-database@a6212beb (2026-10-02) consumables 2026-10-06, item modifiers 2026-10-06, skill choices 2026-10-06";
+    public const string Version = "5e-database@a6212beb (2026-10-02); 2026-10-06: consumables, modifiers, skill choices, level choices";
 
     private const string ResourcePrefix = "5e-SRD-";
 

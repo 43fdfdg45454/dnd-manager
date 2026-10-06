@@ -46,6 +46,7 @@ public static class BreakdownLabels
     public const string ScoreLimit = "Límite de puntuación (1-30)";
     public const string Minimum = "Mínimo 0";
     public const string ManualAdjustment = "Ajuste manual";
+    public const string ImprovementLimit = "Límite de las mejoras (20)";
 
     private static readonly Dictionary<string, string> AbilityNames = new(StringComparer.Ordinal)
     {

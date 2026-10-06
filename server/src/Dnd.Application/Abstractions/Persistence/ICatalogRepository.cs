@@ -60,4 +60,21 @@ public interface ICatalogRepository
     Task<IReadOnlyList<BackgroundDefinition>> ListBackgroundsByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<SpellDefinition>> ListSpellsByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<FeatureDefinition>> ListFeaturesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default);
+
+    // Level choices (phase 16c).
+
+    /// <summary>Every spell of the catalog (a few hundred), for the spell choices of the level-up plan.</summary>
+    Task<IReadOnlyList<SpellDefinition>> ListAllSpellsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Level choice rules of a class and its subclasses, every level.</summary>
+    Task<IReadOnlyList<LevelChoiceRule>> ListLevelChoiceRulesAsync(string classIndex, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<OptionSetDefinition>> ListOptionSetsAsync(IReadOnlyCollection<string> setIds, CancellationToken cancellationToken = default);
+
+    /// <summary>Options of the given sets, ordered by name.</summary>
+    Task<IReadOnlyList<OptionDefinition>> ListOptionsBySetAsync(IReadOnlyCollection<string> setIds, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<OptionDefinition>> ListOptionsByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default);
 }

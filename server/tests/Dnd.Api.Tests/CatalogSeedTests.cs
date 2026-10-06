@@ -55,6 +55,26 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
     }
 
     [Fact]
+    public async Task Startup_imports_the_srd_level_choice_catalog()
+    {
+        factory.CreateClient().Dispose();
+
+        await factory.WithDbAsync(async db =>
+        {
+            Assert.Equal(13, await db.CatalogOptionSets.CountAsync(x => x.Source == CatalogSources.Srd));
+            Assert.Equal(99, await db.CatalogOptions.CountAsync(x => x.Source == CatalogSources.Srd));
+            Assert.Equal(197, await db.CatalogLevelChoiceRules.CountAsync(x => x.Source == CatalogSources.Srd));
+
+            var defense = await db.CatalogOptions.SingleAsync(x => x.Index == "fighting-style-defense");
+            Assert.Equal([new ChoiceModifier(ItemModifierKind.ArmorClassBonus, null, 1, ModifierConditions.WearingArmor)], defense.Modifiers);
+            var rule = await db.CatalogLevelChoiceRules.SingleAsync(x => x.Id == "warlock/-/2/eldritch-invocations");
+            Assert.Equal((LevelChoiceKind.OptionSet, 2, true, true), (rule.Kind, rule.Choose, rule.Replaces, rule.Cumulative));
+            Assert.True((await db.CatalogLevelChoiceRules.SingleAsync(x => x.Id == "wizard/-/2/spellbook")).Filter.MaxSpellLevelBySlots);
+            Assert.Contains("\"levelChoiceRules\":197", (await db.CatalogImports.SingleAsync()).CountsJson);
+        });
+    }
+
+    [Fact]
     public async Task Srd_items_with_numeric_effects_get_structured_modifiers()
     {
         factory.CreateClient().Dispose();

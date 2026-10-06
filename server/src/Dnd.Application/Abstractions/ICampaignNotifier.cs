@@ -42,6 +42,9 @@ public static class CampaignEventTypes
 
     /// <summary>A DM granted a level-up to the character (sent to the campaign and to the character's owner).</summary>
     public const string LevelUpGranted = "levelUp.granted";
+
+    /// <summary>The character completed a level-up (sent to the campaign, together with <see cref="CharacterUpdated"/>).</summary>
+    public const string LevelUpCompleted = "levelUp.completed";
 }
 
 /// <summary>

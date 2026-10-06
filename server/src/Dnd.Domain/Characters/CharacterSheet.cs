@@ -83,6 +83,18 @@ public sealed record CharacterSheet
     /// </summary>
     public IReadOnlyDictionary<string, ValueBreakdown> Breakdowns { get; init; } = new Dictionary<string, ValueBreakdown>();
 
+    /// <summary>
+    /// Modifiers of the chosen options and feats (every one, conditional ones included); the attack and damage
+    /// bonuses are applied by <see cref="CombatCalculator"/> to the attacks that meet their condition.
+    /// </summary>
+    public IReadOnlyList<FeatureModifier> FeatureModifiers { get; init; } = [];
+
+    /// <summary>Automatic resources granted by the chosen options, for <see cref="Character.SyncAutoResources"/>.</summary>
+    public IReadOnlyList<ResourceTemplate> ChoiceResources { get; init; } = [];
+
+    /// <summary>Whether the character wears armor (conditions such as Defense depend on it).</summary>
+    public bool WearsArmor { get; init; }
+
     /// <summary>Modifier of each ability by index; input for <see cref="ClassResourceRules"/>.</summary>
     public IReadOnlyDictionary<string, int> AbilityModifiers => Abilities.ToDictionary(a => a.Key, a => a.Value.Modifier);
 

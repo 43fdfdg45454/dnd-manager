@@ -1,0 +1,78 @@
+{
+  "formatVersion": 2,
+  "id": "tierras-ejemplo",
+  "name": "Tierras de Ejemplo",
+  "version": "2.0.0",
+  "optionSets": [
+    {
+      "setId": "feats",
+      "options": [
+        {
+          "index": "tierras-ejemplo-vigia-incansable",
+          "name": "Vigía incansable",
+          "description": ["Texto de ejemplo: nunca bajas la guardia. Ganas +1 a Sabiduría y +2 a la iniciativa."],
+          "prerequisitesText": "Prerrequisito: Sabiduría 13 o más",
+          "prerequisites": { "abilities": { "wis": 13 } },
+          "modifiers": [{ "kind": "InitiativeBonus", "value": 2 }],
+          "abilityIncrease": { "amount": 1, "from": ["wis"] }
+        }
+      ]
+    },
+    {
+      "setId": "tierras-ejemplo-juramentos",
+      "name": "Juramentos de la Guardia",
+      "options": [
+        {
+          "index": "tierras-ejemplo-juramento-del-muro",
+          "name": "Juramento del Muro",
+          "description": ["Texto de ejemplo: mientras lleves armadura, ganas +1 a la CA."],
+          "modifiers": [{ "kind": "ArmorClassBonus", "value": 1, "condition": "wearingArmor" }]
+        },
+        {
+          "index": "tierras-ejemplo-juramento-del-faro",
+          "name": "Juramento del Faro",
+          "description": ["Texto de ejemplo: conoces el truco luz y puedes lanzar un destello tantas veces como tu bonificador por competencia."],
+          "grants": { "cantrips": ["light"] },
+          "resource": { "key": "tierras-ejemplo-destello", "name": "Destello", "max": "proficiencyBonus", "recharge": "LongRest" }
+        }
+      ]
+    }
+  ],
+  "classesExtended": [
+    {
+      "classIndex": "fighter",
+      "subclasses": [
+        {
+          "index": "tierras-ejemplo-guardia",
+          "name": "Guardia de las Tierras",
+          "flavor": "Arquetipo marcial",
+          "description": ["Guardianes ficticios que juran proteger los caminos de las Tierras de Ejemplo."],
+          "levels": [
+            {
+              "level": 3,
+              "features": [
+                {
+                  "index": "tierras-ejemplo-juramento",
+                  "name": "Juramento",
+                  "description": ["Texto de ejemplo: al entrar en la Guardia pronuncias un juramento."]
+                }
+              ],
+              "grants": { "skills": ["perception"] }
+            }
+          ],
+          "levelChoices": [
+            {
+              "level": 3,
+              "key": "juramento",
+              "name": "Juramento",
+              "kind": "OptionSet",
+              "setId": "tierras-ejemplo-juramentos",
+              "choose": 1,
+              "note": "Elige el juramento de tu Guardia."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

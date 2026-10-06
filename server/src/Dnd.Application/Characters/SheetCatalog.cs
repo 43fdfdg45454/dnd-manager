@@ -20,6 +20,7 @@ public sealed class SheetCatalog
     private readonly Dictionary<string, SubraceDefinition> _subraces;
     private readonly Dictionary<string, BackgroundDefinition> _backgrounds;
     private readonly Dictionary<string, SpellDefinition> _spells;
+    private readonly Dictionary<string, OptionDefinition> _options;
     private readonly IReadOnlyList<SkillInfo> _skills;
 
     private SheetCatalog(
@@ -30,6 +31,7 @@ public sealed class SheetCatalog
         IEnumerable<SubraceDefinition> subraces,
         IEnumerable<BackgroundDefinition> backgrounds,
         IEnumerable<SpellDefinition> spells,
+        IEnumerable<OptionDefinition> options,
         IReadOnlyList<SkillInfo> skills)
     {
         _classes = classes.ToDictionary(c => c.Index, StringComparer.Ordinal);
@@ -39,6 +41,7 @@ public sealed class SheetCatalog
         _subraces = subraces.ToDictionary(s => s.Index, StringComparer.Ordinal);
         _backgrounds = backgrounds.ToDictionary(b => b.Index, StringComparer.Ordinal);
         _spells = spells.ToDictionary(s => s.Index, StringComparer.Ordinal);
+        _options = options.ToDictionary(o => o.Index, StringComparer.Ordinal);
         _skills = skills;
     }
 
@@ -65,7 +68,10 @@ public sealed class SheetCatalog
             : [];
         var skills = (await catalog.ListSkillsAsync(cancellationToken)).Select(SkillInfo.From).ToList();
 
-        return new SheetCatalog(classes, levels, subclasses, races, subraces, backgrounds, spells, skills);
+        // Options picked in level choices (fighting styles, invocations, feats...): their effects enter the sheet.
+        var options = await catalog.ListOptionsByIndexAsync(Distinct(characters.SelectMany(ChoiceEffects.OptionIndexes)), cancellationToken);
+
+        return new SheetCatalog(classes, levels, subclasses, races, subraces, backgrounds, spells, options, skills);
     }
 
     public ClassDefinition? Class(string index) => _classes.GetValueOrDefault(index);
@@ -79,6 +85,8 @@ public sealed class SheetCatalog
     public BackgroundDefinition? Background(string? index) => index is null ? null : _backgrounds.GetValueOrDefault(index);
 
     public SpellDefinition? Spell(string index) => _spells.GetValueOrDefault(index);
+
+    public OptionDefinition? Option(string index) => _options.GetValueOrDefault(index);
 
     /// <summary>Input of <see cref="SheetCalculator.Calculate"/> for a character covered by this catalog.</summary>
     public SheetInput InputFor(Character character, EquippedGear gear)
@@ -95,6 +103,7 @@ public sealed class SheetCatalog
             race is null ? null : RaceInfo.From(race),
             subrace is null ? null : SubraceInfo.From(subrace),
             _skills,
-            gear);
+            gear,
+            character.Choices.Count == 0 ? null : ChoiceEffects.Build(character, Option));
     }
 }

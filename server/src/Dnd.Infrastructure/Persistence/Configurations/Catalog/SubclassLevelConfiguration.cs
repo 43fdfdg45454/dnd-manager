@@ -18,5 +18,6 @@ internal sealed class SubclassLevelConfiguration : IEntityTypeConfiguration<Subc
         builder.HasOne<SubclassDefinition>().WithMany().HasForeignKey(x => x.SubclassIndex).OnDelete(DeleteBehavior.Cascade);
 
         builder.Property(x => x.FeatureIndexes).HasJsonListConversion();
+        builder.Ignore(x => x.Grants);
     }
 }

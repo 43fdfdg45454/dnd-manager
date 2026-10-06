@@ -154,4 +154,28 @@ internal sealed class CatalogRepository(AppDbContext db) : ICatalogRepository
 
     public async Task<IReadOnlyList<SpellDefinition>> ListSpellsByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
         indexes.Count == 0 ? [] : await db.CatalogSpells.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<FeatureDefinition>> ListFeaturesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
+        indexes.Count == 0 ? [] : await db.CatalogFeatures.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<SpellDefinition>> ListAllSpellsAsync(CancellationToken cancellationToken = default) =>
+        await db.CatalogSpells.AsNoTracking().OrderBy(x => x.Level).ThenBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<LevelChoiceRule>> ListLevelChoiceRulesAsync(string classIndex, CancellationToken cancellationToken = default) =>
+        await db.CatalogLevelChoiceRules.AsNoTracking()
+            .Where(x => x.ClassIndex == classIndex)
+            .OrderBy(x => x.Level)
+            .ThenBy(x => x.Id)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<OptionSetDefinition>> ListOptionSetsAsync(IReadOnlyCollection<string> setIds, CancellationToken cancellationToken = default) =>
+        setIds.Count == 0 ? [] : await db.CatalogOptionSets.AsNoTracking().Where(x => setIds.Contains(x.SetId)).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<OptionDefinition>> ListOptionsBySetAsync(IReadOnlyCollection<string> setIds, CancellationToken cancellationToken = default) =>
+        setIds.Count == 0
+            ? []
+            : await db.CatalogOptions.AsNoTracking().Where(x => setIds.Contains(x.SetId)).OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<OptionDefinition>> ListOptionsByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
+        indexes.Count == 0 ? [] : await db.CatalogOptions.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
 }

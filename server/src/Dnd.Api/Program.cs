@@ -176,6 +176,7 @@ app.MapPartyEndpoints();
 app.MapPartyStashEndpoints();
 app.MapMessageEndpoints();
 app.MapRestRequestEndpoints();
+app.MapLevelUpEndpoints();
 app.MapRealtimeEndpoints();
 app.MapHub<CampaignHub>(CampaignHub.Path).RequireRateLimiting(RateLimitingSetup.HubPolicy);
 

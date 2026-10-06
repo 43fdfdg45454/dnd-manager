@@ -16,6 +16,7 @@ internal sealed class CharacterRepository(AppDbContext db) : ICharacterRepositor
             .Include(x => x.Resources)
             .Include(x => x.Overrides)
             .Include(x => x.Items)
+            .Include(x => x.Choices)
             // One query per collection instead of their cartesian product.
             .AsSplitQuery()
             .Where(x => x.Id == id)
@@ -34,6 +35,7 @@ internal sealed class CharacterRepository(AppDbContext db) : ICharacterRepositor
             .AsNoTracking()
             .Include(x => x.Classes)
             .Include(x => x.Overrides)
+            .Include(x => x.Choices)
             .AsSplitQuery()
             .Where(x => x.CampaignId == campaignId)
             .OrderBy(x => x.Id)
@@ -48,6 +50,7 @@ internal sealed class CharacterRepository(AppDbContext db) : ICharacterRepositor
             .Include(x => x.Resources)
             .Include(x => x.Overrides)
             .Include(x => x.Items)
+            .Include(x => x.Choices)
             .AsSplitQuery()
             .Where(x => x.CampaignId == campaignId && x.Status == CharacterStatus.Active)
             .OrderBy(x => x.Id)

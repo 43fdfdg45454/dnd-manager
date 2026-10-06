@@ -8,14 +8,20 @@ using Dnd.Domain.Items;
 
 namespace Dnd.Infrastructure.Catalog;
 
-/// <summary>Catalog data a content pack can reference: SRD classes, SRD subclasses and skills.</summary>
+/// <summary>Catalog data a content pack can reference: SRD classes, SRD subclasses, skills and (format 2) option sets, options and spells.</summary>
 /// <param name="Classes">Class index → subclass flavor (e.g. "Martial Archetype").</param>
 /// <param name="SrdSubclasses">SRD subclass index → class index.</param>
 /// <param name="Skills">Skill index ("perception") → name ("Perception").</param>
+/// <param name="OptionSets">Option set id → source (the SRD or a pack).</param>
+/// <param name="Options">Option index → (set id, source).</param>
+/// <param name="Spells">Spell index → source.</param>
 internal sealed record ContentPackContext(
     IReadOnlyDictionary<string, string> Classes,
     IReadOnlyDictionary<string, string> SrdSubclasses,
-    IReadOnlyDictionary<string, string> Skills);
+    IReadOnlyDictionary<string, string> Skills,
+    IReadOnlyDictionary<string, string>? OptionSets = null,
+    IReadOnlyDictionary<string, (string SetId, string Source)>? Options = null,
+    IReadOnlyDictionary<string, string>? Spells = null);
 
 /// <summary>Catalog rows of a valid content pack, every one with <c>Source</c> = the pack id.</summary>
 internal sealed class ContentPackRows
@@ -38,8 +44,17 @@ internal sealed class ContentPackRows
 
     public List<(string Index, ItemTemplateData Data)> Items { get; } = [];
 
+    public List<OptionSetDefinition> OptionSets { get; } = [];
+
+    public List<OptionDefinition> Options { get; } = [];
+
+    public List<LevelChoiceRule> LevelChoiceRules { get; } = [];
+
     public Dictionary<string, int> Counts() => new()
     {
+        ["optionSets"] = OptionSets.Count,
+        ["options"] = Options.Count,
+        ["levelChoices"] = LevelChoiceRules.Count,
         ["subclasses"] = Subclasses.Count,
         ["features"] = Features.Count,
         ["items"] = Items.Count,
@@ -59,7 +74,10 @@ internal sealed class ContentPackRows
 /// </summary>
 internal sealed partial class ContentPackValidator
 {
-    public const int CurrentFormatVersion = 1;
+    public const int CurrentFormatVersion = 2;
+
+    /// <summary>First format with option sets, level choices and grants.</summary>
+    public const int LevelChoicesFormatVersion = 2;
     public const int MaxListEntries = 500;
     public const int MaxParagraphs = 200;
     public const int ParagraphMaxLength = 10_000;
@@ -80,6 +98,7 @@ internal sealed partial class ContentPackValidator
     private readonly List<string> _errors = [];
     private readonly Dictionary<string, HashSet<string>> _seen = new(StringComparer.Ordinal);
     private string _id = string.Empty;
+    private int _formatVersion = 1;
 
     public ContentPackValidator(ContentPackContext context) => _context = context;
 
@@ -106,10 +125,12 @@ internal sealed partial class ContentPackValidator
     {
         var rows = new ContentPackRows();
 
-        if (pack.FormatVersion is { } format && format != CurrentFormatVersion)
+        if (pack.FormatVersion is { } format && format is < 1 or > CurrentFormatVersion)
         {
-            AddError("formatVersion", $"Versión de formato no admitida; la actual es {CurrentFormatVersion}.");
+            AddError("formatVersion", $"Versión de formato no admitida; se admiten 1 y {CurrentFormatVersion}.");
         }
+
+        _formatVersion = pack.FormatVersion ?? 1;
 
         var id = pack.Id?.Trim();
         if (string.IsNullOrEmpty(id))
@@ -139,11 +160,17 @@ internal sealed partial class ContentPackValidator
         }
 
         var packSubclasses = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (RequireLevelChoicesFormat("optionSets", pack.OptionSets))
+        {
+            ForEach("optionSets", pack.OptionSets, (path, set) => OptionSet(path, set, rows));
+        }
+
         ForEach("classesExtended", pack.ClassesExtended, (path, extension) => ClassExtension(path, extension, rows, packSubclasses));
         ForEach("items", pack.Items, (path, item) => Item(path, item, rows));
         ForEach("spells", pack.Spells, (path, spell) => Spell(path, spell, rows, packSubclasses));
         ForEach("races", pack.Races, (path, race) => Race(path, race, rows));
         ForEach("backgrounds", pack.Backgrounds, (path, background) => Background(path, background, rows));
+        CheckLevelChoiceReferences(rows);
         return rows;
     }
 
@@ -162,6 +189,11 @@ internal sealed partial class ContentPackValidator
             AddError($"{path}.classIndex", $"La clase '{classIndex}' no existe en el catálogo (los paquetes no añaden clases).");
         }
 
+        if (RequireLevelChoicesFormat($"{path}.levelChoices", extension.LevelChoices) && classIndex is not null && flavor is not null)
+        {
+            ForEach($"{path}.levelChoices", extension.LevelChoices, (rulePath, rule) => LevelChoice(rulePath, rule, classIndex, null, rows));
+        }
+
         ForEach($"{path}.subclasses", extension.Subclasses, (subclassPath, subclass) =>
         {
             var index = Index($"{subclassPath}.index", "subclasses", subclass.Index);
@@ -174,6 +206,11 @@ internal sealed partial class ContentPackValidator
             }
 
             packSubclasses[index] = classIndex;
+            if (RequireLevelChoicesFormat($"{subclassPath}.levelChoices", subclass.LevelChoices))
+            {
+                ForEach($"{subclassPath}.levelChoices", subclass.LevelChoices, (rulePath, rule) => LevelChoice(rulePath, rule, classIndex, index, rows));
+            }
+
             rows.Subclasses.Add(new SubclassDefinition
             {
                 Index = index,
@@ -217,6 +254,9 @@ internal sealed partial class ContentPackValidator
                     });
                 });
 
+                var grants = level.Grants is not null && RequireLevelChoicesFormat($"{levelPath}.grants", level.Grants)
+                    ? Grants($"{levelPath}.grants", level.Grants)
+                    : null;
                 if (number is { } levelNumber)
                 {
                     var levelIndex = $"{index}-{levelNumber}";
@@ -227,6 +267,7 @@ internal sealed partial class ContentPackValidator
                         SubclassIndex = index,
                         Level = levelNumber,
                         FeatureIndexes = featureIndexes,
+                        GrantsJson = grants,
                         Source = _id,
                     });
                 }

@@ -62,6 +62,9 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
             db.CatalogTraits.AddRange(rows.Traits);
             db.CatalogSpells.AddRange(rows.Spells);
             db.CatalogBackgrounds.AddRange(rows.Backgrounds);
+            db.CatalogOptionSets.AddRange(rows.OptionSets);
+            db.CatalogOptions.AddRange(rows.Options);
+            db.CatalogLevelChoiceRules.AddRange(rows.LevelChoiceRules);
             await db.SaveChangesAsync(cancellationToken);
             db.ChangeTracker.Clear();
 
@@ -194,7 +197,16 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
         var skills = await db.CatalogSkills.AsNoTracking()
             .Select(x => new { x.Index, x.Name })
             .ToDictionaryAsync(x => x.Index, x => x.Name, StringComparer.Ordinal, cancellationToken);
-        return new ContentPackContext(classes, subclasses, skills);
+        var optionSets = await db.CatalogOptionSets.AsNoTracking()
+            .Select(x => new { x.SetId, x.Source })
+            .ToDictionaryAsync(x => x.SetId, x => x.Source, StringComparer.Ordinal, cancellationToken);
+        var options = await db.CatalogOptions.AsNoTracking()
+            .Select(x => new { x.Index, x.SetId, x.Source })
+            .ToDictionaryAsync(x => x.Index, x => (x.SetId, x.Source), StringComparer.Ordinal, cancellationToken);
+        var spells = await db.CatalogSpells.AsNoTracking()
+            .Select(x => new { x.Index, x.Source })
+            .ToDictionaryAsync(x => x.Index, x => x.Source, StringComparer.Ordinal, cancellationToken);
+        return new ContentPackContext(classes, subclasses, skills, optionSets, options, spells);
     }
 
     /// <summary>Reports the indexes of the pack already used by another source (the SRD or another pack).</summary>
@@ -245,6 +257,16 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
             await db.ItemTemplates.AsNoTracking().Where(x => x.Source != id && x.Index != null && keys.Contains(x.Index)).Select(x => new { Index = x.Index!, x.Source }).ToListAsync(cancellationToken),
             x => (x.Index, x.Source)));
 
+        await CheckAsync("optionSets", async keys => Pairs(
+            await db.CatalogOptionSets.AsNoTracking().Where(x => x.Source != id && keys.Contains(x.SetId)).Select(x => new { x.SetId, x.Source }).ToListAsync(cancellationToken),
+            x => (x.SetId, x.Source)));
+        await CheckAsync("options", async keys => Pairs(
+            await db.CatalogOptions.AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
+            x => (x.Index, x.Source)));
+        await CheckAsync("levelChoiceRules", async keys => Pairs(
+            await db.CatalogLevelChoiceRules.AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Id)).Select(x => new { x.Id, x.Source }).ToListAsync(cancellationToken),
+            x => (x.Id, x.Source)));
+
         // Classes are not extended by packs, but a subclass or feature must not hide a class index either.
         await CheckAsync("subclasses", async keys => Pairs(
             await db.CatalogClasses.AsNoTracking().Where(x => keys.Contains(x.Index)).Select(x => x.Index).ToListAsync(cancellationToken),
@@ -254,6 +276,9 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
     /// <summary>Deletes every definition of the pack except item templates (dependents first).</summary>
     private async Task DeleteDefinitionsAsync(string id, CancellationToken cancellationToken)
     {
+        await db.CatalogLevelChoiceRules.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.CatalogOptions.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.CatalogOptionSets.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogFeatures.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogSubclassLevels.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogSubclasses.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);

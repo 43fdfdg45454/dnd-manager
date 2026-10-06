@@ -64,6 +64,7 @@ internal sealed class CharacterConfiguration : IEntityTypeConfiguration<Characte
         ConfigureChildren<CharacterResource>(builder, nameof(Character.Resources), "_resources");
         ConfigureChildren<CharacterOverride>(builder, nameof(Character.Overrides), "_overrides");
         ConfigureChildren<CharacterItem>(builder, nameof(Character.Items), "_items");
+        ConfigureChildren<CharacterChoice>(builder, nameof(Character.Choices), "_choices");
     }
 
     private static void ConfigureChildren<TChild>(EntityTypeBuilder<Character> builder, string navigationName, string fieldName)
@@ -91,6 +92,22 @@ internal sealed class CharacterClassLevelConfiguration : IEntityTypeConfiguratio
         builder.Property(x => x.ClassIndex).HasMaxLength(Character.IndexMaxLength).IsRequired();
         builder.Property(x => x.SubclassIndex).HasMaxLength(Character.IndexMaxLength);
         builder.HasIndex(x => new { x.CharacterId, x.ClassIndex }).IsUnique();
+    }
+}
+
+internal sealed class CharacterChoiceConfiguration : IEntityTypeConfiguration<CharacterChoice>
+{
+    public void Configure(EntityTypeBuilder<CharacterChoice> builder)
+    {
+        builder.ToTable("CharacterChoices");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.ClassIndex).HasMaxLength(Character.IndexMaxLength).IsRequired();
+        builder.Property(x => x.Key).HasMaxLength(Character.IndexMaxLength).IsRequired();
+        builder.Property(x => x.SelectedJson).IsRequired();
+        builder.Property(x => x.CreatedAt).IsRequired();
+        builder.Ignore(x => x.Selection);
+        builder.HasIndex(x => new { x.CharacterId, x.ClassIndex, x.Key });
     }
 }
 

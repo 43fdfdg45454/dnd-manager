@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Dnd.Infrastructure.Catalog;
 
 // Read models of a content pack file (docs/content-packs.md). Every property is nullable so that missing
@@ -23,6 +25,9 @@ internal sealed class PackJson
     public List<PackRaceJson?>? Races { get; set; }
 
     public List<PackBackgroundJson?>? Backgrounds { get; set; }
+
+    /// <summary>Format 2: option sets (new ones, or options added to sets of the SRD or other packs).</summary>
+    public List<PackOptionSetJson?>? OptionSets { get; set; }
 }
 
 internal sealed class PackClassExtensionJson
@@ -30,6 +35,9 @@ internal sealed class PackClassExtensionJson
     public string? ClassIndex { get; set; }
 
     public List<PackSubclassJson?>? Subclasses { get; set; }
+
+    /// <summary>Format 2: level choices of the base class.</summary>
+    public List<PackLevelChoiceJson?>? LevelChoices { get; set; }
 }
 
 internal sealed class PackSubclassJson
@@ -43,6 +51,9 @@ internal sealed class PackSubclassJson
     public List<string?>? Description { get; set; }
 
     public List<PackSubclassLevelJson?>? Levels { get; set; }
+
+    /// <summary>Format 2: level choices of the subclass.</summary>
+    public List<PackLevelChoiceJson?>? LevelChoices { get; set; }
 }
 
 internal sealed class PackSubclassLevelJson
@@ -50,6 +61,9 @@ internal sealed class PackSubclassLevelJson
     public int? Level { get; set; }
 
     public List<PackFeatureJson?>? Features { get; set; }
+
+    /// <summary>Format 2: proficiencies and always-prepared spells gained at this subclass level.</summary>
+    public PackGrantsJson? Grants { get; set; }
 }
 
 internal sealed class PackFeatureJson
@@ -232,4 +246,141 @@ internal sealed class PackBackgroundJson
     public List<string?>? SkillProficiencies { get; set; }
 
     public string? StartingEquipmentText { get; set; }
+}
+
+// ---- Format 2: level choices -----------------------------------------------------------------------
+
+internal sealed class PackOptionSetJson
+{
+    public string? SetId { get; set; }
+
+    public string? Name { get; set; }
+
+    public List<PackOptionJson?>? Options { get; set; }
+}
+
+internal sealed class PackOptionJson
+{
+    public string? Index { get; set; }
+
+    public string? Name { get; set; }
+
+    public List<string?>? Description { get; set; }
+
+    public string? PrerequisitesText { get; set; }
+
+    public PackPrerequisitesJson? Prerequisites { get; set; }
+
+    public List<PackChoiceModifierJson?>? Modifiers { get; set; }
+
+    public PackAbilityIncreaseJson? AbilityIncrease { get; set; }
+
+    public PackGrantsJson? Grants { get; set; }
+
+    public PackResourceJson? Resource { get; set; }
+}
+
+internal sealed class PackPrerequisitesJson
+{
+    public int? MinLevel { get; set; }
+
+    public string? PactBoon { get; set; }
+
+    public string? Cantrip { get; set; }
+
+    public Dictionary<string, int?>? Abilities { get; set; }
+}
+
+internal sealed class PackChoiceModifierJson
+{
+    public string? Kind { get; set; }
+
+    public string? Target { get; set; }
+
+    public int? Value { get; set; }
+
+    public string? Condition { get; set; }
+}
+
+internal sealed class PackAbilityIncreaseJson
+{
+    public int? Amount { get; set; }
+
+    public List<string?>? From { get; set; }
+}
+
+internal sealed class PackGrantsJson
+{
+    public List<string?>? Skills { get; set; }
+
+    public List<string?>? Cantrips { get; set; }
+
+    public List<PackGrantedSpellJson?>? Spells { get; set; }
+
+    public List<string?>? Armor { get; set; }
+
+    public List<string?>? Weapons { get; set; }
+
+    public List<string?>? Tools { get; set; }
+
+    public List<string?>? Languages { get; set; }
+
+    public List<string?>? SavingThrows { get; set; }
+}
+
+internal sealed class PackGrantedSpellJson
+{
+    public string? Index { get; set; }
+
+    public int? MinLevel { get; set; }
+}
+
+internal sealed class PackResourceJson
+{
+    public string? Key { get; set; }
+
+    public string? Name { get; set; }
+
+    /// <summary>An integer or a formula text (proficiencyBonus, classLevel, halfClassLevel, mod:cha).</summary>
+    public JsonElement? Max { get; set; }
+
+    public string? Recharge { get; set; }
+}
+
+internal sealed class PackLevelChoiceJson
+{
+    public int? Level { get; set; }
+
+    public string? Key { get; set; }
+
+    public string? Name { get; set; }
+
+    public string? Kind { get; set; }
+
+    public string? SetId { get; set; }
+
+    public int? Choose { get; set; }
+
+    public List<string?>? From { get; set; }
+
+    public bool? Replaces { get; set; }
+
+    public bool? Cumulative { get; set; }
+
+    public string? Note { get; set; }
+
+    public PackChoiceFilterJson? Filter { get; set; }
+}
+
+internal sealed class PackChoiceFilterJson
+{
+    public string? SpellList { get; set; }
+
+    public List<int?>? SpellLevels { get; set; }
+
+    public bool? MaxSpellLevelBySlots { get; set; }
+
+    public string? Source { get; set; }
+
+    public bool? CantripsOnly { get; set; }
 }

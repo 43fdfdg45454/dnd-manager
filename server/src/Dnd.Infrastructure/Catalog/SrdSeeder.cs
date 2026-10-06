@@ -14,7 +14,9 @@ namespace Dnd.Infrastructure.Catalog;
 /// dataset version. When an older version was imported, the SRD definitions are replaced and SRD
 /// item templates are updated in place by index, so their ids (referenced by inventories) survive.
 /// Definitions of content packs (<c>Source</c> other than "srd") are left intact: classes, which
-/// pack subclasses and features reference, are updated in place instead of deleted.
+/// pack subclasses and features reference, are updated in place instead of deleted. The level choice
+/// catalog (option sets, options and rules, <see cref="SrdLevelChoices"/>) is replaced the same way: only
+/// the SRD rows, so options that packs add to SRD sets survive.
 /// </summary>
 internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogger<SrdSeeder> logger) : ISrdSeeder
 {
@@ -30,6 +32,7 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
 
         var stopwatch = Stopwatch.StartNew();
         var catalog = SrdDataset.Load();
+        var levelChoices = SrdLevelChoices.Load();
         var now = clock.UtcNow;
 
         // Bulk insert: change detection over thousands of tracked entities is the slow part.
@@ -56,6 +59,9 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
                 ["conditions"] = await InsertAsync(catalog.Conditions, cancellationToken),
                 ["skills"] = await InsertAsync(catalog.Skills, cancellationToken),
                 ["backgrounds"] = await InsertAsync(catalog.Backgrounds, cancellationToken),
+                ["optionSets"] = await InsertAsync(levelChoices.Sets, cancellationToken),
+                ["options"] = await InsertAsync(levelChoices.Options, cancellationToken),
+                ["levelChoiceRules"] = await InsertAsync(levelChoices.Rules, cancellationToken),
             };
 
             db.CatalogImports.Add(new CatalogImport
@@ -101,6 +107,9 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
         await db.CatalogConditions.ExecuteDeleteAsync(cancellationToken);
         await db.CatalogSkills.ExecuteDeleteAsync(cancellationToken);
         await db.CatalogBackgrounds.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.CatalogLevelChoiceRules.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.CatalogOptions.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.CatalogOptionSets.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
     }
 
     /// <summary>

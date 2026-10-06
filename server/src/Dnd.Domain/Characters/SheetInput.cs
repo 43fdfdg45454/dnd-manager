@@ -14,13 +14,15 @@ namespace Dnd.Domain.Characters;
 /// <param name="Subrace">Subrace of the character, or null.</param>
 /// <param name="Skills">The skills to list in the sheet, in display order (usually every SRD skill).</param>
 /// <param name="Gear">Equipped armor, shield and active item modifiers; null means nothing equipped.</param>
+/// <param name="Choices">Effects of the level choices (<see cref="ChoiceEffects.Build"/>); null means none.</param>
 public sealed record SheetInput(
     Character Character,
     IReadOnlyList<ClassInfo> Classes,
     RaceInfo? Race,
     SubraceInfo? Subrace,
     IReadOnlyList<SkillInfo> Skills,
-    EquippedGear? Gear = null);
+    EquippedGear? Gear = null,
+    ChoiceEffects? Choices = null);
 
 /// <summary>Catalog data of a class used by the sheet.</summary>
 public sealed record ClassInfo

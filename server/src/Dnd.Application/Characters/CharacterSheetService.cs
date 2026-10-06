@@ -26,9 +26,9 @@ public interface ICharacterSheetService
     Task<IReadOnlyDictionary<Guid, CharacterSheet>> CalculateManyAsync(IReadOnlyList<Character> characters, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// After a sheet edit, an inventory change that can affect the sheet (equip, attune, remove) or on
-    /// creation: calculates the sheet, regenerates the automatic class resources and refreshes the
-    /// current hit points (capped at the new maximum). Returns the new sheet.
+    /// After a sheet edit, an inventory change that can affect the sheet (equip, attune, remove), a level-up or on
+    /// creation: calculates the sheet, regenerates the automatic resources (class and chosen options) and
+    /// refreshes the current hit points (capped at the new maximum). Returns the new sheet.
     /// </summary>
     Task<CharacterSheet> RecalculateAsync(Character character, CancellationToken cancellationToken = default);
 
@@ -129,7 +129,7 @@ public sealed class CharacterSheetService(
     public async Task<CharacterSheet> RecalculateAsync(Character character, CancellationToken cancellationToken = default)
     {
         var sheet = await CalculateAsync(character, cancellationToken);
-        character.SyncAutoResources(ClassResourceRules.ForClasses(character.Classes, sheet.AbilityModifiers));
+        character.SyncAutoResources([.. ClassResourceRules.ForClasses(character.Classes, sheet.AbilityModifiers), .. sheet.ChoiceResources]);
         character.RefreshHitPoints(sheet.HitPointsMax);
         return sheet;
     }
@@ -310,6 +310,12 @@ public sealed class CharacterSheetService(
             Combat = CombatSummaryBuilder.Build(character, sheet, sheetCatalog, templates, resources),
             PendingRest = pendingRest is null ? null : PendingRestDto.From(pendingRest),
             PendingLevelUpTo = character.PendingLevelUpTo,
+            Choices = character.Choices
+                .Where(c => c.Key != CharacterChoice.HitPointsKey)
+                .OrderBy(c => c.CreatedAt)
+                .ThenBy(c => c.Level)
+                .Select(CharacterChoiceDto.From)
+                .ToList(),
         };
     }
 

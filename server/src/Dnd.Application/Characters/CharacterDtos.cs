@@ -206,6 +206,55 @@ public sealed record CharacterDetailDto
 
     /// <summary>Level granted by a DM that the player has not completed yet, or null.</summary>
     public int? PendingLevelUpTo { get; init; }
+
+    /// <summary>Level choices made when gaining levels (subclass, fighting style, ASI, feats, spells...), oldest first.</summary>
+    public IReadOnlyList<CharacterChoiceDto> Choices { get; init; } = [];
+}
+
+/// <summary>Something picked in a level choice, with its name.</summary>
+public sealed record ChoiceItemDto(string Index, string Name)
+{
+    public static ChoiceItemDto From(ChoiceItem item) => new(item.Index, item.Name);
+}
+
+/// <summary>
+/// A level choice of the character. <see cref="Selected"/>/<see cref="Replaced"/> for picks; <see cref="Asi"/>
+/// ("str" → 1) for an Ability Score Improvement; <see cref="Feat"/> (and the <see cref="Ability"/> it raised) for a feat.
+/// </summary>
+/// <param name="Level">Level of the class at which it was chosen.</param>
+/// <param name="Name">Name of the choice ("Fighting Style").</param>
+/// <param name="Kind">A <c>LevelChoiceKind</c> name.</param>
+public sealed record CharacterChoiceDto(
+    Guid Id,
+    int Level,
+    string ClassIndex,
+    string Key,
+    string Name,
+    string Kind,
+    IReadOnlyList<ChoiceItemDto> Selected,
+    IReadOnlyList<ChoiceItemDto> Replaced,
+    IReadOnlyDictionary<string, int>? Asi,
+    ChoiceItemDto? Feat,
+    string? Ability,
+    DateTimeOffset CreatedAt)
+{
+    public static CharacterChoiceDto From(CharacterChoice choice)
+    {
+        var selection = choice.Selection;
+        return new CharacterChoiceDto(
+            choice.Id,
+            choice.Level,
+            choice.ClassIndex,
+            choice.Key,
+            selection.Name,
+            selection.Kind,
+            selection.Selected.Select(ChoiceItemDto.From).ToList(),
+            selection.Replaced.Select(ChoiceItemDto.From).ToList(),
+            selection.Asi,
+            selection.Feat is null ? null : ChoiceItemDto.From(selection.Feat),
+            selection.Ability,
+            choice.CreatedAt);
+    }
 }
 
 // ---- Combat view (phase 6) -------------------------------------------------------------------

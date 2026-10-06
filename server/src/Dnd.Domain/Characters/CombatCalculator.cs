@@ -30,6 +30,12 @@ public sealed record AttackValue(
     ValueBreakdown AttackBreakdown,
     ValueBreakdown DamageBreakdown);
 
+/// <summary>How a weapon is used, for the conditions of <see cref="FeatureModifier"/>.</summary>
+/// <param name="Ranged">Ranged weapon (<see cref="CombatCalculator.IsRanged"/>).</param>
+/// <param name="TwoHanded">Melee weapon with the two-handed property.</param>
+/// <param name="OtherWeaponEquipped">Another weapon is equipped too.</param>
+public sealed record WeaponContext(bool Ranged, bool TwoHanded, bool OtherWeaponEquipped);
+
 /// <summary>
 /// Pure combat numbers (SRD 5.1): attacks of the equipped weapons plus the unarmed strike, and the
 /// class feature values shown by the class panels and used by the class actions.
@@ -63,6 +69,12 @@ public static class CombatCalculator
     /// itself (when active) plus those of the other active items that are not weapons
     /// (<see cref="CharacterSheet.ItemEffects"/>), which also apply to the unarmed strike.
     /// Monks use Martial Arts with the unarmed strike and monk weapons. Rage is not added.
+    /// Attack and damage bonuses of chosen options (<see cref="CharacterSheet.FeatureModifiers"/>) apply when
+    /// their condition holds: <c>rangedWeapon</c> for ranged weapons, <c>oneHandedMeleeNoOtherWeapon</c> for a
+    /// melee weapon without the two-handed property when no other weapon is equipped (not to the two-handed
+    /// damage of a versatile weapon), <c>twoHandedMelee</c> for two-handed melee weapons and the two-handed
+    /// damage of versatile ones; <c>twoWeaponFighting</c> is not calculated. Unconditional ones apply to every
+    /// attack, the unarmed strike included.
     /// </summary>
     public static IReadOnlyList<AttackValue> Attacks(Character character, CharacterSheet sheet, IEnumerable<EquippedWeapon> weapons)
     {
@@ -81,11 +93,16 @@ public static class CombatCalculator
 
         var globalAttack = ItemBonuses(sheet.ItemEffects.Where(e => e.Kind == ItemModifierKind.AttackBonus));
         var globalDamage = ItemBonuses(sheet.ItemEffects.Where(e => e.Kind == ItemModifierKind.DamageBonus));
+        var featureAttack = sheet.FeatureModifiers.Where(m => m.Kind == ItemModifierKind.AttackBonus).ToList();
+        var featureDamage = sheet.FeatureModifiers.Where(m => m.Kind == ItemModifierKind.DamageBonus).ToList();
+        var equippedWeapons = weapons.Where(w => w.Item.Category == ItemCategory.Weapon).ToList();
 
         var attacks = new List<AttackValue>();
-        foreach (var weapon in weapons.Where(w => w.Item.Category == ItemCategory.Weapon))
+        foreach (var weapon in equippedWeapons)
         {
             var item = weapon.Item;
+            var ranged = IsRanged(item);
+            var context = new WeaponContext(ranged, !ranged && HasProperty(item, TwoHanded), equippedWeapons.Count > 1);
             var monkWeapon = martialArtsDie is not null && IsMonkWeapon(weapon);
             var useDex = IsRanged(item) || ((HasProperty(item, Finesse) || monkWeapon) && dex > str);
             var ability = useDex ? Abilities.Dex : Abilities.Str;
@@ -111,8 +128,10 @@ public static class CombatCalculator
                 damageBonus.Add(BreakdownSources.Item, item.Name, ownDamage);
             }
 
-            attack.AddAll(globalAttack);
-            damageBonus.AddAll(globalDamage);
+            attack.AddAll(globalAttack).AddAll(FeatureParts(featureAttack, context, versatileGrip: false));
+            var versatileBonus = new BreakdownBuilder().AddAll(damageBonus.Build().Parts).AddAll(globalDamage)
+                .AddAll(FeatureParts(featureDamage, context, versatileGrip: true));
+            damageBonus.AddAll(globalDamage).AddAll(FeatureParts(featureDamage, context, versatileGrip: false));
             var dice = monkWeapon ? AtLeastDie(item.DamageDice, martialArtsDie!.Value) : item.DamageDice;
 
             attacks.Add(new AttackValue(
@@ -121,7 +140,7 @@ public static class CombatCalculator
                 attack.Total,
                 string.IsNullOrWhiteSpace(dice) ? "0" : FormatDamage(dice, damageBonus.Total),
                 item.DamageType,
-                string.IsNullOrWhiteSpace(item.VersatileDice) ? null : FormatDamage(item.VersatileDice, damageBonus.Total),
+                string.IsNullOrWhiteSpace(item.VersatileDice) ? null : FormatDamage(item.VersatileDice, versatileBonus.Total),
                 FormatRange(item.RangeNormal, item.RangeLong),
                 item.Properties,
                 item.Effects.Count == 0 ? null : string.Join("; ", item.Effects),
@@ -133,10 +152,12 @@ public static class CombatCalculator
         var unarmedAttack = new BreakdownBuilder()
             .Add(BreakdownSources.Ability, BreakdownLabels.Ability(unarmedAbility), sheet.Modifier(unarmedAbility))
             .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, sheet.ProficiencyBonus)
-            .AddAll(globalAttack);
+            .AddAll(globalAttack)
+            .AddAll(FeatureParts(featureAttack, null, versatileGrip: false));
         var unarmedDamage = new BreakdownBuilder()
             .Add(BreakdownSources.Ability, BreakdownLabels.Ability(unarmedAbility), sheet.Modifier(unarmedAbility))
-            .AddAll(globalDamage);
+            .AddAll(globalDamage)
+            .AddAll(FeatureParts(featureDamage, null, versatileGrip: false));
         attacks.Add(new AttackValue(
             null,
             UnarmedStrikeName,
@@ -264,6 +285,27 @@ public static class CombatCalculator
             ? $"1d{die}"
             : dice;
     }
+
+    /// <summary>
+    /// Whether a condition of a chosen option holds for an attack. <paramref name="weapon"/> null is the unarmed
+    /// strike (only unconditional bonuses); <paramref name="versatileGrip"/> is the two-handed damage of a versatile weapon.
+    /// </summary>
+    public static bool ConditionHolds(string? condition, WeaponContext? weapon, bool versatileGrip) => condition switch
+    {
+        null => true,
+        _ when weapon is null => false,
+        ModifierConditions.RangedWeapon => weapon.Ranged,
+        ModifierConditions.OneHandedMeleeNoOtherWeapon => !weapon.Ranged && !weapon.TwoHanded && !weapon.OtherWeaponEquipped && !versatileGrip,
+        ModifierConditions.TwoHandedMelee => !weapon.Ranged && (weapon.TwoHanded || versatileGrip),
+        _ => false,
+    };
+
+    /// <summary>Parts of the chosen options' bonuses whose condition holds.</summary>
+    private static List<BreakdownPart> FeatureParts(IEnumerable<FeatureModifier> modifiers, WeaponContext? weapon, bool versatileGrip) =>
+        modifiers
+            .Where(m => ConditionHolds(m.Condition, weapon, versatileGrip))
+            .Select(m => new BreakdownPart(BreakdownSources.Feature, m.Label, m.Value))
+            .ToList();
 
     /// <summary>Attack or damage bonuses of non-weapon items, one part per item name (non-zero sums only).</summary>
     private static List<BreakdownPart> ItemBonuses(IEnumerable<AppliedItemEffect> effects) =>

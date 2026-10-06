@@ -101,6 +101,9 @@ public static class DependencyInjection
         services.AddScoped<ResourceHandler>();
         services.AddScoped<RestHandler>();
         services.AddScoped<ClassActionHandler>();
+        services.AddScoped<LevelUpPlanner>();
+        services.AddScoped<GetLevelUpPlanHandler>();
+        services.AddScoped<ApplyLevelUpHandler>();
 
         services.AddScoped<ChangeRequestLoader>();
         services.AddScoped<ListChangeRequestsHandler>();
