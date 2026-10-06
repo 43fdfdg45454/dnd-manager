@@ -4,7 +4,8 @@ name: Release
 # Docker image of the API in GHCR. Run it from Actions > Release > Run workflow.
 #
 # Secrets (Settings > Secrets and variables > Actions):
-#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD  (required)
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+#     (optional: without them the APK is signed with the debug key and the release is marked as such)
 #   DND_API_URL and DND_ADMIN_TOKEN (or DND_ADMIN_EMAIL + DND_ADMIN_PASSWORD)  (optional: publish to the server)
 
 run-name: Release ${{ inputs.version }}
@@ -80,18 +81,25 @@ jobs:
           cache: true
 
       - name: Write the signing key (never committed)
+        id: signing
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::warning::No hay keystore en los secrets: el APK se firma con la clave de depuración. Configura ANDROID_KEYSTORE_* para una firma propia (ver deploy/README.md)."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          for name in ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
             if [ -z "${!name}" ]; then
               echo "::error::Falta el secret $name."
               exit 1
             fi
           done
+          echo "signed=true" >> "$GITHUB_OUTPUT"
           # storeFile is resolved from the app module (app/android/app).
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > app/android/app/upload-keystore.jks
           {
@@ -123,8 +131,12 @@ jobs:
         with:
           tag_name: v${{ inputs.version }}
           name: D&D Companion ${{ inputs.version }}
-          body: ${{ inputs.notes }}
+          body: |
+            ${{ inputs.notes }}
+
+            ${{ steps.signing.outputs.signed == 'true' && 'APK firmado con el keystore del proyecto.' || 'APK firmado con la clave de depuración (sin keystore configurado): para instalar sobre una versión firmada con otra clave hay que desinstalar antes.' }}
           generate_release_notes: ${{ inputs.notes == '' }}
+          prerelease: ${{ steps.signing.outputs.signed != 'true' }}
           files: dnd-companion-${{ inputs.version }}.apk
           fail_on_unmatched_files: true
 

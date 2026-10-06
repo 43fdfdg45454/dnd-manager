@@ -53,12 +53,15 @@ jobs:
           cache-to: type=gha,mode=max
 
   apk:
-    # Installable build for testing: signed with the debug key when no keystore is configured.
-    # Download it from the run page (Artifacts > dnd-companion-apk). Use the Release workflow for
-    # a signed build published to the server.
-    name: APK de prueba
+    # Installable development build, signed with the debug key. Every push to the default branch
+    # refreshes the rolling "dev-latest" prerelease, so the newest APK is always at
+    # https://github.com/<owner>/<repo>/releases/download/dev-latest/dnd-companion-dev.apk.
+    # Use the Release workflow for a versioned build published to the server.
+    name: APK de desarrollo
     runs-on: ubuntu-latest
     needs: app
+    permissions:
+      contents: write # move the dev-latest tag and update its prerelease
     defaults:
       run:
         working-directory: app
@@ -74,9 +77,28 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter build apk --release --build-number=${{ github.run_number }}
+      - run: cp build/app/outputs/flutter-apk/app-release.apk dnd-companion-dev.apk
       - uses: actions/upload-artifact@v4
         with:
           name: dnd-companion-apk
-          path: app/build/app/outputs/flutter-apk/app-release.apk
+          path: app/dnd-companion-dev.apk
           if-no-files-found: error
           retention-days: 30
+      - name: Move the dev-latest tag to this commit
+        if: ${{ github.event_name == 'push' }}
+        working-directory: .
+        run: |
+          git tag -f dev-latest "$GITHUB_SHA"
+          git push -f origin dev-latest
+      - name: Update the dev-latest prerelease
+        if: ${{ github.event_name == 'push' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev-latest
+          name: Build de desarrollo (último push)
+          body: |
+            APK de desarrollo generado automáticamente desde `${{ github.ref_name }}` en `${{ github.sha }}` (build ${{ github.run_number }}).
+            Firmado con la clave de depuración: sirve para probar, no para actualizar una instalación firmada con otra clave.
+          prerelease: true
+          files: app/dnd-companion-dev.apk
+          fail_on_unmatched_files: true

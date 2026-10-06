@@ -284,10 +284,21 @@ pueden borrar desde la app.
 La app comprueba `GET /api/v1/app/latest` y, si hay un `buildNumber` mayor que el suyo, ofrece
 descargar `GET /api/v1/app/download/{buildNumber}` (anónimo, para poder instalarlo desde el navegador).
 
-El workflow manual **Release** (`.github/workflows/release.yml`) compila el APK firmado, lo adjunta a
-una *release* de GitHub, publica la imagen Docker en GHCR y, si están definidos los *secrets*
-`DND_API_URL` y `DND_ADMIN_TOKEN` (o `DND_ADMIN_EMAIL` y `DND_ADMIN_PASSWORD`), lo sube también a tu
-servidor. Para hacerlo a mano con un APK ya compilado:
+Hay dos releases en GitHub (pestaña **Releases** del repositorio):
+
+- **`dev-latest`** (prerelease): la CI la regenera en cada push con el último APK, firmado con la
+  clave de depuración. Descarga directa:
+  `https://github.com/<propietario>/<repo>/releases/download/dev-latest/dnd-companion-dev.apk`.
+- **`vX.Y.Z`**: las crea el workflow manual **Release** (`.github/workflows/release.yml`, Actions →
+  Release → Run workflow con la versión). Compila el APK, lo adjunta a la release, publica la imagen
+  Docker en GHCR y, si están definidos los *secrets* `DND_API_URL` y `DND_ADMIN_TOKEN` (o
+  `DND_ADMIN_EMAIL` y `DND_ADMIN_PASSWORD`), lo sube también a tu servidor. Sin keystore en los
+  *secrets* firma con la clave de depuración y marca la release como prerelease.
+
+Android no actualiza una app instalada con un APK firmado con otra clave: al pasar de la clave de
+depuración a tu keystore (o viceversa) hay que desinstalar antes.
+
+Para publicar a mano en el servidor un APK ya compilado:
 
 ```bash
 URL=https://dnd.example.com
@@ -318,13 +329,20 @@ curl --fail-with-body -X POST "$URL/api/v1/admin/releases" \
 
 | Secret | Contenido |
 |--------|-----------|
-| `ANDROID_KEYSTORE_BASE64` | Keystore de firma en base64 (`base64 -w0 upload-keystore.jks`) |
+| `ANDROID_KEYSTORE_BASE64` | (recomendado) Keystore de firma en base64 (`base64 -w0 upload-keystore.jks`). Sin él se firma con la clave de depuración |
 | `ANDROID_KEYSTORE_PASSWORD` | Contraseña del keystore |
 | `ANDROID_KEY_ALIAS` | Alias de la clave |
 | `ANDROID_KEY_PASSWORD` | Contraseña de la clave |
 | `DND_API_URL` | (opcional) URL de tu servidor, por ejemplo `https://dnd.example.com` |
 | `DND_ADMIN_TOKEN` | (opcional) Token de acceso de un administrador; caduca a los 15 minutos |
 | `DND_ADMIN_EMAIL`, `DND_ADMIN_PASSWORD` | (opcional) Alternativa a `DND_ADMIN_TOKEN`: el workflow inicia sesión y obtiene el token |
+
+Crear el keystore una sola vez:
+
+```bash
+keytool -genkeypair -v -keystore upload-keystore.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
+base64 -w0 upload-keystore.jks   # valor de ANDROID_KEYSTORE_BASE64
+```
 
 Guarda el keystore y sus contraseñas fuera del repositorio: si lo pierdes no podrás publicar
 actualizaciones que Android acepte sobre la app ya instalada.
