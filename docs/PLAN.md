@@ -119,6 +119,7 @@ tests convencionales; **Haiku** hace lo mecánico (DTOs, textos, plantillas, doc
 | 13 Diseño, modos de vista, clases, tiempo real | Contrato y revisión visual | Paneles, shell, cliente SignalR | Sistema de diseño, Vista General | — |
 | 14 Asistente de personaje | Contrato | — | Todo | — |
 | 15 Paquetes de contenido | Contrato y ADR 0007 | Importador | UI admin | Docs del formato |
+| 16 Juego guiado por el PHB | Contratos, datos SRD de elecciones, revisión | Hub endurecido, descansos aprobados, elecciones y subida de nivel, asistente, animaciones, iconos | Correcciones, conexión, peticiones, piel | — |
 
 Cómo se aplica en la práctica: la sesión principal corre con Fable y lanza subagentes con el modelo
 indicado (`Agent` con `model: opus | sonnet | haiku`), dándoles el contrato escrito en
@@ -126,8 +127,8 @@ indicado (`Agent` con `model: opus | sonnet | haiku`), dándoles el contrato esc
 
 ## Estado
 
-Fases 0 a 15 implementadas y en `master`. Verificado en este entorno: servidor compila sin avisos
-y pasa 742 tests (SQLite en memoria); cliente sin incidencias de análisis y 525 tests. CI publica
+Fases 0 a 16 implementadas y en `master`. Verificado en este entorno: servidor compila sin avisos
+y pasa 799 tests (SQLite en memoria); cliente sin incidencias de análisis y 648 tests. CI publica
 en cada push a `master` la imagen `ghcr.io/<owner>/dnd-companion-api:latest` y una release con el
 APK firmado. **No verificado aquí** (sin PostgreSQL ni Android SDK): migraciones contra PostgreSQL
 real, aspecto de las fuentes variables y los SVG en dispositivo, SignalR a través del reverse
@@ -156,6 +157,7 @@ jugador en dos móviles; cualquier desviación se corrige sobre los contratos de
 | 13 | Sistema de diseño místico, Vista General / Mesa del DM / Mi sesión, temas y paneles por clase, cliente SignalR | Rol decide la vista; contraste ≥ 4.5 |
 | 14 | Asistente paso a paso de creación de personaje | Mago nivel 1 completo desde el móvil |
 | 15 | Paquetes de contenido privados (importador + pantalla admin) | Subclase del paquete elegible en un guerrero |
+| 16 | Descansos pedidos y aprobados, nivel concedido por el DM, asistente de subida con todas las elecciones del PHB, conexión clara y diagnóstico, hub endurecido, piel oscura con iconos propios y animaciones | Jugador pide descanso → DM aprueba → PG en vivo; subir de nivel exige completar las elecciones |
 
 ## Verificación end-to-end
 
