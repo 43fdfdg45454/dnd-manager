@@ -1,3 +1,4 @@
+import 'package:dnd_companion/core/ui/selection_grid.dart';
 import 'package:dnd_companion/core/router/app_router.dart';
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
 import 'package:dnd_companion/features/catalog/data/models.dart';
@@ -369,10 +370,10 @@ void main() {
       await _tap(tester, find.text('Acolyte').last);
 
       expect(find.byKey(const Key('wizard-background-skills')), findsOneWidget);
-      expect(tester.widget<FilterChip>(find.byKey(const Key('skill-insight'))).onSelected, isNull);
-      expect(tester.widget<FilterChip>(find.byKey(const Key('skill-religion'))).onSelected, isNull);
+      expect(tester.widget<SelectionTile>(find.byKey(const Key('skill-insight'))).onTap, isNull);
+      expect(tester.widget<SelectionTile>(find.byKey(const Key('skill-religion'))).onTap, isNull);
       expect(
-        tester.widget<FilterChip>(find.byKey(const Key('skill-arcana'))).onSelected,
+        tester.widget<SelectionTile>(find.byKey(const Key('skill-arcana'))).onTap,
         isNotNull,
       );
     });

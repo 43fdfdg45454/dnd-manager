@@ -43,6 +43,28 @@ const skillLabels = <String, String>{
   'survival': 'Supervivencia',
 };
 
+/// Ability of each SRD skill.
+const skillAbilities = <String, String>{
+  'acrobatics': 'dex',
+  'animal-handling': 'wis',
+  'arcana': 'int',
+  'athletics': 'str',
+  'deception': 'cha',
+  'history': 'int',
+  'insight': 'wis',
+  'intimidation': 'cha',
+  'investigation': 'int',
+  'medicine': 'wis',
+  'nature': 'int',
+  'perception': 'wis',
+  'performance': 'cha',
+  'persuasion': 'cha',
+  'religion': 'int',
+  'sleight-of-hand': 'dex',
+  'stealth': 'dex',
+  'survival': 'wis',
+};
+
 /// Spanish name of a skill; falls back to [fallback] (the catalog name).
 String skillLabel(String index, [String? fallback]) => skillLabels[index] ?? fallback ?? index;
 

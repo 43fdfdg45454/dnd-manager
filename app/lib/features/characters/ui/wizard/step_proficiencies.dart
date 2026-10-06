@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/components.dart';
+import '../../../../core/ui/selection_grid.dart';
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/domain/catalog_format.dart';
 import '../../data/character_wizard_controller.dart';
@@ -30,6 +32,18 @@ const srdLanguages = <String, String>{
 };
 
 String languageLabel(String language) => srdLanguages[language] ?? language;
+
+/// Standard languages of the SRD (the rest are exotic).
+const _standardLanguages = {
+  'Common',
+  'Dwarvish',
+  'Elvish',
+  'Giant',
+  'Gnomish',
+  'Goblin',
+  'Halfling',
+  'Orc',
+};
 
 // ---------------------------------------------------------------------------
 // 5. Background and proficiencies
@@ -88,45 +102,69 @@ class BackgroundStep extends ConsumerWidget {
               ),
           ],
           if (choices != null && choices.choose > 0) ...[
-            const SizedBox(height: 16),
+            SectionHeader(
+              'Habilidades de clase',
+              padding: const EdgeInsets.only(top: 20, bottom: 4),
+            ),
             Text(
               'Habilidades de clase ${state.skills.length}/${choices.choose}',
               key: const Key('wizard-skills-counter'),
-              style: theme.textTheme.titleSmall,
+              style: theme.textTheme.bodySmall,
             ),
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
+            const SizedBox(height: 8),
+            SelectionGrid(
+              onToggle: controller.toggleSkill,
+              items: [
                 for (final skill in choices.from)
-                  FilterChip(
-                    key: Key('skill-$skill'),
-                    label: Text(skillLabel(skill)),
-                    selected: state.skills.contains(skill) || granted.contains(skill),
-                    onSelected: granted.contains(skill)
-                        ? null
-                        : (_) => controller.toggleSkill(skill),
+                  SelectionItem(
+                    id: skill,
+                    tileKey: Key('skill-$skill'),
+                    label: skillLabel(skill),
+                    caption: granted.contains(skill)
+                        ? 'Del trasfondo'
+                        : abilityAbbreviation(skillAbilities[skill] ?? ''),
+                    state: granted.contains(skill)
+                        ? SelectionState.locked
+                        : state.skills.contains(skill)
+                        ? SelectionState.selected
+                        : state.skills.length >= choices.choose
+                        ? SelectionState.blocked
+                        : SelectionState.available,
                   ),
               ],
             ),
           ],
-          const SizedBox(height: 16),
-          Text('Idiomas', style: theme.textTheme.titleSmall),
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            children: [
-              for (final language in languages)
-                FilterChip(
-                  key: Key('lang-$language'),
-                  label: Text(languageLabel(language)),
-                  selected: state.languages.contains(language),
-                  onSelected: (_) => controller.toggleLanguage(language),
-                ),
-            ],
+          SectionHeader('Idiomas', padding: const EdgeInsets.only(top: 20, bottom: 4)),
+          Text(
+            state.languages.isEmpty
+                ? 'Marca los idiomas que habla tu personaje.'
+                : '${state.languages.length} seleccionados',
+            style: theme.textTheme.bodySmall,
           ),
+          for (final group in [
+            ('Estándar', languages.where(_standardLanguages.contains).toList()),
+            ('Exóticos', languages.where((l) => !_standardLanguages.contains(l)).toList()),
+          ])
+            if (group.$2.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 6),
+                child: Text(group.$1, style: theme.textTheme.labelLarge),
+              ),
+              SelectionGrid(
+                onToggle: controller.toggleLanguage,
+                items: [
+                  for (final language in group.$2)
+                    SelectionItem(
+                      id: language,
+                      tileKey: Key('lang-$language'),
+                      label: languageLabel(language),
+                      state: state.languages.contains(language)
+                          ? SelectionState.selected
+                          : SelectionState.available,
+                    ),
+                ],
+              ),
+            ],
         ],
       ),
     );
