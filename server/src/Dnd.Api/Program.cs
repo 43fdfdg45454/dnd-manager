@@ -29,7 +29,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 // The public URL is decided by the reverse proxy of the operator: the API learns it from the (trusted)
 // X-Forwarded-* headers and the Host of the requests, and remembers the last one for background services.
-builder.Services.AddAppForwardedHeaders(builder.Configuration);
+builder.Services.AddAppForwardedHeaders();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<PublicOriginStore>();
 builder.Services.AddSingleton<IPublicUrlProvider, PublicUrlProvider>();

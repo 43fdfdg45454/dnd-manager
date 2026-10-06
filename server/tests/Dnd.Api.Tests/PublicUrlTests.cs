@@ -69,39 +69,9 @@ public class PublicUrlTests
     }
 
     [Fact]
-    public async Task Forwarded_host_from_an_untrusted_source_is_ignored_when_no_proxy_is_trusted()
-    {
-        using var factory = new NoTrustedProxiesFactory();
-
-        var link = await CreateUserAndGetLinkAsync(factory, r =>
-        {
-            r.Headers.Add("X-Forwarded-Proto", "https");
-            r.Headers.Add("X-Forwarded-Host", "evil.example.net");
-        });
-
-        Assert.StartsWith($"{ApiFactory.TestOrigin}/set-password?token=", link);
-        Assert.DoesNotContain("evil.example.net", link);
-    }
-
-    [Fact]
-    public async Task Forwarded_host_from_an_ip_outside_the_trusted_proxies_is_ignored()
+    public async Task Forwarded_headers_are_honoured_from_any_client_address()
     {
         using var factory = new PublicClientFactory();
-
-        var link = await CreateUserAndGetLinkAsync(factory, r =>
-        {
-            r.Headers.Add("X-Forwarded-Proto", "https");
-            r.Headers.Add("X-Forwarded-Host", "evil.example.net");
-        });
-
-        Assert.StartsWith($"{ApiFactory.TestOrigin}/set-password?token=", link);
-        Assert.Equal(ApiFactory.TestOrigin, await StoredOriginAsync(factory));
-    }
-
-    [Fact]
-    public async Task Trusted_proxies_can_be_configured_as_a_comma_separated_list_of_cidr_ranges()
-    {
-        using var factory = new CustomProxyFactory();
 
         var link = await CreateUserAndGetLinkAsync(factory, r =>
         {
@@ -110,16 +80,7 @@ public class PublicUrlTests
         });
 
         Assert.StartsWith($"{ForwardedOrigin}/set-password?token=", link);
-    }
-
-    [Fact]
-    public void Startup_fails_when_a_trusted_proxy_is_not_an_ip_range()
-    {
-        using var factory = new ApiFactoryWithoutInitialAdmin();
-        using var broken = factory.WithWebHostBuilder(b => b.UseSetting("App:TrustedProxies", "10.0.0.0/8,not-an-ip"));
-
-        var exception = Assert.ThrowsAny<Exception>(() => broken.CreateClient());
-        Assert.Contains("App:TrustedProxies", exception.ToString());
+        Assert.Equal(ForwardedOrigin, await StoredOriginAsync(factory));
     }
 
     [Fact]
@@ -210,48 +171,9 @@ public class PublicUrlTests
         Assert.Contains("App:PublicUrl", exception.ToString());
     }
 
-    [Fact]
-    public async Task Trusted_proxies_can_be_given_as_an_indexed_list_like_docker_compose_does()
-    {
-        // App__TrustedProxies__0=... is a section with children: the options binder must not choke on it.
-        using var factory = new IndexedProxyListFactory();
-
-        var link = await CreateUserAndGetLinkAsync(factory, r =>
-        {
-            r.Headers.Add("X-Forwarded-Proto", "https");
-            r.Headers.Add("X-Forwarded-Host", "dnd.example.com");
-        });
-
-        Assert.StartsWith("https://dnd.example.com/set-password?token=", link);
-    }
-
-    private sealed class NoTrustedProxiesFactory : ApiFactory
-    {
-        protected override string? TrustedProxies => string.Empty;
-    }
-
     private sealed class PublicClientFactory : ApiFactory
     {
         protected override string RemoteIpAddress => "203.0.113.9";
-    }
-
-    private sealed class CustomProxyFactory : ApiFactory
-    {
-        protected override string? TrustedProxies => "203.0.113.0/24, 2001:db8::/32";
-
-        protected override string RemoteIpAddress => "203.0.113.9";
-    }
-
-    private sealed class IndexedProxyListFactory : ApiFactory
-    {
-        protected override string RemoteIpAddress => "203.0.113.9";
-
-        protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
-        {
-            base.ConfigureWebHost(builder);
-            builder.UseSetting("App:TrustedProxies:0", "203.0.113.0/24");
-            builder.UseSetting("App:TrustedProxies:1", "10.0.0.0/8");
-        }
     }
 
     private sealed class FallbackFactory : ApiFactory

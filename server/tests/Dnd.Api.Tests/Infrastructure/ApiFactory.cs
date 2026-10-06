@@ -62,9 +62,6 @@ public class ApiFactory : WebApplicationFactory<Program>
     /// <summary>Optional <c>App:PublicUrl</c> fallback. Null by default: the API must work without it.</summary>
     protected virtual string? PublicUrlFallback => null;
 
-    /// <summary>When not null, sets <c>App:TrustedProxies</c> (an empty string trusts no proxy).</summary>
-    protected virtual string? TrustedProxies => null;
-
     /// <summary>Address the test server reports as the client's, i.e. the proxy the request came from.</summary>
     protected virtual string RemoteIpAddress => "127.0.0.1";
 
@@ -78,11 +75,6 @@ public class ApiFactory : WebApplicationFactory<Program>
         if (PublicUrlFallback is not null)
         {
             builder.UseSetting("App:PublicUrl", PublicUrlFallback);
-        }
-
-        if (TrustedProxies is not null)
-        {
-            builder.UseSetting("App:TrustedProxies", TrustedProxies);
         }
 
         builder.UseSetting("App:InitialAdminEmail", AdminEmail);

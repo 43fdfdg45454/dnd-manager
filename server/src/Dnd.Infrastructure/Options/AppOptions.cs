@@ -12,11 +12,6 @@ public sealed class AppOptions
     /// </summary>
     public string? PublicUrl { get; set; }
 
-    // App:TrustedProxies (the proxies whose X-Forwarded-* headers are trusted) is intentionally NOT a property:
-    // it may be given as a list (App__TrustedProxies__0=...) or as a comma-separated string, and a string
-    // property would make the options binder fail on the list form. It is read straight from configuration
-    // by ForwardedHeadersSetup in Dnd.Api.
-
     /// <summary>Email of the Admin created on first boot when there are no users. Empty disables it.</summary>
     public string? InitialAdminEmail { get; set; }
 

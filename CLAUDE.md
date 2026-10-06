@@ -52,7 +52,7 @@ cd deploy && cp .env.sample .env && docker compose pull && docker compose up -d
 - **Offline solo lectura**: la app cachea el último estado; las escrituras se deshabilitan sin red.
 - Hosting: Docker Compose solo con `api` y `postgres`; la API escucha en un puerto del host y el
   operador pone su propio reverse proxy con TLS. La URL pública se toma de las cabeceras
-  `X-Forwarded-*` del proxy (redes de confianza configurables); `App:PublicUrl` es solo un respaldo.
+  `X-Forwarded-*` del proxy; `App:PublicUrl` es solo un respaldo.
   Email por **SMTP del operador** (465 TLS implícito o 587 STARTTLS; CA propia vía `SSL_CERT_FILE`).
 - La app Android confía en los certificados de usuario del dispositivo (CA propia) y permite fijar
   la huella de un certificado por host.

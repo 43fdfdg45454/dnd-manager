@@ -29,12 +29,7 @@ services:
       Logging__LogLevel__Default: ${LOG_LEVEL}
       ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       Database__AutoMigrate: "true"
-      AllowedHosts: ${ALLOWED_HOSTS}
       App__PublicUrl: ${PUBLIC_URL}
-      App__TrustedProxies__0: ${TRUSTED_PROXY_0}
-      App__TrustedProxies__1: ${TRUSTED_PROXY_1}
-      App__TrustedProxies__2: ${TRUSTED_PROXY_2}
-      App__TrustedProxies__3: ${TRUSTED_PROXY_3}
       App__InitialAdminEmail: ${ADMIN_EMAIL}
       App__DefaultTimeZone: ${DEFAULT_TIME_ZONE}
       Jwt__Secret: ${JWT_SECRET}

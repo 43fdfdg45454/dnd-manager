@@ -28,8 +28,7 @@ curl http://127.0.0.1:8080/health/ready
 
 - `JWT_SECRET`: genera uno con `openssl rand -base64 48`. Debe tener al menos 32 caracteres.
 - **URL pública**: la decide tu reverse proxy. La API toma el esquema y el host de las cabeceras
-  `X-Forwarded-Proto` y `X-Forwarded-Host` (solo si llegan desde `TRUSTED_PROXY_*`) y los usa en los
-  enlaces de los correos. Recuerda el último origen visto, así los recordatorios que se envían en
+  `X-Forwarded-Proto` y `X-Forwarded-Host` que envía tu proxy y los usa en los enlaces de los correos. Recuerda el último origen visto, así los recordatorios que se envían en
   segundo plano también llevan la URL correcta. `PUBLIC_URL` queda como respaldo opcional para los
   correos enviados antes de la primera petición a través del proxy (p. ej. el del administrador
   inicial): si no lo informas, ese primer enlace sale en los logs como ruta relativa y basta con
@@ -54,8 +53,6 @@ curl http://127.0.0.1:8080/health/ready
 |----------|----------------|-------------|
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base de datos (la contraseña es obligatoria) | `dnd`, `dnd`, — |
 | `PUBLIC_URL` | Respaldo opcional de la URL pública; normalmente vacío (la aporta tu proxy) | vacío |
-| `TRUSTED_PROXY_0..3` | Redes (CIDR) desde las que se aceptan las cabeceras `X-Forwarded-*` | loopback y redes privadas |
-| `ALLOWED_HOSTS` | Dominio(s) admitidos en la cabecera `Host`; ponlo al de tu proxy para que nadie pueda forjar enlaces | `*` |
 | `ADMIN_EMAIL` | Correo del administrador inicial | `admin@example.com` |
 | `JWT_SECRET` | Firma de los tokens y enlaces de asistencia (obligatoria) | — |
 | `MAX_UPLOAD_MB` | Tamaño máximo de subida en la API (ver [Límites de subida](#límites-de-subida)) | `200` |
