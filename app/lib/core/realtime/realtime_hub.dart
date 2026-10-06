@@ -40,6 +40,12 @@ abstract interface class RealtimeHub {
   /// the user.
   Future<void> connect(String campaignId);
 
+  /// Opens a throwaway connection to the hub and answers with the transport it
+  /// negotiated (`WebSockets`, `ServerSentEvents` or `LongPolling`), trying them
+  /// in that order. Throws when none of them connects. Used by the connection
+  /// diagnostics; it does not touch the campaign connection.
+  Future<String> probe();
+
   /// Closes the connection.
   Future<void> disconnect();
 

@@ -76,28 +76,16 @@ class SummaryTab extends StatelessWidget {
     return _TabList(
       children: [
         const SectionTitle('Características'),
-        GridView.count(
-          crossAxisCount: 3,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          childAspectRatio: 1.15,
+        _EqualGrid(
+          key: const Key('abilities-grid'),
+          columnsWide: 3,
           children: [for (final key in abilityKeys) _AbilityCard(character: c, abilityKey: key)],
         ),
         const SectionTitle('Combate'),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        _EqualGrid(
+          key: const Key('combat-grid'),
+          columnsWide: 6,
           children: [
-            _StatTile(
-              statKey: 'proficiency',
-              breakdownKey: 'proficiencyBonus',
-              label: 'Bonificador de competencia',
-              value: formatModifier(sheet.proficiencyBonus),
-              character: c,
-              field: 'proficiencyBonus',
-            ),
             _StatTile(
               statKey: 'armor-class',
               breakdownKey: 'armorClass',
@@ -126,11 +114,39 @@ class SummaryTab extends StatelessWidget {
             _StatTile(
               statKey: 'hp',
               breakdownKey: 'hitPointsMax',
-              totalText: '${sheet.hitPointsMax}',
-              label: 'PG',
-              value: '${c.hitPointsCurrent} / ${sheet.hitPointsMax}',
+              label: 'PG máx',
+              value: '${sheet.hitPointsMax}',
               character: c,
               field: 'hitPointsMax',
+            ),
+            _StatTile(
+              statKey: 'passive-perception',
+              breakdownKey: 'passivePerception',
+              label: 'Percepción pasiva',
+              value: '${sheet.passivePerception}',
+              character: c,
+              field: 'passivePerception',
+            ),
+            _StatTile(
+              statKey: 'proficiency',
+              breakdownKey: 'proficiencyBonus',
+              label: 'Competencia',
+              value: formatModifier(sheet.proficiencyBonus),
+              character: c,
+              field: 'proficiencyBonus',
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _StatTile(
+              statKey: 'hp-current',
+              label: 'PG actuales',
+              value: '${c.hitPointsCurrent} / ${sheet.hitPointsMax}',
+              character: c,
             ),
             _StatTile(
               statKey: 'temp-hp',
@@ -143,14 +159,6 @@ class SummaryTab extends StatelessWidget {
               label: 'Inspiración',
               value: c.inspiration ? 'Sí' : 'No',
               character: c,
-            ),
-            _StatTile(
-              statKey: 'passive-perception',
-              breakdownKey: 'passivePerception',
-              label: 'Percepción pasiva',
-              value: '${sheet.passivePerception}',
-              character: c,
-              field: 'passivePerception',
             ),
           ],
         ),
@@ -168,6 +176,34 @@ class SummaryTab extends StatelessWidget {
             ),
         ],
       ],
+    );
+  }
+}
+
+/// Fixed grid of equal tiles: 3 columns, or [columnsWide] from 600 px wide.
+class _EqualGrid extends StatelessWidget {
+  const _EqualGrid({super.key, required this.columnsWide, required this.children});
+
+  final int columnsWide;
+  final List<Widget> children;
+
+  static const _wideBreakpoint = 600.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= _wideBreakpoint;
+        return GridView.count(
+          crossAxisCount: wide ? columnsWide : 3,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: wide && columnsWide > 3 ? 1.3 : 1.15,
+          children: children,
+        );
+      },
     );
   }
 }
@@ -250,24 +286,36 @@ class _StatTile extends StatelessWidget {
       key: Key('tile-$statKey'),
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(label, style: theme.textTheme.labelMedium),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                StatValue(
-                  statKey: breakdownKey ?? statKey,
-                  title: label,
-                  text: value,
-                  totalText: totalText,
-                  breakdown: breakdownKey == null ? null : character.sheet.breakdown(breakdownKey!),
-                  style: theme.textTheme.titleLarge,
-                ),
-                if (field != null) OverrideMark(character: character, field: field!),
-              ],
+            Text(
+              label,
+              style: theme.textTheme.labelMedium,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  StatValue(
+                    statKey: breakdownKey ?? statKey,
+                    title: label,
+                    text: value,
+                    totalText: totalText,
+                    breakdown: breakdownKey == null
+                        ? null
+                        : character.sheet.breakdown(breakdownKey!),
+                    style: theme.textTheme.titleLarge,
+                  ),
+                  if (field != null) OverrideMark(character: character, field: field!),
+                ],
+              ),
             ),
           ],
         ),

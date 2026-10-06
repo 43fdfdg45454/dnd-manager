@@ -549,6 +549,7 @@ void main() {
       expect(find.textContaining('Credenciales de usuario'), findsOneWidget);
 
       await tester.ensureVisible(find.byKey(const Key('server-trust')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('server-trust')));
       await tester.pumpAndSettle();
 

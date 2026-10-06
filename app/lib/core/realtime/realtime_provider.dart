@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/characters/data/characters_controller.dart';
@@ -63,15 +64,53 @@ class _Connection {
   Timer? retry;
 }
 
+/// What the app bar icon and the connection banner show.
+@immutable
+class RealtimeState {
+  const RealtimeState({required this.status, this.nextRetryAt, this.lastConnectedAt});
+
+  final RealtimeStatus status;
+
+  /// When the next automatic attempt happens (null when none is scheduled).
+  final DateTime? nextRetryAt;
+
+  /// Last time the hub was connected (null: never in this session).
+  final DateTime? lastConnectedAt;
+
+  RealtimeState copyWith({
+    RealtimeStatus? status,
+    DateTime? Function()? nextRetryAt,
+    DateTime? lastConnectedAt,
+  }) => RealtimeState(
+    status: status ?? this.status,
+    nextRetryAt: nextRetryAt == null ? this.nextRetryAt : nextRetryAt(),
+    lastConnectedAt: lastConnectedAt ?? this.lastConnectedAt,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is RealtimeState &&
+      other.status == status &&
+      other.nextRetryAt == nextRetryAt &&
+      other.lastConnectedAt == lastConnectedAt;
+
+  @override
+  int get hashCode => Object.hash(status, nextRetryAt, lastConnectedAt);
+}
+
 /// Realtime link of one campaign, alive while its shell is mounted: connects
-/// the [RealtimeHub] to the campaign, keeps the connection status (the app bar
-/// icon) and refreshes the data each event touches. Without network or session
-/// it does not try and reports [RealtimeStatus.offline]; a failed connection
-/// is retried with a growing delay.
-class CampaignRealtime extends Notifier<RealtimeStatus> {
+/// the [RealtimeHub] to the campaign, keeps the connection state (the app bar
+/// icon and the banner) and refreshes the data each event touches. Without
+/// network or session it does not try and reports [RealtimeStatus.offline];
+/// everything else comes from the hub (never from the outcome of HTTP
+/// requests). A failed connection is retried with a growing delay, or at once
+/// with [retryNow].
+class CampaignRealtime extends Notifier<RealtimeState> {
   CampaignRealtime(this.campaignId);
 
   final String campaignId;
+
+  _Connection? _link;
 
   /// Waits between failed attempts (the last one repeats).
   static const retryDelays = [
@@ -83,12 +122,14 @@ class CampaignRealtime extends Notifier<RealtimeStatus> {
   ];
 
   @override
-  RealtimeStatus build() {
-    final offline = ref.watch(connectivityProvider.select((s) => s.isOffline));
+  RealtimeState build() {
+    final hasNetwork = ref.watch(connectivityProvider.select((s) => s.hasNetwork));
     final signedIn = ref.watch(authControllerProvider.select((s) => s is AuthSignedIn));
-    if (offline || !signedIn) return RealtimeStatus.offline;
+    _link = null;
+    if (!hasNetwork || !signedIn) return const RealtimeState(status: RealtimeStatus.offline);
 
     final link = _Connection(ref.watch(realtimeHubProvider));
+    _link = link;
     final events = link.hub.events.listen((event) => _onEvent(link, event));
     final statuses = link.hub.statusChanges.listen((status) => _onStatus(link, status));
     ref.onDispose(() {
@@ -99,7 +140,19 @@ class CampaignRealtime extends Notifier<RealtimeStatus> {
       if (link.hub.campaignId == campaignId) unawaited(link.hub.disconnect());
     });
     unawaited(_connect(link));
-    return RealtimeStatus.connecting;
+    return const RealtimeState(status: RealtimeStatus.connecting);
+  }
+
+  /// Tries to connect now instead of waiting for the next scheduled attempt.
+  /// Does nothing without network or session.
+  Future<void> retryNow() async {
+    final link = _link;
+    if (link == null || !link.alive || state.status == RealtimeStatus.connected) return;
+    link.retry?.cancel();
+    link.retry = null;
+    link.attempt = 0;
+    state = state.copyWith(status: RealtimeStatus.connecting, nextRetryAt: () => null);
+    await _connect(link);
   }
 
   Future<void> _connect(_Connection link) async {
@@ -107,7 +160,7 @@ class CampaignRealtime extends Notifier<RealtimeStatus> {
       await link.hub.connect(campaignId);
     } catch (_) {
       if (!link.alive) return;
-      state = RealtimeStatus.disconnected;
+      state = state.copyWith(status: RealtimeStatus.disconnected);
       _scheduleRetry(link);
     }
   }
@@ -116,27 +169,35 @@ class CampaignRealtime extends Notifier<RealtimeStatus> {
     if (!link.alive || (link.retry?.isActive ?? false)) return;
     final delay = retryDelays[link.attempt.clamp(0, retryDelays.length - 1)];
     link.attempt++;
+    state = state.copyWith(nextRetryAt: () => DateTime.now().add(delay));
     link.retry = Timer(delay, () {
       link.retry = null;
-      if (link.alive) unawaited(_connect(link));
+      if (!link.alive) return;
+      state = state.copyWith(status: RealtimeStatus.connecting, nextRetryAt: () => null);
+      unawaited(_connect(link));
     });
   }
 
   void _onStatus(_Connection link, RealtimeStatus status) {
     if (!link.alive || link.hub.campaignId != campaignId) return;
+    var next = state.copyWith(status: status);
     switch (status) {
       case RealtimeStatus.connected:
         link.retry?.cancel();
+        link.retry = null;
         link.attempt = 0;
+        next = next.copyWith(nextRetryAt: () => null, lastConnectedAt: DateTime.now());
         // Events may have been missed while the connection was down.
         if (link.wasConnected) _refreshAll();
         link.wasConnected = true;
       case RealtimeStatus.disconnected:
+        state = next;
         _scheduleRetry(link);
+        return;
       case RealtimeStatus.offline || RealtimeStatus.connecting || RealtimeStatus.reconnecting:
         break;
     }
-    state = status;
+    state = next;
   }
 
   void _onEvent(_Connection link, CampaignEvent event) {
@@ -203,4 +264,4 @@ class CampaignRealtime extends Notifier<RealtimeStatus> {
 /// Realtime status of a campaign; listening to it keeps the connection open
 /// (the campaign shell does while it is mounted).
 final campaignRealtimeProvider = NotifierProvider.autoDispose
-    .family<CampaignRealtime, RealtimeStatus, String>(CampaignRealtime.new);
+    .family<CampaignRealtime, RealtimeState, String>(CampaignRealtime.new);

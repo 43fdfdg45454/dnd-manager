@@ -46,6 +46,12 @@ class _OfflineConnectivity extends ConnectivityController {
   ConnectivityStatus build() => const ConnectivityStatus(hasNetwork: false);
 }
 
+/// Connectivity with network whose last request failed.
+class _FailedRequestConnectivity extends ConnectivityController {
+  @override
+  ConnectivityStatus build() => const ConnectivityStatus(lastRequestFailed: true);
+}
+
 DirectMessage _message(String id) =>
     DirectMessage(id: id, campaignId: 'c1', characterId: 'ch1', body: 'Cuidado con el posadero');
 
@@ -66,6 +72,7 @@ Future<_Pumped> _pump(
   FakeRealtimeHub? hub,
   FakeMessagesRepository? messages,
   bool offline = false,
+  bool lastRequestFailed = false,
 }) async {
   final realtime = hub ?? FakeRealtimeHub();
   final characters = _CountingCharacters(
@@ -84,7 +91,10 @@ Future<_Pumped> _pump(
     location: location,
     fakes: fakes,
     realtime: realtime,
-    overrides: [if (offline) connectivityProvider.overrideWith(_OfflineConnectivity.new)],
+    overrides: [
+      if (offline) connectivityProvider.overrideWith(_OfflineConnectivity.new),
+      if (lastRequestFailed) connectivityProvider.overrideWith(_FailedRequestConnectivity.new),
+    ],
   );
   return (hub: realtime, characters: characters, stash: stash, router: router);
 }
@@ -186,6 +196,50 @@ void main() {
       expect(find.byKey(const Key('realtime-connected')), findsOneWidget);
       // Events may have been lost meanwhile: the sheet is read again.
       expect(characters.reads.length, greaterThan(reads));
+    });
+
+    testWidgets('una petición HTTP fallida no hace mentir al icono: manda el hub', (tester) async {
+      final (:hub, characters: _, stash: _, router: _) = await _pump(
+        tester,
+        lastRequestFailed: true,
+      );
+
+      expect(hub.connects, ['c1']);
+      expect(find.byKey(const Key('realtime-connected')), findsOneWidget);
+      expect(find.byTooltip('En vivo'), findsOneWidget);
+      expect(find.byKey(const Key('connection-banner-reconnecting')), findsNothing);
+      expect(find.byKey(const Key('connection-banner-offline')), findsNothing);
+    });
+
+    testWidgets('si el hub no conecta, la franja ámbar cuenta atrás y Reintentar conecta ya', (
+      tester,
+    ) async {
+      final failing = FakeRealtimeHub(failConnect: true);
+      await _pump(tester, hub: failing);
+
+      expect(failing.connects, ['c1']);
+      expect(find.byKey(const Key('connection-banner-reconnecting')), findsOneWidget);
+      expect(find.textContaining('Reconectando… ('), findsOneWidget);
+
+      failing.failConnect = false;
+      await tester.tap(find.byKey(const Key('realtime-retry')));
+      await tester.pumpAndSettle();
+
+      // No waiting for the 2 s timer: the manual retry connected at once.
+      expect(failing.connects, ['c1', 'c1']);
+      expect(find.byKey(const Key('realtime-connected')), findsOneWidget);
+      expect(find.byKey(const Key('connection-banner-reconnecting')), findsNothing);
+    });
+
+    testWidgets('sin red la franja es roja y Reintentar no hace nada hasta que vuelve', (
+      tester,
+    ) async {
+      final (:hub, characters: _, stash: _, router: _) = await _pump(tester, offline: true);
+
+      expect(find.byKey(const Key('connection-banner-offline')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('realtime-retry')));
+      await tester.pumpAndSettle();
+      expect(hub.connects, isEmpty);
     });
 
     testWidgets('si la conexión falla lo reintenta pasado un rato', (tester) async {

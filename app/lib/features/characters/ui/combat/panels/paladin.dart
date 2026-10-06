@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../catalog/ui/detail_widgets.dart' show SectionTitle;
 import '../../../../dice/ui/dice_sheet.dart';
+import '../../../data/characters_controller.dart';
 import '../../../data/models.dart';
 import '../combat_support.dart';
 import 'panel_support.dart';
@@ -37,17 +38,35 @@ class PaladinPanel extends ConsumerStatefulWidget {
 class _PaladinPanelState extends ConsumerState<PaladinPanel> {
   int? _smiteLevel;
   int _amount = 1;
-  bool _targetSelf = true;
 
   CharacterDetail get _character => widget.panel.character;
   bool get _canEdit => widget.panel.canEdit;
 
-  Future<void> _layOnHands(int remaining) async {
+  Future<void> _healSelf(int remaining) async {
     final amount = _amount.clamp(1, remaining);
     await runCombat(
       context,
-      () => panelController(ref, _character).layOnHands(amount, targetSelf: _targetSelf),
-      success: _targetSelf ? 'Te curas $amount PG.' : 'Gastas $amount puntos de la reserva.',
+      () => panelController(ref, _character).layOnHands(amount),
+      success: 'Te curas $amount PG.',
+    );
+  }
+
+  Future<void> _healOther(int remaining) async {
+    final target = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _TargetSheet(campaignId: _character.campaignId, ownId: _character.id),
+    );
+    if (target == null || !mounted) return;
+    final amount = _amount.clamp(1, remaining);
+    await runCombat(
+      context,
+      () => panelController(
+        ref,
+        _character,
+      ).layOnHands(amount, targetSelf: false, note: 'Curar a $target'),
+      success: 'Has curado $amount PG a $target.',
     );
   }
 
@@ -157,19 +176,26 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(remaining == 0 ? 'Reserva agotada.' : 'Cantidad: 1'),
                 ),
-              SwitchListTile(
-                key: const Key('loh-self'),
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Sobre mí'),
-                subtitle: const Text('Desactívalo para curar a otra criatura.'),
-                value: _targetSelf,
-                onChanged: _canEdit ? (v) => setState(() => _targetSelf = v) : null,
-              ),
-              FilledButton.icon(
-                key: const Key('loh-apply'),
-                onPressed: _canEdit && remaining > 0 ? () => _layOnHands(remaining) : null,
-                icon: const Icon(Icons.back_hand_outlined),
-                label: const Text('Imponer manos'),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      key: const Key('loh-heal-self'),
+                      onPressed: _canEdit && remaining > 0 ? () => _healSelf(remaining) : null,
+                      icon: const Icon(Icons.back_hand_outlined),
+                      label: const Text('Curarme'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      key: const Key('loh-heal-other'),
+                      onPressed: _canEdit && remaining > 0 ? () => _healOther(remaining) : null,
+                      icon: const Icon(Icons.favorite_border),
+                      label: const Text('Curar a otro'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -231,6 +257,90 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Bottom sheet that picks who is healed: a character of the campaign or a free
+/// name. Pops with the chosen name.
+class _TargetSheet extends ConsumerStatefulWidget {
+  const _TargetSheet({required this.campaignId, required this.ownId});
+
+  final String campaignId;
+  final String ownId;
+
+  @override
+  ConsumerState<_TargetSheet> createState() => _TargetSheetState();
+}
+
+class _TargetSheetState extends ConsumerState<_TargetSheet> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final characters = ref.watch(campaignCharactersControllerProvider(widget.campaignId));
+    final others = [
+      for (final c in characters.value ?? const <CharacterSummary>[])
+        if (c.id != widget.ownId) c,
+    ];
+    final name = _controller.text.trim();
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + MediaQuery.viewInsetsOf(context).bottom),
+        child: SingleChildScrollView(
+          key: const Key('loh-other-sheet'),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('¿A quién curas?', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              if (characters.isLoading && others.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (characters.hasError && others.isEmpty)
+                const Text('No se pudo cargar el grupo. Escribe el nombre abajo.')
+              else
+                for (final c in others)
+                  ListTile(
+                    key: Key('loh-target-${c.id}'),
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.person_outline),
+                    title: Text(c.name),
+                    subtitle: c.ownerDisplayName == null ? null : Text(c.ownerDisplayName!),
+                    onTap: () => Navigator.of(context).pop(c.name),
+                  ),
+              const SizedBox(height: 8),
+              TextField(
+                key: const Key('loh-target-free'),
+                controller: _controller,
+                textCapitalization: TextCapitalization.sentences,
+                onChanged: (_) => setState(() {}),
+                onSubmitted: (_) => name.isEmpty ? null : Navigator.of(context).pop(name),
+                decoration: const InputDecoration(
+                  labelText: 'Otra criatura',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              FilledButton(
+                key: const Key('loh-target-free-confirm'),
+                onPressed: name.isEmpty ? null : () => Navigator.of(context).pop(name),
+                child: const Text('Curar'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

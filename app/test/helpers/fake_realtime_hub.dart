@@ -12,6 +12,11 @@ class FakeRealtimeHub implements RealtimeHub {
 
   bool failConnect;
 
+  /// Transport [probe] answers with, unless [probeError] is set.
+  String probeTransport = 'WebSockets';
+  Object? probeError;
+  int probes = 0;
+
   /// Campaign ids passed to [connect], in order.
   final List<String> connects = [];
   int disconnects = 0;
@@ -42,6 +47,14 @@ class FakeRealtimeHub implements RealtimeHub {
       throw StateError('Fake connection failure');
     }
     setStatus(RealtimeStatus.connected);
+  }
+
+  @override
+  Future<String> probe() async {
+    probes++;
+    final error = probeError;
+    if (error != null) throw error;
+    return probeTransport;
   }
 
   @override

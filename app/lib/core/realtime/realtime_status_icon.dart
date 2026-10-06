@@ -8,15 +8,15 @@ import 'realtime_hub.dart';
 import 'realtime_provider.dart';
 
 /// Realtime connection status of a campaign in its app bar
-/// (`Key('realtime-status')`): golden sparkles when connected, grey while
-/// connecting or reconnecting, a crossed-out cloud without connection.
+/// (`Key('realtime-status')`): golden sparkles ("En vivo") when connected and
+/// the same icon in grey otherwise (the banner under the app bar explains why).
 class RealtimeStatusIcon extends ConsumerWidget {
   const RealtimeStatusIcon({super.key, required this.campaignId});
 
   final String campaignId;
 
   static String tooltipFor(RealtimeStatus status) => switch (status) {
-    RealtimeStatus.connected => 'Tiempo real: conectado',
+    RealtimeStatus.connected => 'En vivo',
     RealtimeStatus.connecting => 'Tiempo real: conectando…',
     RealtimeStatus.reconnecting => 'Tiempo real: reconectando…',
     RealtimeStatus.disconnected => 'Tiempo real: sin conexión con el servidor',
@@ -25,36 +25,29 @@ class RealtimeStatusIcon extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final status = ref.watch(campaignRealtimeProvider(campaignId));
+    final status = ref.watch(campaignRealtimeProvider(campaignId).select((s) => s.status));
     final tokens = context.tokens;
     final label = tooltipFor(status);
-    final icon = switch (status) {
-      RealtimeStatus.connected => AppIcon(
-        AppIcons.sparkles,
-        key: const Key('realtime-connected'),
-        color: tokens.gold,
-        size: 22,
-        semanticLabel: label,
-      ),
-      RealtimeStatus.connecting || RealtimeStatus.reconnecting => AppIcon(
-        AppIcons.sparkles,
-        key: const Key('realtime-reconnecting'),
-        color: tokens.inkMuted.withValues(alpha: 0.6),
-        size: 22,
-        semanticLabel: label,
-      ),
-      RealtimeStatus.disconnected || RealtimeStatus.offline => Icon(
-        Icons.cloud_off,
-        key: const Key('realtime-offline'),
-        color: tokens.inkMuted,
-        size: 22,
-        semanticLabel: label,
-      ),
+    final connected = status == RealtimeStatus.connected;
+    final key = switch (status) {
+      RealtimeStatus.connected => const Key('realtime-connected'),
+      RealtimeStatus.connecting ||
+      RealtimeStatus.reconnecting => const Key('realtime-reconnecting'),
+      RealtimeStatus.disconnected || RealtimeStatus.offline => const Key('realtime-offline'),
     };
     return Tooltip(
       key: const Key('realtime-status'),
       message: label,
-      child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: icon),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: AppIcon(
+          AppIcons.sparkles,
+          key: key,
+          color: connected ? tokens.gold : tokens.inkMuted.withValues(alpha: 0.6),
+          size: 22,
+          semanticLabel: label,
+        ),
+      ),
     );
   }
 }

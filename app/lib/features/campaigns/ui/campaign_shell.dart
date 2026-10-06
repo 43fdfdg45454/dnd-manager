@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/cache/stale_data.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/realtime/connection_banner.dart';
 import '../../../core/realtime/realtime_events.dart';
 import '../../../core/realtime/realtime_provider.dart';
 import '../../../core/realtime/realtime_status_icon.dart';
@@ -158,30 +159,38 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
           ),
         ],
       ),
-      body: OfflineBannerLayout(
-        scopes: [staleTree(CampaignsRepository.campaignPath(campaignId))],
-        child: detail.when(
-          skipLoadingOnReload: true,
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(describeCampaignError(error), textAlign: TextAlign.center),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: () => ref.invalidate(campaignDetailControllerProvider(campaignId)),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Reintentar'),
+      body: Column(
+        children: [
+          ConnectionBanner(campaignId: campaignId),
+          Expanded(
+            child: OfflineBannerLayout(
+              scopes: [staleTree(CampaignsRepository.campaignPath(campaignId))],
+              child: detail.when(
+                skipLoadingOnReload: true,
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(describeCampaignError(error), textAlign: TextAlign.center),
+                        const SizedBox(height: 12),
+                        FilledButton.icon(
+                          onPressed: () =>
+                              ref.invalidate(campaignDetailControllerProvider(campaignId)),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Reintentar'),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
+                ),
+                data: (_) => navigationShell,
               ),
             ),
           ),
-          data: (_) => navigationShell,
-        ),
+        ],
       ),
       bottomNavigationBar: role == null
           ? null

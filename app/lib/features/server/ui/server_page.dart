@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/network/trust_store.dart';
+import '../../../core/realtime/connection_diagnostics.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/server/server_config_controller.dart';
 import '../../../core/server/server_probe.dart';
@@ -27,6 +28,8 @@ class _ServerPageState extends ConsumerState<ServerPage> {
   bool _saving = false;
   ServerProbeResult? _result;
   ServerProbeException? _failure;
+  bool _diagnosing = false;
+  List<DiagnosticResult>? _diagnostics;
 
   @override
   void initState() {
@@ -73,6 +76,24 @@ class _ServerPageState extends ConsumerState<ServerPage> {
       setState(() => _failure = const ServerProbeException(ServerProbeFailure.unreachable));
     } finally {
       if (mounted) setState(() => _probing = false);
+    }
+  }
+
+  Future<void> _diagnose() async {
+    setState(() {
+      _diagnosing = true;
+      _diagnostics = const [];
+    });
+    try {
+      await ref
+          .read(diagnosticsProvider)
+          .run(
+            onProgress: (results) {
+              if (mounted) setState(() => _diagnostics = results);
+            },
+          );
+    } finally {
+      if (mounted) setState(() => _diagnosing = false);
     }
   }
 
@@ -150,6 +171,32 @@ class _ServerPageState extends ConsumerState<ServerPage> {
                       : const Icon(Icons.wifi_tethering),
                   label: const Text('Probar conexión'),
                 ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  key: const Key('server-diagnose'),
+                  onPressed: _diagnosing || _probing || _saving || config.baseUrl.isEmpty
+                      ? null
+                      : _diagnose,
+                  icon: _diagnosing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.network_check),
+                  label: const Text('Diagnosticar conexión'),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'Comprueba el servidor guardado, tu sesión y la conexión en vivo.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+                if (_diagnostics != null && _diagnostics!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  for (final result in _diagnostics!) _DiagnosticLine(result: result),
+                ],
                 if (_result != null) ...[
                   const SizedBox(height: 12),
                   Text(
@@ -247,5 +294,54 @@ class _ServerPageState extends ConsumerState<ServerPage> {
         ),
       ],
     ];
+  }
+}
+
+class _DiagnosticLine extends StatelessWidget {
+  const _DiagnosticLine({required this.result});
+
+  final DiagnosticResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final (icon, color) = switch (result.outcome) {
+      DiagnosticOutcome.ok => (Icons.check_circle, Colors.green.shade700),
+      DiagnosticOutcome.failed => (Icons.cancel, theme.colorScheme.error),
+      DiagnosticOutcome.skipped => (Icons.remove_circle_outline, theme.disabledColor),
+    };
+    final number = DiagnosticStep.values.indexOf(result.step) + 1;
+    final warning = result.ok && result.cause != null;
+    return Padding(
+      key: Key('diagnose-step-${result.step.name}'),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            warning ? Icons.warning_amber_rounded : icon,
+            key: Key('diagnose-icon-${result.step.name}-${result.outcome.name}'),
+            size: 20,
+            color: warning ? Colors.amber.shade800 : color,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('$number · ${result.step.title}', style: theme.textTheme.titleSmall),
+                Text(result.detail, style: theme.textTheme.bodySmall),
+                if (result.cause != null)
+                  Text(
+                    result.cause!,
+                    key: Key('diagnose-cause-${result.step.name}'),
+                    style: theme.textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

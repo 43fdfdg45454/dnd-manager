@@ -214,6 +214,49 @@ class SignalRRealtimeHub implements RealtimeHub {
     _setStatus(RealtimeStatus.disconnected);
   }
 
+  /// Transports tried by [probe], best first.
+  static const _probeTransports = [
+    (HttpTransportType.WebSockets, 'WebSockets'),
+    (HttpTransportType.ServerSentEvents, 'ServerSentEvents'),
+    (HttpTransportType.LongPolling, 'LongPolling'),
+  ];
+
+  @override
+  Future<String> probe() async {
+    final target = endpoint();
+    if (target.baseUrl.isEmpty) throw StateError('No server configured');
+    final token = await accessToken();
+    if (token == null || token.isEmpty) throw StateError('Signed out');
+    final url = '${target.baseUrl.replaceAll(RegExp(r'/+$'), '')}$path';
+
+    Object? lastError;
+    for (final (transport, name) in _probeTransports) {
+      final connection = HubConnectionBuilder()
+          .withUrl(
+            url,
+            options: HttpConnectionOptions(
+              accessTokenFactory: () async => token,
+              transport: transport,
+              requestTimeout: 8000,
+            ),
+          )
+          .build();
+      try {
+        await _inZone(target, () async => connection.start()).timeout(const Duration(seconds: 8));
+        return name;
+      } catch (error) {
+        lastError = error;
+      } finally {
+        try {
+          await connection.stop();
+        } catch (_) {
+          // Nothing to close.
+        }
+      }
+    }
+    throw lastError ?? StateError('Could not connect');
+  }
+
   @override
   Future<void> disconnect() {
     _campaignId = null;

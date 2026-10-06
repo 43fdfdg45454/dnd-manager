@@ -246,13 +246,63 @@ void main() {
       expect(inCard('ability-cha', '-1'), findsOneWidget);
       expect(inCard('tile-armor-class', '17'), findsOneWidget);
       expect(inCard('tile-initiative', '+2'), findsOneWidget);
-      expect(inCard('tile-hp', '20 / 28'), findsOneWidget);
+      expect(inCard('tile-hp', '28'), findsOneWidget);
+      expect(inCard('tile-hp-current', '20 / 28'), findsOneWidget);
       expect(inCard('tile-temp-hp', '3'), findsOneWidget);
       expect(inCard('tile-passive-perception', '11'), findsOneWidget);
       expect(inCard('save-str', '+5'), findsOneWidget);
       expect(find.byKey(const Key('save-proficient-str')), findsOneWidget);
       expect(find.byKey(const Key('save-plain-dex')), findsOneWidget);
       expect(find.text('Human · Fighter 3 · Nivel 3'), findsOneWidget);
+    });
+
+    testWidgets('Combate: rejilla fija de 3×2 fichas iguales (6 en una fila si es ancha)', (
+      tester,
+    ) async {
+      final repository = FakeCharactersRepository(characters: [makeCharacterJson()]);
+      await _pumpApp(tester, characters: repository, location: '/characters/ch1');
+
+      const keys = [
+        'tile-armor-class',
+        'tile-initiative',
+        'tile-speed',
+        'tile-hp',
+        'tile-passive-perception',
+        'tile-proficiency',
+      ];
+      final grid = find.byKey(const Key('combat-grid'));
+      for (final key in keys) {
+        expect(
+          find.descendant(of: grid, matching: find.byKey(Key(key))),
+          findsOneWidget,
+          reason: key,
+        );
+      }
+      expect(find.descendant(of: grid, matching: find.byType(Card)), findsNWidgets(6));
+      // Order: CA, Iniciativa, Velocidad / PG máx, Percepción pasiva, Competencia.
+      expect(
+        find.descendant(of: find.byKey(const Key('tile-hp')), matching: find.text('PG máx')),
+        findsOneWidget,
+      );
+
+      // Current / temporary HP and inspiration stay in a compact row below.
+      for (final key in ['tile-hp-current', 'tile-temp-hp', 'tile-inspiration']) {
+        expect(find.byKey(Key(key)), findsOneWidget, reason: key);
+      }
+
+      Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+      // The test surface is 800 px wide (>= 600): the six tiles share one row.
+      expect({for (final k in keys) rect(k).top}.length, 1);
+      expect({for (final k in keys) rect(k).width.round()}.length, 1);
+
+      // A phone width gives 3 columns and 2 rows of equal tiles.
+      tester.view.physicalSize = const Size(400, 900);
+      await tester.pumpAndSettle();
+      expect({for (final k in keys) rect(k).top}.length, 2);
+      expect({for (final k in keys) rect(k).width.round()}.length, 1);
+      expect({for (final k in keys) rect(k).height.round()}.length, 1);
+      expect(rect(keys[0]).top, rect(keys[2]).top);
+      expect(rect(keys[3]).top, greaterThan(rect(keys[0]).bottom - 1));
     });
 
     testWidgets('el icono de override muestra la nota con pulsación larga', (tester) async {
@@ -406,7 +456,8 @@ void main() {
 
       await _tap(tester, find.byKey(const Key('stat-save.str')));
       expect(find.text('Salvación de Fuerza'), findsWidgets);
-      expect(find.text('Competencia'), findsOneWidget);
+      // The breakdown line plus the "Competencia" tile of the combat grid.
+      expect(find.text('Competencia'), findsNWidgets(2));
       expect(tester.widget<Text>(find.byKey(const Key('breakdown-total'))).data, '+5');
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();

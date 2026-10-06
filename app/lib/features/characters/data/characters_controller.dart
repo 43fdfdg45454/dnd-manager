@@ -139,8 +139,10 @@ class CharacterController extends AsyncNotifier<CharacterDetail> {
 
   Future<void> rage() => classAction('rage');
 
-  Future<void> layOnHands(int amount, {bool targetSelf = true}) =>
-      classAction('lay-on-hands', {'amount': amount, 'targetSelf': targetSelf});
+  /// [note] (e.g. "Curar a Fulano") is recorded with the action when healing
+  /// someone else.
+  Future<void> layOnHands(int amount, {bool targetSelf = true, String? note}) =>
+      classAction('lay-on-hands', {'amount': amount, 'targetSelf': targetSelf, 'note': ?note});
 
   Future<void> arcaneRecovery(List<int> slotLevels) =>
       classAction('arcane-recovery', {'slotLevels': slotLevels});

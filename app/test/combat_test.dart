@@ -875,13 +875,15 @@ void main() {
       expect(find.text('Castigo divino'), findsWidgets);
     });
 
-    testWidgets('Imposición de manos usa el deslizador y "sobre mí"', (tester) async {
+    testWidgets('Imposición de manos: "Curarme" usa el deslizador', (tester) async {
       final repo = _repo(
         classes: _paladinClasses,
         combat: makeCombatJson(classPanels: [_paladinPanel(loh: 25, lohUsed: 5)]),
       );
       await _pump(tester, characters: repo);
       expect(find.text('20 / 25'), findsWidgets);
+      expect(find.byKey(const Key('loh-self')), findsNothing);
+      expect(find.byKey(const Key('loh-apply')), findsNothing);
 
       final slider = find.byKey(const Key('loh-slider'));
       await tester.drag(slider, const Offset(100, 0));
@@ -889,13 +891,74 @@ void main() {
       final amount = int.parse(tester.widget<Text>(find.byKey(const Key('loh-amount'))).data!);
       expect(amount, greaterThan(1));
 
-      await _tap(tester, 'loh-apply');
+      expect(find.text('Curarme'), findsOneWidget);
+      expect(find.text('Curar a otro'), findsOneWidget);
+      await _tap(tester, 'loh-heal-self');
       expect(repo.classActions.last.action, 'lay-on-hands');
       expect(repo.classActions.last.body, {'amount': amount, 'targetSelf': true});
+    });
 
-      await _tap(tester, 'loh-self');
-      await _tap(tester, 'loh-apply');
+    testWidgets('Imposición de manos: "Curar a otro" elige un personaje de la campaña', (
+      tester,
+    ) async {
+      final repo = FakeCharactersRepository(
+        characters: [
+          makeCharacterJson(
+            status: 'Active',
+            classes: _paladinClasses,
+            combat: makeCombatJson(classPanels: [_paladinPanel(loh: 25)]),
+          ),
+          makeCharacterJson(id: 'ch2', name: 'Elara', status: 'Active', ownerUserId: 'u2'),
+        ],
+      );
+      await _pump(tester, characters: repo);
+
+      await _tap(tester, 'loh-heal-other');
+      expect(find.byKey(const Key('loh-other-sheet')), findsOneWidget);
+      expect(find.byKey(const Key('loh-target-ch2')), findsOneWidget);
+      // The paladin does not list itself.
+      expect(find.byKey(const Key('loh-target-ch1')), findsNothing);
+      expect(find.byKey(const Key('loh-target-free')), findsOneWidget);
+
+      await _tap(tester, 'loh-target-ch2');
+      expect(find.byKey(const Key('loh-other-sheet')), findsNothing);
+      expect(repo.classActions.last.action, 'lay-on-hands');
+      expect(repo.classActions.last.body, {
+        'amount': 1,
+        'targetSelf': false,
+        'note': 'Curar a Elara',
+      });
+      expect(find.text('Has curado 1 PG a Elara.'), findsOneWidget);
+    });
+
+    testWidgets('Imposición de manos: "Otra criatura" acepta un nombre libre', (tester) async {
+      final repo = _repo(
+        classes: _paladinClasses,
+        combat: makeCombatJson(classPanels: [_paladinPanel(loh: 25)]),
+      );
+      await _pump(tester, characters: repo);
+
+      await _tap(tester, 'loh-heal-other');
+      final confirm = find.byKey(const Key('loh-target-free-confirm'));
+      expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+      await tester.enterText(find.byKey(const Key('loh-target-free')), 'Caballo de guerra');
+      await tester.pumpAndSettle();
+      await _tap(tester, confirm);
+
       expect(repo.classActions.last.body['targetSelf'], isFalse);
+      expect(repo.classActions.last.body['note'], 'Curar a Caballo de guerra');
+      expect(find.text('Has curado 1 PG a Caballo de guerra.'), findsOneWidget);
+    });
+
+    testWidgets('Imposición de manos: sin reserva los dos botones se desactivan', (tester) async {
+      final repo = _repo(
+        classes: _paladinClasses,
+        combat: makeCombatJson(classPanels: [_paladinPanel(loh: 5, lohUsed: 5)]),
+      );
+      await _pump(tester, characters: repo);
+      for (final key in ['loh-heal-self', 'loh-heal-other']) {
+        expect(tester.widget<ButtonStyleButton>(find.byKey(Key(key))).onPressed, isNull);
+      }
     });
 
     testWidgets('Canalizar divinidad gasta el recurso', (tester) async {
