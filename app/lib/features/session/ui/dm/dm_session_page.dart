@@ -13,6 +13,7 @@ import '../../../campaigns/domain/campaign_models.dart';
 import '../../../campaigns/ui/confirm_dialog.dart';
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../characters/data/characters_controller.dart';
+import '../../../characters/data/models.dart' show RestKind, RestRequest;
 import '../../../dice/ui/dice_sheet.dart';
 import '../../../items/data/items_controllers.dart';
 import '../../../items/data/models.dart' show ShopSummary;
@@ -25,9 +26,10 @@ import 'dm_character_sheet.dart';
 import 'message_composer.dart';
 import 'party_roster.dart';
 
-/// "Mesa del DM": the party at a glance with forced rests, secret messages and
-/// dice, the party stash, the shops with their open/closed switch, the pending
-/// change requests and the next session. For DMs and the Owner.
+/// "Mesa del DM": the party at a glance with forced rests, level grants, secret
+/// messages and dice, the party stash, the shops with their open/closed switch,
+/// the petitions (rest requests and change requests) and the next session. For
+/// DMs and the Owner.
 class DmSessionPage extends ConsumerStatefulWidget {
   const DmSessionPage({super.key, required this.campaignId});
 
@@ -50,13 +52,16 @@ class _DmSessionPageState extends ConsumerState<DmSessionPage> {
     for (final m in party) (id: m.id, name: m.name),
   ];
 
+  /// Who an action applies to: the whole party or the selection.
+  String _who(List<String> ids, List<PartyMember> party) => ids.isEmpty
+      ? 'todo el grupo'
+      : ids.length == 1
+      ? party.firstWhere((m) => m.id == ids.single).name
+      : '${ids.length} personajes';
+
   Future<void> _rest(PartyRestKind kind, List<PartyMember> party) async {
     final ids = _selected.where((id) => party.any((m) => m.id == id)).toList();
-    final who = ids.isEmpty
-        ? 'todo el grupo'
-        : ids.length == 1
-        ? party.firstWhere((m) => m.id == ids.single).name
-        : '${ids.length} personajes';
+    final who = _who(ids, party);
     final confirmed = await confirmAction(
       context,
       title: kind.label,
@@ -70,6 +75,28 @@ class _DmSessionPageState extends ConsumerState<DmSessionPage> {
           .read(partyControllerProvider(_campaignId).notifier)
           .rest(kind, characterIds: ids.isEmpty ? null : ids),
       success: '${kind.label} aplicado a $who.',
+    );
+    if (done && mounted) setState(_selected.clear);
+  }
+
+  Future<void> _grantLevel(List<PartyMember> party) async {
+    final ids = _selected.where((id) => party.any((m) => m.id == id)).toList();
+    final who = _who(ids, party);
+    final confirmed = await confirmAction(
+      context,
+      title: 'Conceder nivel',
+      message:
+          '¿Conceder el siguiente nivel a $who? Cada jugador lo elegirá desde su sesión; '
+          'quien ya tenga un nivel pendiente no acumula otro.',
+      confirmLabel: 'Conceder',
+    );
+    if (!confirmed || !mounted) return;
+    final done = await runTableAction(
+      context,
+      () => ref
+          .read(partyControllerProvider(_campaignId).notifier)
+          .grantLevel(characterIds: ids.isEmpty ? null : ids),
+      success: 'Nivel concedido a $who.',
     );
     if (done && mounted) setState(_selected.clear);
   }
@@ -101,6 +128,7 @@ class _DmSessionPageState extends ConsumerState<DmSessionPage> {
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(partyControllerProvider(_campaignId));
+        ref.invalidate(restRequestsControllerProvider(_campaignId));
         ref.invalidate(stashControllerProvider(_campaignId));
         ref.invalidate(shopsControllerProvider(_campaignId));
       },
@@ -112,6 +140,7 @@ class _DmSessionPageState extends ConsumerState<DmSessionPage> {
             selectedCount: _selected.length,
             onShortRest: () => _rest(PartyRestKind.short, party),
             onLongRest: () => _rest(PartyRestKind.long, party),
+            onGrantLevel: () => _grantLevel(party),
             onMessage: () => _message(party),
             onClearSelection: () => setState(_selected.clear),
           ),
@@ -143,7 +172,7 @@ class _DmSessionPageState extends ConsumerState<DmSessionPage> {
           const SizedBox(height: 8),
           PartyStashCard(campaign: campaign, characters: _characters(party)),
           _ShopsCard(campaign: campaign),
-          _ChangeRequestsCard(campaignId: _campaignId),
+          _PetitionsCard(campaignId: _campaignId),
           const NextSessionCard(),
         ],
       ),
@@ -156,6 +185,7 @@ class _ActionBar extends StatelessWidget {
     required this.selectedCount,
     required this.onShortRest,
     required this.onLongRest,
+    required this.onGrantLevel,
     required this.onMessage,
     required this.onClearSelection,
   });
@@ -163,6 +193,7 @@ class _ActionBar extends StatelessWidget {
   final int selectedCount;
   final VoidCallback onShortRest;
   final VoidCallback onLongRest;
+  final VoidCallback onGrantLevel;
   final VoidCallback onMessage;
   final VoidCallback onClearSelection;
 
@@ -190,6 +221,14 @@ class _ActionBar extends StatelessWidget {
                 onPressed: canWrite ? onLongRest : null,
                 icon: const AppIcon(AppIcons.moon, size: 20),
                 label: Text('Descanso largo$suffix'),
+              ),
+            ),
+            OfflineAware(
+              builder: (context, canWrite) => FilledButton.tonalIcon(
+                key: const Key('party-grant-level'),
+                onPressed: canWrite ? onGrantLevel : null,
+                icon: const AppIcon(AppIcons.levelUp, size: 20),
+                label: Text('Conceder nivel$suffix'),
               ),
             ),
             OfflineAware(
@@ -300,35 +339,150 @@ class _ShopsCard extends ConsumerWidget {
   }
 }
 
-/// Count of the pending change requests with a link to the list.
-class _ChangeRequestsCard extends ConsumerWidget {
-  const _ChangeRequestsCard({required this.campaignId});
+/// "Peticiones": the rest requests of the players with Aprobar / Rechazar in
+/// the row itself, and the count of pending change requests with a link to
+/// the list.
+class _PetitionsCard extends ConsumerWidget {
+  const _PetitionsCard({required this.campaignId});
 
   final String campaignId;
 
+  Future<void> _approve(BuildContext context, WidgetRef ref, RestRequest request) => runTableAction(
+    context,
+    () => ref.read(restRequestsControllerProvider(campaignId).notifier).approve(request),
+    success: 'Descanso aprobado para ${request.characterName}.',
+  );
+
+  Future<void> _reject(BuildContext context, WidgetRef ref, RestRequest request) => runTableAction(
+    context,
+    () => ref.read(restRequestsControllerProvider(campaignId).notifier).reject(request),
+    success: 'Descanso rechazado para ${request.characterName}.',
+  );
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final pending = ref.watch(pendingChangeRequestCountProvider(campaignId));
+    final rests = ref.watch(restRequestsControllerProvider(campaignId));
     return ParchmentCard(
+      key: const Key('dm-petitions'),
       margin: const EdgeInsets.symmetric(vertical: 6),
-      child: ListTile(
-        key: const Key('dm-change-requests'),
-        leading: Badge(
-          isLabelVisible: pending > 0,
-          label: Text('$pending'),
-          child: const Icon(Icons.fact_check_outlined),
-        ),
-        title: const Text('Solicitudes pendientes'),
-        subtitle: Text(
-          pending == 0
-              ? 'No hay solicitudes pendientes.'
-              : pending == 1
-              ? '1 solicitud por revisar'
-              : '$pending solicitudes por revisar',
-          key: const Key('dm-change-requests-count'),
-        ),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => context.push(AppRoutes.changeRequests(campaignId)),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              AppIcon(AppIcons.scroll, color: context.tokens.gold),
+              const SizedBox(width: 8),
+              Expanded(child: Text('Peticiones', style: theme.textTheme.titleMedium)),
+            ],
+          ),
+          rests.when(
+            skipLoadingOnReload: true,
+            loading: () => const Padding(
+              padding: EdgeInsets.all(12),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (error, _) => TextButton(
+              onPressed: () => ref.invalidate(restRequestsControllerProvider(campaignId)),
+              child: const Text('No se pudieron cargar las peticiones de descanso. Reintentar'),
+            ),
+            data: (list) => list.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      'No hay descansos pendientes de aprobar.',
+                      key: Key('dm-petitions-empty'),
+                    ),
+                  )
+                : Column(
+                    children: [
+                      for (final request in list)
+                        _RestPetitionRow(
+                          request: request,
+                          onApprove: () => _approve(context, ref, request),
+                          onReject: () => _reject(context, ref, request),
+                        ),
+                    ],
+                  ),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            key: const Key('dm-change-requests'),
+            contentPadding: EdgeInsets.zero,
+            leading: Badge(
+              isLabelVisible: pending > 0,
+              label: Text('$pending'),
+              child: const Icon(Icons.fact_check_outlined),
+            ),
+            title: const Text('Solicitudes pendientes'),
+            subtitle: Text(
+              pending == 0
+                  ? 'No hay solicitudes pendientes.'
+                  : pending == 1
+                  ? '1 solicitud por revisar'
+                  : '$pending solicitudes por revisar',
+              key: const Key('dm-change-requests-count'),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(AppRoutes.changeRequests(campaignId)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A pending rest request: who, which rest, how many dice and since when, with
+/// its Aprobar and Rechazar buttons.
+class _RestPetitionRow extends StatelessWidget {
+  const _RestPetitionRow({required this.request, required this.onApprove, required this.onReject});
+
+  final RestRequest request;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final at = request.requestedAt;
+    final age = at == null ? null : describeDataAge(at.toLocal(), DateTime.now());
+    return Padding(
+      key: Key('rest-petition-${request.id}'),
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          AppIcon(
+            request.kind == RestKind.short ? AppIcons.campfire : AppIcons.moon,
+            size: 22,
+            color: context.tokens.gold,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(request.characterName, style: theme.textTheme.titleSmall),
+                Text([request.description, ?age].join(' · '), style: theme.textTheme.bodySmall),
+              ],
+            ),
+          ),
+          OfflineAware(
+            builder: (context, canWrite) => TextButton(
+              key: Key('rest-reject-${request.id}'),
+              onPressed: canWrite ? onReject : null,
+              child: const Text('Rechazar'),
+            ),
+          ),
+          OfflineAware(
+            builder: (context, canWrite) => FilledButton.tonal(
+              key: Key('rest-approve-${request.id}'),
+              onPressed: canWrite ? onApprove : null,
+              child: const Text('Aprobar'),
+            ),
+          ),
+        ],
       ),
     );
   }

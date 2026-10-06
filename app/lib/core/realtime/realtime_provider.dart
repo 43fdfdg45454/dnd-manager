@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/campaigns/data/campaigns_controller.dart';
 import '../../features/characters/data/characters_controller.dart';
 import '../../features/items/data/items_controllers.dart';
 import '../../features/session/data/session_controllers.dart';
@@ -222,6 +223,16 @@ class CampaignRealtime extends Notifier<RealtimeState> {
         ref.invalidate(unreadMessagesCountProvider(campaignId));
       case SessionUpdated(:final entityId):
         _refreshSessions(entityId);
+      case RestRequestUpdated(:final characterId):
+        // The DM's petitions, and the pending rest of the sheet and the roster.
+        ref.invalidate(restRequestsControllerProvider(campaignId));
+        _refreshCharacters(characterId);
+      case LevelUpGranted(:final characterId):
+        // The player banner is shown by the campaign shell.
+        _refreshCharacters(characterId);
+      case MembershipRemoved():
+        // The shell leaves the campaign; its list must not show it any more.
+        ref.invalidate(campaignsControllerProvider);
       case Unknown():
         break;
     }
@@ -251,6 +262,7 @@ class CampaignRealtime extends Notifier<RealtimeState> {
 
   void _refreshAll() {
     _refreshCharacters(null);
+    ref.invalidate(restRequestsControllerProvider(campaignId));
     ref.invalidate(shopsControllerProvider(campaignId));
     ref.invalidate(shopControllerProvider);
     ref.invalidate(stashControllerProvider(campaignId));

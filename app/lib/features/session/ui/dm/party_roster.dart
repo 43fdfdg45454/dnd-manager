@@ -181,13 +181,36 @@ class PartyMemberRow extends StatelessWidget {
                         style: theme.textTheme.bodySmall?.copyWith(color: tokens.crimson),
                       ),
                     ),
-                  if (m.conditions.isNotEmpty || m.exhaustionLevel > 0)
+                  if (m.conditions.isNotEmpty ||
+                      m.exhaustionLevel > 0 ||
+                      m.pendingRest != null ||
+                      m.pendingLevelUpTo != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Wrap(
                         spacing: 4,
                         runSpacing: 4,
                         children: [
+                          if (m.pendingLevelUpTo != null)
+                            Tooltip(
+                              message: 'Nivel concedido: sube a nivel ${m.pendingLevelUpTo}',
+                              child: Chip(
+                                key: Key('party-levelup-${m.id}'),
+                                label: Text('↑ ${m.pendingLevelUpTo}'),
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                              ),
+                            ),
+                          if (m.pendingRest != null)
+                            Tooltip(
+                              message: 'Pide un ${m.pendingRest!.description}',
+                              child: Chip(
+                                key: Key('party-rest-${m.id}'),
+                                label: const Text('Zz'),
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                              ),
+                            ),
                           for (final c in m.conditions)
                             Chip(
                               key: Key('party-condition-${m.id}-${c.index}'),

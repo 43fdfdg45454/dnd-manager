@@ -812,9 +812,23 @@ void main() {
   });
 
   group('descansos', () {
+    testWidgets('el DM descansa directo; el jugador pide el descanso al DM', (tester) async {
+      await _pump(tester, characters: _repo(), role: CampaignRole.dm);
+      expect(find.byKey(const Key('rest-short')), findsOneWidget);
+      expect(find.byKey(const Key('rest-request-short')), findsNothing);
+    });
+
+    testWidgets('el jugador no tiene botones de descanso directo', (tester) async {
+      await _pump(tester, characters: _repo(), role: CampaignRole.player);
+      expect(find.byKey(const Key('rest-short')), findsNothing);
+      expect(find.byKey(const Key('rest-long')), findsNothing);
+      expect(find.byKey(const Key('rest-request-short')), findsOneWidget);
+      expect(find.byKey(const Key('rest-request-long')), findsOneWidget);
+    });
+
     testWidgets('el corto pide dados de golpe por clase', (tester) async {
       final repo = _repo();
-      await _pump(tester, characters: repo);
+      await _pump(tester, characters: repo, role: CampaignRole.dm);
       await _tap(tester, 'rest-short');
       expect(find.text('Fighter (d10)\nQuedan 3 de 3'), findsOneWidget);
       await _tap(tester, 'hit-dice-fighter-plus');
@@ -828,7 +842,7 @@ void main() {
 
     testWidgets('el largo pide confirmación', (tester) async {
       final repo = _repo();
-      await _pump(tester, characters: repo);
+      await _pump(tester, characters: repo, role: CampaignRole.dm);
       await _tap(tester, 'rest-long');
       expect(repo.longRests, 0);
       await tester.tap(find.text('Cancelar'));
@@ -1167,7 +1181,7 @@ void main() {
       await _pump(tester, characters: repo, role: CampaignRole.player);
       expect(tester.widget<IconButton>(find.byKey(const Key('hp-minus'))).onPressed, isNull);
       expect(
-        tester.widget<ButtonStyleButton>(find.byKey(const Key('rest-long'))).onPressed,
+        tester.widget<ButtonStyleButton>(find.byKey(const Key('rest-request-long'))).onPressed,
         isNull,
       );
       await _tap(tester, 'combat-slot-1-pips');

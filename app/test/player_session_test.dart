@@ -139,8 +139,9 @@ void main() {
       await _outside(tester);
 
       expect(find.byKey(const Key('player-outside')), findsOneWidget);
-      expect(find.byKey(const Key('rest-short')), findsOneWidget);
-      expect(find.byKey(const Key('rest-long')), findsOneWidget);
+      expect(find.byKey(const Key('rest-request-short')), findsOneWidget);
+      expect(find.byKey(const Key('rest-request-long')), findsOneWidget);
+      expect(find.byKey(const Key('rest-short')), findsNothing);
       for (final key in ['spells', 'traits', 'notes', 'inventory', 'sheet']) {
         expect(find.byKey(Key('player-open-$key')), findsOneWidget);
       }

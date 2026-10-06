@@ -122,6 +122,9 @@ void main() {
         'shop.updated': ShopUpdated,
         'changeRequest.updated': ChangeRequestUpdated,
         'session.updated': SessionUpdated,
+        'restRequest.updated': RestRequestUpdated,
+        'levelUp.granted': LevelUpGranted,
+        'membership.removed': MembershipRemoved,
       };
       for (final MapEntry(key: type, value: expected) in types.entries) {
         final parsed = CampaignEvent.fromJson({'type': type, 'campaignId': 'c1'});

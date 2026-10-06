@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/auth/auth_controller.dart';
+import '../../../core/auth/auth_state.dart';
 import '../../../core/cache/stale_data.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/realtime/connection_banner.dart';
@@ -87,11 +89,71 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
     _notices = null;
   }
 
+  /// The user is no longer a member: back to the campaign list with a notice.
+  void _onMembershipRemoved() {
+    ref.invalidate(campaignsControllerProvider);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final router = GoRouter.of(context);
+    router.go(AppRoutes.home);
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          key: Key('realtime-notice-removed'),
+          content: Text('Ya no formas parte de esta campaña'),
+        ),
+      );
+  }
+
+  /// "¡Puedes subir a nivel N!" for the owner of the character the DM granted
+  /// a level to (the event also reaches the rest of the campaign).
+  Future<void> _announceLevelUp(String? characterId) async {
+    if (characterId == null) return;
+    final auth = ref.read(authControllerProvider);
+    final myUserId = auth is AuthSignedIn ? auth.user.id : null;
+    if (myUserId == null) return;
+    final known = ref.read(campaignCharactersControllerProvider(campaignId)).value;
+    if (known != null &&
+        !known.any(
+          (c) => c.id.toLowerCase() == characterId.toLowerCase() && c.ownerUserId == myUserId,
+        )) {
+      return;
+    }
+    try {
+      final character = await ref.read(characterControllerProvider(characterId).future);
+      final level = character.pendingLevelUpTo;
+      if (!mounted || character.ownerUserId != myUserId || level == null) return;
+      ScaffoldMessenger.maybeOf(context)
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            key: const Key('realtime-notice-level-up'),
+            content: Text('¡Puedes subir a nivel $level!'),
+            action: SnackBarAction(
+              label: 'Ver',
+              onPressed: () => navigationShell.goBranch(CampaignBranches.player),
+            ),
+          ),
+        );
+    } catch (_) {
+      // Not the owner (no access to the sheet) or offline: the card of "Mi
+      // sesión" shows the grant when the sheet loads.
+    }
+  }
+
   /// Banner for players (the DM is the one who caused these events).
   void _onRealtimeEvent(CampaignEvent event) {
     if (!mounted || !event.isFor(campaignId)) return;
+    if (event is MembershipRemoved) {
+      _onMembershipRemoved();
+      return;
+    }
     final role = ref.read(campaignDetailControllerProvider(campaignId)).value?.myRole;
     if (role == null || role.isAtLeastDm) return;
+    if (event is LevelUpGranted) {
+      unawaited(_announceLevelUp(event.characterId));
+      return;
+    }
     final (key, text) = switch (event) {
       MessageReceived() => ('realtime-notice-message', 'Mensaje del DM'),
       PartyRest() => ('realtime-notice-rest', 'El DM ha declarado un descanso'),

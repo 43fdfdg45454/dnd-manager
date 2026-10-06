@@ -48,6 +48,9 @@ sealed class CampaignEvent {
     ShopUpdated.type: ShopUpdated.new,
     ChangeRequestUpdated.type: ChangeRequestUpdated.new,
     SessionUpdated.type: SessionUpdated.new,
+    RestRequestUpdated.type: RestRequestUpdated.new,
+    LevelUpGranted.type: LevelUpGranted.new,
+    MembershipRemoved.type: MembershipRemoved.new,
   };
 
   final String campaignId;
@@ -117,6 +120,34 @@ final class SessionUpdated extends CampaignEvent {
   const SessionUpdated({required super.campaignId, super.characterId, super.entityId, super.at});
 
   static const type = 'session.updated';
+}
+
+/// A rest request ([entityId]) of a character was created, approved, rejected
+/// or cancelled.
+final class RestRequestUpdated extends CampaignEvent {
+  const RestRequestUpdated({
+    required super.campaignId,
+    super.characterId,
+    super.entityId,
+    super.at,
+  });
+
+  static const type = 'restRequest.updated';
+}
+
+/// A DM granted the next level to [characterId] (sent to the campaign and to
+/// the owner of the character).
+final class LevelUpGranted extends CampaignEvent {
+  const LevelUpGranted({required super.campaignId, super.characterId, super.entityId, super.at});
+
+  static const type = 'levelUp.granted';
+}
+
+/// The user was removed from the campaign or left it (sent to that user only).
+final class MembershipRemoved extends CampaignEvent {
+  const MembershipRemoved({required super.campaignId, super.characterId, super.entityId, super.at});
+
+  static const type = 'membership.removed';
 }
 
 /// An event type this version of the app does not know (ignored).

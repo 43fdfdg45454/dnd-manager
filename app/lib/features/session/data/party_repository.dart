@@ -32,6 +32,24 @@ class PartyRepository {
     return _parse(response.data);
   }
 
+  /// Grants the next level to every active character, or only [characterIds].
+  Future<List<PartyMember>> grantLevel(String campaignId, {List<String>? characterIds}) async {
+    final response = await _client.dio.post<Map<String, dynamic>>(
+      '${partyPath(campaignId)}/grant-level',
+      data: {'characterIds': ?characterIds},
+    );
+    return _parse(response.data);
+  }
+
+  /// Withdraws the level granted and not taken yet (everyone, or [characterIds]).
+  Future<List<PartyMember>> revokeLevel(String campaignId, {List<String>? characterIds}) async {
+    final response = await _client.dio.delete<Map<String, dynamic>>(
+      '${partyPath(campaignId)}/grant-level',
+      data: {'characterIds': ?characterIds},
+    );
+    return _parse(response.data);
+  }
+
   /// Damage or healing, temporary hit points, conditions and maximum hit points
   /// of several characters at once.
   Future<List<PartyMember>> adjust(String campaignId, List<PartyAdjustment> adjustments) async {

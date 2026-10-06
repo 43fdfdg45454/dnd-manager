@@ -27,6 +27,8 @@ Map<String, dynamic> makeCharacterJson({
   Map<String, dynamic>? combat,
   List<Map<String, dynamic>> itemEffects = const [],
   Map<String, dynamic> breakdowns = const {},
+  Map<String, dynamic>? pendingRest,
+  int? pendingLevelUpTo,
 }) => {
   'id': id,
   'campaignId': campaignId,
@@ -115,6 +117,8 @@ Map<String, dynamic> makeCharacterJson({
     'breakdowns': breakdowns,
   },
   'pendingChangeRequests': pending,
+  'pendingRest': pendingRest,
+  'pendingLevelUpTo': pendingLevelUpTo,
 };
 
 /// A `ValueBreakdownDto` as JSON: [parts] are `(source, label, value)`; the
@@ -448,6 +452,56 @@ class FakeCharactersRepository implements CharactersRepository {
     _fail();
     longRests++;
     return get(id);
+  }
+
+  /// Rest requests of the player, in order, and how many were withdrawn.
+  final List<({RestKind kind, Map<String, int> hitDice})> restRequests = [];
+  int restCancellations = 0;
+
+  @override
+  Future<RestRequest> requestRest(
+    String id,
+    RestKind kind, {
+    Map<String, int> hitDice = const {},
+  }) async {
+    _fail();
+    restRequests.add((kind: kind, hitDice: Map<String, int>.of(hitDice)));
+    final json = _json(id);
+    if (json['pendingRest'] != null) throw dioError(409);
+    final request = RestRequest(
+      id: 'rr${restRequests.length}',
+      campaignId: json['campaignId'] as String,
+      characterId: id,
+      kind: kind,
+      hitDice: hitDice,
+    );
+    json['pendingRest'] = {
+      'id': request.id,
+      'kind': kind.apiValue,
+      'hitDice': hitDice,
+      'requestedAt': DateTime.utc(2026, 10, 1, 20).toIso8601String(),
+    };
+    return request;
+  }
+
+  @override
+  Future<void> cancelRestRequest(String id) async {
+    _fail();
+    restCancellations++;
+    final json = _json(id);
+    if (json['pendingRest'] == null) throw dioError(404);
+    json['pendingRest'] = null;
+  }
+
+  /// What the server does when a DM grants (or withdraws, with null) a level.
+  void setPendingLevelUp(String id, int? level) => _json(id)['pendingLevelUpTo'] = level;
+
+  /// What the server does when the DM approves the pending rest of [id]: the
+  /// request disappears and the character heals to [hitPointsCurrent].
+  void approvePendingRest(String id, {required int hitPointsCurrent}) {
+    final json = _json(id);
+    json['pendingRest'] = null;
+    json['hitPointsCurrent'] = hitPointsCurrent;
   }
 
   @override

@@ -270,6 +270,7 @@ class _CombatSubview extends StatelessWidget {
       padding: _listPadding(context),
       children: [
         _PlayerHeader(character: c),
+        if (c.pendingLevelUpTo != null) _LevelUpCard(character: c),
         HpCard(character: c, canEdit: true),
         StatsCard(character: c, canEdit: true),
         if (c.hitPointsCurrent == 0) DeathSavesCard(character: c, canEdit: true),
@@ -280,6 +281,46 @@ class _CombatSubview extends StatelessWidget {
         ClassPanelsSection(character: c, canEdit: true),
         CombatItemsSection(character: c, canEdit: true),
       ],
+    );
+  }
+}
+
+/// "¡Puedes subir a nivel N!": a DM granted the next level. Until the
+/// level-up wizard exists its button opens the full sheet.
+class _LevelUpCard extends StatelessWidget {
+  const _LevelUpCard({required this.character});
+
+  final CharacterDetail character;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final level = character.pendingLevelUpTo;
+    return ParchmentCard(
+      key: const Key('level-up-card'),
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          AppIcon(AppIcons.levelUp, size: 32, color: context.tokens.gold),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('¡Puedes subir a nivel $level!', style: theme.textTheme.titleMedium),
+                Text('El DM te ha concedido un nivel.', style: theme.textTheme.bodySmall),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            key: const Key('level-up-open'),
+            onPressed: () => context.push(AppRoutes.character(character.id)),
+            child: const Text('Subir de nivel'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -376,6 +417,7 @@ class _OutsideSubview extends ConsumerWidget {
       key: const Key('player-outside'),
       padding: _listPadding(context),
       children: [
+        if (c.pendingLevelUpTo != null) _LevelUpCard(character: c),
         RestSection(character: c, canEdit: true),
         ParchmentCard(
           margin: const EdgeInsets.symmetric(vertical: 6),

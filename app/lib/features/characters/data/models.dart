@@ -464,6 +464,125 @@ class SheetSkill {
   final bool expertise;
 }
 
+/// Kind of rest a player asks the DM for.
+enum RestKind {
+  short('short', 'Short', 'corto'),
+  long('long', 'Long', 'largo');
+
+  const RestKind(this.requestValue, this.apiValue, this.label);
+
+  /// Value of `kind` in the request body.
+  final String requestValue;
+
+  /// Value the server answers with.
+  final String apiValue;
+
+  /// "corto" / "largo", to complete "descanso ...".
+  final String label;
+
+  static RestKind fromApi(Object? value) =>
+      _enumFromApi(values, (e) => e.apiValue, value, RestKind.short);
+}
+
+/// The rest a player asked for and the DM has not resolved yet (`PendingRestDto`).
+class PendingRest {
+  const PendingRest({
+    required this.id,
+    required this.kind,
+    this.hitDice = const {},
+    this.requestedAt,
+  });
+
+  factory PendingRest.fromJson(Map<String, dynamic> json) {
+    final dice = _map(json['hitDice']) ?? const {};
+    return PendingRest(
+      id: _str(json['id']),
+      kind: RestKind.fromApi(json['kind']),
+      hitDice: {
+        for (final e in dice.entries)
+          if ((_int(e.value) ?? 0) > 0) e.key: _int(e.value)!,
+      },
+      requestedAt: _date(json['requestedAt']),
+    );
+  }
+
+  final String id;
+  final RestKind kind;
+
+  /// Hit dice to spend per class index (short rest only).
+  final Map<String, int> hitDice;
+  final DateTime? requestedAt;
+
+  /// Total hit dice to spend.
+  int get diceCount => hitDice.values.fold(0, (sum, n) => sum + n);
+
+  /// "descanso corto (2 dados)" / "descanso largo".
+  String get description {
+    final base = 'descanso ${kind.label}';
+    if (kind == RestKind.long || diceCount == 0) return base;
+    return '$base ($diceCount ${diceCount == 1 ? 'dado' : 'dados'})';
+  }
+}
+
+/// A rest request with the names of the people involved (`RestRequestDto`).
+class RestRequest {
+  const RestRequest({
+    required this.id,
+    this.campaignId = '',
+    required this.characterId,
+    this.characterName = '',
+    this.requestedByDisplayName = '',
+    required this.kind,
+    this.hitDice = const {},
+    this.status = 'Pending',
+    this.requestedAt,
+    this.comment,
+  });
+
+  factory RestRequest.fromJson(Map<String, dynamic> json) {
+    final dice = _map(json['hitDice']) ?? const {};
+    return RestRequest(
+      id: _str(json['id']),
+      campaignId: _str(json['campaignId']),
+      characterId: _str(json['characterId']),
+      characterName: _str(json['characterName']),
+      requestedByDisplayName: _str(json['requestedByDisplayName']),
+      kind: RestKind.fromApi(json['kind']),
+      hitDice: {
+        for (final e in dice.entries)
+          if ((_int(e.value) ?? 0) > 0) e.key: _int(e.value)!,
+      },
+      status: _str(json['status'], 'Pending'),
+      requestedAt: _date(json['requestedAt']),
+      comment: _strOrNull(json['comment']),
+    );
+  }
+
+  final String id;
+  final String campaignId;
+  final String characterId;
+  final String characterName;
+  final String requestedByDisplayName;
+  final RestKind kind;
+
+  /// Hit dice to spend per class index (short rest only).
+  final Map<String, int> hitDice;
+
+  /// Pending, Approved, Rejected or Cancelled.
+  final String status;
+  final DateTime? requestedAt;
+  final String? comment;
+
+  bool get isPending => status == 'Pending';
+
+  /// Total hit dice to spend.
+  int get diceCount => hitDice.values.fold(0, (sum, n) => sum + n);
+
+  /// "descanso corto (2 dados)" / "descanso largo".
+  String get description =>
+      PendingRest(id: id, kind: kind, hitDice: hitDice, requestedAt: requestedAt).description;
+}
+
 class HitDice {
   const HitDice({
     required this.classIndex,
@@ -859,6 +978,8 @@ class CharacterDetail {
     this.combat = const CombatSummary(),
     this.sheet = const CharacterSheet(),
     this.pendingChangeRequests = const [],
+    this.pendingRest,
+    this.pendingLevelUpTo,
     this.raceCatalogMissing = false,
     this.backgroundCatalogMissing = false,
     this.catalogMissing = false,
@@ -910,6 +1031,10 @@ class CharacterDetail {
       combat: CombatSummary.fromJson(json['combat']),
       sheet: CharacterSheet.fromJson(_map(json['sheet']) ?? const {}),
       pendingChangeRequests: _objects(json['pendingChangeRequests'], ChangeRequest.fromJson),
+      pendingRest: _map(json['pendingRest']) == null
+          ? null
+          : PendingRest.fromJson(_map(json['pendingRest'])!),
+      pendingLevelUpTo: _int(json['pendingLevelUpTo']),
       raceCatalogMissing: _bool(json['raceCatalogMissing']),
       backgroundCatalogMissing: _bool(json['backgroundCatalogMissing']),
       catalogMissing: _bool(json['catalogMissing']),
@@ -962,6 +1087,12 @@ class CharacterDetail {
   final CombatSummary combat;
   final CharacterSheet sheet;
   final List<ChangeRequest> pendingChangeRequests;
+
+  /// Rest the owner asked the DM for and is waiting on, or null.
+  final PendingRest? pendingRest;
+
+  /// Level a DM granted and the player has not taken yet, or null.
+  final int? pendingLevelUpTo;
 
   /// The race (or subrace) is gone from the catalog (a deleted content pack).
   final bool raceCatalogMissing;

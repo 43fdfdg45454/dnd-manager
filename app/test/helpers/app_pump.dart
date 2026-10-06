@@ -11,6 +11,7 @@ import 'package:dnd_companion/features/items/data/inventory_repository.dart';
 import 'package:dnd_companion/features/items/data/shops_repository.dart';
 import 'package:dnd_companion/features/session/data/messages_repository.dart';
 import 'package:dnd_companion/features/session/data/party_repository.dart';
+import 'package:dnd_companion/features/session/data/rest_requests_repository.dart';
 import 'package:dnd_companion/features/session/data/stash_repository.dart';
 import 'package:dnd_companion/features/sessions/data/sessions_controllers.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +41,7 @@ class AppFakes {
     FakePartyRepository? party,
     FakeStashRepository? stash,
     FakeMessagesRepository? messages,
+    FakeRestRequestsRepository? restRequests,
   }) {
     final items = inventory ?? FakeInventoryRepository();
     return AppFakes._(
@@ -53,6 +55,7 @@ class AppFakes {
       party: party ?? FakePartyRepository(),
       stash: stash ?? FakeStashRepository(inventory: items),
       messages: messages ?? FakeMessagesRepository(),
+      restRequests: restRequests ?? FakeRestRequestsRepository(),
     );
   }
 
@@ -67,6 +70,7 @@ class AppFakes {
     required this.party,
     required this.stash,
     required this.messages,
+    required this.restRequests,
   });
 
   final FakeCampaignsRepository campaigns;
@@ -79,6 +83,7 @@ class AppFakes {
   final FakePartyRepository party;
   final FakeStashRepository stash;
   final FakeMessagesRepository messages;
+  final FakeRestRequestsRepository restRequests;
 
   List<Override> get overrides => [
     campaignsRepositoryProvider.overrideWithValue(campaigns),
@@ -92,6 +97,7 @@ class AppFakes {
     partyRepositoryProvider.overrideWithValue(party),
     stashRepositoryProvider.overrideWithValue(stash),
     messagesRepositoryProvider.overrideWithValue(messages),
+    restRequestsRepositoryProvider.overrideWithValue(restRequests),
   ];
 }
 

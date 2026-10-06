@@ -151,6 +151,25 @@ class CharactersRepository {
   Future<CharacterDetail> longRest(String id) async =>
       CharacterDetail.fromJson(await _json('POST', '$_api/characters/$id/rest/long'));
 
+  /// The owner asks the DM for a rest (`POST /characters/{id}/rest-requests`).
+  /// [hitDice] maps a class index to the hit dice to spend (short rest only).
+  Future<RestRequest> requestRest(
+    String id,
+    RestKind kind, {
+    Map<String, int> hitDice = const {},
+  }) async => RestRequest.fromJson(
+    await _json(
+      'POST',
+      '$_api/characters/$id/rest-requests',
+      data: {'kind': kind.requestValue, if (kind == RestKind.short) 'hitDice': hitDice},
+    ),
+  );
+
+  /// Withdraws the pending rest request of the character.
+  Future<void> cancelRestRequest(String id) async {
+    await _client.dio.delete<void>('$_api/characters/$id/rest-requests');
+  }
+
   // -- Class actions (phase 6, no approval) ----------------------------------
 
   /// `POST /characters/{id}/class-actions/{action}`: `rage` (`{}`),

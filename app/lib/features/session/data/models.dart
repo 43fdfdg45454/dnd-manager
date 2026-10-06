@@ -1,4 +1,5 @@
-import '../../characters/data/models.dart' show CharacterClass, CharacterCondition, SpellSlot;
+import '../../characters/data/models.dart'
+    show CharacterClass, CharacterCondition, PendingRest, SpellSlot;
 import '../../items/data/models.dart' show EffectiveItem;
 
 // Hand-written models of the table endpoints (phase 12): the party seen by the
@@ -64,6 +65,8 @@ class PartyMember {
     this.inspiration = false,
     this.spellSlots = const [],
     this.pactSlots,
+    this.pendingRest,
+    this.pendingLevelUpTo,
   });
 
   factory PartyMember.fromJson(Map<String, dynamic> json) {
@@ -92,6 +95,10 @@ class PartyMember {
       inspiration: _bool(json['inspiration']),
       spellSlots: _objects(json['spellSlots'], SpellSlot.fromJson),
       pactSlots: pact == null ? null : SpellSlot.fromJson(pact),
+      pendingRest: _map(json['pendingRest']) == null
+          ? null
+          : PendingRest.fromJson(_map(json['pendingRest'])!),
+      pendingLevelUpTo: _int(json['pendingLevelUpTo']),
     );
   }
 
@@ -119,6 +126,12 @@ class PartyMember {
   final bool inspiration;
   final List<SpellSlot> spellSlots;
   final SpellSlot? pactSlots;
+
+  /// Rest the player is asking for, or null.
+  final PendingRest? pendingRest;
+
+  /// Level granted by a DM and not taken yet, or null.
+  final int? pendingLevelUpTo;
 
   bool get isDown => hitPointsCurrent <= 0;
 }

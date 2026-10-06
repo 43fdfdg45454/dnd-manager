@@ -3,6 +3,7 @@ import 'package:dnd_companion/features/items/data/models.dart';
 import 'package:dnd_companion/features/session/data/messages_repository.dart';
 import 'package:dnd_companion/features/session/data/models.dart';
 import 'package:dnd_companion/features/session/data/party_repository.dart';
+import 'package:dnd_companion/features/session/data/rest_requests_repository.dart';
 import 'package:dnd_companion/features/session/data/stash_repository.dart';
 
 import 'fakes.dart';
@@ -22,6 +23,8 @@ PartyMember makePartyMember({
   String? concentratingOnSpellIndex,
   int deathSaveSuccesses = 0,
   int deathSaveFailures = 0,
+  PendingRest? pendingRest,
+  int? pendingLevelUpTo,
 }) => PartyMember(
   id: id,
   name: name,
@@ -44,6 +47,8 @@ PartyMember makePartyMember({
   concentratingOnSpellIndex: concentratingOnSpellIndex,
   deathSaveSuccesses: deathSaveSuccesses,
   deathSaveFailures: deathSaveFailures,
+  pendingRest: pendingRest,
+  pendingLevelUpTo: pendingLevelUpTo,
 );
 
 PartyMember _copy(
@@ -52,6 +57,7 @@ PartyMember _copy(
   int? hitPointsMax,
   int? temporaryHitPoints,
   List<CharacterCondition>? conditions,
+  int? pendingLevelUpTo,
 }) => PartyMember(
   id: m.id,
   name: m.name,
@@ -68,6 +74,8 @@ PartyMember _copy(
   concentratingOnSpellIndex: m.concentratingOnSpellIndex,
   deathSaveSuccesses: m.deathSaveSuccesses,
   deathSaveFailures: m.deathSaveFailures,
+  pendingRest: m.pendingRest,
+  pendingLevelUpTo: pendingLevelUpTo ?? m.pendingLevelUpTo,
 );
 
 /// In-memory party of a campaign. Adjustments change the members like the
@@ -79,6 +87,8 @@ class FakePartyRepository implements PartyRepository {
   Object? error;
   final List<({PartyRestKind kind, List<String>? characterIds})> rests = [];
   final List<List<PartyAdjustment>> adjustments = [];
+  final List<List<String>?> grants = [];
+  final List<List<String>?> revokes = [];
 
   @override
   Future<List<PartyMember>> party(String campaignId) async {
@@ -102,6 +112,26 @@ class FakePartyRepository implements PartyRepository {
         }
       }
     }
+    return [...members];
+  }
+
+  @override
+  Future<List<PartyMember>> grantLevel(String campaignId, {List<String>? characterIds}) async {
+    if (error != null) throw error!;
+    grants.add(characterIds);
+    for (var i = 0; i < members.length; i++) {
+      final m = members[i];
+      if ((characterIds == null || characterIds.contains(m.id)) && m.pendingLevelUpTo == null) {
+        members[i] = _copy(m, pendingLevelUpTo: m.level + 1);
+      }
+    }
+    return [...members];
+  }
+
+  @override
+  Future<List<PartyMember>> revokeLevel(String campaignId, {List<String>? characterIds}) async {
+    if (error != null) throw error!;
+    revokes.add(characterIds);
     return [...members];
   }
 
@@ -398,5 +428,64 @@ class FakeMessagesRepository implements MessagesRepository {
     );
     messages[i] = read;
     return read;
+  }
+}
+
+/// A pending rest request as the DM's list shows it.
+RestRequest makeRestRequest({
+  String id = 'rr1',
+  String characterId = 'ch1',
+  String characterName = 'Thorin',
+  RestKind kind = RestKind.short,
+  Map<String, int> hitDice = const {'fighter': 2},
+  DateTime? requestedAt,
+}) => RestRequest(
+  id: id,
+  campaignId: 'c1',
+  characterId: characterId,
+  characterName: characterName,
+  requestedByDisplayName: 'Usuario Demo',
+  kind: kind,
+  hitDice: hitDice,
+  requestedAt: requestedAt,
+);
+
+/// In-memory pending rest requests of a campaign. Approving or rejecting one
+/// removes it from the list and records the call.
+class FakeRestRequestsRepository implements RestRequestsRepository {
+  FakeRestRequestsRepository({List<RestRequest> requests = const []}) : requests = [...requests];
+
+  final List<RestRequest> requests;
+  Object? error;
+  final List<String> approved = [];
+  final List<({String id, String? comment})> rejected = [];
+
+  @override
+  Future<List<RestRequest>> pending(String campaignId) async {
+    if (error != null) throw error!;
+    return [
+      for (final r in requests)
+        if (r.isPending) r,
+    ];
+  }
+
+  RestRequest _take(String id) {
+    final index = requests.indexWhere((r) => r.id == id);
+    if (index < 0) throw dioError(404);
+    return requests.removeAt(index);
+  }
+
+  @override
+  Future<RestRequest> approve(String requestId) async {
+    if (error != null) throw error!;
+    approved.add(requestId);
+    return _take(requestId);
+  }
+
+  @override
+  Future<RestRequest> reject(String requestId, {String? comment}) async {
+    if (error != null) throw error!;
+    rejected.add((id: requestId, comment: comment));
+    return _take(requestId);
   }
 }

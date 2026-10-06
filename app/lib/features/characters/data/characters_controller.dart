@@ -132,6 +132,19 @@ class CharacterController extends AsyncNotifier<CharacterDetail> {
 
   Future<void> longRest() async => _apply(await _repository.longRest(id));
 
+  /// Asks the DM for a rest (the owner) and refreshes the sheet, which then
+  /// carries the pending request.
+  Future<void> requestRest(RestKind kind, {Map<String, int> hitDice = const {}}) async {
+    await _repository.requestRest(id, kind, hitDice: hitDice);
+    await reload();
+  }
+
+  /// Withdraws the pending rest request.
+  Future<void> cancelRestRequest() async {
+    await _repository.cancelRestRequest(id);
+    await reload();
+  }
+
   // Class actions (phase 6).
 
   Future<void> classAction(String action, [Map<String, dynamic> body = const {}]) async =>

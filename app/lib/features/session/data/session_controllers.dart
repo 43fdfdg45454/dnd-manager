@@ -1,11 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../characters/data/characters_controller.dart';
+import '../../characters/data/models.dart' show RestRequest;
 import '../../items/data/items_controllers.dart';
 import '../../items/data/models.dart' show ItemOverrides;
 import 'messages_repository.dart';
 import 'models.dart';
 import 'party_repository.dart';
+import 'rest_requests_repository.dart';
 import 'stash_repository.dart';
 
 /// Errors are shown with a retry button instead of being retried silently.
@@ -52,10 +54,77 @@ class PartyController extends AsyncNotifier<List<PartyMember>> {
     state = AsyncData(await _repository.adjust(campaignId, adjustments));
     _refreshSheets();
   }
+
+  /// Grants the next level to every active character, or only [characterIds].
+  Future<void> grantLevel({List<String>? characterIds}) async {
+    state = AsyncData(
+      await _repository.grantLevel(
+        campaignId,
+        characterIds: characterIds == null || characterIds.isEmpty ? null : characterIds,
+      ),
+    );
+    _refreshSheets();
+  }
+
+  /// Withdraws the level granted and not taken yet.
+  Future<void> revokeLevel({List<String>? characterIds}) async {
+    state = AsyncData(
+      await _repository.revokeLevel(
+        campaignId,
+        characterIds: characterIds == null || characterIds.isEmpty ? null : characterIds,
+      ),
+    );
+    _refreshSheets();
+  }
 }
 
 final partyControllerProvider = AsyncNotifierProvider.autoDispose
     .family<PartyController, List<PartyMember>, String>(PartyController.new, retry: _noRetry);
+
+// ---------------------------------------------------------------------------
+// Rest requests
+// ---------------------------------------------------------------------------
+
+/// The rest requests of a campaign waiting for the DM. Resolving one refreshes
+/// the party and the sheet of its character.
+class RestRequestsController extends AsyncNotifier<List<RestRequest>> {
+  RestRequestsController(this.campaignId);
+
+  final String campaignId;
+
+  RestRequestsRepository get _repository => ref.read(restRequestsRepositoryProvider);
+
+  @override
+  Future<List<RestRequest>> build() => _repository.pending(campaignId);
+
+  Future<void> reload() async {
+    state = AsyncData(await _repository.pending(campaignId));
+  }
+
+  void _refresh(RestRequest request) {
+    ref.invalidate(characterControllerProvider(request.characterId));
+    ref.invalidate(campaignCharactersControllerProvider(campaignId));
+    ref.invalidate(partyControllerProvider(campaignId));
+  }
+
+  Future<void> approve(RestRequest request) async {
+    await _repository.approve(request.id);
+    _refresh(request);
+    await reload();
+  }
+
+  Future<void> reject(RestRequest request, {String? comment}) async {
+    await _repository.reject(request.id, comment: comment);
+    _refresh(request);
+    await reload();
+  }
+}
+
+final restRequestsControllerProvider = AsyncNotifierProvider.autoDispose
+    .family<RestRequestsController, List<RestRequest>, String>(
+      RestRequestsController.new,
+      retry: _noRetry,
+    );
 
 // ---------------------------------------------------------------------------
 // Party stash

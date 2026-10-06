@@ -154,6 +154,7 @@ class _CharacterView extends ConsumerWidget {
               ? CombatView(
                   character: character,
                   canEdit: permissions.canEdit,
+                  isDm: permissions.isDm,
                   header: _CombatHeader(character: character, switcher: switcher),
                 )
               : NestedScrollView(

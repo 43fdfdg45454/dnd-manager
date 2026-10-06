@@ -14,12 +14,21 @@ import 'vitals_section.dart';
 /// nothing changes locally when a request fails.
 ///
 /// [canEdit] false (a player looking at someone else's character) disables
-/// every control that writes. [header] goes on top (name and view switch).
+/// every control that writes. [isDm] (a DM or the Owner) rests the character
+/// directly; anyone else asks the DM for the rest. [header] goes on top (name
+/// and view switch).
 class CombatView extends ConsumerWidget {
-  const CombatView({super.key, required this.character, required this.canEdit, this.header});
+  const CombatView({
+    super.key,
+    required this.character,
+    required this.canEdit,
+    this.isDm = false,
+    this.header,
+  });
 
   final CharacterDetail character;
   final bool canEdit;
+  final bool isDm;
   final Widget? header;
 
   @override
@@ -39,7 +48,7 @@ class CombatView extends ConsumerWidget {
         ResourcesSection(character: c, canEdit: canEdit),
         ClassPanelsSection(character: c, canEdit: canEdit),
         ConsumablesSection(character: c, canEdit: canEdit),
-        RestSection(character: c, canEdit: canEdit),
+        RestSection(character: c, canEdit: canEdit, isDm: isDm),
       ],
     );
   }
