@@ -19,7 +19,8 @@ internal sealed record SrdCatalog(
     IReadOnlyList<(string Index, ItemTemplateData Data)> Items,
     IReadOnlyList<ConditionDefinition> Conditions,
     IReadOnlyList<SkillDefinition> Skills,
-    IReadOnlyList<BackgroundDefinition> Backgrounds);
+    IReadOnlyList<BackgroundDefinition> Backgrounds,
+    IReadOnlyList<EquipmentCategory> EquipmentCategories);
 
 /// <summary>
 /// Reads the SRD 5.1 JSON files of the 5e-database project (embedded in this assembly from
@@ -29,7 +30,7 @@ internal sealed record SrdCatalog(
 internal static class SrdDataset
 {
     /// <summary>Commit and date of the 5e-database snapshot in <c>server/seed/srd</c>.</summary>
-    public const string Version = "5e-database@a6212beb (2026-10-02); 2026-10-06: consumables, modifiers, skill choices, level choices";
+    public const string Version = "5e-database@a6212beb (2026-10-02); 2026-10-06: consumables, modifiers, skill choices, level choices, starting equipment";
 
     private const string ResourcePrefix = "5e-SRD-";
 
@@ -61,13 +62,38 @@ internal static class SrdDataset
 
     private static readonly HashSet<string> PactCasters = new(StringComparer.Ordinal) { "warlock" };
 
+    /// <summary>Alternative starting wealth per class (PHB/SRD "Starting Wealth by Class"; the dataset has no such field).</summary>
+    private static readonly Dictionary<string, StartingGold> StartingWealth = new(StringComparer.Ordinal)
+    {
+        ["barbarian"] = new("2d4", 10),
+        ["bard"] = new("5d4", 10),
+        ["cleric"] = new("5d4", 10),
+        ["druid"] = new("2d4", 10),
+        ["fighter"] = new("5d4", 10),
+        ["monk"] = new("5d4", 1),
+        ["paladin"] = new("5d4", 10),
+        ["ranger"] = new("5d4", 10),
+        ["rogue"] = new("4d4", 10),
+        ["sorcerer"] = new("3d4", 10),
+        ["warlock"] = new("4d4", 10),
+        ["wizard"] = new("4d4", 10),
+    };
+
+    private static readonly Lazy<IReadOnlyDictionary<string, IReadOnlyList<StartingItem>>> PackContentsCache =
+        new(() => PackContentsOf(Read<EquipmentJson>("Equipment")));
+
+    /// <summary>Contents of the SRD equipment packs by item index ("explorers-pack" → backpack, bedroll...).</summary>
+    public static IReadOnlyDictionary<string, IReadOnlyList<StartingItem>> PackContents => PackContentsCache.Value;
+
     public static SrdCatalog Load()
     {
         var subclassFiles = Read<SubclassJson>("Subclasses");
         var levelFiles = Read<LevelJson>("Levels");
+        var equipment = Read<EquipmentJson>("Equipment");
+        var contents = PackContentsOf(equipment);
 
         return new SrdCatalog(
-            Read<ClassJson>("Classes").Select(c => MapClass(c, subclassFiles)).ToList(),
+            Read<ClassJson>("Classes").Select(c => MapClass(c, subclassFiles, contents)).ToList(),
             levelFiles.Where(l => l.Subclass is null).Select(MapClassLevel).ToList(),
             subclassFiles.Select(MapSubclass).ToList(),
             levelFiles.Where(l => l.Subclass is not null).Select(MapSubclassLevel).ToList(),
@@ -77,12 +103,13 @@ internal static class SrdDataset
             Read<TraitJson>("Traits").Select(MapTrait).ToList(),
             Read<SpellJson>("Spells").Select(MapSpell).ToList(),
             [
-                .. Read<EquipmentJson>("Equipment").Select(e => (e.Index, MapEquipment(e))),
+                .. equipment.Select(e => (e.Index, MapEquipment(e))),
                 .. Read<MagicItemJson>("Magic-Items").Select(m => (m.Index, MapMagicItem(m))),
             ],
             Read<ConditionJson>("Conditions").Select(MapCondition).ToList(),
             Read<SkillJson>("Skills").Select(MapSkill).ToList(),
-            Read<BackgroundJson>("Backgrounds").Select(MapBackground).ToList());
+            Read<BackgroundJson>("Backgrounds").Select(b => MapBackground(b, contents)).ToList(),
+            Read<EquipmentCategoryJson>("Equipment-Categories").Select(MapEquipmentCategory).ToList());
     }
 
     /// <summary>Converts a dataset cost to copper pieces (cp=1, sp=10, ep=50, gp=100, pp=1000).</summary>
@@ -118,7 +145,7 @@ internal static class SrdDataset
 
     // ---- Mapping -------------------------------------------------------------------------------
 
-    private static ClassDefinition MapClass(ClassJson c, IReadOnlyList<SubclassJson> subclasses)
+    private static ClassDefinition MapClass(ClassJson c, IReadOnlyList<SubclassJson> subclasses, IReadOnlyDictionary<string, IReadOnlyList<StartingItem>> contents)
     {
         var ability = c.Spellcasting?.SpellcastingAbility?.Index;
         return new ClassDefinition
@@ -138,6 +165,8 @@ internal static class SrdDataset
             IsPactCaster = PactCasters.Contains(c.Index),
             SubclassFlavor = subclasses.FirstOrDefault(s => s.Class?.Index == c.Index)?.SubclassFlavor ?? string.Empty,
             StartingEquipmentText = StartingEquipment(c.StartingEquipment, c.StartingEquipmentOptions, null),
+            StartingEquipmentJson = StructuredStartingEquipment(
+                c.StartingEquipment, c.StartingEquipmentOptions, StartingWealth.GetValueOrDefault(c.Index), null, contents).ToJson(),
             SkillChoicesJson = SkillChoices(c.ProficiencyChoices),
         };
     }
@@ -406,7 +435,7 @@ internal static class SrdDataset
         Description = s.Desc ?? [],
     };
 
-    private static BackgroundDefinition MapBackground(BackgroundJson b) => new()
+    private static BackgroundDefinition MapBackground(BackgroundJson b, IReadOnlyDictionary<string, IReadOnlyList<StartingItem>> contents) => new()
     {
         Index = b.Index,
         Name = b.Name ?? b.Index,
@@ -417,7 +446,145 @@ internal static class SrdDataset
             .Select(p => p.Name is { } name && name.StartsWith("Skill: ", StringComparison.Ordinal) ? name["Skill: ".Length..] : p.Name ?? p.Index!)
             .ToList(),
         StartingEquipmentText = StartingEquipment(b.StartingEquipment, b.StartingEquipmentOptions, b.StartingGold),
+        StartingEquipmentJson = StructuredStartingEquipment(
+            b.StartingEquipment, b.StartingEquipmentOptions, null, ToCopper(b.StartingGold?.Quantity, b.StartingGold?.Unit), contents).ToJson(),
     };
+
+    private static EquipmentCategory MapEquipmentCategory(EquipmentCategoryJson c) => new()
+    {
+        Index = c.Index,
+        Name = c.Name ?? c.Index,
+        ItemIndexes = Indexes(c.Equipment).Distinct(StringComparer.Ordinal).ToList(),
+    };
+
+    // ---- Starting equipment ------------------------------------------------------------------------
+
+    private static Dictionary<string, IReadOnlyList<StartingItem>> PackContentsOf(IEnumerable<EquipmentJson> equipment) =>
+        equipment
+            .Where(e => e.Contents is { Count: > 0 })
+            .ToDictionary(
+                e => e.Index,
+                e => (IReadOnlyList<StartingItem>)e.Contents!
+                    .Where(c => c.Item?.Index is not null)
+                    .Select(c => new StartingItem(c.Item!.Index!, Math.Max(1, c.Quantity ?? 1), c.Item.Name))
+                    .ToList(),
+                StringComparer.Ordinal);
+
+    /// <summary>
+    /// Normalizes <c>starting_equipment</c> and <c>starting_equipment_options</c> (see <see cref="Domain.Catalog.StartingEquipment"/>):
+    /// counted references become items, <c>multiple</c> options gather items and category picks, and choices
+    /// from an equipment category become category picks.
+    /// </summary>
+    private static StartingEquipment StructuredStartingEquipment(
+        List<StartingEquipmentJson>? fixedItems,
+        List<EquipmentOptionJson>? options,
+        StartingGold? gold,
+        int? fixedGoldCp,
+        IReadOnlyDictionary<string, IReadOnlyList<StartingItem>> contents)
+    {
+        StartingItem Item(ReferenceJson reference, int? quantity) =>
+            new(reference.Index!, Math.Max(1, quantity ?? 1), reference.Name, contents.GetValueOrDefault(reference.Index!));
+
+        var fixedList = (fixedItems ?? [])
+            .Where(e => e.Equipment?.Index is not null)
+            .Select(e => Item(e.Equipment!, e.Quantity))
+            .ToList();
+
+        var choices = new List<StartingEquipmentChoice>();
+        foreach (var choice in options ?? [])
+        {
+            var mapped = new List<StartingEquipmentOption>();
+            if (choice.From?.EquipmentCategory is { Index: not null } category)
+            {
+                // "holy symbol": one option, pick from the category.
+                var label = Label(choice.Desc) ?? category.Name ?? category.Index;
+                mapped.Add(new StartingEquipmentOption(label, [], [new StartingCategoryPick(category.Index, Math.Max(1, choice.Choose ?? 1))]));
+                choices.Add(new StartingEquipmentChoice(choice.Desc ?? label, 1, mapped));
+                continue;
+            }
+
+            foreach (var option in choice.From?.Options ?? [])
+            {
+                var items = new List<StartingItem>();
+                var categories = new List<StartingCategoryPick>();
+                var labels = new List<string>();
+                Collect(option, items, categories, labels, Item);
+                if (items.Count + categories.Count == 0)
+                {
+                    continue;
+                }
+
+                var optionLabel = string.Join(", ", labels);
+                if (option.Prerequisites is { Count: > 0 })
+                {
+                    optionLabel += " (if proficient)";
+                }
+
+                mapped.Add(new StartingEquipmentOption(optionLabel, items, categories));
+            }
+
+            if (mapped.Count > 0)
+            {
+                choices.Add(new StartingEquipmentChoice(
+                    choice.Desc ?? string.Join(" or ", mapped.Select(o => o.Label)),
+                    Math.Clamp(choice.Choose ?? 1, 1, mapped.Count),
+                    mapped));
+            }
+        }
+
+        return new StartingEquipment(fixedList, choices, gold, fixedGoldCp is > 0 ? fixedGoldCp : null);
+    }
+
+    private static void Collect(
+        EquipmentOptionItemJson option,
+        List<StartingItem> items,
+        List<StartingCategoryPick> categories,
+        List<string> labels,
+        Func<ReferenceJson, int?, StartingItem> item)
+    {
+        switch (option.OptionType)
+        {
+            case "counted_reference" when option.Of?.Index is not null:
+                var counted = item(option.Of, option.Count);
+                items.Add(counted);
+                labels.Add(counted.Quantity > 1 ? $"{counted.Quantity} {Plural(counted.Name ?? counted.Item)}" : counted.Name ?? counted.Item);
+                break;
+            case "multiple":
+                foreach (var part in option.Items ?? [])
+                {
+                    Collect(part, items, categories, labels, item);
+                }
+
+                break;
+            case "choice" when option.Choice?.From?.EquipmentCategory is { Index: not null } category:
+                categories.Add(new StartingCategoryPick(category.Index, Math.Max(1, option.Choice.Choose ?? 1)));
+                labels.Add(Label(option.Choice.Desc) ?? category.Name ?? category.Index);
+                break;
+        }
+    }
+
+    /// <summary>"a martial weapon" → "Martial weapon"; "any simple weapon" → "Any simple weapon".</summary>
+    private static string? Label(string? description)
+    {
+        var text = description?.Trim();
+        if (string.IsNullOrEmpty(text))
+        {
+            return null;
+        }
+
+        foreach (var article in (string[])["a ", "an "])
+        {
+            if (text.StartsWith(article, StringComparison.OrdinalIgnoreCase) && text.Length > article.Length)
+            {
+                text = text[article.Length..];
+                break;
+            }
+        }
+
+        return char.ToUpperInvariant(text[0]) + text[1..];
+    }
+
+    private static string Plural(string name) => name.EndsWith('s') ? name : name + "s";
 
     // ---- Helpers -------------------------------------------------------------------------------
 
@@ -598,7 +765,35 @@ internal static class SrdDataset
 
     private sealed class EquipmentOptionSourceJson
     {
+        public string? OptionSetType { get; set; }
+
         public ReferenceJson? EquipmentCategory { get; set; }
+
+        public List<EquipmentOptionItemJson>? Options { get; set; }
+    }
+
+    private sealed class EquipmentOptionItemJson
+    {
+        public string? OptionType { get; set; }
+
+        public int? Count { get; set; }
+
+        public ReferenceJson? Of { get; set; }
+
+        public List<EquipmentOptionItemJson>? Items { get; set; }
+
+        public EquipmentOptionJson? Choice { get; set; }
+
+        public List<JsonElement>? Prerequisites { get; set; }
+    }
+
+    private sealed class EquipmentCategoryJson
+    {
+        public string Index { get; set; } = string.Empty;
+
+        public string? Name { get; set; }
+
+        public List<ReferenceJson>? Equipment { get; set; }
     }
 
     private sealed class LevelJson

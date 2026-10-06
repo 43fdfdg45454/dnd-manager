@@ -20,5 +20,6 @@ internal sealed class ClassDefinitionConfiguration : IEntityTypeConfiguration<Cl
         builder.Property(x => x.SubclassFlavor).HasMaxLength(CatalogColumns.NameMaxLength).IsRequired();
         builder.Property(x => x.StartingEquipmentText).IsRequired();
         builder.Property(x => x.SkillChoicesJson).IsRequired();
+        builder.Ignore(x => x.StartingEquipment);
     }
 }

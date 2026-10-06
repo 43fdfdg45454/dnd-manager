@@ -178,4 +178,18 @@ internal sealed class CatalogRepository(AppDbContext db) : ICatalogRepository
 
     public async Task<IReadOnlyList<OptionDefinition>> ListOptionsByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
         indexes.Count == 0 ? [] : await db.CatalogOptions.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<ItemTemplate>> ListCatalogItemsByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
+        indexes.Count == 0
+            ? []
+            : await db.ItemTemplates.AsNoTracking()
+                .Where(x => x.CampaignId == null && x.Index != null && indexes.Contains(x.Index))
+                .WhereListed(db)
+                .ToListAsync(cancellationToken);
+
+    public Task<EquipmentCategory?> GetEquipmentCategoryAsync(string index, CancellationToken cancellationToken = default) =>
+        db.CatalogEquipmentCategories.AsNoTracking().FirstOrDefaultAsync(x => x.Index == index, cancellationToken);
+
+    public async Task<IReadOnlyList<EquipmentCategory>> ListEquipmentCategoriesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
+        indexes.Count == 0 ? [] : await db.CatalogEquipmentCategories.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
 }

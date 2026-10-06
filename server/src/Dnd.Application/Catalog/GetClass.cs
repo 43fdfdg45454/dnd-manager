@@ -13,6 +13,8 @@ public sealed class GetClassHandler(ICatalogRepository catalog)
         var subclasses = await catalog.ListSubclassesAsync(definition.Index, cancellationToken);
         var subclassLevels = await catalog.ListSubclassLevelsAsync(subclasses.Select(s => s.Index).ToList(), cancellationToken);
         var features = (await catalog.ListFeaturesByClassAsync(definition.Index, cancellationToken)).ToDictionary(f => f.Index);
+        var startingEquipment = definition.StartingEquipment;
+        var resolve = await StartingEquipmentResolver.PrepareAsync(catalog, [startingEquipment], cancellationToken);
 
         return new ClassDetailDto(
             definition.Index,
@@ -26,6 +28,7 @@ public sealed class GetClassHandler(ICatalogRepository catalog)
             definition.IsPactCaster,
             definition.SubclassFlavor,
             definition.StartingEquipmentText,
+            resolve(startingEquipment),
             CatalogJson.SkillChoices(definition.SkillChoicesJson),
             levels
                 .Select(l => new ClassLevelDto(

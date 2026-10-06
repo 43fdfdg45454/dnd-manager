@@ -15,13 +15,17 @@ namespace Dnd.Infrastructure.Catalog;
 /// <param name="OptionSets">Option set id → source (the SRD or a pack).</param>
 /// <param name="Options">Option index → (set id, source).</param>
 /// <param name="Spells">Spell index → source.</param>
+/// <param name="SrdItems">Indexes of the SRD item templates (starting equipment references).</param>
+/// <param name="EquipmentCategories">Indexes of the equipment categories ("martial-weapons").</param>
 internal sealed record ContentPackContext(
     IReadOnlyDictionary<string, string> Classes,
     IReadOnlyDictionary<string, string> SrdSubclasses,
     IReadOnlyDictionary<string, string> Skills,
     IReadOnlyDictionary<string, string>? OptionSets = null,
     IReadOnlyDictionary<string, (string SetId, string Source)>? Options = null,
-    IReadOnlyDictionary<string, string>? Spells = null);
+    IReadOnlyDictionary<string, string>? Spells = null,
+    IReadOnlySet<string>? SrdItems = null,
+    IReadOnlySet<string>? EquipmentCategories = null);
 
 /// <summary>Catalog rows of a valid content pack, every one with <c>Source</c> = the pack id.</summary>
 internal sealed class ContentPackRows
@@ -171,6 +175,7 @@ internal sealed partial class ContentPackValidator
         ForEach("races", pack.Races, (path, race) => Race(path, race, rows));
         ForEach("backgrounds", pack.Backgrounds, (path, background) => Background(path, background, rows));
         CheckLevelChoiceReferences(rows);
+        CheckStartingEquipmentReferences(rows);
         return rows;
     }
 
@@ -654,6 +659,7 @@ internal sealed partial class ContentPackValidator
             FeatureDescription = Paragraphs($"{path}.featureDescription", background.FeatureDescription),
             SkillProficiencies = skills,
             StartingEquipmentText = OptionalText($"{path}.startingEquipmentText", background.StartingEquipmentText, LongTextMaxLength),
+            StartingEquipmentJson = background.StartingEquipment is { } equipment ? ParseStartingEquipment($"{path}.startingEquipment", equipment) : null,
             Source = _id,
         };
 

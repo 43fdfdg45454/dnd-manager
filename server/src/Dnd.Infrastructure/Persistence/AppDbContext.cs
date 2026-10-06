@@ -58,6 +58,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<CatalogImport> CatalogImports => Set<CatalogImport>();
 
+    public DbSet<EquipmentCategory> CatalogEquipmentCategories => Set<EquipmentCategory>();
+
     public DbSet<OptionSetDefinition> CatalogOptionSets => Set<OptionSetDefinition>();
 
     public DbSet<OptionDefinition> CatalogOptions => Set<OptionDefinition>();

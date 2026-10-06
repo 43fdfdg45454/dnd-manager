@@ -145,7 +145,8 @@ El mismo fichero se usa en los tests del servidor:
   se indican.
 - **Referencias** (`classIndex`, `classes`, `subclasses` de conjuros): deben existir en el SRD o en el
   propio paquete. Los paquetes **no añaden clases**; las subrazas y los rasgos se declaran dentro de
-  su raza.
+  su raza. Los objetos de `backgrounds[].startingEquipment` deben existir en el SRD o en el propio
+  paquete, y sus categorías en las categorías de equipo del SRD.
 - **Tamaño máximo del fichero**: 20 MB.
 - El contenido se muestra tal cual: escribe los textos en el idioma que prefieras (el SRD está en
   inglés).
@@ -282,6 +283,66 @@ de los dos mapas.
 | `featureDescription` | `string[]?` | Párrafos. |
 | `skillProficiencies` | `string[]?` | Índices de habilidad del SRD (`perception`, `animal-handling`, `sleight-of-hand`...). |
 | `startingEquipmentText` | `string?` | ≤ 10 000. |
+| `startingEquipment` | `StartingEquipment?` | Equipo inicial estructurado (formatos 1 y 2). Sin él, el asistente de creación solo muestra `startingEquipmentText` y el jugador añade los objetos a mano. |
+
+#### `StartingEquipment`
+
+Mismo esquema que el equipo inicial del catálogo (clases y trasfondos del SRD), sin `gold`: la riqueza
+inicial alternativa es solo de las clases y los paquetes no añaden clases.
+
+```json
+"startingEquipment": {
+  "fixed": [
+    { "item": "quarterstaff", "quantity": 1 },
+    { "item": "reinos-ejemplo-catalejo-barato" },
+    { "item": "explorers-pack" }
+  ],
+  "choices": [
+    {
+      "description": "(a) un arma marcial o (b) dos dagas",
+      "choose": 1,
+      "options": [
+        { "label": "Cualquier arma marcial", "category": "martial-weapons", "categoryChoose": 1 },
+        { "label": "Dos dagas", "items": [{ "item": "dagger", "quantity": 2 }] },
+        {
+          "label": "Escudo y dos armas sencillas",
+          "items": [{ "item": "shield" }],
+          "categories": [{ "category": "simple-weapons", "choose": 2 }]
+        }
+      ]
+    }
+  ],
+  "fixedGoldCp": 1000
+}
+```
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `fixed` | `StartingItem[]?` | Objetos que recibe todo personaje con el trasfondo. |
+| `choices` | `Choice[]?` | Elecciones (a)/(b)/(c), en el orden del libro. |
+| `fixedGoldCp` | `int?` | Dinero incluido, en piezas de cobre (15 po = `1500`), 0-10 000 000. |
+| `gold` | — | No se admite en trasfondos (error con su ruta). |
+
+**`StartingItem`**: `item` (**obligatorio**: índice de un objeto **del SRD** —`chain-mail`,
+`explorers-pack`— **o del propio paquete**) y `quantity` (`int?`, 1-1000, por defecto 1). Los
+paquetes de equipo del SRD (`explorers-pack`...) se mantienen como un objeto; la API añade su
+contenido (`contents`) para mostrarlo.
+
+**`Choice`**: `description` (`string?`, ≤ 10 000; si falta se componen las etiquetas de las
+opciones), `choose` (`int?`, opciones a elegir, 1 hasta el número de opciones; por defecto 1) y
+`options` (**obligatorio**, al menos una).
+
+**`Option`**: `label` (**obligatorio**, ≤ 200), `items` (`StartingItem[]?`, objetos fijos de la
+opción) y elecciones por categoría: `categories` (`[{ "category", "choose" }]`, `choose` 1-20, por
+defecto 1) o, como atajo para una sola categoría, `category` + `categoryChoose`. Cada opción debe
+incluir objetos o al menos una categoría. Las categorías son índices de las categorías de equipo del
+SRD (`simple-weapons`, `martial-weapons`, `martial-melee-weapons`, `holy-symbols`,
+`musical-instruments`, `artisans-tools`, `arcane-foci`, `druidic-foci`, `equipment-packs`...);
+`GET /api/v1/catalog/equipment-categories/{index}` lista sus objetos.
+
+La API devuelve el equipo resuelto en `GET /api/v1/catalog/backgrounds` (`startingEquipment`, o
+`null` si el trasfondo no lo define): cada objeto con `item`, `templateId`, `name` y `quantity`, y
+cada categoría con `category`, `name` y `choose`.
 
 ## Errores de validación
 

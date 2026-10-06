@@ -73,6 +73,7 @@ public static class DependencyInjection
         services.AddScoped<ListConditionsHandler>();
         services.AddScoped<ListSkillsHandler>();
         services.AddScoped<ListBackgroundsHandler>();
+        services.AddScoped<GetEquipmentCategoryHandler>();
         services.AddScoped<ListCatalogSourcesHandler>();
 
         services.AddScoped<ListContentPacksHandler>();

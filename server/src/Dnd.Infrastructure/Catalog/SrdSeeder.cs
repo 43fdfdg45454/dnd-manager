@@ -59,6 +59,7 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
                 ["conditions"] = await InsertAsync(catalog.Conditions, cancellationToken),
                 ["skills"] = await InsertAsync(catalog.Skills, cancellationToken),
                 ["backgrounds"] = await InsertAsync(catalog.Backgrounds, cancellationToken),
+                ["equipmentCategories"] = await InsertAsync(catalog.EquipmentCategories, cancellationToken),
                 ["optionSets"] = await InsertAsync(levelChoices.Sets, cancellationToken),
                 ["options"] = await InsertAsync(levelChoices.Options, cancellationToken),
                 ["levelChoiceRules"] = await InsertAsync(levelChoices.Rules, cancellationToken),
@@ -107,6 +108,7 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
         await db.CatalogConditions.ExecuteDeleteAsync(cancellationToken);
         await db.CatalogSkills.ExecuteDeleteAsync(cancellationToken);
         await db.CatalogBackgrounds.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.CatalogEquipmentCategories.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogLevelChoiceRules.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogOptions.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogOptionSets.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);

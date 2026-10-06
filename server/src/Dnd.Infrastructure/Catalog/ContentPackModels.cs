@@ -246,6 +246,58 @@ internal sealed class PackBackgroundJson
     public List<string?>? SkillProficiencies { get; set; }
 
     public string? StartingEquipmentText { get; set; }
+
+    /// <summary>Structured starting equipment (same schema as the catalog, without <c>gold</c>).</summary>
+    public PackStartingEquipmentJson? StartingEquipment { get; set; }
+}
+
+internal sealed class PackStartingEquipmentJson
+{
+    public List<PackStartingItemJson?>? Fixed { get; set; }
+
+    public List<PackStartingChoiceJson?>? Choices { get; set; }
+
+    /// <summary>Only classes have an alternative starting wealth; given here it is reported as an error.</summary>
+    public JsonElement? Gold { get; set; }
+
+    public int? FixedGoldCp { get; set; }
+}
+
+internal sealed class PackStartingItemJson
+{
+    public string? Item { get; set; }
+
+    public int? Quantity { get; set; }
+}
+
+internal sealed class PackStartingChoiceJson
+{
+    public string? Description { get; set; }
+
+    public int? Choose { get; set; }
+
+    public List<PackStartingOptionJson?>? Options { get; set; }
+}
+
+internal sealed class PackStartingOptionJson
+{
+    public string? Label { get; set; }
+
+    public List<PackStartingItemJson?>? Items { get; set; }
+
+    /// <summary>Shorthand for one entry of <see cref="Categories"/>.</summary>
+    public string? Category { get; set; }
+
+    public int? CategoryChoose { get; set; }
+
+    public List<PackCategoryPickJson?>? Categories { get; set; }
+}
+
+internal sealed class PackCategoryPickJson
+{
+    public string? Category { get; set; }
+
+    public int? Choose { get; set; }
 }
 
 // ---- Format 2: level choices -----------------------------------------------------------------------

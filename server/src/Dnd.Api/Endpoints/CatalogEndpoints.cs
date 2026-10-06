@@ -81,6 +81,12 @@ public static class CatalogEndpoints
             .WithName("ListCatalogBackgrounds")
             .WithSummary("Trasfondos del catálogo (SRD y paquetes de contenido) ordenados por nombre.");
 
+        group.MapGet("/equipment-categories/{index}", async (string index, GetEquipmentCategoryHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(index, ct)))
+            .WithName("GetCatalogEquipmentCategory")
+            .WithSummary("Objetos del catálogo de una categoría de equipo (\"martial-weapons\", \"holy-symbols\"...) para elegir el equipo inicial.")
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         group.MapGet("/sources", async (ListCatalogSourcesHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(ct)))
             .WithName("ListCatalogSources")

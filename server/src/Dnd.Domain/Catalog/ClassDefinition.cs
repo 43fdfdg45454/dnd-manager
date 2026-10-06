@@ -37,4 +37,9 @@ public sealed class ClassDefinition
 
     /// <summary>One line per fixed item or choice of the starting equipment.</summary>
     public string StartingEquipmentText { get; init; } = string.Empty;
+
+    /// <summary>Structured starting equipment (see <see cref="Catalog.StartingEquipment"/>), or null when unknown.</summary>
+    public string? StartingEquipmentJson { get; init; }
+
+    public StartingEquipment? StartingEquipment => Catalog.StartingEquipment.Parse(StartingEquipmentJson);
 }

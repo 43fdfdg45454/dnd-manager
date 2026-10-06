@@ -13,4 +13,6 @@ public static class CatalogErrors
     public static AppException ItemNotFound() => AppException.NotFound("Objeto no encontrado.");
 
     public static AppException FeatureNotFound() => AppException.NotFound("Rasgo no encontrado.");
+
+    public static AppException EquipmentCategoryNotFound() => AppException.NotFound("Categoría de equipo no encontrada.");
 }

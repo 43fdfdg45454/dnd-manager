@@ -70,6 +70,7 @@ public sealed record ClassDetailDto(
     bool IsPactCaster,
     string SubclassFlavor,
     string StartingEquipmentText,
+    StartingEquipmentDto? StartingEquipment,
     SkillChoicesDto SkillChoices,
     IReadOnlyList<ClassLevelDto> Levels,
     IReadOnlyList<SubclassDto> Subclasses);
@@ -237,6 +238,7 @@ public sealed record SkillDto(string Index, string Name, string AbilityIndex, IR
     public static SkillDto From(SkillDefinition s) => new(s.Index, s.Name, s.AbilityIndex, s.Description);
 }
 
+/// <param name="StartingEquipment">Structured starting equipment, or null when the background only has <paramref name="StartingEquipmentText"/>.</param>
 /// <param name="Source">"srd" or the id of the content pack that added it.</param>
 public sealed record BackgroundDto(
     string Index,
@@ -245,8 +247,9 @@ public sealed record BackgroundDto(
     IReadOnlyList<string> FeatureDescription,
     IReadOnlyList<string> SkillProficiencies,
     string StartingEquipmentText,
+    StartingEquipmentDto? StartingEquipment,
     string Source)
 {
-    public static BackgroundDto From(BackgroundDefinition b) => new(
-        b.Index, b.Name, b.FeatureName, b.FeatureDescription, b.SkillProficiencies, b.StartingEquipmentText, b.Source);
+    public static BackgroundDto From(BackgroundDefinition b, StartingEquipmentDto? startingEquipment) => new(
+        b.Index, b.Name, b.FeatureName, b.FeatureDescription, b.SkillProficiencies, b.StartingEquipmentText, startingEquipment, b.Source);
 }

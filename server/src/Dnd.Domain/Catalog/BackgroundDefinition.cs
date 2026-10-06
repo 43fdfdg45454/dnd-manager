@@ -15,6 +15,11 @@ public sealed class BackgroundDefinition
 
     public string StartingEquipmentText { get; init; } = string.Empty;
 
+    /// <summary>Structured starting equipment (see <see cref="Catalog.StartingEquipment"/>), or null when the background only has the text.</summary>
+    public string? StartingEquipmentJson { get; init; }
+
+    public StartingEquipment? StartingEquipment => Catalog.StartingEquipment.Parse(StartingEquipmentJson);
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = CatalogSources.Srd;
 }
