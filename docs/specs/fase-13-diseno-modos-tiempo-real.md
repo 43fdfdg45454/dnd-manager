@@ -70,6 +70,13 @@ existentes (que siguen usando `Theme.of(context).colorScheme.*`).
 - Si no se pueden descargar los SVG, mismo criterio que con las fuentes: dejar el código listo con
   un `AppIcon` que haga *fallback* a un `Icon` de Material y documentar lo que falta.
 
+### Regla transversal de la UI: origen de cada bonificación
+
+Cualquier valor con modificador (`+X`, CA, HP máx, CD, ataque, daño…) se muestra con el widget
+`StatValue` de la fase 11 y abre su desglose con **un toque** (dos como máximo si está dentro de
+una tarjeta plegada). Ninguna pantalla nueva (Mesa del DM, Mi sesión, asistente, paneles de clase)
+muestra un número con bonificación sin ese desglose.
+
 ## 13b — Temas por clase y paneles de todas las clases (Opus)
 
 - `app/lib/features/characters/domain/class_theme.dart`:

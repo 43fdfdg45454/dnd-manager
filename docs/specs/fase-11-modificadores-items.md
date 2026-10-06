@@ -63,10 +63,19 @@ public sealed record ItemModifier(ItemModifierKind Kind, string? Target, int Val
     HP "propios"; documentarlo en el XML doc).
   - `CharacterSheet.ItemEffects: IReadOnlyList<AppliedItemEffect(string ItemName, ItemModifierKind Kind, string? Target, int Value)>`
     con todo lo aplicado (excluidos AttackBonus/DamageBonus de armas, que van al combate).
+- **Desglose de cada valor (requisito transversal: el usuario debe ver de dónde sale cada punto
+  con uno o dos toques).** `ValueBreakdown(int Total, IReadOnlyList<BreakdownPart> Parts)` y
+  `BreakdownPart(string Source, string Label, int Value)` con `Source` ∈ {`base`, `race`,
+  `subrace`, `ability`, `proficiency`, `expertise`, `class`, `armor`, `shield`, `item`,
+  `override`, `feature`} y `Label` en español (nombre del ítem, "Destreza", "Competencia", "Ajuste
+  manual: <nota>"). La suma de `Parts.Value` es siempre `Total`: un override se representa como
+  parte final con `Value = override − calculado`; un `AbilitySet` como `set − acumulado`.
+  `CharacterSheet.Breakdowns: IReadOnlyDictionary<string, ValueBreakdown>` con claves
+  `ability.<x>`, `save.<x>`, `skill.<index>`, `armorClass`, `initiative`, `speed`, `hitPointsMax`,
+  `passivePerception`, `proficiencyBonus`, `spellSaveDc.<clase>`, `spellAttackBonus.<clase>`.
 - `CombatCalculator`: cada ataque suma `AttackBonus`/`DamageBonus` del propio arma **más** los de
-  los demás ítems activos que no sean armas (p. ej. un anillo "+1 a ataques"). El tipo `AttackLine`
-  (o equivalente) añade `Breakdown` textual: `"+5 = DES +3, competencia +2"` y
-  `"1d8+4 = DES +3, Espada +1"`, para la vista de combate.
+  los demás ítems activos que no sean armas (p. ej. un anillo "+1 a ataques"). Cada ataque lleva
+  `AttackBreakdown` y `DamageBreakdown` (`ValueBreakdown`; el de daño cubre el bono plano).
 - Tests en `Dnd.Domain.Tests`: AbilityBonus suma; AbilitySet 19 sobre 12 sube, sobre 20 no; ítem
   con sintonía requerida sin sintonizar no aplica; escudo con `ArmorClassBase = 3` (+1) da +3;
   ArmorClassBonus con y sin armadura; SaveBonus con target nulo aplica a las seis; HP máx bonus
@@ -91,8 +100,9 @@ Test de seed: `gauntlets-of-ogre-power` tiene un `AbilitySet str 19`.
 - `ItemTemplateDto`, `EffectiveItemDto`, `ItemOverridesDto` (crear/editar homebrew, añadir ítem
   avanzado, tienda) ganan `modifiers: [{ kind, target, value }]` (kind como string del enum).
   Validación FluentValidation delega en `ItemModifier.Validate`.
-- `CharacterSheetDto` gana `itemEffects: [{ itemName, kind, target, value }]`.
-- `AttackDto` del resumen de combate gana `attackBreakdown` y `damageBreakdown` (string).
+- `CharacterSheetDto` gana `breakdowns: { "<clave>": { total, parts: [{ source, label, value }] } }`
+  (y `itemEffects` como resumen de modificadores activos).
+- `AttackDto` del resumen de combate gana `attackBreakdown` y `damageBreakdown` (`ValueBreakdownDto`).
 - Cambios de equipar/sintonizar ya recalculan la hoja (comprobar que `RecalculateAsync` se invoca
   tras `PATCH /inventory/{itemId}`; si no, añadirlo).
 - Tests de integración: homebrew con `AbilityBonus dex +3` equipado sube DES en
@@ -111,11 +121,14 @@ Test de seed: `gauntlets-of-ogre-power` tiene un `AbilitySet str 19`.
   modificadores si vienen del servidor).
 - `effective_item_page.dart` y `item_detail_page.dart`: lista "Efectos" con los modificadores
   legibles ("+3 Destreza", "Fuerza 19", "+1 CA", "+1 a todas las salvaciones").
-- Hoja: `OverrideMark` se generaliza a `ValueMark` con dos variantes: override (como hoy) y
-  "afectado por objeto" (icono distinto, tooltip con el nombre del ítem y el efecto); se aplica en
-  características, salvaciones, habilidades, CA, velocidad, iniciativa y HP máx usando
-  `sheet.itemEffects`.
-- Combate: cada ataque muestra el desglose bajo el bonus/daño.
+- **Widget `StatValue`** (`app/lib/core/ui/stat_value.dart`): muestra un valor (`+5`, `17`) y,
+  al tocarlo (un toque), abre `BreakdownSheet`: lista de partes con icono por `source` (`race`
+  → icono de raza, `item` → `treasure`, `proficiency` → `d20`, `override` → lápiz), etiqueta y
+  `±valor`, y el total; si hay override, la nota. Se usa en **todos** los valores con bonificación:
+  características y modificadores, salvaciones, habilidades, CA, iniciativa, velocidad, HP máx,
+  percepción pasiva, bono de competencia, CD y ataque de conjuros, y cada ataque (bono y daño).
+  Marca visual sutil (punto dorado) cuando el valor tiene partes de `item` u `override`.
+- Combate: cada ataque muestra `+X` y daño como `StatValue` con su desglose.
 - HP máximo de primera clase: en el editor, sección "Puntos de golpe", campo numérico "PG máximos"
   (vacío = calculado; valor = override `hitPointsMax`) con texto de ayuda "Calculado: N"; en
   `HpCard` (vista de combate) tocar "/ máx" abre un diálogo para fijarlo o volver al cálculo

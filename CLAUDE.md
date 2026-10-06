@@ -48,6 +48,9 @@ cd deploy && cp .env.sample .env && docker compose pull && docker compose up -d
   obligatoria en la app y en el README.
 - Hoja de personaje **semiautomática**: la app calcula a partir de clase/raza/nivel; cualquier
   valor calculado puede sobreescribirse (`CharacterOverride`) y la UI lo marca.
+- **Origen de cada punto**: todo valor con bonificación viaja con su desglose
+  (`breakdowns` en la hoja, `attackBreakdown`/`damageBreakdown` en los ataques) y la UI lo muestra
+  con un toque (`StatValue`). Nunca se muestra un `+X` sin poder explicarlo.
 - **Tiempo real solo para eventos de campaña** (ADR 0006): hub SignalR en `/hubs/campaign` que
   notifica ids (`character.updated`, `party.rest`, `message.received`…); el cliente vuelve a pedir
   por HTTP. Dados privados con historial local.
