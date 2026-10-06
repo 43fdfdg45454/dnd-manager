@@ -178,7 +178,7 @@ void main() {
       expect(tester.widget<Text>(find.byKey(const Key('player-character-name'))).data, 'Brom');
     });
 
-    testWidgets('sin personaje activo avisa y ofrece crear uno', (tester) async {
+    testWidgets('sin personaje activo avisa y ofrece crear uno con el asistente', (tester) async {
       final fakes = await _pump(
         tester,
         characters: [
@@ -188,11 +188,11 @@ void main() {
 
       expect(find.text('No tienes personaje en esta campaña'), findsOneWidget);
       await _tap(tester, find.byKey(const Key('player-create-character')));
-      await tester.enterText(find.byKey(const Key('character-name')), 'Nueva Heroína');
-      await _tap(tester, find.byKey(const Key('character-create-submit')));
 
-      expect(fakes.characters.created.single.name, 'Nueva Heroína');
-      expect(find.byKey(const Key('character-title')), findsOneWidget);
+      // Opens the creation wizard, not the quick name dialog.
+      expect(find.byKey(const Key('wizard-step-title')), findsOneWidget);
+      expect(find.byKey(const Key('character-name')), findsNothing);
+      expect(fakes.characters.created, isEmpty);
     });
 
     testWidgets('la bandeja marca leído al abrir un mensaje', (tester) async {

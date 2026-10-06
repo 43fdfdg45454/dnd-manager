@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/auth/user_dto.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../data/admin_users_controller.dart';
 import 'create_user_dialog.dart';
@@ -123,7 +125,17 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
     final currentUserId = auth is AuthSignedIn ? auth.user.id : null;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Usuarios')),
+      appBar: AppBar(
+        title: const Text('Usuarios'),
+        actions: [
+          IconButton(
+            key: const Key('admin-content'),
+            icon: const Icon(Icons.inventory_2_outlined),
+            tooltip: 'Contenido',
+            onPressed: () => context.push(AppRoutes.adminContent),
+          ),
+        ],
+      ),
       floatingActionButton: OfflineAwareFab(
         fabKey: const Key('admin-new-user'),
         onPressed: _createUser,

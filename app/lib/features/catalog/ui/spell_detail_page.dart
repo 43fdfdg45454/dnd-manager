@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/ui/source_chip.dart';
 import '../data/catalog_controllers.dart';
 import '../data/models.dart' hide Page;
 import '../domain/catalog_format.dart';
@@ -22,6 +23,7 @@ class SpellDetailPage extends ConsumerWidget {
         onRetry: () => ref.invalidate(spellDetailProvider(index)),
         builder: (s) => DetailList(
           children: [
+            Align(alignment: Alignment.centerLeft, child: SourceChip(s.source)),
             Text(
               [spellLevelLabel(s.level), ?s.school].join(' · '),
               key: const Key('spell-subtitle'),

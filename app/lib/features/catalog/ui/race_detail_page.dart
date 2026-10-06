@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/ui/source_chip.dart';
 import '../data/catalog_controllers.dart';
 import '../data/models.dart' hide Page;
 import '../domain/catalog_format.dart';
@@ -26,6 +27,7 @@ class RaceDetailPage extends ConsumerWidget {
         onRetry: () => ref.invalidate(raceDetailProvider(index)),
         builder: (r) => DetailList(
           children: [
+            Align(alignment: Alignment.centerLeft, child: SourceChip(r.source)),
             FactRow('Velocidad', r.speed == null ? null : '${r.speed} pies'),
             FactRow('Tamaño', r.size),
             FactRow('Bonos de característica', _bonuses(r.abilityBonuses)),

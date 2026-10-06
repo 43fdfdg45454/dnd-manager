@@ -1201,7 +1201,13 @@ void main() {
       expect(find.byKey(const Key('homebrew-menu-srd1')), findsNothing);
       expect(find.byKey(const Key('homebrew-menu-hb1')), findsOneWidget);
 
-      await _tap(tester, find.text('Campaña'));
+      // The campaign's own item carries the "Campaña" source chip.
+      expect(find.byKey(const Key('source-chip-homebrew')), findsOneWidget);
+
+      await _tap(
+        tester,
+        find.descendant(of: find.byKey(const Key('item-source')), matching: find.text('Campaña')),
+      );
       expect(items.sources.last, ItemSource.homebrew);
       expect(find.text('Dagger'), findsNothing);
       expect(find.text('Amuleto'), findsOneWidget);

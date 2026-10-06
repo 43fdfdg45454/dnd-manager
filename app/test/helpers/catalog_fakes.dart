@@ -13,6 +13,7 @@ SpellSummary makeSpell({
   String school = 'Evocation',
   bool concentration = false,
   bool ritual = false,
+  String? source,
 }) => SpellSummary(
   index: index,
   name: name,
@@ -20,6 +21,7 @@ SpellSummary makeSpell({
   school: school,
   concentration: concentration,
   ritual: ritual,
+  source: source,
 );
 
 ItemSummary makeItem({
@@ -45,6 +47,7 @@ class FakeCatalogRepository implements CatalogRepository {
     this.raceDetails = const {},
     this.conditionList = const [],
     this.backgroundList = const [],
+    this.sourceList = const [CatalogSource(id: 'srd', name: 'SRD 5.1')],
   });
 
   final List<SpellSummary> spellList;
@@ -57,6 +60,7 @@ class FakeCatalogRepository implements CatalogRepository {
   final Map<String, RaceDetail> raceDetails;
   final List<Condition> conditionList;
   final List<Background> backgroundList;
+  final List<CatalogSource> sourceList;
   Object? error;
   final List<SpellCall> spellCalls = [];
   final List<({String? search, String? category, int page})> itemCalls = [];
@@ -69,6 +73,12 @@ class FakeCatalogRepository implements CatalogRepository {
     final start = (page - 1) * pageSize;
     final items = start >= all.length ? <T>[] : all.skip(start).take(pageSize).toList();
     return Page(items: items, total: all.length, page: page, pageSize: pageSize);
+  }
+
+  @override
+  Future<List<CatalogSource>> sources() async {
+    _fail();
+    return sourceList;
   }
 
   @override

@@ -6,6 +6,7 @@ import '../../../../core/auth/auth_state.dart';
 import '../../../../core/network/api_error.dart';
 import '../../../../core/theme/app_icon.dart';
 import '../../../../core/theme/icons.dart';
+import '../../../../core/ui/source_chip.dart';
 import '../../../campaigns/data/campaigns_controller.dart';
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/data/models.dart' hide Page;
@@ -174,6 +175,7 @@ class RaceStep extends ConsumerWidget {
           for (final race in list)
             WizardChoiceCard(
               key: Key('race-${race.index}'),
+              source: race.source,
               selected: race.index == state.raceIndex,
               leading: const AppIcon(AppIcons.hood, size: 28),
               title: race.name,
@@ -318,6 +320,7 @@ class _ClassSummary extends StatelessWidget {
           for (final sub in detail.subclasses)
             WizardChoiceCard(
               key: Key('subclass-${sub.index}'),
+              source: sub.source,
               selected: sub.index == state.subclassIndex,
               title: sub.name,
               lines: [if (sub.flavor != null) sub.flavor!],
@@ -360,10 +363,14 @@ class WizardChoiceCard extends StatelessWidget {
     this.lines = const [],
     this.leading,
     this.accent,
+    this.source,
   });
 
   final bool selected;
   final String title;
+
+  /// Origin of the content ('srd', 'homebrew' or a content pack id); shown as a chip.
+  final String? source;
   final List<String> lines;
   final Widget? leading;
   final Color? accent;
@@ -393,7 +400,7 @@ class WizardChoiceCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: theme.textTheme.titleMedium),
+                    NameWithSource(title, source, style: theme.textTheme.titleMedium),
                     for (final line in lines.where((l) => l.isNotEmpty))
                       Text(line, style: theme.textTheme.bodySmall),
                   ],

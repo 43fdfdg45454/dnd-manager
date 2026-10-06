@@ -508,6 +508,71 @@ void main() {
       expect(find.text('Sin historia.'), findsOneWidget);
     });
 
+    testWidgets('la ficha avisa de "Contenido no disponible" y nombra lo que falta', (
+      tester,
+    ) async {
+      final repository = FakeCharactersRepository(
+        characters: [
+          {
+            ...makeCharacterJson(
+              classes: [
+                {
+                  'classIndex': 'fighter',
+                  'className': 'Fighter',
+                  'level': 3,
+                  'subclassIndex': 'cavaliere',
+                  'catalogMissing': true,
+                },
+              ],
+              spells: [
+                {
+                  'spellIndex': 'rayo-ejemplo',
+                  'classIndex': 'fighter',
+                  'isPrepared': true,
+                  'alwaysPrepared': false,
+                  'catalogMissing': true,
+                },
+              ],
+            ),
+            'raceCatalogMissing': true,
+            'catalogMissing': true,
+          },
+        ],
+      );
+      await _pumpApp(tester, characters: repository, location: '/characters/ch1');
+
+      expect(find.byKey(const Key('catalog-missing')), findsOneWidget);
+      expect(find.text('Contenido no disponible'), findsOneWidget);
+      final tooltip = tester.widget<Tooltip>(
+        find.ancestor(of: find.byKey(const Key('catalog-missing')), matching: find.byType(Tooltip)),
+      );
+      expect(tooltip.message, contains('clase o subclase, raza, conjuros'));
+      expect(tooltip.message, isNot(contains('trasfondo')));
+    });
+
+    testWidgets('sin contenido ausente no hay aviso', (tester) async {
+      final repository = FakeCharactersRepository(characters: [makeCharacterJson()]);
+      await _pumpApp(tester, characters: repository, location: '/characters/ch1');
+
+      expect(find.byKey(const Key('catalog-missing')), findsNothing);
+    });
+
+    test('CharacterDetail lee los indicadores catalogMissing', () {
+      final detail = CharacterDetail.fromJson({
+        ...makeCharacterJson(),
+        'backgroundCatalogMissing': true,
+        'catalogMissing': true,
+      });
+      expect(detail.backgroundCatalogMissing, isTrue);
+      expect(detail.raceCatalogMissing, isFalse);
+      expect(detail.missingContent, ['trasfondo']);
+
+      // Only the global flag: a generic description.
+      final generic = CharacterDetail.fromJson({...makeCharacterJson(), 'catalogMissing': true});
+      expect(generic.missingContent, ['contenido']);
+      expect(CharacterDetail.fromJson(makeCharacterJson()).missingContent, isEmpty);
+    });
+
     testWidgets('el conmutador Detallado / Combate está habilitado', (tester) async {
       final repository = FakeCharactersRepository(characters: [makeCharacterJson()]);
       await _pumpApp(tester, characters: repository, location: '/characters/ch1');

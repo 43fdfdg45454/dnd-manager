@@ -120,6 +120,22 @@ class Attribution {
   final String text;
 }
 
+/// A source of catalog content (`GET /catalog/sources`): "srd" or a content
+/// pack imported by the administrator.
+class CatalogSource {
+  const CatalogSource({required this.id, required this.name, this.version});
+
+  factory CatalogSource.fromJson(Map<String, dynamic> json) => CatalogSource(
+    id: _str(json['id']),
+    name: _str(json['name'], _str(json['id'])),
+    version: _strOrNull(json['version']),
+  );
+
+  final String id;
+  final String name;
+  final String? version;
+}
+
 class AbilityBonus {
   const AbilityBonus({required this.ability, required this.bonus});
 
@@ -316,6 +332,7 @@ class Subclass {
     this.flavor,
     this.description = const [],
     this.features = const [],
+    this.source,
   });
 
   factory Subclass.fromJson(Map<String, dynamic> json) => Subclass(
@@ -324,10 +341,14 @@ class Subclass {
     flavor: _strOrNull(json['flavor']),
     description: _strList(json['description']),
     features: _subclassFeatures(json),
+    source: _strOrNull(json['source']),
   );
 
   final String index;
   final String name;
+
+  /// "srd", "homebrew" or the id of a content pack; null when not sent.
+  final String? source;
   final String? flavor;
   final List<String> description;
   final List<Feature> features;
@@ -426,6 +447,7 @@ class RaceSummary {
     this.size,
     this.abilityBonuses = const [],
     this.subraceIndexes = const [],
+    this.source,
   });
 
   factory RaceSummary.fromJson(Map<String, dynamic> json) => RaceSummary(
@@ -435,10 +457,14 @@ class RaceSummary {
     size: _strOrNull(json['size']),
     abilityBonuses: _objects(json['abilityBonuses'], AbilityBonus.fromJson),
     subraceIndexes: _nameList(json['subraceIndexes']),
+    source: _strOrNull(json['source']),
   );
 
   final String index;
   final String name;
+
+  /// "srd", "homebrew" or the id of a content pack; null when not sent.
+  final String? source;
   final int? speed;
   final String? size;
   final List<AbilityBonus> abilityBonuses;
@@ -491,6 +517,7 @@ class RaceDetail extends RaceSummary {
     super.size,
     super.abilityBonuses,
     super.subraceIndexes,
+    super.source,
     this.traits = const [],
     this.languages = const [],
     this.age,
@@ -507,6 +534,7 @@ class RaceDetail extends RaceSummary {
       speed: summary.speed,
       size: summary.size,
       abilityBonuses: _objects(json['abilityBonuses'], AbilityBonus.fromJson),
+      source: summary.source,
       traits: _objects(json['traits'], Trait.fromJson),
       languages: _nameList(json['languages']),
       age: _strOrNull(json['age']),
@@ -538,6 +566,7 @@ class SpellSummary {
     this.concentration = false,
     this.ritual = false,
     this.classes = const [],
+    this.source,
   });
 
   factory SpellSummary.fromJson(Map<String, dynamic> json) => SpellSummary(
@@ -549,10 +578,14 @@ class SpellSummary {
     concentration: _bool(json['concentration']),
     ritual: _bool(json['ritual']),
     classes: _spellClasses(json),
+    source: _strOrNull(json['source']),
   );
 
   final String index;
   final String name;
+
+  /// "srd", "homebrew" or the id of a content pack; null when not sent.
+  final String? source;
 
   /// 0 for cantrips, 1..9 otherwise.
   final int level;
@@ -592,6 +625,7 @@ class SpellDetail extends SpellSummary {
     super.concentration,
     super.ritual,
     super.classes,
+    super.source,
     this.range,
     this.components = const [],
     this.material,
@@ -614,6 +648,7 @@ class SpellDetail extends SpellSummary {
       concentration: summary.concentration,
       ritual: summary.ritual,
       classes: summary.classes,
+      source: summary.source,
       range: _strOrNull(json['range']),
       components: _strList(json['components']),
       material: _strOrNull(json['material']),
@@ -678,12 +713,13 @@ class ItemSummary {
   final String? rarity;
   final bool requiresAttunement;
 
-  /// "srd" or "homebrew" (campaign item); null when the server does not say.
+  /// "srd", "homebrew" (campaign item) or the id of a content pack; null when
+  /// the server does not say.
   final String? source;
 
   /// Whether the item belongs to the campaign (and can be edited), as opposed
-  /// to coming from the SRD.
-  bool get isHomebrew => source != 'srd';
+  /// to coming from the SRD or a content pack.
+  bool get isHomebrew => source == null || source == 'homebrew';
 
   /// Cost in copper pieces; null when unknown.
   final int? costCp;
@@ -725,6 +761,7 @@ class ItemDetail extends ItemSummary {
     super.requiresAttunement,
     super.costCp,
     super.weightLb,
+    super.source,
     this.damage,
     this.armor,
     this.rangeNormal,
@@ -780,6 +817,7 @@ class ItemDetail extends ItemSummary {
       requiresAttunement: summary.requiresAttunement,
       costCp: summary.costCp,
       weightLb: summary.weightLb,
+      source: summary.source,
       damage: damage,
       armor: armor,
       rangeNormal: _int(rangeJson?['normal'] ?? json['rangeNormal']),
@@ -899,6 +937,7 @@ class Background {
     this.featureDescription = const [],
     this.skillProficiencies = const [],
     this.startingEquipmentText,
+    this.source,
   });
 
   factory Background.fromJson(Map<String, dynamic> json) => Background(
@@ -908,10 +947,14 @@ class Background {
     featureDescription: _strList(json['featureDescription']),
     skillProficiencies: _nameList(json['skillProficiencies']),
     startingEquipmentText: _strOrNull(json['startingEquipmentText']),
+    source: _strOrNull(json['source']),
   );
 
   final String index;
   final String name;
+
+  /// "srd", "homebrew" or the id of a content pack; null when not sent.
+  final String? source;
   final String? featureName;
   final List<String> featureDescription;
   final List<String> skillProficiencies;

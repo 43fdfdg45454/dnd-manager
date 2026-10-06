@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/ui/source_chip.dart';
 import '../../catalog/data/models.dart' show ItemSummary;
 import '../../catalog/domain/catalog_format.dart';
 import '../data/campaign_items_repository.dart';
@@ -120,7 +121,7 @@ class _ItemSearchListState extends ConsumerState<ItemSearchList> {
                       return ListTile(
                         key: Key('item-${item.id}'),
                         selected: item.id == widget.selectedId,
-                        title: Text(item.name),
+                        title: NameWithSource(item.name, item.source),
                         subtitle: Text(
                           [
                             itemCategoryLabel(item.category),

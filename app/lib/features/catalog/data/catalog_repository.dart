@@ -38,6 +38,9 @@ class CatalogRepository {
     return result.data;
   }
 
+  /// "srd" first, then every imported content pack.
+  Future<List<CatalogSource>> sources() => _list('sources', CatalogSource.fromJson);
+
   Future<Attribution> attribution() => _one('attribution', Attribution.fromJson);
 
   Future<List<ClassSummary>> classes() => _list('classes', ClassSummary.fromJson);

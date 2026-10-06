@@ -27,6 +27,7 @@ enum _HomeAction {
   notifications,
   library,
   adminUsers,
+  adminContent,
   clearCache,
   checkUpdates,
   attributions,
@@ -87,6 +88,8 @@ class HomePage extends ConsumerWidget {
         context.push(AppRoutes.library);
       case _HomeAction.adminUsers:
         context.push(AppRoutes.adminUsers);
+      case _HomeAction.adminContent:
+        context.push(AppRoutes.adminContent);
       case _HomeAction.clearCache:
         _clearCache(context, ref);
       case _HomeAction.checkUpdates:
@@ -173,6 +176,12 @@ class HomePage extends ConsumerWidget {
                     key: Key('home-admin-users'),
                     value: _HomeAction.adminUsers,
                     child: Text('Usuarios'),
+                  ),
+                if (user.isAdmin)
+                  const PopupMenuItem(
+                    key: Key('home-admin-content'),
+                    value: _HomeAction.adminContent,
+                    child: Text('Contenido'),
                   ),
                 const PopupMenuItem(
                   key: Key('home-clear-cache'),

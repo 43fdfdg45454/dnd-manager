@@ -152,6 +152,14 @@ final conditionsProvider = FutureProvider.autoDispose<List<Condition>>(
   retry: _noRetry,
 );
 
+/// Sources of the catalog (SRD and content packs), to name the pack a piece of
+/// content comes from. Kept alive: it is tiny and every chip reads it. Errors
+/// (offline without cache) leave the chips showing nothing rather than failing.
+final catalogSourcesProvider = FutureProvider<List<CatalogSource>>(
+  (ref) => ref.watch(catalogRepositoryProvider).sources(),
+  retry: _noRetry,
+);
+
 final attributionProvider = FutureProvider.autoDispose<Attribution>(
   (ref) => ref.watch(catalogRepositoryProvider).attribution(),
   retry: _noRetry,

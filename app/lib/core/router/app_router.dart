@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/admin/ui/admin_content_page.dart';
 import '../../features/admin/ui/admin_users_page.dart';
 import '../../features/auth/ui/forgot_password_page.dart';
 import '../../features/auth/ui/login_page.dart';
@@ -46,6 +47,7 @@ abstract final class AppRoutes {
   static const forgotPassword = '/forgot-password';
   static const home = '/';
   static const adminUsers = '/admin/users';
+  static const adminContent = '/admin/content';
   static const attributions = '/attributions';
   static const campaignDetail = '/campaigns/:id';
   static const campaignGeneral = '/campaigns/:id/general';
@@ -287,6 +289,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: AppRoutes.home, builder: (context, state) => const HomePage()),
       GoRoute(path: AppRoutes.adminUsers, builder: (context, state) => const AdminUsersPage()),
+      GoRoute(path: AppRoutes.adminContent, builder: (context, state) => const AdminContentPage()),
       GoRoute(path: AppRoutes.attributions, builder: (context, state) => const AttributionPage()),
       ...campaignShellRoutes(rootNavigatorKey),
       GoRoute(

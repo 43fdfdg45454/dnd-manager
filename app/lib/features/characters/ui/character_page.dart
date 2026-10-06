@@ -270,9 +270,39 @@ class _CombatHeader extends StatelessWidget {
               ),
             ],
           ),
+          if (c.missingContent.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            CatalogMissingBadge(character: c),
+          ],
           const SizedBox(height: 8),
           switcher,
         ],
+      ),
+    );
+  }
+}
+
+/// "Contenido no disponible": part of the character comes from a content pack
+/// that was removed. The tooltip names what is missing.
+class CatalogMissingBadge extends StatelessWidget {
+  const CatalogMissingBadge({super.key, required this.character});
+
+  final CharacterDetail character;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final missing = character.missingContent.join(', ');
+    return Tooltip(
+      message: 'Falta en el catálogo: $missing. La ficha conserva los datos.',
+      triggerMode: TooltipTriggerMode.tap,
+      child: Chip(
+        key: const Key('catalog-missing'),
+        avatar: Icon(Icons.warning_amber_rounded, size: 16, color: scheme.onErrorContainer),
+        label: Text('Contenido no disponible', style: TextStyle(color: scheme.onErrorContainer)),
+        backgroundColor: scheme.errorContainer,
+        side: BorderSide.none,
+        visualDensity: VisualDensity.compact,
       ),
     );
   }
@@ -361,6 +391,7 @@ class _Header extends StatelessWidget {
                 label: Text(c.status.label),
                 visualDensity: VisualDensity.compact,
               ),
+              if (c.missingContent.isNotEmpty) CatalogMissingBadge(character: c),
               if (pending > 0)
                 ActionChip(
                   key: const Key('character-pending'),

@@ -183,6 +183,7 @@ class CharacterClass {
     this.subclassIndex,
     this.subclassName,
     required this.level,
+    this.catalogMissing = false,
   });
 
   factory CharacterClass.fromJson(Map<String, dynamic> json) {
@@ -193,6 +194,7 @@ class CharacterClass {
       subclassIndex: _strOrNull(json['subclassIndex']),
       subclassName: _strOrNull(json['subclassName']),
       level: _int(json['level']) ?? 1,
+      catalogMissing: _bool(json['catalogMissing']),
     );
   }
 
@@ -201,6 +203,9 @@ class CharacterClass {
   final String? subclassIndex;
   final String? subclassName;
   final int level;
+
+  /// The class or subclass definition is gone from the catalog (a deleted content pack).
+  final bool catalogMissing;
 
   /// "Wizard 3".
   String get label => '$className $level';
@@ -298,6 +303,7 @@ class CharacterSpell {
     this.alwaysPrepared = false,
     this.name,
     this.level,
+    this.catalogMissing = false,
   });
 
   /// [name] and [level] are optional extras: when the server does not send them
@@ -309,6 +315,7 @@ class CharacterSpell {
     alwaysPrepared: _bool(json['alwaysPrepared']),
     name: _strOrNull(json['spellName'] ?? json['name']),
     level: _int(json['spellLevel'] ?? json['level']),
+    catalogMissing: _bool(json['catalogMissing']),
   );
 
   final String spellIndex;
@@ -317,6 +324,9 @@ class CharacterSpell {
   final bool alwaysPrepared;
   final String? name;
   final int? level;
+
+  /// The spell is gone from the catalog (a deleted content pack).
+  final bool catalogMissing;
 
   Map<String, dynamic> toPatchJson() => {
     'spellIndex': spellIndex,
@@ -849,6 +859,9 @@ class CharacterDetail {
     this.combat = const CombatSummary(),
     this.sheet = const CharacterSheet(),
     this.pendingChangeRequests = const [],
+    this.raceCatalogMissing = false,
+    this.backgroundCatalogMissing = false,
+    this.catalogMissing = false,
     this.createdAt,
     this.updatedAt,
   });
@@ -897,6 +910,9 @@ class CharacterDetail {
       combat: CombatSummary.fromJson(json['combat']),
       sheet: CharacterSheet.fromJson(_map(json['sheet']) ?? const {}),
       pendingChangeRequests: _objects(json['pendingChangeRequests'], ChangeRequest.fromJson),
+      raceCatalogMissing: _bool(json['raceCatalogMissing']),
+      backgroundCatalogMissing: _bool(json['backgroundCatalogMissing']),
+      catalogMissing: _bool(json['catalogMissing']),
       createdAt: _date(json['createdAt']),
       updatedAt: _date(json['updatedAt']),
     );
@@ -946,8 +962,31 @@ class CharacterDetail {
   final CombatSummary combat;
   final CharacterSheet sheet;
   final List<ChangeRequest> pendingChangeRequests;
+
+  /// The race (or subrace) is gone from the catalog (a deleted content pack).
+  final bool raceCatalogMissing;
+
+  /// The background is gone from the catalog.
+  final bool backgroundCatalogMissing;
+
+  /// Some of the character's content is gone from the catalog; the specific
+  /// flags above and on [classes] and [spells] say which.
+  final bool catalogMissing;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+
+  /// What of the character is gone from the catalog, in Spanish ("clase o
+  /// subclase", "raza", "conjuros", "trasfondo"); empty when nothing is. When
+  /// the server only says [catalogMissing] the list is a generic "contenido".
+  List<String> get missingContent {
+    final missing = [
+      if (classes.any((c) => c.catalogMissing)) 'clase o subclase',
+      if (raceCatalogMissing) 'raza',
+      if (spells.any((s) => s.catalogMissing)) 'conjuros',
+      if (backgroundCatalogMissing) 'trasfondo',
+    ];
+    return missing.isEmpty && catalogMissing ? const ['contenido'] : missing;
+  }
 
   int get totalLevel => classes.fold<int>(0, (sum, c) => sum + c.level);
 

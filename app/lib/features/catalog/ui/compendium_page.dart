@@ -8,6 +8,7 @@ import '../../../core/cache/stale_data.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/ui/offline_widgets.dart';
+import '../../../core/ui/source_chip.dart';
 import '../data/catalog_controllers.dart';
 import '../data/catalog_repository.dart';
 import '../data/models.dart';
@@ -247,7 +248,7 @@ class _SpellsTab extends ConsumerWidget {
             emptyText: 'No se encontraron hechizos.',
             itemBuilder: (context, spell) => ListTile(
               key: Key('spell-${spell.index}'),
-              title: Text(spell.name),
+              title: NameWithSource(spell.name, spell.source),
               subtitle: Text(
                 [
                   spellLevelLabel(spell.level),
@@ -299,7 +300,7 @@ class _ItemsTab extends ConsumerWidget {
             emptyText: 'No se encontraron objetos.',
             itemBuilder: (context, item) => ListTile(
               key: Key('item-${item.id}'),
-              title: Text(item.name),
+              title: NameWithSource(item.name, item.source),
               subtitle: Text(
                 [
                   itemCategoryLabel(item.category),
@@ -504,7 +505,7 @@ class _RacesTab extends ConsumerWidget {
       emptyText: 'No se encontraron razas.',
       itemBuilder: (context, r) => ListTile(
         key: Key('race-${r.index}'),
-        title: Text(r.name),
+        title: NameWithSource(r.name, r.source),
         subtitle: Text([if (r.speed != null) 'Velocidad ${r.speed} pies', ?r.size].join(' · ')),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => context.push(AppRoutes.race(r.index)),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/ui/source_chip.dart';
 import '../data/catalog_controllers.dart';
 import '../data/models.dart' hide Page;
 import '../domain/catalog_format.dart';
@@ -78,7 +79,7 @@ class _SubclassEntry extends StatelessWidget {
       tilePadding: EdgeInsets.zero,
       childrenPadding: const EdgeInsets.only(bottom: 8),
       expandedCrossAxisAlignment: CrossAxisAlignment.start,
-      title: Text(subclass.name),
+      title: NameWithSource(subclass.name, subclass.source),
       subtitle: subclass.flavor == null ? null : Text(subclass.flavor!),
       children: [
         if (subclass.description.isEmpty && byLevel.isEmpty)

@@ -13,7 +13,6 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/offline_widgets.dart';
 import '../../../campaigns/data/campaigns_controller.dart';
 import '../../../campaigns/domain/campaign_models.dart';
-import '../../../campaigns/ui/feedback.dart';
 import '../../../characters/data/characters_controller.dart';
 import '../../../characters/data/models.dart';
 import '../../../characters/domain/class_theme.dart';
@@ -24,7 +23,6 @@ import '../../../characters/ui/combat/class_panels.dart';
 import '../../../characters/ui/combat/resources_section.dart';
 import '../../../characters/ui/combat/rest_section.dart';
 import '../../../characters/ui/combat/vitals_section.dart';
-import '../../../characters/ui/new_character_dialog.dart';
 import '../../../items/data/items_controllers.dart';
 import '../../../items/ui/inventory_tab.dart';
 import '../stash_card.dart';
@@ -83,7 +81,7 @@ class _PlayerSessionPageState extends ConsumerState<PlayerSessionPage> {
             if (c.status == CharacterStatus.active) c,
         ];
         if (active.isEmpty) {
-          return _NoCharacter(campaign: campaign, myUserId: myUserId, drafts: mine);
+          return _NoCharacter(campaign: campaign, drafts: mine);
         }
         final selected = active.firstWhere((c) => c.id == _selectedId, orElse: () => active.first);
         return Column(
@@ -168,33 +166,13 @@ class _ErrorView extends StatelessWidget {
 /// The player has no active character: a notice, the button to create one and
 /// the drafts in progress.
 class _NoCharacter extends ConsumerWidget {
-  const _NoCharacter({required this.campaign, required this.myUserId, required this.drafts});
+  const _NoCharacter({required this.campaign, required this.drafts});
 
   final CampaignDetail campaign;
-  final String myUserId;
   final List<CharacterSummary> drafts;
 
-  Future<void> _create(BuildContext context, WidgetRef ref) async {
-    final data = await showDialog<NewCharacterData>(
-      context: context,
-      builder: (_) =>
-          NewCharacterDialog(members: campaign.members, myUserId: myUserId, canChooseOwner: false),
-    );
-    if (data == null || !context.mounted) return;
-    final router = GoRouter.of(context);
-    CharacterDetail? created;
-    final done = await runAction(
-      context,
-      () async {
-        created = await ref
-            .read(campaignCharactersControllerProvider(campaign.id).notifier)
-            .create(data.name, owner: data.owner);
-      },
-      success: 'Personaje creado.',
-      describe: describeCharacterError,
-    );
-    if (done && created != null) router.push(AppRoutes.character(created!.id));
-  }
+  /// Opens the guided creation wizard.
+  void _create(BuildContext context) => context.push(AppRoutes.characterNew(campaign.id));
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -222,7 +200,7 @@ class _NoCharacter extends ConsumerWidget {
           child: OfflineAware(
             builder: (context, canWrite) => FilledButton.icon(
               key: const Key('player-create-character'),
-              onPressed: canWrite ? () => _create(context, ref) : null,
+              onPressed: canWrite ? () => _create(context) : null,
               icon: const Icon(Icons.person_add_alt_1),
               label: const Text('Crear personaje'),
             ),

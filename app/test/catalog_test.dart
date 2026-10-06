@@ -1,4 +1,5 @@
 import 'package:dnd_companion/core/router/app_router.dart';
+import 'package:dnd_companion/core/ui/source_chip.dart';
 import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
 import 'package:dnd_companion/features/catalog/data/models.dart';
 import 'package:dnd_companion/features/catalog/domain/catalog_format.dart';
@@ -124,29 +125,35 @@ Widget _scope(FakeCatalogRepository repository, Widget child) => ProviderScope(
   child: child,
 );
 
-FakeCatalogRepository _repository({List<SpellSummary>? spells}) => FakeCatalogRepository(
-  spellList:
-      spells ??
-      [
-        makeSpell(),
-        makeSpell(index: 'magic-missile', name: 'Magic Missile', level: 1),
-        makeSpell(index: 'light', name: 'Light', level: 0, school: 'Evocation'),
+FakeCatalogRepository _repository({List<SpellSummary>? spells, List<CatalogSource>? sources}) =>
+    FakeCatalogRepository(
+      sourceList: sources ?? const [CatalogSource(id: 'srd', name: 'SRD 5.1')],
+      spellList:
+          spells ??
+          [
+            makeSpell(),
+            makeSpell(index: 'magic-missile', name: 'Magic Missile', level: 1),
+            makeSpell(index: 'light', name: 'Light', level: 0, school: 'Evocation'),
+          ],
+      itemList: [
+        makeItem(),
+        makeItem(id: 'i2', name: 'Potion of Healing', category: 'Consumable'),
       ],
-  itemList: [
-    makeItem(),
-    makeItem(id: 'i2', name: 'Potion of Healing', category: 'Consumable'),
-  ],
-  classList: [
-    _wizard,
-    const ClassSummary(index: 'barbarian', name: 'Barbarian', hitDie: 12),
-  ],
-  classDetails: {'wizard': _wizardDetail()},
-  spellDetails: {'fireball': _fireballDetail()},
-  raceList: const [RaceSummary(index: 'elf', name: 'Elf', speed: 30, size: 'Medium')],
-  conditionList: const [
-    Condition(index: 'blinded', name: 'Blinded', description: ['A blinded creature cannot see.']),
-  ],
-);
+      classList: [
+        _wizard,
+        const ClassSummary(index: 'barbarian', name: 'Barbarian', hitDie: 12),
+      ],
+      classDetails: {'wizard': _wizardDetail()},
+      spellDetails: {'fireball': _fireballDetail()},
+      raceList: const [RaceSummary(index: 'elf', name: 'Elf', speed: 30, size: 'Medium')],
+      conditionList: const [
+        Condition(
+          index: 'blinded',
+          name: 'Blinded',
+          description: ['A blinded creature cannot see.'],
+        ),
+      ],
+    );
 
 Future<void> _pumpCompendium(WidgetTester tester, FakeCatalogRepository repository) async {
   await tester.pumpWidget(_scope(repository, const MaterialApp(home: CompendiumPage())));
@@ -162,6 +169,94 @@ void main() {
       expect(find.text('Magic Missile'), findsOneWidget);
       expect(find.text('Nivel 3 · Evocation'), findsOneWidget);
       expect(find.text('Truco · Evocation'), findsOneWidget);
+    });
+
+    testWidgets('un hechizo de un paquete muestra el chip con el nombre del paquete', (
+      tester,
+    ) async {
+      final repository = _repository(
+        spells: [
+          makeSpell(),
+          makeSpell(
+            index: 'rayo-ejemplo',
+            name: 'Rayo de Ejemplo',
+            level: 1,
+            source: 'reinos-ejemplo',
+          ),
+          makeSpell(index: 'light', name: 'Light', level: 0, source: 'homebrew'),
+        ],
+        sources: const [
+          CatalogSource(id: 'srd', name: 'SRD 5.1'),
+          CatalogSource(id: 'reinos-ejemplo', name: 'Reinos de Ejemplo', version: '1.0'),
+        ],
+      );
+      await _pumpCompendium(tester, repository);
+
+      expect(find.text('Reinos de Ejemplo'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('spell-rayo-ejemplo')),
+          matching: find.byKey(const Key('source-chip-reinos-ejemplo')),
+        ),
+        findsOneWidget,
+      );
+      // The SRD spell has no chip; the campaign one says "Campaña".
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('spell-fireball')),
+          matching: find.byType(SourceChip),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('source-chip-srd')), findsNothing);
+      expect(find.text('Campaña'), findsOneWidget);
+    });
+
+    testWidgets('si el paquete no figura en las fuentes el chip muestra su id', (tester) async {
+      final repository = _repository(
+        spells: [
+          makeSpell(index: 'rayo-ejemplo', name: 'Rayo de Ejemplo', source: 'reinos-ejemplo'),
+        ],
+      );
+      await _pumpCompendium(tester, repository);
+
+      // The default fake only knows the SRD, so the pack id is the fallback.
+      expect(find.text('reinos-ejemplo'), findsOneWidget);
+    });
+
+    testWidgets('el detalle de un hechizo de paquete muestra el chip', (tester) async {
+      final repository = FakeCatalogRepository(
+        spellDetails: {
+          'rayo-ejemplo': const SpellDetail(
+            index: 'rayo-ejemplo',
+            name: 'Rayo de Ejemplo',
+            level: 1,
+            source: 'reinos-ejemplo',
+          ),
+        },
+        sourceList: const [
+          CatalogSource(id: 'srd', name: 'SRD 5.1'),
+          CatalogSource(id: 'reinos-ejemplo', name: 'Reinos de Ejemplo'),
+        ],
+      );
+      await tester.pumpWidget(
+        _scope(repository, const MaterialApp(home: SpellDetailPage(index: 'rayo-ejemplo'))),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reinos de Ejemplo'), findsOneWidget);
+    });
+
+    test('SpellSummary, ItemSummary y Subclass leen source', () {
+      expect(SpellSummary.fromJson({'index': 'a', 'level': 1, 'source': 'p'}).source, 'p');
+      expect(SpellDetail.fromJson({'index': 'a', 'level': 1, 'source': 'p'}).source, 'p');
+      expect(ItemDetail.fromJson({'id': 'i', 'name': 'X', 'source': 'p'}).source, 'p');
+      expect(Subclass.fromJson({'index': 's', 'source': 'p'}).source, 'p');
+      expect(RaceDetail.fromJson({'index': 'r', 'source': 'p'}).source, 'p');
+      expect(Background.fromJson({'index': 'b', 'source': 'p'}).source, 'p');
+      // A pack item is not editable homebrew.
+      expect(const ItemSummary(id: 'i', name: 'X', source: 'p').isHomebrew, isFalse);
+      expect(const ItemSummary(id: 'i', name: 'X', source: 'homebrew').isHomebrew, isTrue);
     });
 
     testWidgets('el pie muestra la atribución', (tester) async {

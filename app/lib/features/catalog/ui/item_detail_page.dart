@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/ui/source_chip.dart';
 import '../data/catalog_controllers.dart';
 import '../data/models.dart' hide Page;
 import '../domain/catalog_format.dart';
@@ -22,6 +23,7 @@ class ItemDetailPage extends ConsumerWidget {
         onRetry: () => ref.invalidate(itemDetailProvider(id)),
         builder: (i) => DetailList(
           children: [
+            Align(alignment: Alignment.centerLeft, child: SourceChip(i.source)),
             Text(
               [
                 itemCategoryLabel(i.category),
