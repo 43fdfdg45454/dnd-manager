@@ -224,8 +224,11 @@ class _NoCharacter extends ConsumerWidget {
   }
 }
 
-/// One character of the player in the selected [subview].
-class _CharacterSession extends ConsumerWidget {
+/// One character of the player in the selected [subview]. While the character
+/// has a granted level or a pending spell preparation, the matching full-screen
+/// page opens by itself and cannot be left: first the level-up wizard, then
+/// "Prepara tus conjuros" (also when a `character.updated` event activates it).
+class _CharacterSession extends ConsumerStatefulWidget {
   const _CharacterSession({
     super.key,
     required this.campaign,
@@ -238,22 +241,65 @@ class _CharacterSession extends ConsumerWidget {
   final PlayerSubview subview;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final detail = ref.watch(characterControllerProvider(characterId));
+  ConsumerState<_CharacterSession> createState() => _CharacterSessionState();
+}
+
+class _CharacterSessionState extends ConsumerState<_CharacterSession> {
+  /// A forced page is open (or about to open).
+  bool _forcing = false;
+
+  /// Opens the forced page that [character] needs, if any (one at a time).
+  void _force(CharacterDetail character) {
+    if (_forcing) return;
+    final String? route;
+    if (character.pendingLevelUpTo != null) {
+      route = AppRoutes.characterLevelUp(character.id);
+    } else if (character.spellPreparationPending) {
+      route = AppRoutes.characterPrepareSpells(character.id);
+    } else {
+      route = null;
+    }
+    final target = route;
+    if (target == null) return;
+    _forcing = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) {
+        _forcing = false;
+        return;
+      }
+      await context.push<void>(target);
+      if (!mounted) return;
+      // Fresh state decides whether the next forced page is needed.
+      try {
+        await ref.read(characterControllerProvider(widget.characterId).notifier).reload();
+      } catch (_) {
+        // Offline or failed: the cached state stays; do not loop.
+        _forcing = false;
+        return;
+      }
+      if (mounted) setState(() => _forcing = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final detail = ref.watch(characterControllerProvider(widget.characterId));
+    final loaded = detail.value;
+    if (loaded != null && loaded.status == CharacterStatus.active) _force(loaded);
     return detail.when(
       skipLoadingOnReload: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => _ErrorView(
         message: describeCharacterError(error),
-        onRetry: () => ref.invalidate(characterControllerProvider(characterId)),
+        onRetry: () => ref.invalidate(characterControllerProvider(widget.characterId)),
       ),
       // At 0 hit points a dark vignette closes in on the edges of the session.
       data: (character) => DarkVignette(
         key: const Key('player-vignette'),
         active: character.hitPointsCurrent == 0,
-        child: switch (subview) {
+        child: switch (widget.subview) {
           PlayerSubview.combat => _CombatSubview(character: character),
-          PlayerSubview.outside => _OutsideSubview(campaign: campaign, character: character),
+          PlayerSubview.outside => _OutsideSubview(campaign: widget.campaign, character: character),
         },
       ),
     );

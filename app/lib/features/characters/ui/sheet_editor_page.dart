@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_error.dart';
 import '../../../core/ui/offline_widgets.dart';
+import '../../../core/ui/spell_category.dart';
 import '../../catalog/data/catalog_controllers.dart';
 import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models.dart' show ClassSummary, titleFromIndex;
@@ -769,6 +770,10 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
 
   Widget _buildSpellsSection(List<ClassSummary> catalog) {
     final info = ref.watch(spellInfoProvider(spellInfoKey(_spells.map((s) => s.spellIndex)))).value;
+    // Only the DM (or the owner of a draft) decides what is prepared; a player
+    // prepares through "Prepara tus conjuros".
+    final myRole = ref.watch(campaignDetailControllerProvider(_initial.campaignId)).value?.myRole;
+    final canPrepare = _initial.status != CharacterStatus.active || (myRole?.isAtLeastDm ?? false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -783,6 +788,7 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
               return ListTile(
                 key: Key('spell-row-${s.spellIndex}'),
                 contentPadding: EdgeInsets.zero,
+                leading: SpellCategoryIcon(s.category ?? spell?.category),
                 title: Text(s.name ?? spell?.name ?? titleFromSpellIndex(s.spellIndex)),
                 subtitle: Text(
                   [
@@ -795,6 +801,8 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
                   children: [
                     if (s.alwaysPrepared)
                       const Text('Siempre')
+                    else if (!canPrepare)
+                      Text(s.isPrepared ? 'Preparado' : 'No preparado')
                     else ...[
                       const Text('Preparado'),
                       Checkbox(
@@ -808,6 +816,7 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
                             alwaysPrepared: s.alwaysPrepared,
                             name: s.name,
                             level: s.level,
+                            category: s.category,
                           ),
                         ),
                       ),

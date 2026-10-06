@@ -1,5 +1,5 @@
 import '../../characters/data/models.dart'
-    show CharacterClass, CharacterCondition, PendingRest, SpellSlot;
+    show CharacterClass, CharacterCondition, PendingRest, SpellPreparationReason, SpellSlot;
 import '../../items/data/models.dart' show EffectiveItem;
 
 // Hand-written models of the table endpoints (phase 12): the party seen by the
@@ -67,6 +67,8 @@ class PartyMember {
     this.pactSlots,
     this.pendingRest,
     this.pendingLevelUpTo,
+    this.spellPreparationPending = false,
+    this.spellPreparationReason,
   });
 
   factory PartyMember.fromJson(Map<String, dynamic> json) {
@@ -99,6 +101,8 @@ class PartyMember {
           ? null
           : PendingRest.fromJson(_map(json['pendingRest'])!),
       pendingLevelUpTo: _int(json['pendingLevelUpTo']),
+      spellPreparationPending: _bool(json['spellPreparationPending']),
+      spellPreparationReason: SpellPreparationReason.fromApi(json['spellPreparationReason']),
     );
   }
 
@@ -132,6 +136,10 @@ class PartyMember {
 
   /// Level granted by a DM and not taken yet, or null.
   final int? pendingLevelUpTo;
+
+  /// The player still has to prepare spells (the DM sees it in the roster).
+  final bool spellPreparationPending;
+  final SpellPreparationReason? spellPreparationReason;
 
   bool get isDown => hitPointsCurrent <= 0;
 }

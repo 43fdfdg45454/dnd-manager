@@ -182,15 +182,16 @@ void main() {
   });
 
   group('Mi sesión · nivel concedido', () {
-    testWidgets('con nivel pendiente la tarjeta abre el asistente', (tester) async {
+    testWidgets('con nivel pendiente el asistente se abre solo y no se puede cerrar', (
+      tester,
+    ) async {
       final (fakes: _, characters: _, hub: _, :router) = await _pumpPlayer(
         tester,
         character: makeCharacterJson(status: 'Active', pendingLevelUpTo: 4),
       );
-      expect(find.byKey(const Key('level-up-card')), findsOneWidget);
-      expect(find.text('¡Puedes subir a nivel 4!'), findsOneWidget);
-
-      await _tapKey(tester, 'level-up-open');
+      // The card stays below the forced wizard.
+      expect(find.byKey(const Key('level-up-card'), skipOffstage: false), findsOneWidget);
+      expect(find.text('¡Puedes subir a nivel 4!', skipOffstage: false), findsOneWidget);
       expect(locationOf(router), '/characters/ch1/level-up');
     });
 
@@ -215,7 +216,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.byKey(const Key('level-up-card')), findsOneWidget);
+      expect(find.byKey(const Key('level-up-card'), skipOffstage: false), findsOneWidget);
     });
 
     testWidgets('levelUp.granted de otro personaje no avisa', (tester) async {

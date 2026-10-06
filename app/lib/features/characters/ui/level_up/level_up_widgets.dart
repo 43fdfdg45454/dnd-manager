@@ -4,6 +4,7 @@ import '../../../../core/theme/app_icon.dart';
 import '../../../../core/theme/icons.dart';
 import '../../../../core/theme/textures.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../../../core/ui/spell_category.dart';
 import '../../../catalog/domain/catalog_format.dart' show spellLevelLabel;
 import '../../data/models.dart';
 
@@ -166,6 +167,10 @@ class LevelUpOptionCard extends StatelessWidget {
                   color: selected ? tokens.ember : tokens.boneMuted,
                 ),
                 const SizedBox(width: 8),
+                if (SpellCategory.fromApi(option.spellCategory) != null) ...[
+                  SpellCategoryIcon(option.spellCategory),
+                  const SizedBox(width: 6),
+                ],
                 Expanded(child: Text(option.name, style: theme.textTheme.titleSmall)),
                 if (showSpellLevel && option.spellLevel != null)
                   Text(

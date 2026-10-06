@@ -285,12 +285,21 @@ void main() {
           pendingLevelUpTo: 4,
         ),
       );
-      final seal = find.byKey(const Key('level-up-seal'));
+      // The forced level-up wizard covers the card; it is still there below.
+      final seal = find.byKey(const Key('level-up-seal'), skipOffstage: false);
       expect(
-        find.descendant(of: find.byKey(const Key('level-up-card')), matching: seal),
+        find.descendant(
+          of: find.byKey(const Key('level-up-card'), skipOffstage: false),
+          matching: seal,
+          skipOffstage: false,
+        ),
         findsOneWidget,
       );
-      final icon = find.descendant(of: seal, matching: find.byType(AppIcon));
+      final icon = find.descendant(
+        of: seal,
+        matching: find.byType(AppIcon, skipOffstage: false),
+        skipOffstage: false,
+      );
       expect(tester.widget<AppIcon>(icon).icon, AppIcons.levelUp);
       expect(tester.widget<PulseSeal>(seal).active, isTrue);
     });

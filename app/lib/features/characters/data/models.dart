@@ -304,6 +304,7 @@ class CharacterSpell {
     this.name,
     this.level,
     this.catalogMissing = false,
+    this.category,
   });
 
   /// [name] and [level] are optional extras: when the server does not send them
@@ -316,6 +317,7 @@ class CharacterSpell {
     name: _strOrNull(json['spellName'] ?? json['name']),
     level: _int(json['spellLevel'] ?? json['level']),
     catalogMissing: _bool(json['catalogMissing']),
+    category: _strOrNull(json['category']),
   );
 
   final String spellIndex;
@@ -324,6 +326,10 @@ class CharacterSpell {
   final bool alwaysPrepared;
   final String? name;
   final int? level;
+
+  /// `SpellCategory` name (Healing, Damage...); null when the spell is not in
+  /// the catalog or the server did not send it.
+  final String? category;
 
   /// The spell is gone from the catalog (a deleted content pack).
   final bool catalogMissing;
@@ -980,6 +986,8 @@ class CharacterDetail {
     this.pendingChangeRequests = const [],
     this.pendingRest,
     this.pendingLevelUpTo,
+    this.spellPreparationPending = false,
+    this.spellPreparationReason,
     this.choices = const [],
     this.raceCatalogMissing = false,
     this.backgroundCatalogMissing = false,
@@ -1036,6 +1044,8 @@ class CharacterDetail {
           ? null
           : PendingRest.fromJson(_map(json['pendingRest'])!),
       pendingLevelUpTo: _int(json['pendingLevelUpTo']),
+      spellPreparationPending: _bool(json['spellPreparationPending']),
+      spellPreparationReason: SpellPreparationReason.fromApi(json['spellPreparationReason']),
       choices: _objects(json['choices'], CharacterChoice.fromJson),
       raceCatalogMissing: _bool(json['raceCatalogMissing']),
       backgroundCatalogMissing: _bool(json['backgroundCatalogMissing']),
@@ -1095,6 +1105,11 @@ class CharacterDetail {
 
   /// Level a DM granted and the player has not taken yet, or null.
   final int? pendingLevelUpTo;
+
+  /// The player must prepare spells before playing (after a long rest, a level
+  /// or the first time). [spellPreparationReason] says why.
+  final bool spellPreparationPending;
+  final SpellPreparationReason? spellPreparationReason;
 
   /// Choices made when levelling up (subclass, fighting style, ASI...).
   final List<CharacterChoice> choices;
@@ -1584,6 +1599,7 @@ class LevelUpOption {
     this.eligible = true,
     this.reason,
     this.spellLevel,
+    this.spellCategory,
     this.effectsPreview = const [],
     this.abilityIncrease,
   });
@@ -1599,6 +1615,7 @@ class LevelUpOption {
       eligible: _bool(json['eligible'], true),
       reason: _strOrNull(json['reason']),
       spellLevel: _int(json['spellLevel']),
+      spellCategory: _strOrNull(json['spellCategory']),
       effectsPreview: _objects(json['effectsPreview'], EffectPreview.fromJson),
       abilityIncrease: increase == null ? null : AbilityIncrease.fromJson(increase),
     );
@@ -1615,6 +1632,9 @@ class LevelUpOption {
 
   /// Level of a spell option (0 for cantrips).
   final int? spellLevel;
+
+  /// `SpellCategory` name of a spell option.
+  final String? spellCategory;
   final List<EffectPreview> effectsPreview;
 
   /// For feats that raise an ability.
@@ -1834,4 +1854,131 @@ class LevelUpRequest {
     'hitPointsRolled': hitPointsRolled,
     'choices': [for (final c in choices) c.toJson()],
   };
+}
+
+// ---------------------------------------------------------------------------
+// Spell preparation (phase 18)
+// ---------------------------------------------------------------------------
+
+/// Why the player has to prepare spells (`spellPreparationReason`).
+enum SpellPreparationReason {
+  creation('Creation', 'Primera preparación'),
+  longRest('LongRest', 'Tras el descanso largo'),
+  levelUp('LevelUp', 'Nuevo nivel');
+
+  const SpellPreparationReason(this.apiValue, this.label);
+
+  final String apiValue;
+
+  /// Header of the "Prepara tus conjuros" page.
+  final String label;
+
+  static SpellPreparationReason? fromApi(Object? value) {
+    for (final r in values) {
+      if (r.apiValue == value) return r;
+    }
+    return null;
+  }
+}
+
+/// A spell of the preparation page (`PreparationSpellDto`).
+class PreparationSpell {
+  const PreparationSpell({
+    required this.index,
+    required this.name,
+    required this.level,
+    this.school,
+    this.category,
+    this.concentration = false,
+    this.ritual = false,
+    this.castingTime,
+    this.source,
+  });
+
+  factory PreparationSpell.fromJson(Map<String, dynamic> json) => PreparationSpell(
+    index: _str(json['index']),
+    name: _str(json['name'], _str(json['index'])),
+    level: _int(json['level']) ?? 1,
+    school: _strOrNull(json['school']),
+    category: _strOrNull(json['category']),
+    concentration: _bool(json['concentration']),
+    ritual: _bool(json['ritual']),
+    castingTime: _strOrNull(json['castingTime']),
+    source: _strOrNull(json['source']),
+  );
+
+  final String index;
+  final String name;
+  final int level;
+  final String? school;
+
+  /// `SpellCategory` name.
+  final String? category;
+  final bool concentration;
+  final bool ritual;
+  final String? castingTime;
+  final String? source;
+}
+
+/// One class that prepares spells (`SpellPreparationClassDto`): [max] spells
+/// out of [candidates], besides the [alwaysPrepared] ones, which do not count.
+class PreparationClass {
+  const PreparationClass({
+    required this.classIndex,
+    required this.className,
+    required this.max,
+    this.maxSpellLevel = 0,
+    this.alwaysPrepared = const [],
+    this.prepared = const [],
+    this.candidates = const [],
+  });
+
+  factory PreparationClass.fromJson(Map<String, dynamic> json) => PreparationClass(
+    classIndex: _str(json['classIndex']),
+    className: _str(json['className'], _str(json['classIndex'])),
+    max: _int(json['max']) ?? 0,
+    maxSpellLevel: _int(json['maxSpellLevel']) ?? 0,
+    alwaysPrepared: _objects(json['alwaysPrepared'], PreparationSpell.fromJson),
+    prepared: _strings(json['prepared']),
+    candidates: _objects(json['candidates'], PreparationSpell.fromJson),
+  );
+
+  final String classIndex;
+  final String className;
+  final int max;
+  final int maxSpellLevel;
+  final List<PreparationSpell> alwaysPrepared;
+
+  /// Indexes prepared now (always-prepared ones excluded).
+  final List<String> prepared;
+  final List<PreparationSpell> candidates;
+}
+
+/// `GET /characters/{id}/spell-preparation`.
+class SpellPreparation {
+  const SpellPreparation({
+    required this.pending,
+    this.reason,
+    this.canKeep = false,
+    this.keepProblem,
+    this.classes = const [],
+  });
+
+  factory SpellPreparation.fromJson(Map<String, dynamic> json) => SpellPreparation(
+    pending: _bool(json['pending']),
+    reason: SpellPreparationReason.fromApi(json['reason']),
+    canKeep: _bool(json['canKeep']),
+    keepProblem: _strOrNull(json['keepProblem']),
+    classes: _objects(json['classes'], PreparationClass.fromJson),
+  );
+
+  final bool pending;
+  final SpellPreparationReason? reason;
+
+  /// "Mantener los de ayer" is possible.
+  final bool canKeep;
+
+  /// Why it is not (Spanish), when [canKeep] is false.
+  final String? keepProblem;
+  final List<PreparationClass> classes;
 }

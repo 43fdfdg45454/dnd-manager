@@ -29,6 +29,8 @@ Map<String, dynamic> makeCharacterJson({
   Map<String, dynamic> breakdowns = const {},
   Map<String, dynamic>? pendingRest,
   int? pendingLevelUpTo,
+  bool spellPreparationPending = false,
+  String? spellPreparationReason,
 }) => {
   'id': id,
   'campaignId': campaignId,
@@ -119,6 +121,65 @@ Map<String, dynamic> makeCharacterJson({
   'pendingChangeRequests': pending,
   'pendingRest': pendingRest,
   'pendingLevelUpTo': pendingLevelUpTo,
+  'spellPreparationPending': spellPreparationPending,
+  'spellPreparationReason': spellPreparationReason,
+};
+
+/// A `PreparationSpellDto` as JSON.
+Map<String, dynamic> makePreparationSpellJson(
+  String index,
+  String name, {
+  int level = 1,
+  String category = 'Utility',
+  String school = 'Evocation',
+}) => {
+  'index': index,
+  'name': name,
+  'level': level,
+  'school': school,
+  'category': category,
+  'concentration': false,
+  'ritual': false,
+  'castingTime': '1 action',
+  'source': 'srd',
+};
+
+/// A `SpellPreparationDto` as JSON: one class (a cleric by default) with
+/// [candidates] (index, name, level, category) and [max] spells to prepare.
+Map<String, dynamic> makePreparationJson({
+  bool pending = true,
+  String? reason = 'LongRest',
+  bool canKeep = true,
+  String? keepProblem,
+  String classIndex = 'cleric',
+  String className = 'Cleric',
+  int max = 2,
+  List<String> prepared = const [],
+  List<Map<String, dynamic>>? candidates,
+  List<Map<String, dynamic>> alwaysPrepared = const [],
+}) => {
+  'pending': pending,
+  'reason': reason,
+  'canKeep': canKeep,
+  'keepProblem': keepProblem,
+  'classes': [
+    {
+      'classIndex': classIndex,
+      'className': className,
+      'max': max,
+      'maxSpellLevel': 1,
+      'alwaysPrepared': alwaysPrepared,
+      'prepared': prepared,
+      'candidates':
+          candidates ??
+          [
+            makePreparationSpellJson('cure-wounds', 'Cure Wounds', category: 'Healing'),
+            makePreparationSpellJson('bless', 'Bless', category: 'Buff'),
+            makePreparationSpellJson('guiding-bolt', 'Guiding Bolt', category: 'Damage'),
+            makePreparationSpellJson('shield-of-faith', 'Shield of Faith', category: 'Defense'),
+          ],
+    },
+  ],
 };
 
 /// A `ValueBreakdownDto` as JSON: [parts] are `(source, label, value)`; the
@@ -537,6 +598,61 @@ class FakeCharactersRepository implements CharactersRepository {
     json['classes'] = classes;
     json['pendingLevelUpTo'] = null;
     return get(id);
+  }
+
+  // -- Spell preparation ----------------------------------------------------
+
+  /// Answers of `GET /spell-preparation` by character id (409 when absent).
+  final Map<String, Map<String, dynamic>> preparations = {};
+
+  /// Bodies of `POST /spell-preparation` (class index -> spells) and the
+  /// number of `POST .../keep` calls.
+  final List<Map<String, List<String>>> prepareBodies = [];
+  int keepCalls = 0;
+
+  /// Thrown by [prepareSpells] / [keepSpellPreparation] when set.
+  Object? prepareError;
+
+  @override
+  Future<SpellPreparation> spellPreparation(String id) async {
+    _fail();
+    final json = preparations[id];
+    if (json == null) throw dioError(409);
+    return SpellPreparation.fromJson(jsonDecode(jsonEncode(json)) as Map<String, dynamic>);
+  }
+
+  @override
+  Future<CharacterDetail> prepareSpells(String id, Map<String, List<String>> classes) async {
+    _fail();
+    prepareBodies.add({
+      for (final e in classes.entries) e.key: [...e.value],
+    });
+    if (prepareError != null) throw prepareError!;
+    _completePreparation(id);
+    return get(id);
+  }
+
+  @override
+  Future<CharacterDetail> keepSpellPreparation(String id) async {
+    _fail();
+    keepCalls++;
+    if (prepareError != null) throw prepareError!;
+    _completePreparation(id);
+    return get(id);
+  }
+
+  void _completePreparation(String id) {
+    final json = _json(id);
+    json['spellPreparationPending'] = false;
+    json['spellPreparationReason'] = null;
+    preparations[id]?['pending'] = false;
+  }
+
+  /// What the server does when a long rest (or a level) makes [id] prepare.
+  void setSpellPreparationPending(String id, {String reason = 'LongRest'}) {
+    final json = _json(id);
+    json['spellPreparationPending'] = true;
+    json['spellPreparationReason'] = reason;
   }
 
   /// What the server does when a DM grants (or withdraws, with null) a level.

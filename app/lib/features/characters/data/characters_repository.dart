@@ -218,6 +218,32 @@ class CharactersRepository {
         await _json('POST', '$_api/characters/$id/level-up', data: request.toJson()),
       );
 
+  // -- Spell preparation (phase 18, no approval) -----------------------------
+
+  /// `GET /characters/{id}/spell-preparation`: what each preparing class can
+  /// prepare and whether the preparation is pending.
+  Future<SpellPreparation> spellPreparation(String id) async =>
+      SpellPreparation.fromJson(await _json('GET', '$_api/characters/$id/spell-preparation'));
+
+  /// `POST /characters/{id}/spell-preparation`: [classes] maps each preparing
+  /// class index to the spells prepared (always every class that prepares).
+  Future<CharacterDetail> prepareSpells(String id, Map<String, List<String>> classes) async =>
+      CharacterDetail.fromJson(
+        await _json(
+          'POST',
+          '$_api/characters/$id/spell-preparation',
+          data: {
+            'classes': [
+              for (final e in classes.entries) {'classIndex': e.key, 'spells': e.value},
+            ],
+          },
+        ),
+      );
+
+  /// `POST /characters/{id}/spell-preparation/keep`: keeps the current ones.
+  Future<CharacterDetail> keepSpellPreparation(String id) async =>
+      CharacterDetail.fromJson(await _json('POST', '$_api/characters/$id/spell-preparation/keep'));
+
   // -- Change requests ------------------------------------------------------
 
   /// DMs get every request of the campaign, players only their own. A null

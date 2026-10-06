@@ -6,6 +6,7 @@ import '../../../core/theme/components.dart';
 import '../../../core/theme/textures.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/ui/stat_value.dart';
+import '../../../core/ui/spell_category.dart';
 import '../../catalog/data/catalog_controllers.dart';
 import '../../catalog/data/models.dart' show ClassDetail, Feature, ItemModifier, RaceDetail, Trait;
 import '../../catalog/domain/catalog_format.dart';
@@ -651,6 +652,7 @@ class SpellsTab extends ConsumerWidget {
               key: Key('spell-${s.spellIndex}'),
               dense: true,
               contentPadding: EdgeInsets.zero,
+              leading: SpellCategoryIcon(s.category ?? info?[s.spellIndex]?.category),
               title: Text(nameOf(s)),
               subtitle: Text(titleFromSpellIndex(s.classIndex)),
               trailing: s.alwaysPrepared

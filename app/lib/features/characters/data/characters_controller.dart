@@ -85,6 +85,14 @@ class CharacterController extends AsyncNotifier<CharacterDetail> {
     return request;
   }
 
+  /// Prepares the spells ([classes]: class index -> spell indexes) and clears
+  /// the pending preparation. Errors are rethrown for the UI.
+  Future<void> prepareSpells(Map<String, List<String>> classes) async =>
+      _apply(await _repository.prepareSpells(id, classes));
+
+  /// Keeps the previous preparation.
+  Future<void> keepSpellPreparation() async => _apply(await _repository.keepSpellPreparation(id));
+
   Future<void> activate() async => _apply(await _repository.activate(id));
 
   /// Sets the portrait to the uploaded `Portrait` file [fileId] (null removes it).
@@ -250,3 +258,9 @@ final spellInfoProvider = FutureProvider.autoDispose.family<Map<String, SpellSum
 
 /// Stable family key for [spellInfoProvider].
 String spellInfoKey(Iterable<String> indexes) => (indexes.toSet().toList()..sort()).join(',');
+
+/// What a character can prepare (`GET /characters/{id}/spell-preparation`).
+final spellPreparationProvider = FutureProvider.autoDispose.family<SpellPreparation, String>(
+  (ref, id) => ref.watch(charactersRepositoryProvider).spellPreparation(id),
+  retry: _noRetry,
+);

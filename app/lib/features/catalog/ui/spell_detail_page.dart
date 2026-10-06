@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/source_chip.dart';
+import '../../../core/ui/spell_category.dart';
 import '../data/catalog_controllers.dart';
 import '../data/models.dart' hide Page;
 import '../domain/catalog_format.dart';
@@ -24,10 +25,18 @@ class SpellDetailPage extends ConsumerWidget {
         builder: (s) => DetailList(
           children: [
             Align(alignment: Alignment.centerLeft, child: SourceChip(s.source)),
-            Text(
-              [spellLevelLabel(s.level), ?s.school].join(' · '),
-              key: const Key('spell-subtitle'),
-              style: Theme.of(context).textTheme.titleSmall,
+            Row(
+              children: [
+                SpellCategoryIcon(s.category),
+                if (SpellCategory.fromApi(s.category) != null) const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    [spellLevelLabel(s.level), ?s.school].join(' · '),
+                    key: const Key('spell-subtitle'),
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             FactRow('Tiempo de lanzamiento', s.castingTime),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_icon.dart';
 import '../../../../../core/theme/components.dart';
 import '../../../../../core/theme/icons.dart';
+import '../../../../../core/ui/spell_category.dart';
 import '../../../data/characters_controller.dart';
 import '../../../data/models.dart';
 import '../../character_tabs.dart' show titleFromSpellIndex;
@@ -75,6 +76,7 @@ class WizardPanel extends ConsumerWidget {
                         semanticLabel: prepared.contains(index) ? 'Preparado' : 'No preparado',
                       ),
                       title: Text(info?[index]?.name ?? titleFromSpellIndex(index)),
+                      trailing: SpellCategoryIcon(info?[index]?.category),
                       subtitle: info?[index] == null
                           ? null
                           : Text(

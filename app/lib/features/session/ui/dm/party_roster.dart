@@ -188,6 +188,7 @@ class PartyMemberRow extends StatelessWidget {
                   if (m.conditions.isNotEmpty ||
                       m.exhaustionLevel > 0 ||
                       m.pendingRest != null ||
+                      m.spellPreparationPending ||
                       m.pendingLevelUpTo != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
@@ -205,6 +206,17 @@ class PartyMemberRow extends StatelessWidget {
                                   '↑ ${m.pendingLevelUpTo}',
                                   style: AppTypography.numeric,
                                 ),
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                              ),
+                            ),
+                          if (m.spellPreparationPending)
+                            Tooltip(
+                              message: 'Preparando conjuros',
+                              child: Chip(
+                                key: Key('party-preparing-${m.id}'),
+                                avatar: AppIcon(AppIcons.spellbook, size: 16, color: tokens.gold),
+                                label: const Text('Prepara'),
                                 visualDensity: VisualDensity.compact,
                                 padding: EdgeInsets.zero,
                               ),

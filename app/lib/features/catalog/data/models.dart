@@ -572,6 +572,7 @@ class SpellSummary {
     this.ritual = false,
     this.classes = const [],
     this.source,
+    this.category,
   });
 
   factory SpellSummary.fromJson(Map<String, dynamic> json) => SpellSummary(
@@ -584,10 +585,15 @@ class SpellSummary {
     ritual: _bool(json['ritual']),
     classes: _spellClasses(json),
     source: _strOrNull(json['source']),
+    category: _strOrNull(json['category']),
   );
 
   final String index;
   final String name;
+
+  /// `SpellCategory` name (Healing, Damage, Control, Buff, Defense, Utility,
+  /// Summoning); null when not sent.
+  final String? category;
 
   /// "srd", "homebrew" or the id of a content pack; null when not sent.
   final String? source;
@@ -631,6 +637,7 @@ class SpellDetail extends SpellSummary {
     super.ritual,
     super.classes,
     super.source,
+    super.category,
     this.range,
     this.components = const [],
     this.material,
@@ -654,6 +661,7 @@ class SpellDetail extends SpellSummary {
       ritual: summary.ritual,
       classes: summary.classes,
       source: summary.source,
+      category: summary.category,
       range: _strOrNull(json['range']),
       components: _strList(json['components']),
       material: _strOrNull(json['material']),

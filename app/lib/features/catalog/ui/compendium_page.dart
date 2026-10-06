@@ -9,6 +9,7 @@ import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../../core/ui/source_chip.dart';
+import '../../../core/ui/spell_category.dart';
 import '../data/catalog_controllers.dart';
 import '../data/catalog_repository.dart';
 import '../data/models.dart';
@@ -248,6 +249,7 @@ class _SpellsTab extends ConsumerWidget {
             emptyText: 'No se encontraron hechizos.',
             itemBuilder: (context, spell) => ListTile(
               key: Key('spell-${spell.index}'),
+              leading: SpellCategoryIcon(spell.category),
               title: NameWithSource(spell.name, spell.source),
               subtitle: Text(
                 [

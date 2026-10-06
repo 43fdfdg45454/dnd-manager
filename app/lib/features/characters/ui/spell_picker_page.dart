@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_error.dart';
+import '../../../core/ui/spell_category.dart';
 import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models.dart' show SpellSummary;
 import '../../catalog/domain/catalog_format.dart';
@@ -172,6 +173,7 @@ class _SpellPickerPageState extends ConsumerState<SpellPickerPage> {
             classIndex: _class.classIndex,
             name: spell.name,
             level: spell.level,
+            category: spell.category,
             isPrepared: spell.level == 0,
           ),
         );
@@ -283,6 +285,7 @@ class _SpellPickerPageState extends ConsumerState<SpellPickerPage> {
             key: Key('picker-spell-${spell.index}'),
             value: widget.chosen.contains(spell.index) || _isPicked(spell.index),
             onChanged: widget.chosen.contains(spell.index) ? null : (_) => _toggle(spell),
+            secondary: SpellCategoryIcon(spell.category),
             title: Text(spell.name),
             subtitle: Text(
               [

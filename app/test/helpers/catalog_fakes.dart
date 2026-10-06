@@ -14,6 +14,7 @@ SpellSummary makeSpell({
   bool concentration = false,
   bool ritual = false,
   String? source,
+  String? category,
 }) => SpellSummary(
   index: index,
   name: name,
@@ -22,6 +23,7 @@ SpellSummary makeSpell({
   concentration: concentration,
   ritual: ritual,
   source: source,
+  category: category,
 );
 
 ItemSummary makeItem({

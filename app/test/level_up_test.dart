@@ -580,7 +580,7 @@ void main() {
         plan: _archetypePlan(),
         location: '/campaigns/c1/player',
       );
-      await _tapKey(tester, 'level-up-open');
+      // The granted level opens the wizard by itself and cannot be skipped.
       expect(locationOf(router), '/characters/ch1/level-up');
 
       await _next(tester);

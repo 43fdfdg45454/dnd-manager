@@ -124,95 +124,104 @@ class _LevelUpPageState extends ConsumerState<LevelUpPage> {
     final scheme = Theme.of(context).colorScheme;
     final name = state.character?.name;
 
-    return Scaffold(
-      key: const Key('levelup-page'),
-      appBar: AppBar(title: Text(name == null ? 'Subir de nivel' : 'Subir de nivel · $name')),
-      body: Column(
-        children: [
-          _ProgressRail(
-            state: state,
-            steps: steps,
-            current: step,
-            onTap: (i) {
-              if (i < step) _controller.goTo(i);
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Paso ${step + 1} de ${steps.length} · ${levelUpStepTitle(state, current)}',
-                key: const Key('levelup-step-title'),
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
+    // A granted level is mandatory: the page can only be left once it is applied
+    // (or when it cannot even load, so the player is not trapped).
+    final locked = state.completed == null && state.loadError == null;
+    return PopScope(
+      canPop: !locked,
+      child: Scaffold(
+        key: const Key('levelup-page'),
+        appBar: AppBar(
+          automaticallyImplyLeading: !locked,
+          title: Text(name == null ? 'Subir de nivel' : 'Subir de nivel · $name'),
+        ),
+        body: Column(
+          children: [
+            _ProgressRail(
+              state: state,
+              steps: steps,
+              current: step,
+              onTap: (i) {
+                if (i < step) _controller.goTo(i);
+              },
             ),
-          ),
-          Expanded(
-            child: PageView.builder(
-              controller: _pages,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: steps.length,
-              itemBuilder: (context, i) =>
-                  KeyedSubtree(key: Key('levelup-${steps[i].id}'), child: _buildStep(steps[i])),
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (error != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  error,
-                  key: const Key('levelup-error'),
-                  style: TextStyle(color: scheme.error),
+                  'Paso ${step + 1} de ${steps.length} · ${levelUpStepTitle(state, current)}',
+                  key: const Key('levelup-step-title'),
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
               ),
             ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  OutlinedButton.icon(
-                    key: const Key('levelup-back'),
-                    onPressed: step == 0 || state.submitting ? null : _controller.back,
-                    icon: const Icon(Icons.arrow_back),
-                    label: const Text('Atrás'),
-                  ),
-                  const Spacer(),
-                  if (isLast)
-                    OfflineAware(
-                      builder: (context, canWrite) => FilledButton.icon(
-                        key: const Key('levelup-confirm'),
-                        onPressed: canWrite && state.canConfirm ? _confirm : null,
-                        icon: state.submitting
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const AppIcon(AppIcons.levelUp, size: 18),
-                        label: const Text('Confirmar'),
-                      ),
-                    )
-                  else
-                    FilledButton.icon(
-                      key: const Key('levelup-next'),
-                      onPressed: _next,
-                      icon: const Icon(Icons.arrow_forward),
-                      label: const Text('Siguiente'),
-                    ),
-                ],
+            Expanded(
+              child: PageView.builder(
+                controller: _pages,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: steps.length,
+                itemBuilder: (context, i) =>
+                    KeyedSubtree(key: Key('levelup-${steps[i].id}'), child: _buildStep(steps[i])),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
+        bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (error != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    error,
+                    key: const Key('levelup-error'),
+                    style: TextStyle(color: scheme.error),
+                  ),
+                ),
+              ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    OutlinedButton.icon(
+                      key: const Key('levelup-back'),
+                      onPressed: step == 0 || state.submitting ? null : _controller.back,
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text('Atrás'),
+                    ),
+                    const Spacer(),
+                    if (isLast)
+                      OfflineAware(
+                        builder: (context, canWrite) => FilledButton.icon(
+                          key: const Key('levelup-confirm'),
+                          onPressed: canWrite && state.canConfirm ? _confirm : null,
+                          icon: state.submitting
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const AppIcon(AppIcons.levelUp, size: 18),
+                          label: const Text('Confirmar'),
+                        ),
+                      )
+                    else
+                      FilledButton.icon(
+                        key: const Key('levelup-next'),
+                        onPressed: _next,
+                        icon: const Icon(Icons.arrow_forward),
+                        label: const Text('Siguiente'),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
