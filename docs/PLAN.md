@@ -151,7 +151,7 @@ de `docs/specs/`.
 | 9 | Caché offline, aviso de actualización de APK, backups, README de despliegue | Modo avión muestra la hoja |
 | 10 | Rasgos de subclase y objetos SRD visibles; `App:PublicUrl` obligatoria; primer admin desde `/admin` | `/admin` crea el admin una sola vez |
 | 11 | Modificadores estructurados de ítems (característica, salvación, CA, ataque, daño…), HP máximo editable, escudo real | Ítem con +3 DES sube la hoja al equiparlo |
-| 12 | Mesa del DM: roster, descansos forzados, daño/estados en lote, mensajes secretos; hub SignalR | Jugador recibe `party.rest` sin refrescar |
+| 12 | Mesa del DM: roster, descansos forzados, daño/estados en lote, inventario de grupo (alijo y oro común), mensajes secretos; hub SignalR | Jugador recibe `party.rest` sin refrescar |
 | 13 | Sistema de diseño místico, Vista General / Mesa del DM / Mi sesión, temas y paneles por clase, cliente SignalR | Rol decide la vista; contraste ≥ 4.5 |
 | 14 | Asistente paso a paso de creación de personaje | Mago nivel 1 completo desde el móvil |
 | 15 | Paquetes de contenido privados (importador + pantalla admin) | Subclase del paquete elegible en un guerrero |

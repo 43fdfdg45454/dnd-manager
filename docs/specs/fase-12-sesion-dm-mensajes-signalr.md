@@ -31,6 +31,40 @@ Todos bajo `/api/v1/campaigns/{campaignId}/party`, `access.RequireAsync(campaign
 - Tests de integración: jugador → 403 en los tres; `rest long` restaura HP de todos; `adjust` con
   daño que supera temporales; `adjust` con `hitPointsMax`; `RemoveConditions` elimina.
 
+## Inventario de grupo (alijo de la campaña)
+
+Botín común de la campaña: objetos y oro que aún no son de nadie. Todos los miembros lo ven.
+
+- Entidad `PartyStashItem` (`Dnd.Domain/Items/PartyStashItem.cs`, `EntityBase`): `CampaignId`,
+  `TemplateId?`, `Overrides` (owned, como `CharacterItem`), `Quantity` (≥ 1), `Notes?`, `AddedAt`,
+  `AddedByUserId`. El oro común vive en `Campaign.StashCopperPieces` (long, ≥ 0).
+  `Campaign.PlayersCanTakeFromStash` (bool, por defecto `true`) se edita en
+  `PATCH /campaigns/{id}/settings` (`CampaignSettings.cs`) y se expone en `CampaignDto`.
+  Migración `AddPartyStash`.
+- `Transaction.ShopId` pasa a nullable y `TransactionType` gana `StashAdd`, `StashRemove`,
+  `StashTake`, `StashReturn`, `StashGoldAdd`, `StashGoldSplit` para que la página de transacciones
+  sea el único libro de cuentas (`CharacterId` nullable para las operaciones del DM sin personaje;
+  `TransactionDto` añade `actorDisplayName`).
+- Endpoints bajo `/api/v1/campaigns/{id}/stash` (miembros: `GET`; DM: añadir/quitar/oro/repartir;
+  jugador: tomar/devolver solo si `PlayersCanTakeFromStash`, y siempre con un personaje propio):
+  - `GET /stash` → `PartyStashDto { CopperPieces, Items: [PartyStashItemDto(Id, Item: EffectiveItemDto,
+    Quantity, Notes, AddedAt, AddedByDisplayName)] }`.
+  - `POST /stash/items` (DM) body `{ templateId?, overrides?, quantity, notes? }` → 201 (mismas
+    reglas de validación que añadir al inventario: catálogo visible en la campaña o personalizado).
+  - `PATCH /stash/items/{itemId}` (DM) `{ quantity?, notes? }`; `DELETE /stash/items/{itemId}` (DM).
+  - `POST /stash/items/{itemId}/take` `{ characterId, quantity }` (jugador dueño del personaje o
+    DM): mueve al inventario del personaje (apilando si procede, con `Overrides.Copy()`), resta o
+    elimina del alijo, registra `StashTake`.
+  - `POST /stash/items/return` `{ characterId, characterItemId, quantity }`: inverso, `StashReturn`.
+  - `POST /stash/gold` (DM) `{ deltaCp }` (positivo añade, negativo retira; no baja de 0) → `StashGoldAdd`.
+  - `POST /stash/gold/split` (DM) `{ characterIds?: [] }` (vacío = todos los activos): reparte a
+    partes iguales en piezas de cobre, el resto queda en el alijo; una transacción `StashGoldSplit`
+    por personaje. Devuelve el alijo.
+- Evento SignalR `party.stash.updated` (grupo campaña) tras cada cambio.
+- Tests: jugador no puede añadir (403); tomar con `PlayersCanTakeFromStash=false` → 403 para el
+  jugador y OK para el DM; tomar 2 de 5 deja 3 y crea el ítem en el personaje; devolver apila;
+  repartir 1000 pc entre 3 deja 1 en el alijo; transacciones listan `StashTake` con el actor.
+
 ## Mensajes secretos (DM → personaje)
 
 - Entidad `DirectMessage` (`server/src/Dnd.Domain/Messages/DirectMessage.cs`, `EntityBase`):
@@ -66,7 +100,7 @@ Todos bajo `/api/v1/campaigns/{campaignId}/party`, `access.RequireAsync(campaign
   Tipos: `message.received` (solo grupo `user:{recipient}`), `character.updated` (grupo campaña;
   cualquier cambio de combate, descanso, hoja, inventario o solicitud aprobada), `party.rest`
   (grupo campaña; `EntityId` nulo), `shop.updated` (grupo campaña), `changeRequest.updated` (grupo
-  campaña), `session.updated` (grupo campaña). Solo ids: el cliente vuelve a pedir lo que puede ver.
+  campaña), `session.updated` (grupo campaña), `party.stash.updated` (grupo campaña). Solo ids: el cliente vuelve a pedir lo que puede ver.
 - Abstracción en Application: `ICampaignNotifier { Task NotifyAsync(CampaignEvent e, CancellationToken ct); }`
   + implementación nula `NoopCampaignNotifier` por defecto (tests de dominio/aplicación) y
   `SignalRCampaignNotifier(IHubContext<CampaignHub>)` en Api. Emitir **después** de `SaveChanges`

@@ -135,6 +135,10 @@ existentes (que siguen usando `Theme.of(context).colorScheme.*`).
   - Barra de acciones: "Descanso corto" (`campfire`) y "Descanso largo" (`moon`) para todos o para
     seleccionados (selección múltiple en el roster); "Mensaje secreto" (`envelope`) → compositor con
     selección de personajes y texto; "Dados" (`showDiceSheet`).
+  - Tarjeta "Botín del grupo" (`AppIcon treasure`): oro común y objetos del alijo
+    (`GET /stash`); acciones del DM: "Añadir botín" (buscador de catálogo + cantidad, u objeto
+    personalizado con `item_fields_form`), "Añadir oro", "Repartir oro" (a todos o seleccionados),
+    editar cantidad/notas, quitar, y "Dar a…" (tomar en nombre de un personaje). Keys `stash-*`.
   - Tarjetas: "Tiendas" (lista con conmutador abierta/cerrada → `PATCH /shops/{id}` `isOpen`),
     "Solicitudes pendientes" (contador + enlace a `ChangeRequestsPage`), "Próxima sesión"
     (`NextSessionCard` existente).
@@ -147,7 +151,9 @@ existentes (que siguen usando `Theme.of(context).colorScheme.*`).
     armas, escudo, armadura, consumibles, objetos con cargas), sin `RestSection`.
   - Fuera de combate: `RestSection`, "Preparar hechizos" (`SpellsTab`), "Rasgos" (`TraitsTab`),
     trasfondo y notas (`NotesTab`), "Inventario" (`InventoryTab`), "Tiendas abiertas" (lista con
-    enlace a `ShopPage`), "Mensajes del DM" (bandeja con badge de no leídos; abrir marca leído).
+    enlace a `ShopPage`), "Botín del grupo" (alijo con oro común; botón "Tomar" por objeto con
+    cantidad, visible solo si `playersCanTakeFromStash`; desde el inventario propio, acción
+    "Devolver al grupo"), "Mensajes del DM" (bandeja con badge de no leídos; abrir marca leído).
   - La vista nunca enlaza hojas de otros jugadores. `CharacterPage` sigue existiendo para la hoja
     completa y los borradores.
 - `CharactersTab` dentro de General muestra a cada jugador solo sus personajes con enlace; los de
@@ -167,7 +173,7 @@ existentes (que siguen usando `Theme.of(context).colorScheme.*`).
 
 - Dependencia `signalr_netcore`. `app/lib/core/realtime/`:
   - `realtime_events.dart`: `sealed class CampaignEvent` (`MessageReceived`, `CharacterUpdated`,
-    `PartyRest`, `ShopUpdated`, `ChangeRequestUpdated`, `SessionUpdated`, `Unknown`) parseado de
+    `PartyRest`, `PartyStashUpdated`, `ShopUpdated`, `ChangeRequestUpdated`, `SessionUpdated`, `Unknown`) parseado de
     `{ type, campaignId, characterId, entityId, at }`.
   - `realtime_hub.dart`: interfaz `RealtimeHub { Stream<CampaignEvent> events; Future<void> connect(campaignId); Future<void> disconnect(); RealtimeStatus status; }`
     e implementación `SignalRRealtimeHub` (`HubConnectionBuilder` a `<servidor>/hubs/campaign`,
@@ -177,7 +183,7 @@ existentes (que siguen usando `Theme.of(context).colorScheme.*`).
     conecta al montarse el shell de campaña y desconecta al salir; sin red (`connectivityProvider`)
     no intenta conectar y marca `offline`. Al recibir eventos invalida: `CharacterUpdated` →
     `characterControllerProvider(id)` y lista de personajes y `party`; `PartyRest` → ídem + snackbar
-    "El DM ha declarado un descanso corto/largo"; `ShopUpdated` → tiendas; `ChangeRequestUpdated` →
+    "El DM ha declarado un descanso corto/largo"; `ShopUpdated` → tiendas; `PartyStashUpdated` → alijo; `ChangeRequestUpdated` →
     solicitudes y contador; `MessageReceived` → bandeja y contador + banner "Mensaje del DM";
     `SessionUpdated` → sesiones.
   - Icono `realtime-status` en el shell: conectado (`sparkles` dorado), reconectando (gris),
