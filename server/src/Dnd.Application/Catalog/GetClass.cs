@@ -26,6 +26,7 @@ public sealed class GetClassHandler(ICatalogRepository catalog)
             definition.IsPactCaster,
             definition.SubclassFlavor,
             definition.StartingEquipmentText,
+            CatalogJson.SkillChoices(definition.SkillChoicesJson),
             levels
                 .Select(l => new ClassLevelDto(
                     l.Level,

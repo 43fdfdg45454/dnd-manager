@@ -32,6 +32,9 @@ public sealed class ClassDefinition
     /// <summary>Name of the subclass choice, e.g. "Primal Path".</summary>
     public string SubclassFlavor { get; init; } = string.Empty;
 
+    /// <summary>Skill proficiency choice at level 1: <c>{"choose":2,"from":["arcana","history"]}</c> (skill indexes without the "skill-" prefix).</summary>
+    public string SkillChoicesJson { get; init; } = "{\"choose\":0,\"from\":[]}";
+
     /// <summary>One line per fixed item or choice of the starting equipment.</summary>
     public string StartingEquipmentText { get; init; } = string.Empty;
 }

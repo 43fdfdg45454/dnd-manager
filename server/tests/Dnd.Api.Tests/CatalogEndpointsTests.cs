@@ -84,6 +84,32 @@ public class CatalogEndpointsTests(CatalogApiFactory factory)
         Assert.Contains(evocation.Levels, l => l.Level == 2 && l.Features.Any(f => f.Index == "sculpt-spells"));
     }
 
+    [Theory]
+    [InlineData("rogue", 4, 11)]
+    [InlineData("wizard", 2, 6)]
+    [InlineData("bard", 3, 18)]
+    [InlineData("monk", 2, 6)]
+    public async Task Class_detail_exposes_the_level_one_skill_choice(string index, int choose, int count)
+    {
+        var detail = await GetAsync<ClassDetailDto>($"{Base}/classes/{index}");
+
+        Assert.Equal(choose, detail.SkillChoices.Choose);
+        Assert.Equal(count, detail.SkillChoices.From.Count);
+        Assert.All(detail.SkillChoices.From, s => Assert.DoesNotContain("skill-", s));
+    }
+
+    [Fact]
+    public async Task Rogue_skill_choice_lists_its_skills_and_ignores_tool_choices()
+    {
+        var rogue = await GetAsync<ClassDetailDto>($"{Base}/classes/rogue");
+        var wizard = await GetAsync<ClassDetailDto>($"{Base}/classes/wizard");
+
+        Assert.Contains("acrobatics", rogue.SkillChoices.From);
+        Assert.Contains("sleight-of-hand", rogue.SkillChoices.From);
+        Assert.DoesNotContain("arcana", rogue.SkillChoices.From);
+        Assert.Equal(["arcana", "history", "insight", "investigation", "medicine", "religion"], wizard.SkillChoices.From);
+    }
+
     [Fact]
     public async Task Class_specific_counters_are_exposed_as_an_object()
     {

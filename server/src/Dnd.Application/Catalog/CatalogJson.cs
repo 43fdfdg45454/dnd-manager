@@ -13,6 +13,11 @@ internal static class CatalogJson
     public static IReadOnlyList<AbilityBonusDto> AbilityBonuses(string json) =>
         TryDeserialize<List<AbilityBonus>>(json)?.Select(b => new AbilityBonusDto(b.Ability, b.Bonus)).ToList() ?? [];
 
+    public static SkillChoicesDto SkillChoices(string json) =>
+        TryDeserialize<StoredSkillChoices>(json) is { } stored
+            ? new SkillChoicesDto(stored.Choose, stored.From ?? [])
+            : new SkillChoicesDto(0, []);
+
     public static JsonElement Object(string json)
     {
         try
@@ -74,4 +79,6 @@ internal static class CatalogJson
     }
 
     private sealed record StoredSpellDamage(string? Type, Dictionary<int, string>? AtSlotLevel, Dictionary<int, string>? AtCharacterLevel);
+
+    private sealed record StoredSkillChoices(int Choose, List<string>? From);
 }

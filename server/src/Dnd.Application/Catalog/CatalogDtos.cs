@@ -68,8 +68,12 @@ public sealed record ClassDetailDto(
     bool IsPactCaster,
     string SubclassFlavor,
     string StartingEquipmentText,
+    SkillChoicesDto SkillChoices,
     IReadOnlyList<ClassLevelDto> Levels,
     IReadOnlyList<SubclassDto> Subclasses);
+
+/// <summary>Level-1 skill proficiency choice: pick <paramref name="Choose"/> of <paramref name="From"/> (skill indexes such as "arcana").</summary>
+public sealed record SkillChoicesDto(int Choose, IReadOnlyList<string> From);
 
 public sealed record TraitDto(string Index, string Name, IReadOnlyList<string> Description)
 {

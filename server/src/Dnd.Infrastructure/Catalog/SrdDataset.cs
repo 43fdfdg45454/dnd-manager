@@ -29,7 +29,7 @@ internal sealed record SrdCatalog(
 internal static class SrdDataset
 {
     /// <summary>Commit and date of the 5e-database snapshot in <c>server/seed/srd</c>.</summary>
-    public const string Version = "5e-database@a6212beb (2026-10-02) consumables 2026-10-06, item modifiers 2026-10-06";
+    public const string Version = "5e-database@a6212beb (2026-10-02) consumables 2026-10-06, item modifiers 2026-10-06, skill choices 2026-10-06";
 
     private const string ResourcePrefix = "5e-SRD-";
 
@@ -138,7 +138,32 @@ internal static class SrdDataset
             IsPactCaster = PactCasters.Contains(c.Index),
             SubclassFlavor = subclasses.FirstOrDefault(s => s.Class?.Index == c.Index)?.SubclassFlavor ?? string.Empty,
             StartingEquipmentText = StartingEquipment(c.StartingEquipment, c.StartingEquipmentOptions, null),
+            SkillChoicesJson = SkillChoices(c.ProficiencyChoices),
         };
+    }
+
+    /// <summary>Picks the proficiency choice whose options are all skills and serializes it as <c>{"choose":N,"from":[...]}</c>.</summary>
+    private static string SkillChoices(List<ProficiencyChoiceJson>? choices)
+    {
+        const string prefix = "skill-";
+        foreach (var choice in choices ?? [])
+        {
+            var indexes = (choice.From?.Options ?? [])
+                .Select(o => o.Item?.Index)
+                .ToList();
+            if (indexes.Count == 0 || indexes.Any(i => i is null || !i.StartsWith(prefix, StringComparison.Ordinal)))
+            {
+                continue;
+            }
+
+            return JsonSerializer.Serialize(new
+            {
+                choose = choice.Choose ?? 0,
+                from = indexes.Select(i => i![prefix.Length..]).ToList(),
+            });
+        }
+
+        return "{\"choose\":0,\"from\":[]}";
     }
 
     private static ClassLevel MapClassLevel(LevelJson l)
@@ -524,11 +549,30 @@ internal static class SrdDataset
 
         public List<ReferenceJson>? SavingThrows { get; set; }
 
+        public List<ProficiencyChoiceJson>? ProficiencyChoices { get; set; }
+
         public List<StartingEquipmentJson>? StartingEquipment { get; set; }
 
         public List<EquipmentOptionJson>? StartingEquipmentOptions { get; set; }
 
         public ClassSpellcastingJson? Spellcasting { get; set; }
+    }
+
+    private sealed class ProficiencyChoiceJson
+    {
+        public int? Choose { get; set; }
+
+        public ProficiencyChoiceSourceJson? From { get; set; }
+    }
+
+    private sealed class ProficiencyChoiceSourceJson
+    {
+        public List<ProficiencyChoiceOptionJson>? Options { get; set; }
+    }
+
+    private sealed class ProficiencyChoiceOptionJson
+    {
+        public ReferenceJson? Item { get; set; }
     }
 
     private sealed class ClassSpellcastingJson
