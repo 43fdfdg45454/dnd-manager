@@ -124,15 +124,16 @@ Cómo se aplica en la práctica: la sesión principal corre con Fable y lanza su
 indicado (`Agent` con `model: opus | sonnet | haiku`), dándoles el contrato escrito en
 `docs/specs/` y revisando su resultado antes de confirmar.
 
-## Estado (fin de la sesión de implementación)
+## Estado
 
-Las nueve fases están implementadas y subidas. Verificado en este entorno: servidor compila sin
-avisos y pasa 600 tests (SQLite en memoria); cliente sin incidencias de análisis y 369 tests.
-**No verificado aquí** (sin Docker, PostgreSQL ni Android SDK): construcción de la imagen Docker,
-migraciones contra PostgreSQL real, `flutter build apk`, visor PDF y selectores de ficheros en
-dispositivo, envío SMTP real. Primeros pasos recomendados: levantar `deploy/` con el perfil `dev`,
-compilar el APK y hacer una partida de prueba; cualquier desviación se corrige sobre los contratos
-de `docs/specs/`.
+Fases 0 a 15 implementadas y en `master`. Verificado en este entorno: servidor compila sin avisos
+y pasa 742 tests (SQLite en memoria); cliente sin incidencias de análisis y 525 tests. CI publica
+en cada push a `master` la imagen `ghcr.io/<owner>/dnd-companion-api:latest` y una release con el
+APK firmado. **No verificado aquí** (sin PostgreSQL ni Android SDK): migraciones contra PostgreSQL
+real, aspecto de las fuentes variables y los SVG en dispositivo, SignalR a través del reverse
+proxy, envío SMTP real. Primeros pasos recomendados: `docker compose pull && up -d`, abrir
+`/admin` para crear el administrador, instalar el APK y hacer una partida de prueba con un DM y un
+jugador en dos móviles; cualquier desviación se corrige sobre los contratos de `docs/specs/`.
 
 ## Fases
 
