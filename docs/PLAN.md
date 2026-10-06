@@ -148,7 +148,7 @@ de `docs/specs/`.
 
 1. `cd server && dotnet build && dotnet test`.
 2. `cd app && flutter analyze && flutter test`.
-3. `cd deploy && cp .env.example .env && docker compose up -d --build`, abrir `/swagger` a través del
+3. `cd deploy && cp .env.sample .env && docker compose up -d --build`, abrir `/swagger` a través del
    proxy, crear usuario desde el admin inicial y recibir el correo en tu SMTP.
 4. `flutter build apk --release`, instalar en emulador, crear personaje, comprar en tienda, modo
    combate, gastar un slot; modo avión y comprobar que la hoja sigue visible.

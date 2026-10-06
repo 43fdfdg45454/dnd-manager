@@ -13,7 +13,7 @@ ejemplo, commits ni issues:
 - contraseñas, claves JWT, API keys, cadenas de conexión con credenciales.
 
 Usar siempre valores ficticios (`admin@example.com`, `dnd.example.com`, `change-me`) y
-mantenerlos en `deploy/.env.example`. Los valores reales viven solo en `deploy/.env`, que está
+mantenerlos en `deploy/.env.sample`. Los valores reales viven solo en `deploy/.env`, que está
 en `.gitignore`.
 
 ## Estructura
@@ -21,7 +21,7 @@ en `.gitignore`.
 ```
 server/   solución .NET (Dnd.Domain, Dnd.Application, Dnd.Infrastructure, Dnd.Api, tests/)
 app/      proyecto Flutter (lib/core, lib/features/<feature>)
-deploy/   docker-compose.yml, .env.example, backup.sh, README.md (reverse proxy del operador)
+deploy/   docker-compose.yml, .env.sample, backup.sh, README.md (reverse proxy del operador)
 docs/     PLAN.md (plan maestro) y ADR/ (decisiones de arquitectura)
 ```
 
@@ -39,7 +39,7 @@ cd app && flutter run   # la URL del servidor se configura dentro de la app (pan
 cd app && flutter build apk --release --dart-define=API_BASE_URL=https://dnd.example.com
 
 # Despliegue
-cd deploy && cp .env.example .env && docker compose up -d --build
+cd deploy && cp .env.sample .env && docker compose up -d --build
 ```
 
 ## Decisiones fijadas (ver docs/ADR)

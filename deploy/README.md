@@ -19,8 +19,9 @@ que está en `.gitignore` y nunca debe subirse al repositorio.
 
 ```bash
 cd deploy
-cp .env.example .env     # rellenar POSTGRES_PASSWORD, JWT_SECRET, ADMIN_EMAIL y SMTP_*
-docker compose up -d --build
+cp .env.sample .env      # rellenar todas las variables (ninguna tiene valor por defecto)
+docker compose pull      # descarga la imagen de la API indicada en API_IMAGE
+docker compose up -d
 docker compose ps        # api y postgres deben quedar "healthy"
 curl http://127.0.0.1:8080/health/ready
 ```
@@ -66,7 +67,8 @@ curl http://127.0.0.1:8080/health/ready
 | `SMTP_CHECK_REVOCATION` | Comprobar revocación del certificado del SMTP; `false` solo si tu CA no publica CRL/OCSP | `true` |
 | `SSL_CERT_FILE` / `SSL_CERT_DIR` | CA propia para el SMTP u otras conexiones TLS salientes (variables estándar de OpenSSL que .NET respeta) | bundle del sistema |
 | `API_BIND`, `API_PORT` | Dirección y puerto del host en los que escucha la API (`127.0.0.1` solo para un proxy local; `0.0.0.0` para exponerla en la LAN/VPN) | `127.0.0.1`, `8080` |
-| `API_IMAGE` | Imagen de la API (por defecto se construye desde el código) | `dnd-companion-api:local` |
+| `API_IMAGE` | Imagen de la API en GitHub Packages (`:dev-latest` de la CI o `:1.2.0` de una release). Para usar una compilada en local: `docker build -t dnd-companion-api:local ../server` y `API_IMAGE=dnd-companion-api:local` | — |
+| `CA_BUNDLE_HOST_PATH` | Fichero PEM del host que se monta en el contenedor como `SSL_CERT_FILE` (bundle del sistema si no tienes CA propia) | — |
 | `BACKUP_RETENTION_DAYS` | Días que `backup.sh` conserva las copias | `14` |
 
 Cada recordatorio se calcula en la zona horaria de su campaña y los avisos (24 h y 2 h antes por
@@ -151,13 +153,10 @@ cd deploy
 ./backup.sh                         # siempre antes de actualizar: las migraciones no son reversibles
 git pull
 
-# Construyendo desde el código
-docker compose up -d --build
-
-# O con la imagen publicada en GitHub Packages (ghcr.io/<propietario>/dnd-companion-api):
+# Imagen publicada en GitHub Packages (ghcr.io/<propietario>/dnd-companion-api):
 #   - :dev-latest y :sha-<commit>  → la CI las publica en cada push
 #   - :1.2.0 y :latest             → las publica el workflow "Release"
-#   en .env:  API_IMAGE=ghcr.io/<propietario>/dnd-companion-api:1.2.0
+# Cambia API_IMAGE en .env si quieres otra etiqueta y luego:
 docker compose pull api
 docker compose up -d
 ```
