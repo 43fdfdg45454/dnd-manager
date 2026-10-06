@@ -1,7 +1,9 @@
 name: dnd_companion
 description: Companion app para campañas de D&D 5e en sesiones presenciales.
 publish_to: 'none'
-version: 0.1.0+1
+# La versión real la calcula GitVersion (GitVersion.yml) y la CI la pasa con --build-name y
+# --build-number; este valor solo se usa en compilaciones locales.
+version: 0.0.0+1
 
 environment:
   sdk: ^3.13.5

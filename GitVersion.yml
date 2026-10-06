@@ -1,0 +1,20 @@
+# Versionado semántico calculado por GitVersion a partir del historial de git.
+# - master: cada push publicado sube el parche (0.2.0 → 0.2.1). La CI etiqueta el commit con
+#   v<versión> al crear la release, y esa etiqueta es la base del siguiente cálculo.
+# - Para subir menor o mayor, incluye en el mensaje de un commit "+semver: minor" (o "feature")
+#   o "+semver: major" (o "breaking"). "+semver: none" no incrementa.
+# - Otras ramas: versión de pre-release con el nombre de la rama (no se publican).
+workflow: GitHubFlow/v1
+# Primera versión gestionada por GitVersion; las etiquetas antiguas v0.1.0-build.N son anteriores.
+next-version: 0.2.0
+tag-prefix: '[vV]?'
+major-version-bump-message: '\+semver:\s?(breaking|major)'
+minor-version-bump-message: '\+semver:\s?(feature|minor)'
+patch-version-bump-message: '\+semver:\s?(fix|patch)'
+no-bump-message: '\+semver:\s?(none|skip)'
+branches:
+  main:
+    regex: ^master$|^main$
+    mode: ContinuousDeployment
+    label: ''
+    increment: Patch

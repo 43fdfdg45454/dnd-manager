@@ -63,6 +63,9 @@ cd deploy && cp .env.sample .env && docker compose pull && docker compose up -d
 - La app Android confía en los certificados de usuario del dispositivo (CA propia) y permite fijar
   la huella de un certificado por host.
 - Distribución: APK directo; la API expone la última versión disponible.
+- **Versionado semántico con GitVersion** (`GitVersion.yml`, ADR 0008): la CI calcula `X.Y.Z` en cada
+  push a `master`, etiqueta `vX.Y.Z` y publica APK e imagen con esa versión. Para subir menor o
+  mayor, `+semver: minor` / `+semver: major` en el mensaje de un commit. No editar la versión a mano.
 - Documentación oficial: **solo el SRD en PDF** (CC-BY) se empaqueta. Nada con copyright de
   Wizards of the Coast en el repo. El administrador puede subir otros PDF a la biblioteca de la
   instancia y **paquetes de contenido** JSON (ADR 0007, `docs/content-packs.md`) que viven solo en

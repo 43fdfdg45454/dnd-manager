@@ -44,7 +44,7 @@ curl http://127.0.0.1:8080/health/ready
 
 | Variable | Para qué sirve |
 |----------|----------------|
-| `API_IMAGE` | Imagen de la API en GitHub Packages (`:latest` de la CI en `master` o `:1.2.0` de una release). Para una compilada en local: `docker build -t dnd-companion-api:local ../server` y `API_IMAGE=dnd-companion-api:local` |
+| `API_IMAGE` | Imagen de la API en GitHub Packages (`:latest` o una versión fija `:X.Y.Z`, ambas publicadas por la CI en cada push a `master`). Para una compilada en local: `docker build -t dnd-companion-api:local ../server` y `API_IMAGE=dnd-companion-api:local` |
 | `API_BIND`, `API_PORT` | Dirección y puerto del host en los que escucha la API (`127.0.0.1` solo para un proxy local; `0.0.0.0` para exponerla en la LAN/VPN) |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base de datos |
 | `DB_AUTO_MIGRATE` | Aplicar las migraciones al arrancar la API (`true`) |
@@ -195,8 +195,8 @@ cd deploy
 git pull
 
 # Imagen publicada en GitHub Packages (ghcr.io/<propietario>/dnd-companion-api):
-#   - :latest y :sha-<commit>      → la CI las publica en cada push a master
-#   - :1.2.0 y :latest             → las publica el workflow "Release"
+#   - :latest, :X.Y.Z y :sha-<commit> → la CI las publica en cada push a master
+#     (X.Y.Z es la versión semántica que calcula GitVersion; ver "Versionado")
 # Cambia API_IMAGE en .env si quieres otra etiqueta y luego:
 docker compose pull api
 docker compose up -d
@@ -351,17 +351,31 @@ copyright.
 La app comprueba `GET /api/v1/app/latest` y, si hay un `buildNumber` mayor que el suyo, ofrece
 descargar `GET /api/v1/app/download/{buildNumber}` (anónimo, para poder instalarlo desde el navegador).
 
-Las releases de GitHub (pestaña **Releases**) contienen solo el APK:
+Cada push a `master` produce, con la misma versión `X.Y.Z`:
 
-- **`vX.Y.Z-build.N`**: la CI la crea en cada push a `master`, con el APK firmado con el keystore de
-  los *secrets* del repositorio (sin keystore, firma de depuración y marcada como prerelease). El
-  mismo APK queda también como artefacto de la ejecución.
-- **`vX.Y.Z`**: el workflow manual **Release** (`.github/workflows/release.yml`, Actions → Release →
-  Run workflow con la versión). Además de la release, publica la imagen Docker `:X.Y.Z` en GHCR y, si
-  están definidos los *secrets* `DND_API_URL` y `DND_ADMIN_TOKEN` (o `DND_ADMIN_EMAIL` y
-  `DND_ADMIN_PASSWORD`), sube el APK a tu servidor para que la app avise de la actualización.
+- la release de GitHub **`vX.Y.Z`** (pestaña **Releases**) con el APK firmado con el keystore de los
+  *secrets* (sin keystore, firma de depuración y marcada como prerelease); el mismo APK queda como
+  artefacto de la ejecución;
+- la imagen `ghcr.io/<propietario>/dnd-companion-api:X.Y.Z` (y `:latest`), que responde esa versión
+  en `GET /api/v1/app/info`;
+- si están definidos los *secrets* `DND_API_URL` y `DND_ADMIN_TOKEN` (o `DND_ADMIN_EMAIL` y
+  `DND_ADMIN_PASSWORD`), la subida del APK a tu servidor para que la app avise de la actualización
+  (las notas son la primera línea del mensaje del commit).
 
-La versión `X.Y.Z` sale de `version:` en `app/pubspec.yaml`.
+### Versionado
+
+Versión semántica (`MAYOR.MENOR.PARCHE`) calculada por **GitVersion** con `GitVersion.yml` en la
+raíz del repositorio:
+
+- Cada push a `master` sube el **parche** respecto a la última etiqueta `vX.Y.Z` (la crea la propia
+  CI al publicar la release): `0.2.0` → `0.2.1` → `0.2.2`.
+- Para subir la **menor** o la **mayor**, incluye en el mensaje de algún commit del push
+  `+semver: minor` (o `feature`) o `+semver: major` (o `breaking`). `+semver: none` no incrementa.
+- Las otras ramas calculan una pre-release con el nombre de la rama (`0.2.1-mi-rama.3`) y no publican.
+- En local: `dotnet tool install -g GitVersion.Tool` y `dotnet-gitversion` desde la raíz.
+
+En el APK, `versionName` es la versión semántica y `versionCode` (`buildNumber`) el número de
+ejecución de la CI, que siempre crece; la app compara `buildNumber` para avisar de actualizaciones.
 
 Android no actualiza una app instalada con un APK firmado con otra clave: al pasar de la clave de
 depuración a tu keystore (o viceversa) hay que desinstalar antes.
@@ -385,7 +399,7 @@ curl --fail-with-body -X POST "$URL/api/v1/admin/releases" \
 ```
 
 - `version` es semver simple (`1.2.0`) y `buildNumber` un entero que crece con cada compilación
-  (el workflow usa el número de ejecución). Ambos deben ser únicos: si se repiten, responde `409`.
+  (la CI usa el número de ejecución). Ambos deben ser únicos: si se repiten, responde `409`.
 - Con `isMandatory=true` la app bloquea su uso hasta actualizar.
 - También se acepta JSON con el `fileId` de un APK subido antes con `kind=AppRelease` a
   `POST /api/v1/files`.
@@ -393,7 +407,7 @@ curl --fail-with-body -X POST "$URL/api/v1/admin/releases" \
   (con su APK). `GET /api/v1/app/latest` responde `204` si no hay ninguna.
 - El límite de subida de la sección anterior también afecta al APK.
 
-### Secrets del repositorio para el workflow Release
+### Secrets del repositorio para la CI
 
 | Secret | Contenido |
 |--------|-----------|
@@ -403,7 +417,7 @@ curl --fail-with-body -X POST "$URL/api/v1/admin/releases" \
 | `ANDROID_KEY_PASSWORD` | Contraseña de la clave |
 | `DND_API_URL` | (opcional) URL de tu servidor, por ejemplo `https://dnd.example.com` |
 | `DND_ADMIN_TOKEN` | (opcional) Token de acceso de un administrador; caduca a los 15 minutos |
-| `DND_ADMIN_EMAIL`, `DND_ADMIN_PASSWORD` | (opcional) Alternativa a `DND_ADMIN_TOKEN`: el workflow inicia sesión y obtiene el token |
+| `DND_ADMIN_EMAIL`, `DND_ADMIN_PASSWORD` | (opcional) Alternativa a `DND_ADMIN_TOKEN`: la CI inicia sesión y obtiene el token |
 
 Crear el keystore una sola vez:
 
@@ -417,7 +431,7 @@ actualizaciones que Android acepte sobre la app ya instalada.
 
 ### Firma del APK en Gradle
 
-El workflow escribe `app/android/key.properties` (ignorado por git) y el keystore en
+La CI escribe `app/android/key.properties` (ignorado por git) y el keystore en
 `app/android/app/upload-keystore.jks`, y falla si `app/android/app/build.gradle.kts` no lee ese
 fichero. La configuración de firma `release` de ese fichero debe ser:
 
