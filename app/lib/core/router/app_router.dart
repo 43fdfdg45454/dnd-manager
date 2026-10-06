@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,7 +6,11 @@ import '../../features/admin/ui/admin_users_page.dart';
 import '../../features/auth/ui/forgot_password_page.dart';
 import '../../features/auth/ui/login_page.dart';
 import '../../features/auth/ui/splash_page.dart';
-import '../../features/campaigns/ui/campaign_detail_page.dart';
+import '../../features/campaigns/data/campaigns_controller.dart';
+import '../../features/campaigns/domain/campaign_models.dart';
+import '../../features/campaigns/ui/campaign_shell.dart';
+import '../../features/campaigns/ui/general/campaign_general_page.dart';
+import '../../features/campaigns/ui/general/campaign_section_page.dart';
 import '../../features/change_requests/ui/change_requests_page.dart';
 import '../../features/characters/ui/character_page.dart';
 import '../../features/characters/ui/sheet_editor_page.dart';
@@ -25,6 +29,8 @@ import '../../features/maps/ui/map_viewer_page.dart';
 import '../../features/server/ui/server_page.dart';
 import '../../features/sessions/ui/session_form_page.dart';
 import '../../features/sessions/ui/session_page.dart';
+import '../../features/session/ui/dm/dm_session_page.dart';
+import '../../features/session/ui/player/player_session_page.dart';
 import '../../features/sessions/ui/summary_editor_page.dart';
 import '../../features/items/ui/shop_page.dart';
 import '../../features/items/ui/transactions_page.dart';
@@ -41,6 +47,9 @@ abstract final class AppRoutes {
   static const adminUsers = '/admin/users';
   static const attributions = '/attributions';
   static const campaignDetail = '/campaigns/:id';
+  static const campaignGeneral = '/campaigns/:id/general';
+  static const campaignDm = '/campaigns/:id/dm';
+  static const campaignPlayer = '/campaigns/:id/player';
   static const campaignChangeRequests = '/campaigns/:id/change-requests';
   static const campaignShop = '/campaigns/:id/shops/:shopId';
   static const campaignTransactions = '/campaigns/:id/transactions';
@@ -63,8 +72,18 @@ abstract final class AppRoutes {
   static const classDetail = '/compendium/classes/:index';
   static const raceDetail = '/compendium/races/:index';
 
-  /// Location of the campaign with the given [id].
-  static String campaign(String id) => '/campaigns/$id';
+  /// Location of the campaign with the given [id]: its "General" view.
+  static String campaign(String id) => '/campaigns/$id/general';
+
+  /// "Mesa del DM" view of the campaign (DM and Owner).
+  static String campaignDmView(String id) => '/campaigns/$id/dm';
+
+  /// "Mi sesión" view of the campaign (Player).
+  static String campaignPlayerView(String id) => '/campaigns/$id/player';
+
+  /// A section of the "General" view, as a full page.
+  static String campaignSection(String id, CampaignSection section) =>
+      '/campaigns/$id/general/${section.path}';
 
   /// Change requests of the campaign with the given [id].
   static String changeRequests(String id) => '/campaigns/$id/change-requests';
@@ -143,21 +162,114 @@ String? authRedirect(AuthState auth, String location, {bool hasServer = true}) {
   }
 }
 
-final routerProvider = Provider<GoRouter>((ref) {
-  // Re-evaluates the redirect whenever the session or the server changes.
-  bool hasServer() => ref.read(serverConfigProvider).isConfigured;
-  final refresh = ValueNotifier<(AuthState, bool)>((ref.read(authControllerProvider), hasServer()));
-  ref.listen<AuthState>(authControllerProvider, (_, next) => refresh.value = (next, hasServer()));
-  ref.listen<bool>(
-    serverConfigProvider.select((config) => config.isConfigured),
-    (_, next) => refresh.value = (ref.read(authControllerProvider), next),
-  );
+/// Id of the campaign of [location] (`/campaigns/<id>/...`), or null.
+String? campaignIdOf(String location) {
+  final segments = Uri.parse(location).pathSegments.where((s) => s.isNotEmpty).toList();
+  if (segments.length < 2 || segments.first != 'campaigns') return null;
+  return segments[1];
+}
 
+/// Keeps every user in the campaign views of their [role]: `/campaigns/:id`
+/// goes to the "General" view, the DM view (`/dm`) is only for DM and Owner
+/// and the player view (`/player`) only for Players; the others are sent to
+/// "General". Returns null when [location] is allowed or the role is not
+/// known yet (null), in which case the router asks again once it is.
+String? campaignModeRedirect(CampaignRole? role, String location) {
+  final segments = Uri.parse(location).pathSegments.where((s) => s.isNotEmpty).toList();
+  if (segments.length < 2 || segments.first != 'campaigns') return null;
+  final id = segments[1];
+  if (segments.length == 2) return AppRoutes.campaign(id);
+  if (role == null) return null;
+  return switch (segments[2]) {
+    'dm' when !role.isAtLeastDm => AppRoutes.campaign(id),
+    'player' when role != CampaignRole.player => AppRoutes.campaign(id),
+    _ => null,
+  };
+}
+
+/// Routes of a campaign: `/campaigns/:id` (redirected to "General") and the
+/// shell with the "General", "Mesa del DM" and "Mi sesión" branches. The
+/// sections of "General" are full pages on [rootNavigatorKey].
+List<RouteBase> campaignShellRoutes(GlobalKey<NavigatorState> rootNavigatorKey) => [
+  GoRoute(
+    path: AppRoutes.campaignDetail,
+    redirect: (context, state) => campaignModeRedirect(null, state.uri.path),
+    routes: [
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) => CampaignShell(
+          campaignId: state.pathParameters['id']!,
+          navigationShell: navigationShell,
+        ),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: 'general',
+                builder: (context, state) =>
+                    CampaignGeneralPage(campaignId: state.pathParameters['id']!),
+                routes: [
+                  for (final section in CampaignSection.values)
+                    GoRoute(
+                      path: section.path,
+                      parentNavigatorKey: rootNavigatorKey,
+                      builder: (context, state) => CampaignSectionPage(
+                        campaignId: state.pathParameters['id']!,
+                        section: section,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: 'dm',
+                builder: (context, state) => DmSessionPage(campaignId: state.pathParameters['id']!),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: 'player',
+                builder: (context, state) =>
+                    PlayerSessionPage(campaignId: state.pathParameters['id']!),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  ),
+];
+
+/// First location of the router; tests start the real router elsewhere.
+final routerInitialLocationProvider = Provider<String>((ref) => AppRoutes.home);
+
+final routerProvider = Provider<GoRouter>((ref) {
+  // Re-evaluates the redirect whenever the session, the server or a known
+  // campaign role changes.
+  bool hasServer() => ref.read(serverConfigProvider).isConfigured;
+  final refresh = ValueNotifier<int>(0);
+  void bump() => refresh.value++;
+  ref.listen<AuthState>(authControllerProvider, (_, _) => bump());
+  ref.listen<bool>(serverConfigProvider.select((config) => config.isConfigured), (_, _) => bump());
+  ref.listen<Map<String, CampaignRole>>(campaignRoleCacheProvider, (_, _) => bump());
+
+  final rootNavigatorKey = GlobalKey<NavigatorState>();
   final router = GoRouter(
-    initialLocation: AppRoutes.home,
+    navigatorKey: rootNavigatorKey,
+    initialLocation: ref.read(routerInitialLocationProvider),
     refreshListenable: refresh,
-    redirect: (context, state) =>
-        authRedirect(ref.read(authControllerProvider), state.uri.path, hasServer: hasServer()),
+    redirect: (context, state) {
+      final location = state.uri.path;
+      final auth = authRedirect(ref.read(authControllerProvider), location, hasServer: hasServer());
+      if (auth != null) return auth;
+      final campaignId = campaignIdOf(location);
+      if (campaignId == null) return null;
+      return campaignModeRedirect(ref.read(campaignRoleCacheProvider)[campaignId], location);
+    },
     routes: [
       GoRoute(path: AppRoutes.server, builder: (context, state) => const ServerPage()),
       GoRoute(path: AppRoutes.splash, builder: (context, state) => const SplashPage()),
@@ -169,10 +281,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.home, builder: (context, state) => const HomePage()),
       GoRoute(path: AppRoutes.adminUsers, builder: (context, state) => const AdminUsersPage()),
       GoRoute(path: AppRoutes.attributions, builder: (context, state) => const AttributionPage()),
-      GoRoute(
-        path: AppRoutes.campaignDetail,
-        builder: (context, state) => CampaignDetailPage(campaignId: state.pathParameters['id']!),
-      ),
+      ...campaignShellRoutes(rootNavigatorKey),
       GoRoute(
         path: AppRoutes.campaignChangeRequests,
         builder: (context, state) => ChangeRequestsPage(campaignId: state.pathParameters['id']!),

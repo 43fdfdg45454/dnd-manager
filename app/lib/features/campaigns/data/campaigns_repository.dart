@@ -40,15 +40,20 @@ class CampaignsRepository {
     return CampaignDetail.fromJson(response.data!);
   }
 
-  /// Changes the calendar settings; only the non-null fields are sent.
+  /// Changes the calendar and party stash settings; only the non-null fields are sent.
   Future<CampaignDetail> updateSettings(
     String id, {
     String? timeZoneId,
     List<int>? reminderOffsetsMinutes,
+    bool? playersCanTakeFromStash,
   }) async {
     final response = await _client.dio.patch<Map<String, dynamic>>(
       '$_base/$id/settings',
-      data: {'timeZoneId': ?timeZoneId, 'reminderOffsetsMinutes': ?reminderOffsetsMinutes},
+      data: {
+        'timeZoneId': ?timeZoneId,
+        'reminderOffsetsMinutes': ?reminderOffsetsMinutes,
+        'playersCanTakeFromStash': ?playersCanTakeFromStash,
+      },
     );
     return CampaignDetail.fromJson(response.data!);
   }

@@ -139,9 +139,12 @@ ClassTheme classThemeOf(String? index) => classThemes[index] ?? adventurerTheme;
 
 /// The class that gives a character its colour: the highest level one (the
 /// first on a tie); null without classes.
-String? mainClassIndex(CharacterDetail character) {
+String? mainClassIndex(CharacterDetail character) => mainClassIndexOf(character.classes);
+
+/// [mainClassIndex] of a list of classes (a summary or a party member).
+String? mainClassIndexOf(List<CharacterClass> classes) {
   CharacterClass? best;
-  for (final c in character.classes) {
+  for (final c in classes) {
     if (best == null || c.level > best.level) best = c;
   }
   return best?.classIndex;

@@ -12,6 +12,7 @@ import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
 import '../../campaigns/ui/feedback.dart';
+import '../../campaigns/ui/general/campaign_section_page.dart';
 import '../data/lore_controllers.dart';
 import '../data/lore_repository.dart';
 import '../data/models.dart';
@@ -57,7 +58,7 @@ class LoreEntryPage extends ConsumerWidget {
     if (router.canPop()) {
       router.pop();
     } else {
-      router.go(AppRoutes.campaign(campaignId));
+      router.go(AppRoutes.campaignSection(campaignId, CampaignSection.lore));
     }
   }
 

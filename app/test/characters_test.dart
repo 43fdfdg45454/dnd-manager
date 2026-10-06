@@ -2,33 +2,21 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:dnd_companion/core/auth/auth_controller.dart';
-import 'package:dnd_companion/core/auth/auth_state.dart';
 import 'package:dnd_companion/core/network/api_client.dart';
-import 'package:dnd_companion/core/router/app_router.dart';
-import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart';
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/campaigns/ui/campaign_detail_page.dart';
-import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
 import 'package:dnd_companion/features/catalog/data/models.dart';
-import 'package:dnd_companion/features/change_requests/ui/change_requests_page.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:dnd_companion/features/characters/data/models.dart';
 import 'package:dnd_companion/features/characters/data/view_mode_controller.dart';
 import 'package:dnd_companion/features/characters/domain/character_format.dart';
 import 'package:dnd_companion/features/characters/domain/payload_format.dart';
-import 'package:dnd_companion/features/characters/ui/character_page.dart';
-import 'package:dnd_companion/features/characters/ui/sheet_editor_page.dart';
-import 'package:dnd_companion/features/items/data/inventory_repository.dart';
 import 'package:flutter/material.dart' hide Page;
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 
+import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
-import 'helpers/item_fakes.dart';
 
 FakeCatalogRepository _catalog() => FakeCatalogRepository(
   classList: [
@@ -86,7 +74,7 @@ FakeCatalogRepository _catalog() => FakeCatalogRepository(
   },
 );
 
-/// App with the routes the characters feature navigates between.
+/// The whole app (real router) at [location]. The signed-in user is `u1`.
 Future<void> _pumpApp(
   WidgetTester tester, {
   required FakeCharactersRepository characters,
@@ -94,50 +82,15 @@ Future<void> _pumpApp(
   CampaignRole role = CampaignRole.player,
   FakeCatalogRepository? catalog,
 }) async {
-  final router = GoRouter(
-    initialLocation: location,
-    routes: [
-      GoRoute(
-        path: '/',
-        builder: (_, _) => const Scaffold(body: Text('inicio')),
-      ),
-      GoRoute(
-        path: AppRoutes.campaignDetail,
-        builder: (_, state) => CampaignDetailPage(campaignId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: AppRoutes.campaignChangeRequests,
-        builder: (_, state) => ChangeRequestsPage(campaignId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: AppRoutes.characterDetail,
-        builder: (_, state) => CharacterPage(characterId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: AppRoutes.characterEditor,
-        builder: (_, state) => SheetEditorPage(characterId: state.pathParameters['id']!),
-      ),
-    ],
-  );
-  addTearDown(router.dispose);
-  tester.view.physicalSize = const Size(800, 2400);
-  tester.view.devicePixelRatio = 1;
-  addTearDown(tester.view.reset);
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        authControllerProvider.overrideWith(() => FixedAuthController(AuthSignedIn(makeUser()))),
-        campaignsRepositoryProvider.overrideWithValue(
-          FakeCampaignsRepository(campaigns: [makeCampaign(myRole: role)]),
-        ),
-        charactersRepositoryProvider.overrideWithValue(characters),
-        inventoryRepositoryProvider.overrideWithValue(FakeInventoryRepository()),
-        catalogRepositoryProvider.overrideWithValue(catalog ?? _catalog()),
-      ],
-      child: MaterialApp.router(routerConfig: router),
+  await pumpRealApp(
+    tester,
+    location: location,
+    fakes: AppFakes(
+      campaigns: FakeCampaignsRepository(campaigns: [makeCampaign(myRole: role)]),
+      characters: characters,
+      catalog: catalog ?? _catalog(),
     ),
   );
-  await tester.pumpAndSettle();
 }
 
 Future<void> _tap(WidgetTester tester, Finder finder) async {
@@ -158,8 +111,7 @@ void main() {
       );
       await _pumpApp(tester, characters: repository, location: '/campaigns/c1');
 
-      await tester.tap(find.byKey(const Key('tab-characters')));
-      await tester.pumpAndSettle();
+      await openGeneralSection(tester, 'characters');
 
       expect(find.byKey(const Key('character-ch1')), findsOneWidget);
       expect(find.byKey(const Key('character-ch2')), findsOneWidget);
@@ -167,15 +119,56 @@ void main() {
       expect(find.text('Human · Fighter 3 · Nivel 3'), findsNWidgets(2));
       expect(find.text('Activo'), findsOneWidget);
       expect(find.text('Borrador'), findsOneWidget);
-      expect(find.text('PG 20 / 28'), findsNWidgets(2));
+      // A player sees the hit points of their own characters only.
+      expect(find.text('PG 20 / 28'), findsOneWidget);
       expect(find.text('Nuevo personaje'), findsOneWidget);
+    });
+
+    testWidgets('un jugador solo abre sus personajes; el DM abre todos', (tester) async {
+      final repository = FakeCharactersRepository(
+        characters: [
+          makeCharacterJson(id: 'ch1', name: 'Thorin', status: 'Active'),
+          makeCharacterJson(id: 'ch2', name: 'Elara', ownerUserId: 'p2', status: 'Active'),
+        ],
+      );
+      await _pumpApp(tester, characters: repository, location: '/campaigns/c1/general/characters');
+
+      await tester.tap(find.byKey(const Key('character-ch2')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('character-title')), findsNothing);
+      expect(find.text('Jugador: Usuario Demo'), findsNWidgets(2));
+
+      await tester.tap(find.byKey(const Key('character-ch1')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('character-title')), findsOneWidget);
+    });
+
+    testWidgets('el DM ve los PG y abre la hoja de cualquier personaje', (tester) async {
+      final repository = FakeCharactersRepository(
+        isDm: true,
+        characters: [
+          makeCharacterJson(id: 'ch1', name: 'Thorin', status: 'Active'),
+          makeCharacterJson(id: 'ch2', name: 'Elara', ownerUserId: 'p2', status: 'Active'),
+        ],
+      );
+      await _pumpApp(
+        tester,
+        characters: repository,
+        location: '/campaigns/c1/general/characters',
+        role: CampaignRole.dm,
+      );
+
+      expect(find.text('PG 20 / 28'), findsNWidgets(2));
+      await tester.tap(find.byKey(const Key('character-ch2')));
+      await tester.pumpAndSettle();
+      expect(find.text('Elara'), findsOneWidget);
+      expect(find.byKey(const Key('character-title')), findsOneWidget);
     });
 
     testWidgets('un jugador crea su personaje sin elegir dueño', (tester) async {
       final repository = FakeCharactersRepository();
       await _pumpApp(tester, characters: repository, location: '/campaigns/c1');
-      await tester.tap(find.byKey(const Key('tab-characters')));
-      await tester.pumpAndSettle();
+      await openGeneralSection(tester, 'characters');
       expect(find.text('Aún no hay personajes en esta campaña'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('characters-new')));
@@ -199,8 +192,7 @@ void main() {
         location: '/campaigns/c1',
         role: CampaignRole.dm,
       );
-      await tester.tap(find.byKey(const Key('tab-characters')));
-      await tester.pumpAndSettle();
+      await openGeneralSection(tester, 'characters');
 
       await tester.tap(find.byKey(const Key('characters-new')));
       await tester.pumpAndSettle();

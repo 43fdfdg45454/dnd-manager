@@ -2,7 +2,6 @@ import 'package:dnd_companion/core/auth/auth_controller.dart';
 import 'package:dnd_companion/core/auth/auth_state.dart';
 import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart';
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/campaigns/ui/campaign_detail_page.dart';
 import 'package:dnd_companion/features/campaigns/ui/campaigns_page.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'helpers/app_pump.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
 
@@ -34,29 +34,19 @@ Future<void> _pumpList(WidgetTester tester, FakeCampaignsRepository repository) 
   await tester.pumpAndSettle();
 }
 
-/// Mounts the detail page under a router so `go('/')` after leaving works.
-Future<void> _pumpDetail(WidgetTester tester, FakeCampaignsRepository repository) async {
-  final router = GoRouter(
-    initialLocation: '/campaigns/c1',
-    routes: [
-      GoRoute(
-        path: '/',
-        builder: (_, _) => const Scaffold(body: Text('inicio')),
-      ),
-      GoRoute(
-        path: '/campaigns/:id',
-        builder: (_, state) => CampaignDetailPage(campaignId: state.pathParameters['id']!),
-      ),
-    ],
+/// Opens [section] of the "General" view of campaign `c1` with the real router.
+Future<GoRouter> _pumpDetail(
+  WidgetTester tester,
+  FakeCampaignsRepository repository, {
+  String section = 'settings',
+}) async {
+  final router = await pumpRealApp(
+    tester,
+    location: '/campaigns/c1',
+    fakes: AppFakes(campaigns: repository),
   );
-  addTearDown(router.dispose);
-  await tester.pumpWidget(_providerScope(repository, MaterialApp.router(routerConfig: router)));
-  await tester.pumpAndSettle();
-}
-
-Future<void> _openMembersTab(WidgetTester tester) async {
-  await tester.tap(find.byKey(const Key('tab-members')));
-  await tester.pumpAndSettle();
+  await openGeneralSection(tester, section);
+  return router;
 }
 
 void main() {
@@ -203,7 +193,7 @@ void main() {
       final repository = FakeCampaignsRepository(
         campaigns: [makeCampaign(myRole: CampaignRole.player)],
       );
-      await _pumpDetail(tester, repository);
+      final router = await _pumpDetail(tester, repository);
 
       await tester.tap(find.byKey(const Key('campaign-leave')));
       await tester.pumpAndSettle();
@@ -217,12 +207,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(repository.campaigns, isEmpty);
-      expect(find.text('inicio'), findsOneWidget);
+      expect(locationOf(router), '/');
     });
 
     testWidgets('eliminar la campaña pide confirmación', (tester) async {
       final repository = FakeCampaignsRepository(campaigns: [makeCampaign()]);
-      await _pumpDetail(tester, repository);
+      final router = await _pumpDetail(tester, repository);
 
       await tester.tap(find.byKey(const Key('campaign-delete')));
       await tester.pumpAndSettle();
@@ -230,7 +220,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(repository.campaigns, isEmpty);
-      expect(find.text('inicio'), findsOneWidget);
+      expect(locationOf(router), '/');
     });
 
     testWidgets('un 403 se muestra en español', (tester) async {
@@ -249,8 +239,11 @@ void main() {
 
   group('detalle: miembros', () {
     testWidgets('lista los miembros con su rol', (tester) async {
-      await _pumpDetail(tester, FakeCampaignsRepository(campaigns: [makeCampaign()]));
-      await _openMembersTab(tester);
+      await _pumpDetail(
+        tester,
+        FakeCampaignsRepository(campaigns: [makeCampaign()]),
+        section: 'members',
+      );
 
       expect(find.text('Usuario Demo (tú)'), findsOneWidget);
       expect(find.text('Beto'), findsOneWidget);
@@ -262,8 +255,8 @@ void main() {
       await _pumpDetail(
         tester,
         FakeCampaignsRepository(campaigns: [makeCampaign(myRole: CampaignRole.player)]),
+        section: 'members',
       );
-      await _openMembersTab(tester);
 
       expect(find.text('Añadir'), findsNothing);
       expect(find.byType(PopupMenuButton<Object>), findsNothing);
@@ -275,8 +268,7 @@ void main() {
         campaigns: [makeCampaign()],
         directory: _directory,
       );
-      await _pumpDetail(tester, repository);
-      await _openMembersTab(tester);
+      await _pumpDetail(tester, repository, section: 'members');
 
       await tester.tap(find.byKey(const Key('members-add')));
       await tester.pumpAndSettle();
@@ -305,8 +297,7 @@ void main() {
         campaigns: [makeCampaign()],
         directory: _directory,
       );
-      await _pumpDetail(tester, repository);
-      await _openMembersTab(tester);
+      await _pumpDetail(tester, repository, section: 'members');
 
       await tester.tap(find.byKey(const Key('members-add')));
       await tester.pumpAndSettle();
@@ -320,8 +311,7 @@ void main() {
 
     testWidgets('el Owner puede añadir un DM; un DM solo Player', (tester) async {
       final owner = FakeCampaignsRepository(campaigns: [makeCampaign()], directory: _directory);
-      await _pumpDetail(tester, owner);
-      await _openMembersTab(tester);
+      await _pumpDetail(tester, owner, section: 'members');
       await tester.tap(find.byKey(const Key('members-add')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('member-role')), findsOneWidget);
@@ -344,8 +334,7 @@ void main() {
         campaigns: [makeCampaign(myRole: CampaignRole.dm)],
         directory: _directory,
       );
-      await _pumpDetail(tester, repository);
-      await _openMembersTab(tester);
+      await _pumpDetail(tester, repository, section: 'members');
 
       await tester.tap(find.byKey(const Key('members-add')));
       await tester.pumpAndSettle();
@@ -356,8 +345,7 @@ void main() {
 
     testWidgets('el Owner cambia el rol de un jugador a DM', (tester) async {
       final repository = FakeCampaignsRepository(campaigns: [makeCampaign()]);
-      await _pumpDetail(tester, repository);
-      await _openMembersTab(tester);
+      await _pumpDetail(tester, repository, section: 'members');
 
       await tester.tap(find.byKey(const Key('member-menu-p2')));
       await tester.pumpAndSettle();
@@ -374,8 +362,7 @@ void main() {
 
     testWidgets('el Owner quita a un miembro y no tiene menú propio', (tester) async {
       final repository = FakeCampaignsRepository(campaigns: [makeCampaign()]);
-      await _pumpDetail(tester, repository);
-      await _openMembersTab(tester);
+      await _pumpDetail(tester, repository, section: 'members');
 
       expect(find.byKey(const Key('member-menu-u1')), findsNothing);
 
@@ -401,8 +388,7 @@ void main() {
           ),
         ],
       );
-      await _pumpDetail(tester, repository);
-      await _openMembersTab(tester);
+      await _pumpDetail(tester, repository, section: 'members');
 
       expect(find.byKey(const Key('member-menu-owner')), findsNothing);
       expect(find.byKey(const Key('member-menu-d2')), findsNothing);

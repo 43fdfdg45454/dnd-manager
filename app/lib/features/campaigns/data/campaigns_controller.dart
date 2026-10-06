@@ -4,19 +4,51 @@ import '../../../core/server/app_session_epoch.dart';
 import '../domain/campaign_models.dart';
 import 'campaigns_repository.dart';
 
+/// Role of the signed-in user in each campaign seen so far (from the list or a
+/// detail). The router reads it synchronously to keep each user in the campaign
+/// views of their role (see `campaignModeRedirect`).
+class CampaignRoleCache extends Notifier<Map<String, CampaignRole>> {
+  @override
+  Map<String, CampaignRole> build() {
+    // Roles belong to one server and one session.
+    ref.watch(appSessionEpochProvider);
+    return const {};
+  }
+
+  void remember(String campaignId, CampaignRole role) {
+    if (state[campaignId] == role) return;
+    state = {...state, campaignId: role};
+  }
+
+  void rememberAll(Iterable<CampaignSummary> campaigns) {
+    final next = {...state, for (final c in campaigns) c.id: c.myRole};
+    if (next.length == state.length && next.entries.every((e) => state[e.key] == e.value)) return;
+    state = next;
+  }
+}
+
+final campaignRoleCacheProvider = NotifierProvider<CampaignRoleCache, Map<String, CampaignRole>>(
+  CampaignRoleCache.new,
+);
+
 /// Campaigns of the signed-in user, ordered by name by the server.
 class CampaignsController extends AsyncNotifier<List<CampaignSummary>> {
   CampaignsRepository get _repository => ref.read(campaignsRepositoryProvider);
 
   @override
-  Future<List<CampaignSummary>> build() {
+  Future<List<CampaignSummary>> build() async {
     // Reload from scratch after a server switch.
     ref.watch(appSessionEpochProvider);
-    return _repository.list();
+    return _remember(await _repository.list());
+  }
+
+  List<CampaignSummary> _remember(List<CampaignSummary> list) {
+    ref.read(campaignRoleCacheProvider.notifier).rememberAll(list);
+    return list;
   }
 
   Future<void> reload() async {
-    state = await AsyncValue.guard(_repository.list);
+    state = await AsyncValue.guard(() async => _remember(await _repository.list()));
   }
 
   /// Creates a campaign and refreshes the list. Errors are rethrown for the UI.
@@ -43,7 +75,13 @@ class CampaignDetailController extends AsyncNotifier<CampaignDetail> {
   CampaignsRepository get _repository => ref.read(campaignsRepositoryProvider);
 
   @override
-  Future<CampaignDetail> build() => _repository.get(id);
+  Future<CampaignDetail> build() async => _remember(await _repository.get(id));
+
+  /// Keeps the role cache of the router in sync with every loaded detail.
+  CampaignDetail _remember(CampaignDetail detail) {
+    ref.read(campaignRoleCacheProvider.notifier).remember(detail.id, detail.myRole);
+    return detail;
+  }
 
   /// The member count shown in the list changes with every membership mutation.
   void _refreshList() => ref.invalidate(campaignsControllerProvider);
@@ -60,12 +98,18 @@ class CampaignDetailController extends AsyncNotifier<CampaignDetail> {
     _refreshList();
   }
 
-  /// Changes the time zone and the reminder offsets (at least DM).
-  Future<void> updateSettings({String? timeZoneId, List<int>? reminderOffsetsMinutes}) async {
+  /// Changes the time zone, the reminder offsets or whether players take items
+  /// from the party stash (at least DM).
+  Future<void> updateSettings({
+    String? timeZoneId,
+    List<int>? reminderOffsetsMinutes,
+    bool? playersCanTakeFromStash,
+  }) async {
     final updated = await _repository.updateSettings(
       id,
       timeZoneId: timeZoneId,
       reminderOffsetsMinutes: reminderOffsetsMinutes,
+      playersCanTakeFromStash: playersCanTakeFromStash,
     );
     // The server answers with the whole campaign; keep the members already loaded
     // in case the answer omits them.
@@ -89,10 +133,12 @@ class CampaignDetailController extends AsyncNotifier<CampaignDetail> {
 
   Future<void> transferOwnership(String toUserId, CampaignRole previousOwnerRole) async {
     state = AsyncData(
-      await _repository.transferOwnership(
-        id,
-        toUserId: toUserId,
-        previousOwnerRole: previousOwnerRole,
+      _remember(
+        await _repository.transferOwnership(
+          id,
+          toUserId: toUserId,
+          previousOwnerRole: previousOwnerRole,
+        ),
       ),
     );
     _refreshList();

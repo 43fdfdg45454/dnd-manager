@@ -19,7 +19,6 @@ import 'package:dnd_companion/core/storage/local_preferences.dart';
 import 'package:dnd_companion/core/ui/markdown_view.dart';
 import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart';
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/campaigns/ui/campaign_detail_page.dart';
 import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:dnd_companion/features/characters/ui/character_page.dart';
@@ -36,6 +35,7 @@ import 'package:dnd_companion/features/lore/ui/lore_entry_page.dart';
 import 'package:dnd_companion/features/maps/data/maps_repository.dart';
 import 'package:dnd_companion/features/maps/data/models.dart' show parsePinColor;
 import 'package:dnd_companion/features/maps/ui/map_viewer_page.dart';
+import 'package:dnd_companion/features/session/data/messages_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -43,10 +43,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/content_fakes.dart';
 import 'helpers/fakes.dart';
+import 'helpers/party_fakes.dart';
 import 'helpers/item_fakes.dart';
 
 /// App with the routes of the phase 7 screens. The signed-in user is `u1`.
@@ -64,16 +66,12 @@ Future<void> _pumpApp(
   SharedPreferences? prefs,
   List<Override> overrides = const [],
 }) async {
-  final router = GoRouter(
-    initialLocation: location,
+  final router = buildTestRouter(
+    location: location,
     routes: [
       GoRoute(
         path: '/',
         builder: (_, _) => const Scaffold(body: Text('inicio')),
-      ),
-      GoRoute(
-        path: AppRoutes.campaignDetail,
-        builder: (_, state) => CampaignDetailPage(campaignId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: AppRoutes.campaignLoreNew,
@@ -108,7 +106,6 @@ Future<void> _pumpApp(
       ),
     ],
   );
-  addTearDown(router.dispose);
   tester.view.physicalSize = const Size(800, 2400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -116,6 +113,7 @@ Future<void> _pumpApp(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        messagesRepositoryProvider.overrideWithValue(FakeMessagesRepository()),
         authControllerProvider.overrideWith(
           () => FixedAuthController(AuthSignedIn(makeUser(role: userRole))),
         ),
@@ -148,13 +146,6 @@ Future<void> _pumpApp(
   await tester.pumpAndSettle();
 }
 
-Future<void> _openTab(WidgetTester tester, String key) async {
-  await tester.ensureVisible(find.byKey(Key(key)));
-  await tester.pumpAndSettle();
-  await tester.tap(find.byKey(Key(key)));
-  await tester.pumpAndSettle();
-}
-
 final _shownLore = [
   makeLore(id: 'l1', title: 'Valle del Norte'),
   makeLore(
@@ -176,7 +167,7 @@ void main() {
           location: '/campaigns/c1',
           lore: FakeLoreRepository(entries: _shownLore, isDm: false),
         );
-        await _openTab(tester, 'tab-lore');
+        await openGeneralSection(tester, 'lore');
 
         expect(find.text('Valle del Norte'), findsOneWidget);
         expect(find.text('Reina Mara'), findsOneWidget);
@@ -200,7 +191,7 @@ void main() {
         lore: FakeLoreRepository(entries: _shownLore, isDm: true),
       );
       // The campaign role is Player: no badge, no create button.
-      await _openTab(tester, 'tab-lore');
+      await openGeneralSection(tester, 'lore');
       expect(find.byKey(const Key('lore-dm-badge-l2')), findsNothing);
       expect(find.byKey(const Key('lore-new')), findsNothing);
     });
@@ -214,7 +205,7 @@ void main() {
         role: CampaignRole.dm,
         lore: FakeLoreRepository(entries: _shownLore, isDm: true),
       );
-      await _openTab(tester, 'tab-lore');
+      await openGeneralSection(tester, 'lore');
 
       expect(find.text('Secreto del Culto'), findsOneWidget);
       expect(find.byKey(const Key('lore-dm-badge-l2')), findsOneWidget);
@@ -229,7 +220,7 @@ void main() {
         location: '/campaigns/c1',
         lore: FakeLoreRepository(entries: _shownLore),
       );
-      await _openTab(tester, 'tab-lore');
+      await openGeneralSection(tester, 'lore');
 
       await tester.enterText(find.byKey(const Key('lore-search')), 'mara');
       await tester.pumpAndSettle();
@@ -243,7 +234,7 @@ void main() {
 
     testWidgets('sin entradas el jugador ve un aviso', (tester) async {
       await _pumpApp(tester, location: '/campaigns/c1');
-      await _openTab(tester, 'tab-lore');
+      await openGeneralSection(tester, 'lore');
       expect(find.text('El DM aún no ha publicado lore'), findsOneWidget);
     });
 
@@ -340,7 +331,7 @@ void main() {
         isDm: true,
       );
       await _pumpApp(tester, location: '/campaigns/c1', role: CampaignRole.dm, lore: repository);
-      await _openTab(tester, 'tab-lore');
+      await openGeneralSection(tester, 'lore');
       await tester.tap(find.byKey(const Key('lore-new')));
       await tester.pumpAndSettle();
 
@@ -452,7 +443,7 @@ void main() {
           ],
         ),
       );
-      await _openTab(tester, 'tab-maps');
+      await openGeneralSection(tester, 'maps');
       expect(find.text('Costa de la Espada'), findsOneWidget);
       expect(find.text('Mapa oculto'), findsNothing);
       expect(find.byKey(const Key('maps-new')), findsNothing);
@@ -468,7 +459,7 @@ void main() {
           isDm: true,
         ),
       );
-      await _openTab(tester, 'tab-maps');
+      await openGeneralSection(tester, 'maps');
       expect(find.byKey(const Key('maps-new')), findsOneWidget);
       expect(find.text('Solo DM'), findsOneWidget);
     });
@@ -484,7 +475,7 @@ void main() {
         files: files,
         overrides: [imagePickerProvider.overrideWithValue(FakeImagePicker())],
       );
-      await _openTab(tester, 'tab-maps');
+      await openGeneralSection(tester, 'maps');
       await tester.tap(find.byKey(const Key('maps-new')));
       await tester.pumpAndSettle();
 
@@ -788,8 +779,22 @@ void main() {
         location: '/campaigns/c1',
         library: FakeLibraryRepository(documents: docs),
       );
+      await openGeneralSection(tester, 'settings');
       await tester.tap(find.byKey(const Key('campaign-documents')));
       await tester.pumpAndSettle();
+      expect(find.text('Documentos de la campaña'), findsOneWidget);
+      expect(find.text('Reglas básicas'), findsOneWidget);
+    });
+
+    testWidgets('la tarjeta Biblioteca de General abre los documentos de la campaña', (
+      tester,
+    ) async {
+      await _pumpApp(
+        tester,
+        location: '/campaigns/c1',
+        library: FakeLibraryRepository(documents: docs),
+      );
+      await openGeneralSection(tester, 'library');
       expect(find.text('Documentos de la campaña'), findsOneWidget);
       expect(find.text('Reglas básicas'), findsOneWidget);
     });

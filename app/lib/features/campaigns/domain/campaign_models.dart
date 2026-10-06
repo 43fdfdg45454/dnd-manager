@@ -125,6 +125,7 @@ class CampaignDetail {
     required this.updatedAt,
     this.timeZoneId = defaultCampaignTimeZone,
     this.reminderOffsetsMinutes = defaultReminderOffsets,
+    this.playersCanTakeFromStash = false,
   });
 
   factory CampaignDetail.fromJson(Map<String, dynamic> json) => CampaignDetail(
@@ -144,6 +145,7 @@ class CampaignDetail {
       for (final o in (json['reminderOffsetsMinutes'] as List<dynamic>? ?? defaultReminderOffsets))
         (o as num).toInt(),
     ],
+    playersCanTakeFromStash: json['playersCanTakeFromStash'] as bool? ?? false,
   );
 
   final String id;
@@ -162,6 +164,9 @@ class CampaignDetail {
   /// Minutes before a session at which reminder emails are sent.
   final List<int> reminderOffsetsMinutes;
 
+  /// Whether players take items from the party stash (and give them back) by themselves.
+  final bool playersCanTakeFromStash;
+
   CampaignDetail copyWith({
     String? name,
     String? description,
@@ -171,6 +176,7 @@ class CampaignDetail {
     List<Member>? members,
     String? timeZoneId,
     List<int>? reminderOffsetsMinutes,
+    bool? playersCanTakeFromStash,
   }) => CampaignDetail(
     id: id,
     name: name ?? this.name,
@@ -183,6 +189,7 @@ class CampaignDetail {
     updatedAt: updatedAt,
     timeZoneId: timeZoneId ?? this.timeZoneId,
     reminderOffsetsMinutes: reminderOffsetsMinutes ?? this.reminderOffsetsMinutes,
+    playersCanTakeFromStash: playersCanTakeFromStash ?? this.playersCanTakeFromStash,
   );
 }
 

@@ -9,8 +9,8 @@ import 'package:dnd_companion/core/network/api_client.dart';
 import 'package:dnd_companion/core/router/app_router.dart';
 import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart';
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/campaigns/ui/campaign_detail_page.dart';
 import 'package:dnd_companion/features/home/ui/home_page.dart';
+import 'package:dnd_companion/features/session/data/messages_repository.dart';
 import 'package:dnd_companion/features/sessions/data/models.dart';
 import 'package:dnd_companion/features/sessions/data/sessions_controllers.dart';
 import 'package:dnd_companion/features/sessions/data/sessions_repository.dart';
@@ -25,7 +25,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 
+import 'helpers/app_pump.dart';
 import 'helpers/fakes.dart';
+import 'helpers/party_fakes.dart';
 import 'helpers/session_fakes.dart';
 
 /// App with the routes of the phase 8 screens. The signed-in user is `u1`.
@@ -37,14 +39,10 @@ Future<GoRouter> _pumpApp(
   FakeCampaignsRepository? campaigns,
   FakeAuthRepository? authRepository,
 }) async {
-  final router = GoRouter(
-    initialLocation: location,
+  final router = buildTestRouter(
+    location: location,
     routes: [
       GoRoute(path: '/', builder: (_, _) => const HomePage()),
-      GoRoute(
-        path: AppRoutes.campaignDetail,
-        builder: (_, state) => CampaignDetailPage(campaignId: state.pathParameters['id']!),
-      ),
       GoRoute(
         path: AppRoutes.campaignSessionNew,
         builder: (_, state) => SessionFormPage(campaignId: state.pathParameters['id']!),
@@ -72,7 +70,6 @@ Future<GoRouter> _pumpApp(
       ),
     ],
   );
-  addTearDown(router.dispose);
   tester.view.physicalSize = const Size(1400, 2400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -80,6 +77,7 @@ Future<GoRouter> _pumpApp(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        messagesRepositoryProvider.overrideWithValue(FakeMessagesRepository()),
         authControllerProvider.overrideWith(() => FixedAuthController(AuthSignedIn(user))),
         authRepositoryProvider.overrideWithValue(
           authRepository ?? FakeAuthRepository(storage: FakeTokenStorage(), meUser: user),
@@ -97,13 +95,6 @@ Future<GoRouter> _pumpApp(
   );
   await tester.pumpAndSettle();
   return router;
-}
-
-Future<void> _openTab(WidgetTester tester, String key) async {
-  await tester.ensureVisible(find.byKey(Key(key)));
-  await tester.pumpAndSettle();
-  await tester.tap(find.byKey(Key(key)));
-  await tester.pumpAndSettle();
 }
 
 Future<void> _tap(WidgetTester tester, Finder finder) async {
@@ -314,7 +305,7 @@ void main() {
         location: '/campaigns/c1',
         sessions: FakeSessionsRepository(sessions: [_past, _upcoming]),
       );
-      await _openTab(tester, 'tab-sessions');
+      await openGeneralSection(tester, 'sessions');
 
       expect(find.byKey(const Key('sessions-upcoming-header')), findsOneWidget);
       expect(find.byKey(const Key('sessions-past-header')), findsOneWidget);
@@ -341,7 +332,7 @@ void main() {
         location: '/campaigns/c1',
         sessions: FakeSessionsRepository(sessions: [_upcoming]),
       );
-      await _openTab(tester, 'tab-sessions');
+      await openGeneralSection(tester, 'sessions');
 
       expect(find.byKey(const Key('sessions-new')), findsNothing);
       expect(find.text('Nueva sesión'), findsNothing);
@@ -349,7 +340,7 @@ void main() {
 
     testWidgets('un DM ve "Nueva sesión" y abre el formulario', (tester) async {
       await _pumpApp(tester, location: '/campaigns/c1', role: CampaignRole.dm);
-      await _openTab(tester, 'tab-sessions');
+      await openGeneralSection(tester, 'sessions');
 
       expect(find.text('No hay sesiones programadas.'), findsOneWidget);
       await _tap(tester, find.byKey(const Key('sessions-new')));
@@ -371,7 +362,7 @@ void main() {
         location: '/campaigns/c1',
         sessions: FakeSessionsRepository(sessions: [inMonth]),
       );
-      await _openTab(tester, 'tab-sessions');
+      await openGeneralSection(tester, 'sessions');
       await _tap(tester, find.byKey(const Key('sessions-view-calendar')));
 
       final calendar = tester.widget<TableCalendar<Session>>(
@@ -392,7 +383,7 @@ void main() {
     testWidgets('un error de red muestra el mensaje y permite reintentar', (tester) async {
       final fake = FakeSessionsRepository(sessions: [_upcoming])..error = dioError(null);
       await _pumpApp(tester, location: '/campaigns/c1', sessions: fake);
-      await _openTab(tester, 'tab-sessions');
+      await openGeneralSection(tester, 'sessions');
 
       expect(find.text('No se pudo conectar con el servidor. Revisa tu conexión.'), findsOneWidget);
       fake.error = null;
@@ -655,7 +646,7 @@ void main() {
           sessions: [_past, _upcoming, _oldest],
         ),
       );
-      await _openTab(tester, 'tab-journal');
+      await openGeneralSection(tester, 'journal');
 
       expect(find.text('Sesión 1 · La Taberna · 6 sept 2026'), findsOneWidget);
       expect(find.text('Sesión 2 · Cruce de Caminos · 20 sept 2026'), findsOneWidget);
@@ -685,7 +676,7 @@ void main() {
         location: '/campaigns/c1',
         sessions: FakeSessionsRepository(sessions: [_oldest, cancelled]),
       );
-      await _openTab(tester, 'tab-journal');
+      await openGeneralSection(tester, 'journal');
 
       expect(find.textContaining('La Taberna'), findsOneWidget);
       expect(find.textContaining('Cancelada con resumen'), findsNothing);
@@ -697,7 +688,7 @@ void main() {
         location: '/campaigns/c1',
         sessions: FakeSessionsRepository(sessions: [_past, _oldest]),
       );
-      await _openTab(tester, 'tab-journal');
+      await openGeneralSection(tester, 'journal');
 
       await tester.enterText(find.byKey(const Key('journal-search')), 'puente');
       await tester.pumpAndSettle();
@@ -711,7 +702,7 @@ void main() {
 
     testWidgets('un diario vacío lo explica', (tester) async {
       await _pumpApp(tester, location: '/campaigns/c1');
-      await _openTab(tester, 'tab-journal');
+      await openGeneralSection(tester, 'journal');
 
       expect(find.byKey(const Key('journal-empty')), findsOneWidget);
     });
@@ -730,7 +721,7 @@ void main() {
         role: CampaignRole.dm,
         sessions: FakeSessionsRepository(isDm: true, sessions: [_oldest, noSummary, _upcoming]),
       );
-      await _openTab(tester, 'tab-journal');
+      await openGeneralSection(tester, 'journal');
 
       expect(find.byKey(const Key('journal-empty-s5')), findsOneWidget);
       expect(find.text('Sin resumen todavía'), findsOneWidget);
@@ -750,7 +741,7 @@ void main() {
       );
       final fake = FakeSessionsRepository(isDm: true, sessions: [_oldest, noSummary]);
       await _pumpApp(tester, location: '/campaigns/c1', role: CampaignRole.dm, sessions: fake);
-      await _openTab(tester, 'tab-journal');
+      await openGeneralSection(tester, 'journal');
 
       await _tap(tester, find.byKey(const Key('journal-edit-s5')));
       expect(find.byKey(const Key('summary-field')), findsOneWidget);
@@ -805,7 +796,7 @@ void main() {
       final campaigns = FakeCampaignsRepository(campaigns: [makeCampaign(myRole: CampaignRole.dm)]);
       await _pumpApp(
         tester,
-        location: '/campaigns/c1',
+        location: '/campaigns/c1/general/settings',
         role: CampaignRole.dm,
         campaigns: campaigns,
       );
@@ -848,7 +839,7 @@ void main() {
       final campaigns = FakeCampaignsRepository(campaigns: [makeCampaign(myRole: CampaignRole.dm)]);
       await _pumpApp(
         tester,
-        location: '/campaigns/c1',
+        location: '/campaigns/c1/general/settings',
         role: CampaignRole.dm,
         campaigns: campaigns,
       );
@@ -863,7 +854,7 @@ void main() {
     });
 
     testWidgets('un jugador ve la zona pero no el botón de ajustes', (tester) async {
-      await _pumpApp(tester, location: '/campaigns/c1');
+      await _pumpApp(tester, location: '/campaigns/c1/general/settings');
 
       expect(find.byKey(const Key('campaign-calendar-info')), findsOneWidget);
       expect(find.byKey(const Key('campaign-calendar-settings')), findsNothing);

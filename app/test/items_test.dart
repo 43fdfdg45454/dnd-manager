@@ -4,7 +4,6 @@ import 'package:dnd_companion/core/network/api_error.dart';
 import 'package:dnd_companion/core/router/app_router.dart';
 import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart';
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/campaigns/ui/campaign_detail_page.dart';
 import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
 import 'package:dnd_companion/features/catalog/data/models.dart' hide Page;
 import 'package:dnd_companion/features/catalog/domain/item_modifier_format.dart';
@@ -18,14 +17,17 @@ import 'package:dnd_companion/features/items/domain/item_form_data.dart';
 import 'package:dnd_companion/features/items/domain/items_format.dart';
 import 'package:dnd_companion/features/items/ui/shop_page.dart';
 import 'package:dnd_companion/features/items/ui/transactions_page.dart';
+import 'package:dnd_companion/features/session/data/messages_repository.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
+import 'helpers/party_fakes.dart';
 import 'helpers/item_fakes.dart';
 
 const _sword = ItemSummary(id: 't-sword', name: 'Longsword', category: 'Weapon', costCp: 1500);
@@ -84,16 +86,12 @@ Future<void> _pumpApp(
   FakeCatalogRepository? catalog,
   CampaignRole role = CampaignRole.player,
 }) async {
-  final router = GoRouter(
-    initialLocation: location,
+  final router = buildTestRouter(
+    location: location,
     routes: [
       GoRoute(
         path: '/',
         builder: (_, _) => const Scaffold(body: Text('inicio')),
-      ),
-      GoRoute(
-        path: AppRoutes.campaignDetail,
-        builder: (_, state) => CampaignDetailPage(campaignId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: AppRoutes.campaignShop,
@@ -112,13 +110,13 @@ Future<void> _pumpApp(
       ),
     ],
   );
-  addTearDown(router.dispose);
   tester.view.physicalSize = const Size(800, 2400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        messagesRepositoryProvider.overrideWithValue(FakeMessagesRepository()),
         authControllerProvider.overrideWith(() => FixedAuthController(AuthSignedIn(makeUser()))),
         campaignsRepositoryProvider.overrideWithValue(
           FakeCampaignsRepository(campaigns: [makeCampaign(myRole: role)]),
@@ -730,7 +728,7 @@ void main() {
         campaignItems: items,
         role: CampaignRole.dm,
       );
-      await _tap(tester, find.byKey(const Key('tab-objects')));
+      await openGeneralSection(tester, 'content');
       await _tap(tester, find.byKey(const Key('homebrew-new')));
       await tester.enterText(find.byKey(const Key('item-form-name')), 'Cinturón de gigante');
       // The loose attack and damage bonus fields are gone.
@@ -942,7 +940,7 @@ void main() {
         shops: dmShops,
         role: CampaignRole.dm,
       );
-      await _tap(tester, find.byKey(const Key('tab-shops')));
+      await openGeneralSection(tester, 'shops');
       expect(find.byKey(const Key('shop-switch-s1')), findsOneWidget);
       expect(find.byKey(const Key('shop-switch-s2')), findsOneWidget);
       expect(find.byKey(const Key('shops-new')), findsOneWidget);
@@ -966,7 +964,7 @@ void main() {
           ],
         ),
       );
-      await _tap(tester, find.byKey(const Key('tab-shops')));
+      await openGeneralSection(tester, 'shops');
       expect(find.text('Armería'), findsOneWidget);
       expect(find.text('Botica'), findsNothing);
       expect(find.byType(Switch), findsNothing);
@@ -983,7 +981,7 @@ void main() {
         shops: dmShops,
         role: CampaignRole.dm,
       );
-      await _tap(tester, find.byKey(const Key('tab-shops')));
+      await openGeneralSection(tester, 'shops');
       await _tap(tester, find.byKey(const Key('shops-new')));
       await tester.enterText(find.byKey(const Key('shop-name')), 'Herrería');
       await tester.enterText(find.byKey(const Key('shop-buyback')), '40');
@@ -1086,6 +1084,74 @@ void main() {
       expect(tester.widget<FilledButton>(find.byKey(const Key('sell-confirm'))).onPressed, isNull);
     });
 
+    test('las transacciones del alijo se leen con su actor y sin tienda', () {
+      final t = Transaction.fromJson({
+        'id': 'tx9',
+        'shopId': null,
+        'shopName': null,
+        'characterId': 'ch1',
+        'characterName': 'Thorin',
+        'actorUserId': 'owner',
+        'actorDisplayName': 'Dueña Demo',
+        'type': 'StashGoldSplit',
+        'itemName': 'Reparto del oro del grupo',
+        'quantity': 1,
+        'totalCp': 250,
+        'at': '2026-10-01T20:00:00Z',
+      });
+      expect(t.type, TransactionType.stashGoldSplit);
+      expect(t.shopId, isNull);
+      expect(t.shopName, '');
+      expect(t.actorDisplayName, 'Dueña Demo');
+      expect(TransactionType.fromApi('StashTake'), TransactionType.stashTake);
+      expect(TransactionType.fromApi('StashReturn'), TransactionType.stashReturn);
+      expect(TransactionType.fromApi('StashAdd'), TransactionType.stashAdd);
+      expect(TransactionType.fromApi('StashRemove'), TransactionType.stashRemove);
+      expect(TransactionType.fromApi('StashGoldAdd'), TransactionType.stashGoldAdd);
+    });
+
+    testWidgets('las transacciones del alijo muestran el tipo y quién las hizo', (tester) async {
+      final inventory = FakeInventoryRepository();
+      final shops = FakeShopsRepository(inventory: inventory)
+        ..history.addAll([
+          const Transaction(
+            id: 'tx1',
+            type: TransactionType.stashGoldAdd,
+            itemName: 'Oro añadido al alijo',
+            totalCp: 1000,
+            actorDisplayName: 'Dueña Demo',
+          ),
+          const Transaction(
+            id: 'tx2',
+            type: TransactionType.stashTake,
+            itemName: 'Longsword',
+            characterName: 'Thorin',
+            actorDisplayName: 'Usuario Demo',
+          ),
+          const Transaction(
+            id: 'tx3',
+            type: TransactionType.stashGoldSplit,
+            itemName: 'Reparto del oro del grupo',
+            characterName: 'Thorin',
+            totalCp: 250,
+            actorDisplayName: 'Dueña Demo',
+          ),
+        ]);
+      await _pumpApp(
+        tester,
+        location: '/campaigns/c1/transactions',
+        inventory: inventory,
+        shops: shops,
+      );
+
+      expect(find.text('Oro añadido al alijo'), findsOneWidget);
+      expect(find.text('10 gp'), findsOneWidget);
+      expect(find.text('Oro del grupo · por Dueña Demo'), findsOneWidget);
+      expect(find.text('Longsword ×1'), findsOneWidget);
+      expect(find.text('Tomado del botín · Thorin · por Usuario Demo'), findsOneWidget);
+      expect(find.text('+2 gp 5 sp'), findsOneWidget);
+    });
+
     testWidgets('las transacciones se listan con su importe', (tester) async {
       final inventory = FakeInventoryRepository(money: {'ch1': 1550});
       final shops = shopsOf(inventory);
@@ -1123,7 +1189,7 @@ void main() {
         campaignItems: items,
         role: CampaignRole.dm,
       );
-      await _tap(tester, find.byKey(const Key('tab-objects')));
+      await openGeneralSection(tester, 'content');
 
       expect(find.byKey(const Key('item-source')), findsOneWidget);
       expect(items.sources.first, ItemSource.all);
@@ -1149,7 +1215,7 @@ void main() {
         campaignItems: items,
         role: CampaignRole.dm,
       );
-      await _tap(tester, find.byKey(const Key('tab-objects')));
+      await openGeneralSection(tester, 'content');
       expect(find.text('No hay objetos que coincidan.'), findsOneWidget);
 
       await _tap(tester, find.byKey(const Key('homebrew-new')));
@@ -1175,7 +1241,7 @@ void main() {
         campaignItems: items,
         role: CampaignRole.dm,
       );
-      await _tap(tester, find.byKey(const Key('tab-objects')));
+      await openGeneralSection(tester, 'content');
       await _tap(tester, find.byKey(const Key('homebrew-menu-hb1')));
       await tester.tap(find.text('Borrar').last);
       await tester.pumpAndSettle();
@@ -1191,7 +1257,7 @@ void main() {
         homebrew: [const ItemSummary(id: 'hb1', name: 'Amuleto', category: 'MagicItem')],
       );
       await _pumpApp(tester, location: '/campaigns/c1', inventory: inventory, campaignItems: items);
-      await _tap(tester, find.byKey(const Key('tab-objects')));
+      await openGeneralSection(tester, 'content');
       expect(find.text('Amuleto'), findsOneWidget);
       expect(find.byKey(const Key('homebrew-new')), findsNothing);
       expect(find.byKey(const Key('homebrew-menu-hb1')), findsNothing);

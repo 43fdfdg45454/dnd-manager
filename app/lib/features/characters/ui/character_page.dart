@@ -12,6 +12,7 @@ import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
 import '../../campaigns/ui/feedback.dart';
+import '../../campaigns/ui/general/campaign_section_page.dart';
 import '../../catalog/data/models.dart' show titleFromIndex;
 import '../../dice/ui/dice_sheet.dart';
 import '../../items/ui/inventory_tab.dart';
@@ -103,7 +104,7 @@ class _CharacterView extends ConsumerWidget {
     if (router.canPop()) {
       router.pop();
     } else {
-      router.go(AppRoutes.campaign(character.campaignId));
+      router.go(AppRoutes.campaignSection(character.campaignId, CampaignSection.characters));
     }
   }
 

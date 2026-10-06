@@ -656,7 +656,13 @@ class ShopItemPatch {
 
 enum TransactionType {
   purchase('Purchase', 'Compra'),
-  sale('Sale', 'Venta');
+  sale('Sale', 'Venta'),
+  stashAdd('StashAdd', 'Botín añadido'),
+  stashRemove('StashRemove', 'Botín retirado'),
+  stashTake('StashTake', 'Tomado del botín'),
+  stashReturn('StashReturn', 'Devuelto al botín'),
+  stashGoldAdd('StashGoldAdd', 'Oro del grupo'),
+  stashGoldSplit('StashGoldSplit', 'Reparto de oro');
 
   const TransactionType(this.apiValue, this.label);
 
@@ -669,11 +675,18 @@ enum TransactionType {
   );
 }
 
+/// One movement of items or money: a purchase or sale between a character and
+/// a shop, or a movement of the party stash. Shop and character are empty when
+/// they do not apply (for example gold added to the stash by the DM).
 class Transaction {
   const Transaction({
     required this.id,
+    this.shopId,
     this.shopName = '',
+    this.characterId,
     this.characterName = '',
+    this.actorUserId,
+    this.actorDisplayName = '',
     required this.type,
     required this.itemName,
     this.quantity = 1,
@@ -683,8 +696,12 @@ class Transaction {
 
   factory Transaction.fromJson(Map<String, dynamic> json) => Transaction(
     id: _str(json['id']),
+    shopId: _strOrNull(json['shopId']),
     shopName: _str(json['shopName']),
+    characterId: _strOrNull(json['characterId']),
     characterName: _str(json['characterName']),
+    actorUserId: _strOrNull(json['actorUserId']),
+    actorDisplayName: _str(json['actorDisplayName']),
     type: TransactionType.fromApi(json['type']),
     itemName: _str(json['itemName']),
     quantity: _int(json['quantity']) ?? 1,
@@ -693,8 +710,14 @@ class Transaction {
   );
 
   final String id;
+  final String? shopId;
   final String shopName;
+  final String? characterId;
   final String characterName;
+
+  /// Who did it (the buyer, the DM who moved the loot...).
+  final String? actorUserId;
+  final String actorDisplayName;
   final TransactionType type;
   final String itemName;
   final int quantity;

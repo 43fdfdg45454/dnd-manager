@@ -561,7 +561,7 @@ class ConditionsCard extends ConsumerWidget {
   Future<void> _add(BuildContext context, WidgetRef ref) async {
     final picked = await showDialog<Condition>(
       context: context,
-      builder: (_) => _ConditionPicker(taken: {for (final k in character.conditions) k.index}),
+      builder: (_) => ConditionPickerDialog(taken: {for (final k in character.conditions) k.index}),
     );
     if (picked == null || !context.mounted) return;
     if (picked.index == 'exhaustion') {
@@ -664,8 +664,9 @@ class ConditionsCard extends ConsumerWidget {
   }
 }
 
-class _ConditionPicker extends ConsumerWidget {
-  const _ConditionPicker({required this.taken});
+/// Picks one condition of the SRD list that is not in [taken].
+class ConditionPickerDialog extends ConsumerWidget {
+  const ConditionPickerDialog({super.key, required this.taken});
 
   final Set<String> taken;
 

@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/offline_widgets.dart';
+import '../../campaigns/data/campaigns_controller.dart';
 import '../../catalog/domain/catalog_format.dart';
 import '../../characters/data/models.dart' show CharacterDetail;
+import '../../session/data/session_controllers.dart';
 import '../data/items_controllers.dart';
 import '../data/models.dart';
 import '../domain/items_format.dart';
 import 'add_item_page.dart';
 import 'effective_item_page.dart';
 import 'item_feedback.dart';
+import 'quantity_dialog.dart';
 import 'sell_dialog.dart';
 
 /// "Inventario" tab of a character: money, weight, attunement and the items
@@ -152,7 +155,7 @@ class _InventoryView extends ConsumerWidget {
   }
 }
 
-enum _ItemAction { equip, attune, use, notes, detail, sell, remove }
+enum _ItemAction { equip, attune, use, notes, detail, sell, giveBack, remove }
 
 class _ItemTile extends ConsumerWidget {
   const _ItemTile({required this.character, required this.item});
@@ -222,6 +225,22 @@ class _ItemTile extends ConsumerWidget {
           context: context,
           builder: (_) => SellDialog(character: character, item: item),
         );
+      case _ItemAction.giveBack:
+        final quantity = await showQuantityDialog(
+          context,
+          title: 'Devolver al grupo',
+          message: '¿Devolver "${item.effective.name}" al botín del grupo?',
+          max: item.quantity,
+          confirmLabel: 'Devolver',
+        );
+        if (quantity == null || !context.mounted) return;
+        await runItemAction(
+          context,
+          () => ref
+              .read(stashControllerProvider(character.campaignId).notifier)
+              .giveBack(characterId: character.id, characterItemId: item.id, quantity: quantity),
+          success: 'Devuelto al botín del grupo.',
+        );
       case _ItemAction.remove:
         final quantity = await showDialog<int>(
           context: context,
@@ -242,6 +261,13 @@ class _ItemTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final e = item.effective;
+    // Giving back to the party stash: DMs always, players when the campaign
+    // allows it; never an attuned item.
+    final campaign = ref.watch(campaignDetailControllerProvider(character.campaignId)).value;
+    final canGiveBack =
+        campaign != null &&
+        !item.attuned &&
+        (campaign.myRole.isAtLeastDm || campaign.playersCanTakeFromStash);
     final chips = <Widget>[
       if (item.equipped) const _SmallChip('Equipado'),
       if (item.attuned) const _SmallChip('Sintonizado'),
@@ -303,6 +329,12 @@ class _ItemTile extends ConsumerWidget {
               const PopupMenuItem(value: _ItemAction.notes, child: Text('Notas')),
               const PopupMenuItem(value: _ItemAction.detail, child: Text('Ver detalle')),
               const PopupMenuItem(value: _ItemAction.sell, child: Text('Vender')),
+              if (canGiveBack)
+                const PopupMenuItem(
+                  key: Key('inv-give-back'),
+                  value: _ItemAction.giveBack,
+                  child: Text('Devolver al grupo'),
+                ),
               const PopupMenuItem(value: _ItemAction.remove, child: Text('Quitar')),
             ],
           ),

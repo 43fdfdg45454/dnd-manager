@@ -281,6 +281,7 @@ CampaignDetail makeCampaign({
   List<Member>? members,
   String timeZoneId = 'Europe/Madrid',
   List<int> reminderOffsetsMinutes = const [1440, 120],
+  bool playersCanTakeFromStash = false,
 }) {
   final list =
       members ??
@@ -303,6 +304,7 @@ CampaignDetail makeCampaign({
     updatedAt: DateTime.utc(2026, 1, 1),
     timeZoneId: timeZoneId,
     reminderOffsetsMinutes: reminderOffsetsMinutes,
+    playersCanTakeFromStash: playersCanTakeFromStash,
   );
 }
 
@@ -384,11 +386,13 @@ class FakeCampaignsRepository implements CampaignsRepository {
     String id, {
     String? timeZoneId,
     List<int>? reminderOffsetsMinutes,
+    bool? playersCanTakeFromStash,
   }) async {
     _fail();
     final updated = _byId(id).copyWith(
       timeZoneId: timeZoneId,
       reminderOffsetsMinutes: reminderOffsetsMinutes,
+      playersCanTakeFromStash: playersCanTakeFromStash,
     );
     campaigns[_index(id)] = updated;
     return updated;

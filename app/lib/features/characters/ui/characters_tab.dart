@@ -13,7 +13,9 @@ import '../data/characters_controller.dart';
 import '../data/models.dart';
 import 'new_character_dialog.dart';
 
-/// "Personajes" tab of a campaign: summary cards plus the "new character" button.
+/// "Personajes" section of a campaign: summary cards plus the "new character"
+/// button. A player opens only their own characters; the others show name,
+/// class and level without a link (DMs open every one).
 class CharactersTab extends ConsumerWidget {
   const CharactersTab({super.key, required this.campaign});
 
@@ -89,7 +91,13 @@ class CharactersTab extends ConsumerWidget {
                 )
               : ListView(
                   padding: const EdgeInsets.only(top: 8, bottom: 96),
-                  children: [for (final c in list) CharacterCard(character: c)],
+                  children: [
+                    for (final c in list)
+                      CharacterCard(
+                        character: c,
+                        canOpen: campaign.myRole.isAtLeastDm || c.ownerUserId == myUserId,
+                      ),
+                  ],
                 ),
         ),
       ),
@@ -98,10 +106,13 @@ class CharactersTab extends ConsumerWidget {
 }
 
 /// Summary card: name, race, classes and level, status chip and HP when visible.
+/// Without [canOpen] (someone else's character for a player) it has no link
+/// and no hit points.
 class CharacterCard extends StatelessWidget {
-  const CharacterCard({super.key, required this.character});
+  const CharacterCard({super.key, required this.character, this.canOpen = true});
 
   final CharacterSummary character;
+  final bool canOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +124,7 @@ class CharacterCard extends StatelessWidget {
       classes,
       if (c.classes.isNotEmpty) 'Nivel ${c.level}',
     ].join(' · ');
-    final hp = c.hitPointsMax == null
+    final hp = c.hitPointsMax == null || !canOpen
         ? null
         : 'PG ${c.hitPointsCurrent ?? c.hitPointsMax} / ${c.hitPointsMax}';
 
@@ -121,7 +132,7 @@ class CharacterCard extends StatelessWidget {
       key: Key('character-${c.id}'),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => context.push(AppRoutes.character(c.id)),
+        onTap: canOpen ? () => context.push(AppRoutes.character(c.id)) : null,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(

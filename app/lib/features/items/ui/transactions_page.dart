@@ -10,8 +10,9 @@ import '../data/models.dart';
 import '../../catalog/domain/catalog_format.dart';
 import 'item_feedback.dart';
 
-/// Purchase and sale history of a campaign: DMs see every transaction, players
-/// those of their own characters.
+/// Transaction history of a campaign (purchases, sales and the movements of the
+/// party stash): DMs see every transaction, players those of their own
+/// characters.
 class TransactionsPage extends ConsumerWidget {
   const TransactionsPage({super.key, required this.campaignId});
 
@@ -75,23 +76,55 @@ class _TransactionTile extends StatelessWidget {
 
   final Transaction transaction;
 
+  static IconData _icon(TransactionType type) => switch (type) {
+    TransactionType.purchase => Icons.shopping_cart_outlined,
+    TransactionType.sale => Icons.sell_outlined,
+    TransactionType.stashAdd => Icons.add_box_outlined,
+    TransactionType.stashRemove => Icons.indeterminate_check_box_outlined,
+    TransactionType.stashTake => Icons.move_to_inbox_outlined,
+    TransactionType.stashReturn => Icons.outbox_outlined,
+    TransactionType.stashGoldAdd => Icons.savings_outlined,
+    TransactionType.stashGoldSplit => Icons.call_split,
+  };
+
   @override
   Widget build(BuildContext context) {
     final t = transaction;
     final theme = Theme.of(context);
-    final isPurchase = t.type == TransactionType.purchase;
     final date = t.at == null ? null : DateFormat('dd/MM/yyyy HH:mm').format(t.at!.toLocal());
+    final isTrade = t.type == TransactionType.purchase || t.type == TransactionType.sale;
+    final isGold =
+        t.type == TransactionType.stashGoldAdd || t.type == TransactionType.stashGoldSplit;
+
+    // Money: what a character pays (-) or gets (+) in a trade or a gold share;
+    // the stash gold as it is; nothing for the loot moves.
+    final String? amount = switch (t.type) {
+      TransactionType.purchase => '-${formatCostCp(t.totalCp)}',
+      TransactionType.sale || TransactionType.stashGoldSplit => '+${formatCostCp(t.totalCp)}',
+      TransactionType.stashGoldAdd => formatCostCp(t.totalCp),
+      _ => null,
+    };
+    final subtitle = [
+      if (!isTrade) t.type.label,
+      t.characterName,
+      t.shopName,
+      if (!isTrade && t.actorDisplayName.isNotEmpty) 'por ${t.actorDisplayName}',
+      ?date,
+    ].where((e) => e.isNotEmpty).join(' · ');
+
     return ListTile(
       key: Key('transaction-${t.id}'),
-      leading: Icon(isPurchase ? Icons.shopping_cart_outlined : Icons.sell_outlined),
-      title: Text('${t.itemName} ×${t.quantity}'),
-      subtitle: Text([t.characterName, t.shopName, ?date].where((e) => e.isNotEmpty).join(' · ')),
-      trailing: Text(
-        '${isPurchase ? '-' : '+'}${formatCostCp(t.totalCp)}',
-        style: theme.textTheme.titleSmall?.copyWith(
-          color: isPurchase ? theme.colorScheme.error : null,
-        ),
-      ),
+      leading: Icon(_icon(t.type)),
+      title: Text(isGold ? t.itemName : '${t.itemName} ×${t.quantity}'),
+      subtitle: Text(subtitle),
+      trailing: amount == null
+          ? null
+          : Text(
+              amount,
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: t.type == TransactionType.purchase ? theme.colorScheme.error : null,
+              ),
+            ),
     );
   }
 }
