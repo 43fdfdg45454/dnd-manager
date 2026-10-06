@@ -200,7 +200,10 @@ public static class SheetCalculator
                             .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus)
                             .Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), Mod(ability)),
                         OverrideFields.SpellAttackBonus));
-                return new SpellcastingValue(classIndex, ability, saveDc, attackBonus, PreparedMax(classIndex, c.Level.Level, Mod(ability)));
+                return new SpellcastingValue(classIndex, ability, saveDc, attackBonus, PreparedMax(classIndex, c.Level.Level, Mod(ability)))
+                {
+                    MaxSpellLevel = MaxSpellLevel(c.Info.SlotsByLevel(c.Level.Level)),
+                };
             })
             .ToList();
 
@@ -249,6 +252,21 @@ public static class SheetCalculator
         "paladin" => Math.Max(1, abilityModifier + classLevel / 2),
         _ => null,
     };
+
+    /// <summary>Highest spell level (1-9) with at least one slot in a slots row; 0 when there are none.</summary>
+    public static int MaxSpellLevel(IReadOnlyList<int> slots)
+    {
+        ArgumentNullException.ThrowIfNull(slots);
+        for (var level = slots.Count; level >= 1; level--)
+        {
+            if (slots[level - 1] > 0)
+            {
+                return level;
+            }
+        }
+
+        return 0;
+    }
 
     private static List<ResolvedClass> ResolveClasses(Character character, IReadOnlyList<ClassInfo> infos)
     {

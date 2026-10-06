@@ -151,6 +151,25 @@ public static class CharacterEndpoints
             .WithSummary("Descanso largo aplicado por un DM: PG al máximo, slots y recursos repuestos, recupera dados de golpe y reduce el agotamiento. Jugadores: 403 (piden el descanso con rest-requests).")
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
+        group.MapGet("/spell-preparation", async (Guid id, ClaimsPrincipal user, SpellPreparationHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.GetAsync(user.GetUserId(), id, ct)))
+            .WithName("GetSpellPreparation")
+            .WithSummary("Preparación de conjuros: pendiente y motivo, y por cada clase que prepara su máximo, los siempre preparados, los preparados y los candidatos.");
+
+        group.MapPost("/spell-preparation", async (Guid id, PrepareSpellsRequest request, ClaimsPrincipal user, SpellPreparationHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.PrepareAsync(user.GetUserId(), id, request, ct)))
+            .WithName("PrepareSpells")
+            .WithSummary("Prepara conjuros ({ classes: [{ classIndex, spells: [index] }] }) sin aprobación del DM. Valida máximo y candidatos (sin trucos ni siempre preparados) y limpia el pendiente. El dueño de un personaje activo solo con la preparación pendiente (409); el DM siempre.")
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group.MapPost("/spell-preparation/keep", async (Guid id, ClaimsPrincipal user, SpellPreparationHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.KeepAsync(user.GetUserId(), id, ct)))
+            .WithName("KeepSpellPreparation")
+            .WithSummary("Mantiene la preparación actual si sigue siendo válida (400 con el motivo si el máximo bajó o algún conjuro ya no es candidato) y limpia el pendiente.")
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
         var classActions = group.MapGroup("/class-actions").ProducesProblem(StatusCodes.Status400BadRequest);
 
         classActions.MapPost($"/{ClassActionHandler.Rage}", async (Guid id, ClaimsPrincipal user, ClassActionHandler handler, CancellationToken ct) =>

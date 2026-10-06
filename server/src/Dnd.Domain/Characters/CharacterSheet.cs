@@ -13,7 +13,17 @@ public sealed record SkillValue(string Index, string Name, string Ability, int V
 public sealed record HitDiceValue(string ClassIndex, int Die, int Total, int Remaining);
 
 /// <summary>Spellcasting numbers of one class. <see cref="PreparedMax"/> only for classes that prepare spells.</summary>
-public sealed record SpellcastingValue(string ClassIndex, string Ability, int SaveDc, int AttackBonus, int? PreparedMax);
+public sealed record SpellcastingValue(string ClassIndex, string Ability, int SaveDc, int AttackBonus, int? PreparedMax)
+{
+    /// <summary>
+    /// Highest spell level with slots in the class's own table at its level (0 without slots, e.g. a level 1
+    /// paladin). Multiclassed characters prepare each class as if single-classed (PHB, multiclassing).
+    /// </summary>
+    public int MaxSpellLevel { get; init; }
+
+    /// <summary>The class prepares spells (cleric, druid, paladin, wizard) and can already cast leveled spells.</summary>
+    public bool PreparesSpells => PreparedMax is not null && MaxSpellLevel > 0;
+}
 
 /// <summary>Warlock Pact Magic: <see cref="Slots"/> slots, all of spell level <see cref="SlotLevel"/>.</summary>
 public sealed record PactMagicValue(int SlotLevel, int Slots);
@@ -110,6 +120,9 @@ public sealed record CharacterSheet
         >= 1 and <= 9 => SpellSlotsMax[level - 1],
         _ => 0,
     };
+
+    /// <summary>Classes that prepare spells and can already cast leveled spells (see <see cref="SpellcastingValue.PreparesSpells"/>).</summary>
+    public IReadOnlyList<SpellcastingValue> PreparingClasses => [.. Spellcasting.Where(s => s.PreparesSpells)];
 
     public bool IsOverridden(string field) => OverriddenFields.Contains(field, StringComparer.Ordinal);
 }

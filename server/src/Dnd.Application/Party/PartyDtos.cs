@@ -31,7 +31,9 @@ public sealed record PartyMemberDto(
     IReadOnlyList<SpellSlotDto> SpellSlots,
     SpellSlotDto? PactSlots,
     PendingRestDto? PendingRest,
-    int? PendingLevelUpTo);
+    int? PendingLevelUpTo,
+    bool SpellPreparationPending = false,
+    string? SpellPreparationReason = null);
 
 /// <summary>The active characters of a campaign, sorted by name.</summary>
 public sealed record PartyDto(IReadOnlyList<PartyMemberDto> Characters);

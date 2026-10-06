@@ -16,7 +16,8 @@ public sealed record PlannedOption(
     string? Reason,
     int? SpellLevel,
     OptionDefinition? Definition,
-    IReadOnlyList<EffectPreviewDto> Preview);
+    IReadOnlyList<EffectPreviewDto> Preview,
+    string? SpellCategory = null);
 
 /// <summary>A choice of the plan: the rule, how many picks are required, the options and the replaceable picks.</summary>
 public sealed record PlannedChoice(LevelChoiceRule Rule, int Required, bool FreeText, IReadOnlyList<PlannedOption> Options, IReadOnlyList<ChoiceItem> Known)
@@ -44,7 +45,8 @@ public sealed record PlannedChoice(LevelChoiceRule Rule, int Required, bool Free
                 o.Reason,
                 o.SpellLevel,
                 o.Preview,
-                o.Definition?.AbilityIncrease is { } increase ? new AbilityIncreaseDto(increase.Amount, increase.From) : null))
+                o.Definition?.AbilityIncrease is { } increase ? new AbilityIncreaseDto(increase.Amount, increase.From) : null,
+                o.SpellCategory))
             .ToList(),
         Known.Select(ChoiceItemDto.From).ToList());
 }
@@ -524,7 +526,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             new(index, name, description, null, true, null, null, null, []);
 
         private static PlannedOption SpellOption(SpellDefinition spell) =>
-            new(spell.Index, spell.Name, spell.Description.Take(1).ToList(), null, true, null, spell.Level, null, []);
+            new(spell.Index, spell.Name, spell.Description.Take(1).ToList(), null, true, null, spell.Level, null, [], spell.Category.ToString());
 
         private List<EffectPreviewDto> Preview(OptionDefinition option) =>
             option.Modifiers.Select(m => PreviewOf(m, sheet)).ToList();

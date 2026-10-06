@@ -185,7 +185,7 @@ public sealed class PartyRestHandler(
             var sheet = sheetsById[character.Id];
             if (request.Kind == PartyRestKinds.Long)
             {
-                character.LongRest(sheet.HitPointsMax, now);
+                character.LongRest(sheet, now);
             }
             else
             {
@@ -199,6 +199,13 @@ public sealed class PartyRestHandler(
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await notifier.NotifyAsync(new CampaignEvent(CampaignEventTypes.PartyRest, campaignId, null, null, now), cancellationToken);
         await RestRequestLoader.NotifyAsync(notifier, cancelled, now, cancellationToken);
+
+        // A long rest asks the characters that prepare spells to prepare them again (the app opens the screen).
+        foreach (var character in targets.Where(c => c.SpellPreparationPending && request.Kind == PartyRestKinds.Long))
+        {
+            await notifier.CharacterUpdatedAsync(campaignId, character.Id, now, cancellationToken);
+        }
+
         return new PartyDto(await sheets.BuildPartyAsync(party, cancellationToken));
     }
 }

@@ -97,6 +97,13 @@ public sealed class ApplyLevelUpHandler(
         var sheet = await sheets.RecalculateAsync(character, cancellationToken);
         character.GainHitPoints(sheet.HitPointsMax - oldMax, sheet.HitPointsMax, now);
 
+        // A level in a class that prepares spells (the first one with slots included, e.g. paladin 2) lets the
+        // character change its preparation: the app forces the preparation screen.
+        if (sheet.PreparingClasses.Any(s => s.ClassIndex == classIndex))
+        {
+            character.RequireSpellPreparation(SpellPreparationReason.LevelUp, now);
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, now, cancellationToken);
         await notifier.NotifyAsync(new CampaignEvent(CampaignEventTypes.LevelUpCompleted, character.CampaignId, character.Id, null, now), cancellationToken);

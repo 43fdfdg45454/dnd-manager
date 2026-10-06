@@ -115,6 +115,7 @@ public sealed record RaceDetailDto(
     string Source);
 
 /// <param name="Source">"srd" or the id of the content pack that added it.</param>
+/// <param name="Category">What the spell is mainly for: a <c>SpellCategory</c> name (Healing, Damage, Control, Buff, Defense, Utility, Summoning).</param>
 public sealed record SpellSummaryDto(
     string Index,
     string Name,
@@ -127,10 +128,11 @@ public sealed record SpellSummaryDto(
     bool Concentration,
     bool Ritual,
     IReadOnlyList<string> ClassIndexes,
-    string Source)
+    string Source,
+    string Category)
 {
     public static SpellSummaryDto From(SpellDefinition s) => new(
-        s.Index, s.Name, s.Level, s.School, s.CastingTime, s.Range, s.Components, s.Duration, s.Concentration, s.Ritual, s.ClassIndexes, s.Source);
+        s.Index, s.Name, s.Level, s.School, s.CastingTime, s.Range, s.Components, s.Duration, s.Concentration, s.Ritual, s.ClassIndexes, s.Source, s.Category.ToString());
 }
 
 /// <summary>
@@ -163,7 +165,8 @@ public sealed record SpellDetailDto(
     string? AttackType,
     SpellDamageDto? Damage,
     string? DcAbility,
-    string Source);
+    string Source,
+    string Category);
 
 /// <summary>Origin of an item template as shown by the API.</summary>
 public static class ItemSources

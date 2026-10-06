@@ -441,6 +441,20 @@ internal sealed partial class ContentPackValidator
             AddError($"{path}.dcAbility", "Característica desconocida (str, dex, con, int, wis o cha).");
         }
 
+        var damageJson = SpellDamage($"{path}.damage", spell.Damage);
+        var category = SpellCategories.Derive(heals: false, dealsDamage: damageJson is not null, hasSavingThrow: dcAbility is not null);
+        if (spell.Category is not null)
+        {
+            if (SpellCategories.TryParse(spell.Category) is { } parsed)
+            {
+                category = parsed;
+            }
+            else
+            {
+                AddError($"{path}.category", $"Categoría desconocida. Valores: {string.Join(", ", Enum.GetNames<SpellCategory>())}.");
+            }
+        }
+
         var definition = new SpellDefinition
         {
             Index = index ?? string.Empty,
@@ -459,8 +473,9 @@ internal sealed partial class ContentPackValidator
             ClassIndexes = classes,
             SubclassIndexes = subclasses,
             AttackType = attackType,
-            DamageJson = SpellDamage($"{path}.damage", spell.Damage),
+            DamageJson = damageJson,
             DcAbility = dcAbility,
+            Category = category,
             Source = _id,
         };
 

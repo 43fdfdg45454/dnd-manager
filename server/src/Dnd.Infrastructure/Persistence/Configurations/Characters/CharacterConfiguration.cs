@@ -23,6 +23,7 @@ internal sealed class CharacterConfiguration : IEntityTypeConfiguration<Characte
         builder.Property(x => x.BackgroundIndex).HasMaxLength(Character.IndexMaxLength);
         builder.Property(x => x.Alignment).HasMaxLength(Character.AlignmentMaxLength);
         builder.Property(x => x.HpMode).HasConversion<string>().HasMaxLength(16).IsRequired();
+        builder.Property(x => x.SpellPreparationReason).HasConversion<string>().HasMaxLength(16);
         builder.Property(x => x.ConditionsJson).IsRequired();
         builder.Property(x => x.ConcentratingOnSpellIndex).HasMaxLength(Character.IndexMaxLength);
         builder.Property(x => x.HitDiceUsedJson).IsRequired();

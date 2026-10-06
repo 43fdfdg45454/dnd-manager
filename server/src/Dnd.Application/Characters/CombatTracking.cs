@@ -262,7 +262,7 @@ public sealed class RestHandler(
         var character = await LoadForDmAsync(currentUserId, characterId, cancellationToken);
         var sheet = await tracker.SheetAsync(character, cancellationToken);
         var now = clock.UtcNow;
-        character.LongRest(sheet.HitPointsMax, now);
+        character.LongRest(sheet, now);
         return await SaveAsync(currentUserId, character, now, cancellationToken);
     }
 

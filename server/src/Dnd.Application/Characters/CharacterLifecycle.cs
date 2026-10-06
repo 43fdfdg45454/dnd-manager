@@ -35,12 +35,13 @@ public sealed class SubmitCharacterHandler(
 }
 
 /// <summary>
-/// A DM activates a draft directly; it enters play at full hit points. Pending Activate requests of
-/// the character are marked approved by the same DM.
+/// A DM activates a draft directly; it enters play at full hit points (and must prepare spells when it prepares
+/// them and has none prepared yet). Pending Activate requests of the character are marked approved by the same DM.
 /// </summary>
 public sealed class ActivateCharacterHandler(
     CharacterLoader loader,
     ICharacterSheetService sheets,
+    SpellPreparationPlanner preparation,
     IChangeRequestRepository changeRequests,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
@@ -58,6 +59,7 @@ public sealed class ActivateCharacterHandler(
         var now = clock.UtcNow;
         var sheet = await sheets.CalculateAsync(character, cancellationToken);
         character.Activate(sheet.HitPointsMax, now);
+        await preparation.RequireInitialPreparationAsync(character, now, cancellationToken);
 
         foreach (var pending in await changeRequests.ListPendingAsync(character.Id, ChangeRequestType.Activate, cancellationToken))
         {

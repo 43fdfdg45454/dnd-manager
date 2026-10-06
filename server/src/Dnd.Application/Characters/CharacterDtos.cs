@@ -30,7 +30,8 @@ public sealed record CharacterProficiencyDto(Guid Id, string Type, string Key, b
 /// <param name="SpellName">Name from the catalog (null when the spell is not in it).</param>
 /// <param name="SpellLevel">Spell level from the catalog (0 = cantrip; null when unknown).</param>
 /// <param name="CatalogMissing">True when the spell is no longer in the catalog (e.g. its content pack was deleted).</param>
-public sealed record CharacterSpellDto(Guid Id, string SpellIndex, string ClassIndex, bool IsPrepared, bool AlwaysPrepared, string? SpellName, int? SpellLevel, bool CatalogMissing = false);
+/// <param name="Category">A <c>SpellCategory</c> name from the catalog (null when the spell is not in it).</param>
+public sealed record CharacterSpellDto(Guid Id, string SpellIndex, string ClassIndex, bool IsPrepared, bool AlwaysPrepared, string? SpellName, int? SpellLevel, bool CatalogMissing = false, string? Category = null);
 
 public sealed record CharacterOverrideDto(string Field, int Value, string? Note);
 
@@ -206,6 +207,12 @@ public sealed record CharacterDetailDto
 
     /// <summary>Level granted by a DM that the player has not completed yet, or null.</summary>
     public int? PendingLevelUpTo { get; init; }
+
+    /// <summary>The player must prepare spells (the app forces the preparation screen); see <c>/spell-preparation</c>.</summary>
+    public bool SpellPreparationPending { get; init; }
+
+    /// <summary>"Creation", "LongRest" or "LevelUp" while <see cref="SpellPreparationPending"/>; null otherwise.</summary>
+    public string? SpellPreparationReason { get; init; }
 
     /// <summary>Level choices made when gaining levels (subclass, fighting style, ASI, feats, spells...), oldest first.</summary>
     public IReadOnlyList<CharacterChoiceDto> Choices { get; init; } = [];

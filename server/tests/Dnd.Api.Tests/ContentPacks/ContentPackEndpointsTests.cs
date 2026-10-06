@@ -66,6 +66,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         var spell = Assert.Single(spells.Items);
         Assert.Equal(ExampleId, spell.Source);
         Assert.Equal("Evocation", spell.School);
+        Assert.Equal("Damage", spell.Category);
         var spellDetail = await GetAsync<SpellDetailDto>(admin, $"/api/v1/catalog/spells/{spell.Index}");
         Assert.Equal("2d8", spellDetail.Damage?.AtSlotLevel?[1]);
         Assert.Equal("dex", spellDetail.DcAbility);
@@ -196,7 +197,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
                 { "index": "reinos-erroneos-anillo", "name": "Anillo", "category": "Ring", "modifiers": [ { "kind": "Bogus", "value": 1 } ] }
               ],
               "spells": [
-                { "index": "luz", "name": "", "level": 12, "school": "pyromancy", "castingTime": "1 action", "range": "Self", "duration": "1 minute", "classes": ["fighter"], "subclasses": ["no-such-subclass"] }
+                { "index": "luz", "name": "", "level": 12, "school": "pyromancy", "castingTime": "1 action", "range": "Self", "duration": "1 minute", "classes": ["fighter"], "subclasses": ["no-such-subclass"], "category": "magic" }
               ],
               "backgrounds": [ { "index": "reinos-erroneos-a", "name": "A", "skillProficiencies": ["cooking"] }, { "index": "reinos-erroneos-a", "name": "B" } ]
             }
@@ -214,6 +215,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         Assert.Contains("spells[0].level: Debe estar entre 0 y 9.", errors);
         Assert.Contains(errors, e => e.StartsWith("spells[0].school: Escuela desconocida", StringComparison.Ordinal));
         Assert.Contains(errors, e => e.StartsWith("spells[0].subclasses[0]: La subclase 'no-such-subclass'", StringComparison.Ordinal));
+        Assert.Contains(errors, e => e.StartsWith("spells[0].category: Categoría desconocida", StringComparison.Ordinal));
         Assert.Contains(errors, e => e.StartsWith("backgrounds[0].skillProficiencies[0]: La habilidad 'cooking'", StringComparison.Ordinal));
         Assert.Contains(errors, e => e.StartsWith("backgrounds[1].index: Índice 'reinos-erroneos-a' duplicado", StringComparison.Ordinal));
         Assert.DoesNotContain(await GetAsync<List<ContentPackDto>>(admin, PacksUrl), p => p.Id == "reinos-erroneos");
@@ -292,6 +294,30 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
     }
 
     // ---- Helpers ---------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task Pack_spells_take_their_category_or_derive_it()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        const string pack = """
+            {
+              "id": "reinos-categorias", "name": "Categorías", "version": "1",
+              "spells": [
+                { "index": "reinos-categorias-lobo", "name": "Lobo de bruma", "level": 2, "school": "conjuration", "castingTime": "1 action", "range": "30 feet", "duration": "1 hour", "classes": ["druid"], "category": "summoning" },
+                { "index": "reinos-categorias-red", "name": "Red de raíces", "level": 1, "school": "conjuration", "castingTime": "1 action", "range": "60 feet", "duration": "1 minute", "classes": ["druid"], "dcAbility": "str" },
+                { "index": "reinos-categorias-mapa", "name": "Mapa estelar", "level": 1, "school": "divination", "castingTime": "1 minute", "range": "Self", "duration": "1 hour", "classes": ["druid"] }
+              ]
+            }
+            """;
+
+        await ImportAsync(admin, pack);
+
+        foreach (var (index, category) in new[] { ("lobo", "Summoning"), ("red", "Control"), ("mapa", "Utility") })
+        {
+            var spell = await GetAsync<SpellDetailDto>(admin, $"/api/v1/catalog/spells/reinos-categorias-{index}");
+            Assert.Equal((index, category), (index, spell.Category));
+        }
+    }
 
     /// <summary>The fictitious example pack with its id (and therefore every index prefix) replaced by <paramref name="id"/>.</summary>
     private static string Example(string id) =>

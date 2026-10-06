@@ -72,7 +72,8 @@ public sealed record LevelUpChoiceDto(
 
 /// <summary>
 /// An option of a choice. Not <see cref="Eligible"/> when its prerequisites are not met (<see cref="Reason"/>).
-/// <see cref="SpellLevel"/> for spells; <see cref="AbilityIncrease"/> for feats that raise an ability.
+/// <see cref="SpellLevel"/> and <see cref="SpellCategory"/> (a <c>SpellCategory</c> name) for spells;
+/// <see cref="AbilityIncrease"/> for feats that raise an ability.
 /// </summary>
 public sealed record LevelUpOptionDto(
     string Index,
@@ -83,7 +84,8 @@ public sealed record LevelUpOptionDto(
     string? Reason,
     int? SpellLevel,
     IReadOnlyList<EffectPreviewDto> EffectsPreview,
-    AbilityIncreaseDto? AbilityIncrease);
+    AbilityIncreaseDto? AbilityIncrease,
+    string? SpellCategory = null);
 
 /// <summary>
 /// A numeric effect of an option, as a breakdown part (<see cref="Source"/> "feature", <see cref="Label"/> the value it

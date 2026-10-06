@@ -96,6 +96,7 @@ public sealed class ApproveChangeRequestHandler(
     ChangeRequestLoader loader,
     ICharacterRepository characters,
     ICharacterSheetService sheets,
+    SpellPreparationPlanner preparation,
     IValidator<SheetPatch> patchValidator,
     InventoryOperations inventory,
     IUnitOfWork unitOfWork,
@@ -122,6 +123,7 @@ public sealed class ApproveChangeRequestHandler(
             case ChangeRequestType.Activate:
                 var sheet = await sheets.CalculateAsync(character, cancellationToken);
                 character.Activate(sheet.HitPointsMax, now);
+                await preparation.RequireInitialPreparationAsync(character, now, cancellationToken);
                 break;
             case ChangeRequestType.EditSheet:
                 await ApplySheetPatchAsync(character, request.PayloadJson, now, cancellationToken);
@@ -153,7 +155,8 @@ public sealed class ApproveChangeRequestHandler(
             throw AppException.Validation("payload", validation.Errors[0].ErrorMessage);
         }
 
-        var edit = patch.ToSheetEdit();
+        // Sheet edit requests come from the owner of an active character, who cannot prepare spells this way.
+        var edit = patch.ToSheetEdit() with { KeepSpellPreparation = true };
         await sheets.EnsureCatalogReferencesAsync(character, edit, cancellationToken);
         character.ApplySheetEdit(edit, now);
         await sheets.RecalculateAsync(character, cancellationToken);

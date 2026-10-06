@@ -40,6 +40,13 @@ public sealed record SheetEdit
 
     public IReadOnlyList<SpellEntry>? Spells { get; init; }
 
+    /// <summary>
+    /// The edit comes from the owner of an active character (an approved change request): spells the character
+    /// already has keep their <see cref="SpellEntry.IsPrepared"/> (the owner prepares spells with the spell
+    /// preparation operation, not with sheet edits). DMs change it freely.
+    /// </summary>
+    public bool KeepSpellPreparation { get; init; }
+
     public IReadOnlyList<OverrideEntry>? Overrides { get; init; }
 
     public string? Notes { get; init; }

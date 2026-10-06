@@ -248,6 +248,7 @@ si lo requiere, sintonizado):
 | `attackType` | `string?` | `melee`, `ranged` o `null`. |
 | `damage` | `SpellDamage?` | `null` si no hace daño. |
 | `dcAbility` | `string?` | Característica de la salvación (`dex`, `wis`...). |
+| `category` | `string?` | Opcional: `Healing`, `Damage`, `Control`, `Buff`, `Defense`, `Utility` o `Summoning` (sin distinguir mayúsculas). La app la muestra como icono junto al nombre. Si falta se deduce: con `damage` → `Damage`; con `dcAbility` y sin daño → `Control`; si no, `Utility`. |
 
 **`SpellDamage`**: `type` (`string?`, ≤ 32, p. ej. `Radiant`), `atSlotLevel` (objeto con claves `"1"`
 a `"9"` y dados como valor) y/o `atCharacterLevel` (claves `"1"` a `"20"`, para trucos). Al menos uno

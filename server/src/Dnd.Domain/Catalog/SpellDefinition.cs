@@ -46,6 +46,9 @@ public sealed class SpellDefinition
     /// <summary>Ability index of the saving throw ("dex", "wis", ...).</summary>
     public string? DcAbility { get; init; }
 
+    /// <summary>What the spell is mainly for (icon in the app).</summary>
+    public SpellCategory Category { get; init; } = SpellCategory.Utility;
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = CatalogSources.Srd;
 }

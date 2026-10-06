@@ -168,6 +168,9 @@ internal sealed class PackSpellJson
     public PackSpellDamageJson? Damage { get; set; }
 
     public string? DcAbility { get; set; }
+
+    /// <summary>Optional SpellCategory name; derived from damage and saving throw when absent.</summary>
+    public string? Category { get; set; }
 }
 
 internal sealed class PackSpellDamageJson

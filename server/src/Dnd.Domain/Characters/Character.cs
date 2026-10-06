@@ -277,6 +277,15 @@ public sealed partial class Character : EntityBase
         var classes = edit.Classes is null ? null : NormalizeClasses(edit.Classes);
         var proficiencies = edit.Proficiencies is null ? null : NormalizeProficiencies(edit.Proficiencies);
         var spells = edit.Spells is null ? null : NormalizeSpells(edit.Spells);
+        if (spells is not null && edit.KeepSpellPreparation)
+        {
+            spells = spells
+                .Select(e => _spells.FirstOrDefault(s => s.SpellIndex == e.SpellIndex && s.ClassIndex == e.ClassIndex) is { } existing && !e.AlwaysPrepared
+                    ? e with { IsPrepared = existing.IsPrepared }
+                    : e)
+                .ToList();
+        }
+
         var overrides = edit.Overrides is null ? null : NormalizeOverrides(edit.Overrides);
         var hpMode = edit.HpMode ?? HpMode;
         EnsureHpModeConsistent(hpMode, overrides?.Select(o => o.Field) ?? _overrides.Select(o => o.Field));

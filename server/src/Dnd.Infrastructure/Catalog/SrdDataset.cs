@@ -30,7 +30,7 @@ internal sealed record SrdCatalog(
 internal static class SrdDataset
 {
     /// <summary>Commit and date of the 5e-database snapshot in <c>server/seed/srd</c>.</summary>
-    public const string Version = "5e-database@a6212beb (2026-10-02); 2026-10-06: consumables, modifiers, skill choices, level choices, starting equipment";
+    public const string Version = "5e-database@a6212beb (2026-10-02); 2026-10-07: consumables, modifiers, skill choices, level choices, starting equipment, spell categories";
 
     private const string ResourcePrefix = "5e-SRD-";
 
@@ -305,6 +305,15 @@ internal static class SrdDataset
         AttackType = s.AttackType,
         DamageJson = SpellDamageJson(s.Damage),
         DcAbility = s.Dc?.DcType?.Index,
+        Category = SrdSpellCategories.For(s.Index, HasData(s.HealAtSlotLevel), HasData(s.Damage), s.Dc is not null),
+    };
+
+    /// <summary>A non-empty JSON object or array (the dataset omits the field or leaves it empty when absent).</summary>
+    private static bool HasData(JsonElement? element) => element switch
+    {
+        { ValueKind: JsonValueKind.Object } e => e.EnumerateObject().Any(),
+        { ValueKind: JsonValueKind.Array } e => e.GetArrayLength() > 0,
+        _ => false,
     };
 
     private static ItemTemplateData MapEquipment(EquipmentJson e)
@@ -934,6 +943,8 @@ internal static class SrdDataset
         public string? AttackType { get; set; }
 
         public JsonElement? Damage { get; set; }
+
+        public JsonElement? HealAtSlotLevel { get; set; }
 
         public SpellDcJson? Dc { get; set; }
 

@@ -121,7 +121,9 @@ public sealed class CharacterSheetService(
                         ? new SpellSlotDto(pact.SlotLevel, pact.Slots, c.SpellSlotsUsed(SpellSlotState.PactLevel))
                         : null,
                     pendingRests.TryGetValue(c.Id, out var rest) ? PendingRestDto.From(rest) : null,
-                    c.PendingLevelUpTo);
+                    c.PendingLevelUpTo,
+                    c.SpellPreparationPending,
+                    c.SpellPreparationReason?.ToString());
             })
             .ToList();
     }
@@ -243,7 +245,8 @@ public sealed class CharacterSheetService(
                 s.Spell.AlwaysPrepared,
                 s.Definition?.Name,
                 s.Definition?.Level,
-                s.Definition is null))
+                s.Definition is null,
+                s.Definition?.Category.ToString()))
             .ToList();
         var raceMissing = (character.RaceIndex is not null && sheetCatalog.Race(character.RaceIndex) is null)
             || (character.SubraceIndex is not null && sheetCatalog.Subrace(character.SubraceIndex) is null);
@@ -310,6 +313,8 @@ public sealed class CharacterSheetService(
             Combat = CombatSummaryBuilder.Build(character, sheet, sheetCatalog, templates, resources),
             PendingRest = pendingRest is null ? null : PendingRestDto.From(pendingRest),
             PendingLevelUpTo = character.PendingLevelUpTo,
+            SpellPreparationPending = character.SpellPreparationPending,
+            SpellPreparationReason = character.SpellPreparationReason?.ToString(),
             Choices = character.Choices
                 .Where(c => c.Key != CharacterChoice.HitPointsKey)
                 .OrderBy(c => c.CreatedAt)

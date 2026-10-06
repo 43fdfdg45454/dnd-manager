@@ -318,7 +318,7 @@ public sealed class ApproveRestRequestHandler(
         }
         else
         {
-            character.LongRest(sheet.HitPointsMax, now);
+            character.LongRest(sheet, now);
         }
 
         request.Approve(currentUserId, body?.Comment, now);

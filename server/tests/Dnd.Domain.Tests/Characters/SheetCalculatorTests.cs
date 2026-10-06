@@ -31,7 +31,7 @@ public class SheetCalculatorTests
         var sheet = Sheet(character);
 
         var casting = Assert.Single(sheet.Spellcasting);
-        Assert.Equal(new SpellcastingValue("wizard", "int", 15, 7, 9), casting);
+        Assert.Equal(new SpellcastingValue("wizard", "int", 15, 7, 9) { MaxSpellLevel = 3 }, casting);
         Assert.Equal([4, 3, 2, 0, 0, 0, 0, 0, 0], sheet.SpellSlotsMax);
         Assert.Equal(3, sheet.SpellSlotMax(2));
         Assert.Null(sheet.PactMagic);
@@ -70,7 +70,7 @@ public class SheetCalculatorTests
         Assert.Equal(new PactMagicValue(2, 2), sheet.PactMagic);
         Assert.Equal(2, sheet.SpellSlotMax(SpellSlotState.PactLevel));
         Assert.All(sheet.SpellSlotsMax, s => Assert.Equal(0, s));
-        Assert.Equal(new SpellcastingValue("warlock", "cha", 13, 5, null), Assert.Single(sheet.Spellcasting));
+        Assert.Equal(new SpellcastingValue("warlock", "cha", 13, 5, null) { MaxSpellLevel = 2 }, Assert.Single(sheet.Spellcasting));
     }
 
     [Fact]
