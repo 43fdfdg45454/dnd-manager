@@ -29,7 +29,7 @@ curl http://127.0.0.1:8080/health/ready
 - `JWT_SECRET`: genera uno con `openssl rand -base64 48`. Debe tener al menos 32 caracteres.
 - **URL pública**: la decide tu reverse proxy. La API toma el esquema y el host de las cabeceras
   `X-Forwarded-Proto` y `X-Forwarded-Host` que envía tu proxy y los usa en los enlaces de los correos. Recuerda el último origen visto, así los recordatorios que se envían en
-  segundo plano también llevan la URL correcta. `PUBLIC_URL` queda como respaldo opcional para los
+  segundo plano también llevan la URL correcta. `App__PublicUrl` queda como respaldo opcional para los
   correos enviados antes de la primera petición a través del proxy (p. ej. el del administrador
   inicial): si no lo informas, ese primer enlace sale en los logs como ruta relativa y basta con
   anteponerle tu URL.
@@ -118,7 +118,7 @@ server {
     ssl_certificate     /ruta/a/fullchain.pem;
     ssl_certificate_key /ruta/a/privkey.pem;
 
-    # Igual o mayor que MAX_UPLOAD_MB (mapas, PDF y APK).
+    # Igual o mayor que el límite de subida de la API (200 MB por defecto).
     client_max_body_size 200m;
 
     location / {
@@ -181,7 +181,7 @@ haz `docker login ghcr.io` antes con un token de acceso personal con permiso `re
   docker compose logs --no-log-prefix api | jq -c 'select(.RequestId == "0HNXXXXXXXXXX")'
   ```
 
-  El nivel se controla con `LOG_LEVEL` (`Logging__LogLevel__Default` en la API); tras cambiarlo,
+  El nivel se controla con `Logging__LogLevel__Default` en el servicio `api`; tras cambiarlo,
   `docker compose up -d api`.
 - `GET /health`: la API responde (liveness). `GET /health/ready`: además PostgreSQL responde
   (readiness); es el `healthcheck` del servicio `api` en el compose.
