@@ -1,6 +1,6 @@
 # ADR 0005 — Sin tiempo real
 
-**Estado**: aceptado.
+**Estado**: reemplazado por el ADR 0006 (tiempo real para eventos de campaña con SignalR). Los dados siguen siendo privados.
 
 ## Contexto
 

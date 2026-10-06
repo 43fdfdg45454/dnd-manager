@@ -48,7 +48,9 @@ cd deploy && cp .env.sample .env && docker compose pull && docker compose up -d
   obligatoria en la app y en el README.
 - Hoja de personaje **semiautomática**: la app calcula a partir de clase/raza/nivel; cualquier
   valor calculado puede sobreescribirse (`CharacterOverride`) y la UI lo marca.
-- **Sin tiempo real**: dados privados con historial local. No usar SignalR.
+- **Tiempo real solo para eventos de campaña** (ADR 0006): hub SignalR en `/hubs/campaign` que
+  notifica ids (`character.updated`, `party.rest`, `message.received`…); el cliente vuelve a pedir
+  por HTTP. Dados privados con historial local.
 - **Offline solo lectura**: la app cachea el último estado; las escrituras se deshabilitan sin red.
 - Hosting: Docker Compose solo con `api` y `postgres`; la API escucha en un puerto del host y el
   operador pone su propio reverse proxy con TLS. La URL pública se configura con `App:PublicUrl`
@@ -60,7 +62,10 @@ cd deploy && cp .env.sample .env && docker compose pull && docker compose up -d
 - Distribución: APK directo; la API expone la última versión disponible.
 - Documentación oficial: **solo el SRD en PDF** (CC-BY) se empaqueta. Nada con copyright de
   Wizards of the Coast en el repo. El administrador puede subir otros PDF a la biblioteca de la
-  instancia.
+  instancia y **paquetes de contenido** JSON (ADR 0007, `docs/content-packs.md`) que viven solo en
+  su base de datos; `content-packs/` está en `.gitignore` y los ejemplos son ficticios.
+- Fuentes e iconos empaquetados: Cinzel y Alegreya (SIL OFL) y SVG de game-icons.net (CC-BY 3.0),
+  con atribución en la pantalla "Atribuciones" y en `app/assets/icons/ATTRIBUTION.md`.
 
 ## Modelo de permisos
 
@@ -69,10 +74,13 @@ cd deploy && cp .env.sample .env && docker compose pull && docker compose up -d
 - Los ítems de un personaje pertenecen a la campaña. El jugador solo los modifica mediante
   **operaciones**: comprar/vender en tienda abierta, equipar, usar consumible, atunement.
 - **Auto-seguimiento en combate sin aprobación**: HP, HP temporales, death saves, slots, usos de
-  recursos, condiciones, concentración, short/long rest. (Supuesto; si el usuario pide aprobación
-  también aquí, se añaden esos tipos a `ChangeRequest`.)
+  recursos, condiciones, concentración, short/long rest.
 - Todo lo demás (subir de nivel, editar stats, ítems a mano, ítems personalizados, oro fuera de
-  compras) crea un `ChangeRequest` que el DM aprueba o rechaza. El DM/Owner aplica directo.
+  compras) crea un `ChangeRequest` que el DM aprueba o rechaza. **El DM/Owner aplica directo y
+  nunca pasa por aprobación dentro de su campaña**; además dispone de acciones de grupo
+  (`/campaigns/{id}/party/*`) y mensajes secretos a personajes concretos.
+- Un jugador solo ve la hoja de sus propios personajes.
+- Vistas de campaña: General (todos), Mesa del DM (solo rol DM/Owner) y Mi sesión (solo Player).
 
 ## Convenciones de código
 

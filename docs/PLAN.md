@@ -113,6 +113,12 @@ tests convencionales; **Haiku** hace lo mecánico (DTOs, textos, plantillas, doc
 | 7 Lore, mapas, biblioteca | Revisión | — | Todo (servidor + Flutter + visor PDF) | README |
 | 8 Calendario y correos | Revisión | — | Sesiones, RSVP, worker SMTP | Plantillas |
 | 9 Offline, APK, backups | Revisión | Caché offline (drift) | Aviso de versión, backups | README de despliegue |
+| 10 Arreglos, `PublicUrl`, `/admin` | Contrato | — | Todo | — |
+| 11 Modificadores de ítems | Contrato | Dominio y seed | UI | — |
+| 12 Mesa del DM, mensajes, SignalR | Contrato y ADR 0006 | Todo | — | — |
+| 13 Diseño, modos de vista, clases, tiempo real | Contrato y revisión visual | Paneles, shell, cliente SignalR | Sistema de diseño, Vista General | — |
+| 14 Asistente de personaje | Contrato | — | Todo | — |
+| 15 Paquetes de contenido | Contrato y ADR 0007 | Importador | UI admin | Docs del formato |
 
 Cómo se aplica en la práctica: la sesión principal corre con Fable y lanza subagentes con el modelo
 indicado (`Agent` con `model: opus | sonnet | haiku`), dándoles el contrato escrito en
@@ -143,12 +149,19 @@ de `docs/specs/`.
 | 7 | Lore + mapas con pines + biblioteca de documentos | Pin oculto invisible al jugador; PDF offline |
 | 8 | Calendario, RSVP, recordatorios SMTP, diario de sesiones con resumen del DM | Reminder enviado por el sender falso; jugador lee el resumen y no lo edita |
 | 9 | Caché offline, aviso de actualización de APK, backups, README de despliegue | Modo avión muestra la hoja |
+| 10 | Rasgos de subclase y objetos SRD visibles; `App:PublicUrl` obligatoria; primer admin desde `/admin` | `/admin` crea el admin una sola vez |
+| 11 | Modificadores estructurados de ítems (característica, salvación, CA, ataque, daño…), HP máximo editable, escudo real | Ítem con +3 DES sube la hoja al equiparlo |
+| 12 | Mesa del DM: roster, descansos forzados, daño/estados en lote, mensajes secretos; hub SignalR | Jugador recibe `party.rest` sin refrescar |
+| 13 | Sistema de diseño místico, Vista General / Mesa del DM / Mi sesión, temas y paneles por clase, cliente SignalR | Rol decide la vista; contraste ≥ 4.5 |
+| 14 | Asistente paso a paso de creación de personaje | Mago nivel 1 completo desde el móvil |
+| 15 | Paquetes de contenido privados (importador + pantalla admin) | Subclase del paquete elegible en un guerrero |
 
 ## Verificación end-to-end
 
 1. `cd server && dotnet build && dotnet test`.
 2. `cd app && flutter analyze && flutter test`.
-3. `cd deploy && cp .env.sample .env && docker compose up -d --build`, abrir `/swagger` a través del
-   proxy, crear usuario desde el admin inicial y recibir el correo en tu SMTP.
+3. `cd deploy && cp .env.sample .env && docker compose pull && docker compose up -d`, abrir
+   `https://<host>/admin` a través del proxy para crear el administrador, luego crear un usuario
+   desde la app y recibir el correo en tu SMTP.
 4. `flutter build apk --release`, instalar en emulador, crear personaje, comprar en tienda, modo
    combate, gastar un slot; modo avión y comprobar que la hoja sigue visible.

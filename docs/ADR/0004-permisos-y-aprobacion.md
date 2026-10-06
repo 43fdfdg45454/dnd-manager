@@ -1,6 +1,6 @@
 # ADR 0004 — Permisos: ítems de la campaña y aprobación del DM
 
-**Estado**: aceptado (con un supuesto a validar).
+**Estado**: aceptado (supuesto validado; ampliado el 2026-10-06).
 
 ## Contexto
 
@@ -16,7 +16,11 @@ modificaciones.
   usar consumible, atunement, y el auto-seguimiento de combate (HP, slots, recursos, condiciones,
   concentración, rests).
 - Cualquier otra modificación del personaje crea un `ChangeRequest` que el DM aprueba o rechaza.
-  DM y Owner aplican cambios directamente.
+  DM y Owner aplican cambios directamente: **dentro de su campaña el rol DM no pasa por ninguna
+  aprobación** (hoja, inventario, oro, objetos personalizados, descansos y daño a cualquier
+  personaje del grupo).
+- Un jugador solo ve la hoja de sus propios personajes; de los demás solo nombre, clase y nivel.
+  El DM ve todas.
 
 ## Supuesto
 
