@@ -53,12 +53,14 @@ curl http://127.0.0.1:8080/health/ready
 |----------|----------------|
 | `API_IMAGE` | Imagen de la API en GitHub Packages (`:dev-latest` de la CI o `:1.2.0` de una release). Para una compilada en local: `docker build -t dnd-companion-api:local ../server` y `API_IMAGE=dnd-companion-api:local` |
 | `API_BIND`, `API_PORT` | Dirección y puerto del host en los que escucha la API (`127.0.0.1` solo para un proxy local; `0.0.0.0` para exponerla en la LAN/VPN) |
-| `POSTGRES_PASSWORD` | Contraseña de la base de datos (usuario y base se llaman `dnd`) |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base de datos |
+| `DB_AUTO_MIGRATE` | Aplicar las migraciones al arrancar la API (`true`) |
+| `ASPNETCORE_ENVIRONMENT` | `Production` (logs JSON) o `Development` (logs legibles, más detalle) |
 | `ADMIN_EMAIL` | Correo del administrador inicial |
 | `JWT_SECRET` | Firma de los tokens y de los enlaces de asistencia (mínimo 32 caracteres) |
 | `DEFAULT_TIME_ZONE` | Zona horaria IANA de las campañas nuevas (cada campaña puede cambiarla en sus ajustes) |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_ADDRESS` | Correo saliente. Puerto `465` = TLS implícito, `587` = STARTTLS (se detecta por el puerto). El remitente debe estar autorizado para la cuenta |
-| `CA_BUNDLE_HOST_PATH` | Fichero PEM del host con tu CA propia, montado en el contenedor como `/certs/ca.pem` (deja el bundle del sistema si no tienes CA propia) |
+| `CA_BUNDLE_HOST_PATH`, `SSL_CERT_FILE` | Fichero PEM del host con tu CA propia y la ruta donde se monta en el contenedor, a la que apunta `SSL_CERT_FILE` (deja el bundle del sistema si no tienes CA propia) |
 
 ### Ajustes opcionales
 
@@ -94,7 +96,7 @@ el fichero y apuntar la variable:
 CA_BUNDLE_HOST_PATH=/ruta/a/tu/ca.pem
 ```
 
-El Compose lo monta como `/certs/ca.pem` y apunta `SSL_CERT_FILE` a él.
+El Compose lo monta en la ruta de `SSL_CERT_FILE`.
 
 Alternativa con directorio: `SSL_CERT_DIR=/certs` con los PEM procesados por `openssl rehash /certs`
 (los nombres deben ser los hashes que genera ese comando). Nunca se desactiva la validación del

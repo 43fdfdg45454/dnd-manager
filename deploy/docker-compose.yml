@@ -1,6 +1,6 @@
 name: dnd-companion
 
-# Las variables se definen en .env (copia de .env.sample). Sin valores por defecto a propósito.
+# Toda la configuración viene de .env (copia de .env.sample): sin valores fijos ni por defecto aquí.
 # Ajustes menos habituales (nivel de log, límite de subida, recordatorios, seguridad SMTP...) tienen
 # un valor razonable dentro de la imagen; se pueden añadir aquí como variables de entorno si hace falta
 # (ver deploy/README.md, "Ajustes opcionales").
@@ -10,13 +10,13 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: dnd
-      POSTGRES_USER: dnd
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dnd -d dnd"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,9 +28,9 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__Default: Host=postgres;Port=5432;Database=dnd;Username=dnd;Password=${POSTGRES_PASSWORD}
-      Database__AutoMigrate: "true"
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Database__AutoMigrate: ${DB_AUTO_MIGRATE}
       App__InitialAdminEmail: ${ADMIN_EMAIL}
       App__DefaultTimeZone: ${DEFAULT_TIME_ZONE}
       Jwt__Secret: ${JWT_SECRET}
@@ -40,12 +40,12 @@ services:
       Smtp__Password: ${SMTP_PASSWORD}
       Smtp__FromAddress: ${SMTP_FROM_ADDRESS}
       # CA propia para el SMTP u otras conexiones TLS salientes (OpenSSL la carga junto a las públicas).
-      SSL_CERT_FILE: /certs/ca.pem
+      SSL_CERT_FILE: ${SSL_CERT_FILE}
     ports:
       - "${API_BIND}:${API_PORT}:8080"
     volumes:
       - files:/data/files
-      - ${CA_BUNDLE_HOST_PATH}:/certs/ca.pem:ro
+      - ${CA_BUNDLE_HOST_PATH}:${SSL_CERT_FILE}:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health/ready || exit 1"]
       interval: 15s
