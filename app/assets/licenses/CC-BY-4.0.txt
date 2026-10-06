@@ -1,0 +1,5 @@
+Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+El contenido del System Reference Document 5.1 (SRD 5.1) se usa bajo esta licencia.
+Texto completo de la licencia: https://creativecommons.org/licenses/by/4.0/legalcode
+Resumen legible: https://creativecommons.org/licenses/by/4.0/

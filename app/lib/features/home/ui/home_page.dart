@@ -29,6 +29,7 @@ enum _HomeAction {
   adminUsers,
   clearCache,
   checkUpdates,
+  attributions,
   server,
   logout,
 }
@@ -90,6 +91,8 @@ class HomePage extends ConsumerWidget {
         _clearCache(context, ref);
       case _HomeAction.checkUpdates:
         checkForUpdatesFromMenu(context, ref);
+      case _HomeAction.attributions:
+        context.push(AppRoutes.attributions);
       case _HomeAction.server:
         context.push(AppRoutes.server);
       case _HomeAction.logout:
@@ -180,6 +183,11 @@ class HomePage extends ConsumerWidget {
                   key: Key('home-check-updates'),
                   value: _HomeAction.checkUpdates,
                   child: Text('Buscar actualizaciones'),
+                ),
+                const PopupMenuItem(
+                  key: Key('home-attribution'),
+                  value: _HomeAction.attributions,
+                  child: Text('Atribuciones'),
                 ),
                 const PopupMenuItem(
                   key: Key('home-server'),

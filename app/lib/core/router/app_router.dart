@@ -15,6 +15,7 @@ import '../../features/catalog/ui/compendium_page.dart';
 import '../../features/catalog/ui/item_detail_page.dart';
 import '../../features/catalog/ui/race_detail_page.dart';
 import '../../features/catalog/ui/spell_detail_page.dart';
+import '../../features/home/ui/attribution_page.dart';
 import '../../features/home/ui/home_page.dart';
 import '../../features/library/ui/library_page.dart';
 import '../../features/library/ui/pdf_viewer_page.dart';
@@ -38,6 +39,7 @@ abstract final class AppRoutes {
   static const forgotPassword = '/forgot-password';
   static const home = '/';
   static const adminUsers = '/admin/users';
+  static const attributions = '/attributions';
   static const campaignDetail = '/campaigns/:id';
   static const campaignChangeRequests = '/campaigns/:id/change-requests';
   static const campaignShop = '/campaigns/:id/shops/:shopId';
@@ -166,6 +168,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: AppRoutes.home, builder: (context, state) => const HomePage()),
       GoRoute(path: AppRoutes.adminUsers, builder: (context, state) => const AdminUsersPage()),
+      GoRoute(path: AppRoutes.attributions, builder: (context, state) => const AttributionPage()),
       GoRoute(
         path: AppRoutes.campaignDetail,
         builder: (context, state) => CampaignDetailPage(campaignId: state.pathParameters['id']!),

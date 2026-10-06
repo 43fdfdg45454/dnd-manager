@@ -63,6 +63,15 @@ void main() {
     expect(find.text('Biblioteca'), findsOneWidget);
   });
 
+  testWidgets('el menú de usuario da acceso a las Atribuciones', (tester) async {
+    await tester.pumpWidget(_app(user: makeUser()));
+    await tester.pumpAndSettle();
+    await _openUserMenu(tester);
+
+    expect(find.byKey(const Key('home-attribution')), findsOneWidget);
+    expect(find.text('Atribuciones'), findsOneWidget);
+  });
+
   testWidgets('un Admin ve el acceso a Usuarios', (tester) async {
     await tester.pumpWidget(
       _app(

@@ -1,0 +1,8 @@
+Creative Commons Attribution 3.0 Unported (CC BY 3.0)
+
+Los iconos de assets/icons/ (game-icons.net) se usan bajo esta licencia.
+Texto completo de la licencia: https://creativecommons.org/licenses/by/3.0/legalcode
+Resumen legible: https://creativecommons.org/licenses/by/3.0/
+
+Debe darse crédito a los autores (ver assets/icons/ATTRIBUTION.md), indicar el enlace a la licencia
+e indicar si se han hecho cambios (se eliminó el fondo negro de cada SVG).
