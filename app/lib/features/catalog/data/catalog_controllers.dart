@@ -147,6 +147,12 @@ final backgroundsProvider = FutureProvider.autoDispose<List<Background>>(
   retry: _noRetry,
 );
 
+/// Items of an equipment category (starting equipment picker).
+final equipmentCategoryProvider = FutureProvider.autoDispose.family<EquipmentCategory, String>(
+  (ref, index) => ref.watch(catalogRepositoryProvider).equipmentCategory(index),
+  retry: _noRetry,
+);
+
 final conditionsProvider = FutureProvider.autoDispose<List<Condition>>(
   (ref) => ref.watch(catalogRepositoryProvider).conditions(),
   retry: _noRetry,

@@ -4,7 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models.dart'
-    show Background, ClassDetail, ClassLevel, RaceDetail, Subrace;
+    show
+        Background,
+        ClassDetail,
+        ClassLevel,
+        EquipmentCategoryItem,
+        RaceDetail,
+        StartingEquipment,
+        StartingEquipmentChoice,
+        StartingGold,
+        StartingItem,
+        Subrace;
 import '../../items/data/inventory_repository.dart';
 import '../domain/character_format.dart';
 import 'characters_controller.dart';
@@ -55,6 +65,12 @@ const _defaultManual = <String, int>{
 /// One line of starting equipment.
 typedef WizardEquipment = ({String templateId, String name, int qty});
 
+/// How the character gets its starting equipment.
+enum EquipmentMode { kit, gold }
+
+/// Key of the pick [category] of option [option] of choice [choice].
+String categoryPickKey(int choice, int option, int category) => '$choice-$option-$category';
+
 /// Lower-case dash-separated skill index of a skill name ("Sleight of Hand" ->
 /// "sleight-of-hand"); an index stays as it is.
 String skillIndexOf(String name) => name.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '-');
@@ -79,6 +95,11 @@ class WizardState {
     this.skills = const {},
     this.languages = const {},
     this.equipment = const [],
+    this.equipmentMode = EquipmentMode.kit,
+    this.equipmentOptions = const {},
+    this.categoryPicks = const {},
+    this.goldRoll,
+    this.keepBackgroundEquipment = false,
     this.cantrips = const [],
     this.leveledSpells = const [],
     this.alignment,
@@ -117,6 +138,21 @@ class WizardState {
   /// Language names (SRD spelling).
   final Set<String> languages;
   final List<WizardEquipment> equipment;
+
+  /// Kit (class and background equipment) or starting gold.
+  final EquipmentMode equipmentMode;
+
+  /// Choice index (see [equipmentChoices]) -> selected option indexes.
+  final Map<int, Set<int>> equipmentOptions;
+
+  /// [categoryPickKey] -> items picked from that category.
+  final Map<String, List<EquipmentCategoryItem>> categoryPicks;
+
+  /// Result of the starting gold roll typed by the user.
+  final int? goldRoll;
+
+  /// In gold mode, keep the equipment of the background.
+  final bool keepBackgroundEquipment;
   final List<CharacterSpell> cantrips;
   final List<CharacterSpell> leveledSpells;
   final String? alignment;
@@ -213,6 +249,146 @@ class WizardState {
     for (final s in background?.skillProficiencies ?? const <String>[]) skillIndexOf(s),
   };
 
+  // -- Derived: starting equipment ------------------------------------------------
+
+  StartingEquipment? get classEquipment => classDetail?.startingEquipment;
+  StartingEquipment? get backgroundEquipment => background?.startingEquipment;
+
+  /// True when the class has structured equipment (otherwise the texts are shown).
+  bool get hasStructuredEquipment => classEquipment != null || backgroundEquipment != null;
+
+  /// Starting wealth of the class, when it offers it.
+  StartingGold? get startingGold => classEquipment?.gold;
+
+  int get _classChoiceCount => classEquipment?.choices.length ?? 0;
+
+  /// Choices of the class followed by those of the background; the position is
+  /// the choice index used by [equipmentOptions].
+  List<StartingEquipmentChoice> get allEquipmentChoices => [
+    ...?classEquipment?.choices,
+    ...?backgroundEquipment?.choices,
+  ];
+
+  /// True when the background equipment is part of the character.
+  bool get usesBackgroundEquipment => equipmentMode == EquipmentMode.kit || keepBackgroundEquipment;
+
+  /// Indexes (in [allEquipmentChoices]) of the choices that apply to the current mode.
+  List<int> get activeChoiceIndexes {
+    final classCount = _classChoiceCount;
+    final total = allEquipmentChoices.length;
+    return [
+      for (var i = 0; i < total; i++)
+        if (i < classCount ? equipmentMode == EquipmentMode.kit : usesBackgroundEquipment) i,
+    ];
+  }
+
+  /// True when [choice] has the right number of options and every category pick filled.
+  bool isChoiceComplete(int choice) {
+    final all = allEquipmentChoices;
+    if (choice < 0 || choice >= all.length) return false;
+    final def = all[choice];
+    final selected = equipmentOptions[choice] ?? const <int>{};
+    if (selected.length != def.choose) return false;
+    for (final o in selected) {
+      final categories = o < def.options.length ? def.options[o].categories : const [];
+      for (var k = 0; k < categories.length; k++) {
+        if ((categoryPicks[categoryPickKey(choice, o, k)]?.length ?? 0) != categories[k].choose) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  int get completedChoices => activeChoiceIndexes.where(isChoiceComplete).length;
+
+  /// Allowed range of the gold roll, or null when the dice are unknown.
+  ({int min, int max})? get goldRange {
+    final dice = startingGold?.parsed;
+    return dice == null ? null : (min: dice.count, max: dice.count * dice.sides);
+  }
+
+  /// Spanish error of the equipment step, or null.
+  String? get equipmentError {
+    if (!hasStructuredEquipment) return null;
+    if (equipmentMode == EquipmentMode.gold && startingGold != null) {
+      final range = goldRange;
+      final roll = goldRoll;
+      if (roll == null) return 'Escribe el resultado de la tirada de oro';
+      if (range != null && (roll < range.min || roll > range.max)) {
+        return 'La tirada va de ${range.min} a ${range.max}';
+      }
+    }
+    if (completedChoices != activeChoiceIndexes.length) {
+      return 'Completa todas las elecciones de equipo';
+    }
+    return null;
+  }
+
+  /// Gold of the rolled starting wealth in copper (gold mode only).
+  int get rolledCopper {
+    final gold = startingGold;
+    if (equipmentMode != EquipmentMode.gold || gold == null || goldRoll == null) return 0;
+    return (goldRoll! * gold.multiplier * 100).toInt();
+  }
+
+  /// Copper the new character starts with: fixed money of the background plus
+  /// the rolled wealth.
+  int get startingCopper =>
+      (usesBackgroundEquipment ? backgroundEquipment?.fixedGoldCp ?? 0 : 0) + rolledCopper;
+
+  /// Item lines of the starting kit (fixed items plus chosen options and
+  /// category items), merged by template; items without a template are skipped.
+  List<WizardEquipment> get startingLines {
+    final lines = <String, WizardEquipment>{};
+    void add(String? templateId, String name, int qty) {
+      if (templateId == null || qty <= 0) return;
+      final old = lines[templateId];
+      lines[templateId] = (templateId: templateId, name: name, qty: (old?.qty ?? 0) + qty);
+    }
+
+    if (equipmentMode == EquipmentMode.kit) {
+      for (final i in classEquipment?.fixed ?? const <StartingItem>[]) {
+        add(i.templateId, i.name, i.quantity);
+      }
+    }
+    if (usesBackgroundEquipment) {
+      for (final i in backgroundEquipment?.fixed ?? const <StartingItem>[]) {
+        add(i.templateId, i.name, i.quantity);
+      }
+    }
+    final all = allEquipmentChoices;
+    for (final c in activeChoiceIndexes) {
+      for (final o in [...?equipmentOptions[c]]..sort()) {
+        if (o >= all[c].options.length) continue;
+        final option = all[c].options[o];
+        for (final i in option.items) {
+          add(i.templateId, i.name, i.quantity);
+        }
+        for (var k = 0; k < option.categories.length; k++) {
+          for (final i in categoryPicks[categoryPickKey(c, o, k)] ?? const []) {
+            add(i.templateId, i.name, 1);
+          }
+        }
+      }
+    }
+    return lines.values.toList();
+  }
+
+  /// Every line to add to the inventory: the kit followed by the free list.
+  List<WizardEquipment> get allEquipment {
+    final merged = <String, WizardEquipment>{};
+    for (final line in [...startingLines, ...equipment]) {
+      final old = merged[line.templateId];
+      merged[line.templateId] = (
+        templateId: line.templateId,
+        name: line.name,
+        qty: (old?.qty ?? 0) + line.qty,
+      );
+    }
+    return merged.values.toList();
+  }
+
   /// Visible steps ("Hechizos" only when the class casts).
   List<WizardStep> get steps => [
     for (final s in WizardStep.values)
@@ -238,6 +414,11 @@ class WizardState {
     Set<String>? skills,
     Set<String>? languages,
     List<WizardEquipment>? equipment,
+    EquipmentMode? equipmentMode,
+    Map<int, Set<int>>? equipmentOptions,
+    Map<String, List<EquipmentCategoryItem>>? categoryPicks,
+    Object? goldRoll = _unset,
+    bool? keepBackgroundEquipment,
     List<CharacterSpell>? cantrips,
     List<CharacterSpell>? leveledSpells,
     Object? alignment = _unset,
@@ -265,6 +446,11 @@ class WizardState {
     skills: skills ?? this.skills,
     languages: languages ?? this.languages,
     equipment: equipment ?? this.equipment,
+    equipmentMode: equipmentMode ?? this.equipmentMode,
+    equipmentOptions: equipmentOptions ?? this.equipmentOptions,
+    categoryPicks: categoryPicks ?? this.categoryPicks,
+    goldRoll: identical(goldRoll, _unset) ? this.goldRoll : goldRoll as int?,
+    keepBackgroundEquipment: keepBackgroundEquipment ?? this.keepBackgroundEquipment,
     cantrips: cantrips ?? this.cantrips,
     leveledSpells: leveledSpells ?? this.leveledSpells,
     alignment: identical(alignment, _unset) ? this.alignment : alignment as String?,
@@ -308,7 +494,7 @@ class WizardState {
         }
         return null;
       case WizardStep.equipment:
-        return null;
+        return equipmentError;
       case WizardStep.spells:
         if (cantrips.length > maxCantrips) {
           return maxCantrips == 1 ? 'Como máximo 1 truco' : 'Como máximo $maxCantrips trucos';
@@ -359,9 +545,10 @@ class WizardState {
       classes: [SheetPatchClass(classIndex: classKey, subclassIndex: subclassIndex, level: 1)],
       proficiencies: [
         // Saving throws of the class, as the full sheet editor marks them.
-        for (final a in (classDetail?.savingThrows ?? const <String>[])
-            .map(abilityKeyOf)
-            .where(abilityKeys.contains))
+        for (final a
+            in (classDetail?.savingThrows ?? const <String>[])
+                .map(abilityKeyOf)
+                .where(abilityKeys.contains))
           CharacterProficiency(
             type: ProficiencyType.savingThrow,
             key: a,
@@ -393,6 +580,7 @@ class WizardState {
       ],
       overrides: const [],
       notes: notes.trim().isEmpty ? null : notes.trim(),
+      copperPieces: startingCopper > 0 ? startingCopper : null,
     );
   }
 }
@@ -447,6 +635,7 @@ class CharacterWizardController extends Notifier<WizardState> {
         s.classIndex != null ||
         s.backgroundIndex != null ||
         s.equipment.isNotEmpty ||
+        s.equipmentOptions.isNotEmpty ||
         s.notes.isNotEmpty ||
         s.alignment != null;
   }
@@ -491,6 +680,10 @@ class CharacterWizardController extends Notifier<WizardState> {
       skills: const {},
       cantrips: const [],
       leveledSpells: const [],
+      equipmentMode: EquipmentMode.kit,
+      equipmentOptions: const {},
+      categoryPicks: const {},
+      goldRoll: null,
       loadError: null,
     );
     try {
@@ -548,9 +741,21 @@ class CharacterWizardController extends Notifier<WizardState> {
     final granted = {
       for (final s in background?.skillProficiencies ?? const <String>[]) skillIndexOf(s),
     };
+    // Selections of the previous background's choices are dropped; the class ones stay.
+    final classCount =
+        state.allEquipmentChoices.length - (state.backgroundEquipment?.choices.length ?? 0);
     state = state.copyWith(
       backgroundIndex: background?.index,
       background: background,
+      keepBackgroundEquipment: false,
+      equipmentOptions: {
+        for (final e in state.equipmentOptions.entries)
+          if (e.key < classCount) e.key: e.value,
+      },
+      categoryPicks: {
+        for (final e in state.categoryPicks.entries)
+          if (int.parse(e.key.split('-').first) < classCount) e.key: e.value,
+      },
       skills: {
         for (final s in state.skills)
           if (!granted.contains(s)) s,
@@ -575,6 +780,53 @@ class CharacterWizardController extends Notifier<WizardState> {
   }
 
   // -- Step 6: equipment ---------------------------------------------------------
+
+  void setEquipmentMode(EquipmentMode mode) {
+    if (mode == EquipmentMode.gold && state.startingGold == null) return;
+    state = state.copyWith(equipmentMode: mode);
+  }
+
+  /// Selects option [option] of [choice]. With `choose` 1 it replaces the
+  /// previous option; with more it toggles, up to the limit.
+  void selectEquipmentOption(int choice, int option) {
+    final all = state.allEquipmentChoices;
+    if (choice < 0 || choice >= all.length) return;
+    final choose = all[choice].choose;
+    final current = {...?state.equipmentOptions[choice]};
+    if (choose <= 1) {
+      current
+        ..clear()
+        ..add(option);
+    } else if (!current.remove(option)) {
+      if (current.length >= choose) return;
+      current.add(option);
+    }
+    state = state.copyWith(equipmentOptions: {...state.equipmentOptions, choice: current});
+  }
+
+  /// Toggles [item] in the category pick [key]; at the limit it replaces the
+  /// pick when only one item is allowed and is ignored otherwise.
+  void toggleCategoryItem(String key, int limit, EquipmentCategoryItem item) {
+    final picks = [...?state.categoryPicks[key]];
+    final i = picks.indexWhere((e) => e.templateId == item.templateId);
+    if (i >= 0) {
+      picks.removeAt(i);
+    } else if (picks.length < limit) {
+      picks.add(item);
+    } else if (limit == 1) {
+      picks
+        ..clear()
+        ..add(item);
+    } else {
+      return;
+    }
+    state = state.copyWith(categoryPicks: {...state.categoryPicks, key: picks});
+  }
+
+  void setGoldRoll(int? roll) => state = state.copyWith(goldRoll: roll);
+
+  void setKeepBackgroundEquipment(bool value) =>
+      state = state.copyWith(keepBackgroundEquipment: value);
 
   void addEquipment(String templateId, String name) {
     final lines = [...state.equipment];
@@ -651,8 +903,9 @@ class CharacterWizardController extends Notifier<WizardState> {
       await characters.patchSheet(id, s.toPatch());
       _sheetSaved = true;
     }
-    while (_itemsAdded < s.equipment.length) {
-      final line = s.equipment[_itemsAdded];
+    final lines = s.allEquipment;
+    while (_itemsAdded < lines.length) {
+      final line = lines[_itemsAdded];
       await inventory.add(id, templateId: line.templateId, quantity: line.qty);
       _itemsAdded++;
     }

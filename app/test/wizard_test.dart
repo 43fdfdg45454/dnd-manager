@@ -20,7 +20,56 @@ const _skillsOfClass = SkillChoices(
   from: ['arcana', 'history', 'insight', 'investigation', 'medicine', 'religion'],
 );
 
-FakeCatalogRepository _catalog() => FakeCatalogRepository(
+const _fighterEquipment = StartingEquipment(
+  fixed: [
+    StartingItem(
+      item: 'explorers-pack',
+      templateId: 'explorers-pack',
+      name: "Explorer's Pack",
+      contents: [StartingItem(item: 'rope', templateId: 'rope', name: 'Rope', quantity: 1)],
+    ),
+    StartingItem(item: 'dagger', templateId: 'dagger', name: 'Dagger', quantity: 2),
+  ],
+  choices: [
+    StartingEquipmentChoice(
+      description: '(a) chain mail or (b) leather armor',
+      options: [
+        StartingEquipmentOption(
+          label: 'Chain mail',
+          items: [StartingItem(item: 'chain-mail', templateId: 'chain-mail', name: 'Chain Mail')],
+        ),
+        StartingEquipmentOption(
+          label: 'Leather armor',
+          items: [StartingItem(item: 'leather', templateId: 'leather', name: 'Leather Armor')],
+        ),
+      ],
+    ),
+    StartingEquipmentChoice(
+      description: '(a) a martial weapon and a shield or (b) two martial weapons',
+      options: [
+        StartingEquipmentOption(
+          label: 'A martial weapon and a shield',
+          items: [StartingItem(item: 'shield', templateId: 'shield', name: 'Shield')],
+          categories: [StartingCategoryPick(category: 'martial-weapons', name: 'Martial Weapons')],
+        ),
+        StartingEquipmentOption(
+          label: 'Two martial weapons',
+          categories: [
+            StartingCategoryPick(category: 'martial-weapons', name: 'Martial Weapons', choose: 2),
+          ],
+        ),
+      ],
+    ),
+  ],
+  gold: StartingGold(dice: '5d4', multiplier: 10),
+);
+
+const _acolyteEquipment = StartingEquipment(
+  fixed: [StartingItem(item: 'holy-symbol', templateId: 'holy-symbol', name: 'Holy Symbol')],
+  fixedGoldCp: 1500,
+);
+
+FakeCatalogRepository _catalog({bool structured = false}) => FakeCatalogRepository(
   classList: const [
     ClassSummary(index: 'cleric', name: 'Cleric', hitDie: 8, isSpellcaster: true),
     ClassSummary(index: 'fighter', name: 'Fighter', hitDie: 10),
@@ -46,14 +95,15 @@ FakeCatalogRepository _catalog() => FakeCatalogRepository(
         ClassLevel(level: 1, cantripsKnown: 3, spellSlots: [2, 0, 0, 0, 0, 0, 0, 0, 0]),
       ],
     ),
-    'fighter': const ClassDetail(
+    'fighter': ClassDetail(
       index: 'fighter',
       name: 'Fighter',
       hitDie: 10,
-      savingThrows: ['str', 'con'],
-      skillChoices: SkillChoices(choose: 2, from: ['athletics', 'perception', 'survival']),
+      savingThrows: const ['str', 'con'],
+      skillChoices: const SkillChoices(choose: 2, from: ['athletics', 'perception', 'survival']),
       startingEquipmentText: 'Chain mail, a martial weapon and a shield.',
-      levels: [ClassLevel(level: 1)],
+      startingEquipment: structured ? _fighterEquipment : null,
+      levels: const [ClassLevel(level: 1)],
     ),
     'wizard': const ClassDetail(
       index: 'wizard',
@@ -107,14 +157,26 @@ FakeCatalogRepository _catalog() => FakeCatalogRepository(
       languages: ['Common'],
     ),
   },
-  backgroundList: const [
+  backgroundList: [
     Background(
       index: 'acolyte',
       name: 'Acolyte',
-      skillProficiencies: ['Insight', 'Religion'],
+      skillProficiencies: const ['Insight', 'Religion'],
       startingEquipmentText: 'A holy symbol and a prayer book.',
+      startingEquipment: structured ? _acolyteEquipment : null,
     ),
   ],
+  equipmentCategories: const {
+    'martial-weapons': EquipmentCategory(
+      index: 'martial-weapons',
+      name: 'Martial Weapons',
+      items: [
+        EquipmentCategoryItem(templateId: 'battleaxe', index: 'battleaxe', name: 'Battleaxe'),
+        EquipmentCategoryItem(templateId: 'halberd', index: 'halberd', name: 'Halberd'),
+        EquipmentCategoryItem(templateId: 'longsword', index: 'longsword', name: 'Longsword'),
+      ],
+    ),
+  },
   spellList: [
     makeSpell(index: 'fire-bolt', name: 'Fire Bolt', level: 0),
     makeSpell(index: 'light', name: 'Light', level: 0),
@@ -139,6 +201,7 @@ class _Setup {
 
 Future<_Setup> _pump(
   WidgetTester tester, {
+  bool structured = false,
   CampaignRole role = CampaignRole.player,
   String location = '/campaigns/c1/characters/new',
 }) async {
@@ -151,7 +214,7 @@ Future<_Setup> _pump(
       campaigns: FakeCampaignsRepository(campaigns: [makeCampaign(myRole: role)]),
       characters: characters,
       inventory: inventory,
-      catalog: _catalog(),
+      catalog: _catalog(structured: structured),
       campaignItems: FakeCampaignItemsRepository(
         srd: [
           makeItem(id: 'dagger', name: 'Dagger', costCp: 200),
@@ -197,6 +260,8 @@ Future<void> _toBackground(WidgetTester tester, {String classIndex = 'wizard'}) 
   await _plus(tester, 'con', 5); // 13 -> 5 points
   await _next(tester);
 }
+
+const _args = (campaignId: 'c1', ownerUserId: null);
 
 String _text(WidgetTester tester, String key) => tester.widget<Text>(find.byKey(Key(key))).data!;
 
@@ -586,6 +651,177 @@ void main() {
       await _tap(tester, find.byKey(const Key('wizard-submit')));
       expect(setup.characters.created, hasLength(1));
       expect(locationOf(setup.router), AppRoutes.character('new1'));
+    });
+  });
+
+  group('equipo inicial estructurado', () {
+    Future<_Setup> toEquipment(WidgetTester tester) async {
+      final setup = await _pump(tester, structured: true);
+      await _toBackground(tester, classIndex: 'fighter');
+      await _tap(tester, find.byKey(const Key('wizard-background')));
+      await _tap(tester, find.text('Acolyte').last);
+      await _tap(tester, find.byKey(const Key('skill-athletics')));
+      await _tap(tester, find.byKey(const Key('skill-perception')));
+      await _next(tester);
+      expect(find.byKey(const Key('step-equipment')), findsOneWidget);
+      return setup;
+    }
+
+    Future<void> pickTwoWeapons(WidgetTester tester) async {
+      await _tap(tester, find.byKey(const Key('equipment-option-1-1')));
+      expect(find.byKey(const Key('equipment-category-picker')), findsOneWidget);
+      await _tap(tester, find.byKey(const Key('equipment-category-item-longsword')));
+      await _tap(tester, find.byKey(const Key('equipment-category-item-battleaxe')));
+      await _tap(tester, find.byKey(const Key('equipment-category-done')));
+    }
+
+    Future<void> toReview(WidgetTester tester) async {
+      await _next(tester);
+      expect(find.byKey(const Key('step-review')), findsOneWidget);
+    }
+
+    testWidgets('el modo equipo bloquea hasta completar todas las elecciones', (tester) async {
+      await toEquipment(tester);
+      expect(find.text('Incluido'), findsOneWidget);
+      expect(find.text('2 × Dagger'), findsOneWidget);
+      expect(find.text('Holy Symbol'), findsOneWidget);
+      expect(find.text('Elecciones 0 de 2'), findsOneWidget);
+
+      await _next(tester);
+      expect(find.text('Completa todas las elecciones de equipo'), findsOneWidget);
+
+      await _tap(tester, find.byKey(const Key('equipment-option-0-0')));
+      expect(find.text('Elecciones 1 de 2'), findsOneWidget);
+      await _next(tester);
+      expect(find.byKey(const Key('step-equipment')), findsOneWidget);
+
+      await pickTwoWeapons(tester);
+      expect(find.text('Elecciones 2 de 2'), findsOneWidget);
+      await toReview(tester);
+    });
+
+    testWidgets('el selector de categoría exige exactamente 2 armas marciales', (tester) async {
+      final setup = await toEquipment(tester);
+      await _tap(tester, find.byKey(const Key('equipment-option-1-1')));
+      await _tap(tester, find.byKey(const Key('equipment-category-item-longsword')));
+      expect(find.text('Elige 2: 1 de 2'), findsOneWidget);
+      await _tap(tester, find.byKey(const Key('equipment-category-item-battleaxe')));
+      // A third one is ignored.
+      await _tap(tester, find.byKey(const Key('equipment-category-item-halberd')));
+      expect(find.text('Elige 2: 2 de 2'), findsOneWidget);
+      await _tap(tester, find.byKey(const Key('equipment-category-done')));
+
+      final state = setup.container.read(characterWizardControllerProvider(_args));
+      expect(state.categoryPicks['1-1-0']!.map((e) => e.templateId), ['longsword', 'battleaxe']);
+      expect(state.isChoiceComplete(1), isTrue);
+    });
+
+    testWidgets('el contenido de un paquete se despliega', (tester) async {
+      await toEquipment(tester);
+      expect(find.text('Rope'), findsNothing);
+      await _tap(tester, find.byKey(const Key('equipment-fixed-explorers-pack')));
+      expect(find.text('Rope'), findsOneWidget);
+    });
+
+    testWidgets('el oro inicial valida el rango y muestra la vista previa', (tester) async {
+      await toEquipment(tester);
+      await _tap(tester, find.byKey(const Key('equipment-mode-gold')));
+      expect(find.text('Tira 5d4 y escribe el resultado'), findsOneWidget);
+      expect(find.byKey(const Key('equipment-option-0-0')), findsNothing);
+
+      await _next(tester);
+      expect(find.text('Escribe el resultado de la tirada de oro'), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('equipment-gold-roll')), '4');
+      await tester.pumpAndSettle();
+      expect(find.text('La tirada va de 5 a 20'), findsWidgets);
+      expect(find.byKey(const Key('equipment-gold-preview')), findsNothing);
+      await _next(tester);
+      expect(find.byKey(const Key('step-equipment')), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('equipment-gold-roll')), '21');
+      await tester.pumpAndSettle();
+      expect(find.text('La tirada va de 5 a 20'), findsWidgets);
+
+      await tester.enterText(find.byKey(const Key('equipment-gold-roll')), '12');
+      await tester.pumpAndSettle();
+      expect(_text(tester, 'equipment-gold-preview'), '× 10 = 120 po');
+      expect(
+        tester.widget<CheckboxListTile>(find.byKey(const Key('equipment-keep-background'))).value,
+        isFalse,
+      );
+      await toReview(tester);
+    });
+
+    testWidgets('envío en modo equipo: objetos y oro fijo del trasfondo', (tester) async {
+      final setup = await toEquipment(tester);
+      await _tap(tester, find.byKey(const Key('equipment-option-0-0')));
+      await pickTwoWeapons(tester);
+      await toReview(tester);
+      expect(find.text('Oro inicial: 15 po'), findsOneWidget);
+      await _tap(tester, find.byKey(const Key('wizard-submit')));
+
+      expect(setup.inventory.added.map((a) => (a.templateId, a.quantity)).toList(), [
+        ('explorers-pack', 1),
+        ('dagger', 2),
+        ('holy-symbol', 1),
+        ('chain-mail', 1),
+        ('longsword', 1),
+        ('battleaxe', 1),
+      ]);
+      expect(setup.characters.patches.single.copperPieces, 1500);
+    });
+
+    testWidgets('envío en modo oro sin conservar el trasfondo', (tester) async {
+      final setup = await toEquipment(tester);
+      await _tap(tester, find.byKey(const Key('equipment-mode-gold')));
+      await tester.enterText(find.byKey(const Key('equipment-gold-roll')), '12');
+      await tester.pumpAndSettle();
+      await toReview(tester);
+      await _tap(tester, find.byKey(const Key('wizard-submit')));
+
+      expect(setup.inventory.added, isEmpty);
+      expect(setup.characters.patches.single.copperPieces, 12000);
+    });
+
+    testWidgets('envío en modo oro conservando el equipo del trasfondo', (tester) async {
+      final setup = await toEquipment(tester);
+      await _tap(tester, find.byKey(const Key('equipment-mode-gold')));
+      await tester.enterText(find.byKey(const Key('equipment-gold-roll')), '12');
+      await tester.pumpAndSettle();
+      await _tap(tester, find.byKey(const Key('equipment-keep-background')));
+      await toReview(tester);
+      await _tap(tester, find.byKey(const Key('wizard-submit')));
+
+      expect(setup.inventory.added.map((a) => (a.templateId, a.quantity)).toList(), [
+        ('holy-symbol', 1),
+      ]);
+      expect(setup.characters.patches.single.copperPieces, 13500);
+    });
+
+    testWidgets('cambiar de clase reinicia las elecciones de equipo', (tester) async {
+      final setup = await toEquipment(tester);
+      await _tap(tester, find.byKey(const Key('equipment-option-0-0')));
+      final controller = setup.container.read(characterWizardControllerProvider(_args).notifier);
+      expect(controller.state.equipmentOptions, isNotEmpty);
+
+      await controller.selectClass('wizard');
+      expect(controller.state.equipmentOptions, isEmpty);
+      expect(controller.state.categoryPicks, isEmpty);
+      expect(controller.state.goldRoll, isNull);
+    });
+
+    testWidgets('sin equipo estructurado se muestra el texto de siempre', (tester) async {
+      await _pump(tester);
+      await _toBackground(tester, classIndex: 'fighter');
+      await _tap(tester, find.byKey(const Key('skill-athletics')));
+      await _tap(tester, find.byKey(const Key('skill-perception')));
+      await _next(tester);
+
+      expect(find.byKey(const Key('wizard-class-equipment')), findsOneWidget);
+      expect(find.byKey(const Key('equipment-mode-kit')), findsNothing);
+      await _next(tester);
+      expect(find.byKey(const Key('step-review')), findsOneWidget);
     });
   });
 

@@ -115,8 +115,9 @@ class _ReviewStepState extends ConsumerState<ReviewStep> {
             'Idiomas: ${state.languages.map(languageLabel).join(', ')}',
         ]),
         section(WizardStep.equipment, [
-          if (state.equipment.isEmpty) 'Sin equipo inicial',
-          for (final e in state.equipment) '${e.qty} × ${e.name}',
+          if (state.allEquipment.isEmpty && state.startingCopper == 0) 'Sin equipo inicial',
+          for (final e in state.allEquipment) '${e.qty} × ${e.name}',
+          if (state.startingCopper > 0) 'Oro inicial: ${copperToGoldText(state.startingCopper)} po',
         ]),
         if (steps.contains(WizardStep.spells))
           section(WizardStep.spells, [

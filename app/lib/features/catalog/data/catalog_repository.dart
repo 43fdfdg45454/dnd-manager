@@ -100,6 +100,9 @@ class CatalogRepository {
 
   Future<List<Background>> backgrounds() => _list('backgrounds', Background.fromJson);
 
+  Future<EquipmentCategory> equipmentCategory(String index) =>
+      _one('equipment-categories/${Uri.encodeComponent(index)}', EquipmentCategory.fromJson);
+
   Future<Feature> feature(String index) =>
       _one('features/${Uri.encodeComponent(index)}', Feature.fromJson);
 }

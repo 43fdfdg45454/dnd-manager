@@ -10,6 +10,7 @@ import '../../../../core/ui/offline_widgets.dart';
 import '../../data/character_wizard_controller.dart';
 import 'step_abilities.dart';
 import 'step_basics.dart';
+import 'step_equipment.dart';
 import 'step_proficiencies.dart';
 import 'step_review.dart';
 import 'step_spells.dart';

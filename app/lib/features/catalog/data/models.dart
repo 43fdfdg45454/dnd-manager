@@ -378,6 +378,7 @@ class ClassDetail extends ClassSummary {
     this.proficiencies = const [],
     this.subclassFlavor,
     this.startingEquipmentText,
+    this.startingEquipment,
     this.skillChoices = const SkillChoices(),
     this.levels = const [],
     this.subclasses = const [],
@@ -412,6 +413,7 @@ class ClassDetail extends ClassSummary {
       proficiencies: _nameList(json['proficiencyNames'] ?? json['proficiencies']),
       subclassFlavor: _strOrNull(json['subclassFlavor']),
       startingEquipmentText: _strOrNull(json['startingEquipmentText']),
+      startingEquipment: _map(json['startingEquipment']).let(StartingEquipment.fromJson),
       skillChoices: _map(json['skillChoices']).let(SkillChoices.fromJson) ?? const SkillChoices(),
       levels: levels,
       subclasses: _objects(json['subclasses'], Subclass.fromJson),
@@ -426,6 +428,9 @@ class ClassDetail extends ClassSummary {
   final List<String> proficiencies;
   final String? subclassFlavor;
   final String? startingEquipmentText;
+
+  /// Structured equipment; null when the server has none (use the text).
+  final StartingEquipment? startingEquipment;
   final SkillChoices skillChoices;
   final List<ClassLevel> levels;
   final List<Subclass> subclasses;
@@ -937,6 +942,7 @@ class Background {
     this.featureDescription = const [],
     this.skillProficiencies = const [],
     this.startingEquipmentText,
+    this.startingEquipment,
     this.source,
   });
 
@@ -947,6 +953,7 @@ class Background {
     featureDescription: _strList(json['featureDescription']),
     skillProficiencies: _nameList(json['skillProficiencies']),
     startingEquipmentText: _strOrNull(json['startingEquipmentText']),
+    startingEquipment: _map(json['startingEquipment']).let(StartingEquipment.fromJson),
     source: _strOrNull(json['source']),
   );
 
@@ -959,4 +966,162 @@ class Background {
   final List<String> featureDescription;
   final List<String> skillProficiencies;
   final String? startingEquipmentText;
+  final StartingEquipment? startingEquipment;
+}
+
+// ---------------------------------------------------------------------------
+// Structured starting equipment
+// ---------------------------------------------------------------------------
+
+/// An item of starting equipment. [templateId] is null when the item does not
+/// resolve against the catalog (it cannot be added to the inventory).
+class StartingItem {
+  const StartingItem({
+    required this.item,
+    this.templateId,
+    required this.name,
+    this.quantity = 1,
+    this.contents,
+  });
+
+  factory StartingItem.fromJson(Map<String, dynamic> json) {
+    final contents = _objects(json['contents'], StartingItem.fromJson);
+    return StartingItem(
+      item: _str(json['item']),
+      templateId: _strOrNull(json['templateId']),
+      name: _str(json['name'], _str(json['item'])),
+      quantity: _int(json['quantity']) ?? 1,
+      contents: contents.isEmpty ? null : contents,
+    );
+  }
+
+  final String item;
+  final String? templateId;
+  final String name;
+  final int quantity;
+
+  /// What an equipment pack contains, when known.
+  final List<StartingItem>? contents;
+}
+
+/// "Any martial weapon": [choose] items of the equipment category [category].
+class StartingCategoryPick {
+  const StartingCategoryPick({required this.category, required this.name, this.choose = 1});
+
+  factory StartingCategoryPick.fromJson(Map<String, dynamic> json) => StartingCategoryPick(
+    category: _str(json['category']),
+    name: _str(json['name'], _str(json['category'])),
+    choose: _int(json['choose']) ?? 1,
+  );
+
+  final String category;
+  final String name;
+  final int choose;
+}
+
+class StartingEquipmentOption {
+  const StartingEquipmentOption({
+    required this.label,
+    this.items = const [],
+    this.categories = const [],
+  });
+
+  factory StartingEquipmentOption.fromJson(Map<String, dynamic> json) => StartingEquipmentOption(
+    label: _str(json['label']),
+    items: _objects(json['items'], StartingItem.fromJson),
+    categories: _objects(json['categories'], StartingCategoryPick.fromJson),
+  );
+
+  final String label;
+  final List<StartingItem> items;
+  final List<StartingCategoryPick> categories;
+}
+
+/// Pick [choose] of [options].
+class StartingEquipmentChoice {
+  const StartingEquipmentChoice({
+    required this.description,
+    this.choose = 1,
+    this.options = const [],
+  });
+
+  factory StartingEquipmentChoice.fromJson(Map<String, dynamic> json) => StartingEquipmentChoice(
+    description: _str(json['description']),
+    choose: _int(json['choose']) ?? 1,
+    options: _objects(json['options'], StartingEquipmentOption.fromJson),
+  );
+
+  final String description;
+  final int choose;
+  final List<StartingEquipmentOption> options;
+}
+
+/// Alternative starting wealth: roll [dice] ("5d4") and multiply by [multiplier] gp.
+class StartingGold {
+  const StartingGold({required this.dice, this.multiplier = 1});
+
+  factory StartingGold.fromJson(Map<String, dynamic> json) =>
+      StartingGold(dice: _str(json['dice']), multiplier: _int(json['multiplier']) ?? 1);
+
+  final String dice;
+  final int multiplier;
+
+  /// Number of dice and sides of [dice], or null when it is not "NdS".
+  ({int count, int sides})? get parsed {
+    final m = RegExp(r'^\s*(\d+)\s*d\s*(\d+)\s*$', caseSensitive: false).firstMatch(dice);
+    if (m == null) return null;
+    final count = int.parse(m.group(1)!);
+    final sides = int.parse(m.group(2)!);
+    return count > 0 && sides > 0 ? (count: count, sides: sides) : null;
+  }
+}
+
+class StartingEquipment {
+  const StartingEquipment({
+    this.fixed = const [],
+    this.choices = const [],
+    this.gold,
+    this.fixedGoldCp,
+  });
+
+  factory StartingEquipment.fromJson(Map<String, dynamic> json) => StartingEquipment(
+    fixed: _objects(json['fixed'], StartingItem.fromJson),
+    choices: _objects(json['choices'], StartingEquipmentChoice.fromJson),
+    gold: _map(json['gold']).let(StartingGold.fromJson),
+    fixedGoldCp: _int(json['fixedGoldCp']),
+  );
+
+  final List<StartingItem> fixed;
+  final List<StartingEquipmentChoice> choices;
+  final StartingGold? gold;
+  final int? fixedGoldCp;
+}
+
+class EquipmentCategoryItem {
+  const EquipmentCategoryItem({required this.templateId, required this.index, required this.name});
+
+  factory EquipmentCategoryItem.fromJson(Map<String, dynamic> json) => EquipmentCategoryItem(
+    templateId: _str(json['templateId']),
+    index: _str(json['index']),
+    name: _str(json['name'], _str(json['index'])),
+  );
+
+  final String templateId;
+  final String index;
+  final String name;
+}
+
+/// `GET /catalog/equipment-categories/{index}`.
+class EquipmentCategory {
+  const EquipmentCategory({required this.index, required this.name, this.items = const []});
+
+  factory EquipmentCategory.fromJson(Map<String, dynamic> json) => EquipmentCategory(
+    index: _str(json['index']),
+    name: _str(json['name'], _str(json['index'])),
+    items: _objects(json['items'], EquipmentCategoryItem.fromJson),
+  );
+
+  final String index;
+  final String name;
+  final List<EquipmentCategoryItem> items;
 }
