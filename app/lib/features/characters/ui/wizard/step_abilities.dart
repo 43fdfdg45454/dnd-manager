@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../catalog/domain/catalog_format.dart';
@@ -45,47 +46,79 @@ class AbilitiesStep extends ConsumerWidget {
             'Asigna ${standardArray.join(', ')} una sola vez cada valor.',
             style: theme.textTheme.bodyMedium,
           ),
-        const SizedBox(height: 4),
-        for (final key in abilityKeys)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            child: Row(
-              children: [
-                Expanded(flex: 3, child: Text(abilityLabel(key))),
-                switch (state.method) {
-                  AbilityMethod.pointBuy => _Stepper(
-                    keyPrefix: 'wizard-pb',
-                    abilityKey: key,
-                    value: state.pointBuyScores[key] ?? pointBuyMin,
-                    onMinus: state.pointBuyScores[key]! > pointBuyMin
-                        ? () => controller.changePointBuy(key, -1)
-                        : null,
-                    onPlus: _canRaise(state, key) ? () => controller.changePointBuy(key, 1) : null,
-                  ),
-                  AbilityMethod.manual => _Stepper(
-                    keyPrefix: 'wizard-manual',
-                    abilityKey: key,
-                    value: state.manualScores[key] ?? 10,
-                    onMinus: (state.manualScores[key] ?? 10) > 1
-                        ? () => controller.setManualScore(key, state.manualScores[key]! - 1)
-                        : null,
-                    onPlus: (state.manualScores[key] ?? 10) < 20
-                        ? () => controller.setManualScore(key, state.manualScores[key]! + 1)
-                        : null,
-                  ),
-                  AbilityMethod.standardArray => _ArrayPicker(
-                    abilityKey: key,
-                    state: state,
-                    onChanged: (value) => controller.assignArray(key, value),
-                  ),
-                },
-                Expanded(
-                  flex: 3,
-                  child: _FinalScore(state: state, abilityKey: key),
-                ),
-              ],
-            ),
+        if (state.method == AbilityMethod.rolled) ...[
+          Text(
+            'Tira 4d6 seis veces, descarta el dado menor de cada tirada y escribe los totales.',
+            key: const Key('roll-help'),
+            style: theme.textTheme.bodyMedium,
           ),
+          const SizedBox(height: 8),
+          _RollInputs(state: state, onChanged: controller.setRollInput),
+          const SizedBox(height: 8),
+          if (state.rollValues != null)
+            Text(
+              'Valores ordenados: ${state.rollValues!.join(', ')}. Asigna cada uno una sola vez.',
+              key: const Key('roll-sorted'),
+              style: theme.textTheme.bodyMedium,
+            ),
+        ],
+        const SizedBox(height: 4),
+        if (state.method != AbilityMethod.rolled || state.rollValues != null)
+          for (final key in abilityKeys)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                children: [
+                  Expanded(flex: 3, child: Text(abilityLabel(key))),
+                  switch (state.method) {
+                    AbilityMethod.pointBuy => _Stepper(
+                      keyPrefix: 'wizard-pb',
+                      abilityKey: key,
+                      value: state.pointBuyScores[key] ?? pointBuyMin,
+                      onMinus: state.pointBuyScores[key]! > pointBuyMin
+                          ? () => controller.changePointBuy(key, -1)
+                          : null,
+                      onPlus: _canRaise(state, key)
+                          ? () => controller.changePointBuy(key, 1)
+                          : null,
+                    ),
+                    AbilityMethod.manual => _Stepper(
+                      keyPrefix: 'wizard-manual',
+                      abilityKey: key,
+                      value: state.manualScores[key] ?? 10,
+                      onMinus: (state.manualScores[key] ?? 10) > 1
+                          ? () => controller.setManualScore(key, state.manualScores[key]! - 1)
+                          : null,
+                      onPlus: (state.manualScores[key] ?? 10) < 20
+                          ? () => controller.setManualScore(key, state.manualScores[key]! + 1)
+                          : null,
+                    ),
+                    AbilityMethod.standardArray => _ValuePicker(
+                      keyName: 'wizard-array-$key',
+                      values: standardArray,
+                      assigned: {
+                        for (final e in state.arrayScores.entries)
+                          e.key: standardArray.indexOf(e.value),
+                      },
+                      abilityKey: key,
+                      onChanged: (slot) =>
+                          controller.assignArray(key, slot == null ? null : standardArray[slot]),
+                    ),
+                    AbilityMethod.rolled => _ValuePicker(
+                      keyName: 'wizard-roll-$key',
+                      values: state.rollValues ?? const [],
+                      assigned: state.rollAssignment,
+                      abilityKey: key,
+                      onChanged: (slot) => controller.assignRoll(key, slot),
+                    ),
+                  },
+                  Expanded(
+                    flex: 3,
+                    child: _FinalScore(state: state, abilityKey: key),
+                  ),
+                ],
+              ),
+            ),
         if (state.racialBonuses.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -151,32 +184,80 @@ class _Stepper extends StatelessWidget {
   );
 }
 
-/// Dropdown of the standard array: a value taken by another ability is disabled.
-class _ArrayPicker extends StatelessWidget {
-  const _ArrayPicker({required this.abilityKey, required this.state, required this.onChanged});
+/// Dropdown over a list of values (standard array or sorted rolls). [assigned]
+/// maps ability key -> slot in [values]; a slot taken by another ability is
+/// disabled, so equal rolled values stay distinguishable.
+class _ValuePicker extends StatelessWidget {
+  const _ValuePicker({
+    required this.keyName,
+    required this.values,
+    required this.assigned,
+    required this.abilityKey,
+    required this.onChanged,
+  });
 
+  final String keyName;
+  final List<int> values;
+  final Map<String, int> assigned;
   final String abilityKey;
-  final WizardState state;
   final ValueChanged<int?> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final taken = {
-      for (final e in state.arrayScores.entries)
+      for (final e in assigned.entries)
         if (e.key != abilityKey) e.value,
     };
     return DropdownButton<int?>(
-      key: Key('wizard-array-$abilityKey'),
-      value: state.arrayScores[abilityKey],
+      key: Key(keyName),
+      value: assigned[abilityKey],
       hint: const Text('—'),
       items: [
         const DropdownMenuItem<int?>(value: null, child: Text('—')),
-        for (final v in standardArray)
-          DropdownMenuItem<int?>(value: v, enabled: !taken.contains(v), child: Text('$v')),
+        for (var i = 0; i < values.length; i++)
+          DropdownMenuItem<int?>(
+            key: Key('$keyName-slot-$i'),
+            value: i,
+            enabled: !taken.contains(i),
+            child: Text('${values[i]}'),
+          ),
       ],
       onChanged: onChanged,
     );
   }
+}
+
+/// Six numeric fields for the typed 4d6 totals with inline range validation.
+class _RollInputs extends StatelessWidget {
+  const _RollInputs({required this.state, required this.onChanged});
+
+  final WizardState state;
+  final void Function(int index, String text) onChanged;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      for (var i = 0; i < 6; i++)
+        SizedBox(
+          width: 88,
+          child: TextFormField(
+            key: Key('roll-score-$i'),
+            initialValue: state.rollInputs[i],
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: 'Tirada ${i + 1}',
+              errorText: state.rollInputs[i].isEmpty || parseRollScore(state.rollInputs[i]) != null
+                  ? null
+                  : '$rollMin a $rollMax',
+            ),
+            onChanged: (t) => onChanged(i, t),
+          ),
+        ),
+    ],
+  );
 }
 
 /// "→ 16 (+3)" with the racial bonus hint.

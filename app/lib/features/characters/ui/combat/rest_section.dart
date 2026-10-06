@@ -12,6 +12,7 @@ import '../../data/models.dart';
 import '../character_tabs.dart' show titleFromSpellIndex;
 import 'combat_state.dart';
 import 'combat_support.dart';
+import 'recovery_reminder.dart';
 import 'rest_celebration.dart';
 
 /// "Descansos". The DM (and the Owner) rests the character directly: "Descanso
@@ -143,6 +144,11 @@ class _RestSectionState extends ConsumerState<RestSection> {
       ref.read(rageControllerProvider(after.id).notifier).end();
     }
     if (changed) showRestCelebration(context, before.pendingRest!.kind);
+    if (changed &&
+        before.pendingRest!.kind == RestKind.short &&
+        showRecoveryReminder(context, ref, after)) {
+      return;
+    }
     showCombatMessage(
       context,
       changed ? 'Descanso aprobado' : 'La petición de descanso ya no está pendiente.',

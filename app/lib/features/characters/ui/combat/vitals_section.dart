@@ -574,6 +574,39 @@ class DeathSavesCard extends ConsumerWidget {
       ],
     );
 
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (c.hitPointsCurrent == 0 && c.deathSaveSuccesses < 3 && c.deathSaveFailures < 3)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Container(
+              key: const Key('death-save-banner'),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: context.tokens.blood.withValues(alpha: 0.18),
+                border: Border.all(color: context.tokens.blood),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.edit_note),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('Anota tu salvación contra muerte')),
+                ],
+              ),
+            ),
+          ),
+        _card(context, c, row),
+      ],
+    );
+  }
+
+  Widget _card(
+    BuildContext context,
+    CharacterDetail c,
+    Widget Function(String, String, int, Color, bool) row,
+  ) {
     return CombatCard(
       key: const Key('death-saves'),
       title: 'Salvaciones de muerte',

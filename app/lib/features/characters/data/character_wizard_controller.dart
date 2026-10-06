@@ -25,6 +25,7 @@ import 'models.dart';
 enum AbilityMethod {
   pointBuy('Compra por puntos'),
   standardArray('Matriz estándar'),
+  rolled('Tirada (4d6, descarta el menor)'),
   manual('Manual');
 
   const AbilityMethod(this.label);
@@ -34,6 +35,16 @@ enum AbilityMethod {
 
 /// The values of the standard array.
 const standardArray = <int>[15, 14, 13, 12, 10, 8];
+
+/// Range of a rolled score (4d6 dropping the lowest die).
+const rollMin = 3;
+const rollMax = 18;
+
+/// Parses a typed roll total; null when it is not a whole number in 3..18.
+int? parseRollScore(String text) {
+  final value = int.tryParse(text.trim());
+  return value != null && value >= rollMin && value <= rollMax ? value : null;
+}
 
 /// Steps of the creation wizard in order. [spells] only exists for classes that
 /// cast at level 1.
@@ -90,6 +101,8 @@ class WizardState {
     this.method = AbilityMethod.pointBuy,
     this.pointBuyScores = _defaultPointBuy,
     this.arrayScores = const {},
+    this.rollInputs = const ['', '', '', '', '', ''],
+    this.rollAssignment = const {},
     this.manualScores = _defaultManual,
     this.backgroundIndex,
     this.skills = const {},
@@ -129,6 +142,12 @@ class WizardState {
 
   /// Standard array assignment: ability key -> value (missing = not assigned).
   final Map<String, int> arrayScores;
+
+  /// Raw text of the six typed roll totals, in input order.
+  final List<String> rollInputs;
+
+  /// Rolled assignment: ability key -> slot of [rollValues] (each slot once).
+  final Map<String, int> rollAssignment;
   final Map<String, int> manualScores;
   final String? backgroundIndex;
 
@@ -174,8 +193,19 @@ class WizardState {
   Map<String, int> get abilities => switch (method) {
     AbilityMethod.pointBuy => pointBuyScores,
     AbilityMethod.standardArray => arrayScores,
+    AbilityMethod.rolled => {
+      for (final e in rollAssignment.entries)
+        if (rollValues != null) e.key: rollValues![e.value],
+    },
     AbilityMethod.manual => manualScores,
   };
+
+  /// The six typed rolls sorted high to low, or null until all six are valid.
+  List<int>? get rollValues {
+    final parsed = [for (final t in rollInputs) parseRollScore(t)];
+    if (parsed.any((v) => v == null)) return null;
+    return [for (final v in parsed) v!]..sort((a, b) => b.compareTo(a));
+  }
 
   /// Ability key -> racial bonus (race and subrace; empty when not applied).
   Map<String, int> get racialBonuses {
@@ -409,6 +439,8 @@ class WizardState {
     AbilityMethod? method,
     Map<String, int>? pointBuyScores,
     Map<String, int>? arrayScores,
+    List<String>? rollInputs,
+    Map<String, int>? rollAssignment,
     Map<String, int>? manualScores,
     Object? backgroundIndex = _unset,
     Set<String>? skills,
@@ -439,6 +471,8 @@ class WizardState {
     method: method ?? this.method,
     pointBuyScores: pointBuyScores ?? this.pointBuyScores,
     arrayScores: arrayScores ?? this.arrayScores,
+    rollInputs: rollInputs ?? this.rollInputs,
+    rollAssignment: rollAssignment ?? this.rollAssignment,
     manualScores: manualScores ?? this.manualScores,
     backgroundIndex: identical(backgroundIndex, _unset)
         ? this.backgroundIndex
@@ -519,6 +553,12 @@ class WizardState {
         return null;
       case AbilityMethod.standardArray:
         if (abilityKeys.any((k) => arrayScores[k] == null)) return 'Asigna las seis puntuaciones';
+        return null;
+      case AbilityMethod.rolled:
+        if (rollValues == null) return 'Escribe las seis tiradas (3 a 18)';
+        if (abilityKeys.any((k) => rollAssignment[k] == null)) {
+          return 'Asigna las seis puntuaciones';
+        }
         return null;
       case AbilityMethod.manual:
         if (abilityKeys.any((k) => (manualScores[k] ?? 0) < 1 || manualScores[k]! > 20)) {
@@ -730,6 +770,27 @@ class CharacterWizardController extends Notifier<WizardState> {
       scores[key] = value;
     }
     state = state.copyWith(arrayScores: scores);
+  }
+
+  /// Types roll total number [index]. Changing a total resets the assignment,
+  /// since the sorted slots move.
+  void setRollInput(int index, String text) {
+    final inputs = [...state.rollInputs];
+    inputs[index] = text;
+    state = state.copyWith(rollInputs: inputs, rollAssignment: const {});
+  }
+
+  /// Assigns slot [slot] of the sorted rolls to [key]; the slot leaves any
+  /// other ability that held it. A null [slot] clears the ability.
+  void assignRoll(String key, int? slot) {
+    final scores = {...state.rollAssignment};
+    if (slot == null) {
+      scores.remove(key);
+    } else {
+      scores.removeWhere((_, v) => v == slot);
+      scores[key] = slot;
+    }
+    state = state.copyWith(rollAssignment: scores);
   }
 
   void setManualScore(String key, int value) =>

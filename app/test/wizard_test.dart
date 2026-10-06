@@ -372,10 +372,7 @@ void main() {
       expect(find.byKey(const Key('wizard-background-skills')), findsOneWidget);
       expect(tester.widget<SelectionTile>(find.byKey(const Key('skill-insight'))).onTap, isNull);
       expect(tester.widget<SelectionTile>(find.byKey(const Key('skill-religion'))).onTap, isNull);
-      expect(
-        tester.widget<SelectionTile>(find.byKey(const Key('skill-arcana'))).onTap,
-        isNotNull,
-      );
+      expect(tester.widget<SelectionTile>(find.byKey(const Key('skill-arcana'))).onTap, isNotNull);
     });
 
     test('mensajes de trucos, hechizos y puntuaciones del estado', () {
@@ -480,6 +477,110 @@ void main() {
 
       final scores = container.read(characterWizardControllerProvider(args)).arrayScores;
       expect(scores, {'dex': 14, 'con': 15});
+    });
+  });
+
+  group('tirada de características', () {
+    Future<void> toAbilities(WidgetTester tester) async {
+      await _name(tester);
+      await _next(tester);
+      await _tap(tester, find.byKey(const Key('race-elf')));
+      await _tap(tester, find.byKey(const Key('subrace-high-elf')));
+      await _next(tester);
+      await _tap(tester, find.byKey(const Key('class-wizard')));
+      await _next(tester);
+      await _tap(tester, find.text('Tirada (4d6, descarta el menor)'));
+    }
+
+    Future<void> typeRolls(WidgetTester tester, List<String> values) async {
+      for (var i = 0; i < values.length; i++) {
+        await tester.enterText(find.byKey(Key('roll-score-$i')), values[i]);
+      }
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> assign(WidgetTester tester, String ability, int slot) async {
+      await _tap(tester, find.byKey(Key('wizard-roll-$ability')));
+      await _tap(tester, find.byKey(Key('wizard-roll-$ability-slot-$slot')).last);
+    }
+
+    testWidgets('valida el rango, ordena y exige asignar los seis valores', (tester) async {
+      await _pump(tester);
+      await toAbilities(tester);
+      expect(
+        find.text(
+          'Tira 4d6 seis veces, descarta el dado menor de cada tirada y escribe los totales.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('roll-score-5')), findsOneWidget);
+
+      await typeRolls(tester, ['19', '2', '8', '14', '10', '13']);
+      expect(find.text('3 a 18'), findsNWidgets(2));
+      expect(find.byKey(const Key('roll-sorted')), findsNothing);
+      await _next(tester);
+      expect(find.byKey(const Key('step-abilities')), findsOneWidget);
+      expect(find.text('Escribe las seis tiradas (3 a 18)'), findsOneWidget);
+
+      await typeRolls(tester, ['12', '15', '8', '14', '10', '13']);
+      expect(find.text('3 a 18'), findsNothing);
+      expect(
+        find.text('Valores ordenados: 15, 14, 13, 12, 10, 8. Asigna cada uno una sola vez.'),
+        findsOneWidget,
+      );
+
+      // Sin asignar no avanza.
+      await _next(tester);
+      expect(find.byKey(const Key('step-abilities')), findsOneWidget);
+      expect(find.text('Asigna las seis puntuaciones'), findsOneWidget);
+
+      await assign(tester, 'int', 0); // 15 (+1 alto elfo)
+      expect(_text(tester, 'wizard-final-int'), '16 (+3) · raza +1');
+      // El valor ya usado queda deshabilitado para las demás características.
+      await _tap(tester, find.byKey(const Key('wizard-roll-dex')));
+      final taken = tester.widget<DropdownMenuItem<int?>>(
+        find.byKey(const Key('wizard-roll-dex-slot-0')).last,
+      );
+      expect(taken.enabled, isFalse);
+      await _tap(tester, find.byKey(const Key('wizard-roll-dex-slot-1')).last); // 14 (+2 raza)
+      expect(_text(tester, 'wizard-final-dex'), '16 (+3) · raza +2');
+      await assign(tester, 'con', 2);
+      await assign(tester, 'wis', 3);
+      await assign(tester, 'cha', 4);
+      await _next(tester);
+      expect(find.byKey(const Key('step-abilities')), findsOneWidget);
+      await assign(tester, 'str', 5);
+
+      final state = ProviderScope.containerOf(
+        tester.element(find.byKey(const Key('step-abilities'))),
+      ).read(characterWizardControllerProvider(_args));
+      expect(state.abilities, {'int': 15, 'dex': 14, 'con': 13, 'wis': 12, 'cha': 10, 'str': 8});
+
+      await _next(tester);
+      expect(find.byKey(const Key('step-background')), findsOneWidget);
+    });
+
+    test('valores repetidos se asignan por separado y cambiar una tirada reinicia', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final controller = container.read(characterWizardControllerProvider(_args).notifier);
+      controller.setMethod(AbilityMethod.rolled);
+      for (final (i, v) in ['14', '14', '9', '9', '3', '18'].indexed) {
+        controller.setRollInput(i, v);
+      }
+      var state = container.read(characterWizardControllerProvider(_args));
+      expect(state.rollValues, [18, 14, 14, 9, 9, 3]);
+      controller.assignRoll('str', 1);
+      controller.assignRoll('dex', 2);
+      controller.assignRoll('con', 1);
+      state = container.read(characterWizardControllerProvider(_args));
+      expect(state.abilities, {'dex': 14, 'con': 14});
+      controller.setRollInput(0, '15');
+      state = container.read(characterWizardControllerProvider(_args));
+      expect(state.rollAssignment, isEmpty);
+      expect(parseRollScore('2'), isNull);
+      expect(parseRollScore('abc'), isNull);
+      expect(parseRollScore('18'), 18);
     });
   });
 

@@ -379,6 +379,30 @@ void main() {
       expect(find.byKey(const Key('hp-max-field')), findsNothing);
     });
 
+    testWidgets('a 0 PG un banner pide anotar la salvación y desaparece al estabilizarse o curar', (
+      tester,
+    ) async {
+      final alive = _repo();
+      await _pump(tester, characters: alive);
+      expect(find.byKey(const Key('death-save-banner')), findsNothing);
+
+      await tester.pumpWidget(const SizedBox());
+      final down = _repo(hp: 0, temp: 0);
+      await _pump(tester, characters: down);
+      expect(find.byKey(const Key('death-save-banner')), findsOneWidget);
+      expect(find.text('Anota tu salvación contra muerte'), findsOneWidget);
+      // El banner queda encima de la tarjeta de salvaciones.
+      expect(
+        tester.getBottomLeft(find.byKey(const Key('death-save-banner'))).dy,
+        lessThanOrEqualTo(tester.getTopLeft(find.byKey(const Key('death-saves'))).dy),
+      );
+      await _tap(tester, 'death-success-0');
+      await _tap(tester, 'death-success-1');
+      await _tap(tester, 'death-success-2');
+      expect(find.byKey(const Key('death-save-banner')), findsNothing);
+      expect(find.byKey(const Key('death-saves')), findsOneWidget);
+    });
+
     testWidgets('las salvaciones de muerte solo aparecen con 0 PG y se marcan al tocar', (
       tester,
     ) async {
