@@ -156,6 +156,15 @@ class Feature {
   final String? subclassIndex;
   final int level;
   final List<String> description;
+
+  Feature withLevel(int level) => Feature(
+    index: index,
+    name: name,
+    classIndex: classIndex,
+    subclassIndex: subclassIndex,
+    level: level,
+    description: description,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -273,6 +282,33 @@ class ClassLevel {
   );
 }
 
+/// The server nests a subclass' features under `levels[].features`; a flat
+/// `features` list is still accepted. Flattened and sorted by level, each
+/// feature carrying the level it is gained at.
+List<Feature> _subclassFeatures(Map<String, dynamic> json) {
+  final features = <Feature>[];
+  final levels = json['levels'];
+  if (levels is List) {
+    for (final entry in levels) {
+      final level = _map(entry);
+      if (level == null) continue;
+      final levelNumber = _int(level['level']) ?? 0;
+      for (final feature in _objects(level['features'], Feature.fromJson)) {
+        features.add(feature.level == 0 ? feature.withLevel(levelNumber) : feature);
+      }
+    }
+  }
+  if (features.isEmpty) features.addAll(_objects(json['features'], Feature.fromJson));
+  // Stable sort: List.sort is not guaranteed stable, so keep the original order
+  // as a tie breaker.
+  final order = {for (var i = 0; i < features.length; i++) features[i]: i};
+  features.sort((a, b) {
+    final byLevel = a.level.compareTo(b.level);
+    return byLevel != 0 ? byLevel : order[a]!.compareTo(order[b]!);
+  });
+  return features;
+}
+
 class Subclass {
   const Subclass({
     required this.index,
@@ -287,7 +323,7 @@ class Subclass {
     name: _str(json['name'], _str(json['index'])),
     flavor: _strOrNull(json['flavor']),
     description: _strList(json['description']),
-    features: _objects(json['features'], Feature.fromJson),
+    features: _subclassFeatures(json),
   );
 
   final String index;
@@ -592,6 +628,7 @@ class ItemSummary {
     this.requiresAttunement = false,
     this.costCp,
     this.weightLb,
+    this.source,
   });
 
   factory ItemSummary.fromJson(Map<String, dynamic> json) => ItemSummary(
@@ -604,6 +641,7 @@ class ItemSummary {
     requiresAttunement: _bool(json['requiresAttunement']),
     costCp: _int(json['costCp']),
     weightLb: _double(json['weightLb']),
+    source: _strOrNull(json['source']),
   );
 
   final String id;
@@ -613,6 +651,13 @@ class ItemSummary {
   final String? subcategory;
   final String? rarity;
   final bool requiresAttunement;
+
+  /// "srd" or "homebrew" (campaign item); null when the server does not say.
+  final String? source;
+
+  /// Whether the item belongs to the campaign (and can be edited), as opposed
+  /// to coming from the SRD.
+  bool get isHomebrew => source != 'srd';
 
   /// Cost in copper pieces; null when unknown.
   final int? costCp;

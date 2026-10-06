@@ -71,6 +71,54 @@ ClassDetail _wizardDetail() => ClassDetail(
   ],
 );
 
+/// A class whose JSON has the shape the server sends: subclass features nested
+/// under `levels[].features`.
+ClassDetail _fighterDetail() => ClassDetail.fromJson(_fighterJson);
+
+const _fighterJson = <String, dynamic>{
+  'index': 'fighter',
+  'name': 'Fighter',
+  'hitDie': 10,
+  'subclassFlavor': 'Martial Archetype',
+  'levels': <Object>[],
+  'subclasses': [
+    {
+      'index': 'champion',
+      'name': 'Champion',
+      'flavor': 'Martial Archetype',
+      'description': ['The archetypal Champion focuses on raw physical power.'],
+      'levels': [
+        {
+          'level': 3,
+          'features': [
+            {
+              'index': 'improved-critical',
+              'name': 'Improved Critical',
+              'classIndex': 'fighter',
+              'subclassIndex': 'champion',
+              'level': 3,
+              'description': ['Your weapon attacks score a critical hit on a 19 or 20.'],
+            },
+          ],
+        },
+        {
+          'level': 2,
+          'features': [
+            {
+              'index': 'bonus-proficiency',
+              'name': 'Bonus Proficiency',
+              'classIndex': 'fighter',
+              'subclassIndex': 'champion',
+              'level': 2,
+              'description': ['You gain proficiency in one skill.'],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
 Widget _scope(FakeCatalogRepository repository, Widget child) => ProviderScope(
   overrides: [catalogRepositoryProvider.overrideWithValue(repository)],
   child: child,
@@ -315,6 +363,31 @@ void main() {
       expect(find.text('You can regain some spell slots.'), findsOneWidget);
     });
 
+    testWidgets('la subclase muestra sus rasgos agrupados por nivel', (tester) async {
+      final repository = FakeCatalogRepository(classDetails: {'fighter': _fighterDetail()});
+      await tester.pumpWidget(
+        _scope(repository, const MaterialApp(home: ClassDetailPage(index: 'fighter'))),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('subclass-champion')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nivel 2'), findsOneWidget);
+      expect(find.text('Nivel 3'), findsOneWidget);
+      expect(find.text('Bonus Proficiency'), findsOneWidget);
+      expect(find.text('Improved Critical'), findsOneWidget);
+      // Ordered by level.
+      expect(
+        tester.getTopLeft(find.text('Nivel 2')).dy,
+        lessThan(tester.getTopLeft(find.text('Nivel 3')).dy),
+      );
+
+      await tester.tap(find.text('Bonus Proficiency'));
+      await tester.pumpAndSettle();
+      expect(find.text('You gain proficiency in one skill.'), findsOneWidget);
+    });
+
     testWidgets('el objeto muestra daño, propiedades, coste y peso', (tester) async {
       final repository = FakeCatalogRepository(
         itemDetails: {
@@ -362,6 +435,48 @@ void main() {
   });
 
   group('modelos', () {
+    test('la subclase lee los rasgos de levels[] con su nivel y ordenados', () {
+      final subclass = _fighterDetail().subclasses.single;
+
+      expect(subclass.name, 'Champion');
+      expect(subclass.features.map((f) => f.name), ['Bonus Proficiency', 'Improved Critical']);
+      expect(subclass.features.map((f) => f.level), [2, 3]);
+      expect(subclass.features.last.description, [
+        'Your weapon attacks score a critical hit on a 19 or 20.',
+      ]);
+    });
+
+    test('la subclase asigna el nivel del grupo al rasgo que no lo trae', () {
+      final subclass = Subclass.fromJson({
+        'index': 's',
+        'name': 'S',
+        'levels': [
+          {
+            'level': 7,
+            'features': [
+              {'index': 'f', 'name': 'F'},
+            ],
+          },
+        ],
+      });
+
+      expect(subclass.features.single.level, 7);
+    });
+
+    test('la subclase sigue aceptando features planos', () {
+      final subclass = Subclass.fromJson({
+        'index': 's',
+        'name': 'S',
+        'features': [
+          {'index': 'a', 'name': 'A', 'level': 6},
+          {'index': 'b', 'name': 'B'},
+        ],
+      });
+
+      expect(subclass.features.map((f) => f.index), ['b', 'a']);
+      expect(subclass.features.map((f) => f.level), [0, 6]);
+    });
+
     test('toleran campos ausentes o nulos', () {
       final spell = SpellDetail.fromJson({'index': 'x', 'name': null, 'level': null});
       expect(spell.level, 0);

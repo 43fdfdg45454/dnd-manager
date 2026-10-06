@@ -15,8 +15,8 @@ import 'item_feedback.dart';
 import 'item_fields_form.dart';
 import 'item_search_list.dart';
 
-/// "Objetos" tab of a campaign: the homebrew items with search. At least a DM
-/// creates, edits and deletes them.
+/// "Objetos" tab of a campaign: the SRD and homebrew items with search and a
+/// source toggle. At least a DM creates, edits and deletes the homebrew ones.
 class HomebrewTab extends ConsumerWidget {
   const HomebrewTab({super.key, required this.campaign});
 
@@ -60,20 +60,23 @@ class HomebrewTab extends ConsumerWidget {
           : null,
       body: ItemSearchList(
         campaignId: campaign.id,
-        initialSource: ItemSource.homebrew,
-        showSourceFilter: false,
+        initialSource: ItemSource.all,
+        showSourceFilter: true,
         onSelected: (item) => context.push(AppRoutes.item(item.id)),
+        // Only the campaign's own items can be edited; SRD items are read-only.
         trailingBuilder: isDm
-            ? (context, item) => PopupMenuButton<String>(
-                key: Key('homebrew-menu-${item.id}'),
-                onSelected: (value) => value == 'edit'
-                    ? _openForm(context, editing: item)
-                    : _delete(context, ref, item),
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'edit', child: Text('Editar')),
-                  PopupMenuItem(value: 'delete', child: Text('Borrar')),
-                ],
-              )
+            ? (context, item) => !item.isHomebrew
+                  ? null
+                  : PopupMenuButton<String>(
+                      key: Key('homebrew-menu-${item.id}'),
+                      onSelected: (value) => value == 'edit'
+                          ? _openForm(context, editing: item)
+                          : _delete(context, ref, item),
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(value: 'edit', child: Text('Editar')),
+                        PopupMenuItem(value: 'delete', child: Text('Borrar')),
+                      ],
+                    )
             : null,
       ),
     );

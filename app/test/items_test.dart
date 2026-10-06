@@ -815,6 +815,39 @@ void main() {
   });
 
   group('objetos de la campaña', () {
+    testWidgets('la pestaña lista los objetos SRD y de campaña con el conmutador visible', (
+      tester,
+    ) async {
+      final inventory = FakeInventoryRepository();
+      final items = FakeCampaignItemsRepository(
+        srd: [const ItemSummary(id: 'srd1', name: 'Dagger', category: 'Weapon', source: 'srd')],
+        homebrew: [
+          const ItemSummary(id: 'hb1', name: 'Amuleto', category: 'MagicItem', source: 'homebrew'),
+        ],
+      );
+      await _pumpApp(
+        tester,
+        location: '/campaigns/c1',
+        inventory: inventory,
+        campaignItems: items,
+        role: CampaignRole.dm,
+      );
+      await _tap(tester, find.byKey(const Key('tab-objects')));
+
+      expect(find.byKey(const Key('item-source')), findsOneWidget);
+      expect(items.sources.first, ItemSource.all);
+      expect(find.text('Dagger'), findsOneWidget);
+      expect(find.text('Amuleto'), findsOneWidget);
+      // SRD items are read-only: only the campaign's own item has the menu.
+      expect(find.byKey(const Key('homebrew-menu-srd1')), findsNothing);
+      expect(find.byKey(const Key('homebrew-menu-hb1')), findsOneWidget);
+
+      await _tap(tester, find.text('Campaña'));
+      expect(items.sources.last, ItemSource.homebrew);
+      expect(find.text('Dagger'), findsNothing);
+      expect(find.text('Amuleto'), findsOneWidget);
+    });
+
     testWidgets('el DM crea un objeto con el formulario avanzado', (tester) async {
       final inventory = FakeInventoryRepository();
       final items = FakeCampaignItemsRepository();

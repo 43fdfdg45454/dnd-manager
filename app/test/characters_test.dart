@@ -460,6 +460,51 @@ void main() {
   });
 
   group('editor de hoja', () {
+    const approvalNotice = 'Los cambios de un personaje activo se envían al DM para su aprobación.';
+
+    testWidgets('el aviso de aprobación se muestra a un jugador con personaje activo', (
+      tester,
+    ) async {
+      final repository = FakeCharactersRepository(
+        characters: [makeCharacterJson(status: 'Active')],
+      );
+      await _pumpApp(tester, characters: repository, location: '/characters/ch1/edit');
+
+      expect(find.byKey(const Key('editor-name')), findsOneWidget);
+      expect(find.text(approvalNotice), findsOneWidget);
+    });
+
+    testWidgets('el aviso de aprobación no aparece para el DM', (tester) async {
+      final repository = FakeCharactersRepository(
+        characters: [makeCharacterJson(status: 'Active')],
+        isDm: true,
+      );
+      await _pumpApp(
+        tester,
+        characters: repository,
+        location: '/characters/ch1/edit',
+        role: CampaignRole.dm,
+      );
+
+      expect(find.byKey(const Key('editor-name')), findsOneWidget);
+      expect(find.text(approvalNotice), findsNothing);
+    });
+
+    testWidgets('el aviso de aprobación no aparece para el Owner', (tester) async {
+      final repository = FakeCharactersRepository(
+        characters: [makeCharacterJson(status: 'Active')],
+        isDm: true,
+      );
+      await _pumpApp(
+        tester,
+        characters: repository,
+        location: '/characters/ch1/edit',
+        role: CampaignRole.owner,
+      );
+
+      expect(find.text(approvalNotice), findsNothing);
+    });
+
     testWidgets('guardar en un personaje Active muestra el envío al DM', (tester) async {
       final repository = FakeCharactersRepository(
         characters: [makeCharacterJson(status: 'Active')],

@@ -31,7 +31,7 @@ class ItemSearchList extends ConsumerStatefulWidget {
   final bool showSourceFilter;
 
   /// Optional widget at the end of each row (for example a menu).
-  final Widget Function(BuildContext context, ItemSummary item)? trailingBuilder;
+  final Widget? Function(BuildContext context, ItemSummary item)? trailingBuilder;
 
   @override
   ConsumerState<ItemSearchList> createState() => _ItemSearchListState();

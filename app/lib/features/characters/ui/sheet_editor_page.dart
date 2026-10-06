@@ -10,6 +10,7 @@ import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models.dart' show ClassSummary, titleFromIndex;
 import '../../catalog/domain/catalog_format.dart';
 import '../../catalog/ui/detail_widgets.dart' show SectionTitle;
+import '../../campaigns/data/campaigns_controller.dart';
 import '../data/characters_controller.dart';
 import '../data/models.dart';
 import '../domain/character_format.dart';
@@ -436,6 +437,10 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
   Widget build(BuildContext context) {
     final catalogClasses = ref.watch(classesProvider).value ?? const <ClassSummary>[];
     final isActive = _initial.status == CharacterStatus.active;
+    // Changes go through the DM's approval only for players; the DM/Owner
+    // applies them directly. Hidden until the role is known.
+    final myRole = ref.watch(campaignDetailControllerProvider(_initial.campaignId)).value?.myRole;
+    final needsApproval = isActive && myRole != null && !myRole.isAtLeastDm;
 
     return Scaffold(
       appBar: AppBar(
@@ -457,7 +462,7 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (isActive)
+              if (needsApproval)
                 const Card(
                   margin: EdgeInsets.symmetric(vertical: 8),
                   child: Padding(
@@ -892,7 +897,7 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
                   TextFormField(
                     key: Key('override-note-$i'),
                     controller: _overrides[i].noteController,
-                    maxLength: 200,
+                    maxLength: 500,
                     decoration: const InputDecoration(labelText: 'Nota (opcional)'),
                   ),
                 ],

@@ -36,12 +36,7 @@ class ClassDetailPage extends ConsumerWidget {
               SectionTitle(
                 c.subclassFlavor == null ? 'Subclases' : 'Subclases (${c.subclassFlavor})',
               ),
-              for (final sub in c.subclasses)
-                ExpandableEntry(
-                  title: sub.name,
-                  subtitle: sub.flavor,
-                  description: sub.description,
-                ),
+              for (final sub in c.subclasses) _SubclassEntry(subclass: sub),
             ],
             if (c.levels.isNotEmpty) ...[
               const SectionTitle('Tabla de niveles'),
@@ -61,6 +56,51 @@ class ClassDetailPage extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// A subclass: its description plus its features grouped by level.
+class _SubclassEntry extends StatelessWidget {
+  const _SubclassEntry({required this.subclass});
+
+  final Subclass subclass;
+
+  @override
+  Widget build(BuildContext context) {
+    final byLevel = <int, List<Feature>>{};
+    for (final feature in subclass.features) {
+      byLevel.putIfAbsent(feature.level, () => []).add(feature);
+    }
+    final textTheme = Theme.of(context).textTheme;
+    return ExpansionTile(
+      key: Key('subclass-${subclass.index}'),
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: const EdgeInsets.only(bottom: 8),
+      expandedCrossAxisAlignment: CrossAxisAlignment.start,
+      title: Text(subclass.name),
+      subtitle: subclass.flavor == null ? null : Text(subclass.flavor!),
+      children: [
+        if (subclass.description.isEmpty && byLevel.isEmpty)
+          const Text('Sin descripción.')
+        else
+          Paragraphs(subclass.description),
+        for (final entry in byLevel.entries) ...[
+          Padding(
+            padding: const EdgeInsets.only(top: 12, bottom: 4),
+            child: Text(
+              entry.key > 0 ? 'Nivel ${entry.key}' : 'Rasgos',
+              style: textTheme.titleSmall,
+            ),
+          ),
+          for (final feature in entry.value)
+            ExpandableEntry(
+              key: Key('subclass-feature-${subclass.index}-${feature.index}'),
+              title: feature.name,
+              description: feature.description,
+            ),
+        ],
+      ],
     );
   }
 }
