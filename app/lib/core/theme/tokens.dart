@@ -1,79 +1,118 @@
 import 'package:flutter/material.dart';
 
-/// Design tokens of the "mystic" visual identity: a parchment / stone / ink
-/// palette with gold, crimson, arcane and emerald accents.
+/// Design tokens of the "carved stone" identity: an obsidian / stone / bone
+/// palette with ember, arcane, moss, blood and old-gold accents.
+///
+/// Field names follow the dark palette (the default); every field is a role,
+/// so in the [light] variant `obsidian` holds the page background (bone),
+/// `stone` the cards (clay) and `bone` the text (obsidian).
 ///
 /// Exposed as a [ThemeExtension] so widgets can read them with `context.tokens`
 /// while the regular Material widgets keep using `Theme.of(context).colorScheme`.
+/// The names of the previous parchment palette ([parchment], [ink], [gold]…)
+/// remain as aliases of the new roles.
 @immutable
 class AppTokens extends ThemeExtension<AppTokens> {
   const AppTokens({
-    required this.parchment,
-    required this.parchmentDeep,
+    required this.obsidian,
     required this.stone,
-    required this.ink,
-    required this.inkMuted,
-    required this.gold,
-    required this.crimson,
+    required this.stoneRaised,
+    required this.bone,
+    required this.boneMuted,
+    required this.ember,
     required this.arcane,
-    required this.emerald,
+    required this.moss,
+    required this.blood,
+    required this.oldGold,
     required this.rune,
   });
 
   /// Page background.
-  final Color parchment;
+  final Color obsidian;
 
-  /// "Parchment" cards.
-  final Color parchmentDeep;
-
-  /// App bar and secondary cards.
+  /// Cards.
   final Color stone;
 
+  /// Raised surfaces: app bar, secondary cards, sheets.
+  final Color stoneRaised;
+
   /// Primary text.
-  final Color ink;
+  final Color bone;
 
   /// Secondary text.
-  final Color inkMuted;
+  final Color boneMuted;
 
-  /// Accents, borders, active tab.
-  final Color gold;
-
-  /// Primary action, damage.
-  final Color crimson;
+  /// Primary action.
+  final Color ember;
 
   /// Magic, spells.
   final Color arcane;
 
   /// Healing, success.
-  final Color emerald;
+  final Color moss;
+
+  /// Damage, danger.
+  final Color blood;
+
+  /// Borders, seals, highlights.
+  final Color oldGold;
 
   /// Lines and outlines.
   final Color rune;
 
-  static const light = AppTokens(
-    parchment: Color(0xFFF3E9D2),
-    parchmentDeep: Color(0xFFE6D6B4),
-    stone: Color(0xFFD8D1C5),
-    ink: Color(0xFF2B2118),
-    inkMuted: Color(0xFF6B5B4B),
-    gold: Color(0xFFB8860B),
-    crimson: Color(0xFF8B1E1E),
-    arcane: Color(0xFF4B3F8F),
-    emerald: Color(0xFF2E6B3F),
-    rune: Color(0xFF7A6A52),
+  // Aliases of the previous parchment palette, kept so existing widgets map
+  // onto the new roles.
+
+  /// Page background (alias of [obsidian]).
+  Color get parchment => obsidian;
+
+  /// Cards (alias of [stone]).
+  Color get parchmentDeep => stone;
+
+  /// Primary text (alias of [bone]).
+  Color get ink => bone;
+
+  /// Secondary text (alias of [boneMuted]).
+  Color get inkMuted => boneMuted;
+
+  /// Accents and borders (alias of [oldGold]).
+  Color get gold => oldGold;
+
+  /// Primary action (alias of [ember]); damage now uses [blood].
+  Color get crimson => ember;
+
+  /// Healing (alias of [moss]).
+  Color get emerald => moss;
+
+  /// Dark variant: the default look.
+  static const dark = AppTokens(
+    obsidian: Color(0xFF14110F),
+    stone: Color(0xFF231D19),
+    stoneRaised: Color(0xFF2D2622),
+    bone: Color(0xFFE7DCC6),
+    boneMuted: Color(0xFFA89C87),
+    ember: Color(0xFFD9671E),
+    arcane: Color(0xFF8A6BD1),
+    moss: Color(0xFF5E7A4A),
+    blood: Color(0xFF9B2226),
+    oldGold: Color(0xFFB8923A),
+    rune: Color(0xFF4A3F36),
   );
 
-  static const dark = AppTokens(
-    parchment: Color(0xFF1C1814),
-    parchmentDeep: Color(0xFF26211B),
-    stone: Color(0xFF332E28),
-    ink: Color(0xFFEDE3CF),
-    inkMuted: Color(0xFFA8997F),
-    gold: Color(0xFFD4A83A),
-    crimson: Color(0xFFC0392B),
-    arcane: Color(0xFF8C7BE0),
-    emerald: Color(0xFF5BBF7A),
-    rune: Color(0xFF5A4E3C),
+  /// Light variant: bone background, clay cards, obsidian text and the same
+  /// accents darkened by 15 %.
+  static const light = AppTokens(
+    obsidian: Color(0xFFE7DCC6),
+    stone: Color(0xFFD8C9AE),
+    stoneRaised: Color(0xFFE0D3BA),
+    bone: Color(0xFF14110F),
+    boneMuted: Color(0xFF574B40),
+    ember: Color(0xFFB8581A),
+    arcane: Color(0xFF755BB2),
+    moss: Color(0xFF50683F),
+    blood: Color(0xFF841D20),
+    oldGold: Color(0xFF9C7C31),
+    rune: Color(0xFF9A8B74),
   );
 
   /// Tokens for the given [brightness].
@@ -81,26 +120,28 @@ class AppTokens extends ThemeExtension<AppTokens> {
 
   @override
   AppTokens copyWith({
-    Color? parchment,
-    Color? parchmentDeep,
+    Color? obsidian,
     Color? stone,
-    Color? ink,
-    Color? inkMuted,
-    Color? gold,
-    Color? crimson,
+    Color? stoneRaised,
+    Color? bone,
+    Color? boneMuted,
+    Color? ember,
     Color? arcane,
-    Color? emerald,
+    Color? moss,
+    Color? blood,
+    Color? oldGold,
     Color? rune,
   }) => AppTokens(
-    parchment: parchment ?? this.parchment,
-    parchmentDeep: parchmentDeep ?? this.parchmentDeep,
+    obsidian: obsidian ?? this.obsidian,
     stone: stone ?? this.stone,
-    ink: ink ?? this.ink,
-    inkMuted: inkMuted ?? this.inkMuted,
-    gold: gold ?? this.gold,
-    crimson: crimson ?? this.crimson,
+    stoneRaised: stoneRaised ?? this.stoneRaised,
+    bone: bone ?? this.bone,
+    boneMuted: boneMuted ?? this.boneMuted,
+    ember: ember ?? this.ember,
     arcane: arcane ?? this.arcane,
-    emerald: emerald ?? this.emerald,
+    moss: moss ?? this.moss,
+    blood: blood ?? this.blood,
+    oldGold: oldGold ?? this.oldGold,
     rune: rune ?? this.rune,
   );
 
@@ -108,15 +149,16 @@ class AppTokens extends ThemeExtension<AppTokens> {
   AppTokens lerp(ThemeExtension<AppTokens>? other, double t) {
     if (other is! AppTokens) return this;
     return AppTokens(
-      parchment: Color.lerp(parchment, other.parchment, t)!,
-      parchmentDeep: Color.lerp(parchmentDeep, other.parchmentDeep, t)!,
+      obsidian: Color.lerp(obsidian, other.obsidian, t)!,
       stone: Color.lerp(stone, other.stone, t)!,
-      ink: Color.lerp(ink, other.ink, t)!,
-      inkMuted: Color.lerp(inkMuted, other.inkMuted, t)!,
-      gold: Color.lerp(gold, other.gold, t)!,
-      crimson: Color.lerp(crimson, other.crimson, t)!,
+      stoneRaised: Color.lerp(stoneRaised, other.stoneRaised, t)!,
+      bone: Color.lerp(bone, other.bone, t)!,
+      boneMuted: Color.lerp(boneMuted, other.boneMuted, t)!,
+      ember: Color.lerp(ember, other.ember, t)!,
       arcane: Color.lerp(arcane, other.arcane, t)!,
-      emerald: Color.lerp(emerald, other.emerald, t)!,
+      moss: Color.lerp(moss, other.moss, t)!,
+      blood: Color.lerp(blood, other.blood, t)!,
+      oldGold: Color.lerp(oldGold, other.oldGold, t)!,
       rune: Color.lerp(rune, other.rune, t)!,
     );
   }

@@ -67,8 +67,11 @@ cd deploy && cp .env.sample .env && docker compose pull && docker compose up -d
   Wizards of the Coast en el repo. El administrador puede subir otros PDF a la biblioteca de la
   instancia y **paquetes de contenido** JSON (ADR 0007, `docs/content-packs.md`) que viven solo en
   su base de datos; `content-packs/` está en `.gitignore` y los ejemplos son ficticios.
-- Fuentes e iconos empaquetados: Cinzel y Alegreya (SIL OFL) y SVG de game-icons.net (CC-BY 3.0),
-  con atribución en la pantalla "Atribuciones" y en `app/assets/icons/ATTRIBUTION.md`.
+- Fuentes e iconos empaquetados: Almendra y Source Sans 3 (SIL OFL, con sus avisos de licencia en
+  `app/assets/licenses/`) e iconos **propios** dibujados en `app/assets/icons/` (licencia del
+  proyecto). Paleta oscura por defecto; el usuario la cambia en "Personalización".
+- Descansos corto y largo los **pide** el jugador y los aprueba el DM; el nivel lo **concede** el DM
+  y el jugador completa el asistente de subida (PG por tirada física; dotes siempre disponibles).
 
 ## Modelo de permisos
 

@@ -29,6 +29,7 @@ import '../../features/lore/ui/lore_editor_page.dart';
 import '../../features/lore/ui/lore_entry_page.dart';
 import '../../features/maps/ui/map_viewer_page.dart';
 import '../../features/server/ui/server_page.dart';
+import '../../features/settings/ui/appearance_page.dart';
 import '../../features/sessions/ui/session_form_page.dart';
 import '../../features/sessions/ui/session_page.dart';
 import '../../features/session/ui/dm/dm_session_page.dart';
@@ -49,6 +50,7 @@ abstract final class AppRoutes {
   static const adminUsers = '/admin/users';
   static const adminContent = '/admin/content';
   static const attributions = '/attributions';
+  static const appearance = '/settings/appearance';
   static const campaignDetail = '/campaigns/:id';
   static const campaignGeneral = '/campaigns/:id/general';
   static const campaignDm = '/campaigns/:id/dm';
@@ -291,6 +293,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.adminUsers, builder: (context, state) => const AdminUsersPage()),
       GoRoute(path: AppRoutes.adminContent, builder: (context, state) => const AdminContentPage()),
       GoRoute(path: AppRoutes.attributions, builder: (context, state) => const AttributionPage()),
+      GoRoute(path: AppRoutes.appearance, builder: (context, state) => const AppearancePage()),
       ...campaignShellRoutes(rootNavigatorKey),
       GoRoute(
         path: AppRoutes.campaignChangeRequests,

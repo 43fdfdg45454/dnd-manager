@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart' show Icons;
 import 'package:flutter/widgets.dart';
 
-/// Bundled game-icons.net SVGs (CC BY 3.0, see `assets/icons/ATTRIBUTION.md`).
+/// Icon set drawn for this project (project licence, see
+/// `assets/icons/ATTRIBUTION.md`): 24×24 SVGs, 2 px stroke in `currentColor`,
+/// "carved stone" style with straight segments and marked corners.
 ///
 /// [fallback] is the Material icon shown when the asset cannot be loaded.
 enum AppIcons {
@@ -44,7 +46,32 @@ enum AppIcons {
   calendar('calendar', Icons.calendar_month),
   book('book', Icons.book),
   quill('quill', Icons.edit),
-  users('users', Icons.groups);
+  users('users', Icons.groups),
+  // Combat and resources.
+  bow('bow', Icons.north_east),
+  staff('staff', Icons.auto_fix_normal),
+  flame('flame', Icons.whatshot),
+  bolt('bolt', Icons.bolt),
+  eye('eye', Icons.visibility),
+
+  /// Conditions.
+  chains('chains', Icons.link),
+
+  /// Live connection.
+  seal('seal', Icons.verified),
+  rune('rune', Icons.token),
+  levelUp('levelUp', Icons.arrow_upward),
+
+  /// Healing.
+  drop('drop', Icons.water_drop),
+
+  /// Damage.
+  splash('splash', Icons.bloodtype),
+  gear('gear', Icons.settings),
+
+  /// Concentration.
+  anchor('anchor', Icons.anchor),
+  clock('clock', Icons.schedule);
 
   const AppIcons(this.file, this.fallback);
 

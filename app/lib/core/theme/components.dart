@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'textures.dart';
 import 'tokens.dart';
 import 'typography.dart';
 
@@ -13,12 +14,16 @@ class AppComponentThemes {
 
   bool get _dark => scheme.brightness == Brightness.dark;
 
-  Color get _goldBorder => tokens.gold.withValues(alpha: 0.4);
+  Color get _goldBorder => tokens.oldGold.withValues(alpha: 0.45);
 
-  static const _radius = 10.0;
+  static const _radius = 6.0;
+
+  /// Cut ("carved") corners for cards and dialogs.
+  static ShapeBorder _carved(double radius, BorderSide side) =>
+      BeveledRectangleBorder(borderRadius: BorderRadius.circular(radius), side: side);
 
   CardThemeData get card => CardThemeData(
-    color: tokens.parchmentDeep,
+    color: tokens.stone,
     surfaceTintColor: Colors.transparent,
     elevation: 1,
     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -30,92 +35,126 @@ class AppComponentThemes {
 
   AppBarTheme get appBar => AppBarTheme(
     centerTitle: true,
-    backgroundColor: tokens.stone,
-    foregroundColor: tokens.ink,
+    backgroundColor: tokens.stoneRaised,
+    foregroundColor: tokens.bone,
     surfaceTintColor: Colors.transparent,
     scrolledUnderElevation: 0,
-    titleTextStyle: textTheme.titleLarge?.copyWith(fontSize: 20, color: tokens.ink),
+    titleTextStyle: textTheme.titleLarge?.copyWith(fontSize: 21, color: tokens.bone),
     shape: Border(bottom: BorderSide(color: _goldBorder)),
   );
 
   FilledButtonThemeData get filledButton => FilledButtonThemeData(
     style: FilledButton.styleFrom(
-      backgroundColor: tokens.crimson,
+      backgroundColor: tokens.ember,
       foregroundColor: scheme.onPrimary,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      textStyle: AppTypography.sans(weight: FontWeight.w600),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
     ),
   );
 
   OutlinedButtonThemeData get outlinedButton => OutlinedButtonThemeData(
     style: OutlinedButton.styleFrom(
-      foregroundColor: tokens.ink,
-      side: BorderSide(color: tokens.gold),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      foregroundColor: tokens.bone,
+      side: BorderSide(color: tokens.oldGold),
+      textStyle: AppTypography.sans(weight: FontWeight.w600),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
     ),
   );
 
   TextButtonThemeData get textButton => TextButtonThemeData(
-    // Crimson is too dark to read as text on the dark parchment.
-    style: TextButton.styleFrom(foregroundColor: _dark ? tokens.gold : tokens.crimson),
+    // Ember reads well on obsidian; on bone it is too light for text.
+    style: TextButton.styleFrom(
+      foregroundColor: _dark ? tokens.ember : tokens.blood,
+      textStyle: AppTypography.sans(weight: FontWeight.w600),
+    ),
   );
 
   FloatingActionButtonThemeData get floatingActionButton => FloatingActionButtonThemeData(
-    backgroundColor: tokens.crimson,
+    backgroundColor: tokens.ember,
     foregroundColor: scheme.onPrimary,
+    shape: _carved(10, BorderSide.none),
   );
 
   TabBarThemeData get tabBar => TabBarThemeData(
-    indicator: UnderlineTabIndicator(borderSide: BorderSide(color: tokens.gold, width: 3)),
+    indicator: UnderlineTabIndicator(borderSide: BorderSide(color: tokens.oldGold, width: 3)),
     indicatorSize: TabBarIndicatorSize.tab,
-    labelColor: tokens.ink,
-    unselectedLabelColor: tokens.inkMuted,
+    labelColor: tokens.bone,
+    unselectedLabelColor: tokens.boneMuted,
     labelStyle: const TextStyle(fontFamily: AppFonts.display, fontWeight: FontWeight.w700),
     unselectedLabelStyle: const TextStyle(
       fontFamily: AppFonts.display,
       fontWeight: FontWeight.w400,
     ),
-    dividerColor: tokens.rune.withValues(alpha: 0.5),
+    dividerColor: tokens.rune.withValues(alpha: 0.7),
   );
 
   ChipThemeData get chip => ChipThemeData(
     side: BorderSide(color: tokens.rune),
     labelStyle: textTheme.labelLarge,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
   );
 
   NavigationBarThemeData get navigationBar => NavigationBarThemeData(
-    backgroundColor: tokens.stone,
+    backgroundColor: tokens.stoneRaised,
     surfaceTintColor: Colors.transparent,
-    indicatorColor: tokens.gold.withValues(alpha: 0.3),
+    indicatorColor: tokens.oldGold.withValues(alpha: 0.3),
     labelTextStyle: WidgetStatePropertyAll(
-      TextStyle(fontFamily: AppFonts.body, fontWeight: FontWeight.w700, color: tokens.ink),
+      AppTypography.sans(weight: FontWeight.w600, color: tokens.bone),
     ),
   );
 
-  ProgressIndicatorThemeData get progress =>
-      ProgressIndicatorThemeData(linearTrackColor: tokens.stone, circularTrackColor: tokens.stone);
+  SegmentedButtonThemeData get segmentedButton => SegmentedButtonThemeData(
+    style: SegmentedButton.styleFrom(
+      foregroundColor: tokens.bone,
+      selectedForegroundColor: tokens.bone,
+      selectedBackgroundColor: tokens.oldGold.withValues(alpha: 0.3),
+      side: BorderSide(color: tokens.rune),
+      textStyle: AppTypography.sans(weight: FontWeight.w600),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+    ),
+  );
+
+  ProgressIndicatorThemeData get progress => ProgressIndicatorThemeData(
+    color: tokens.ember,
+    linearTrackColor: tokens.stoneRaised,
+    circularTrackColor: tokens.stoneRaised,
+  );
 
   DividerThemeData get divider => DividerThemeData(color: tokens.rune, thickness: 1, space: 1);
 
   SnackBarThemeData get snackBar => SnackBarThemeData(
-    backgroundColor: tokens.ink,
-    contentTextStyle: TextStyle(fontFamily: AppFonts.body, fontSize: 15, color: tokens.parchment),
-    actionTextColor: _dark ? tokens.crimson : tokens.gold,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    backgroundColor: tokens.bone,
+    contentTextStyle: AppTypography.sans(fontSize: 15, color: tokens.obsidian),
+    actionTextColor: _dark ? tokens.blood : tokens.oldGold,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
   );
 
   DialogThemeData get dialog => DialogThemeData(
-    backgroundColor: tokens.parchment,
+    backgroundColor: tokens.stone,
     surfaceTintColor: Colors.transparent,
-    titleTextStyle: textTheme.titleLarge?.copyWith(color: tokens.ink),
+    titleTextStyle: textTheme.titleLarge?.copyWith(color: tokens.bone),
+    shape: _carved(10, BorderSide(color: _goldBorder)),
+  );
+
+  BottomSheetThemeData get bottomSheet => BottomSheetThemeData(
+    backgroundColor: tokens.stone,
+    surfaceTintColor: Colors.transparent,
+    modalBackgroundColor: tokens.stone,
+  );
+
+  PopupMenuThemeData get popupMenu => PopupMenuThemeData(
+    color: tokens.stoneRaised,
+    surfaceTintColor: Colors.transparent,
+    textStyle: textTheme.bodyLarge,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(4),
       side: BorderSide(color: _goldBorder),
     ),
   );
 }
 
-/// Parchment-coloured card: the default surface for content.
+/// Default surface for content: a [RuneCard] (stone fill, old-gold brush
+/// border). Kept under its previous name so existing screens adopt the skin.
 class ParchmentCard extends StatelessWidget {
   const ParchmentCard({super.key, required this.child, this.margin, this.padding, this.onTap});
 
@@ -127,18 +166,12 @@ class ParchmentCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return _TokenCard(
-      color: context.tokens.parchmentDeep,
-      margin: margin,
-      padding: padding,
-      onTap: onTap,
-      child: child,
-    );
-  }
+  Widget build(BuildContext context) =>
+      RuneCard(margin: margin, padding: padding, onTap: onTap, seed: key?.hashCode, child: child);
 }
 
-/// Stone-coloured card for secondary content.
+/// Raised card for secondary content: [AppTokens.stoneRaised] fill with a
+/// rune-coloured brush border.
 class StoneCard extends StatelessWidget {
   const StoneCard({super.key, required this.child, this.margin, this.padding, this.onTap});
 
@@ -150,60 +183,19 @@ class StoneCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    return _TokenCard(
-      color: tokens.stone,
-      borderColor: tokens.rune.withValues(alpha: 0.5),
+    return RuneCard(
+      color: tokens.stoneRaised,
+      borderColor: tokens.rune,
       margin: margin,
       padding: padding,
       onTap: onTap,
+      seed: key?.hashCode,
       child: child,
     );
   }
 }
 
-class _TokenCard extends StatelessWidget {
-  const _TokenCard({
-    required this.color,
-    required this.child,
-    this.borderColor,
-    this.margin,
-    this.padding,
-    this.onTap,
-  });
-
-  final Color color;
-  final Color? borderColor;
-  final Widget child;
-  final EdgeInsetsGeometry? margin;
-  final EdgeInsetsGeometry? padding;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final shape = Theme.of(context).cardTheme.shape;
-    final radius = shape is RoundedRectangleBorder
-        ? shape.borderRadius.resolve(Directionality.of(context))
-        : BorderRadius.circular(10);
-    Widget content = padding == null ? child : Padding(padding: padding!, child: child);
-    if (onTap != null) {
-      content = InkWell(borderRadius: radius, onTap: onTap, child: content);
-    }
-    return Card(
-      color: color,
-      margin: margin,
-      clipBehavior: onTap == null ? Clip.none : Clip.antiAlias,
-      shape: borderColor == null
-          ? null
-          : RoundedRectangleBorder(
-              borderRadius: radius,
-              side: BorderSide(color: borderColor!),
-            ),
-      child: content,
-    );
-  }
-}
-
-/// Section title in Cinzel with a gold rule on both sides.
+/// Section title in Almendra with a gold rule on both sides.
 class SectionHeader extends StatelessWidget {
   const SectionHeader(
     this.title, {
@@ -221,7 +213,9 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final rule = Expanded(child: Container(height: 1, color: tokens.gold.withValues(alpha: 0.6)));
+    final rule = Expanded(
+      child: Container(height: 1, color: tokens.oldGold.withValues(alpha: 0.6)),
+    );
     return Padding(
       padding: padding,
       child: Row(
@@ -265,7 +259,7 @@ class RuneDivider extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Transform.rotate(
               angle: 0.7853981633974483,
-              child: Container(width: 7, height: 7, color: tokens.gold),
+              child: Container(width: 7, height: 7, color: tokens.oldGold),
             ),
           ),
           rule,

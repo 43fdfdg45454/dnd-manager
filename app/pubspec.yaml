@@ -46,22 +46,29 @@ flutter:
     - assets/icons/
     - assets/licenses/
   fonts:
-    # Variable fonts (SIL OFL, see assets/licenses): one file serves every weight.
-    - family: Cinzel
+    # SIL OFL, see assets/licenses. Almendra ships static Regular and Bold
+    # files; Source Sans 3 is a variable font (one file serves every weight,
+    # selected with fontVariations).
+    - family: Almendra
       fonts:
-        - asset: assets/fonts/Cinzel.ttf
+        - asset: assets/fonts/Almendra-Regular.ttf
           weight: 400
-        - asset: assets/fonts/Cinzel.ttf
+        - asset: assets/fonts/Almendra-Bold.ttf
           weight: 700
-    - family: Alegreya
+    - family: SourceSans3
       fonts:
-        - asset: assets/fonts/Alegreya.ttf
+        - asset: assets/fonts/SourceSans3.ttf
           weight: 400
-        - asset: assets/fonts/Alegreya.ttf
+        - asset: assets/fonts/SourceSans3.ttf
+          weight: 600
+        - asset: assets/fonts/SourceSans3.ttf
           weight: 700
-        - asset: assets/fonts/Alegreya-Italic.ttf
+        - asset: assets/fonts/SourceSans3-Italic.ttf
           weight: 400
           style: italic
-        - asset: assets/fonts/Alegreya-Italic.ttf
+        - asset: assets/fonts/SourceSans3-Italic.ttf
+          weight: 600
+          style: italic
+        - asset: assets/fonts/SourceSans3-Italic.ttf
           weight: 700
           style: italic

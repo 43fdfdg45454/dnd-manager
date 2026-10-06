@@ -10,7 +10,7 @@ const _srdFallback =
     'Attribution 4.0 International (CC-BY 4.0).';
 
 /// Credits of the third-party material bundled with the app: the SRD 5.1
-/// (CC-BY 4.0), the game-icons.net icons (CC BY 3.0) and the OFL fonts.
+/// (CC-BY 4.0) and the OFL fonts. The icons are original work of the project.
 class AttributionPage extends ConsumerWidget {
   const AttributionPage({super.key});
 
@@ -44,33 +44,6 @@ class AttributionPage extends ConsumerWidget {
               ],
             ),
           ),
-          const SectionHeader('Iconos'),
-          ParchmentCard(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Los iconos proceden de game-icons.net y se usan bajo la licencia '
-                  'Creative Commons Attribution 3.0 (CC BY 3.0). Autores: Lorc, Delapouite, '
-                  'Skoll y sbed. Se eliminó el fondo negro de cada icono.',
-                  key: const Key('attributions-icons'),
-                  style: theme.textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 8),
-                const _LicenseTile(
-                  key: Key('attributions-license-icons'),
-                  title: 'Lista de iconos y autores',
-                  asset: 'assets/icons/ATTRIBUTION.md',
-                ),
-                const _LicenseTile(
-                  key: Key('attributions-license-cc-by-3'),
-                  title: 'Licencia CC BY 3.0',
-                  asset: 'assets/licenses/CC-BY-3.0.txt',
-                ),
-              ],
-            ),
-          ),
           const SectionHeader('Tipografías'),
           ParchmentCard(
             padding: const EdgeInsets.all(16),
@@ -78,20 +51,20 @@ class AttributionPage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Cinzel y Alegreya se distribuyen bajo la SIL Open Font License 1.1.',
+                  'Almendra y Source Sans 3 se distribuyen bajo la SIL Open Font License 1.1.',
                   key: const Key('attributions-fonts'),
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 8),
                 const _LicenseTile(
-                  key: Key('attributions-license-cinzel'),
-                  title: 'Licencia de Cinzel',
-                  asset: 'assets/licenses/OFL-Cinzel.txt',
+                  key: Key('attributions-license-almendra'),
+                  title: 'Licencia de Almendra',
+                  asset: 'assets/licenses/OFL-Almendra.txt',
                 ),
                 const _LicenseTile(
-                  key: Key('attributions-license-alegreya'),
-                  title: 'Licencia de Alegreya',
-                  asset: 'assets/licenses/OFL-Alegreya.txt',
+                  key: Key('attributions-license-source-sans'),
+                  title: 'Licencia de Source Sans 3',
+                  asset: 'assets/licenses/OFL-SourceSans3.txt',
                 ),
               ],
             ),
