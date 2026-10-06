@@ -82,19 +82,19 @@ class EquipmentStep extends ConsumerWidget {
             Text(cleanText(backgroundText), key: const Key('wizard-background-equipment')),
           ],
         ],
-        const SizedBox(height: 16),
-        Text('Otros objetos', style: theme.textTheme.titleSmall),
+        if (structured) _DefaultEquipmentList(args: args),
+        const SectionHeader('Otros objetos', padding: EdgeInsets.only(top: 16, bottom: 4)),
+        Text('Objetos que añades tú, además del equipo inicial.', style: theme.textTheme.bodySmall),
         if (state.equipment.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
             child: Text('Ningún objeto añadido.'),
           ),
         for (final line in state.equipment)
-          ListTile(
+          EquipmentLineTile(
             key: Key('equipment-${line.templateId}'),
-            contentPadding: EdgeInsets.zero,
-            title: Text(line.name),
-            subtitle: Text('Cantidad: ${line.qty}'),
+            name: line.name,
+            quantity: line.qty,
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -147,69 +147,133 @@ class _KitSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(characterWizardControllerProvider(args));
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return _ChoiceList(args: args);
+  }
+}
+
+/// One item line of the equipment step. The same look for the default
+/// starting items and the ones the player adds, so both read as "my items".
+class EquipmentLineTile extends StatelessWidget {
+  const EquipmentLineTile({
+    super.key,
+    required this.name,
+    required this.quantity,
+    this.trailing,
+    this.contents,
+  });
+
+  final String name;
+  final int quantity;
+  final Widget? trailing;
+
+  /// Items inside a pack (explorer's pack…); the line expands to show them.
+  final List<StartingItem>? contents;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final title = Text(name);
+    final subtitle = Text('Cantidad: $quantity');
+    final inner = contents;
+    if (inner == null || inner.isEmpty) {
+      return ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: title,
+        subtitle: subtitle,
+        trailing: trailing,
+      );
+    }
+    return ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      title: title,
+      subtitle: subtitle,
+      trailing: trailing,
       children: [
-        _IncludedList(
-          items: [...?state.classEquipment?.fixed, ...?state.backgroundEquipment?.fixed],
-          goldCp: state.backgroundEquipment?.fixedGoldCp,
-        ),
-        _ChoiceList(args: args),
+        for (final c in inner)
+          ListTile(
+            dense: true,
+            contentPadding: const EdgeInsets.only(left: 16),
+            title: Text(_qtyName(c), style: theme.textTheme.bodySmall),
+          ),
       ],
     );
   }
 }
 
-/// "Incluido": fixed items, not editable.
-class _IncludedList extends StatelessWidget {
-  const _IncludedList({required this.items, this.goldCp});
+/// "Equipo inicial": the items the class and background give with the
+/// current choices (or the background kit kept with starting gold), shown
+/// like the player's own items under their own heading.
+class _DefaultEquipmentList extends ConsumerWidget {
+  const _DefaultEquipmentList({required this.args});
 
-  final List<StartingItem> items;
-  final int? goldCp;
+  final WizardArgs args;
 
   @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(characterWizardControllerProvider(args));
     final theme = Theme.of(context);
-    if (items.isEmpty && (goldCp ?? 0) <= 0) return const SizedBox.shrink();
+    final tokens = context.tokens;
+    final lines = state.startingLines;
+    final copper = state.startingCopper;
+
+    // Pack contents by template, to let packs expand.
+    final contents = <String, List<StartingItem>>{};
+    void collect(StartingItem i) {
+      final id = i.templateId;
+      if (id != null && i.contents != null && i.contents!.isNotEmpty) contents[id] = i.contents!;
+    }
+
+    for (final e in [state.classEquipment, state.backgroundEquipment]) {
+      if (e == null) continue;
+      e.fixed.forEach(collect);
+      for (final c in e.choices) {
+        for (final o in c.options) {
+          o.items.forEach(collect);
+        }
+      }
+    }
+
+    final badge = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        border: Border.all(color: tokens.oldGold.withValues(alpha: 0.6)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        'Por defecto',
+        style: theme.textTheme.labelSmall?.copyWith(color: tokens.oldGold),
+      ),
+    );
+
     return Column(
       key: const Key('equipment-included'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader('Incluido', padding: EdgeInsets.only(top: 16, bottom: 8)),
-        for (final item in items)
-          if (item.contents == null || item.contents!.isEmpty)
-            ListTile(
-              key: Key('equipment-fixed-${item.item}'),
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.check_circle_outline, color: tokens.moss),
-              title: Text(_qtyName(item)),
-            )
-          else
-            ExpansionTile(
-              key: Key('equipment-fixed-${item.item}'),
-              dense: true,
-              tilePadding: EdgeInsets.zero,
-              leading: Icon(Icons.check_circle_outline, color: tokens.moss),
-              title: Text(_qtyName(item)),
-              children: [
-                for (final c in item.contents!)
-                  ListTile(
-                    dense: true,
-                    contentPadding: const EdgeInsets.only(left: 56),
-                    title: Text(_qtyName(c), style: theme.textTheme.bodySmall),
-                  ),
-              ],
-            ),
-        if ((goldCp ?? 0) > 0)
+        const SectionHeader('Equipo inicial', padding: EdgeInsets.only(top: 16, bottom: 4)),
+        Text(
+          'Lo que te dan tu clase y tu trasfondo con las elecciones de arriba.',
+          style: theme.textTheme.bodySmall,
+        ),
+        if (lines.isEmpty && copper <= 0)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('Completa las elecciones para ver tu equipo.'),
+          ),
+        for (final line in lines)
+          EquipmentLineTile(
+            key: Key('equipment-default-${line.templateId}'),
+            name: line.name,
+            quantity: line.qty,
+            contents: contents[line.templateId],
+            trailing: badge,
+          ),
+        if (copper > 0)
           ListTile(
-            key: const Key('equipment-fixed-gold'),
-            dense: true,
+            key: const Key('equipment-default-gold'),
             contentPadding: EdgeInsets.zero,
-            leading: AppIcon(AppIcons.coins, color: tokens.oldGold),
-            title: Text('${copperToGoldText(goldCp!)} po'),
+            title: Text('${copperToGoldText(copper)} po'),
+            subtitle: const Text('Oro inicial'),
+            trailing: badge,
           ),
       ],
     );
@@ -501,10 +565,7 @@ class _GoldSection extends ConsumerWidget {
             title: const Text('Conservar el equipo del trasfondo'),
             onChanged: (value) => controller.setKeepBackgroundEquipment(value ?? false),
           ),
-        if (state.keepBackgroundEquipment && background != null) ...[
-          _IncludedList(items: background.fixed, goldCp: background.fixedGoldCp),
-          _ChoiceList(args: args),
-        ],
+        if (state.keepBackgroundEquipment && background != null) _ChoiceList(args: args),
       ],
     );
   }

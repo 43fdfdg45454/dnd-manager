@@ -682,8 +682,14 @@ void main() {
 
     testWidgets('el modo equipo bloquea hasta completar todas las elecciones', (tester) async {
       await toEquipment(tester);
-      expect(find.text('Incluido'), findsOneWidget);
-      expect(find.text('2 × Dagger'), findsOneWidget);
+      // Default items share the look of the player's own items, under their
+      // own heading and marked "Por defecto", without edit buttons.
+      expect(find.text('Equipo inicial'), findsOneWidget);
+      final dagger = find.byKey(const Key('equipment-default-dagger'));
+      expect(dagger, findsOneWidget);
+      expect(find.descendant(of: dagger, matching: find.text('Cantidad: 2')), findsOneWidget);
+      expect(find.descendant(of: dagger, matching: find.text('Por defecto')), findsOneWidget);
+      expect(find.descendant(of: dagger, matching: find.byType(IconButton)), findsNothing);
       expect(find.text('Holy Symbol'), findsOneWidget);
       expect(find.text('Elecciones 0 de 2'), findsOneWidget);
 
@@ -719,7 +725,7 @@ void main() {
     testWidgets('el contenido de un paquete se despliega', (tester) async {
       await toEquipment(tester);
       expect(find.text('Rope'), findsNothing);
-      await _tap(tester, find.byKey(const Key('equipment-fixed-explorers-pack')));
+      await _tap(tester, find.byKey(const Key('equipment-default-explorers-pack')));
       expect(find.text('Rope'), findsOneWidget);
     });
 
