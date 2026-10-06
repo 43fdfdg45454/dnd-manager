@@ -305,6 +305,79 @@ void main() {
       expect(find.byKey(const Key('concentration-chip')), findsNothing);
     });
 
+    FakeCharactersRepository hpMaxRepo({bool overridden = false, bool isDm = true}) =>
+        FakeCharactersRepository(
+          isDm: isDm,
+          characters: [
+            makeCharacterJson(
+              status: 'Active',
+              combat: makeCombatJson(),
+              overrides: [
+                {'field': 'armorClass', 'value': 18, 'note': 'Escudo de la familia'},
+                if (overridden) {'field': 'hitPointsMax', 'value': 40, 'note': 'Bendición'},
+              ],
+              overriddenFields: ['armorClass', if (overridden) 'hitPointsMax'],
+            ),
+          ],
+        );
+
+    testWidgets('tocar "/ máx" guarda el override hitPointsMax con los demás', (tester) async {
+      final repo = hpMaxRepo();
+      await _pump(tester, characters: repo, role: CampaignRole.dm);
+      expect(find.byKey(const Key('override-hitPointsMax')), findsNothing);
+
+      await _tap(tester, 'hp-max-edit');
+      expect(find.text('PG máximos'), findsWidgets);
+      expect(find.byKey(const Key('hp-max-reset')), findsNothing);
+      await tester.enterText(find.byKey(const Key('hp-max-field')), '35');
+      await _tap(tester, 'hp-max-save');
+
+      final overrides = repo.patches.single.overrides!;
+      expect(
+        [for (final o in overrides) (o.field, o.value)],
+        [('armorClass', 18), ('hitPointsMax', 35)],
+      );
+      expect(overrides.first.note, 'Escudo de la familia');
+      expect(repo.patches.single.toJson().keys, ['overrides']);
+      expect(find.text('PG máximos actualizados.'), findsOneWidget);
+    });
+
+    testWidgets('"Volver al cálculo" quita el override y la marca se ve', (tester) async {
+      final repo = hpMaxRepo(overridden: true);
+      await _pump(tester, characters: repo, role: CampaignRole.dm);
+      expect(find.byKey(const Key('override-hitPointsMax')), findsOneWidget);
+
+      await _tap(tester, 'hp-max-edit');
+      await _tap(tester, 'hp-max-reset');
+      final overrides = repo.patches.single.overrides!;
+      expect([for (final o in overrides) o.field], ['armorClass']);
+      expect(find.text('PG máximos: vuelven al cálculo.'), findsOneWidget);
+    });
+
+    testWidgets('el jugador de un personaje activo lo envía al DM; valores inválidos no', (
+      tester,
+    ) async {
+      final repo = hpMaxRepo(isDm: false);
+      await _pump(tester, characters: repo, role: CampaignRole.player);
+      await _tap(tester, 'hp-max-edit');
+      await tester.enterText(find.byKey(const Key('hp-max-field')), '0');
+      await _tap(tester, 'hp-max-save');
+      expect(find.text('Introduce un número entre 1 y 999.'), findsOneWidget);
+      expect(repo.patches, isEmpty);
+
+      await tester.enterText(find.byKey(const Key('hp-max-field')), '30');
+      await _tap(tester, 'hp-max-save');
+      expect(repo.patches.single.overrides!.last.value, 30);
+      expect(find.text('Enviado al DM para aprobación'), findsOneWidget);
+    });
+
+    testWidgets('sin permiso de escritura "/ máx" no abre nada', (tester) async {
+      final repo = _repo(ownerUserId: 'p2');
+      await _pump(tester, characters: repo, role: CampaignRole.player);
+      await _tap(tester, 'hp-max-edit');
+      expect(find.byKey(const Key('hp-max-field')), findsNothing);
+    });
+
     testWidgets('las salvaciones de muerte solo aparecen con 0 PG y se marcan al tocar', (
       tester,
     ) async {
@@ -932,27 +1005,31 @@ void main() {
     testWidgets('una clase sin panel propio usa el genérico y se puede registrar otro', (
       tester,
     ) async {
+      final rogue = classPanelBuilders['rogue'];
       classPanelBuilders['rogue'] = (context, panel) =>
           Text('Panel de pícaro ${panel.panel.level}');
-      addTearDown(() => classPanelBuilders.remove('rogue'));
+      addTearDown(() => classPanelBuilders['rogue'] = rogue!);
       await _pump(
         tester,
         characters: _repo(
+          classes: const [
+            {'classIndex': 'artificer', 'className': 'Artificer', 'level': 3},
+          ],
           combat: makeCombatJson(
             classPanels: [
               {'classIndex': 'rogue', 'level': 3, 'data': <String, dynamic>{}},
               {
-                'classIndex': 'fighter',
+                'classIndex': 'artificer',
                 'level': 3,
-                'data': {'fightingStyle': 'Defense'},
+                'data': {'infusions': 2},
               },
             ],
           ),
         ),
       );
       expect(find.text('Panel de pícaro 3'), findsOneWidget);
-      expect(find.text('Fighter (nivel 3)'), findsOneWidget);
-      expect(find.text('fightingStyle: Defense'), findsOneWidget);
+      expect(find.text('Artificer (nivel 3)'), findsOneWidget);
+      expect(find.text('infusions: 2'), findsOneWidget);
     });
   });
 

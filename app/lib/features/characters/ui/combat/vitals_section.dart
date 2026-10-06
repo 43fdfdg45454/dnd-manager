@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,8 +9,9 @@ import '../../../dice/ui/dice_sheet.dart';
 import '../../data/characters_controller.dart';
 import '../../data/models.dart';
 import '../../domain/character_format.dart';
+import '../../domain/class_theme.dart';
 import '../../domain/combat_math.dart';
-import '../character_tabs.dart' show titleFromSpellIndex;
+import '../character_tabs.dart' show OverrideMark, titleFromSpellIndex;
 import 'combat_support.dart';
 
 CharacterController _controller(WidgetRef ref, CharacterDetail character) =>
@@ -32,11 +34,57 @@ class HpCard extends ConsumerStatefulWidget {
 
 class _HpCardState extends ConsumerState<HpCard> {
   final _amount = TextEditingController(text: '1');
+  late final _maxTap = TapGestureRecognizer()..onTap = _editMax;
 
   @override
   void dispose() {
     _amount.dispose();
+    _maxTap.dispose();
     super.dispose();
+  }
+
+  /// Edits the maximum hit points as the `hitPointsMax` override (merged with
+  /// the character's other overrides, since the list is replaced as a whole).
+  /// The DM applies it directly; a player's edit of an active character goes
+  /// to the DM for approval.
+  Future<void> _editMax() async {
+    if (!widget.canEdit) return;
+    final c = widget.character;
+    final current = c.overrideOf(hitPointsMaxField);
+    final choice = await showDialog<HpMaxChoice>(
+      context: context,
+      builder: (_) => HpMaxDialog(value: c.sheet.hitPointsMax, overridden: current != null),
+    );
+    if (choice == null || !mounted) return;
+    final others = [
+      for (final o in c.overrides)
+        if (o.field != hitPointsMaxField) o,
+    ];
+    final List<CharacterOverride> overrides;
+    switch (choice) {
+      case HpMaxReset():
+        if (current == null) return;
+        overrides = others;
+      case HpMaxValue(:final value):
+        if (current?.value == value || (current == null && value == c.sheet.hitPointsMax)) {
+          showCombatMessage(context, 'No hay cambios que guardar.');
+          return;
+        }
+        overrides = [
+          ...others,
+          CharacterOverride(field: hitPointsMaxField, value: value, note: current?.note),
+        ];
+    }
+    SheetSaveResult? result;
+    final done = await runCombat(context, () async {
+      result = await _controller(ref, c).saveSheet(SheetPatch(overrides: overrides));
+    });
+    if (!done || !mounted) return;
+    showCombatMessage(context, switch (result) {
+      PendingApproval() => 'Enviado al DM para aprobación',
+      _ when choice is HpMaxReset => 'PG máximos: vuelven al cálculo.',
+      _ => 'PG máximos actualizados.',
+    });
   }
 
   /// The amount in the field, or null (with a message) when it is not a number.
@@ -110,65 +158,187 @@ class _HpCardState extends ConsumerState<HpCard> {
         : fraction > .25
         ? Colors.orange.shade700
         : theme.colorScheme.error;
-    return CombatCard(
-      title: 'Puntos de golpe',
-      trailing: ActionChip(
-        key: const Key('temp-hp'),
-        avatar: const Icon(Icons.shield_outlined, size: 18),
-        label: Text('PG temp.: ${c.temporaryHitPoints}'),
-        onPressed: widget.canEdit ? _editTemp : null,
-      ),
-      child: Column(
-        children: [
-          Text(
-            '${c.hitPointsCurrent} / $max',
-            key: const Key('combat-hp'),
-            style: theme.textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          LinearProgressIndicator(
-            key: const Key('hp-bar'),
-            value: fraction,
-            minHeight: 12,
-            borderRadius: BorderRadius.circular(6),
-            color: barColor,
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              IconButton.filledTonal(
-                key: const Key('hp-minus'),
-                tooltip: 'Daño',
-                iconSize: 32,
-                onPressed: widget.canEdit ? _damage : null,
-                icon: const Icon(Icons.remove),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  key: const Key('hp-amount'),
-                  controller: _amount,
-                  textAlign: TextAlign.center,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Daño / curación',
-                    border: OutlineInputBorder(),
-                    isDense: true,
+    final bigNumber = theme.textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold);
+    return ClassAccent(
+      classIndex: mainClassIndex(c),
+      child: CombatCard(
+        title: 'Puntos de golpe',
+        trailing: ActionChip(
+          key: const Key('temp-hp'),
+          avatar: const Icon(Icons.shield_outlined, size: 18),
+          label: Text('PG temp.: ${c.temporaryHitPoints}'),
+          onPressed: widget.canEdit ? _editTemp : null,
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Only " / max" reacts to taps: it opens the maximum editor.
+                KeyedSubtree(
+                  key: const Key('hp-max-edit'),
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: '${c.hitPointsCurrent}'),
+                        TextSpan(
+                          text: ' / $max',
+                          recognizer: widget.canEdit ? _maxTap : null,
+                          mouseCursor: widget.canEdit ? SystemMouseCursors.click : null,
+                          style: widget.canEdit
+                              ? TextStyle(
+                                  decoration: TextDecoration.underline,
+                                  decorationStyle: TextDecorationStyle.dotted,
+                                  decorationColor: classThemeOf(mainClassIndex(c))
+                                      .accent(theme.brightness),
+                                )
+                              : null,
+                        ),
+                      ],
+                    ),
+                    key: const Key('combat-hp'),
+                    style: bigNumber,
+                    semanticsLabel: '${c.hitPointsCurrent} de $max puntos de golpe',
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              IconButton.filledTonal(
-                key: const Key('hp-plus'),
-                tooltip: 'Curación',
-                iconSize: 32,
-                onPressed: widget.canEdit ? _heal : null,
-                icon: const Icon(Icons.add),
-              ),
-            ],
+                OverrideMark(character: c, field: hitPointsMaxField),
+              ],
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              key: const Key('hp-bar'),
+              value: fraction,
+              minHeight: 12,
+              borderRadius: BorderRadius.circular(6),
+              color: barColor,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                IconButton.filledTonal(
+                  key: const Key('hp-minus'),
+                  tooltip: 'Daño',
+                  iconSize: 32,
+                  onPressed: widget.canEdit ? _damage : null,
+                  icon: const Icon(Icons.remove),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    key: const Key('hp-amount'),
+                    controller: _amount,
+                    textAlign: TextAlign.center,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Daño / curación',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                IconButton.filledTonal(
+                  key: const Key('hp-plus'),
+                  tooltip: 'Curación',
+                  iconSize: 32,
+                  onPressed: widget.canEdit ? _heal : null,
+                  icon: const Icon(Icons.add),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Override field of the maximum hit points.
+const hitPointsMaxField = 'hitPointsMax';
+
+/// What [HpMaxDialog] resolves to.
+sealed class HpMaxChoice {
+  const HpMaxChoice();
+}
+
+/// Save [value] as the override.
+class HpMaxValue extends HpMaxChoice {
+  const HpMaxValue(this.value);
+
+  final int value;
+}
+
+/// Remove the override ("Volver al cálculo").
+class HpMaxReset extends HpMaxChoice {
+  const HpMaxReset();
+}
+
+/// Number field for the maximum hit points with "Guardar" and, when the value
+/// is overridden, "Volver al cálculo".
+class HpMaxDialog extends StatefulWidget {
+  const HpMaxDialog({super.key, required this.value, required this.overridden});
+
+  final int value;
+  final bool overridden;
+
+  @override
+  State<HpMaxDialog> createState() => _HpMaxDialogState();
+}
+
+class _HpMaxDialogState extends State<HpMaxDialog> {
+  late final _controller = TextEditingController(text: '${widget.value}');
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final value = int.tryParse(_controller.text.trim());
+    if (value == null || value < 1 || value > 999) {
+      setState(() => _error = 'Introduce un número entre 1 y 999.');
+      return;
+    }
+    Navigator.of(context).pop(HpMaxValue(value));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('PG máximos'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            key: const Key('hp-max-field'),
+            controller: _controller,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: 'PG máximos', errorText: _error),
+            onSubmitted: (_) => _save(),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.overridden
+                ? 'Valor fijado a mano. "Volver al cálculo" usa el de clase y nivel.'
+                : 'Fija un valor a mano en lugar del calculado.',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+        if (widget.overridden)
+          TextButton(
+            key: const Key('hp-max-reset'),
+            onPressed: () => Navigator.of(context).pop(const HpMaxReset()),
+            child: const Text('Volver al cálculo'),
+          ),
+        FilledButton(key: const Key('hp-max-save'), onPressed: _save, child: const Text('Guardar')),
+      ],
     );
   }
 }

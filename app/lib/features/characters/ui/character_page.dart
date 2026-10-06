@@ -7,6 +7,7 @@ import '../../../core/auth/auth_state.dart';
 import '../../../core/cache/stale_data.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_icon.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
@@ -19,6 +20,7 @@ import '../data/characters_repository.dart';
 import '../data/models.dart';
 import '../data/view_mode_controller.dart';
 import '../domain/character_format.dart';
+import '../domain/class_theme.dart';
 import 'character_avatar.dart';
 import 'character_tabs.dart';
 import 'combat/combat_view.dart';
@@ -225,6 +227,14 @@ class _CombatHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = character;
+    return ClassAccent(
+      classIndex: mainClassIndex(c),
+      child: Builder(builder: (context) => _buildHeader(context)),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
     final theme = Theme.of(context);
     final c = character;
     return Padding(
@@ -246,10 +256,13 @@ class _CombatHeader extends StatelessWidget {
                       style: theme.textTheme.headlineSmall,
                     ),
                     if (c.classes.isNotEmpty)
-                      Text(
-                        '${classesLabel(c.classes)} · Nivel ${c.totalLevel}',
-                        key: const Key('character-subtitle'),
-                        style: theme.textTheme.bodyMedium,
+                      _ClassLine(
+                        character: c,
+                        child: Text(
+                          '${classesLabel(c.classes)} · Nivel ${c.totalLevel}',
+                          key: const Key('character-subtitle'),
+                          style: theme.textTheme.bodyMedium,
+                        ),
                       ),
                   ],
                 ),
@@ -292,11 +305,19 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final c = character;
     final classes = c.classes.isEmpty ? 'Sin clase' : classesLabel(c.classes);
     final pending = c.pendingChangeRequests.where((r) => r.isPending).length;
 
+    return ClassAccent(
+      classIndex: mainClassIndex(c),
+      child: Builder(builder: (context) => _buildHeader(context, classes, pending)),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, String classes, int pending) {
+    final theme = Theme.of(context);
+    final c = character;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Column(
@@ -316,10 +337,13 @@ class _Header extends StatelessWidget {
                       style: theme.textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      '$_race · $classes${c.classes.isEmpty ? '' : ' · Nivel ${c.totalLevel}'}',
-                      key: const Key('character-subtitle'),
-                      style: theme.textTheme.bodyMedium,
+                    _ClassLine(
+                      character: c,
+                      child: Text(
+                        '$_race · $classes${c.classes.isEmpty ? '' : ' · Nivel ${c.totalLevel}'}',
+                        key: const Key('character-subtitle'),
+                        style: theme.textTheme.bodyMedium,
+                      ),
                     ),
                   ],
                 ),
@@ -382,6 +406,34 @@ class _Header extends StatelessWidget {
           switcher,
         ],
       ),
+    );
+  }
+}
+
+/// The subtitle of a header with the icon of the character's main class,
+/// tinted with its accent.
+class _ClassLine extends StatelessWidget {
+  const _ClassLine({required this.character, required this.child});
+
+  final CharacterDetail character;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final main = mainClassIndex(character);
+    if (main == null) return child;
+    return Row(
+      children: [
+        AppIcon(
+          classThemeOf(main).icon,
+          key: const Key('character-class-icon'),
+          size: 18,
+          color: Theme.of(context).colorScheme.primary,
+          semanticLabel: classThemeOf(main).labelEs,
+        ),
+        const SizedBox(width: 6),
+        Flexible(child: child),
+      ],
     );
   }
 }
