@@ -60,6 +60,7 @@ curl http://127.0.0.1:8080/health/ready
 | `JWT_SECRET` | Firma de los tokens y de los enlaces de asistencia (mínimo 32 caracteres) |
 | `DEFAULT_TIME_ZONE` | Zona horaria IANA de las campañas nuevas (cada campaña puede cambiarla en sus ajustes) |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_ADDRESS` | Correo saliente. Puerto `465` = TLS implícito, `587` = STARTTLS (se detecta por el puerto). El remitente debe estar autorizado para la cuenta |
+| `SMTP_CHECK_REVOCATION` | Comprobar revocación (CRL/OCSP) del certificado del SMTP. `false` con una CA propia que no publica CRL (si no, el envío falla con `unable to get certificate CRL`); la cadena y el host se validan siempre |
 | `CA_BUNDLE_HOST_PATH`, `SSL_CERT_FILE` | Fichero PEM del host con tu CA propia y la ruta donde se monta en el contenedor, a la que apunta `SSL_CERT_FILE` (deja el bundle del sistema si no tienes CA propia) |
 
 ### Ajustes opcionales
@@ -73,7 +74,6 @@ servicio `api` del `docker-compose.yml`:
 | `FileStorage__MaxUploadMegabytes` | `200` | Tamaño máximo de subida (ver [Límites de subida](#límites-de-subida)) |
 | `Reminders__Enabled`, `Reminders__PollSeconds` | `true`, `60` | Envío de recordatorios de sesión y frecuencia de comprobación |
 | `Smtp__Security` | `Auto` | `Auto`, `SslOnConnect`, `StartTls` o `None` |
-| `Smtp__CheckCertificateRevocation` | `true` | `false` solo si tu CA privada no publica CRL/OCSP y el envío falla por revocación |
 | `Smtp__FromName` | `D&D Companion` | Nombre del remitente |
 | `App__PublicUrl` | vacío | Respaldo de la URL pública para correos enviados antes de la primera petición por el proxy |
 | `SSL_CERT_DIR` | — | Alternativa a `SSL_CERT_FILE`: directorio de PEM procesado con `openssl rehash` |

@@ -196,12 +196,12 @@ public class SmtpSecurityMappingTests
         Assert.Equal(expected, SmtpSecurityMapper.ToSecureSocketOptions(security, useStartTls));
 
     [Fact]
-    public void Defaults_are_auto_security_with_revocation_check()
+    public void Defaults_are_auto_security_without_revocation_check()
     {
         var options = new SmtpOptions();
 
         Assert.Equal(SmtpSecurity.Auto, options.Security);
         Assert.False(options.UseStartTls);
-        Assert.True(options.CheckCertificateRevocation);
+        Assert.False(options.CheckCertificateRevocation);
     }
 }

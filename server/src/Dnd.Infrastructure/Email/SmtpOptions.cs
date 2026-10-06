@@ -39,8 +39,12 @@ public sealed class SmtpOptions
     /// </summary>
     public bool UseStartTls { get; set; }
 
-    /// <summary>Check whether the server certificate was revoked (CRL/OCSP). Disable only if the CA publishes no revocation data.</summary>
-    public bool CheckCertificateRevocation { get; set; } = true;
+    /// <summary>
+    /// Check whether the server certificate was revoked (CRL/OCSP). Off by default: private CAs rarely
+    /// publish revocation data and OpenSSL then fails the handshake with "unable to get certificate CRL".
+    /// The chain and the host name are always validated regardless of this setting.
+    /// </summary>
+    public bool CheckCertificateRevocation { get; set; }
 
     public string? Username { get; set; }
 

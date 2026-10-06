@@ -39,6 +39,7 @@ services:
       Smtp__Username: ${SMTP_USERNAME}
       Smtp__Password: ${SMTP_PASSWORD}
       Smtp__FromAddress: ${SMTP_FROM_ADDRESS}
+      Smtp__CheckCertificateRevocation: ${SMTP_CHECK_REVOCATION}
       # CA propia para el SMTP u otras conexiones TLS salientes (OpenSSL la carga junto a las públicas).
       SSL_CERT_FILE: ${SSL_CERT_FILE}
     ports:
