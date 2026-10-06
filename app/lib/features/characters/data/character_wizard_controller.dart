@@ -358,6 +358,15 @@ class WizardState {
       baseAbilities: {for (final k in abilityKeys) k: abilities[k] ?? 10},
       classes: [SheetPatchClass(classIndex: classKey, subclassIndex: subclassIndex, level: 1)],
       proficiencies: [
+        // Saving throws of the class, as the full sheet editor marks them.
+        for (final a in (classDetail?.savingThrows ?? const <String>[])
+            .map(abilityKeyOf)
+            .where(abilityKeys.contains))
+          CharacterProficiency(
+            type: ProficiencyType.savingThrow,
+            key: a,
+            source: ProficiencySource.classSource,
+          ),
         for (final s in skills)
           CharacterProficiency(
             type: ProficiencyType.skill,

@@ -541,6 +541,13 @@ void main() {
         {'Common', 'Elvish'},
       );
       expect(
+        {
+          for (final p in patch.proficiencies!)
+            if (p.type == ProficiencyType.savingThrow) p.key: p.source,
+        },
+        {'int': ProficiencySource.classSource, 'wis': ProficiencySource.classSource},
+      );
+      expect(
         {for (final s in patch.spells!) s.spellIndex: s.isPrepared},
         {'fire-bolt': true, 'light': true, 'magic-missile': true},
       );
