@@ -44,6 +44,7 @@ class FakeCatalogRepository implements CatalogRepository {
     this.raceList = const [],
     this.raceDetails = const {},
     this.conditionList = const [],
+    this.backgroundList = const [],
   });
 
   final List<SpellSummary> spellList;
@@ -55,6 +56,7 @@ class FakeCatalogRepository implements CatalogRepository {
   final List<RaceSummary> raceList;
   final Map<String, RaceDetail> raceDetails;
   final List<Condition> conditionList;
+  final List<Background> backgroundList;
   Object? error;
   final List<SpellCall> spellCalls = [];
   final List<({String? search, String? category, int page})> itemCalls = [];
@@ -164,7 +166,10 @@ class FakeCatalogRepository implements CatalogRepository {
   Future<List<Skill>> skills() async => const [];
 
   @override
-  Future<List<Background>> backgrounds() async => const [];
+  Future<List<Background>> backgrounds() async {
+    _fail();
+    return backgroundList;
+  }
 
   @override
   Future<Feature> feature(String index) => throw UnimplementedError();

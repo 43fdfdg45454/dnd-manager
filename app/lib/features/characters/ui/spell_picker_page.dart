@@ -15,10 +15,30 @@ typedef SpellPickerClass = ({String classIndex, String className, int level});
 /// Full-screen catalog search to add spells to a character. Spells are filtered
 /// by class and by the highest spell level the class can cast. Pops the list of
 /// spells added (empty if none).
+///
+/// The character creation wizard narrows it with [minLevel] / [maxLevel] (for
+/// example only cantrips) and [limit] (how many more spells may be picked).
 class SpellPickerPage extends ConsumerStatefulWidget {
-  const SpellPickerPage({super.key, required this.classes, required this.chosen});
+  const SpellPickerPage({
+    super.key,
+    required this.classes,
+    required this.chosen,
+    this.minLevel = 0,
+    this.maxLevel,
+    this.limit,
+    this.title = 'Añadir hechizos',
+  });
 
   final List<SpellPickerClass> classes;
+
+  /// Lowest and highest spell level offered (0 = cantrips); [maxLevel] null
+  /// means whatever the class can cast.
+  final int minLevel;
+  final int? maxLevel;
+
+  /// Most spells that may be picked in this page; null means no limit.
+  final int? limit;
+  final String title;
 
   /// Spell indexes the character already has (shown checked, not toggleable).
   final Set<String> chosen;
@@ -34,7 +54,9 @@ class _SpellPickerPageState extends ConsumerState<SpellPickerPage> {
   final _picked = <CharacterSpell>[];
   Timer? _debounce;
   late SpellPickerClass _class = widget.classes.first;
-  int? _levelFilter;
+  late int? _levelFilter = widget.maxLevel != null && widget.maxLevel == widget.minLevel
+      ? widget.minLevel
+      : null;
   int _maxLevel = 9;
   List<SpellSummary> _items = [];
   int _page = 1;
@@ -82,7 +104,7 @@ class _SpellPickerPageState extends ConsumerState<SpellPickerPage> {
     try {
       final maxLevel = await _maxSpellLevel(_class);
       if (generation != _generation || !mounted) return;
-      _maxLevel = maxLevel;
+      _maxLevel = widget.maxLevel == null ? maxLevel : maxLevel.clamp(0, widget.maxLevel!);
       if (_levelFilter != null && _levelFilter! > maxLevel) _levelFilter = null;
       await _fetch(generation, 1);
     } catch (error) {
@@ -104,7 +126,10 @@ class _SpellPickerPageState extends ConsumerState<SpellPickerPage> {
     );
     if (generation != _generation || !mounted) return;
     setState(() {
-      _items = [..._items, ...result.items.where((s) => s.level <= _maxLevel)];
+      _items = [
+        ..._items,
+        ...result.items.where((s) => s.level <= _maxLevel && s.level >= widget.minLevel),
+      ];
       _page = page;
       _hasMore = result.hasMore;
       _loading = false;
@@ -136,6 +161,10 @@ class _SpellPickerPageState extends ConsumerState<SpellPickerPage> {
     setState(() {
       if (_isPicked(spell.index)) {
         _picked.removeWhere((s) => s.spellIndex == spell.index);
+      } else if (widget.limit != null && _picked.length >= widget.limit!) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text('Como máximo ${widget.limit} más.')));
       } else {
         _picked.add(
           CharacterSpell(
@@ -154,12 +183,18 @@ class _SpellPickerPageState extends ConsumerState<SpellPickerPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Añadir hechizos'),
+        title: Text(widget.title),
         actions: [
           TextButton(
             key: const Key('spell-picker-done'),
             onPressed: () => Navigator.of(context).pop<List<CharacterSpell>>(_picked),
-            child: Text(_picked.isEmpty ? 'Listo' : 'Añadir (${_picked.length})'),
+            child: Text(
+              _picked.isEmpty
+                  ? 'Listo'
+                  : widget.limit == null
+                  ? 'Añadir (${_picked.length})'
+                  : 'Añadir (${_picked.length}/${widget.limit})',
+            ),
           ),
         ],
       ),
@@ -200,7 +235,7 @@ class _SpellPickerPageState extends ConsumerState<SpellPickerPage> {
                   decoration: const InputDecoration(labelText: 'Nivel'),
                   items: [
                     const DropdownMenuItem<int?>(value: null, child: Text('Todos los niveles')),
-                    for (var l = 0; l <= _maxLevel; l++)
+                    for (var l = widget.minLevel; l <= _maxLevel; l++)
                       DropdownMenuItem<int?>(value: l, child: Text(spellLevelLabel(l))),
                   ],
                   onChanged: (value) {

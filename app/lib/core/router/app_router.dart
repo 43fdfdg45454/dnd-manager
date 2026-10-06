@@ -14,6 +14,7 @@ import '../../features/campaigns/ui/general/campaign_section_page.dart';
 import '../../features/change_requests/ui/change_requests_page.dart';
 import '../../features/characters/ui/character_page.dart';
 import '../../features/characters/ui/sheet_editor_page.dart';
+import '../../features/characters/ui/wizard/character_wizard_page.dart';
 import '../../features/catalog/ui/class_detail_page.dart';
 import '../../features/catalog/ui/compendium_page.dart';
 import '../../features/catalog/ui/item_detail_page.dart';
@@ -53,6 +54,7 @@ abstract final class AppRoutes {
   static const campaignChangeRequests = '/campaigns/:id/change-requests';
   static const campaignShop = '/campaigns/:id/shops/:shopId';
   static const campaignTransactions = '/campaigns/:id/transactions';
+  static const campaignCharacterNew = '/campaigns/:id/characters/new';
   static const characterDetail = '/characters/:id';
   static const characterEditor = '/characters/:id/edit';
   static const campaignLoreNew = '/campaigns/:id/lore/new';
@@ -127,6 +129,11 @@ abstract final class AppRoutes {
 
   /// PDF viewer of the library document [docId].
   static String libraryDocument(String docId) => '/library/$docId/view';
+
+  /// Creation wizard of a new character; DMs may preselect the owner.
+  static String characterNew(String campaignId, {String? ownerUserId}) =>
+      '/campaigns/$campaignId/characters/new'
+      '${ownerUserId == null ? '' : '?ownerUserId=${Uri.encodeQueryComponent(ownerUserId)}'}';
 
   static String character(String id) => '/characters/$id';
 
@@ -296,6 +303,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.campaignTransactions,
         builder: (context, state) => TransactionsPage(campaignId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.campaignCharacterNew,
+        builder: (context, state) => CharacterWizardPage(
+          campaignId: state.pathParameters['id']!,
+          ownerUserId: state.uri.queryParameters['ownerUserId'],
+        ),
       ),
       GoRoute(
         path: AppRoutes.campaignLoreNew,

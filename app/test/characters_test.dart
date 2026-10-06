@@ -165,26 +165,24 @@ void main() {
       expect(find.byKey(const Key('character-title')), findsOneWidget);
     });
 
-    testWidgets('un jugador crea su personaje sin elegir dueño', (tester) async {
+    testWidgets('"Nuevo personaje" abre el asistente sin elegir dueño para un jugador', (
+      tester,
+    ) async {
       final repository = FakeCharactersRepository();
       await _pumpApp(tester, characters: repository, location: '/campaigns/c1');
       await openGeneralSection(tester, 'characters');
       expect(find.text('Aún no hay personajes en esta campaña'), findsOneWidget);
+      expect(find.byKey(const Key('characters-more')), findsNothing);
 
       await tester.tap(find.byKey(const Key('characters-new')));
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('character-owner')), findsNothing);
-      await tester.enterText(find.byKey(const Key('character-name')), 'Nuevo Héroe');
-      await tester.tap(find.byKey(const Key('character-create-submit')));
-      await tester.pumpAndSettle();
 
-      expect(repository.created.single.name, 'Nuevo Héroe');
-      expect(repository.created.single.owner, isNull);
-      expect(find.text('Personaje creado.'), findsOneWidget);
-      expect(find.text('Nuevo Héroe'), findsOneWidget);
+      expect(find.byKey(const Key('step-name')), findsOneWidget);
+      expect(find.byKey(const Key('wizard-owner')), findsNothing);
+      expect(repository.created, isEmpty);
     });
 
-    testWidgets('un DM puede crear un PNJ sin dueño', (tester) async {
+    testWidgets('un DM sigue pudiendo crear un PNJ rápido sin dueño', (tester) async {
       final repository = FakeCharactersRepository(isDm: true);
       await _pumpApp(
         tester,
@@ -194,7 +192,9 @@ void main() {
       );
       await openGeneralSection(tester, 'characters');
 
-      await tester.tap(find.byKey(const Key('characters-new')));
+      await tester.tap(find.byKey(const Key('characters-more')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('characters-quick')));
       await tester.pumpAndSettle();
       await tester.enterText(find.byKey(const Key('character-name')), 'Guardia');
       await tester.tap(find.byKey(const Key('character-owner')));

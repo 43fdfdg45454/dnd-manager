@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/network/connectivity.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/domain/campaign_models.dart';
@@ -21,7 +22,11 @@ class CharactersTab extends ConsumerWidget {
 
   final CampaignDetail campaign;
 
-  Future<void> _create(BuildContext context, WidgetRef ref, String myUserId) async {
+  /// Opens the guided creation wizard.
+  void _openWizard(BuildContext context) => context.push(AppRoutes.characterNew(campaign.id));
+
+  /// DM shortcut: name and owner only, for NPCs.
+  Future<void> _createQuick(BuildContext context, WidgetRef ref, String myUserId) async {
     final data = await showDialog<NewCharacterData>(
       context: context,
       builder: (_) => NewCharacterDialog(
@@ -51,11 +56,20 @@ class CharactersTab extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: OfflineAwareFab(
-        fabKey: const Key('characters-new'),
-        onPressed: () => _create(context, ref, myUserId),
-        icon: const Icon(Icons.person_add_alt_1),
-        label: const Text('Nuevo personaje'),
+      floatingActionButton: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (campaign.myRole.isAtLeastDm) ...[
+            _QuickCreateMenu(onSelected: () => _createQuick(context, ref, myUserId)),
+            const SizedBox(width: 12),
+          ],
+          OfflineAwareFab(
+            fabKey: const Key('characters-new'),
+            onPressed: () => _openWizard(context),
+            icon: const Icon(Icons.person_add_alt_1),
+            label: const Text('Nuevo personaje'),
+          ),
+        ],
       ),
       body: characters.when(
         skipLoadingOnReload: true,
@@ -101,6 +115,31 @@ class CharactersTab extends ConsumerWidget {
                 ),
         ),
       ),
+    );
+  }
+}
+
+/// Secondary menu of the DM next to "Nuevo personaje": quick NPC creation.
+class _QuickCreateMenu extends ConsumerWidget {
+  const _QuickCreateMenu({required this.onSelected});
+
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final canWrite = ref.watch(canWriteProvider);
+    return PopupMenuButton<String>(
+      key: const Key('characters-more'),
+      enabled: canWrite,
+      tooltip: canWrite ? 'Más opciones' : needsConnectionMessage,
+      onSelected: (_) => onSelected(),
+      itemBuilder: (context) => const [
+        PopupMenuItem<String>(
+          key: Key('characters-quick'),
+          value: 'quick',
+          child: Text('Crear rápido (PNJ)'),
+        ),
+      ],
     );
   }
 }

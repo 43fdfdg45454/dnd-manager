@@ -333,6 +333,18 @@ class Subclass {
   final List<Feature> features;
 }
 
+/// Level 1 skill proficiency choice of a class: pick [choose] of [from] (skill
+/// indexes such as "arcana").
+class SkillChoices {
+  const SkillChoices({this.choose = 0, this.from = const []});
+
+  factory SkillChoices.fromJson(Map<String, dynamic> json) =>
+      SkillChoices(choose: _int(json['choose']) ?? 0, from: _strList(json['from']));
+
+  final int choose;
+  final List<String> from;
+}
+
 class ClassDetail extends ClassSummary {
   const ClassDetail({
     required super.index,
@@ -345,6 +357,7 @@ class ClassDetail extends ClassSummary {
     this.proficiencies = const [],
     this.subclassFlavor,
     this.startingEquipmentText,
+    this.skillChoices = const SkillChoices(),
     this.levels = const [],
     this.subclasses = const [],
     this.features = const [],
@@ -378,6 +391,7 @@ class ClassDetail extends ClassSummary {
       proficiencies: _nameList(json['proficiencyNames'] ?? json['proficiencies']),
       subclassFlavor: _strOrNull(json['subclassFlavor']),
       startingEquipmentText: _strOrNull(json['startingEquipmentText']),
+      skillChoices: _map(json['skillChoices']).let(SkillChoices.fromJson) ?? const SkillChoices(),
       levels: levels,
       subclasses: _objects(json['subclasses'], Subclass.fromJson),
       features: features,
@@ -391,6 +405,7 @@ class ClassDetail extends ClassSummary {
   final List<String> proficiencies;
   final String? subclassFlavor;
   final String? startingEquipmentText;
+  final SkillChoices skillChoices;
   final List<ClassLevel> levels;
   final List<Subclass> subclasses;
   final List<Feature> features;
@@ -404,19 +419,30 @@ class ClassDetail extends ClassSummary {
 // ---------------------------------------------------------------------------
 
 class RaceSummary {
-  const RaceSummary({required this.index, required this.name, this.speed, this.size});
+  const RaceSummary({
+    required this.index,
+    required this.name,
+    this.speed,
+    this.size,
+    this.abilityBonuses = const [],
+    this.subraceIndexes = const [],
+  });
 
   factory RaceSummary.fromJson(Map<String, dynamic> json) => RaceSummary(
     index: _str(json['index']),
     name: _str(json['name'], _str(json['index'])),
     speed: _int(json['speed']),
     size: _strOrNull(json['size']),
+    abilityBonuses: _objects(json['abilityBonuses'], AbilityBonus.fromJson),
+    subraceIndexes: _nameList(json['subraceIndexes']),
   );
 
   final String index;
   final String name;
   final int? speed;
   final String? size;
+  final List<AbilityBonus> abilityBonuses;
+  final List<String> subraceIndexes;
 }
 
 class Trait {
@@ -463,7 +489,8 @@ class RaceDetail extends RaceSummary {
     required super.name,
     super.speed,
     super.size,
-    this.abilityBonuses = const [],
+    super.abilityBonuses,
+    super.subraceIndexes,
     this.traits = const [],
     this.languages = const [],
     this.age,
@@ -489,7 +516,6 @@ class RaceDetail extends RaceSummary {
     );
   }
 
-  final List<AbilityBonus> abilityBonuses;
   final List<Trait> traits;
   final List<String> languages;
   final String? age;
