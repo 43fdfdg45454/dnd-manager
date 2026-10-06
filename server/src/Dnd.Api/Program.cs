@@ -19,7 +19,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Console logging with Serilog (JSON outside Development). The default console provider is removed so
 // events are not printed twice; providers added later (for example by tests) still receive the events.
 builder.Logging.ClearProviders();
-builder.Host.UseSerilog((context, _, logger) => LoggingSetup.Configure(context, logger), writeToProviders: true);
+// preserveStaticLogger keeps one logger per host instead of the shared static Log.Logger: several hosts in the
+// same process (integration tests) would otherwise overwrite and silence each other.
+builder.Host.UseSerilog((context, _, logger) => LoggingSetup.Configure(context, logger), preserveStaticLogger: true, writeToProviders: true);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
