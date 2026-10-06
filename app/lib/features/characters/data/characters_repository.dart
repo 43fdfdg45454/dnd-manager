@@ -199,6 +199,25 @@ class CharactersRepository {
     );
   }
 
+  // -- Level-up wizard (phase 16c) -------------------------------------------
+
+  /// `GET /characters/{id}/level-up`: what the next level in [classIndex]
+  /// (the main class when null) brings. 409 when no level was granted.
+  Future<LevelUpPlan> levelUpPlan(String id, {String? classIndex}) async {
+    final response = await _client.dio.get<Map<String, dynamic>>(
+      '$_api/characters/$id/level-up',
+      queryParameters: {'classIndex': ?classIndex},
+    );
+    return LevelUpPlan.fromJson(response.data!);
+  }
+
+  /// `POST /characters/{id}/level-up`: applies the level and returns the
+  /// updated character. 400 with a Spanish message on an invalid answer.
+  Future<CharacterDetail> applyLevelUp(String id, LevelUpRequest request) async =>
+      CharacterDetail.fromJson(
+        await _json('POST', '$_api/characters/$id/level-up', data: request.toJson()),
+      );
+
   // -- Change requests ------------------------------------------------------
 
   /// DMs get every request of the campaign, players only their own. A null

@@ -16,6 +16,7 @@ import '../../dice/ui/dice_sheet.dart';
 import '../data/characters_controller.dart';
 import '../data/models.dart';
 import '../domain/character_format.dart';
+import 'level_up/character_choices_section.dart';
 
 /// Icon with the note of an override, shown on long press. Renders nothing for
 /// values that were not overridden.
@@ -476,6 +477,7 @@ class TraitsTab extends ConsumerWidget {
     }
     return _TabList(
       children: [
+        if (c.choices.isNotEmpty) CharacterChoicesSection(character: c),
         for (final cls in c.classes) _ClassFeatures(characterClass: cls),
         if (c.raceIndex != null) _RaceTraits(raceIndex: c.raceIndex!, subraceIndex: c.subraceIndex),
       ],

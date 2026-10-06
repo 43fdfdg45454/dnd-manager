@@ -293,8 +293,7 @@ class _CombatSubview extends StatelessWidget {
 }
 
 /// "¡Puedes subir a nivel N!": a DM granted the next level, with the level-up
-/// glyph beating softly ([PulseSeal]). Until the level-up wizard exists its
-/// button opens the full sheet.
+/// glyph beating softly ([PulseSeal]). Its button opens the level-up wizard.
 class _LevelUpCard extends StatelessWidget {
   const _LevelUpCard({required this.character});
 
@@ -327,7 +326,7 @@ class _LevelUpCard extends StatelessWidget {
           const SizedBox(width: 8),
           FilledButton(
             key: const Key('level-up-open'),
-            onPressed: () => context.push(AppRoutes.character(character.id)),
+            onPressed: () => context.push(AppRoutes.characterLevelUp(character.id)),
             child: const Text('Subir de nivel'),
           ),
         ],

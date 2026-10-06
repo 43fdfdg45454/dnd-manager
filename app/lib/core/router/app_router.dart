@@ -14,6 +14,7 @@ import '../../features/campaigns/ui/general/campaign_general_page.dart';
 import '../../features/campaigns/ui/general/campaign_section_page.dart';
 import '../../features/change_requests/ui/change_requests_page.dart';
 import '../../features/characters/ui/character_page.dart';
+import '../../features/characters/ui/level_up/level_up_page.dart';
 import '../../features/characters/ui/sheet_editor_page.dart';
 import '../../features/characters/ui/wizard/character_wizard_page.dart';
 import '../../features/catalog/ui/class_detail_page.dart';
@@ -61,6 +62,7 @@ abstract final class AppRoutes {
   static const campaignCharacterNew = '/campaigns/:id/characters/new';
   static const characterDetail = '/characters/:id';
   static const characterEditor = '/characters/:id/edit';
+  static const characterLevelUpPath = '/characters/:id/level-up';
   static const campaignLoreNew = '/campaigns/:id/lore/new';
   static const campaignLoreEntry = '/campaigns/:id/lore/:entryId';
   static const campaignLoreEdit = '/campaigns/:id/lore/:entryId/edit';
@@ -142,6 +144,9 @@ abstract final class AppRoutes {
   static String character(String id) => '/characters/$id';
 
   static String characterEdit(String id) => '/characters/$id/edit';
+
+  /// Level-up wizard of a character with a level granted by the DM.
+  static String characterLevelUp(String id) => '/characters/$id/level-up';
 
   static String spell(String index) => '/compendium/spells/${Uri.encodeComponent(index)}';
 
@@ -386,6 +391,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.characterEditor,
         builder: (context, state) => SheetEditorPage(characterId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.characterLevelUpPath,
+        builder: (context, state) => LevelUpPage(characterId: state.pathParameters['id']!),
       ),
       GoRoute(path: AppRoutes.compendium, builder: (context, state) => const CompendiumPage()),
       GoRoute(

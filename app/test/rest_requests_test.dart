@@ -182,7 +182,7 @@ void main() {
   });
 
   group('Mi sesión · nivel concedido', () {
-    testWidgets('la tarjeta aparece solo con un nivel pendiente y abre la hoja', (tester) async {
+    testWidgets('con nivel pendiente la tarjeta abre el asistente', (tester) async {
       final (fakes: _, characters: _, hub: _, :router) = await _pumpPlayer(
         tester,
         character: makeCharacterJson(status: 'Active', pendingLevelUpTo: 4),
@@ -191,7 +191,7 @@ void main() {
       expect(find.text('¡Puedes subir a nivel 4!'), findsOneWidget);
 
       await _tapKey(tester, 'level-up-open');
-      expect(locationOf(router), '/characters/ch1');
+      expect(locationOf(router), '/characters/ch1/level-up');
     });
 
     testWidgets('sin nivel pendiente no hay tarjeta', (tester) async {

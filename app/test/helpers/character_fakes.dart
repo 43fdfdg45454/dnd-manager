@@ -493,6 +493,52 @@ class FakeCharactersRepository implements CharactersRepository {
     json['pendingRest'] = null;
   }
 
+  // -- Level-up wizard ------------------------------------------------------
+
+  /// Plans answered by `GET /level-up`, by class index; the entry under ''
+  /// is the default (no `classIndex`). Without a plan the request fails with 409.
+  final Map<String, Map<String, dynamic>> levelUpPlans = {};
+
+  /// Class asked for in each plan request (null for the default one).
+  final List<String?> levelUpPlanRequests = [];
+
+  /// Bodies of `POST /level-up`, as JSON.
+  final List<Map<String, dynamic>> levelUpBodies = [];
+
+  /// Thrown by [levelUpPlan] / [applyLevelUp] when set.
+  Object? levelUpPlanError;
+  Object? levelUpError;
+
+  @override
+  Future<LevelUpPlan> levelUpPlan(String id, {String? classIndex}) async {
+    _fail();
+    levelUpPlanRequests.add(classIndex);
+    if (levelUpPlanError != null) throw levelUpPlanError!;
+    final json = levelUpPlans[classIndex ?? ''] ?? levelUpPlans[''];
+    if (json == null) throw dioError(409);
+    return LevelUpPlan.fromJson(jsonDecode(jsonEncode(json)) as Map<String, dynamic>);
+  }
+
+  @override
+  Future<CharacterDetail> applyLevelUp(String id, LevelUpRequest request) async {
+    _fail();
+    levelUpBodies.add(jsonDecode(jsonEncode(request.toJson())) as Map<String, dynamic>);
+    if (levelUpError != null) throw levelUpError!;
+    final json = _json(id);
+    final classes = [
+      for (final c in (json['classes'] as List? ?? const [])) Map<String, dynamic>.from(c as Map),
+    ];
+    final existing = classes.where((c) => c['classIndex'] == request.classIndex).firstOrNull;
+    if (existing != null) {
+      existing['level'] = (existing['level'] as int) + 1;
+    } else if (request.classIndex != null) {
+      classes.add({'classIndex': request.classIndex, 'className': request.classIndex, 'level': 1});
+    }
+    json['classes'] = classes;
+    json['pendingLevelUpTo'] = null;
+    return get(id);
+  }
+
   /// What the server does when a DM grants (or withdraws, with null) a level.
   void setPendingLevelUp(String id, int? level) => _json(id)['pendingLevelUpTo'] = level;
 

@@ -980,6 +980,7 @@ class CharacterDetail {
     this.pendingChangeRequests = const [],
     this.pendingRest,
     this.pendingLevelUpTo,
+    this.choices = const [],
     this.raceCatalogMissing = false,
     this.backgroundCatalogMissing = false,
     this.catalogMissing = false,
@@ -1035,6 +1036,7 @@ class CharacterDetail {
           ? null
           : PendingRest.fromJson(_map(json['pendingRest'])!),
       pendingLevelUpTo: _int(json['pendingLevelUpTo']),
+      choices: _objects(json['choices'], CharacterChoice.fromJson),
       raceCatalogMissing: _bool(json['raceCatalogMissing']),
       backgroundCatalogMissing: _bool(json['backgroundCatalogMissing']),
       catalogMissing: _bool(json['catalogMissing']),
@@ -1093,6 +1095,9 @@ class CharacterDetail {
 
   /// Level a DM granted and the player has not taken yet, or null.
   final int? pendingLevelUpTo;
+
+  /// Choices made when levelling up (subclass, fighting style, ASI...).
+  final List<CharacterChoice> choices;
 
   /// The race (or subrace) is gone from the catalog (a deleted content pack).
   final bool raceCatalogMissing;
@@ -1318,4 +1323,515 @@ class PendingApproval extends SheetSaveResult {
   const PendingApproval(this.changeRequest);
 
   final ChangeRequest changeRequest;
+}
+
+// ---------------------------------------------------------------------------
+// Level choices and level-up plan (phase 16c)
+// ---------------------------------------------------------------------------
+
+Map<String, int> _intMap(Object? value) {
+  final json = _map(value);
+  if (json == null) return const {};
+  return {
+    for (final e in json.entries)
+      if (_int(e.value) != null) e.key: _int(e.value)!,
+  };
+}
+
+List<String> _strings(Object? value) =>
+    value is List ? [for (final e in value) _str(e)] : const <String>[];
+
+/// A picked option: catalog index (or free text) and its display name (`ChoiceItemDto`).
+class ChoiceItem {
+  const ChoiceItem({required this.index, required this.name});
+
+  factory ChoiceItem.fromJson(Map<String, dynamic> json) {
+    final index = _str(json['index']);
+    return ChoiceItem(index: index, name: _str(json['name'], index));
+  }
+
+  final String index;
+  final String name;
+}
+
+/// A choice the character made when levelling up (`CharacterChoiceDto`):
+/// picks ([selected], [replaced]), an Ability Score Improvement ([asi]) or a
+/// [feat] (with the [ability] it raised).
+class CharacterChoice {
+  const CharacterChoice({
+    this.id = '',
+    required this.level,
+    required this.classIndex,
+    required this.key,
+    required this.name,
+    this.kind = '',
+    this.selected = const [],
+    this.replaced = const [],
+    this.asi = const {},
+    this.feat,
+    this.ability,
+  });
+
+  factory CharacterChoice.fromJson(Map<String, dynamic> json) {
+    final feat = _map(json['feat']);
+    return CharacterChoice(
+      id: _str(json['id']),
+      level: _int(json['level']) ?? 1,
+      classIndex: _str(json['classIndex']),
+      key: _str(json['key']),
+      name: _str(json['name'], _str(json['key'])),
+      kind: _str(json['kind']),
+      selected: _objects(json['selected'], ChoiceItem.fromJson),
+      replaced: _objects(json['replaced'], ChoiceItem.fromJson),
+      asi: _intMap(json['asi']),
+      feat: feat == null ? null : ChoiceItem.fromJson(feat),
+      ability: _strOrNull(json['ability']),
+    );
+  }
+
+  final String id;
+
+  /// Level of the class at which it was chosen.
+  final int level;
+  final String classIndex;
+  final String key;
+
+  /// Name of the choice ("Fighting Style").
+  final String name;
+
+  /// A [LevelChoiceKind] api value.
+  final String kind;
+  final List<ChoiceItem> selected;
+  final List<ChoiceItem> replaced;
+
+  /// Ability key -> increase, for an Ability Score Improvement.
+  final Map<String, int> asi;
+  final ChoiceItem? feat;
+  final String? ability;
+}
+
+/// Kinds of level choices (`LevelChoiceKind`).
+enum LevelChoiceKind {
+  subclass('Subclass'),
+  optionSet('OptionSet'),
+  asiOrFeat('AsiOrFeat'),
+  expertise('Expertise'),
+  skill('Skill'),
+  language('Language'),
+  tool('Tool'),
+  cantripsKnown('CantripsKnown'),
+  spellsKnown('SpellsKnown'),
+  spellbookSpells('SpellbookSpells'),
+  custom('Custom');
+
+  const LevelChoiceKind(this.apiValue);
+
+  final String apiValue;
+
+  /// Cantrips, spells known and spellbook spells.
+  bool get isSpells => this == cantripsKnown || this == spellsKnown || this == spellbookSpells;
+
+  static LevelChoiceKind fromApi(Object? value) =>
+      _enumFromApi(values, (e) => e.apiValue, value, LevelChoiceKind.custom);
+}
+
+/// A class the character could gain the level in (`LevelUpClassDto`).
+class LevelUpClassOption {
+  const LevelUpClassOption({
+    required this.classIndex,
+    required this.name,
+    this.allowed = true,
+    this.reason,
+    this.hitDie = 8,
+    this.isNew = false,
+    this.currentLevel = 0,
+    this.subclassIndex,
+  });
+
+  factory LevelUpClassOption.fromJson(Map<String, dynamic> json) {
+    final classIndex = _str(json['classIndex']);
+    return LevelUpClassOption(
+      classIndex: classIndex,
+      name: _str(json['name'], _titleFromIndex(classIndex)),
+      allowed: _bool(json['allowed'], true),
+      reason: _strOrNull(json['reason']),
+      hitDie: _int(json['hitDie']) ?? 8,
+      isNew: _bool(json['isNew']),
+      currentLevel: _int(json['currentLevel']) ?? 0,
+      subclassIndex: _strOrNull(json['subclassIndex']),
+    );
+  }
+
+  final String classIndex;
+  final String name;
+
+  /// False when a new class does not meet the multiclassing prerequisites ([reason]).
+  final bool allowed;
+  final String? reason;
+  final int hitDie;
+
+  /// The character does not have the class yet (multiclassing).
+  final bool isNew;
+
+  /// Level in the class now (0 for a new class).
+  final int currentLevel;
+
+  /// Current subclass in the class, if any.
+  final String? subclassIndex;
+}
+
+/// A feature gained automatically at the new level (`LevelUpFeatureDto`).
+class LevelUpFeature {
+  const LevelUpFeature({
+    required this.classIndex,
+    this.subclassIndex,
+    required this.level,
+    required this.index,
+    required this.name,
+    this.description = const [],
+  });
+
+  factory LevelUpFeature.fromJson(Map<String, dynamic> json) {
+    final feature = _map(json['feature']) ?? const {};
+    final index = _str(feature['index']);
+    return LevelUpFeature(
+      classIndex: _str(json['classIndex']),
+      subclassIndex: _strOrNull(json['subclassIndex']),
+      level: _int(json['level']) ?? 1,
+      index: index,
+      name: _str(feature['name'], index),
+      description: _strings(feature['description']),
+    );
+  }
+
+  final String classIndex;
+
+  /// Set for subclass features.
+  final String? subclassIndex;
+  final int level;
+  final String index;
+  final String name;
+  final List<String> description;
+}
+
+/// A numeric effect of an option (`EffectPreviewDto`): "CA 16 → 17".
+class EffectPreview {
+  const EffectPreview({
+    this.source = 'feature',
+    required this.label,
+    this.value = 0,
+    this.field,
+    this.before,
+    this.after,
+    this.condition,
+  });
+
+  factory EffectPreview.fromJson(Map<String, dynamic> json) => EffectPreview(
+    source: _str(json['source'], 'feature'),
+    label: _str(json['label']),
+    value: _int(json['value']) ?? 0,
+    field: _strOrNull(json['field']),
+    before: _int(json['before']),
+    after: _int(json['after']),
+    condition: _strOrNull(json['condition']),
+  );
+
+  final String source;
+
+  /// The value it changes ("CA").
+  final String label;
+  final int value;
+  final String? field;
+  final int? before;
+  final int? after;
+
+  /// When the effect applies (Spanish), for conditional effects.
+  final String? condition;
+
+  /// "CA 16 → 17", or "Ataque a distancia +2" without before/after; the
+  /// [condition] goes in brackets.
+  String get text {
+    final sign = value >= 0 ? '+$value' : '$value';
+    final base = before != null && after != null ? '$label $before → $after' : '$label $sign';
+    return condition == null ? base : '$base ($condition)';
+  }
+}
+
+/// A feat raises one ability of [from] (empty: any) by [amount] (`AbilityIncreaseDto`).
+class AbilityIncrease {
+  const AbilityIncrease({this.amount = 1, this.from = const []});
+
+  factory AbilityIncrease.fromJson(Map<String, dynamic> json) =>
+      AbilityIncrease(amount: _int(json['amount']) ?? 1, from: _strings(json['from']));
+
+  final int amount;
+  final List<String> from;
+
+  /// The abilities that can be raised.
+  List<String> get options => from.isEmpty ? abilityKeys : from;
+
+  /// The player has to pick the ability (more than one candidate).
+  bool get needsPick => options.length > 1;
+}
+
+/// An option of a level choice (`LevelUpOptionDto`).
+class LevelUpOption {
+  const LevelUpOption({
+    required this.index,
+    required this.name,
+    this.description = const [],
+    this.prerequisitesText,
+    this.eligible = true,
+    this.reason,
+    this.spellLevel,
+    this.effectsPreview = const [],
+    this.abilityIncrease,
+  });
+
+  factory LevelUpOption.fromJson(Map<String, dynamic> json) {
+    final index = _str(json['index']);
+    final increase = _map(json['abilityIncrease']);
+    return LevelUpOption(
+      index: index,
+      name: _str(json['name'], index),
+      description: _strings(json['description']),
+      prerequisitesText: _strOrNull(json['prerequisitesText']),
+      eligible: _bool(json['eligible'], true),
+      reason: _strOrNull(json['reason']),
+      spellLevel: _int(json['spellLevel']),
+      effectsPreview: _objects(json['effectsPreview'], EffectPreview.fromJson),
+      abilityIncrease: increase == null ? null : AbilityIncrease.fromJson(increase),
+    );
+  }
+
+  final String index;
+  final String name;
+  final List<String> description;
+  final String? prerequisitesText;
+
+  /// False when the prerequisites are not met ([reason]).
+  final bool eligible;
+  final String? reason;
+
+  /// Level of a spell option (0 for cantrips).
+  final int? spellLevel;
+  final List<EffectPreview> effectsPreview;
+
+  /// For feats that raise an ability.
+  final AbilityIncrease? abilityIncrease;
+}
+
+/// A choice to make at the new level (`LevelUpChoiceDto`). [required] picks
+/// are needed; with [replaces] one of [known] may be swapped (one more pick).
+/// With a [subclassIndex] it only applies when that subclass is chosen.
+class LevelUpChoice {
+  const LevelUpChoice({
+    required this.key,
+    required this.name,
+    required this.kind,
+    this.choose = 0,
+    this.required = 0,
+    this.replaces = false,
+    this.cumulative = false,
+    this.note = '',
+    this.subclassIndex,
+    this.setId,
+    this.freeText = false,
+    this.options = const [],
+    this.known = const [],
+  });
+
+  factory LevelUpChoice.fromJson(Map<String, dynamic> json) => LevelUpChoice(
+    key: _str(json['key']),
+    name: _str(json['name'], _str(json['key'])),
+    kind: LevelChoiceKind.fromApi(json['kind']),
+    choose: _int(json['choose']) ?? 0,
+    required: _int(json['required']) ?? _int(json['choose']) ?? 0,
+    replaces: _bool(json['replaces']),
+    cumulative: _bool(json['cumulative']),
+    note: _str(json['note']),
+    subclassIndex: _strOrNull(json['subclassIndex']),
+    setId: _strOrNull(json['setId']),
+    freeText: _bool(json['freeText']),
+    options: _objects(json['options'], LevelUpOption.fromJson),
+    known: _objects(json['known'], ChoiceItem.fromJson),
+  );
+
+  final String key;
+  final String name;
+  final LevelChoiceKind kind;
+  final int choose;
+
+  /// Picks needed (fewer than [choose] when not enough options are eligible).
+  final int required;
+  final bool replaces;
+  final bool cumulative;
+  final String note;
+  final String? subclassIndex;
+  final String? setId;
+
+  /// No list: the player writes the values (languages, tools...).
+  final bool freeText;
+  final List<LevelUpOption> options;
+
+  /// Earlier picks that may be replaced.
+  final List<ChoiceItem> known;
+
+  /// The choice only offers replacements ([choose] 0).
+  bool get replacementOnly => choose == 0;
+
+  LevelUpOption? option(String index) {
+    for (final o in options) {
+      if (o.index == index) return o;
+    }
+    return null;
+  }
+}
+
+/// Spellcasting of the class at its new level (`LevelUpSpellcastingDto`).
+class LevelUpSpellcasting {
+  const LevelUpSpellcasting({
+    required this.classIndex,
+    this.ability,
+    this.isPactCaster = false,
+    this.cantripsKnown,
+    this.spellsKnown,
+    this.maxSpellLevel = 0,
+    this.currentCantrips = 0,
+    this.currentSpells = 0,
+    this.spellSlots = const [],
+  });
+
+  factory LevelUpSpellcasting.fromJson(Map<String, dynamic> json) => LevelUpSpellcasting(
+    classIndex: _str(json['classIndex']),
+    ability: _strOrNull(json['ability']),
+    isPactCaster: _bool(json['isPactCaster']),
+    cantripsKnown: _int(json['cantripsKnown']),
+    spellsKnown: _int(json['spellsKnown']),
+    maxSpellLevel: _int(json['maxSpellLevel']) ?? 0,
+    currentCantrips: _int(json['currentCantrips']) ?? 0,
+    currentSpells: _int(json['currentSpells']) ?? 0,
+    spellSlots: [for (final s in (json['spellSlots'] as List? ?? const [])) _int(s) ?? 0],
+  );
+
+  final String classIndex;
+  final String? ability;
+  final bool isPactCaster;
+  final int? cantripsKnown;
+  final int? spellsKnown;
+  final int maxSpellLevel;
+  final int currentCantrips;
+  final int currentSpells;
+  final List<int> spellSlots;
+}
+
+/// What gaining the next level in [classIndex] means (`LevelUpPlanDto`).
+class LevelUpPlan {
+  const LevelUpPlan({
+    this.characterId = '',
+    this.currentLevel = 0,
+    required this.targetLevel,
+    required this.classIndex,
+    this.classLevel = 1,
+    this.hitDie = 8,
+    this.conModifier = 0,
+    this.classes = const [],
+    this.automaticFeatures = const [],
+    this.choices = const [],
+    this.spellcasting,
+  });
+
+  factory LevelUpPlan.fromJson(Map<String, dynamic> json) {
+    final spellcasting = _map(json['spellcasting']);
+    final currentLevel = _int(json['currentLevel']) ?? 0;
+    return LevelUpPlan(
+      characterId: _str(json['characterId']),
+      currentLevel: currentLevel,
+      targetLevel: _int(json['targetLevel']) ?? currentLevel + 1,
+      classIndex: _str(json['classIndex']),
+      classLevel: _int(json['classLevel']) ?? 1,
+      hitDie: _int(json['hitDie']) ?? 8,
+      conModifier: _int(json['conModifier']) ?? 0,
+      classes: _objects(json['classes'], LevelUpClassOption.fromJson),
+      automaticFeatures: _objects(json['automaticFeatures'], LevelUpFeature.fromJson),
+      choices: _objects(json['choices'], LevelUpChoice.fromJson),
+      spellcasting: spellcasting == null ? null : LevelUpSpellcasting.fromJson(spellcasting),
+    );
+  }
+
+  final String characterId;
+  final int currentLevel;
+  final int targetLevel;
+  final String classIndex;
+
+  /// Level of [classIndex] after the level-up.
+  final int classLevel;
+  final int hitDie;
+  final int conModifier;
+  final List<LevelUpClassOption> classes;
+  final List<LevelUpFeature> automaticFeatures;
+  final List<LevelUpChoice> choices;
+  final LevelUpSpellcasting? spellcasting;
+
+  /// The entry of [classIndex] in [classes], or null.
+  LevelUpClassOption? get selectedClass {
+    for (final c in classes) {
+      if (c.classIndex == classIndex) return c;
+    }
+    return null;
+  }
+}
+
+/// The answer to one choice of the plan (`LevelUpChoiceAnswer`): picks
+/// ([selected], with [replaced]), an ASI ([asi]) or a [feat] (and [ability]).
+class LevelUpChoiceAnswer {
+  const LevelUpChoiceAnswer.picks(this.key, this.selected, {this.replaced = const []})
+    : asi = null,
+      feat = null,
+      ability = null;
+
+  const LevelUpChoiceAnswer.asi(this.key, Map<String, int> this.asi)
+    : selected = const [],
+      replaced = const [],
+      feat = null,
+      ability = null;
+
+  const LevelUpChoiceAnswer.feat(this.key, String this.feat, {this.ability})
+    : selected = const [],
+      replaced = const [],
+      asi = null;
+
+  final String key;
+  final List<String> selected;
+  final List<String> replaced;
+  final Map<String, int>? asi;
+  final String? feat;
+  final String? ability;
+
+  Map<String, dynamic> toJson() => {
+    'key': key,
+    'selected': asi != null
+        ? {'asi': asi}
+        : feat != null
+        ? {'feat': feat, 'ability': ?ability}
+        : selected,
+    if (replaced.isNotEmpty) 'replaced': replaced,
+  };
+}
+
+/// Body of `POST /characters/{id}/level-up`.
+class LevelUpRequest {
+  const LevelUpRequest({this.classIndex, required this.hitPointsRolled, this.choices = const []});
+
+  final String? classIndex;
+
+  /// Result of the hit die (1..die); the server adds Constitution.
+  final int hitPointsRolled;
+  final List<LevelUpChoiceAnswer> choices;
+
+  Map<String, dynamic> toJson() => {
+    'classIndex': classIndex,
+    'hitPointsRolled': hitPointsRolled,
+    'choices': [for (final c in choices) c.toJson()],
+  };
 }
