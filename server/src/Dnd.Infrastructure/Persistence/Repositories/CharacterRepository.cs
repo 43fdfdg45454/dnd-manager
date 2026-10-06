@@ -39,6 +39,20 @@ internal sealed class CharacterRepository(AppDbContext db) : ICharacterRepositor
             .OrderBy(x => x.Id)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Character>> ListActiveWithDetailsAsync(Guid campaignId, CancellationToken cancellationToken = default) =>
+        await db.Characters
+            .Include(x => x.Classes)
+            .Include(x => x.Proficiencies)
+            .Include(x => x.Spells)
+            .Include(x => x.SpellSlots)
+            .Include(x => x.Resources)
+            .Include(x => x.Overrides)
+            .Include(x => x.Items)
+            .AsSplitQuery()
+            .Where(x => x.CampaignId == campaignId && x.Status == CharacterStatus.Active)
+            .OrderBy(x => x.Id)
+            .ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyList<CharacterItem>> ListEquippedItemsAsync(IReadOnlyCollection<Guid> characterIds, CancellationToken cancellationToken = default) =>
         characterIds.Count == 0
             ? []

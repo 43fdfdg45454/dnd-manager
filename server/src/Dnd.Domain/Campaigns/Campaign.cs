@@ -13,6 +13,9 @@ public sealed class Campaign : EntityBase
     public const int NameMaxLength = 100;
     public const int DescriptionMaxLength = 2000;
 
+    /// <summary>Upper bound of the shared gold of the party stash, in copper pieces.</summary>
+    public const long MaxStashCopperPieces = 1_000_000_000_000;
+
     private readonly List<CampaignMember> _members = [];
 
     private Campaign()
@@ -35,6 +38,15 @@ public sealed class Campaign : EntityBase
     public string ReminderOffsetsMinutesJson { get; private set; } = CampaignSchedule.SerializeOffsets(CampaignSchedule.DefaultOffsetsMinutes);
 
     public IReadOnlyList<int> ReminderOffsetsMinutes => CampaignSchedule.ParseOffsets(ReminderOffsetsMinutesJson);
+
+    /// <summary>Whether players can take items from the party stash (and give them back) by themselves.</summary>
+    public bool PlayersCanTakeFromStash { get; private set; } = true;
+
+    /// <summary>
+    /// Shared gold of the party stash, in copper pieces (≥ 0). Also an optimistic concurrency token:
+    /// two concurrent changes computed from the same amount cannot both be saved.
+    /// </summary>
+    public long StashCopperPieces { get; private set; }
 
     public IReadOnlyCollection<CampaignMember> Members => _members;
 
@@ -80,10 +92,16 @@ public sealed class Campaign : EntityBase
     }
 
     /// <summary>
-    /// Changes the time zone and/or the reminder offsets (null keeps the current value). Requires at
-    /// least DM. Returns true when the offsets changed, so pending reminders must be regenerated.
+    /// Changes the time zone, the reminder offsets and/or whether players take from the party stash
+    /// (null keeps the current value). Requires at least DM. Returns true when the offsets changed, so
+    /// pending reminders must be regenerated.
     /// </summary>
-    public bool UpdateSettings(Guid actorUserId, string? timeZoneId, IReadOnlyCollection<int>? reminderOffsetsMinutes, DateTimeOffset now)
+    public bool UpdateSettings(
+        Guid actorUserId,
+        string? timeZoneId,
+        IReadOnlyCollection<int>? reminderOffsetsMinutes,
+        DateTimeOffset now,
+        bool? playersCanTakeFromStash = null)
     {
         RequireActor(actorUserId, CampaignRole.DM, "Solo el propietario o un DM pueden editar los ajustes de la campaña.");
 
@@ -95,8 +113,52 @@ public sealed class Campaign : EntityBase
         var offsetsChanged = newOffsetsJson != ReminderOffsetsMinutesJson;
         TimeZoneId = newZone;
         ReminderOffsetsMinutesJson = newOffsetsJson;
+        PlayersCanTakeFromStash = playersCanTakeFromStash ?? PlayersCanTakeFromStash;
         UpdatedAt = now;
         return offsetsChanged;
+    }
+
+    /// <summary>
+    /// Adds (or, when negative, withdraws) shared gold of the party stash. The result must stay between
+    /// 0 and <see cref="MaxStashCopperPieces"/>. Permissions are checked by the caller.
+    /// </summary>
+    public void AdjustStashGold(long deltaCp, DateTimeOffset now)
+    {
+        var result = StashCopperPieces + deltaCp;
+        if (result < 0)
+        {
+            throw DomainException.RuleViolation("No hay tanto oro en el alijo del grupo.");
+        }
+
+        if (result > MaxStashCopperPieces)
+        {
+            throw DomainException.RuleViolation($"El oro del alijo no puede superar {MaxStashCopperPieces} pc.");
+        }
+
+        StashCopperPieces = result;
+        UpdatedAt = now;
+    }
+
+    /// <summary>
+    /// Splits the shared gold in equal shares of copper pieces among <paramref name="recipients"/>:
+    /// takes <c>share × recipients</c> out of the stash (the remainder stays) and returns the share.
+    /// </summary>
+    public long SplitStashGold(int recipients, DateTimeOffset now)
+    {
+        if (recipients < 1)
+        {
+            throw DomainException.RuleViolation("No hay personajes entre los que repartir el oro.");
+        }
+
+        var share = StashCopperPieces / recipients;
+        if (share == 0)
+        {
+            throw DomainException.RuleViolation("No hay oro suficiente en el alijo para repartir.");
+        }
+
+        StashCopperPieces -= share * recipients;
+        UpdatedAt = now;
+        return share;
     }
 
     /// <summary>

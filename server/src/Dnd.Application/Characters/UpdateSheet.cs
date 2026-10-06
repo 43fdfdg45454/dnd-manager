@@ -17,6 +17,7 @@ public sealed class UpdateSheetHandler(
     ICharacterSheetService sheets,
     IChangeRequestRepository changeRequests,
     IUnitOfWork unitOfWork,
+    ICampaignNotifier notifier,
     IDateTimeProvider clock)
 {
     public async Task<SheetPatchResult> HandleAsync(Guid currentUserId, Guid characterId, SheetPatch patch, CancellationToken cancellationToken = default)
@@ -33,6 +34,7 @@ public sealed class UpdateSheetHandler(
             character.ApplySheetEdit(edit, clock.UtcNow);
             await sheets.RecalculateAsync(character, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
+            await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, clock.UtcNow, cancellationToken);
             return new SheetPatchResult(await sheets.BuildDetailAsync(character, cancellationToken), null);
         }
 
@@ -45,6 +47,7 @@ public sealed class UpdateSheetHandler(
             clock.UtcNow);
         changeRequests.Add(request);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.ChangeRequestUpdatedAsync(character.CampaignId, character.Id, request.Id, clock.UtcNow, cancellationToken);
 
         var view = (await changeRequests.ListViewsAsync(new ChangeRequestQuery(Id: request.Id), cancellationToken)).Single();
         return new SheetPatchResult(null, ChangeRequestDto.From(view));

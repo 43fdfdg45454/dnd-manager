@@ -21,6 +21,10 @@ internal sealed class CampaignConfiguration : IEntityTypeConfiguration<Campaign>
         builder.Property(x => x.TimeZoneId).HasMaxLength(CampaignSchedule.TimeZoneIdMaxLength).IsRequired();
         builder.Property(x => x.ReminderOffsetsMinutesJson).HasMaxLength(256).IsRequired();
         builder.Ignore(x => x.ReminderOffsetsMinutes);
+        builder.Property(x => x.PlayersCanTakeFromStash).IsRequired();
+
+        // Value-based optimistic concurrency: two stash gold changes computed from the same amount conflict (409).
+        builder.Property(x => x.StashCopperPieces).IsRequired().IsConcurrencyToken();
 
         // Users are never deleted while they own campaigns (they are deactivated instead).
         builder.HasOne<User>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);

@@ -2,6 +2,7 @@ using Dnd.Domain.Campaigns;
 using Dnd.Domain.Catalog;
 using Dnd.Domain.Characters;
 using Dnd.Domain.Items;
+using Dnd.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -85,9 +86,36 @@ internal sealed class TransactionConfiguration : IEntityTypeConfiguration<Transa
 
         builder.HasOne<Campaign>().WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(x => x.CampaignId);
-        builder.HasOne<Shop>().WithMany().HasForeignKey(x => x.ShopId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<Shop>().WithMany().HasForeignKey(x => x.ShopId).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(x => x.ShopId);
-        builder.HasOne<Character>().WithMany().HasForeignKey(x => x.CharacterId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<Character>().WithMany().HasForeignKey(x => x.CharacterId).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(x => x.CharacterId);
+
+        // Users are deactivated, never deleted while they have history.
+        builder.HasOne<User>().WithMany().HasForeignKey(x => x.ActorUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => x.ActorUserId);
+    }
+}
+
+internal sealed class PartyStashItemConfiguration : IEntityTypeConfiguration<PartyStashItem>
+{
+    public void Configure(EntityTypeBuilder<PartyStashItem> builder)
+    {
+        builder.ToTable("PartyStashItems");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.Notes).HasMaxLength(ItemLimits.NotesMaxLength);
+        builder.Property(x => x.AddedAt).IsRequired();
+        builder.Property(x => x.CreatedAt).IsRequired();
+        builder.Property(x => x.Version).IsConcurrencyToken();
+        builder.Ignore(x => x.HasCharges);
+        builder.OwnsItemOverrides();
+
+        builder.HasOne<Campaign>().WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(x => x.CampaignId);
+        builder.HasOne<ItemTemplate>().WithMany().HasForeignKey(x => x.TemplateId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+        builder.HasIndex(x => x.TemplateId);
+        builder.HasOne<User>().WithMany().HasForeignKey(x => x.AddedByUserId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => x.AddedByUserId);
     }
 }

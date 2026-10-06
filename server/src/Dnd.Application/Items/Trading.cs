@@ -72,6 +72,7 @@ public sealed class BuyHandler(
     ITransactionRepository transactions,
     InventoryReader inventory,
     IUnitOfWork unitOfWork,
+    ICampaignNotifier notifier,
     IDateTimeProvider clock)
 {
     public async Task<TradeResultDto> HandleAsync(Guid currentUserId, Guid shopId, BuyRequest request, CancellationToken cancellationToken = default)
@@ -91,11 +92,14 @@ public sealed class BuyHandler(
 
         character.AdjustMoney(-total, now);
         character.AddItem(shopItem.TemplateId, shopItem.Overrides.Copy(), request.Quantity, effective, now);
-        var transaction = Transaction.Record(shop.CampaignId, shop.Id, character.Id, TransactionType.Purchase, effective.Name, request.Quantity, total, now);
+        var transaction = Transaction.Record(shop.CampaignId, shop.Id, character.Id, currentUserId, TransactionType.Purchase, effective.Name, request.Quantity, total, now);
         transactions.Add(transaction);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        return new TradeResultDto(await inventory.BuildAsync(character, cancellationToken), TransactionDto.From(transaction, shop.Name, character.Name));
+        await TradeEvents.PublishAsync(notifier, shop, character, now, cancellationToken);
+        return new TradeResultDto(
+            await inventory.BuildAsync(character, cancellationToken),
+            await TradeEvents.ToDtoAsync(transactions, transaction, cancellationToken));
     }
 }
 
@@ -109,6 +113,7 @@ public sealed class SellHandler(
     InventoryReader inventory,
     ICharacterSheetService sheets,
     IUnitOfWork unitOfWork,
+    ICampaignNotifier notifier,
     IDateTimeProvider clock)
 {
     public async Task<TradeResultDto> HandleAsync(Guid currentUserId, Guid shopId, SellRequest request, CancellationToken cancellationToken = default)
@@ -144,12 +149,30 @@ public sealed class SellHandler(
             await sheets.RecalculateAsync(character, cancellationToken);
         }
 
-        var transaction = Transaction.Record(shop.CampaignId, shop.Id, character.Id, TransactionType.Sale, effective.Name, request.Quantity, total, now);
+        var transaction = Transaction.Record(shop.CampaignId, shop.Id, character.Id, currentUserId, TransactionType.Sale, effective.Name, request.Quantity, total, now);
         transactions.Add(transaction);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        return new TradeResultDto(await inventory.BuildAsync(character, cancellationToken), TransactionDto.From(transaction, shop.Name, character.Name));
+        await TradeEvents.PublishAsync(notifier, shop, character, now, cancellationToken);
+        return new TradeResultDto(
+            await inventory.BuildAsync(character, cancellationToken),
+            await TradeEvents.ToDtoAsync(transactions, transaction, cancellationToken));
     }
+}
+
+/// <summary>What purchases and sales share after saving: realtime events and the transaction DTO.</summary>
+internal static class TradeEvents
+{
+    /// <summary>The character's inventory and the shop's stock changed.</summary>
+    public static async Task PublishAsync(ICampaignNotifier notifier, Shop shop, Character character, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, now, cancellationToken);
+        await notifier.NotifyAsync(new CampaignEvent(CampaignEventTypes.ShopUpdated, shop.CampaignId, null, shop.Id, now), cancellationToken);
+    }
+
+    /// <summary>The saved transaction with the names of its shop, character and actor.</summary>
+    public static async Task<TransactionDto> ToDtoAsync(ITransactionRepository transactions, Transaction transaction, CancellationToken cancellationToken) =>
+        TransactionDto.From(await transactions.GetViewAsync(transaction.Id, cancellationToken) ?? throw new InvalidOperationException("Saved transaction not found."));
 }
 
 public sealed record ListTransactionsQuery(Guid? CharacterId, int? Page, int? PageSize);
@@ -166,7 +189,10 @@ public sealed class ListTransactionsQueryValidator : AbstractValidator<ListTrans
     }
 }
 
-/// <summary>Transactions of the campaign, newest first: DMs see all of them, players those of their characters.</summary>
+/// <summary>
+/// Transactions of the campaign (shops and party stash), newest first: DMs see all of them, players
+/// those of their characters.
+/// </summary>
 public sealed class ListTransactionsHandler(ICampaignAccess access, ITransactionRepository transactions)
 {
     public async Task<PagedResult<TransactionDto>> HandleAsync(Guid currentUserId, Guid campaignId, ListTransactionsQuery query, CancellationToken cancellationToken = default)
@@ -183,7 +209,7 @@ public sealed class ListTransactionsHandler(ICampaignAccess access, ITransaction
             pageSize,
             cancellationToken);
         return new PagedResult<TransactionDto>(
-            items.Select(v => TransactionDto.From(v.Transaction, v.ShopName, v.CharacterName)).ToList(),
+            items.Select(TransactionDto.From).ToList(),
             total,
             page,
             pageSize);

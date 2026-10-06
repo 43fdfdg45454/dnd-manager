@@ -123,6 +123,19 @@ public sealed class CharacterItem
         UpdatedAt = now;
     }
 
+    /// <summary>Restores charges and maximum kept elsewhere (the party stash), both within range.</summary>
+    internal void RestoreCharges(int charges, int chargesMax, DateTimeOffset now)
+    {
+        if (chargesMax is < 0 or > ItemLimits.MaxCharges || charges < 0 || charges > chargesMax)
+        {
+            throw DomainException.RuleViolation($"Las cargas deben estar entre 0 y {ItemLimits.MaxCharges}.");
+        }
+
+        ChargesMax = chargesMax;
+        Charges = charges;
+        UpdatedAt = now;
+    }
+
     internal void SetEquipped(bool equipped, DateTimeOffset now)
     {
         Equipped = equipped;

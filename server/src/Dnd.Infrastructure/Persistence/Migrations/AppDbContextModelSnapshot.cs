@@ -43,10 +43,17 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("PlayersCanTakeFromStash")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("ReminderOffsetsMinutesJson")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
+
+                    b.Property<long>("StashCopperPieces")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
 
                     b.Property<string>("TimeZoneId")
                         .IsRequired()
@@ -1228,6 +1235,54 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                     b.ToTable("CharacterItems", (string)null);
                 });
 
+            modelBuilder.Entity("Dnd.Domain.Items.PartyStashItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("AddedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Charges")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ChargesMax")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AddedByUserId");
+
+                    b.HasIndex("CampaignId");
+
+                    b.HasIndex("TemplateId");
+
+                    b.ToTable("PartyStashItems", (string)null);
+                });
+
             modelBuilder.Entity("Dnd.Domain.Items.Shop", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1302,13 +1357,16 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("At")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("CampaignId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("CharacterId")
+                    b.Property<Guid?>("CharacterId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -1322,7 +1380,7 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("ShopId")
+                    b.Property<Guid?>("ShopId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("TotalCp")
@@ -1334,6 +1392,8 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(16)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
 
                     b.HasIndex("CampaignId");
 
@@ -1601,6 +1661,52 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                     b.HasIndex("MapId");
 
                     b.ToTable("MapPins", (string)null);
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Messages.DirectMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CharacterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RecipientUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SenderUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CharacterId");
+
+                    b.HasIndex("RecipientUserId");
+
+                    b.HasIndex("SenderUserId");
+
+                    b.HasIndex("CampaignId", "SenderUserId");
+
+                    b.HasIndex("CampaignId", "RecipientUserId", "ReadAt");
+
+                    b.ToTable("DirectMessages", (string)null);
                 });
 
             modelBuilder.Entity("Dnd.Domain.Releases.AppRelease", b =>
@@ -2235,6 +2341,133 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Dnd.Domain.Items.PartyStashItem", b =>
+                {
+                    b.HasOne("Dnd.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("AddedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Campaigns.Campaign", null)
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Catalog.ItemTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.OwnsOne("Dnd.Domain.Items.ItemOverrides", "Overrides", b1 =>
+                        {
+                            b1.Property<Guid>("PartyStashItemId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<bool?>("AddDexModifier")
+                                .HasColumnType("boolean")
+                                .HasColumnName("OverrideAddDexModifier");
+
+                            b1.Property<int?>("ArmorClassBase")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideArmorClassBase");
+
+                            b1.Property<int?>("AttackBonus")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideAttackBonus");
+
+                            b1.Property<string>("Category")
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("OverrideCategory");
+
+                            b1.Property<int?>("DamageBonus")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideDamageBonus");
+
+                            b1.Property<string>("DamageDice")
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("OverrideDamageDice");
+
+                            b1.Property<string>("DamageType")
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("OverrideDamageType");
+
+                            b1.Property<string>("Description")
+                                .HasColumnType("text")
+                                .HasColumnName("OverrideDescription");
+
+                            b1.Property<string>("Effects")
+                                .HasColumnType("text")
+                                .HasColumnName("OverrideEffects");
+
+                            b1.Property<int?>("MaxDexBonus")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideMaxDexBonus");
+
+                            b1.Property<string>("Modifiers")
+                                .HasColumnType("text")
+                                .HasColumnName("OverrideModifiers");
+
+                            b1.Property<string>("Name")
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("OverrideName");
+
+                            b1.Property<string>("Properties")
+                                .HasColumnType("text")
+                                .HasColumnName("OverrideProperties");
+
+                            b1.Property<int?>("RangeLong")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideRangeLong");
+
+                            b1.Property<int?>("RangeNormal")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideRangeNormal");
+
+                            b1.Property<string>("Rarity")
+                                .HasMaxLength(16)
+                                .HasColumnType("character varying(16)")
+                                .HasColumnName("OverrideRarity");
+
+                            b1.Property<bool?>("RequiresAttunement")
+                                .HasColumnType("boolean")
+                                .HasColumnName("OverrideRequiresAttunement");
+
+                            b1.Property<bool?>("StealthDisadvantage")
+                                .HasColumnType("boolean")
+                                .HasColumnName("OverrideStealthDisadvantage");
+
+                            b1.Property<int?>("StrengthMinimum")
+                                .HasColumnType("integer")
+                                .HasColumnName("OverrideStrengthMinimum");
+
+                            b1.Property<string>("VersatileDice")
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("OverrideVersatileDice");
+
+                            b1.Property<decimal?>("WeightLb")
+                                .HasPrecision(10, 2)
+                                .HasColumnType("numeric(10,2)")
+                                .HasColumnName("OverrideWeightLb");
+
+                            b1.HasKey("PartyStashItemId");
+
+                            b1.ToTable("PartyStashItems");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PartyStashItemId");
+                        });
+
+                    b.Navigation("Overrides")
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Dnd.Domain.Items.Shop", b =>
                 {
                     b.HasOne("Dnd.Domain.Campaigns.Campaign", null)
@@ -2367,6 +2600,11 @@ namespace Dnd.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Dnd.Domain.Items.Transaction", b =>
                 {
+                    b.HasOne("Dnd.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Dnd.Domain.Campaigns.Campaign", null)
                         .WithMany()
                         .HasForeignKey("CampaignId")
@@ -2376,14 +2614,12 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                     b.HasOne("Dnd.Domain.Characters.Character", null)
                         .WithMany()
                         .HasForeignKey("CharacterId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Dnd.Domain.Items.Shop", null)
                         .WithMany()
                         .HasForeignKey("ShopId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("Dnd.Domain.Library.CampaignDocument", b =>
@@ -2481,6 +2717,33 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                         .WithMany("Pins")
                         .HasForeignKey("MapId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Dnd.Domain.Messages.DirectMessage", b =>
+                {
+                    b.HasOne("Dnd.Domain.Campaigns.Campaign", null)
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Characters.Character", null)
+                        .WithMany()
+                        .HasForeignKey("CharacterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("RecipientUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Dnd.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("SenderUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

@@ -99,6 +99,7 @@ public sealed class ApproveChangeRequestHandler(
     IValidator<SheetPatch> patchValidator,
     InventoryOperations inventory,
     IUnitOfWork unitOfWork,
+    ICampaignNotifier notifier,
     IDateTimeProvider clock)
 {
     public async Task<ChangeRequestDto> HandleAsync(Guid currentUserId, Guid requestId, ApproveChangeRequestRequest? body, CancellationToken cancellationToken = default)
@@ -137,6 +138,8 @@ public sealed class ApproveChangeRequestHandler(
 
         request.Approve(currentUserId, body?.Comment, now);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.ChangeRequestUpdatedAsync(request.CampaignId, request.CharacterId, request.Id, now, cancellationToken);
+        await notifier.CharacterUpdatedAsync(request.CampaignId, request.CharacterId, now, cancellationToken);
         return await loader.ToDtoAsync(request.Id, cancellationToken);
     }
 
@@ -171,7 +174,7 @@ public sealed class RejectChangeRequestRequestValidator : AbstractValidator<Reje
 }
 
 /// <summary>A DM rejects a pending request with a comment.</summary>
-public sealed class RejectChangeRequestHandler(ChangeRequestLoader loader, IUnitOfWork unitOfWork, IDateTimeProvider clock)
+public sealed class RejectChangeRequestHandler(ChangeRequestLoader loader, IUnitOfWork unitOfWork, ICampaignNotifier notifier, IDateTimeProvider clock)
 {
     public async Task<ChangeRequestDto> HandleAsync(Guid currentUserId, Guid requestId, RejectChangeRequestRequest body, CancellationToken cancellationToken = default)
     {
@@ -183,18 +186,20 @@ public sealed class RejectChangeRequestHandler(ChangeRequestLoader loader, IUnit
 
         request.Reject(currentUserId, body.Comment, clock.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.ChangeRequestUpdatedAsync(request.CampaignId, request.CharacterId, request.Id, clock.UtcNow, cancellationToken);
         return await loader.ToDtoAsync(request.Id, cancellationToken);
     }
 }
 
 /// <summary>The requester withdraws a pending request.</summary>
-public sealed class CancelChangeRequestHandler(ChangeRequestLoader loader, IUnitOfWork unitOfWork, IDateTimeProvider clock)
+public sealed class CancelChangeRequestHandler(ChangeRequestLoader loader, IUnitOfWork unitOfWork, ICampaignNotifier notifier, IDateTimeProvider clock)
 {
     public async Task<ChangeRequestDto> HandleAsync(Guid currentUserId, Guid requestId, CancellationToken cancellationToken = default)
     {
         var (request, _) = await loader.LoadAsync(requestId, currentUserId, cancellationToken);
         request.Cancel(currentUserId, clock.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.ChangeRequestUpdatedAsync(request.CampaignId, request.CharacterId, request.Id, clock.UtcNow, cancellationToken);
         return await loader.ToDtoAsync(request.Id, cancellationToken);
     }
 }

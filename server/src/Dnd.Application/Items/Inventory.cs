@@ -117,6 +117,7 @@ public sealed class InventoryOperations(
     IValidator<AddInventoryItemRequest> addValidator,
     IValidator<AdjustMoneyRequest> moneyValidator,
     IUnitOfWork unitOfWork,
+    ICampaignNotifier notifier,
     IDateTimeProvider clock)
 {
     private static readonly JsonSerializerOptions PayloadOptions = new(JsonSerializerDefaults.Web)
@@ -143,7 +144,11 @@ public sealed class InventoryOperations(
     public async Task EnsureCanAddAsync(Guid campaignId, AddInventoryItemRequest request, CancellationToken cancellationToken) =>
         await ResolveAddAsync(campaignId, request, cancellationToken);
 
-    private async Task<(ItemTemplate? Template, ItemOverrides Overrides)> ResolveAddAsync(Guid campaignId, AddInventoryItemRequest request, CancellationToken cancellationToken)
+    /// <summary>
+    /// The template (usable in the campaign, 400 otherwise) and the normalized overrides of an item to
+    /// add; an item without template needs a name.
+    /// </summary>
+    public async Task<(ItemTemplate? Template, ItemOverrides Overrides)> ResolveAddAsync(Guid campaignId, AddInventoryItemRequest request, CancellationToken cancellationToken)
     {
         var template = request.TemplateId is { } templateId
             ? await templates.GetVisibleAsync(campaignId, templateId, cancellationToken) ?? throw ItemErrors.UnknownTemplate()
@@ -174,6 +179,7 @@ public sealed class InventoryOperations(
             clock.UtcNow);
         changeRequests.Add(request);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.ChangeRequestUpdatedAsync(character.CampaignId, character.Id, request.Id, clock.UtcNow, cancellationToken);
         return ChangeRequestDto.From((await changeRequests.ListViewsAsync(new ChangeRequestQuery(Id: request.Id), cancellationToken)).Single());
     }
 
@@ -256,7 +262,13 @@ public sealed record InventoryChangeResult(CharacterItemDto? Item, InventoryDto?
 /// Adds an item: DMs and the owner of a draft directly (201); the owner of an active character creates
 /// an AddItem (catalog item) or CustomItem (with overrides or without template) change request (202).
 /// </summary>
-public sealed class AddInventoryItemHandler(CharacterLoader loader, InventoryOperations operations, InventoryReader reader, IUnitOfWork unitOfWork, IDateTimeProvider clock)
+public sealed class AddInventoryItemHandler(
+    CharacterLoader loader,
+    InventoryOperations operations,
+    InventoryReader reader,
+    IUnitOfWork unitOfWork,
+    ICampaignNotifier notifier,
+    IDateTimeProvider clock)
 {
     public async Task<InventoryChangeResult> HandleAsync(Guid currentUserId, Guid characterId, AddInventoryItemRequest request, CancellationToken cancellationToken = default)
     {
@@ -268,6 +280,7 @@ public sealed class AddInventoryItemHandler(CharacterLoader loader, InventoryOpe
         {
             var item = await operations.AddAsync(character, request, clock.UtcNow, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
+            await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, clock.UtcNow, cancellationToken);
             return new InventoryChangeResult(await reader.BuildItemAsync(item, cancellationToken), null, null);
         }
 
@@ -286,6 +299,7 @@ public sealed class UpdateInventoryItemHandler(
     InventoryReader reader,
     ICharacterSheetService sheets,
     IUnitOfWork unitOfWork,
+    ICampaignNotifier notifier,
     IDateTimeProvider clock)
 {
     public async Task<CharacterItemDto> HandleAsync(Guid currentUserId, Guid characterId, Guid itemId, UpdateInventoryItemRequest request, CancellationToken cancellationToken = default)
@@ -315,12 +329,13 @@ public sealed class UpdateInventoryItemHandler(
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, clock.UtcNow, cancellationToken);
         return CharacterItemDto.From(item, InventoryView.TemplateOf(templates, item.TemplateId));
     }
 }
 
 /// <summary>Uses an item (a charge, or a unit of a consumable): owner and DMs, without approval. Returns the inventory.</summary>
-public sealed class UseInventoryItemHandler(CharacterLoader loader, InventoryReader reader, IUnitOfWork unitOfWork, IDateTimeProvider clock)
+public sealed class UseInventoryItemHandler(CharacterLoader loader, InventoryReader reader, IUnitOfWork unitOfWork, ICampaignNotifier notifier, IDateTimeProvider clock)
 {
     public async Task<InventoryDto> HandleAsync(Guid currentUserId, Guid characterId, Guid itemId, AmountRequest? request, CancellationToken cancellationToken = default)
     {
@@ -332,6 +347,7 @@ public sealed class UseInventoryItemHandler(CharacterLoader loader, InventoryRea
         var item = character.FindItem(itemId);
         character.UseItem(itemId, request?.Amount ?? 1, InventoryView.Resolve(templates, item), clock.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, clock.UtcNow, cancellationToken);
         return await reader.BuildAsync(character, cancellationToken);
     }
 }
@@ -346,6 +362,7 @@ public sealed class RemoveInventoryItemHandler(
     InventoryReader reader,
     ICharacterSheetService sheets,
     IUnitOfWork unitOfWork,
+    ICampaignNotifier notifier,
     IDateTimeProvider clock)
 {
     public async Task<ChangeRequestDto?> HandleAsync(Guid currentUserId, Guid characterId, Guid itemId, RemoveInventoryItemRequest? request, CancellationToken cancellationToken = default)
@@ -370,6 +387,7 @@ public sealed class RemoveInventoryItemHandler(
             }
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
+            await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, clock.UtcNow, cancellationToken);
             return null;
         }
 
@@ -380,7 +398,13 @@ public sealed class RemoveInventoryItemHandler(
 }
 
 /// <summary>Money outside purchases and sales: DMs and the owner of a draft directly; the owner of an active character via an AdjustMoney request.</summary>
-public sealed class AdjustMoneyHandler(CharacterLoader loader, InventoryOperations operations, InventoryReader reader, IUnitOfWork unitOfWork, IDateTimeProvider clock)
+public sealed class AdjustMoneyHandler(
+    CharacterLoader loader,
+    InventoryOperations operations,
+    InventoryReader reader,
+    IUnitOfWork unitOfWork,
+    ICampaignNotifier notifier,
+    IDateTimeProvider clock)
 {
     public async Task<InventoryChangeResult> HandleAsync(Guid currentUserId, Guid characterId, AdjustMoneyRequest request, CancellationToken cancellationToken = default)
     {
@@ -392,6 +416,7 @@ public sealed class AdjustMoneyHandler(CharacterLoader loader, InventoryOperatio
         {
             character.AdjustMoney(request.DeltaCp, clock.UtcNow);
             await unitOfWork.SaveChangesAsync(cancellationToken);
+            await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, clock.UtcNow, cancellationToken);
             return new InventoryChangeResult(null, await reader.BuildAsync(character, cancellationToken), null);
         }
 

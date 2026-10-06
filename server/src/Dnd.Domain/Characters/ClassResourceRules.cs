@@ -58,7 +58,8 @@ public static class ClassResourceRules
                 Add(ChannelDivinity, "Channel Divinity", level >= 18 ? 3 : level >= 6 ? 2 : 1, ResourceRecharge.ShortRest);
                 break;
             case "druid" when level >= 2:
-                Add(WildShape, "Wild Shape", 2, ResourceRecharge.ShortRest);
+                // Archdruid (level 20): unlimited uses.
+                Add(WildShape, "Wild Shape", level >= 20 ? Unlimited : 2, ResourceRecharge.ShortRest);
                 break;
             case "fighter":
                 Add(SecondWind, "Second Wind", 1, ResourceRecharge.ShortRest);

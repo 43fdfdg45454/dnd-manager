@@ -193,13 +193,14 @@ public sealed class GetShopHandler(ShopLoader loader)
     }
 }
 
-public sealed class UpdateShopHandler(ShopLoader loader, IUnitOfWork unitOfWork, IDateTimeProvider clock)
+public sealed class UpdateShopHandler(ShopLoader loader, IUnitOfWork unitOfWork, ICampaignNotifier notifier, IDateTimeProvider clock)
 {
     public async Task<ShopDto> HandleAsync(Guid currentUserId, Guid shopId, UpdateShopRequest request, CancellationToken cancellationToken = default)
     {
         var shop = await loader.LoadForDmAsync(shopId, currentUserId, cancellationToken);
         shop.Update(request.Name, request.Description, request.IsOpen, request.BuybackPercent, clock.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.NotifyAsync(new CampaignEvent(CampaignEventTypes.ShopUpdated, shop.CampaignId, null, shop.Id, clock.UtcNow), cancellationToken);
         return await loader.ToDtoAsync(shop, cancellationToken);
     }
 }

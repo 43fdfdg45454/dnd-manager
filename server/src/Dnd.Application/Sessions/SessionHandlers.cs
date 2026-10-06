@@ -40,6 +40,7 @@ public sealed class CreateSessionHandler(
     ISessionRepository sessions,
     SessionViewBuilder views,
     IUnitOfWork unitOfWork,
+    ICampaignNotifier notifier,
     IDateTimeProvider clock)
 {
     public async Task<SessionDto> HandleAsync(Guid currentUserId, Guid campaignId, CreateSessionRequest request, CancellationToken cancellationToken = default)
@@ -63,6 +64,7 @@ public sealed class CreateSessionHandler(
 
         sessions.Add(session);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.SessionUpdatedAsync(session, now, cancellationToken);
         return await views.BuildOneAsync(session, currentUserId, cancellationToken);
     }
 }
@@ -82,6 +84,7 @@ public sealed class UpdateSessionHandler(
     ISessionRepository sessions,
     SessionViewBuilder views,
     IUnitOfWork unitOfWork,
+    ICampaignNotifier notifier,
     IDateTimeProvider clock)
 {
     public async Task<SessionDto> HandleAsync(Guid currentUserId, Guid sessionId, UpdateSessionRequest request, CancellationToken cancellationToken = default)
@@ -135,41 +138,45 @@ public sealed class UpdateSessionHandler(
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.SessionUpdatedAsync(session, now, cancellationToken);
         return await views.BuildOneAsync(session, currentUserId, cancellationToken);
     }
 }
 
 /// <summary>Deletes the session with its answers and pending reminders. Requires at least DM.</summary>
-public sealed class DeleteSessionHandler(SessionLoader loader, ISessionRepository sessions, IUnitOfWork unitOfWork)
+public sealed class DeleteSessionHandler(SessionLoader loader, ISessionRepository sessions, IUnitOfWork unitOfWork, ICampaignNotifier notifier, IDateTimeProvider clock)
 {
     public async Task HandleAsync(Guid currentUserId, Guid sessionId, CancellationToken cancellationToken = default)
     {
         var loaded = await loader.LoadForDmAsync(sessionId, currentUserId, "Solo un DM puede borrar las sesiones.", cancellationToken);
         sessions.Remove(loaded.Session);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.SessionUpdatedAsync(loaded.Session, clock.UtcNow, cancellationToken);
     }
 }
 
 /// <summary>A member sets or changes their own answer to a session.</summary>
-public sealed class RespondToSessionHandler(SessionLoader loader, SessionViewBuilder views, IUnitOfWork unitOfWork, IDateTimeProvider clock)
+public sealed class RespondToSessionHandler(SessionLoader loader, SessionViewBuilder views, IUnitOfWork unitOfWork, ICampaignNotifier notifier, IDateTimeProvider clock)
 {
     public async Task<SessionDto> HandleAsync(Guid currentUserId, Guid sessionId, RsvpRequest request, CancellationToken cancellationToken = default)
     {
         var loaded = await loader.LoadAsync(sessionId, currentUserId, cancellationToken);
         loaded.Session.Respond(currentUserId, EnumNames.Parse<RsvpStatus>(request.Status), request.Comment, clock.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.SessionUpdatedAsync(loaded.Session, clock.UtcNow, cancellationToken);
         return await views.BuildOneAsync(loaded.Session, currentUserId, cancellationToken);
     }
 }
 
 /// <summary>Sets the journal summary of a session (blank removes it). Requires at least DM.</summary>
-public sealed class SetSessionSummaryHandler(SessionLoader loader, SessionViewBuilder views, IUnitOfWork unitOfWork, IDateTimeProvider clock)
+public sealed class SetSessionSummaryHandler(SessionLoader loader, SessionViewBuilder views, IUnitOfWork unitOfWork, ICampaignNotifier notifier, IDateTimeProvider clock)
 {
     public async Task<SessionDto> HandleAsync(Guid currentUserId, Guid sessionId, SetSessionSummaryRequest request, CancellationToken cancellationToken = default)
     {
         var loaded = await loader.LoadForDmAsync(sessionId, currentUserId, "Solo un DM puede escribir el resumen de la sesión.", cancellationToken);
         loaded.Session.SetSummary(request.SummaryMarkdown, clock.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.SessionUpdatedAsync(loaded.Session, clock.UtcNow, cancellationToken);
         return await views.BuildOneAsync(loaded.Session, currentUserId, cancellationToken);
     }
 }

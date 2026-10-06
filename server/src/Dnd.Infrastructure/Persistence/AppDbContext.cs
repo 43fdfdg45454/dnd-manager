@@ -8,6 +8,7 @@ using Dnd.Domain.Items;
 using Dnd.Domain.Library;
 using Dnd.Domain.Lore;
 using Dnd.Domain.Maps;
+using Dnd.Domain.Messages;
 using Dnd.Domain.Releases;
 using Dnd.Domain.Sessions;
 using Dnd.Domain.Users;
@@ -80,6 +81,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ShopItem> ShopItems => Set<ShopItem>();
 
     public DbSet<Transaction> Transactions => Set<Transaction>();
+
+    public DbSet<PartyStashItem> PartyStashItems => Set<PartyStashItem>();
+
+    public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
 
     public DbSet<StoredFile> StoredFiles => Set<StoredFile>();
 

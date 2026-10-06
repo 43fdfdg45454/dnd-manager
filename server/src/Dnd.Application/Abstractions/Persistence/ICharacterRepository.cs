@@ -20,6 +20,12 @@ public interface ICharacterRepository
     /// </summary>
     Task<IReadOnlyList<Character>> ListByCampaignAsync(Guid campaignId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Tracked active characters of the campaign (the party) with every child collection loaded, ready
+    /// to be modified, in no particular order.
+    /// </summary>
+    Task<IReadOnlyList<Character>> ListActiveWithDetailsAsync(Guid campaignId, CancellationToken cancellationToken = default);
+
     /// <summary>Read-only equipped inventory entries of the given characters.</summary>
     Task<IReadOnlyList<CharacterItem>> ListEquippedItemsAsync(IReadOnlyCollection<Guid> characterIds, CancellationToken cancellationToken = default);
 

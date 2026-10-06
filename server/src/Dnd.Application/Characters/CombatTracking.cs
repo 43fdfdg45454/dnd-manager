@@ -108,8 +108,16 @@ public sealed class ShortRestRequestValidator : AbstractValidator<ShortRestReque
     }
 }
 
-/// <summary>Loads a character for combat tracking (owner or DM) and saves with the detail as result.</summary>
-public sealed class CharacterTracker(CharacterLoader loader, ICharacterSheetService sheets, IUnitOfWork unitOfWork)
+/// <summary>
+/// Loads a character for combat tracking (owner or DM) and saves with the detail as result, publishing
+/// <see cref="CampaignEventTypes.CharacterUpdated"/> after the save.
+/// </summary>
+public sealed class CharacterTracker(
+    CharacterLoader loader,
+    ICharacterSheetService sheets,
+    IUnitOfWork unitOfWork,
+    ICampaignNotifier notifier,
+    IDateTimeProvider clock)
 {
     public async Task<Character> LoadAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken)
     {
@@ -124,8 +132,13 @@ public sealed class CharacterTracker(CharacterLoader loader, ICharacterSheetServ
     public async Task<CharacterDetailDto> SaveAsync(Character character, CancellationToken cancellationToken)
     {
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await NotifyAsync(character, cancellationToken);
         return await sheets.BuildDetailAsync(character, cancellationToken);
     }
+
+    /// <summary>Publishes <see cref="CampaignEventTypes.CharacterUpdated"/> (call after saving).</summary>
+    public Task NotifyAsync(Character character, CancellationToken cancellationToken) =>
+        notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, clock.UtcNow, cancellationToken);
 }
 
 public sealed class UpdateCombatHandler(CharacterTracker tracker, IDateTimeProvider clock)
@@ -208,6 +221,7 @@ public sealed class ResourceHandler(CharacterTracker tracker, IUnitOfWork unitOf
         var character = await tracker.LoadAsync(currentUserId, characterId, cancellationToken);
         var resource = character.AddManualResource(request.Name, request.Max, EnumNames.Parse<ResourceRecharge>(request.Recharge), clock.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await tracker.NotifyAsync(character, cancellationToken);
         return new CharacterResourceDto(resource.Id, resource.Key, resource.Name, resource.Max, resource.Used, resource.Recharge.ToString(), resource.IsAuto);
     }
 
@@ -216,6 +230,7 @@ public sealed class ResourceHandler(CharacterTracker tracker, IUnitOfWork unitOf
         var character = await tracker.LoadAsync(currentUserId, characterId, cancellationToken);
         character.RemoveManualResource(resourceId, clock.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await tracker.NotifyAsync(character, cancellationToken);
     }
 }
 

@@ -9,6 +9,8 @@ using Dnd.Application.Files;
 using Dnd.Application.Library;
 using Dnd.Application.Lore;
 using Dnd.Application.Maps;
+using Dnd.Application.Messages;
+using Dnd.Application.Party;
 using Dnd.Application.Releases;
 using Dnd.Application.Sessions;
 using Dnd.Application.Setup;
@@ -71,6 +73,9 @@ public static class DependencyInjection
         services.AddScoped<ListSkillsHandler>();
         services.AddScoped<ListBackgroundsHandler>();
 
+        // Realtime events: nothing by default; the API host replaces it with the SignalR notifier.
+        services.AddSingleton<ICampaignNotifier, NoopCampaignNotifier>();
+
         services.AddScoped<IEquippedGearProvider, InventoryEquippedGearProvider>();
         services.AddSingleton<IDiceRoller>(RandomDiceRoller.Instance);
         services.AddScoped<ICharacterSheetService, CharacterSheetService>();
@@ -123,6 +128,25 @@ public static class DependencyInjection
         services.AddScoped<BuyHandler>();
         services.AddScoped<SellHandler>();
         services.AddScoped<ListTransactionsHandler>();
+        services.AddScoped<StashSupport>();
+        services.AddScoped<GetStashHandler>();
+        services.AddScoped<AddStashItemHandler>();
+        services.AddScoped<UpdateStashItemHandler>();
+        services.AddScoped<DeleteStashItemHandler>();
+        services.AddScoped<TakeStashItemHandler>();
+        services.AddScoped<ReturnStashItemHandler>();
+        services.AddScoped<StashGoldHandler>();
+        services.AddScoped<SplitStashGoldHandler>();
+
+        services.AddScoped<PartyLoader>();
+        services.AddScoped<GetPartyHandler>();
+        services.AddScoped<PartyRestHandler>();
+        services.AddScoped<PartyAdjustHandler>();
+
+        services.AddScoped<SendMessageHandler>();
+        services.AddScoped<ListMessagesHandler>();
+        services.AddScoped<GetUnreadCountHandler>();
+        services.AddScoped<MarkMessageReadHandler>();
 
         services.AddScoped<FileCleanup>();
         services.AddScoped<CampaignFileGuard>();

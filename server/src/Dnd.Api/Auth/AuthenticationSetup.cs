@@ -9,6 +9,11 @@ namespace Dnd.Api.Auth;
 
 public static class AuthenticationSetup
 {
+    /// <summary>Path prefix of the SignalR hubs, where the token may come in the query string.</summary>
+    public const string HubsPathPrefix = "/hubs";
+
+    public const string AccessTokenQueryParameter = "access_token";
+
     public static IServiceCollection AddJwtAuthentication(this IServiceCollection services)
     {
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
@@ -32,6 +37,22 @@ public static class AuthenticationSetup
                     ClockSkew = TimeSpan.FromSeconds(30),
                     NameClaimType = JwtClaimTypes.Name,
                     RoleClaimType = JwtClaimTypes.Role,
+                };
+
+                // WebSockets and server-sent events cannot carry an Authorization header from browsers and some
+                // clients: SignalR sends the token as ?access_token=, accepted only on the hub paths.
+                bearer.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var token = context.Request.Query[AccessTokenQueryParameter];
+                        if (!string.IsNullOrEmpty(token) && context.HttpContext.Request.Path.StartsWithSegments(HubsPathPrefix))
+                        {
+                            context.Token = token;
+                        }
+
+                        return Task.CompletedTask;
+                    },
                 };
             });
 

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Dnd.Application.Abstractions.Persistence;
 using Dnd.Application.Common;
 using Dnd.Domain.Catalog;
 using Dnd.Domain.Items;
@@ -264,21 +265,33 @@ public sealed record ShopDto(
 
 public sealed record ShopSummaryDto(Guid Id, Guid CampaignId, string Name, string? Description, bool IsOpen, int BuybackPercent, int ItemCount);
 
-/// <param name="Type">"Purchase" or "Sale".</param>
+/// <param name="ShopId">Null for party stash operations.</param>
+/// <param name="CharacterId">Null for DM operations on the party stash without a character.</param>
+/// <param name="ActorDisplayName">Who performed the operation (null for old records).</param>
+/// <param name="Type">
+/// "Purchase", "Sale", "StashAdd", "StashRemove", "StashTake", "StashReturn", "StashGoldAdd" or "StashGoldSplit".
+/// </param>
 public sealed record TransactionDto(
     Guid Id,
-    Guid ShopId,
-    string ShopName,
-    Guid CharacterId,
-    string CharacterName,
+    Guid? ShopId,
+    string? ShopName,
+    Guid? CharacterId,
+    string? CharacterName,
+    Guid? ActorUserId,
+    string? ActorDisplayName,
     string Type,
     string ItemName,
     int Quantity,
     int TotalCp,
     DateTimeOffset At)
 {
-    public static TransactionDto From(Transaction t, string shopName, string characterName) => new(
-        t.Id, t.ShopId, shopName, t.CharacterId, characterName, t.Type.ToString(), t.ItemName, t.Quantity, t.TotalCp, t.At);
+    public static TransactionDto From(TransactionView view)
+    {
+        var t = view.Transaction;
+        return new TransactionDto(
+            t.Id, t.ShopId, view.ShopName, t.CharacterId, view.CharacterName, t.ActorUserId, view.ActorDisplayName,
+            t.Type.ToString(), t.ItemName, t.Quantity, t.TotalCp, t.At);
+    }
 }
 
 /// <summary>Result of a purchase or sale: the character's inventory afterwards and the recorded transaction.</summary>

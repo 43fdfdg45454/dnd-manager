@@ -68,6 +68,7 @@ public class ClassResourceRulesTests
         Assert.Empty(ClassResourceRules.For("monk", 1, NoMods));
         Assert.Equal(new ResourceTemplate("ki", "Ki", 5, ResourceRecharge.ShortRest), ClassResourceRules.For("monk", 5, NoMods).Single());
         Assert.Equal(new ResourceTemplate("wild-shape", "Wild Shape", 2, ResourceRecharge.ShortRest), ClassResourceRules.For("druid", 2, NoMods).Single());
+        Assert.Equal(ClassResourceRules.Unlimited, ClassResourceRules.For("druid", 20, NoMods).Single().Max);
         Assert.Equal(new ResourceTemplate("sorcery-points", "Sorcery Points", 4, ResourceRecharge.LongRest), ClassResourceRules.For("sorcerer", 4, NoMods).Single());
         Assert.Equal(new ResourceTemplate("arcane-recovery", "Arcane Recovery", 1, ResourceRecharge.LongRest), ClassResourceRules.For("wizard", 1, NoMods).Single());
 

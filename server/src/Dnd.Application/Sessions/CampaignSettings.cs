@@ -8,7 +8,11 @@ using FluentValidation;
 namespace Dnd.Application.Sessions;
 
 /// <summary>Partial update: absent fields are left unchanged.</summary>
-public sealed record UpdateCampaignSettingsRequest(string? TimeZoneId, IReadOnlyList<int>? ReminderOffsetsMinutes);
+/// <param name="PlayersCanTakeFromStash">Whether players take items from the party stash (and give them back) by themselves.</param>
+public sealed record UpdateCampaignSettingsRequest(
+    string? TimeZoneId,
+    IReadOnlyList<int>? ReminderOffsetsMinutes,
+    bool? PlayersCanTakeFromStash = null);
 
 public sealed class UpdateCampaignSettingsRequestValidator : AbstractValidator<UpdateCampaignSettingsRequest>
 {
@@ -23,8 +27,8 @@ public sealed class UpdateCampaignSettingsRequestValidator : AbstractValidator<U
 }
 
 /// <summary>
-/// Changes the time zone and reminder offsets of a campaign (at least DM). When the offsets change,
-/// the pending reminders of its upcoming scheduled sessions are regenerated.
+/// Changes the time zone, the reminder offsets and the party stash setting of a campaign (at least
+/// DM). When the offsets change, the pending reminders of its upcoming scheduled sessions are regenerated.
 /// </summary>
 public sealed class UpdateCampaignSettingsHandler(
     ICampaignRepository campaigns,
@@ -39,7 +43,7 @@ public sealed class UpdateCampaignSettingsHandler(
 
         var campaign = await campaigns.GetWithMembersAsync(campaignId, cancellationToken) ?? throw CampaignErrors.CampaignNotFound();
         var now = clock.UtcNow;
-        var offsetsChanged = campaign.UpdateSettings(currentUserId, request.TimeZoneId, request.ReminderOffsetsMinutes, now);
+        var offsetsChanged = campaign.UpdateSettings(currentUserId, request.TimeZoneId, request.ReminderOffsetsMinutes, now, request.PlayersCanTakeFromStash);
 
         if (offsetsChanged)
         {

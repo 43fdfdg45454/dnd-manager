@@ -2,6 +2,7 @@ using Dnd.Api.Auth;
 using Dnd.Api.Endpoints;
 using Dnd.Api.Errors;
 using Dnd.Api.Hosting;
+using Dnd.Api.Realtime;
 using Dnd.Application;
 using Dnd.Application.Abstractions;
 using Dnd.Application.Common;
@@ -11,6 +12,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using Serilog;
@@ -26,6 +28,10 @@ builder.Host.UseSerilog((context, _, logger) => LoggingSetup.Configure(context, 
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// Realtime campaign events (ADR 0006): the SignalR hub replaces the no-op notifier of the application layer.
+builder.Services.AddSignalR();
+builder.Services.Replace(ServiceDescriptor.Singleton<ICampaignNotifier, SignalRCampaignNotifier>());
 
 // The public URL comes from the mandatory App:PublicUrl; the forwarded headers only keep the scheme and host
 // of the requests correct (logs, redirects).
@@ -145,6 +151,10 @@ app.MapLibraryEndpoints();
 app.MapSessionEndpoints();
 app.MapPublicSessionEndpoints();
 app.MapPageEndpoints();
+app.MapPartyEndpoints();
+app.MapPartyStashEndpoints();
+app.MapMessageEndpoints();
+app.MapHub<CampaignHub>(CampaignHub.Path);
 
 await app.RunAsync();
 

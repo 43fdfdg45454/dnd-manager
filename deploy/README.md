@@ -104,6 +104,13 @@ nginx la expone con TLS; los certificados los gestionas tú como con cualquier o
 tu CA interna, etc.):
 
 ```nginx
+# En el bloque http (p. ej. /etc/nginx/conf.d/websocket-map.conf): "upgrade" solo cuando el cliente
+# lo pide, para que el resto de peticiones sigan cerrando la conexión con normalidad.
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
 server {
     listen 443 ssl;
     http2 on;
@@ -125,6 +132,9 @@ server {
         proxy_set_header   X-Forwarded-Proto $scheme;
         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header   X-Real-IP         $remote_addr;
+        # WebSocket del hub de tiempo real (/hubs/campaign).
+        proxy_set_header   Upgrade           $http_upgrade;
+        proxy_set_header   Connection        $connection_upgrade;
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
     }
@@ -134,6 +144,11 @@ server {
 Todo va bajo `location /`: además de `/api`, la API sirve en la raíz las páginas de contraseña
 (`/set-password`), de asistencia (`/sessions/{id}`) y de creación del primer administrador (`/admin`), y Swagger (`/swagger`). Si el proxy corre en otra
 máquina, pon `API_BIND=0.0.0.0` y apunta `proxy_pass` a la IP del host.
+
+**Tiempo real**: la app recibe los eventos de la campaña (descansos, daño, mensajes del DM...) por
+SignalR en `/hubs/campaign`. Las cabeceras `Upgrade`/`Connection` de arriba permiten WebSocket; si el
+proxy no lo negocia, SignalR cae solo a Server-Sent Events o long polling, que funcionan sin tocar
+nada pero con más latencia y peticiones. Caddy reenvía WebSocket sin configuración extra.
 
 **CA propia o certificado autofirmado**: la app Android confía en los certificados de usuario del
 dispositivo. Instala tu CA en Ajustes → Seguridad → Credenciales de usuario (o fija la huella del

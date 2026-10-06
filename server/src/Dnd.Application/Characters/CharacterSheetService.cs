@@ -4,6 +4,7 @@ using Dnd.Application.ChangeRequests;
 using Dnd.Application.Common;
 using Dnd.Application.Files;
 using Dnd.Application.Items;
+using Dnd.Application.Party;
 using Dnd.Domain.Characters;
 
 namespace Dnd.Application.Characters;
@@ -17,6 +18,12 @@ public interface ICharacterSheetService
 {
     /// <summary>Calculates the sheet of a character with all its child collections (inventory included) loaded.</summary>
     Task<CharacterSheet> CalculateAsync(Character character, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Like <see cref="CalculateAsync"/> for several characters at once, loading the catalog and the item
+    /// templates once for all of them. Sheets by character id.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, CharacterSheet>> CalculateManyAsync(IReadOnlyList<Character> characters, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// After a sheet edit, an inventory change that can affect the sheet (equip, attune, remove) or on
@@ -33,6 +40,9 @@ public interface ICharacterSheetService
     Task EnsureCatalogReferencesAsync(Character character, SheetEdit edit, CancellationToken cancellationToken = default);
 
     Task<CharacterDetailDto> BuildDetailAsync(Character character, CancellationToken cancellationToken = default);
+
+    /// <summary>The DM's view of the given characters (loaded with every child collection), sorted by name.</summary>
+    Task<IReadOnlyList<PartyMemberDto>> BuildPartyAsync(IReadOnlyList<Character> characters, CancellationToken cancellationToken = default);
 
     /// <summary>Summaries sorted by name. Hit points only for characters the viewer owns, or all when a DM.</summary>
     Task<IReadOnlyList<CharacterSummaryDto>> BuildSummariesAsync(
@@ -53,6 +63,62 @@ public sealed class CharacterSheetService(
     {
         var sheetCatalog = await SheetCatalog.LoadAsync(catalog, [character], includeSpells: false, cancellationToken);
         return await CalculateAsync(character, sheetCatalog, cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, CharacterSheet>> CalculateManyAsync(IReadOnlyList<Character> characters, CancellationToken cancellationToken = default)
+    {
+        var sheetCatalog = await SheetCatalog.LoadAsync(catalog, characters, includeSpells: false, cancellationToken);
+        return await CalculateManyAsync(characters, sheetCatalog, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<PartyMemberDto>> BuildPartyAsync(IReadOnlyList<Character> characters, CancellationToken cancellationToken = default)
+    {
+        var sheetCatalog = await SheetCatalog.LoadAsync(catalog, characters, includeSpells: false, cancellationToken);
+        var sheetsById = await CalculateManyAsync(characters, sheetCatalog, cancellationToken);
+        var owners = await users.GetDisplayNamesAsync(characters.Select(c => c.OwnerUserId).OfType<Guid>().Distinct().ToList(), cancellationToken);
+
+        return characters
+            .OrderBy(c => c.Name, StringComparer.InvariantCultureIgnoreCase)
+            .ThenBy(c => c.Id)
+            .Select(c =>
+            {
+                var sheet = sheetsById[c.Id];
+                return new PartyMemberDto(
+                    c.Id,
+                    c.Name,
+                    c.OwnerUserId,
+                    c.OwnerUserId is { } owner ? owners.GetValueOrDefault(owner) : null,
+                    FileUrls.For(c.PortraitFileId),
+                    c.OrderedClasses
+                        .Select(k => new CharacterClassSummaryDto(
+                            k.ClassIndex,
+                            sheetCatalog.Class(k.ClassIndex)?.Name ?? k.ClassIndex,
+                            sheetCatalog.Subclass(k.SubclassIndex)?.Name,
+                            k.Level))
+                        .ToList(),
+                    c.TotalLevel,
+                    c.HitPointsCurrent,
+                    sheet.HitPointsMax,
+                    c.TemporaryHitPoints,
+                    sheet.ArmorClass,
+                    sheet.Initiative,
+                    sheet.PassivePerception,
+                    sheet.Speed,
+                    c.Conditions.Select(k => new CharacterConditionDto(k.Index, k.Note)).ToList(),
+                    c.ExhaustionLevel,
+                    c.DeathSaveSuccesses,
+                    c.DeathSaveFailures,
+                    c.ConcentratingOnSpellIndex,
+                    c.Inspiration,
+                    Enumerable.Range(1, 9)
+                        .Select(level => new SpellSlotDto(level, sheet.SpellSlotMax(level), c.SpellSlotsUsed(level)))
+                        .Where(slot => slot.Max > 0 || slot.Used > 0)
+                        .ToList(),
+                    sheet.PactMagic is { } pact
+                        ? new SpellSlotDto(pact.SlotLevel, pact.Slots, c.SpellSlotsUsed(SpellSlotState.PactLevel))
+                        : null);
+            })
+            .ToList();
     }
 
     public async Task<CharacterSheet> RecalculateAsync(Character character, CancellationToken cancellationToken = default)
@@ -282,6 +348,21 @@ public sealed class CharacterSheetService(
         var equipped = character.Items.Where(i => i.Equipped).ToList();
         var templates = await InventoryView.LoadTemplatesAsync(itemTemplates, equipped.Select(i => i.TemplateId), cancellationToken);
         return SheetCalculator.Calculate(sheetCatalog.InputFor(character, InventoryView.Gear(equipped, templates)));
+    }
+
+    /// <summary>Sheets of several characters with their inventories loaded, with one template query for all.</summary>
+    private async Task<IReadOnlyDictionary<Guid, CharacterSheet>> CalculateManyAsync(
+        IReadOnlyList<Character> characters,
+        SheetCatalog sheetCatalog,
+        CancellationToken cancellationToken)
+    {
+        var templates = await InventoryView.LoadTemplatesAsync(
+            itemTemplates,
+            characters.SelectMany(c => c.Items).Where(i => i.Equipped).Select(i => i.TemplateId),
+            cancellationToken);
+        return characters.ToDictionary(
+            c => c.Id,
+            c => SheetCalculator.Calculate(sheetCatalog.InputFor(c, InventoryView.Gear(c.Items.Where(i => i.Equipped), templates))));
     }
 
     /// <summary>Levels with slots (or spent ones), pact slots first as level 0.</summary>

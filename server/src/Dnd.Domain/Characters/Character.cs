@@ -422,6 +422,45 @@ public sealed partial class Character : EntityBase
         Touch(now);
     }
 
+    /// <summary>
+    /// Takes damage: temporary hit points absorb it first, the rest lowers the current hit points
+    /// (never below 0). <paramref name="amount"/> must not be negative.
+    /// </summary>
+    public void ApplyDamage(int amount, DateTimeOffset now)
+    {
+        if (amount < 0)
+        {
+            throw DomainException.RuleViolation("El daño no puede ser negativo.");
+        }
+
+        var absorbed = Math.Min(TemporaryHitPoints, amount);
+        TemporaryHitPoints -= absorbed;
+        HitPointsCurrent = Math.Max(0, HitPointsCurrent - (amount - absorbed));
+        Touch(now);
+    }
+
+    /// <summary>
+    /// Heals up to <paramref name="maxHp"/> (the sheet's maximum hit points). Healing a character at 0
+    /// hit points brings it back: the death saves are reset. <paramref name="amount"/> must not be negative.
+    /// </summary>
+    public void Heal(int amount, int maxHp, DateTimeOffset now)
+    {
+        if (amount < 0)
+        {
+            throw DomainException.RuleViolation("La curación no puede ser negativa.");
+        }
+
+        if (amount > 0 && HitPointsCurrent == 0)
+        {
+            DeathSaveSuccesses = 0;
+            DeathSaveFailures = 0;
+        }
+
+        var max = Math.Max(0, maxHp);
+        HitPointsCurrent = Math.Max(HitPointsCurrent, Math.Min(max, HitPointsCurrent + amount));
+        Touch(now);
+    }
+
     /// <summary>Starts concentrating on a spell, or stops when <paramref name="spellIndex"/> is null or empty.</summary>
     public void SetConcentration(string? spellIndex, DateTimeOffset now)
     {
@@ -743,6 +782,42 @@ public sealed partial class Character : EntityBase
 
         var sortOrder = _items.Count == 0 ? 0 : _items.Max(i => i.SortOrder) + 1;
         var item = CharacterItem.Create(Id, CampaignId, templateId, normalized, quantity, sortOrder, now);
+        _items.Add(item);
+        Touch(now);
+        return item;
+    }
+
+    /// <summary>
+    /// Adds an item that comes with its own charges (e.g. taken from the party stash). Without charges it
+    /// behaves like <see cref="AddItem"/>; with charges a new entry is always created (charges belong to
+    /// one entry and never stack).
+    /// </summary>
+    public CharacterItem ReceiveItem(
+        Guid? templateId,
+        ItemOverrides overrides,
+        int quantity,
+        EffectiveItem effective,
+        int? charges,
+        int? chargesMax,
+        DateTimeOffset now)
+    {
+        if (charges is null || chargesMax is null)
+        {
+            return AddItem(templateId, overrides, quantity, effective, now);
+        }
+
+        ArgumentNullException.ThrowIfNull(overrides);
+        ArgumentNullException.ThrowIfNull(effective);
+        ValidateQuantity(quantity);
+        var normalized = overrides.Normalize();
+        if (templateId is null && normalized.Name is null)
+        {
+            throw DomainException.RuleViolation("Un objeto sin plantilla necesita un nombre.");
+        }
+
+        var sortOrder = _items.Count == 0 ? 0 : _items.Max(i => i.SortOrder) + 1;
+        var item = CharacterItem.Create(Id, CampaignId, templateId, normalized, quantity, sortOrder, now);
+        item.RestoreCharges(charges.Value, chargesMax.Value, now);
         _items.Add(item);
         Touch(now);
         return item;

@@ -11,6 +11,7 @@ public sealed class SubmitCharacterHandler(
     CharacterLoader loader,
     IChangeRequestRepository changeRequests,
     IUnitOfWork unitOfWork,
+    ICampaignNotifier notifier,
     IDateTimeProvider clock)
 {
     public async Task<ChangeRequestDto> HandleAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken = default)
@@ -26,6 +27,7 @@ public sealed class SubmitCharacterHandler(
         var request = ChangeRequest.Create(character.CampaignId, character.Id, currentUserId, ChangeRequestType.Activate, null, clock.UtcNow);
         changeRequests.Add(request);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.ChangeRequestUpdatedAsync(character.CampaignId, character.Id, request.Id, clock.UtcNow, cancellationToken);
 
         var view = (await changeRequests.ListViewsAsync(new ChangeRequestQuery(Id: request.Id), cancellationToken)).Single();
         return ChangeRequestDto.From(view);
@@ -41,6 +43,7 @@ public sealed class ActivateCharacterHandler(
     ICharacterSheetService sheets,
     IChangeRequestRepository changeRequests,
     IUnitOfWork unitOfWork,
+    ICampaignNotifier notifier,
     IDateTimeProvider clock)
 {
     public async Task<CharacterDetailDto> HandleAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken = default)
@@ -62,6 +65,7 @@ public sealed class ActivateCharacterHandler(
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, clock.UtcNow, cancellationToken);
         return await sheets.BuildDetailAsync(character, cancellationToken);
     }
 }
