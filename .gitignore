@@ -3,6 +3,9 @@ deploy/.env
 deploy/backups/
 deploy/data/
 
+# Paquetes de contenido privados (material con copyright; ver docs/content-packs.md)
+content-packs/
+
 # .NET
 server/**/bin/
 server/**/obj/

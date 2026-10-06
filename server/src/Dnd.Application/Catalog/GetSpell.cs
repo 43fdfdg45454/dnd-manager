@@ -25,6 +25,7 @@ public sealed class GetSpellHandler(ICatalogRepository catalog)
             s.SubclassIndexes,
             s.AttackType,
             CatalogJson.SpellDamage(s.DamageJson),
-            s.DcAbility);
+            s.DcAbility,
+            s.Source);
     }
 }

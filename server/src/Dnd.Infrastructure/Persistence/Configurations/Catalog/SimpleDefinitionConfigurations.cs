@@ -44,6 +44,8 @@ internal sealed class BackgroundDefinitionConfiguration : IEntityTypeConfigurati
         builder.Property(x => x.FeatureDescription).HasJsonListConversion();
         builder.Property(x => x.SkillProficiencies).HasJsonListConversion();
         builder.Property(x => x.StartingEquipmentText).IsRequired();
+        builder.Property(x => x.Source).HasMaxLength(CatalogSources.MaxLength).IsRequired();
+        builder.HasIndex(x => x.Source);
     }
 }
 
@@ -54,7 +56,8 @@ internal sealed class CatalogImportConfiguration : IEntityTypeConfiguration<Cata
         builder.ToTable("CatalogImports");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.Property(x => x.Ruleset).HasMaxLength(32).IsRequired();
+        builder.Property(x => x.Ruleset).HasMaxLength(CatalogImport.RulesetMaxLength).IsRequired();
+        builder.Property(x => x.Name).HasMaxLength(CatalogColumns.NameMaxLength);
         builder.Property(x => x.DatasetVersion).HasMaxLength(100).IsRequired();
         builder.HasIndex(x => new { x.Ruleset, x.DatasetVersion }).IsUnique();
         builder.Property(x => x.ImportedAt).IsRequired();

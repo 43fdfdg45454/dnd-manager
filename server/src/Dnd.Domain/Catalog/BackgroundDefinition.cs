@@ -14,4 +14,7 @@ public sealed class BackgroundDefinition
     public IReadOnlyList<string> SkillProficiencies { get; init; } = [];
 
     public string StartingEquipmentText { get; init; } = string.Empty;
+
+    /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
+    public string Source { get; init; } = CatalogSources.Srd;
 }

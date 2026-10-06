@@ -4,9 +4,9 @@ using Dnd.Domain.Items;
 namespace Dnd.Domain.Catalog;
 
 /// <summary>
-/// Item definition. SRD items have <see cref="CampaignId"/> null and a dataset <see cref="Index"/>;
-/// homebrew items belong to a campaign and have no index. The Guid id stays stable across
-/// dataset re-imports so that future inventories can reference it.
+/// Item definition. Catalog items (SRD and content packs) have <see cref="CampaignId"/> null and a
+/// dataset <see cref="Index"/>; homebrew items belong to a campaign and have no index. The Guid id
+/// stays stable across dataset re-imports so that inventories can keep referencing it.
 /// </summary>
 public sealed class ItemTemplate : EntityBase
 {
@@ -19,8 +19,11 @@ public sealed class ItemTemplate : EntityBase
     /// <summary>Null for SRD items.</summary>
     public Guid? CampaignId { get; private set; }
 
-    /// <summary>Dataset slug for SRD items; null for homebrew.</summary>
+    /// <summary>Dataset slug for catalog items (SRD and content packs); null for homebrew.</summary>
     public string? Index { get; private set; }
+
+    /// <summary>"srd", "homebrew" or the id of the content pack (see <see cref="CatalogSources"/>).</summary>
+    public string Source { get; private set; } = CatalogSources.Srd;
 
     public string Name { get; private set; } = string.Empty;
 
@@ -66,14 +69,19 @@ public sealed class ItemTemplate : EntityBase
     /// <summary>Structured effects on the sheet while the item is active (see <see cref="ItemModifier"/>).</summary>
     public IReadOnlyList<ItemModifier> Modifiers { get; private set; } = [];
 
+    /// <summary>True for catalog items (SRD and content packs), which no campaign can edit.</summary>
     public bool IsSrd => CampaignId is null;
 
     /// <summary>True when the item can be used inside the campaign: SRD items and the campaign's own homebrew.</summary>
     public bool IsVisibleIn(Guid campaignId) => CampaignId is null || CampaignId == campaignId;
 
-    public static ItemTemplate CreateSrd(string index, ItemTemplateData data, DateTimeOffset now)
+    public static ItemTemplate CreateSrd(string index, ItemTemplateData data, DateTimeOffset now) =>
+        CreateCatalog(CatalogSources.Srd, index, data, now);
+
+    /// <summary>Creates a catalog item of the SRD or of a content pack (<paramref name="source"/> = pack id).</summary>
+    public static ItemTemplate CreateCatalog(string source, string index, ItemTemplateData data, DateTimeOffset now)
     {
-        var item = new ItemTemplate { Index = index, CreatedAt = now };
+        var item = new ItemTemplate { Index = index, Source = source, CreatedAt = now };
         item.Apply(data);
         return item;
     }
@@ -81,7 +89,7 @@ public sealed class ItemTemplate : EntityBase
     /// <summary>Creates a homebrew item that belongs to a campaign (it has no dataset index).</summary>
     public static ItemTemplate CreateHomebrew(Guid campaignId, ItemTemplateData data, DateTimeOffset now)
     {
-        var item = new ItemTemplate { CampaignId = campaignId, CreatedAt = now };
+        var item = new ItemTemplate { CampaignId = campaignId, Source = CatalogSources.Homebrew, CreatedAt = now };
         item.Apply(data);
         return item;
     }
@@ -123,7 +131,7 @@ public sealed class ItemTemplate : EntityBase
         Modifiers = Modifiers,
     };
 
-    /// <summary>Replaces the rules data of an SRD item with a newer version of the dataset.</summary>
+    /// <summary>Replaces the rules data of a catalog item (SRD or content pack) with a newer version of its dataset.</summary>
     public void UpdateSrd(ItemTemplateData data)
     {
         if (!IsSrd)

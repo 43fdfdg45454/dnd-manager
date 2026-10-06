@@ -136,6 +136,7 @@ app.MapAuthEndpoints();
 app.MapSetupEndpoints();
 app.MapAdminUserEndpoints();
 app.MapAdminReleaseEndpoints();
+app.MapAdminContentPackEndpoints();
 app.MapUserEndpoints();
 app.MapCampaignEndpoints();
 app.MapCatalogEndpoints();

@@ -214,6 +214,34 @@ public sealed class CharacterSheetService(
             .ThenBy(r => r.Name, StringComparer.Ordinal)
             .Select(ToDto)
             .ToList();
+        var classes = character.OrderedClasses
+            .Select(c => new CharacterClassDto(
+                c.ClassIndex,
+                sheetCatalog.Class(c.ClassIndex)?.Name ?? c.ClassIndex,
+                c.SubclassIndex,
+                sheetCatalog.Subclass(c.SubclassIndex)?.Name,
+                c.Level,
+                c.Order,
+                sheetCatalog.Class(c.ClassIndex) is null || (c.SubclassIndex is not null && sheetCatalog.Subclass(c.SubclassIndex) is null)))
+            .ToList();
+        var spells = character.Spells
+            .Select(s => (Spell: s, Definition: sheetCatalog.Spell(s.SpellIndex)))
+            .OrderBy(s => s.Definition?.Level ?? int.MaxValue)
+            .ThenBy(s => s.Definition?.Name ?? s.Spell.SpellIndex, StringComparer.Ordinal)
+            .ThenBy(s => s.Spell.ClassIndex, StringComparer.Ordinal)
+            .Select(s => new CharacterSpellDto(
+                s.Spell.Id,
+                s.Spell.SpellIndex,
+                s.Spell.ClassIndex,
+                s.Spell.IsPrepared,
+                s.Spell.AlwaysPrepared,
+                s.Definition?.Name,
+                s.Definition?.Level,
+                s.Definition is null))
+            .ToList();
+        var raceMissing = (character.RaceIndex is not null && sheetCatalog.Race(character.RaceIndex) is null)
+            || (character.SubraceIndex is not null && sheetCatalog.Subrace(character.SubraceIndex) is null);
+        var backgroundMissing = character.BackgroundIndex is not null && sheetCatalog.Background(character.BackgroundIndex) is null;
 
         return new CharacterDetailDto
         {
@@ -229,6 +257,9 @@ public sealed class CharacterSheetService(
             SubraceName = sheetCatalog.Subrace(character.SubraceIndex)?.Name,
             BackgroundIndex = character.BackgroundIndex,
             BackgroundName = sheetCatalog.Background(character.BackgroundIndex)?.Name,
+            RaceCatalogMissing = raceMissing,
+            BackgroundCatalogMissing = backgroundMissing,
+            CatalogMissing = raceMissing || backgroundMissing || classes.Any(c => c.CatalogMissing) || spells.Any(s => s.CatalogMissing),
             Alignment = character.Alignment,
             ApplyRacialBonuses = character.ApplyRacialBonuses,
             HpMode = character.HpMode.ToString(),
@@ -254,34 +285,13 @@ public sealed class CharacterSheetService(
             PortraitUrl = FileUrls.For(character.PortraitFileId),
             CreatedAt = character.CreatedAt,
             UpdatedAt = character.UpdatedAt,
-            Classes = character.OrderedClasses
-                .Select(c => new CharacterClassDto(
-                    c.ClassIndex,
-                    sheetCatalog.Class(c.ClassIndex)?.Name ?? c.ClassIndex,
-                    c.SubclassIndex,
-                    sheetCatalog.Subclass(c.SubclassIndex)?.Name,
-                    c.Level,
-                    c.Order))
-                .ToList(),
+            Classes = classes,
             Proficiencies = character.Proficiencies
                 .OrderBy(p => p.Type)
                 .ThenBy(p => p.Key, StringComparer.Ordinal)
                 .Select(p => new CharacterProficiencyDto(p.Id, p.Type.ToString(), p.Key, p.Expertise, p.Source.ToString()))
                 .ToList(),
-            Spells = character.Spells
-                .Select(s => (Spell: s, Definition: sheetCatalog.Spell(s.SpellIndex)))
-                .OrderBy(s => s.Definition?.Level ?? int.MaxValue)
-                .ThenBy(s => s.Definition?.Name ?? s.Spell.SpellIndex, StringComparer.Ordinal)
-                .ThenBy(s => s.Spell.ClassIndex, StringComparer.Ordinal)
-                .Select(s => new CharacterSpellDto(
-                    s.Spell.Id,
-                    s.Spell.SpellIndex,
-                    s.Spell.ClassIndex,
-                    s.Spell.IsPrepared,
-                    s.Spell.AlwaysPrepared,
-                    s.Definition?.Name,
-                    s.Definition?.Level))
-                .ToList(),
+            Spells = spells,
             Overrides = character.Overrides
                 .OrderBy(o => o.Field, StringComparer.Ordinal)
                 .Select(o => new CharacterOverrideDto(o.Field, o.Value, o.Note))

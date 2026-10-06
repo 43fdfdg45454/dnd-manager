@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Dnd.Api.Auth;
 using Dnd.Api.Filters;
 using Dnd.Application.Catalog;
+using Dnd.Application.ContentPacks;
 
 namespace Dnd.Api.Endpoints;
 
@@ -22,7 +23,7 @@ public static class CatalogEndpoints
         group.MapGet("/classes", async (ListClassesHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(ct)))
             .WithName("ListCatalogClasses")
-            .WithSummary("Clases del SRD ordenadas por nombre.");
+            .WithSummary("Clases del catálogo ordenadas por nombre.");
 
         group.MapGet("/classes/{index}", async (string index, GetClassHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(index, ct)))
@@ -33,7 +34,7 @@ public static class CatalogEndpoints
         group.MapGet("/races", async (ListRacesHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(ct)))
             .WithName("ListCatalogRaces")
-            .WithSummary("Razas del SRD ordenadas por nombre.");
+            .WithSummary("Razas del catálogo (SRD y paquetes de contenido) ordenadas por nombre.");
 
         group.MapGet("/races/{index}", async (string index, GetRaceHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(index, ct)))
@@ -56,7 +57,7 @@ public static class CatalogEndpoints
         group.MapGet("/items", async ([AsParameters] SearchItemsQuery query, SearchItemsHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(query, ct)))
             .WithName("SearchCatalogItems")
-            .WithSummary("Objetos del SRD paginados con búsqueda por nombre y filtros de categoría y rareza.")
+            .WithSummary("Objetos del catálogo (SRD y paquetes de contenido) paginados con búsqueda por nombre y filtros de categoría y rareza.")
             .ProducesValidationProblem();
 
         group.MapGet("/items/{id:guid}", async (Guid id, ClaimsPrincipal user, GetItemHandler handler, CancellationToken ct) =>
@@ -78,7 +79,12 @@ public static class CatalogEndpoints
         group.MapGet("/backgrounds", async (ListBackgroundsHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(ct)))
             .WithName("ListCatalogBackgrounds")
-            .WithSummary("Trasfondos del SRD ordenados por nombre.");
+            .WithSummary("Trasfondos del catálogo (SRD y paquetes de contenido) ordenados por nombre.");
+
+        group.MapGet("/sources", async (ListCatalogSourcesHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(ct)))
+            .WithName("ListCatalogSources")
+            .WithSummary("Fuentes del catálogo: el SRD y los paquetes de contenido importados (id, nombre y versión), para etiquetar su contenido.");
 
         group.MapGet("/features/{index}", async (string index, GetFeatureHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(index, ct)))

@@ -26,7 +26,8 @@ public sealed class GetRaceHandler(ICatalogRepository catalog)
             Traits(race.TraitIndexes, traits),
             subraces
                 .Select(s => new SubraceDto(s.Index, s.Name, s.Description, CatalogJson.AbilityBonuses(s.AbilityBonusesJson), Traits(s.TraitIndexes, traits)))
-                .ToList());
+                .ToList(),
+            race.Source);
     }
 
     private static List<TraitDto> Traits(IEnumerable<string> indexes, IReadOnlyDictionary<string, TraitDefinition> traits) =>

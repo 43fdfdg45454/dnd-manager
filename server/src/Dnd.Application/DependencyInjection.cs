@@ -4,6 +4,7 @@ using Dnd.Application.Auth;
 using Dnd.Application.Campaigns;
 using Dnd.Application.Catalog;
 using Dnd.Application.ChangeRequests;
+using Dnd.Application.ContentPacks;
 using Dnd.Application.Characters;
 using Dnd.Application.Files;
 using Dnd.Application.Library;
@@ -72,6 +73,11 @@ public static class DependencyInjection
         services.AddScoped<ListConditionsHandler>();
         services.AddScoped<ListSkillsHandler>();
         services.AddScoped<ListBackgroundsHandler>();
+        services.AddScoped<ListCatalogSourcesHandler>();
+
+        services.AddScoped<ListContentPacksHandler>();
+        services.AddScoped<ImportContentPackHandler>();
+        services.AddScoped<DeleteContentPackHandler>();
 
         // Realtime events: nothing by default; the API host replaces it with the SignalR notifier.
         services.AddSingleton<ICampaignNotifier, NoopCampaignNotifier>();

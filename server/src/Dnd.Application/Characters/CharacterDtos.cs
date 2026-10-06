@@ -22,13 +22,15 @@ public sealed record CharacterSummaryDto(
     int? HitPointsMax,
     string? PortraitUrl);
 
-public sealed record CharacterClassDto(string ClassIndex, string ClassName, string? SubclassIndex, string? SubclassName, int Level, int Order);
+/// <param name="CatalogMissing">True when the class or the subclass is no longer in the catalog (e.g. its content pack was deleted).</param>
+public sealed record CharacterClassDto(string ClassIndex, string ClassName, string? SubclassIndex, string? SubclassName, int Level, int Order, bool CatalogMissing = false);
 
 public sealed record CharacterProficiencyDto(Guid Id, string Type, string Key, bool Expertise, string Source);
 
 /// <param name="SpellName">Name from the catalog (null when the spell is not in it).</param>
 /// <param name="SpellLevel">Spell level from the catalog (0 = cantrip; null when unknown).</param>
-public sealed record CharacterSpellDto(Guid Id, string SpellIndex, string ClassIndex, bool IsPrepared, bool AlwaysPrepared, string? SpellName, int? SpellLevel);
+/// <param name="CatalogMissing">True when the spell is no longer in the catalog (e.g. its content pack was deleted).</param>
+public sealed record CharacterSpellDto(Guid Id, string SpellIndex, string ClassIndex, bool IsPrepared, bool AlwaysPrepared, string? SpellName, int? SpellLevel, bool CatalogMissing = false);
 
 public sealed record CharacterOverrideDto(string Field, int Value, string? Note);
 
@@ -113,6 +115,18 @@ public sealed record CharacterDetailDto
     public required string? BackgroundIndex { get; init; }
 
     public required string? BackgroundName { get; init; }
+
+    /// <summary>True when the race or the subrace is set but no longer in the catalog (e.g. its content pack was deleted).</summary>
+    public bool RaceCatalogMissing { get; init; }
+
+    /// <summary>True when the background is set but no longer in the catalog.</summary>
+    public bool BackgroundCatalogMissing { get; init; }
+
+    /// <summary>
+    /// True when anything the character references (race, subrace, background, classes, subclasses, spells) is no
+    /// longer in the catalog. The sheet is still calculated (a missing class counts as d8 without features).
+    /// </summary>
+    public bool CatalogMissing { get; init; }
 
     public required string? Alignment { get; init; }
 

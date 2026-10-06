@@ -10,6 +10,8 @@ internal sealed class TraitDefinitionConfiguration : IEntityTypeConfiguration<Tr
     {
         builder.ToTable("CatalogTraits");
         builder.HasKey(x => x.Index);
+        builder.Property(x => x.Source).HasMaxLength(CatalogSources.MaxLength).IsRequired();
+        builder.HasIndex(x => x.Source);
         builder.Property(x => x.Index).HasMaxLength(CatalogColumns.IndexMaxLength);
         builder.Property(x => x.Name).HasMaxLength(CatalogColumns.NameMaxLength).IsRequired();
         builder.HasIndex(x => x.Name);

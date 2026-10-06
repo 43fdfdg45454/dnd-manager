@@ -98,7 +98,7 @@ internal sealed class CatalogRepository(AppDbContext db) : ICatalogRepository
 
     public async Task<(IReadOnlyList<ItemTemplate> Items, int Total)> SearchSrdItemsAsync(ItemFilter filter, int skip, int take, CancellationToken cancellationToken = default)
     {
-        var query = db.ItemTemplates.AsNoTracking().Where(x => x.CampaignId == null);
+        var query = db.ItemTemplates.AsNoTracking().Where(x => x.CampaignId == null).WhereListed(db);
         if (filter.Search is { } search)
         {
             query = query.Where(x => x.Name.ToLower().Contains(search));

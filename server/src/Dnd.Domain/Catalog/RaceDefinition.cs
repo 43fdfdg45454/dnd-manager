@@ -25,4 +25,7 @@ public sealed class RaceDefinition
     public string SizeDescription { get; init; } = string.Empty;
 
     public IReadOnlyList<string> SubraceIndexes { get; init; } = [];
+
+    /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
+    public string Source { get; init; } = CatalogSources.Srd;
 }

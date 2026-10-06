@@ -11,6 +11,8 @@ internal sealed class ItemTemplateConfiguration : IEntityTypeConfiguration<ItemT
     {
         builder.ToTable("ItemTemplates");
         builder.HasKey(x => x.Id);
+        builder.Property(x => x.Source).HasMaxLength(CatalogSources.MaxLength).IsRequired();
+        builder.HasIndex(x => x.Source);
         builder.Property(x => x.Id).ValueGeneratedNever();
 
         // Homebrew items (with a campaign) are deleted together with their campaign.

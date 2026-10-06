@@ -11,8 +11,10 @@ namespace Dnd.Infrastructure.Catalog;
 /// <summary>
 /// Imports the embedded SRD 5.1 dataset into the catalog tables in a single transaction.
 /// Idempotent: nothing happens when a <see cref="CatalogImport"/> exists for the same ruleset and
-/// dataset version. When an older version was imported, the definition tables are replaced and SRD
+/// dataset version. When an older version was imported, the SRD definitions are replaced and SRD
 /// item templates are updated in place by index, so their ids (referenced by inventories) survive.
+/// Definitions of content packs (<c>Source</c> other than "srd") are left intact: classes, which
+/// pack subclasses and features reference, are updated in place instead of deleted.
 /// </summary>
 internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogger<SrdSeeder> logger) : ISrdSeeder
 {
@@ -41,7 +43,7 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
 
             var counts = new Dictionary<string, int>
             {
-                ["classes"] = await InsertAsync(catalog.Classes, cancellationToken),
+                ["classes"] = await UpsertClassesAsync(catalog.Classes, cancellationToken),
                 ["classLevels"] = await InsertAsync(catalog.ClassLevels, cancellationToken),
                 ["subclasses"] = await InsertAsync(catalog.Subclasses, cancellationToken),
                 ["subclassLevels"] = await InsertAsync(catalog.SubclassLevels, cancellationToken),
@@ -50,7 +52,7 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
                 ["subraces"] = await InsertAsync(catalog.Subraces, cancellationToken),
                 ["traits"] = await InsertAsync(catalog.Traits, cancellationToken),
                 ["spells"] = await InsertAsync(catalog.Spells, cancellationToken),
-                ["items"] = await UpsertItemsAsync(catalog.Items, now, cancellationToken),
+                ["items"] = await CatalogItems.UpsertAsync(db, CatalogSources.Srd, catalog.Items, now, cancellationToken),
                 ["conditions"] = await InsertAsync(catalog.Conditions, cancellationToken),
                 ["skills"] = await InsertAsync(catalog.Skills, cancellationToken),
                 ["backgrounds"] = await InsertAsync(catalog.Backgrounds, cancellationToken),
@@ -81,21 +83,41 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
         }
     }
 
-    /// <summary>Empties the definition tables (dependents first). Item templates are upserted instead.</summary>
+    /// <summary>
+    /// Deletes the SRD definitions (dependents first). Classes are upserted and item templates are
+    /// upserted instead; the class levels, conditions and skills only exist in the SRD.
+    /// </summary>
     private async Task DeleteDefinitionsAsync(CancellationToken cancellationToken)
     {
-        await db.CatalogFeatures.ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogSubclassLevels.ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogSubclasses.ExecuteDeleteAsync(cancellationToken);
+        const string srd = CatalogSources.Srd;
+        await db.CatalogFeatures.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.CatalogSubclassLevels.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.CatalogSubclasses.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogClassLevels.ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogClasses.ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogSubraces.ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogRaces.ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogTraits.ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogSpells.ExecuteDeleteAsync(cancellationToken);
+        await db.CatalogSubraces.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.CatalogRaces.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.CatalogTraits.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.CatalogSpells.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogConditions.ExecuteDeleteAsync(cancellationToken);
         await db.CatalogSkills.ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogBackgrounds.ExecuteDeleteAsync(cancellationToken);
+        await db.CatalogBackgrounds.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Updates the existing classes in place, inserts the new ones and deletes those no longer in the
+    /// dataset. Deleting a class would cascade over the subclasses and features of content packs.
+    /// </summary>
+    private async Task<int> UpsertClassesAsync(IReadOnlyList<ClassDefinition> classes, CancellationToken cancellationToken)
+    {
+        var indexes = classes.Select(c => c.Index).ToList();
+        await db.CatalogClasses.Where(x => !indexes.Contains(x.Index)).ExecuteDeleteAsync(cancellationToken);
+        var existing = (await db.CatalogClasses.AsNoTracking().Select(x => x.Index).ToListAsync(cancellationToken)).ToHashSet(StringComparer.Ordinal);
+
+        db.CatalogClasses.UpdateRange(classes.Where(c => existing.Contains(c.Index)));
+        db.CatalogClasses.AddRange(classes.Where(c => !existing.Contains(c.Index)));
+        await db.SaveChangesAsync(cancellationToken);
+        db.ChangeTracker.Clear();
+        return classes.Count;
     }
 
     /// <summary>One <c>AddRange</c> and one <c>SaveChanges</c> per table.</summary>
@@ -106,35 +128,5 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
         await db.SaveChangesAsync(cancellationToken);
         db.ChangeTracker.Clear();
         return rows.Count;
-    }
-
-    private async Task<int> UpsertItemsAsync(IReadOnlyList<(string Index, ItemTemplateData Data)> items, DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        var existing = await db.ItemTemplates
-            .Where(x => x.CampaignId == null && x.Index != null)
-            .ToDictionaryAsync(x => x.Index!, StringComparer.Ordinal, cancellationToken);
-
-        var added = new List<ItemTemplate>();
-        foreach (var (index, data) in items)
-        {
-            if (existing.TryGetValue(index, out var item))
-            {
-                item.UpdateSrd(data);
-            }
-            else
-            {
-                added.Add(ItemTemplate.CreateSrd(index, data, now));
-            }
-        }
-
-        db.ItemTemplates.AddRange(added);
-        if (existing.Count > 0)
-        {
-            db.ChangeTracker.DetectChanges();
-        }
-
-        await db.SaveChangesAsync(cancellationToken);
-        db.ChangeTracker.Clear();
-        return items.Count;
     }
 }

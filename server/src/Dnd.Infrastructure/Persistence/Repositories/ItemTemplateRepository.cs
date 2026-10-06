@@ -21,6 +21,7 @@ internal sealed class ItemTemplateRepository(AppDbContext db) : IItemTemplateRep
             ItemSource.Homebrew => db.ItemTemplates.AsNoTracking().Where(x => x.CampaignId == campaignId),
             _ => db.ItemTemplates.AsNoTracking().Where(x => x.CampaignId == null || x.CampaignId == campaignId),
         };
+        query = query.WhereListed(db);
 
         if (filter.Search is { } search)
         {

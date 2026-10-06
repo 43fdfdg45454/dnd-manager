@@ -14,4 +14,7 @@ public sealed class SubraceDefinition
     public string AbilityBonusesJson { get; init; } = "[]";
 
     public IReadOnlyList<string> TraitIndexes { get; init; } = [];
+
+    /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
+    public string Source { get; init; } = CatalogSources.Srd;
 }

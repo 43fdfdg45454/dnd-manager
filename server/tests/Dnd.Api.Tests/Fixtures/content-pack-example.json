@@ -1,0 +1,119 @@
+{
+  "formatVersion": 1,
+  "id": "reinos-ejemplo",
+  "name": "Reinos de Ejemplo",
+  "version": "1.0.0",
+  "classesExtended": [
+    {
+      "classIndex": "fighter",
+      "subclasses": [
+        {
+          "index": "reinos-ejemplo-centinela",
+          "name": "Centinela",
+          "flavor": "Arquetipo marcial",
+          "description": ["Guardianes ficticios que vigilan las murallas de los Reinos de Ejemplo."],
+          "levels": [
+            {
+              "level": 3,
+              "features": [
+                {
+                  "index": "reinos-ejemplo-vigilia",
+                  "name": "Vigilia",
+                  "description": ["Texto de ejemplo: mientras estés consciente, ganas un bonificador de +1 a la iniciativa."]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "index": "reinos-ejemplo-espada-del-alba",
+      "name": "Espada del Alba",
+      "category": "Weapon",
+      "subcategory": "Martial Melee",
+      "rarity": "Rare",
+      "requiresAttunement": true,
+      "costCp": null,
+      "weightLb": 3,
+      "damageDice": "1d8",
+      "damageType": "slashing",
+      "versatileDice": "1d10",
+      "properties": ["versatile"],
+      "description": ["Una espada ficticia que brilla con la primera luz del día."],
+      "modifiers": [
+        { "kind": "AttackBonus", "value": 1 },
+        { "kind": "DamageBonus", "value": 1 }
+      ]
+    }
+  ],
+  "spells": [
+    {
+      "index": "reinos-ejemplo-luz-del-alba",
+      "name": "Luz del Alba",
+      "level": 1,
+      "school": "evocation",
+      "castingTime": "1 action",
+      "range": "60 feet",
+      "components": ["V", "S"],
+      "material": null,
+      "duration": "Instantaneous",
+      "concentration": false,
+      "ritual": false,
+      "description": ["Un destello ficticio de luz cálida golpea a una criatura que puedas ver."],
+      "higherLevel": ["El daño aumenta en 1d8 por cada nivel de espacio por encima de 1."],
+      "classes": ["cleric", "paladin"],
+      "subclasses": [],
+      "attackType": null,
+      "damage": { "type": "Radiant", "atSlotLevel": { "1": "2d8", "2": "3d8" } },
+      "dcAbility": "dex"
+    }
+  ],
+  "races": [
+    {
+      "index": "reinos-ejemplo-aurano",
+      "name": "Aurano",
+      "speed": 30,
+      "size": "Medium",
+      "sizeDescription": "Los auranos ficticios miden entre 1,60 y 1,90 metros.",
+      "abilityBonuses": [{ "ability": "cha", "bonus": 2 }],
+      "languages": ["Common"],
+      "age": "Viven tanto como los humanos.",
+      "alignment": "Suelen preferir el orden.",
+      "traits": [
+        {
+          "index": "reinos-ejemplo-brillo",
+          "name": "Brillo",
+          "description": ["Tu piel emite una luz tenue en un radio de 1,5 metros."]
+        }
+      ],
+      "subraces": [
+        {
+          "index": "reinos-ejemplo-aurano-del-alba",
+          "name": "Aurano del Alba",
+          "description": "Auranos ficticios nacidos al amanecer.",
+          "abilityBonuses": [{ "ability": "wis", "bonus": 1 }],
+          "traits": [
+            {
+              "index": "reinos-ejemplo-mirada-clara",
+              "name": "Mirada clara",
+              "description": ["Tienes ventaja en las tiradas para no quedar cegado."]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "backgrounds": [
+    {
+      "index": "reinos-ejemplo-farero",
+      "name": "Farero",
+      "featureName": "Luz en la costa",
+      "featureDescription": ["Los marineros ficticios de la costa te ofrecen refugio."],
+      "skillProficiencies": ["perception", "survival"],
+      "startingEquipmentText": "Una linterna, un catalejo barato y 10 po."
+    }
+  ]
+}

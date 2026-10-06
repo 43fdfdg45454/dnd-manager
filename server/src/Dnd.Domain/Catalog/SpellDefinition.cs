@@ -45,4 +45,7 @@ public sealed class SpellDefinition
 
     /// <summary>Ability index of the saving throw ("dex", "wis", ...).</summary>
     public string? DcAbility { get; init; }
+
+    /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
+    public string Source { get; init; } = CatalogSources.Srd;
 }

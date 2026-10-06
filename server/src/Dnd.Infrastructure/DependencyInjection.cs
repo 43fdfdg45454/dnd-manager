@@ -50,6 +50,7 @@ public static class DependencyInjection
         services.AddScoped<IReleaseRepository, ReleaseRepository>();
         services.AddScoped<IInstanceStatsRepository, InstanceStatsRepository>();
         services.AddScoped<ISrdSeeder, SrdSeeder>();
+        services.AddScoped<IContentPackImporter, ContentPackImporter>();
         services.AddScoped<SystemDocumentSeeder>();
 
         services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));

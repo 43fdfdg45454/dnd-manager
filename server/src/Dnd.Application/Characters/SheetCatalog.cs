@@ -10,7 +10,7 @@ namespace Dnd.Application.Characters;
 /// </summary>
 public sealed class SheetCatalog
 {
-    /// <summary>Hit die assumed for a class missing from the catalog (should not happen: indexes are validated on edit).</summary>
+    /// <summary>Hit die assumed for a class missing from the catalog (indexes are validated on edit, but the catalog can change).</summary>
     private const int FallbackHitDie = 8;
 
     private readonly Dictionary<string, ClassDefinition> _classes;

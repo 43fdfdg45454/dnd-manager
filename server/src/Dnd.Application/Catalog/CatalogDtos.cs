@@ -49,12 +49,14 @@ public sealed record ClassLevelDto(
 
 public sealed record SubclassLevelDto(int Level, IReadOnlyList<FeatureDto> Features);
 
+/// <param name="Source">"srd" or the id of the content pack that added it.</param>
 public sealed record SubclassDto(
     string Index,
     string Name,
     string Flavor,
     IReadOnlyList<string> Description,
-    IReadOnlyList<SubclassLevelDto> Levels);
+    IReadOnlyList<SubclassLevelDto> Levels,
+    string Source);
 
 public sealed record ClassDetailDto(
     string Index,
@@ -80,13 +82,15 @@ public sealed record TraitDto(string Index, string Name, IReadOnlyList<string> D
     public static TraitDto From(TraitDefinition t) => new(t.Index, t.Name, t.Description);
 }
 
+/// <param name="Source">"srd" or the id of the content pack that added it.</param>
 public sealed record RaceSummaryDto(
     string Index,
     string Name,
     int Speed,
     string Size,
     IReadOnlyList<AbilityBonusDto> AbilityBonuses,
-    IReadOnlyList<string> SubraceIndexes);
+    IReadOnlyList<string> SubraceIndexes,
+    string Source);
 
 public sealed record SubraceDto(
     string Index,
@@ -106,8 +110,10 @@ public sealed record RaceDetailDto(
     string Age,
     string Alignment,
     IReadOnlyList<TraitDto> Traits,
-    IReadOnlyList<SubraceDto> Subraces);
+    IReadOnlyList<SubraceDto> Subraces,
+    string Source);
 
+/// <param name="Source">"srd" or the id of the content pack that added it.</param>
 public sealed record SpellSummaryDto(
     string Index,
     string Name,
@@ -119,10 +125,11 @@ public sealed record SpellSummaryDto(
     string Duration,
     bool Concentration,
     bool Ritual,
-    IReadOnlyList<string> ClassIndexes)
+    IReadOnlyList<string> ClassIndexes,
+    string Source)
 {
     public static SpellSummaryDto From(SpellDefinition s) => new(
-        s.Index, s.Name, s.Level, s.School, s.CastingTime, s.Range, s.Components, s.Duration, s.Concentration, s.Ritual, s.ClassIndexes);
+        s.Index, s.Name, s.Level, s.School, s.CastingTime, s.Range, s.Components, s.Duration, s.Concentration, s.Ritual, s.ClassIndexes, s.Source);
 }
 
 /// <summary>
@@ -154,18 +161,20 @@ public sealed record SpellDetailDto(
     IReadOnlyList<string> SubclassIndexes,
     string? AttackType,
     SpellDamageDto? Damage,
-    string? DcAbility);
+    string? DcAbility,
+    string Source);
 
 /// <summary>Origin of an item template as shown by the API.</summary>
 public static class ItemSources
 {
-    public const string Srd = "srd";
-    public const string Homebrew = "homebrew";
+    public const string Srd = CatalogSources.Srd;
+    public const string Homebrew = CatalogSources.Homebrew;
 
-    public static string Of(ItemTemplate item) => item.IsSrd ? Srd : Homebrew;
+    /// <summary>"srd", "homebrew" or the id of the content pack.</summary>
+    public static string Of(ItemTemplate item) => item.IsSrd ? item.Source : Homebrew;
 }
 
-/// <param name="Source">"srd" or "homebrew" (campaign item).</param>
+/// <param name="Source">"srd", "homebrew" (campaign item) or the id of the content pack.</param>
 public sealed record ItemSummaryDto(
     Guid Id,
     string? Index,
@@ -228,14 +237,16 @@ public sealed record SkillDto(string Index, string Name, string AbilityIndex, IR
     public static SkillDto From(SkillDefinition s) => new(s.Index, s.Name, s.AbilityIndex, s.Description);
 }
 
+/// <param name="Source">"srd" or the id of the content pack that added it.</param>
 public sealed record BackgroundDto(
     string Index,
     string Name,
     string FeatureName,
     IReadOnlyList<string> FeatureDescription,
     IReadOnlyList<string> SkillProficiencies,
-    string StartingEquipmentText)
+    string StartingEquipmentText,
+    string Source)
 {
     public static BackgroundDto From(BackgroundDefinition b) => new(
-        b.Index, b.Name, b.FeatureName, b.FeatureDescription, b.SkillProficiencies, b.StartingEquipmentText);
+        b.Index, b.Name, b.FeatureName, b.FeatureDescription, b.SkillProficiencies, b.StartingEquipmentText, b.Source);
 }

@@ -10,6 +10,8 @@ internal sealed class SubclassLevelConfiguration : IEntityTypeConfiguration<Subc
     {
         builder.ToTable("CatalogSubclassLevels");
         builder.HasKey(x => x.Index);
+        builder.Property(x => x.Source).HasMaxLength(CatalogSources.MaxLength).IsRequired();
+        builder.HasIndex(x => x.Source);
         builder.Property(x => x.Index).HasMaxLength(CatalogColumns.IndexMaxLength);
         builder.Property(x => x.SubclassIndex).HasMaxLength(CatalogColumns.IndexMaxLength).IsRequired();
         builder.HasIndex(x => new { x.SubclassIndex, x.Level }).IsUnique();

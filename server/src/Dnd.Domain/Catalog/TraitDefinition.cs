@@ -11,4 +11,7 @@ public sealed class TraitDefinition
     public IReadOnlyList<string> RaceIndexes { get; init; } = [];
 
     public IReadOnlyList<string> SubraceIndexes { get; init; } = [];
+
+    /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
+    public string Source { get; init; } = CatalogSources.Srd;
 }

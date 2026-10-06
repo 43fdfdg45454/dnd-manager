@@ -294,6 +294,31 @@ docker compose restart api          # se registra al arrancar; es idempotente
 El archivo debe ser legible por todos (`chmod 644` antes de copiarlo). Los documentos del sistema no se
 pueden borrar desde la app.
 
+## Paquetes de contenido
+
+El repositorio y la imagen solo traen el SRD 5.1. Para usar en tu instancia subclases, objetos,
+conjuros, razas o trasfondos de material que poseas, crea un **paquete de contenido** JSON con el
+formato de [`docs/content-packs.md`](../docs/content-packs.md) e impórtalo como administrador:
+
+- **Desde la app**: Administración → Contenido → "Importar paquete". La lista muestra la versión, la
+  fecha y los recuentos; si el paquete tiene errores, se listan con su ruta
+  (`items[3].modifiers[0].kind: ...`) y no se importa nada.
+- **Con `curl`** (con `$URL` y `$TOKEN` como en [Publicar una versión del APK](#publicar-una-versión-del-apk)):
+
+  ```bash
+  curl --fail-with-body -X POST "$URL/api/v1/admin/content-packs" \
+    -H "Authorization: Bearer $TOKEN" -F "file=@reinos-ejemplo.json;type=application/json"
+  ```
+
+Reimportar un paquete con el mismo `id` reemplaza su contenido (los objetos conservan su
+identificador, así que los inventarios no se rompen). Borrarlo quita su contenido del catálogo; los
+personajes que lo usaban siguen cargando y la ficha lo marca como "contenido no disponible".
+
+Los paquetes viven en la base de datos: la [copia de seguridad](#copias-de-seguridad) los incluye y
+se restauran con ella. Guarda los ficheros JSON fuera del repositorio (la carpeta `content-packs/`
+está en `.gitignore`) y **no los subas nunca** a un repositorio público: su contenido suele tener
+copyright.
+
 ## Publicar una versión del APK
 
 La app comprueba `GET /api/v1/app/latest` y, si hay un `buildNumber` mayor que el suyo, ofrece

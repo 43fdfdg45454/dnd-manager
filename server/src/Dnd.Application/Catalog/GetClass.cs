@@ -48,7 +48,8 @@ public sealed class GetClassHandler(ICatalogRepository catalog)
                         .Where(l => l.SubclassIndex == s.Index)
                         .OrderBy(l => l.Level)
                         .Select(l => new SubclassLevelDto(l.Level, Features(l.FeatureIndexes, features)))
-                        .ToList()))
+                        .ToList(),
+                    s.Source))
                 .ToList());
     }
 
