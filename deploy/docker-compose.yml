@@ -17,8 +17,9 @@ services:
       retries: 5
 
   api:
-    # Build from the sources (docker compose up -d --build) or set API_IMAGE in .env to a published
-    # image (ghcr.io/<owner>/dnd-companion-api:<version>) and run docker compose pull api.
+    # Build from the sources (docker compose up -d --build) or set API_IMAGE in .env to an image from
+    # GitHub Packages (ghcr.io/<owner>/dnd-companion-api:dev-latest from CI, :<version> from Release)
+    # and run docker compose pull api.
     image: ${API_IMAGE:-dnd-companion-api:local}
     build:
       context: ../server

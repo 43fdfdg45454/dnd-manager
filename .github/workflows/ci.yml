@@ -38,17 +38,39 @@ jobs:
       - run: flutter test
 
   docker:
+    # Builds the API image and, on pushes, publishes it to GitHub Packages (GHCR) as
+    # ghcr.io/<owner>/dnd-companion-api:dev-latest and :sha-<commit>. Pull requests only build.
+    # Versioned tags (:1.2.0, :latest) come from the Release workflow.
     name: Imagen Docker de la API
     runs-on: ubuntu-latest
     needs: server
+    permissions:
+      contents: read
+      packages: write # push to GHCR with GITHUB_TOKEN
     steps:
       - uses: actions/checkout@v4
+      - name: Image name (GHCR requires lowercase)
+        id: image
+        run: |
+          echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/dnd-companion-api" >> "$GITHUB_OUTPUT"
+          echo "short=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: ${{ github.event_name == 'push' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
           context: server
-          push: false
-          tags: dnd-companion-api:ci
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ steps.image.outputs.name }}:dev-latest
+            ${{ steps.image.outputs.name }}:sha-${{ steps.image.outputs.short }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

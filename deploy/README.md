@@ -154,7 +154,9 @@ git pull
 # Construyendo desde el código
 docker compose up -d --build
 
-# O con la imagen publicada por el workflow "Release" (ghcr.io/<propietario>/dnd-companion-api)
+# O con la imagen publicada en GitHub Packages (ghcr.io/<propietario>/dnd-companion-api):
+#   - :dev-latest y :sha-<commit>  → la CI las publica en cada push
+#   - :1.2.0 y :latest             → las publica el workflow "Release"
 #   en .env:  API_IMAGE=ghcr.io/<propietario>/dnd-companion-api:1.2.0
 docker compose pull api
 docker compose up -d
