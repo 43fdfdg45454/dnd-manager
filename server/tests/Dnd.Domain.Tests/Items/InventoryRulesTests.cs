@@ -107,11 +107,36 @@ public class InventoryRulesTests
 
         var error = Assert.Throws<DomainException>(() => Update(character, items[3], new ItemUpdate { Attuned = true }));
 
-        Assert.Equal(DomainErrorKind.RuleViolation, error.Kind);
+        Assert.Equal(DomainErrorKind.Conflict, error.Kind);
+        Assert.Equal(ItemLimits.AttunementLimitCode, error.Code);
         Assert.Equal(3, character.AttunedCount);
         Update(character, items[0], new ItemUpdate { Attuned = false });
         Update(character, items[3], new ItemUpdate { Attuned = true });
         Assert.Equal(3, character.AttunedCount);
+    }
+
+    [Fact]
+    public void Attuning_can_drop_another_attuned_item_in_the_same_operation()
+    {
+        var character = NewCharacter();
+        var rings = Enumerable.Range(1, 4).Select(i => Attuned($"Ring {i}")).ToList();
+        foreach (var ring in rings)
+        {
+            _templates[ring.Id] = ring;
+        }
+
+        var items = rings.Select(r => Add(character, r)).ToList();
+        foreach (var item in items.Take(3))
+        {
+            Update(character, item, new ItemUpdate { Attuned = true });
+        }
+
+        Update(character, items[3], new ItemUpdate { Attuned = true, ReplaceAttunedItemId = items[1].Id });
+
+        Assert.Equal(3, character.AttunedCount);
+        Assert.False(items[1].Attuned);
+        Assert.True(items[3].Attuned);
+        Assert.Throws<DomainException>(() => Update(character, items[1], new ItemUpdate { Attuned = true, ReplaceAttunedItemId = items[1].Id }));
     }
 
     [Fact]

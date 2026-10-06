@@ -99,4 +99,15 @@ public static class MulticlassRules
     /// <summary>Proficiencies gained when <paramref name="classIndex"/> is taken as a new class.</summary>
     public static IReadOnlyList<(ProficiencyType Type, string Key)> ProficienciesFor(string classIndex) =>
         Proficiencies.TryGetValue(classIndex, out var list) ? list : [];
+
+    /// <summary>
+    /// Skills gained when the class is taken as a new class (PHB multiclassing): bard one skill of any kind, ranger
+    /// and rogue one skill of their class list (<c>true</c> in <c>FromClassList</c>). Null for the other classes.
+    /// </summary>
+    public static (int Choose, bool FromClassList)? SkillsFor(string classIndex) => classIndex switch
+    {
+        "bard" => (1, false),
+        "ranger" or "rogue" => (1, true),
+        _ => null,
+    };
 }

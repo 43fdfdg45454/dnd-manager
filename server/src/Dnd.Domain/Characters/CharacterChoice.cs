@@ -22,10 +22,14 @@ public sealed class CharacterChoice
 
     public Guid CharacterId { get; private set; }
 
-    /// <summary>Level of the class (<see cref="ClassIndex"/>) at which the choice was made.</summary>
+    /// <summary>Level of the class (<see cref="ClassIndex"/>) at which the choice was made; 0 for origin choices (race, background).</summary>
     public int Level { get; private set; }
 
-    public string ClassIndex { get; private set; } = string.Empty;
+    /// <summary>Class of the choice; null for origin choices (keys <c>race.*</c> and <c>background.*</c>).</summary>
+    public string? ClassIndex { get; private set; }
+
+    /// <summary>A race or background choice made at creation (level 0, no class).</summary>
+    public bool IsOrigin => ClassIndex is null;
 
     /// <summary>Key of the rule ("subclass", "asi", "eldritch-invocations"...) or <see cref="HitPointsKey"/>.</summary>
     public string Key { get; private set; } = string.Empty;
@@ -37,7 +41,7 @@ public sealed class CharacterChoice
 
     public ChoiceSelection Selection => ChoiceSelection.Parse(SelectedJson);
 
-    internal static CharacterChoice Create(Guid characterId, int level, string classIndex, string key, ChoiceSelection selection, DateTimeOffset now) => new()
+    internal static CharacterChoice Create(Guid characterId, int level, string? classIndex, string key, ChoiceSelection selection, DateTimeOffset now) => new()
     {
         CharacterId = characterId,
         Level = level,

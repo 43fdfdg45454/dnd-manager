@@ -72,20 +72,44 @@ public sealed record ClassInfo
 /// <summary>Catalog data of a race used by the sheet.</summary>
 public sealed record RaceInfo(int Speed, IReadOnlyList<AbilityBonus> AbilityBonuses)
 {
+    public string Name { get; init; } = string.Empty;
+
+    /// <summary>Decisions of the race (trait options give resistances and the breath weapon).</summary>
+    public RaceChoices Choices { get; init; } = RaceChoices.None;
+
+    /// <summary>Damage types always resisted.</summary>
+    public IReadOnlyList<string> Resistances { get; init; } = [];
+
     public static RaceInfo From(RaceDefinition definition)
     {
         ArgumentNullException.ThrowIfNull(definition);
-        return new RaceInfo(definition.Speed, AbilityBonusJson.Parse(definition.AbilityBonusesJson));
+        return new RaceInfo(definition.Speed, AbilityBonusJson.Parse(definition.AbilityBonusesJson))
+        {
+            Name = definition.Name,
+            Choices = definition.Choices,
+            Resistances = definition.Resistances,
+        };
     }
 }
 
 /// <summary>Catalog data of a subrace used by the sheet (subraces do not change speed).</summary>
 public sealed record SubraceInfo(IReadOnlyList<AbilityBonus> AbilityBonuses)
 {
+    public string Name { get; init; } = string.Empty;
+
+    public RaceChoices Choices { get; init; } = RaceChoices.None;
+
+    public IReadOnlyList<string> Resistances { get; init; } = [];
+
     public static SubraceInfo From(SubraceDefinition definition)
     {
         ArgumentNullException.ThrowIfNull(definition);
-        return new SubraceInfo(AbilityBonusJson.Parse(definition.AbilityBonusesJson));
+        return new SubraceInfo(AbilityBonusJson.Parse(definition.AbilityBonusesJson))
+        {
+            Name = definition.Name,
+            Choices = definition.Choices,
+            Resistances = definition.Resistances,
+        };
     }
 }
 

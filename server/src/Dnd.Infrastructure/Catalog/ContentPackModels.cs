@@ -205,6 +205,12 @@ internal sealed class PackRaceJson
     public List<PackTraitJson?>? Traits { get; set; }
 
     public List<PackSubraceJson?>? Subraces { get; set; }
+
+    /// <summary>Decisions asked at creation (phase 19).</summary>
+    public PackOriginChoicesJson? Choices { get; set; }
+
+    /// <summary>Damage types always resisted ("fire").</summary>
+    public List<string?>? Resistances { get; set; }
 }
 
 internal sealed class PackSubraceJson
@@ -218,6 +224,84 @@ internal sealed class PackSubraceJson
     public List<PackAbilityBonusJson?>? AbilityBonuses { get; set; }
 
     public List<PackTraitJson?>? Traits { get; set; }
+
+    public PackOriginChoicesJson? Choices { get; set; }
+
+    public List<string?>? Resistances { get; set; }
+}
+
+/// <summary>Decisions of a race, subrace or background (normalized to <c>RaceChoices</c>).</summary>
+internal sealed class PackOriginChoicesJson
+{
+    public PackAbilityBonusChoiceJson? AbilityBonuses { get; set; }
+
+    public PackPickChoiceJson? Skills { get; set; }
+
+    public PackPickChoiceJson? Languages { get; set; }
+
+    public PackPickChoiceJson? Tools { get; set; }
+
+    public PackCantripChoiceJson? Cantrip { get; set; }
+
+    public PackFeatChoiceJson? Feats { get; set; }
+
+    public List<PackTraitOptionChoiceJson?>? TraitOptions { get; set; }
+}
+
+internal sealed class PackAbilityBonusChoiceJson
+{
+    public int? Choose { get; set; }
+
+    public int? Amount { get; set; }
+
+    /// <summary>Ability indexes; absent = any of the six.</summary>
+    public List<string?>? From { get; set; }
+}
+
+internal sealed class PackPickChoiceJson
+{
+    public int? Choose { get; set; }
+
+    /// <summary>Allowed values; absent = any.</summary>
+    public List<string?>? From { get; set; }
+}
+
+internal sealed class PackCantripChoiceJson
+{
+    public int? Choose { get; set; }
+
+    /// <summary>Class whose spell list is used ("wizard"), or "any".</summary>
+    public string? SpellList { get; set; }
+
+    public List<string?>? From { get; set; }
+}
+
+internal sealed class PackFeatChoiceJson
+{
+    public int? Choose { get; set; }
+}
+
+internal sealed class PackTraitOptionChoiceJson
+{
+    public string? Key { get; set; }
+
+    public string? Name { get; set; }
+
+    public int? Choose { get; set; }
+
+    public List<PackTraitOptionJson?>? Options { get; set; }
+}
+
+internal sealed class PackTraitOptionJson
+{
+    public string? Index { get; set; }
+
+    public string? Name { get; set; }
+
+    public List<string?>? Description { get; set; }
+
+    /// <summary>Damage type resisted with this option ("fire").</summary>
+    public string? DamageType { get; set; }
 }
 
 internal sealed class PackAbilityBonusJson
@@ -252,6 +336,9 @@ internal sealed class PackBackgroundJson
 
     /// <summary>Structured starting equipment (same schema as the catalog, without <c>gold</c>).</summary>
     public PackStartingEquipmentJson? StartingEquipment { get; set; }
+
+    /// <summary>Decisions asked at creation (languages, tools, skills...).</summary>
+    public PackOriginChoicesJson? Choices { get; set; }
 }
 
 internal sealed class PackStartingEquipmentJson
@@ -400,6 +487,20 @@ internal sealed class PackResourceJson
     public JsonElement? Max { get; set; }
 
     public string? Recharge { get; set; }
+
+    /// <summary>Dice rolled after a rest and kept in the resource (Portent-like features).</summary>
+    public PackRollOnRestJson? RollOnRest { get; set; }
+}
+
+internal sealed class PackRollOnRestJson
+{
+    /// <summary>"d20".</summary>
+    public string? Dice { get; set; }
+
+    public int? Count { get; set; }
+
+    /// <summary>"short" or "long".</summary>
+    public string? Rest { get; set; }
 }
 
 internal sealed class PackLevelChoiceJson

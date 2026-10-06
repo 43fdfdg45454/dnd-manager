@@ -58,19 +58,33 @@ public static class CharacterEndpoints
             .WithSummary("Edita la hoja: 200 si se aplica (DM o dueño en borrador); 202 con la solicitud creada si necesita aprobación del DM.")
             .ProducesValidationProblem();
 
+        group.MapGet("/origin-choices", async (Guid id, ClaimsPrincipal user, OriginChoicesHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.GetAsync(user.GetUserId(), id, ct)))
+            .WithName("GetOriginChoices")
+            .WithSummary("Elecciones de raza, subraza y trasfondo del personaje (bonos de característica, habilidades, idiomas, herramientas, truco, dote, rasgos como el linaje dracónico) con sus opciones, lo ya elegido y si están completas.");
+
+        group.MapPut("/origin-choices", async (Guid id, SaveOriginChoicesRequest request, ClaimsPrincipal user, OriginChoicesHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.SaveAsync(user.GetUserId(), id, request, ct)))
+            .WithName("SaveOriginChoices")
+            .WithSummary("Guarda respuestas ({ choices: [{ key, selected }] }; selected null o [] la borra) y aplica sus efectos en la hoja. Dueño en borrador o DM, sin aprobación; 409 para el dueño de un personaje activo.")
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
         group.MapPost("/submit", async (Guid id, ClaimsPrincipal user, SubmitCharacterHandler handler, CancellationToken ct) =>
             {
                 var request = await handler.HandleAsync(user.GetUserId(), id, ct);
                 return TypedResults.Created($"/api/v1/change-requests/{request.Id}", request);
             })
             .WithName("SubmitCharacter")
-            .WithSummary("El dueño de un borrador pide al DM que lo active (solicitud Activate).")
+            .WithSummary("El dueño de un borrador pide al DM que lo active (solicitud Activate). 400 (code origin-choices-incomplete) si faltan elecciones de raza o trasfondo.")
+            .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapPost("/activate", async (Guid id, ClaimsPrincipal user, ActivateCharacterHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, ct)))
             .WithName("ActivateCharacter")
-            .WithSummary("Un DM activa el personaje directamente; entra en juego con los PG al máximo.")
+            .WithSummary("Un DM activa el personaje directamente; entra en juego con los PG al máximo. 400 (code origin-choices-incomplete) si faltan elecciones de raza o trasfondo.")
+            .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapPatch("/portrait", async (Guid id, SetPortraitRequest request, ClaimsPrincipal user, SetPortraitHandler handler, CancellationToken ct) =>
@@ -91,6 +105,12 @@ public static class CharacterEndpoints
                 TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, request, ct)))
             .WithName("UpdateCharacterCombat")
             .WithSummary("Seguimiento de combate sin aprobación: PG, PG temporales, salvaciones contra muerte, agotamiento, condiciones, inspiración.")
+            .ProducesValidationProblem();
+
+        group.MapPost("/damage", async (Guid id, DamageRequest request, ClaimsPrincipal user, ApplyDamageHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, request, ct)))
+            .WithName("ApplyCharacterDamage")
+            .WithSummary("Aplica daño ({ amount }) sin aprobación: primero los PG temporales. Devuelve { character, outcome }; si estaba concentrado, outcome.concentrationCheckDc = max(10, daño/2) o, a 0 PG, concentrationEnded: true.")
             .ProducesValidationProblem();
 
         group.MapPost("/concentration", async (Guid id, ConcentrationRequest request, ClaimsPrincipal user, SetConcentrationHandler handler, CancellationToken ct) =>
@@ -127,6 +147,12 @@ public static class CharacterEndpoints
                 TypedResults.Ok(await handler.RestoreAsync(user.GetUserId(), id, resourceId, request, ct)))
             .WithName("RestoreCharacterResource")
             .WithSummary("Recupera usos gastados de un recurso.")
+            .ProducesValidationProblem();
+
+        group.MapPost("/resources/{resourceId:guid}/rolls", async (Guid id, Guid resourceId, ResourceRollsRequest request, ClaimsPrincipal user, ResourceHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.RecordRollsAsync(user.GetUserId(), id, resourceId, request, ct)))
+            .WithName("RecordResourceRolls")
+            .WithSummary("Guarda las tiradas de un recurso que tira al descansar ({ values: [14, 3] }: tantas como pide, cada una 1..dado) y quita el pendiente. Dueño o DM, sin aprobación.")
             .ProducesValidationProblem();
 
         group.MapDelete("/resources/{resourceId:guid}", async (Guid id, Guid resourceId, ClaimsPrincipal user, ResourceHandler handler, CancellationToken ct) =>
@@ -170,6 +196,18 @@ public static class CharacterEndpoints
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        group.MapGet("/invalid-choices", async (Guid id, ClaimsPrincipal user, InvalidChoicesHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.GetAsync(user.GetUserId(), id, ct)))
+            .WithName("GetInvalidChoices")
+            .WithSummary("Opciones y dotes cuyos requisitos ya no se cumplen, con la elección para sustituir cada una (key replace.<índice>).");
+
+        group.MapPost("/invalid-choices", async (Guid id, ReplaceInvalidChoicesRequest request, ClaimsPrincipal user, InvalidChoicesHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.ReplaceAsync(user.GetUserId(), id, request, ct)))
+            .WithName("ReplaceInvalidChoices")
+            .WithSummary("Sustituye las elecciones inválidas ({ choices: [{ key: \"replace.<índice>\", selected: [\"nueva\"] }] }; dotes: { feat, ability }). Dueño o DM, sin aprobación. 409 si no hay nada que sustituir.")
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
         var classActions = group.MapGroup("/class-actions").ProducesProblem(StatusCodes.Status400BadRequest);
 
         classActions.MapPost($"/{ClassActionHandler.Rage}", async (Guid id, ClaimsPrincipal user, ClassActionHandler handler, CancellationToken ct) =>
@@ -193,6 +231,12 @@ public static class CharacterEndpoints
                 TypedResults.Ok(await handler.ArcaneRecoveryAsync(user.GetUserId(), id, request, ct)))
             .WithName("ClassActionArcaneRecovery")
             .WithSummary("Mago: Recuperación arcana ({ slotLevels: [..] }). Suma ≤ mitad del nivel de mago (redondeo arriba), ningún espacio > 5; una vez por descanso largo.")
+            .ProducesValidationProblem();
+
+        classActions.MapPost($"/{ClassActionHandler.NaturalRecovery}", async (Guid id, ArcaneRecoveryRequest request, ClaimsPrincipal user, ClassActionHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.NaturalRecoveryAsync(user.GetUserId(), id, request, ct)))
+            .WithName("ClassActionNaturalRecovery")
+            .WithSummary("Druida del Círculo de la Tierra (nivel 2+): Recuperación natural ({ slotLevels: [..] }). Suma ≤ mitad del nivel de druida (redondeo arriba), ningún espacio de nivel 6+; una vez por descanso largo.")
             .ProducesValidationProblem();
 
         classActions.MapPost("/{action}", IResult (string action) => throw ClassActionHandler.UnknownAction(action))

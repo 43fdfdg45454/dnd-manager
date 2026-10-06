@@ -24,14 +24,17 @@ internal sealed class AppExceptionHandler(IProblemDetailsService problemDetailsS
         AppErrorKind kind;
         IReadOnlyDictionary<string, string[]>? errors = null;
         var detail = exception.Message;
+        string? code = null;
         switch (exception)
         {
             case AppException app:
                 kind = app.Kind;
                 errors = app.Errors;
+                code = app.Code;
                 break;
             case DomainException domain:
                 kind = ToAppErrorKind(domain.Kind);
+                code = domain.Code;
                 break;
             case DbUpdateConcurrencyException:
                 kind = AppErrorKind.Conflict;
@@ -62,6 +65,10 @@ internal sealed class AppExceptionHandler(IProblemDetailsService problemDetailsS
         problem.Status = status;
         problem.Title = title;
         problem.Detail = detail;
+        if (code is not null)
+        {
+            problem.Extensions["code"] = code;
+        }
 
         httpContext.Response.StatusCode = status;
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext

@@ -229,6 +229,7 @@ public sealed class PartyAdjustHandler(
         var sheetsById = (await sheets.CalculateManyAsync(targets, cancellationToken)).ToDictionary();
         var byId = targets.ToDictionary(c => c.Id);
         var now = clock.UtcNow;
+        var damage = new List<DamageOutcomeDto>();
 
         foreach (var adjustment in adjustments)
         {
@@ -247,8 +248,8 @@ public sealed class PartyAdjustHandler(
 
             switch (adjustment.HitPointsDelta)
             {
-                case < 0 and var damage:
-                    character.ApplyDamage(-damage, now);
+                case < 0 and var taken:
+                    damage.Add(DamageOutcomeDto.From(character.Id, character.ApplyDamage(-taken, now)));
                     break;
                 case > 0 and var healing:
                     character.Heal(healing, maxHp, now);
@@ -267,7 +268,7 @@ public sealed class PartyAdjustHandler(
             await notifier.CharacterUpdatedAsync(campaignId, character.Id, now, cancellationToken);
         }
 
-        return new PartyDto(await sheets.BuildPartyAsync(party, cancellationToken));
+        return new PartyDto(await sheets.BuildPartyAsync(party, cancellationToken)) { Damage = damage };
     }
 
     /// <summary>The character's overrides with <c>hitPointsMax</c> set to <paramref name="value"/> (0 removes it).</summary>

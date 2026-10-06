@@ -46,11 +46,13 @@ internal static class TestCatalog
 
     public static ClassInfo Cleric { get; } = Class("cleric", 8, "wis", 1, FullCaster);
 
+    public static ClassInfo Druid { get; } = Class("druid", 8, "wis", 1, FullCaster);
+
     public static ClassInfo Paladin { get; } = Class("paladin", 10, "cha", 2, HalfCaster);
 
     public static ClassInfo Warlock { get; } = Class("warlock", 8, "cha", 1, Pact, isPact: true);
 
-    public static IReadOnlyList<ClassInfo> Classes { get; } = [Barbarian, Fighter, Monk, Rogue, Wizard, Cleric, Paladin, Warlock];
+    public static IReadOnlyList<ClassInfo> Classes { get; } = [Barbarian, Fighter, Monk, Rogue, Wizard, Cleric, Druid, Paladin, Warlock];
 
     public static IReadOnlyList<SkillInfo> Skills { get; } =
     [

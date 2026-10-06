@@ -35,5 +35,11 @@ public sealed record PartyMemberDto(
     bool SpellPreparationPending = false,
     string? SpellPreparationReason = null);
 
-/// <summary>The active characters of a campaign, sorted by name.</summary>
-public sealed record PartyDto(IReadOnlyList<PartyMemberDto> Characters);
+/// <summary>
+/// The active characters of a campaign, sorted by name. After <c>POST /party/adjust</c>, <see cref="Damage"/> lists
+/// the damage applied to each character and what it meant for its concentration (empty otherwise).
+/// </summary>
+public sealed record PartyDto(IReadOnlyList<PartyMemberDto> Characters)
+{
+    public IReadOnlyList<DamageOutcomeDto> Damage { get; init; } = [];
+}

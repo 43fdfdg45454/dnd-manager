@@ -19,6 +19,7 @@ public static class BreakdownSources
     public const string Base = "base";
     public const string Race = "race";
     public const string Subrace = "subrace";
+    public const string Background = "background";
     public const string Ability = "ability";
     public const string Proficiency = "proficiency";
     public const string Expertise = "expertise";
@@ -36,6 +37,8 @@ public static class BreakdownLabels
     public const string BaseScore = "Puntuación base";
     public const string Race = "Raza";
     public const string Subrace = "Subraza";
+    public const string Chosen = "elección";
+    public const string Background = "Trasfondo";
     public const string Proficiency = "Competencia";
     public const string Expertise = "Pericia";
     public const string Base = "Base";

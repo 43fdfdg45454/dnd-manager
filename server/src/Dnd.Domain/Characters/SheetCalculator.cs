@@ -22,6 +22,9 @@ public static class SheetCalculator
     /// <summary>Ability Score Improvements and feats cannot raise a score above 20.</summary>
     public const int ImprovementMaxScore = 20;
 
+    /// <summary>Breakdown key of the breath weapon DC.</summary>
+    public const string BreathWeaponDcKey = "breathWeapon.dc";
+
     private const string Barbarian = "barbarian";
     private const string Monk = "monk";
     private const string Warlock = "warlock";
@@ -209,10 +212,33 @@ public static class SheetCalculator
 
         var (spellSlots, casterLevel) = CalculateSpellSlots(classes);
         var choiceResources = choices.Resources
-            .Select(r => (r.Resource, ClassLevel: classes.FirstOrDefault(c => c.Level.ClassIndex == r.ClassIndex)?.Level.Level ?? 0))
+            .Select(r => (r.Resource, ClassLevel: r.ClassIndex is null ? totalLevel : classes.FirstOrDefault(c => c.Level.ClassIndex == r.ClassIndex)?.Level.Level ?? 0))
             .Where(r => r.ClassLevel > 0)
-            .Select(r => new ResourceTemplate(r.Resource.Key, r.Resource.Name, r.Resource.Evaluate(proficiencyBonus, r.ClassLevel, Mod), r.Resource.Recharge))
+            .Select(r => new ResourceTemplate(r.Resource.Key, r.Resource.Name, r.Resource.Evaluate(proficiencyBonus, r.ClassLevel, Mod), r.Resource.Recharge)
+            {
+                RollOnRest = r.Resource.RollOnRest,
+            })
             .ToList();
+
+        var (resistances, breath) = OriginTraits(character, input.Race, input.Subrace);
+        BreathWeaponValue? breathWeapon = null;
+        if (breath is { } chosen && chosen.Option.BreathWeapon is { } weapon)
+        {
+            var dc = Record(
+                BreathWeaponDcKey,
+                new BreakdownBuilder()
+                    .Add(BreakdownSources.Base, BreakdownLabels.Base, 8)
+                    .Add(BreakdownSources.Ability, BreakdownLabels.Ability(Abilities.Con), Mod(Abilities.Con))
+                    .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus));
+            breathWeapon = new BreathWeaponValue(
+                weapon.Name,
+                chosen.Source,
+                chosen.Option.DamageType ?? string.Empty,
+                weapon.DiceAt(level) ?? string.Empty,
+                weapon.SaveAbility,
+                weapon.Area,
+                dc);
+        }
 
         return new CharacterSheet
         {
@@ -242,7 +268,69 @@ public static class SheetCalculator
             FeatureModifiers = choices.Modifiers,
             ChoiceResources = choiceResources,
             WearsArmor = gear.WearsArmor,
+            Resistances = resistances,
+            BreathWeapon = breathWeapon,
         };
+    }
+
+    /// <summary>
+    /// Resistances of the race and subrace and of the chosen trait options (key <c>race.trait.&lt;key&gt;</c> or
+    /// <c>race.subrace.trait.&lt;key&gt;</c>), and the breath weapon of a chosen option that has one.
+    /// </summary>
+    private static (List<ResistanceValue> Resistances, (TraitOption Option, string Source)? Breath) OriginTraits(Character character, RaceInfo? race, SubraceInfo? subrace)
+    {
+        var resistances = new List<ResistanceValue>();
+        (TraitOption, string)? breath = null;
+        void Add(string damageType, string source, string label)
+        {
+            if (resistances.All(r => r.DamageType != damageType))
+            {
+                resistances.Add(new ResistanceValue(damageType, source, label));
+            }
+        }
+
+        foreach (var type in race?.Resistances ?? [])
+        {
+            Add(type, BreakdownSources.Race, race!.Name.Length > 0 ? race.Name : BreakdownLabels.Race);
+        }
+
+        foreach (var type in subrace?.Resistances ?? [])
+        {
+            Add(type, BreakdownSources.Subrace, subrace!.Name.Length > 0 ? subrace.Name : BreakdownLabels.Subrace);
+        }
+
+        foreach (var choice in character.OriginChoices.Where(c => c.Selection.Kind == OriginChoiceKeys.TraitOptionKind))
+        {
+            var isSubrace = OriginChoiceKeys.IsSubrace(choice.Key);
+            var prefix = (isSubrace ? OriginChoiceKeys.SubracePrefix : OriginChoiceKeys.RacePrefix) + OriginChoiceKeys.TraitPrefix;
+            if (!choice.Key.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var traitKey = choice.Key[prefix.Length..];
+            var trait = (isSubrace ? subrace?.Choices : race?.Choices)?.TraitOptions.FirstOrDefault(t => t.Key == traitKey);
+            var source = isSubrace ? BreakdownSources.Subrace : BreakdownSources.Race;
+            foreach (var item in choice.Selection.Selected)
+            {
+                if (trait?.Options.FirstOrDefault(o => o.Index == item.Index) is not { } option)
+                {
+                    continue;
+                }
+
+                if (option.DamageType is { } damageType)
+                {
+                    Add(damageType, source, option.Name);
+                }
+
+                if (option.BreathWeapon is not null && breath is null)
+                {
+                    breath = (option, source);
+                }
+            }
+        }
+
+        return (resistances, breath);
     }
 
     /// <summary>Preparable spells for classes that prepare them (cleric, druid, paladin, wizard); null otherwise. Minimum 1.</summary>
@@ -307,12 +395,18 @@ public static class SheetCalculator
             {
                 builder.Add(BreakdownSources.Subrace, BreakdownLabels.Subrace, subraceBonus);
             }
+
+            // Bonuses chosen for the race (half-elf: +1 to two abilities).
+            foreach (var bonus in choices.OriginAbilityBonuses.Where(b => b.Ability == ability))
+            {
+                builder.Add(bonus.Source, bonus.Label, bonus.Amount);
+            }
         }
 
         var natural = builder.Total;
         foreach (var increase in choices.AbilityIncreases.Where(i => i.Ability == ability))
         {
-            builder.Add(BreakdownSources.Feature, increase.Label, increase.Amount);
+            builder.Add(increase.Source, increase.Label, increase.Amount);
         }
 
         foreach (var m in choices.Modifiers.Where(m => m.Kind == ItemModifierKind.AbilityBonus && m.Target == ability && m.Condition is null))

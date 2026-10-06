@@ -312,7 +312,7 @@ public class SheetCalculatorTests
     [Fact]
     public void Missing_class_info_is_a_programming_error()
     {
-        var character = NewCharacter(classes: [new ClassEntry("druid", null, 1)]);
+        var character = NewCharacter(classes: [new ClassEntry("sorcerer", null, 1)]);
 
         Assert.Throws<ArgumentException>(() => Sheet(character));
     }

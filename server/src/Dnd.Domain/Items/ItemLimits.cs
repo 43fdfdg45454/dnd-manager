@@ -44,4 +44,7 @@ public static class ItemLimits
 
     /// <summary>Attuned items a character can have at the same time (SRD rule).</summary>
     public const int MaxAttunedItems = 3;
+
+    /// <summary>Code of the 409 returned when attuning a fourth item (the app offers to choose which one to drop).</summary>
+    public const string AttunementLimitCode = "attunement-limit";
 }

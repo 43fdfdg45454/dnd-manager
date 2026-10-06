@@ -7,7 +7,8 @@ namespace Dnd.Domain.Characters;
 /// <summary>An option, spell, skill or subclass a character currently has from its level choices.</summary>
 /// <param name="Level">Class level of the choice that picked it.</param>
 /// <param name="Kind">Kind of the choice (a <c>LevelChoiceKind</c> name).</param>
-public sealed record ActivePick(string ClassIndex, string Key, int Level, string Kind, string? SetId, ChoiceItem Item);
+/// <param name="ClassIndex">Class of the choice; null for origin choices (race, background).</param>
+public sealed record ActivePick(string? ClassIndex, string Key, int Level, string Kind, string? SetId, ChoiceItem Item);
 
 // Level-ups granted by the DM (phase 16b): the DM grants the next level and the player completes it with the
 // level-up wizard (phase 16c), which records its choices (CharacterChoice) and applies their effects.
@@ -145,7 +146,8 @@ public sealed partial class Character
     public IReadOnlyDictionary<(string ClassIndex, int Level), int> HitPointRolls() =>
         _choices
             .Where(c => c.Key == CharacterChoice.HitPointsKey)
-            .Select(c => (c.ClassIndex, c.Level, Roll: c.Selection.Roll))
+            .Where(c => c.ClassIndex is not null)
+            .Select(c => (ClassIndex: c.ClassIndex!, c.Level, Roll: c.Selection.Roll))
             .Where(c => c.Roll is > 0)
             .GroupBy(c => (c.ClassIndex, c.Level))
             .ToDictionary(g => g.Key, g => g.Last().Roll!.Value);

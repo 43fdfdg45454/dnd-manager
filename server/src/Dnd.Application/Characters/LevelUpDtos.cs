@@ -85,7 +85,11 @@ public sealed record LevelUpOptionDto(
     int? SpellLevel,
     IReadOnlyList<EffectPreviewDto> EffectsPreview,
     AbilityIncreaseDto? AbilityIncrease,
-    string? SpellCategory = null);
+    string? SpellCategory = null)
+{
+    /// <summary>Damage type resisted with a trait option (origin choices: draconic ancestry), or null.</summary>
+    public string? DamageType { get; init; }
+}
 
 /// <summary>
 /// A numeric effect of an option, as a breakdown part (<see cref="Source"/> "feature", <see cref="Label"/> the value it

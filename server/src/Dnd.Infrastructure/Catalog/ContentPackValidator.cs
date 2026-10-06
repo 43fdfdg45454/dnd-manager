@@ -573,6 +573,8 @@ internal sealed partial class ContentPackValidator
                 Description = description,
                 AbilityBonusesJson = bonuses,
                 TraitIndexes = subraceTraits,
+                ChoicesJson = OriginChoices($"{subracePath}.choices", subrace.Choices),
+                Resistances = DamageTypes($"{subracePath}.resistances", subrace.Resistances),
                 Source = _id,
             });
         });
@@ -590,6 +592,8 @@ internal sealed partial class ContentPackValidator
             Alignment = OptionalText($"{path}.alignment", race.Alignment, LongTextMaxLength),
             SizeDescription = OptionalText($"{path}.sizeDescription", race.SizeDescription, LongTextMaxLength),
             SubraceIndexes = subraceIndexes,
+            ChoicesJson = OriginChoices($"{path}.choices", race.Choices),
+            Resistances = DamageTypes($"{path}.resistances", race.Resistances),
             Source = _id,
         };
 
@@ -675,6 +679,7 @@ internal sealed partial class ContentPackValidator
             SkillProficiencies = skills,
             StartingEquipmentText = OptionalText($"{path}.startingEquipmentText", background.StartingEquipmentText, LongTextMaxLength),
             StartingEquipmentJson = background.StartingEquipment is { } equipment ? ParseStartingEquipment($"{path}.startingEquipment", equipment) : null,
+            ChoicesJson = OriginChoices($"{path}.choices", background.Choices),
             Source = _id,
         };
 

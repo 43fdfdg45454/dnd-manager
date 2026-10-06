@@ -35,7 +35,28 @@ public sealed record CharacterSpellDto(Guid Id, string SpellIndex, string ClassI
 
 public sealed record CharacterOverrideDto(string Field, int Value, string? Note);
 
-public sealed record CharacterResourceDto(Guid Id, string? Key, string Name, int Max, int Used, string Recharge, bool IsAuto);
+/// <summary>
+/// A limited-use resource. <see cref="RollOnRest"/>: dice rolled after a rest whose results are kept in
+/// <see cref="Rolls"/>; while <see cref="RollsPending"/> the player must write them (<c>POST …/resources/{id}/rolls</c>).
+/// </summary>
+public sealed record CharacterResourceDto(Guid Id, string? Key, string Name, int Max, int Used, string Recharge, bool IsAuto)
+{
+    public RollOnRestDto? RollOnRest { get; init; }
+
+    public IReadOnlyList<int> Rolls { get; init; } = [];
+
+    public bool RollsPending { get; init; }
+
+    public static CharacterResourceDto From(CharacterResource r) => new(r.Id, r.Key, r.Name, r.Max, r.Used, r.Recharge.ToString(), r.IsAuto)
+    {
+        RollOnRest = r.RollOnRest is { } roll ? new RollOnRestDto(roll.Dice, roll.Count, roll.Rest == RestKind.Short ? "short" : "long") : null,
+        Rolls = r.Rolls,
+        RollsPending = r.RollsPending,
+    };
+}
+
+/// <summary>Dice rolled after a rest: <see cref="Count"/> × <see cref="Dice"/> ("d20") after a <see cref="Rest"/> ("short" or "long") rest.</summary>
+public sealed record RollOnRestDto(string Dice, int Count, string Rest);
 
 /// <summary>Spell slots of a level; level 0 = Pact Magic slots (all of the pact slot level).</summary>
 public sealed record SpellSlotDto(int Level, int Max, int Used);
@@ -88,7 +109,20 @@ public sealed record CharacterSheetDto(
     int? PactSlotLevel,
     IReadOnlyList<string> OverriddenFields,
     IReadOnlyList<ItemEffectDto> ItemEffects,
-    IReadOnlyDictionary<string, ValueBreakdownDto> Breakdowns);
+    IReadOnlyDictionary<string, ValueBreakdownDto> Breakdowns)
+{
+    /// <summary>Damage resistances (race traits and chosen options such as a draconic ancestry).</summary>
+    public IReadOnlyList<ResistanceDto> Resistances { get; init; } = [];
+
+    /// <summary>Breath weapon of the chosen draconic ancestry (DC breakdown in <c>breakdowns["breathWeapon.dc"]</c>), or null.</summary>
+    public BreathWeaponValueDto? BreathWeapon { get; init; }
+}
+
+/// <summary>A resisted damage type; <see cref="Source"/> is "race", "subrace" or "background", <see cref="Label"/> what grants it.</summary>
+public sealed record ResistanceDto(string DamageType, string Source, string Label);
+
+/// <summary>Breath weapon: damage dice at the current level, damage type, saving throw ability, area and DC.</summary>
+public sealed record BreathWeaponValueDto(string Name, string Source, string DamageType, string Dice, string SaveAbility, string Area, int Dc);
 
 /// <summary>Full character: stored fields, child collections, calculated sheet, inventory and pending change requests.</summary>
 public sealed record CharacterDetailDto
@@ -214,6 +248,15 @@ public sealed record CharacterDetailDto
     /// <summary>"Creation", "LongRest" or "LevelUp" while <see cref="SpellPreparationPending"/>; null otherwise.</summary>
     public string? SpellPreparationReason { get; init; }
 
+    /// <summary>
+    /// Options and feats whose prerequisites no longer hold: they must be replaced (<c>/invalid-choices</c>, forced step
+    /// after the pending level-up; every level-up asks for them too).
+    /// </summary>
+    public IReadOnlyList<InvalidChoiceDto> InvalidChoices { get; init; } = [];
+
+    /// <summary>Some resource asks for its dice to be rolled after the last rest (forced step after spell preparation).</summary>
+    public bool RestRollsPending { get; init; }
+
     /// <summary>Level choices made when gaining levels (subclass, fighting style, ASI, feats, spells...), oldest first.</summary>
     public IReadOnlyList<CharacterChoiceDto> Choices { get; init; } = [];
 }
@@ -228,13 +271,14 @@ public sealed record ChoiceItemDto(string Index, string Name)
 /// A level choice of the character. <see cref="Selected"/>/<see cref="Replaced"/> for picks; <see cref="Asi"/>
 /// ("str" → 1) for an Ability Score Improvement; <see cref="Feat"/> (and the <see cref="Ability"/> it raised) for a feat.
 /// </summary>
-/// <param name="Level">Level of the class at which it was chosen.</param>
+/// <param name="Level">Level of the class at which it was chosen; 0 for origin choices (race, background).</param>
+/// <param name="ClassIndex">Class of the choice; null for origin choices (keys <c>race.*</c>, <c>background.*</c>).</param>
 /// <param name="Name">Name of the choice ("Fighting Style").</param>
 /// <param name="Kind">A <c>LevelChoiceKind</c> name.</param>
 public sealed record CharacterChoiceDto(
     Guid Id,
     int Level,
-    string ClassIndex,
+    string? ClassIndex,
     string Key,
     string Name,
     string Kind,
@@ -310,6 +354,9 @@ public sealed record ArcaneRecoveryPanelDto(bool Used, int SlotLevelsRecoverable
 /// <param name="Spellbook">Wizard spells (cantrips excluded), by index.</param>
 /// <param name="Prepared">Prepared wizard spells (cantrips excluded), by index.</param>
 public sealed record WizardPanelData(IReadOnlyList<string> Spellbook, IReadOnlyList<string> Prepared, int PreparedMax, ArcaneRecoveryPanelDto ArcaneRecovery);
+
+/// <summary>Druid panel (Circle of the Land): Natural Recovery, same shape as Arcane Recovery.</summary>
+public sealed record DruidPanelData(ArcaneRecoveryPanelDto NaturalRecovery);
 
 public sealed record LayOnHandsPanelDto(int Pool, int Used);
 

@@ -267,9 +267,12 @@ de los dos mapas.
 | `languages` | `string[]?` | ≤ 50 entradas de ≤ 100 ("Common"). |
 | `traits` | `Trait[]?` | Rasgos de la raza. |
 | `subraces` | `Subrace[]?` | Subrazas. |
+| `choices` | `OriginChoices?` | Decisiones que la raza pide al crear el personaje (ver abajo). |
+| `resistances` | `string[]?` | Tipos de daño que la raza resiste siempre (`fire`, `poison`...). |
 
 **`Subrace`**: `index` (**obligatorio**, con prefijo), `name` (**obligatorio**, ≤ 200), `description`
-(`string?`, un solo texto de ≤ 10 000), `abilityBonuses` (`AbilityBonus[]?`) y `traits` (`Trait[]?`).
+(`string?`, un solo texto de ≤ 10 000), `abilityBonuses` (`AbilityBonus[]?`), `traits` (`Trait[]?`),
+`choices` (`OriginChoices?`) y `resistances` (`string[]?`).
 
 **`Trait`**: `index` (**obligatorio**, con prefijo, único en todo el paquete), `name` (**obligatorio**,
 ≤ 200) y `description` (`string[]?`).
@@ -285,6 +288,45 @@ de los dos mapas.
 | `skillProficiencies` | `string[]?` | Índices de habilidad del SRD (`perception`, `animal-handling`, `sleight-of-hand`...). |
 | `startingEquipmentText` | `string?` | ≤ 10 000. |
 | `startingEquipment` | `StartingEquipment?` | Equipo inicial estructurado (formatos 1 y 2). Sin él, el asistente de creación solo muestra `startingEquipmentText` y el jugador añade los objetos a mano. |
+| `choices` | `OriginChoices?` | Decisiones que el trasfondo pide al crear el personaje (idiomas, herramientas...). |
+
+#### `OriginChoices`
+
+Decisiones de una raza, subraza o trasfondo (todas opcionales; formatos 1 y 2). El SRD las importa de
+`ability_bonus_options`, `language_options`, las elecciones de competencias de los rasgos y
+`trait_specific` (linaje dracónico, truco del alto elfo). La API las devuelve normalizadas en
+`GET /api/v1/catalog/races/{index}` (`choices` de la raza y de cada subraza) y en
+`GET /api/v1/catalog/backgrounds`; cada personaje las responde con
+`GET`/`PUT /api/v1/characters/{id}/origin-choices` y no se puede activar un borrador con alguna
+obligatoria sin responder (400, `code: origin-choices-incomplete`). Los idiomas son opcionales (el
+asistente ya los pide en su propio paso).
+
+| Campo | Forma | Efecto |
+| --- | --- | --- |
+| `abilityBonuses` | `{ "choose": 1-6, "amount": 1-2, "from": ["str", "dex"] }` | +`amount` a `choose` características distintas de `from` (sin `from`, las seis). Desglose con origen "race"/"subrace" ("Raza (elección)"). |
+| `skills` | `{ "choose": 1-10, "from": ["perception"] }` | Competencias en habilidades (índices del SRD); sin `from`, cualquiera. Origen "Raza" o "Trasfondo". |
+| `languages` | `{ "choose": 1-10, "from": ["Elvish"] }` | Idiomas (nombres, como las competencias de idioma); sin `from`, cualquiera. |
+| `tools` | `{ "choose": 1-10, "from": ["Catalejo de ejemplo"] }` | Competencias en herramientas; sin `from`, texto libre. |
+| `cantrip` | `{ "choose": 1, "spellList": "wizard", "from": ["light"] }` | Truco de la lista de esa clase (`any`: cualquiera), siempre preparado (clase `race` en la lista de conjuros). |
+| `feats` | `{ "choose": 1 }` | Una dote del conjunto `feats`, con sus efectos (humano variante). |
+| `traitOptions` | `[{ "key": "linaje", "name": "Linaje", "choose": 1, "options": [{ "index": "linaje-escarcha", "name": "Escarcha", "description": ["..."], "damageType": "cold" }] }]` | Opciones de un rasgo; `damageType` da la resistencia a ese daño. |
+
+Ejemplo ficticio de raza al estilo del humano variante:
+
+```json
+{
+  "index": "reinos-ejemplo-viajero",
+  "name": "Viajero de ejemplo",
+  "speed": 30,
+  "size": "Medium",
+  "languages": ["Common"],
+  "choices": {
+    "abilityBonuses": { "choose": 2, "amount": 1 },
+    "skills": { "choose": 1 },
+    "feats": { "choose": 1 }
+  }
+}
+```
 
 #### `StartingEquipment`
 
@@ -559,8 +601,13 @@ concede). Las competencias se añaden con origen "Clase"; los conjuros, siempre 
 conjuros y trucos deben existir en el SRD o en el paquete.
 
 **`Resource`**: `key` (índice, sin prefijo obligatorio), `name` (**obligatorio**, ≤ 100), `max` (entero
-1–999 o fórmula: `proficiencyBonus`, `classLevel`, `halfClassLevel`, `mod:cha`... mínimo 1) y
-`recharge` (`ShortRest`, `LongRest` por defecto, `Dawn` o `Manual`).
+1–999 o fórmula: `proficiencyBonus`, `classLevel`, `halfClassLevel`, `mod:cha`... mínimo 1),
+`recharge` (`ShortRest`, `LongRest` por defecto, `Dawn` o `Manual`) y `rollOnRest` opcional:
+`{ "dice": "d20", "count": 2, "rest": "long" }` para rasgos cuyos valores se tiran al descansar (al
+estilo de un presagio). Tras ese descanso (`long`: solo el largo; `short`: corto y largo) el recurso
+queda pendiente (`rollsPending`) hasta que el jugador escribe sus tiradas físicas con
+`POST /api/v1/characters/{id}/resources/{resourceId}/rolls` (`{ "values": [14, 3] }`); los valores se
+guardan en el recurso (`rolls`). `dice`: `d4`, `d6`, `d8`, `d10`, `d12`, `d20` o `d100`; `count` 1–20.
 
 ### `levelChoices`
 

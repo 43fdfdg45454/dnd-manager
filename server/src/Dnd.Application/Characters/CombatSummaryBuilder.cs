@@ -10,6 +10,7 @@ public static class CombatSummaryBuilder
 {
     private const string Barbarian = "barbarian";
     private const string Wizard = "wizard";
+    private const string Druid = "druid";
     private const string Paladin = "paladin";
 
     /// <summary>Reckless Attack is gained at barbarian level 2.</summary>
@@ -90,6 +91,7 @@ public static class CombatSummaryBuilder
                     + gear.Modifiers.Where(m => m.Modifier.Kind == ItemModifierKind.ArmorClassBonus).Sum(m => m.Modifier.Value)),
             Wizard => WizardPanel(character, sheet, catalog, level),
             Paladin => PaladinPanel(character, spellSlots, level),
+            Druid => DruidPanel(character, level),
             _ => null,
         };
 
@@ -111,6 +113,15 @@ public static class CombatSummaryBuilder
             spells.Where(s => s.IsPrepared).Select(s => s.SpellIndex).ToList(),
             sheet.Spellcasting.FirstOrDefault(s => s.ClassIndex == Wizard)?.PreparedMax ?? 0,
             new ArcaneRecoveryPanelDto(arcaneRecovery is { } r && r.Used >= r.Max, CombatCalculator.ArcaneRecoveryLevels(level)));
+    }
+
+    /// <summary>Circle of the Land druids: Natural Recovery (null for other druids).</summary>
+    private static DruidPanelData? DruidPanel(Character character, int level)
+    {
+        var naturalRecovery = character.Resources.FirstOrDefault(r => r.IsAuto && r.Key == ClassResourceRules.NaturalRecovery);
+        return naturalRecovery is null
+            ? null
+            : new DruidPanelData(new ArcaneRecoveryPanelDto(naturalRecovery.Used >= naturalRecovery.Max, CombatCalculator.ArcaneRecoveryLevels(level)));
     }
 
     private static PaladinPanelData PaladinPanel(Character character, IReadOnlyList<SpellSlotDto> spellSlots, int level)

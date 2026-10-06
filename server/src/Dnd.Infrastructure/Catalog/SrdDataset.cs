@@ -30,7 +30,7 @@ internal sealed record SrdCatalog(
 internal static class SrdDataset
 {
     /// <summary>Commit and date of the 5e-database snapshot in <c>server/seed/srd</c>.</summary>
-    public const string Version = "5e-database@a6212beb (2026-10-02); 2026-10-07: consumables, modifiers, skill choices, level choices, starting equipment, spell categories";
+    public const string Version = "5e-database@a6212beb (2026-10-02); 2026-10-07: consumables, modifiers, skill choices, level choices, starting equipment, spell categories; 2026-10-08: race and background choices, racial resistances";
 
     private const string ResourcePrefix = "5e-SRD-";
 
@@ -91,6 +91,8 @@ internal static class SrdDataset
         var levelFiles = Read<LevelJson>("Levels");
         var equipment = Read<EquipmentJson>("Equipment");
         var contents = PackContentsOf(equipment);
+        var traits = Read<TraitJson>("Traits");
+        var traitsByIndex = traits.ToDictionary(t => t.Index, StringComparer.Ordinal);
 
         return new SrdCatalog(
             Read<ClassJson>("Classes").Select(c => MapClass(c, subclassFiles, contents)).ToList(),
@@ -98,9 +100,9 @@ internal static class SrdDataset
             subclassFiles.Select(MapSubclass).ToList(),
             levelFiles.Where(l => l.Subclass is not null).Select(MapSubclassLevel).ToList(),
             Read<FeatureJson>("Features").Select(MapFeature).ToList(),
-            Read<RaceJson>("Races").Select(MapRace).ToList(),
-            Read<SubraceJson>("Subraces").Select(MapSubrace).ToList(),
-            Read<TraitJson>("Traits").Select(MapTrait).ToList(),
+            Read<RaceJson>("Races").Select(r => MapRace(r, traitsByIndex)).ToList(),
+            Read<SubraceJson>("Subraces").Select(s => MapSubrace(s, traitsByIndex)).ToList(),
+            traits.Select(MapTrait).ToList(),
             Read<SpellJson>("Spells").Select(MapSpell).ToList(),
             [
                 .. equipment.Select(e => (e.Index, MapEquipment(e))),
@@ -251,7 +253,7 @@ internal static class SrdDataset
         Description = f.Desc ?? [],
     };
 
-    private static RaceDefinition MapRace(RaceJson r) => new()
+    private static RaceDefinition MapRace(RaceJson r, IReadOnlyDictionary<string, TraitJson> traits) => new()
     {
         Index = r.Index,
         Name = r.Name ?? r.Index,
@@ -264,9 +266,11 @@ internal static class SrdDataset
         Alignment = r.Alignment ?? string.Empty,
         SizeDescription = r.SizeDescription ?? string.Empty,
         SubraceIndexes = Indexes(r.Subraces),
+        ChoicesJson = OriginChoices(r.AbilityBonusOptions, r.LanguageOptions, r.StartingProficiencyOptions, Indexes(r.Traits), traits).ToJson(),
+        Resistances = Resistances(Indexes(r.Traits)),
     };
 
-    private static SubraceDefinition MapSubrace(SubraceJson s) => new()
+    private static SubraceDefinition MapSubrace(SubraceJson s, IReadOnlyDictionary<string, TraitJson> traits) => new()
     {
         Index = s.Index,
         RaceIndex = s.Race?.Index ?? string.Empty,
@@ -274,7 +278,170 @@ internal static class SrdDataset
         Description = string.Join("\n", s.Desc ?? []),
         AbilityBonusesJson = AbilityBonusesJson(s.AbilityBonuses),
         TraitIndexes = Indexes(s.RacialTraits),
+        ChoicesJson = OriginChoices(s.AbilityBonusOptions, s.LanguageOptions, s.StartingProficiencyOptions, Indexes(s.RacialTraits), traits).ToJson(),
+        Resistances = Resistances(Indexes(s.RacialTraits)),
     };
+
+    // ---- Origin choices (phase 19) -------------------------------------------------------------------
+
+    /// <summary>Fixed racial resistances of the SRD traits (the dataset only describes them in text).</summary>
+    private static readonly Dictionary<string, string> TraitResistances = new(StringComparer.Ordinal)
+    {
+        ["dwarven-resilience"] = "poison",
+        ["hellish-resistance"] = "fire",
+    };
+
+    private static List<string> Resistances(IEnumerable<string> traitIndexes) =>
+        traitIndexes.Select(t => TraitResistances.GetValueOrDefault(t)).OfType<string>().Distinct(StringComparer.Ordinal).ToList();
+
+    /// <summary>
+    /// Normalizes the decisions of a race or subrace: ability bonus options, language options and proficiency options
+    /// of the race itself, plus those of its traits (proficiency choices split into skills and tools, extra languages,
+    /// a cantrip of <c>spell_options</c> and the <c>subtrait_options</c> of Draconic Ancestry).
+    /// </summary>
+    private static RaceChoices OriginChoices(
+        OptionSetJson? abilityOptions,
+        OptionSetJson? languageOptions,
+        OptionSetJson? proficiencyOptions,
+        IEnumerable<string> traitIndexes,
+        IReadOnlyDictionary<string, TraitJson> traits)
+    {
+        AbilityBonusChoice? abilities = null;
+        if (abilityOptions is { Choose: > 0 } abilitySet)
+        {
+            var from = (abilitySet.From?.Options ?? [])
+                .Where(o => o.AbilityScore?.Index is not null)
+                .Select(o => (Option: new OriginOption(o.AbilityScore!.Index!, o.AbilityScore.Name ?? o.AbilityScore.Index!), Bonus: o.Bonus ?? 1))
+                .ToList();
+            abilities = new AbilityBonusChoice(abilitySet.Choose.Value, from.Count == 0 ? 1 : from[0].Bonus, from.Select(f => f.Option).ToList());
+        }
+
+        PickChoice? skills = null;
+        PickChoice? tools = null;
+        PickChoice? languages = Picks(languageOptions);
+        CantripChoice? cantrip = null;
+        var traitOptions = new List<TraitOptionChoice>();
+
+        void AddProficiencyChoice(OptionSetJson? set)
+        {
+            if (set is not { Choose: > 0 })
+            {
+                return;
+            }
+
+            var options = References(set);
+            if (options.Count > 0 && options.All(o => o.Index.StartsWith("skill-", StringComparison.Ordinal)))
+            {
+                skills = Merge(skills, new PickChoice(set.Choose.Value, options.Select(o => new OriginOption(o.Index["skill-".Length..], StripPrefix(o.Name, "Skill: "))).ToList()));
+            }
+            else
+            {
+                tools = Merge(tools, new PickChoice(set.Choose.Value, options));
+            }
+        }
+
+        AddProficiencyChoice(proficiencyOptions);
+        foreach (var traitIndex in traitIndexes)
+        {
+            if (!traits.TryGetValue(traitIndex, out var trait))
+            {
+                continue;
+            }
+
+            AddProficiencyChoice(trait.ProficiencyChoices);
+            languages = Merge(languages, Picks(trait.LanguageOptions));
+            if (trait.TraitSpecific is not { ValueKind: JsonValueKind.Object } specific)
+            {
+                continue;
+            }
+
+            if (specific.TryGetProperty("spell_options", out var spellOptions)
+                && spellOptions.Deserialize<OptionSetJson>(JsonOptions) is { Choose: > 0 } spells)
+            {
+                var description = string.Join(" ", trait.Desc ?? []);
+                var list = SpellcastingLevels.Keys.Concat(["warlock"]).FirstOrDefault(c => description.Contains($"{c} spell list", StringComparison.OrdinalIgnoreCase)) ?? "any";
+                cantrip = new CantripChoice(spells.Choose.Value, list, References(spells));
+            }
+
+            if (specific.TryGetProperty("subtrait_options", out var subtraitOptions)
+                && subtraitOptions.Deserialize<OptionSetJson>(JsonOptions) is { Choose: > 0 } subtraits)
+            {
+                var options = References(subtraits)
+                    .Select(o => traits.GetValueOrDefault(o.Index) is { } subtrait ? TraitOptionOf(subtrait) : new TraitOption(o.Index, o.Name, []))
+                    .ToList();
+                traitOptions.Add(new TraitOptionChoice(trait.Index, trait.Name ?? trait.Index, subtraits.Choose.Value, options));
+            }
+        }
+
+        return new RaceChoices
+        {
+            AbilityBonuses = abilities,
+            Skills = skills,
+            Languages = languages,
+            Tools = tools,
+            Cantrip = cantrip,
+            TraitOptions = traitOptions,
+        };
+    }
+
+    /// <summary>A subtrait (a draconic ancestry): its damage type and its breath weapon.</summary>
+    private static TraitOption TraitOptionOf(TraitJson subtrait)
+    {
+        string? damageType = null;
+        string? damageName = null;
+        BreathWeaponInfo? breath = null;
+        var description = new List<string>();
+        if (subtrait.TraitSpecific is { ValueKind: JsonValueKind.Object } specific)
+        {
+            if (specific.TryGetProperty("damage_type", out var type) && type.Deserialize<ReferenceJson>(JsonOptions) is { Index: not null } reference)
+            {
+                damageType = reference.Index;
+                damageName = reference.Name ?? reference.Index;
+                description.Add($"Damage resistance: {damageName}.");
+            }
+
+            if (specific.TryGetProperty("breath_weapon", out var breathJson) && breathJson.Deserialize<BreathWeaponJson>(JsonOptions) is { } weapon)
+            {
+                var area = weapon.AreaOfEffect is { Size: { } size, Type: { } shape } ? $"{size} ft. {shape}" : string.Empty;
+                var damage = (weapon.Damage ?? [])
+                    .SelectMany(d => d.DamageAtCharacterLevel ?? [])
+                    .Select(d => (Ok: int.TryParse(d.Key, NumberStyles.Integer, CultureInfo.InvariantCulture, out var level), Level: level, Dice: d.Value))
+                    .Where(d => d.Ok)
+                    .GroupBy(d => d.Level)
+                    .ToDictionary(g => g.Key, g => g.First().Dice);
+                breath = new BreathWeaponInfo(weapon.Name ?? "Breath Weapon", area, weapon.Dc?.DcType?.Index ?? string.Empty, new SortedDictionary<int, string>(damage));
+                description.Add($"{breath.Name}: {area}, {weapon.Dc?.DcType?.Name ?? string.Empty} saving throw, {breath.DiceAt(1)} {damageName} damage.");
+            }
+        }
+
+        return new TraitOption(subtrait.Index, subtrait.Name ?? subtrait.Index, description)
+        {
+            DamageType = damageType,
+            BreathWeapon = breath,
+        };
+    }
+
+    /// <summary>The reference options of a set (empty for a <c>resource_list</c>, which means any).</summary>
+    private static List<OriginOption> References(OptionSetJson set) =>
+        (set.From?.Options ?? [])
+            .Where(o => o.Item?.Index is not null)
+            .Select(o => new OriginOption(o.Item!.Index!, o.Item.Name ?? o.Item.Index!))
+            .ToList();
+
+    /// <summary>Languages are stored by name ("Dwarvish"), like the language proficiencies.</summary>
+    private static PickChoice? Picks(OptionSetJson? set) =>
+        set is { Choose: > 0 }
+            ? new PickChoice(set.Choose.Value, References(set).Select(o => new OriginOption(o.Name, o.Name)).ToList())
+            : null;
+
+    /// <summary>Two choices of the same kind add up their picks (any + any stays any).</summary>
+    private static PickChoice? Merge(PickChoice? a, PickChoice? b) =>
+        a is null ? b
+        : b is null ? a
+        : new PickChoice(a.Choose + b.Choose, a.From.Count == 0 || b.From.Count == 0 ? [] : [.. a.From, .. b.From.Where(o => a.From.All(x => x.Index != o.Index))]);
+
+    private static string StripPrefix(string name, string prefix) =>
+        name.StartsWith(prefix, StringComparison.Ordinal) ? name[prefix.Length..] : name;
 
     private static TraitDefinition MapTrait(TraitJson t) => new()
     {
@@ -457,6 +624,7 @@ internal static class SrdDataset
         StartingEquipmentText = StartingEquipment(b.StartingEquipment, b.StartingEquipmentOptions, b.StartingGold),
         StartingEquipmentJson = StructuredStartingEquipment(
             b.StartingEquipment, b.StartingEquipmentOptions, null, ToCopper(b.StartingGold?.Quantity, b.StartingGold?.Unit), contents).ToJson(),
+        ChoicesJson = OriginChoices(null, b.LanguageOptions, b.StartingProficiencyOptions, [], new Dictionary<string, TraitJson>()).ToJson(),
     };
 
     private static EquipmentCategory MapEquipmentCategory(EquipmentCategoryJson c) => new()
@@ -884,6 +1052,56 @@ internal static class SrdDataset
         public List<ReferenceJson>? Traits { get; set; }
 
         public List<ReferenceJson>? Subraces { get; set; }
+
+        public OptionSetJson? AbilityBonusOptions { get; set; }
+
+        public OptionSetJson? LanguageOptions { get; set; }
+
+        public OptionSetJson? StartingProficiencyOptions { get; set; }
+    }
+
+    /// <summary>A dataset choice: <c>{"choose": N, "from": {"option_set_type": ..., "options": [...]}}</c>.</summary>
+    private sealed class OptionSetJson
+    {
+        public int? Choose { get; set; }
+
+        public OptionSetSourceJson? From { get; set; }
+    }
+
+    private sealed class OptionSetSourceJson
+    {
+        public string? OptionSetType { get; set; }
+
+        public List<OptionSetItemJson>? Options { get; set; }
+    }
+
+    private sealed class OptionSetItemJson
+    {
+        public string? OptionType { get; set; }
+
+        public ReferenceJson? Item { get; set; }
+
+        public ReferenceJson? AbilityScore { get; set; }
+
+        public int? Bonus { get; set; }
+    }
+
+    private sealed class BreathWeaponJson
+    {
+        public string? Name { get; set; }
+
+        public AreaJson? AreaOfEffect { get; set; }
+
+        public SpellDcJson? Dc { get; set; }
+
+        public List<SpellDamagePartJson>? Damage { get; set; }
+    }
+
+    private sealed class AreaJson
+    {
+        public int? Size { get; set; }
+
+        public string? Type { get; set; }
     }
 
     private sealed class SubraceJson
@@ -899,6 +1117,12 @@ internal static class SrdDataset
         public List<AbilityBonusJson>? AbilityBonuses { get; set; }
 
         public List<ReferenceJson>? RacialTraits { get; set; }
+
+        public OptionSetJson? AbilityBonusOptions { get; set; }
+
+        public OptionSetJson? LanguageOptions { get; set; }
+
+        public OptionSetJson? StartingProficiencyOptions { get; set; }
     }
 
     private sealed class TraitJson
@@ -912,6 +1136,12 @@ internal static class SrdDataset
         public List<ReferenceJson>? Races { get; set; }
 
         public List<ReferenceJson>? Subraces { get; set; }
+
+        public OptionSetJson? ProficiencyChoices { get; set; }
+
+        public OptionSetJson? LanguageOptions { get; set; }
+
+        public JsonElement? TraitSpecific { get; set; }
     }
 
     private sealed class SpellJson
@@ -1116,6 +1346,10 @@ internal static class SrdDataset
         public CostJson? StartingGold { get; set; }
 
         public BackgroundFeatureJson? Feature { get; set; }
+
+        public OptionSetJson? LanguageOptions { get; set; }
+
+        public OptionSetJson? StartingProficiencyOptions { get; set; }
     }
 
     /// <summary>Reads a list of strings that may also come as a single string (e.g. subrace <c>desc</c>).</summary>

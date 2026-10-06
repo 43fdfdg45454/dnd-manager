@@ -62,6 +62,39 @@ public sealed class ConcentrationRequestValidator : AbstractValidator<Concentrat
     }
 }
 
+/// <summary>Damage taken (temporary hit points absorb it first).</summary>
+public sealed record DamageRequest(int Amount);
+
+public sealed class DamageRequestValidator : AbstractValidator<DamageRequest>
+{
+    public const int MaxDamage = 999;
+
+    public DamageRequestValidator()
+    {
+        RuleFor(x => x.Amount).InclusiveBetween(1, MaxDamage).WithMessage($"El daño debe estar entre 1 y {MaxDamage}.");
+    }
+}
+
+/// <summary>
+/// What a damage meant for one character: the damage, the hit points left and, when it was concentrating, the
+/// DC of the Constitution saving throw to keep concentrating (<see cref="ConcentrationCheckDc"/>, max(10, damage / 2))
+/// or that the concentration ended because it dropped to 0 hit points (<see cref="ConcentrationEnded"/>).
+/// </summary>
+public sealed record DamageOutcomeDto(
+    Guid CharacterId,
+    int Damage,
+    int HitPointsCurrent,
+    string? ConcentratingOn,
+    int? ConcentrationCheckDc,
+    bool ConcentrationEnded)
+{
+    public static DamageOutcomeDto From(Guid characterId, DamageResult result) => new(
+        characterId, result.Damage, result.HitPointsCurrent, result.ConcentratingOn, result.ConcentrationCheckDc, result.ConcentrationEnded);
+}
+
+/// <summary>Result of <c>POST /characters/{id}/damage</c>: the updated character and the damage outcome.</summary>
+public sealed record DamageResultDto(CharacterDetailDto Character, DamageOutcomeDto Outcome);
+
 /// <summary>Uses to spend or restore (default 1). The body is optional.</summary>
 public sealed record AmountRequest(int Amount = 1);
 
@@ -72,6 +105,18 @@ public sealed class AmountRequestValidator : AbstractValidator<AmountRequest>
     public AmountRequestValidator()
     {
         RuleFor(x => x.Amount).InclusiveBetween(1, MaxAmount).WithMessage($"La cantidad debe estar entre 1 y {MaxAmount}.");
+    }
+}
+
+/// <summary>Values rolled for a resource that rolls after resting (e.g. [14, 3] for two d20).</summary>
+public sealed record ResourceRollsRequest(IReadOnlyList<int>? Values);
+
+public sealed class ResourceRollsRequestValidator : AbstractValidator<ResourceRollsRequest>
+{
+    public ResourceRollsRequestValidator()
+    {
+        RuleFor(x => x.Values).NotEmpty().WithMessage("Indica los valores de las tiradas.")
+            .Must(v => v is null || v.Count <= RollOnRest.MaxCount).WithMessage($"Como máximo {RollOnRest.MaxCount} tiradas.");
     }
 }
 
@@ -164,6 +209,18 @@ public sealed class UpdateCombatHandler(CharacterTracker tracker, IDateTimeProvi
     }
 }
 
+/// <summary>Auto-tracking: the owner or a DM applies damage; reports the concentration check when it applies.</summary>
+public sealed class ApplyDamageHandler(CharacterTracker tracker, IDateTimeProvider clock)
+{
+    public async Task<DamageResultDto> HandleAsync(Guid currentUserId, Guid characterId, DamageRequest request, CancellationToken cancellationToken = default)
+    {
+        var character = await tracker.LoadAsync(currentUserId, characterId, cancellationToken);
+        var result = character.ApplyDamage(request.Amount, clock.UtcNow);
+        var detail = await tracker.SaveAsync(character, cancellationToken);
+        return new DamageResultDto(detail, DamageOutcomeDto.From(character.Id, result));
+    }
+}
+
 public sealed class SetConcentrationHandler(CharacterTracker tracker, ICatalogRepository catalog, IDateTimeProvider clock)
 {
     public async Task<CharacterDetailDto> HandleAsync(Guid currentUserId, Guid characterId, ConcentrationRequest request, CancellationToken cancellationToken = default)
@@ -222,7 +279,15 @@ public sealed class ResourceHandler(CharacterTracker tracker, IUnitOfWork unitOf
         var resource = character.AddManualResource(request.Name, request.Max, EnumNames.Parse<ResourceRecharge>(request.Recharge), clock.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await tracker.NotifyAsync(character, cancellationToken);
-        return new CharacterResourceDto(resource.Id, resource.Key, resource.Name, resource.Max, resource.Used, resource.Recharge.ToString(), resource.IsAuto);
+        return CharacterResourceDto.From(resource);
+    }
+
+    /// <summary>Stores the dice rolled after a rest for a resource that asks for them (owner or DM, without approval).</summary>
+    public async Task<CharacterDetailDto> RecordRollsAsync(Guid currentUserId, Guid characterId, Guid resourceId, ResourceRollsRequest request, CancellationToken cancellationToken = default)
+    {
+        var character = await tracker.LoadAsync(currentUserId, characterId, cancellationToken);
+        character.RecordResourceRolls(resourceId, request.Values ?? [], clock.UtcNow);
+        return await tracker.SaveAsync(character, cancellationToken);
     }
 
     public async Task DeleteAsync(Guid currentUserId, Guid characterId, Guid resourceId, CancellationToken cancellationToken = default)

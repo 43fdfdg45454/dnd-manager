@@ -16,20 +16,24 @@ public enum AppErrorKind
 /// </summary>
 public sealed class AppException : Exception
 {
-    private AppException(AppErrorKind kind, string message, IReadOnlyDictionary<string, string[]>? errors)
+    private AppException(AppErrorKind kind, string message, IReadOnlyDictionary<string, string[]>? errors, string? code = null)
         : base(message)
     {
         Kind = kind;
         Errors = errors;
+        Code = code;
     }
 
     public AppErrorKind Kind { get; }
 
+    /// <summary>Stable machine-readable code of the case, sent as <c>code</c> in the ProblemDetails; null for most errors.</summary>
+    public string? Code { get; }
+
     /// <summary>Field errors keyed by camelCase field name, for validation-like failures.</summary>
     public IReadOnlyDictionary<string, string[]>? Errors { get; }
 
-    public static AppException Validation(string field, string message) =>
-        new(AppErrorKind.Validation, message, new Dictionary<string, string[]> { [field] = [message] });
+    public static AppException Validation(string field, string message, string? code = null) =>
+        new(AppErrorKind.Validation, message, new Dictionary<string, string[]> { [field] = [message] }, code);
 
     public static AppException Unauthorized(string message) => new(AppErrorKind.Unauthorized, message, null);
 
@@ -37,7 +41,7 @@ public sealed class AppException : Exception
 
     public static AppException NotFound(string message) => new(AppErrorKind.NotFound, message, null);
 
-    public static AppException Conflict(string message) => new(AppErrorKind.Conflict, message, null);
+    public static AppException Conflict(string message, string? code = null) => new(AppErrorKind.Conflict, message, null, code);
 
     public static AppException PayloadTooLarge(string message) => new(AppErrorKind.PayloadTooLarge, message, null);
 }

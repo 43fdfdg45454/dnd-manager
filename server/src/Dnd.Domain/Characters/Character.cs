@@ -296,6 +296,7 @@ public sealed partial class Character : EntityBase
             ValidateCopper(copper);
         }
 
+        DropStaleOriginChoices(race, subrace, background);
         Name = name;
         RaceIndex = race;
         SubraceIndex = subrace;
@@ -326,6 +327,12 @@ public sealed partial class Character : EntityBase
         if (overrides is not null)
         {
             ApplyOverrides(overrides);
+        }
+
+        if (proficiencies is not null || spells is not null)
+        {
+            // Proficiencies and the cantrip chosen for the race or the background survive a full replacement.
+            ReapplyOriginChoiceEffects();
         }
 
         Notes = notes;
@@ -418,6 +425,12 @@ public sealed partial class Character : EntityBase
         var conditions = update.Conditions is null ? null : NormalizeConditions(update.Conditions);
 
         HitPointsCurrent = update.HitPointsCurrent ?? HitPointsCurrent;
+        if (update.HitPointsCurrent == 0)
+        {
+            // Unconscious at 0 hit points: concentration ends.
+            ConcentratingOnSpellIndex = null;
+        }
+
         TemporaryHitPoints = update.TemporaryHitPoints ?? TemporaryHitPoints;
         DeathSaveSuccesses = update.DeathSaveSuccesses ?? DeathSaveSuccesses;
         DeathSaveFailures = update.DeathSaveFailures ?? DeathSaveFailures;
@@ -433,9 +446,11 @@ public sealed partial class Character : EntityBase
 
     /// <summary>
     /// Takes damage: temporary hit points absorb it first, the rest lowers the current hit points
-    /// (never below 0). <paramref name="amount"/> must not be negative.
+    /// (never below 0). <paramref name="amount"/> must not be negative. A concentrating character that drops
+    /// to 0 hit points stops concentrating; one that stays above 0 must make a Constitution saving throw
+    /// (DC max(10, damage / 2)), which the result reports (<see cref="DamageResult.ConcentrationCheckDc"/>).
     /// </summary>
-    public void ApplyDamage(int amount, DateTimeOffset now)
+    public DamageResult ApplyDamage(int amount, DateTimeOffset now)
     {
         if (amount < 0)
         {
@@ -445,8 +460,28 @@ public sealed partial class Character : EntityBase
         var absorbed = Math.Min(TemporaryHitPoints, amount);
         TemporaryHitPoints -= absorbed;
         HitPointsCurrent = Math.Max(0, HitPointsCurrent - (amount - absorbed));
+        var concentrating = ConcentratingOnSpellIndex;
+        int? checkDc = null;
+        var ended = false;
+        if (concentrating is not null && amount > 0)
+        {
+            if (HitPointsCurrent == 0)
+            {
+                ConcentratingOnSpellIndex = null;
+                ended = true;
+            }
+            else
+            {
+                checkDc = ConcentrationCheckDc(amount);
+            }
+        }
+
         Touch(now);
+        return new DamageResult(amount, absorbed, HitPointsCurrent, concentrating, checkDc, ended);
     }
+
+    /// <summary>DC of the Constitution saving throw to keep concentrating after taking damage: max(10, damage / 2).</summary>
+    public static int ConcentrationCheckDc(int damage) => Math.Max(10, damage / 2);
 
     /// <summary>
     /// Heals up to <paramref name="maxHp"/> (the sheet's maximum hit points). Healing a character at 0
@@ -547,6 +582,19 @@ public sealed partial class Character : EntityBase
         }
 
         resource.SetUsed(resource.Used - amount);
+        Touch(now);
+        return resource;
+    }
+
+    /// <summary>Resources whose dice must be rolled after the last rest (<see cref="CharacterResource.RollsPending"/>).</summary>
+    public bool RestRollsPending => _resources.Any(r => r.RollsPending);
+
+    /// <summary>Stores the values rolled for a resource that rolls after resting (e.g. two d20 after a long rest).</summary>
+    public CharacterResource RecordResourceRolls(Guid resourceId, IReadOnlyList<int> values, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+        var resource = FindResource(resourceId);
+        resource.RecordRolls(values);
         Touch(now);
         return resource;
     }
@@ -698,6 +746,11 @@ public sealed partial class Character : EntityBase
             resource.SetUsed(0);
         }
 
+        foreach (var resource in _resources)
+        {
+            resource.AfterRest(RestKind.Short);
+        }
+
         _spellSlots.FirstOrDefault(s => s.Level == SpellSlotState.PactLevel)?.SetUsed(0);
         Touch(now);
         return new ShortRestResult(rolls, restored);
@@ -733,6 +786,11 @@ public sealed partial class Character : EntityBase
         foreach (var resource in _resources.Where(r => r.Recharge is ResourceRecharge.ShortRest or ResourceRecharge.LongRest))
         {
             resource.SetUsed(0);
+        }
+
+        foreach (var resource in _resources)
+        {
+            resource.AfterRest(RestKind.Long);
         }
 
         var toRecover = Math.Max(1, TotalLevel / 2);
@@ -850,8 +908,9 @@ public sealed partial class Character : EntityBase
     /// <summary>
     /// Changes the play state of an entry. Equipping requires a weapon, armor, shield or magic item; equipping an
     /// armor (or a shield) unequips the one worn before. Attuning requires an item that needs it and at
-    /// most <see cref="ItemLimits.MaxAttunedItems"/> attuned items. Everything is checked before anything
-    /// changes. <paramref name="resolve"/> gives the effective item of any entry.
+    /// most <see cref="ItemLimits.MaxAttunedItems"/> attuned items (409 with code <see cref="ItemLimits.AttunementLimitCode"/>;
+    /// <see cref="ItemUpdate.ReplaceAttunedItemId"/> drops another attuned item in the same operation). Everything is checked
+    /// before anything changes. <paramref name="resolve"/> gives the effective item of any entry.
     /// </summary>
     public CharacterItem UpdateItem(Guid itemId, ItemUpdate update, Func<CharacterItem, EffectiveItem> resolve, DateTimeOffset now)
     {
@@ -865,6 +924,21 @@ public sealed partial class Character : EntityBase
             throw DomainException.RuleViolation("Solo se pueden equipar armas, armaduras, escudos y objetos mágicos.");
         }
 
+        CharacterItem? released = null;
+        if (update.ReplaceAttunedItemId is { } replaceId)
+        {
+            if (update.Attuned != true)
+            {
+                throw DomainException.RuleViolation("Solo se puede dejar otro objeto sintonizado al sintonizar este.");
+            }
+
+            released = FindItem(replaceId);
+            if (!released.Attuned || released.Id == item.Id)
+            {
+                throw DomainException.RuleViolation("El objeto que quieres dejar no está sintonizado.");
+            }
+        }
+
         if (update.Attuned == true && !item.Attuned)
         {
             if (!effective.RequiresAttunement)
@@ -872,9 +946,11 @@ public sealed partial class Character : EntityBase
                 throw DomainException.RuleViolation("Este objeto no requiere sintonización.");
             }
 
-            if (AttunedCount >= ItemLimits.MaxAttunedItems)
+            if (AttunedCount - (released is null ? 0 : 1) >= ItemLimits.MaxAttunedItems)
             {
-                throw DomainException.RuleViolation($"No se pueden tener más de {ItemLimits.MaxAttunedItems} objetos sintonizados.");
+                throw DomainException.Conflict(
+                    $"Ya tienes {ItemLimits.MaxAttunedItems} objetos sintonizados: elige cuál dejar para sintonizar este.",
+                    ItemLimits.AttunementLimitCode);
             }
         }
 
@@ -899,6 +975,11 @@ public sealed partial class Character : EntityBase
             }
 
             item.SetEquipped(equipped, now);
+        }
+
+        if (released is not null && !item.Attuned)
+        {
+            released.SetAttuned(false, now);
         }
 
         if (update.Attuned is { } attuned && attuned != item.Attuned)

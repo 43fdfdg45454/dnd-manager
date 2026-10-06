@@ -15,6 +15,14 @@ public sealed class SubraceDefinition
 
     public IReadOnlyList<string> TraitIndexes { get; init; } = [];
 
+    /// <summary>Normalized <see cref="Catalog.RaceChoices"/> (decisions asked at creation), or null when there are none.</summary>
+    public string? ChoicesJson { get; init; }
+
+    public RaceChoices Choices => RaceChoices.Parse(ChoicesJson);
+
+    /// <summary>Damage types the race always resists ("poison" for dwarves).</summary>
+    public IReadOnlyList<string> Resistances { get; init; } = [];
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = CatalogSources.Srd;
 }

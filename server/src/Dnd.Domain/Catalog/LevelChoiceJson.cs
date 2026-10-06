@@ -50,6 +50,9 @@ public sealed record OptionGrants(
 /// </summary>
 public sealed record OptionResource(string Key, string Name, string Max, ResourceRecharge Recharge)
 {
+    /// <summary>Dice rolled after a rest and kept in the resource (<c>"rollOnRest": {"dice":"d20","count":2,"rest":"long"}</c>), or null.</summary>
+    public RollOnRest? RollOnRest { get; init; }
+
     public const string ProficiencyBonusFormula = "proficiencyBonus";
     public const string ClassLevelFormula = "classLevel";
     public const string HalfClassLevelFormula = "halfClassLevel";
@@ -264,7 +267,16 @@ public static class LevelChoiceJson
                 && Enum.TryParse<ResourceRecharge>(rechargeName, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed)
                     ? parsed
                     : ResourceRecharge.LongRest;
-            return new OptionResource(key, name, max, recharge);
+            RollOnRest? roll = null;
+            if (Property(root, "rollOnRest") is { ValueKind: JsonValueKind.Object } rollJson
+                && RollOnRest.ParseDie(Text(Property(rollJson, "dice"))) is { } die
+                && Int(Property(rollJson, "count")) is { } count and >= 1 and <= RollOnRest.MaxCount
+                && RollOnRest.ParseRest(Text(Property(rollJson, "rest"))) is { } rest)
+            {
+                roll = new RollOnRest(die, count, rest);
+            }
+
+            return new OptionResource(key, name, max, recharge) { RollOnRest = roll };
         });
 
     public static ChoiceFilter ParseFilter(string? json) =>

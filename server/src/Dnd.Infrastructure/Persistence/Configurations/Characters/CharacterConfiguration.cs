@@ -42,6 +42,8 @@ internal sealed class CharacterConfiguration : IEntityTypeConfiguration<Characte
         builder.Ignore(x => x.Conditions);
         builder.Ignore(x => x.HitDiceUsed);
         builder.Ignore(x => x.AttunedCount);
+        builder.Ignore(x => x.RestRollsPending);
+        builder.Ignore(x => x.OriginChoices);
 
         builder.HasOne<Campaign>().WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(x => x.CampaignId);
@@ -103,9 +105,11 @@ internal sealed class CharacterChoiceConfiguration : IEntityTypeConfiguration<Ch
         builder.ToTable("CharacterChoices");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.Property(x => x.ClassIndex).HasMaxLength(Character.IndexMaxLength).IsRequired();
+        // Null for origin choices (race, background; level 0).
+        builder.Property(x => x.ClassIndex).HasMaxLength(Character.IndexMaxLength);
         builder.Property(x => x.Key).HasMaxLength(Character.IndexMaxLength).IsRequired();
         builder.Property(x => x.SelectedJson).IsRequired();
+        builder.Ignore(x => x.IsOrigin);
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Ignore(x => x.Selection);
         builder.HasIndex(x => new { x.CharacterId, x.ClassIndex, x.Key });
@@ -161,6 +165,10 @@ internal sealed class CharacterResourceConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.Name).HasMaxLength(CharacterResource.NameMaxLength).IsRequired();
         builder.Property(x => x.Recharge).HasConversion<string>().HasMaxLength(16).IsRequired();
         builder.Ignore(x => x.Remaining);
+        builder.Ignore(x => x.RollOnRest);
+        builder.Ignore(x => x.Rolls);
+        builder.Property(x => x.RollRest).HasConversion<string>().HasMaxLength(16);
+        builder.Property(x => x.RollsJson).IsRequired().HasDefaultValue("[]");
         builder.HasIndex(x => x.CharacterId);
     }
 }

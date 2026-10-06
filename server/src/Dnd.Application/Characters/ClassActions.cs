@@ -51,13 +51,14 @@ public sealed class ArcaneRecoveryRequestValidator : AbstractValidator<ArcaneRec
     }
 }
 
-/// <summary>Rage, Lay on Hands, Divine Smite and Arcane Recovery. 400 when the class does not apply or no uses remain.</summary>
+/// <summary>Rage, Lay on Hands, Divine Smite, Arcane Recovery and Natural Recovery. 400 when the class does not apply or no uses remain.</summary>
 public sealed class ClassActionHandler(CharacterTracker tracker, IDateTimeProvider clock, ILogger<ClassActionHandler> logger)
 {
     public const string Rage = "rage";
     public const string LayOnHands = "lay-on-hands";
     public const string DivineSmite = "divine-smite";
     public const string ArcaneRecovery = "arcane-recovery";
+    public const string NaturalRecovery = "natural-recovery";
 
     public static AppException UnknownAction(string action) => AppException.NotFound($"La acción de clase '{action}' no existe.");
 
@@ -95,6 +96,14 @@ public sealed class ClassActionHandler(CharacterTracker tracker, IDateTimeProvid
     {
         var character = await tracker.LoadAsync(currentUserId, characterId, cancellationToken);
         character.ArcaneRecovery(request.SlotLevels ?? [], clock.UtcNow);
+        return await tracker.SaveAsync(character, cancellationToken);
+    }
+
+    /// <summary>Druid (Circle of the Land) Natural Recovery: same body and rules as Arcane Recovery (no slot of 6th level or higher).</summary>
+    public async Task<CharacterDetailDto> NaturalRecoveryAsync(Guid currentUserId, Guid characterId, ArcaneRecoveryRequest request, CancellationToken cancellationToken = default)
+    {
+        var character = await tracker.LoadAsync(currentUserId, characterId, cancellationToken);
+        character.NaturalRecovery(request.SlotLevels ?? [], clock.UtcNow);
         return await tracker.SaveAsync(character, cancellationToken);
     }
 }

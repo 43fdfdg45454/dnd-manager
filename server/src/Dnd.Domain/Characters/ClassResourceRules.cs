@@ -3,7 +3,11 @@ using Dnd.Domain.Rules;
 namespace Dnd.Domain.Characters;
 
 /// <summary>An automatic class resource as derived from class and level (see <see cref="ClassResourceRules"/>).</summary>
-public sealed record ResourceTemplate(string Key, string Name, int Max, ResourceRecharge Recharge);
+public sealed record ResourceTemplate(string Key, string Name, int Max, ResourceRecharge Recharge)
+{
+    /// <summary>Dice rolled after a rest whose results are kept in the resource (null for most resources).</summary>
+    public RollOnRest? RollOnRest { get; init; }
+}
 
 /// <summary>
 /// Automatic limited-use resources by class and level (SRD 5.1). Each resource appears from the level
@@ -25,6 +29,15 @@ public static class ClassResourceRules
     public const string LayOnHands = "lay-on-hands";
     public const string SorceryPoints = "sorcery-points";
     public const string ArcaneRecovery = "arcane-recovery";
+    public const string NaturalRecovery = "natural-recovery";
+
+    /// <summary>Druid level at which the Circle of the Land grants Natural Recovery.</summary>
+    public const int NaturalRecoveryMinLevel = 2;
+
+    /// <summary>Whether a druid subclass is the Circle of the Land ("land" in the SRD; "circle-of-the-land…" in packs).</summary>
+    public static bool IsCircleOfTheLand(string? subclassIndex) =>
+        subclassIndex is not null
+        && (subclassIndex == "land" || subclassIndex.StartsWith("circle-of-the-land", StringComparison.Ordinal));
 
     /// <summary>Rages per long rest by barbarian level 1-20 (SRD <c>class_specific.rage_count</c>).</summary>
     private static readonly int[] RageCount = [2, 2, 3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, Unlimited];
@@ -106,9 +119,18 @@ public static class ClassResourceRules
 
         return classes
             .OrderBy(c => c.Order)
-            .SelectMany(c => For(c.ClassIndex, c.Level, abilityModifiers))
+            .SelectMany(c => For(c.ClassIndex, c.Level, abilityModifiers).Concat(ForSubclass(c)))
             .GroupBy(t => t.Key, StringComparer.Ordinal)
             .Select(g => g.MaxBy(t => t.Max)!)
             .ToList();
+    }
+
+    /// <summary>Resources granted by a subclass (Circle of the Land: Natural Recovery from druid level 2).</summary>
+    public static IReadOnlyList<ResourceTemplate> ForSubclass(CharacterClassLevel entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        return entry.ClassIndex == "druid" && entry.Level >= NaturalRecoveryMinLevel && IsCircleOfTheLand(entry.SubclassIndex)
+            ? [new ResourceTemplate(NaturalRecovery, "Natural Recovery", 1, ResourceRecharge.LongRest)]
+            : [];
     }
 }

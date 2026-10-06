@@ -315,6 +315,8 @@ public sealed class CharacterSheetService(
             PendingLevelUpTo = character.PendingLevelUpTo,
             SpellPreparationPending = character.SpellPreparationPending,
             SpellPreparationReason = character.SpellPreparationReason?.ToString(),
+            RestRollsPending = character.RestRollsPending,
+            InvalidChoices = ChoiceValidity.Find(character, sheet, sheetCatalog.Option).Select(InvalidChoicesPlanner.ToDto).ToList(),
             Choices = character.Choices
                 .Where(c => c.Key != CharacterChoice.HitPointsKey)
                 .OrderBy(c => c.CreatedAt)
@@ -401,8 +403,7 @@ public sealed class CharacterSheetService(
             .Where(s => s.Max > 0 || s.Used > 0)
             .ToList();
 
-    private static CharacterResourceDto ToDto(CharacterResource r) =>
-        new(r.Id, r.Key, r.Name, r.Max, r.Used, r.Recharge.ToString(), r.IsAuto);
+    private static CharacterResourceDto ToDto(CharacterResource r) => CharacterResourceDto.From(r);
 
     private static CharacterSheetDto ToDto(CharacterSheet sheet) => new(
         sheet.Abilities.ToDictionary(a => a.Key, a => new AbilityDto(a.Value.Score, a.Value.Modifier, a.Value.Overridden)),
@@ -420,5 +421,9 @@ public sealed class CharacterSheetService(
         sheet.PactMagic?.SlotLevel,
         sheet.OverriddenFields,
         sheet.ItemEffects.Select(e => new ItemEffectDto(e.ItemName, e.Kind.ToString(), e.Target, e.Value)).ToList(),
-        sheet.Breakdowns.ToDictionary(b => b.Key, b => ValueBreakdownDto.From(b.Value), StringComparer.Ordinal));
+        sheet.Breakdowns.ToDictionary(b => b.Key, b => ValueBreakdownDto.From(b.Value), StringComparer.Ordinal))
+    {
+        Resistances = sheet.Resistances.Select(r => new ResistanceDto(r.DamageType, r.Source, r.Label)).ToList(),
+        BreathWeapon = sheet.BreathWeapon is { } b ? new BreathWeaponValueDto(b.Name, b.Source, b.DamageType, b.Dice, b.SaveAbility, b.Area, b.Dc) : null,
+    };
 }

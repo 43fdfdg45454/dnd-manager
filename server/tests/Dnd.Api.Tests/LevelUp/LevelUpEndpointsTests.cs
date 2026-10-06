@@ -268,16 +268,35 @@ public class LevelUpEndpointsTests(CatalogApiFactory factory)
         var expertise = Assert.Single(plan.Choices, c => c.Key == "expertise");
         Assert.Equal(["athletics", "perception"], expertise.Options.Select(o => o.Index).Order());
 
-        var after = await ApplyAsync(s.Player, hero.Id, new
+        // Multiclassing into a rogue asks for one skill of the rogue list (PHB), without the ones the character has.
+        var skill = Assert.Single(plan.Choices, c => c.Key == "multiclass-skill");
+        Assert.Equal(("Skill", 1), (skill.Kind, skill.Required));
+        Assert.Contains(skill.Options, o => o.Index == "stealth");
+        Assert.DoesNotContain(skill.Options, o => o.Index is "perception" or "athletics" or "arcana");
+
+        var missing = await PostAsync(s.Player, hero.Id, new
         {
             classIndex = "rogue",
             hitPointsRolled = 8,
             choices = new object[] { new { key = "expertise", selected = new[] { "athletics", "perception" } } },
         });
+        Assert.Equal(HttpStatusCode.BadRequest, missing.StatusCode);
+
+        var after = await ApplyAsync(s.Player, hero.Id, new
+        {
+            classIndex = "rogue",
+            hitPointsRolled = 8,
+            choices = new object[]
+            {
+                new { key = "expertise", selected = new[] { "athletics", "perception" } },
+                new { key = "multiclass-skill", selected = new[] { "stealth" } },
+            },
+        });
 
         Assert.Equal([("fighter", 2), ("rogue", 1)], after.Classes.Select(c => (c.ClassIndex, c.Level)));
         Assert.Contains(after.Proficiencies, p => p is { Type: "Tool", Key: "thieves-tools" });
         Assert.True(after.Sheet.Skills.Single(k => k.Index == "athletics").Expertise);
+        Assert.True(after.Sheet.Skills.Single(k => k.Index == "stealth").Proficient);
     }
 
     [Fact]

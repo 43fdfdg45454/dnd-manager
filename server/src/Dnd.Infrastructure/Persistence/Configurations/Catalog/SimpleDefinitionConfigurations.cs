@@ -45,6 +45,7 @@ internal sealed class BackgroundDefinitionConfiguration : IEntityTypeConfigurati
         builder.Property(x => x.SkillProficiencies).HasJsonListConversion();
         builder.Property(x => x.StartingEquipmentText).IsRequired();
         builder.Ignore(x => x.StartingEquipment);
+        builder.Ignore(x => x.Choices);
         builder.Property(x => x.Source).HasMaxLength(CatalogSources.MaxLength).IsRequired();
         builder.HasIndex(x => x.Source);
     }

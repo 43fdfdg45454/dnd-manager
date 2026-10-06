@@ -98,6 +98,11 @@ public static class DependencyInjection
         services.AddScoped<DeleteCharacterHandler>();
         services.AddScoped<UpdateCombatHandler>();
         services.AddScoped<SetConcentrationHandler>();
+        services.AddScoped<ApplyDamageHandler>();
+        services.AddScoped<OriginChoicesPlanner>();
+        services.AddScoped<OriginChoicesHandler>();
+        services.AddScoped<InvalidChoicesPlanner>();
+        services.AddScoped<InvalidChoicesHandler>();
         services.AddScoped<SpellSlotHandler>();
         services.AddScoped<ResourceHandler>();
         services.AddScoped<RestHandler>();

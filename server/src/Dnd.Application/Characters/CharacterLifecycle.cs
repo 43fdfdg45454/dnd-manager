@@ -9,6 +9,7 @@ namespace Dnd.Application.Characters;
 /// <summary>The owner of a draft asks the DMs to activate it (an Activate change request).</summary>
 public sealed class SubmitCharacterHandler(
     CharacterLoader loader,
+    OriginChoicesPlanner originChoices,
     IChangeRequestRepository changeRequests,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
@@ -18,6 +19,7 @@ public sealed class SubmitCharacterHandler(
     {
         var character = (await loader.LoadAsync(characterId, currentUserId, cancellationToken)).Character;
         character.EnsureCanSubmit(currentUserId);
+        await originChoices.EnsureCompleteAsync(character, cancellationToken);
 
         if ((await changeRequests.ListPendingAsync(character.Id, ChangeRequestType.Activate, cancellationToken)).Count > 0)
         {
@@ -42,6 +44,7 @@ public sealed class ActivateCharacterHandler(
     CharacterLoader loader,
     ICharacterSheetService sheets,
     SpellPreparationPlanner preparation,
+    OriginChoicesPlanner originChoices,
     IChangeRequestRepository changeRequests,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
@@ -56,6 +59,11 @@ public sealed class ActivateCharacterHandler(
         }
 
         var character = loaded.Character;
+        if (character.Status == CharacterStatus.Draft)
+        {
+            await originChoices.EnsureCompleteAsync(character, cancellationToken);
+        }
+
         var now = clock.UtcNow;
         var sheet = await sheets.CalculateAsync(character, cancellationToken);
         character.Activate(sheet.HitPointsMax, now);

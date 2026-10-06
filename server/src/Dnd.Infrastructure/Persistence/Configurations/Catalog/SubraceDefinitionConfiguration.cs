@@ -22,5 +22,7 @@ internal sealed class SubraceDefinitionConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.Description).IsRequired();
         builder.Property(x => x.AbilityBonusesJson).IsRequired();
         builder.Property(x => x.TraitIndexes).HasJsonListConversion();
+        builder.Property(x => x.Resistances).HasJsonListConversion();
+        builder.Ignore(x => x.Choices);
     }
 }

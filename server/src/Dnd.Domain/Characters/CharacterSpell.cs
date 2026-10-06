@@ -3,6 +3,12 @@ namespace Dnd.Domain.Characters;
 /// <summary>A spell known or prepared by a character for one of its classes. Unique per (SpellIndex, ClassIndex).</summary>
 public sealed class CharacterSpell
 {
+    /// <summary>
+    /// <see cref="ClassIndex"/> of spells granted by the race or the background (the high elf cantrip): always
+    /// prepared, outside the classes' known and prepared counts.
+    /// </summary>
+    public const string OriginClassIndex = "race";
+
     private CharacterSpell()
     {
     }

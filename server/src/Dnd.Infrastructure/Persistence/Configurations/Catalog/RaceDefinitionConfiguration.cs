@@ -19,6 +19,8 @@ internal sealed class RaceDefinitionConfiguration : IEntityTypeConfiguration<Rac
         builder.Property(x => x.Size).HasMaxLength(CatalogColumns.ShortTextMaxLength).IsRequired();
         builder.Property(x => x.AbilityBonusesJson).IsRequired();
         builder.Property(x => x.TraitIndexes).HasJsonListConversion();
+        builder.Property(x => x.Resistances).HasJsonListConversion();
+        builder.Ignore(x => x.Choices);
         builder.Property(x => x.Languages).HasJsonListConversion();
         builder.Property(x => x.SubraceIndexes).HasJsonListConversion();
         builder.Property(x => x.Age).IsRequired();

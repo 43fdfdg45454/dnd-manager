@@ -48,6 +48,9 @@ public sealed record UpdateInventoryItemRequest
 
     public bool? Attuned { get; init; }
 
+    /// <summary>With <c>attuned: true</c>: an attuned item that ends its attunement in the same operation (limit of 3 reached).</summary>
+    public Guid? ReplaceAttunedItemId { get; init; }
+
     public Optional<string?> Notes { get; init; }
 
     public int? SortOrder { get; init; }
@@ -315,6 +318,7 @@ public sealed class UpdateInventoryItemHandler(
             {
                 Equipped = request.Equipped,
                 Attuned = request.Attuned,
+                ReplaceAttunedItemId = request.ReplaceAttunedItemId,
                 SetNotes = request.Notes.IsSet,
                 Notes = request.Notes.Value,
                 SortOrder = request.SortOrder,

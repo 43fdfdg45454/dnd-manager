@@ -25,9 +25,17 @@ public sealed class GetRaceHandler(ICatalogRepository catalog)
             race.Alignment,
             Traits(race.TraitIndexes, traits),
             subraces
-                .Select(s => new SubraceDto(s.Index, s.Name, s.Description, CatalogJson.AbilityBonuses(s.AbilityBonusesJson), Traits(s.TraitIndexes, traits)))
+                .Select(s => new SubraceDto(s.Index, s.Name, s.Description, CatalogJson.AbilityBonuses(s.AbilityBonusesJson), Traits(s.TraitIndexes, traits))
+                {
+                    Choices = RaceChoicesDto.From(s.Choices),
+                    Resistances = s.Resistances,
+                })
                 .ToList(),
-            race.Source);
+            race.Source)
+        {
+            Choices = RaceChoicesDto.From(race.Choices),
+            Resistances = race.Resistances,
+        };
     }
 
     private static List<TraitDto> Traits(IEnumerable<string> indexes, IReadOnlyDictionary<string, TraitDefinition> traits) =>

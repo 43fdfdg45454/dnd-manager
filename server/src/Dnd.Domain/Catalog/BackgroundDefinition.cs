@@ -20,6 +20,11 @@ public sealed class BackgroundDefinition
 
     public StartingEquipment? StartingEquipment => Catalog.StartingEquipment.Parse(StartingEquipmentJson);
 
+    /// <summary>Normalized <see cref="Catalog.RaceChoices"/> (decisions asked at creation), or null when there are none.</summary>
+    public string? ChoicesJson { get; init; }
+
+    public RaceChoices Choices => RaceChoices.Parse(ChoicesJson);
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = CatalogSources.Srd;
 }

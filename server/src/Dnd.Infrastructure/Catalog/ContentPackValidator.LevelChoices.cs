@@ -306,7 +306,28 @@ internal sealed partial class ContentPackValidator
             AddError($"{path}.recharge", $"Recarga desconocida. Valores admitidos: {string.Join(", ", Enum.GetNames<ResourceRecharge>())}.");
         }
 
-        return LevelChoiceJson.Serialize(new { key, name, max, recharge = recharge.ToString() });
+        object? rollOnRest = null;
+        if (resource.RollOnRest is { } roll)
+        {
+            var die = RollOnRest.ParseDie(roll.Dice);
+            if (die is null)
+            {
+                AddError($"{path}.rollOnRest.dice", $"Dado no válido: usa {string.Join(", ", RollOnRest.AllowedDice.Select(d => $"d{d}"))}.");
+            }
+
+            var count = RequiredInt($"{path}.rollOnRest.count", roll.Count, 1, RollOnRest.MaxCount);
+            var rest = RollOnRest.ParseRest(roll.Rest);
+            if (rest is null)
+            {
+                AddError($"{path}.rollOnRest.rest", "Debe ser short o long.");
+            }
+
+            rollOnRest = new { dice = die is null ? null : $"d{die}", count, rest = rest == RestKind.Short ? "short" : "long" };
+        }
+
+        return rollOnRest is null
+            ? LevelChoiceJson.Serialize(new { key, name, max, recharge = recharge.ToString() })
+            : LevelChoiceJson.Serialize(new { key, name, max, recharge = recharge.ToString(), rollOnRest });
     }
 
     private void LevelChoice(string path, PackLevelChoiceJson rule, string classIndex, string? subclassIndex, ContentPackRows rows)

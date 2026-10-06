@@ -187,7 +187,7 @@ public class InventoryEndpointsTests(CatalogApiFactory factory)
     }
 
     [Fact]
-    public async Task Attuning_a_fourth_item_returns_400()
+    public async Task Attuning_a_fourth_item_returns_409_with_a_code_and_can_replace_one()
     {
         var s = await factory.CreateCampaignScenarioAsync();
         var character = await s.Player.CreateActiveCharacterAsync(s.Dm, s.CampaignId);
@@ -204,8 +204,18 @@ public class InventoryEndpointsTests(CatalogApiFactory factory)
 
         var fourth = await s.Player.PatchItemAsync(character.Id, rings[3].Id, new { attuned = true });
 
-        Assert.Equal(HttpStatusCode.BadRequest, fourth.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, fourth.StatusCode);
+        var problem = await fourth.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.Equal("attunement-limit", problem.GetProperty("code").GetString());
         Assert.Equal(3, (await s.Player.GetInventoryAsync(character.Id)).AttunedCount);
+
+        var swap = await s.Player.PatchItemAsync(character.Id, rings[3].Id, new { attuned = true, replaceAttunedItemId = rings[0].Id });
+
+        Assert.Equal(HttpStatusCode.OK, swap.StatusCode);
+        var inventory = await s.Player.GetInventoryAsync(character.Id);
+        Assert.Equal(3, inventory.AttunedCount);
+        Assert.False(inventory.Items.Single(i => i.Id == rings[0].Id).Attuned);
+        Assert.True(inventory.Items.Single(i => i.Id == rings[3].Id).Attuned);
     }
 
     [Fact]

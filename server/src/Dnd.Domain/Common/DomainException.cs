@@ -21,13 +21,17 @@ public enum DomainErrorKind
 /// </summary>
 public sealed class DomainException : Exception
 {
-    private DomainException(DomainErrorKind kind, string message)
+    private DomainException(DomainErrorKind kind, string message, string? code = null)
         : base(message)
     {
         Kind = kind;
+        Code = code;
     }
 
     public DomainErrorKind Kind { get; }
+
+    /// <summary>Stable machine-readable code of the case (e.g. <c>attunement-limit</c>), sent as <c>code</c> in the ProblemDetails; null for most errors.</summary>
+    public string? Code { get; }
 
     public static DomainException RuleViolation(string message) => new(DomainErrorKind.RuleViolation, message);
 
@@ -35,5 +39,5 @@ public sealed class DomainException : Exception
 
     public static DomainException NotFound(string message) => new(DomainErrorKind.NotFound, message);
 
-    public static DomainException Conflict(string message) => new(DomainErrorKind.Conflict, message);
+    public static DomainException Conflict(string message, string? code = null) => new(DomainErrorKind.Conflict, message, code);
 }

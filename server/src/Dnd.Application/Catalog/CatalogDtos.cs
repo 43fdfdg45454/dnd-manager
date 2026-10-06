@@ -98,7 +98,83 @@ public sealed record SubraceDto(
     string Name,
     string Description,
     IReadOnlyList<AbilityBonusDto> AbilityBonuses,
-    IReadOnlyList<TraitDto> Traits);
+    IReadOnlyList<TraitDto> Traits)
+{
+    /// <summary>Decisions the subrace asks for at creation (null when none).</summary>
+    public RaceChoicesDto? Choices { get; init; }
+
+    /// <summary>Damage types the subrace always resists.</summary>
+    public IReadOnlyList<string> Resistances { get; init; } = [];
+}
+
+/// <summary>An option of an origin choice (<see cref="Index"/>: ability, skill, language name, tool or spell index).</summary>
+public sealed record OriginOptionDto(string Index, string Name);
+
+/// <summary>+<see cref="Amount"/> to <see cref="Choose"/> different abilities of <see cref="From"/>.</summary>
+public sealed record AbilityBonusChoiceDto(int Choose, int Amount, IReadOnlyList<OriginOptionDto> From);
+
+/// <summary><see cref="Choose"/> picks of <see cref="From"/>; empty <see cref="From"/> = any.</summary>
+public sealed record PickChoiceDto(int Choose, IReadOnlyList<OriginOptionDto> From);
+
+/// <summary>A cantrip of the <see cref="SpellList"/> class ("any" for every list), narrowed to <see cref="From"/> when not empty.</summary>
+public sealed record CantripChoiceDto(int Choose, string SpellList, IReadOnlyList<OriginOptionDto> From);
+
+public sealed record FeatChoiceDto(int Choose);
+
+/// <summary>Breath weapon of an option (area, saving throw ability, damage dice by character level).</summary>
+public sealed record BreathWeaponDto(string Name, string Area, string SaveAbility, IReadOnlyDictionary<int, string> DamageAtCharacterLevel);
+
+public sealed record TraitOptionDto(string Index, string Name, IReadOnlyList<string> Description, string? DamageType, BreathWeaponDto? BreathWeapon);
+
+public sealed record TraitOptionChoiceDto(string Key, string Name, int Choose, IReadOnlyList<TraitOptionDto> Options);
+
+/// <summary>
+/// Decisions a race, subrace or background asks for at creation (phase 19). Every part is optional. Saved with
+/// <c>PUT /characters/{id}/origin-choices</c> (see <c>GET</c> of the same route for the plan of a character).
+/// </summary>
+public sealed record RaceChoicesDto(
+    AbilityBonusChoiceDto? AbilityBonuses,
+    PickChoiceDto? Skills,
+    PickChoiceDto? Languages,
+    PickChoiceDto? Tools,
+    CantripChoiceDto? Cantrip,
+    FeatChoiceDto? Feats,
+    IReadOnlyList<TraitOptionChoiceDto> TraitOptions)
+{
+    public static RaceChoicesDto? From(RaceChoices choices)
+    {
+        ArgumentNullException.ThrowIfNull(choices);
+        if (choices.IsEmpty)
+        {
+            return null;
+        }
+
+        static IReadOnlyList<OriginOptionDto> Options(IReadOnlyList<OriginOption> options) => options.Select(o => new OriginOptionDto(o.Index, o.Name)).ToList();
+        static PickChoiceDto? Pick(PickChoice? pick) => pick is null ? null : new PickChoiceDto(pick.Choose, Options(pick.From));
+
+        return new RaceChoicesDto(
+            choices.AbilityBonuses is { } a ? new AbilityBonusChoiceDto(a.Choose, a.Amount, Options(a.From)) : null,
+            Pick(choices.Skills),
+            Pick(choices.Languages),
+            Pick(choices.Tools),
+            choices.Cantrip is { } c ? new CantripChoiceDto(c.Choose, c.SpellList, Options(c.From)) : null,
+            choices.Feats is { } f ? new FeatChoiceDto(f.Choose) : null,
+            choices.TraitOptions
+                .Select(t => new TraitOptionChoiceDto(
+                    t.Key,
+                    t.Name,
+                    t.Choose,
+                    t.Options
+                        .Select(o => new TraitOptionDto(
+                            o.Index,
+                            o.Name,
+                            o.Description,
+                            o.DamageType,
+                            o.BreathWeapon is { } b ? new BreathWeaponDto(b.Name, b.Area, b.SaveAbility, b.DamageAtCharacterLevel) : null))
+                        .ToList()))
+                .ToList());
+    }
+}
 
 public sealed record RaceDetailDto(
     string Index,
@@ -112,7 +188,14 @@ public sealed record RaceDetailDto(
     string Alignment,
     IReadOnlyList<TraitDto> Traits,
     IReadOnlyList<SubraceDto> Subraces,
-    string Source);
+    string Source)
+{
+    /// <summary>Decisions the race asks for at creation (null when none); the subraces carry their own.</summary>
+    public RaceChoicesDto? Choices { get; init; }
+
+    /// <summary>Damage types the race always resists ("poison" for dwarves).</summary>
+    public IReadOnlyList<string> Resistances { get; init; } = [];
+}
 
 /// <param name="Source">"srd" or the id of the content pack that added it.</param>
 /// <param name="Category">What the spell is mainly for: a <c>SpellCategory</c> name (Healing, Damage, Control, Buff, Defense, Utility, Summoning).</param>
@@ -253,6 +336,12 @@ public sealed record BackgroundDto(
     StartingEquipmentDto? StartingEquipment,
     string Source)
 {
+    /// <summary>Decisions the background asks for at creation (languages, tools...), or null.</summary>
+    public RaceChoicesDto? Choices { get; init; }
+
     public static BackgroundDto From(BackgroundDefinition b, StartingEquipmentDto? startingEquipment) => new(
-        b.Index, b.Name, b.FeatureName, b.FeatureDescription, b.SkillProficiencies, b.StartingEquipmentText, startingEquipment, b.Source);
+        b.Index, b.Name, b.FeatureName, b.FeatureDescription, b.SkillProficiencies, b.StartingEquipmentText, startingEquipment, b.Source)
+    {
+        Choices = RaceChoicesDto.From(b.Choices),
+    };
 }

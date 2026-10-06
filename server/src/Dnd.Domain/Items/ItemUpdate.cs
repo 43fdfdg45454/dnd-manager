@@ -11,6 +11,12 @@ public sealed record ItemUpdate
 
     public bool? Attuned { get; init; }
 
+    /// <summary>
+    /// With <see cref="Attuned"/> true: another attuned entry that ends its attunement in the same operation
+    /// (the player chose which one to drop when the limit was reached).
+    /// </summary>
+    public Guid? ReplaceAttunedItemId { get; init; }
+
     public bool SetNotes { get; init; }
 
     public string? Notes { get; init; }

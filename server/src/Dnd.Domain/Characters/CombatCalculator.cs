@@ -51,6 +51,9 @@ public static class CombatCalculator
     /// <summary>Highest slot level Arcane Recovery can recover.</summary>
     public const int ArcaneRecoveryMaxSlotLevel = 5;
 
+    /// <summary>Highest slot level Natural Recovery can recover (none of 6th level or higher).</summary>
+    public const int NaturalRecoveryMaxSlotLevel = 5;
+
     /// <summary>Divine Smite deals at most 5d8 (6d8 against undead and fiends, left to the player).</summary>
     public const int DivineSmiteMaxDice = 5;
 

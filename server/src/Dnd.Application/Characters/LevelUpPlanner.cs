@@ -17,7 +17,11 @@ public sealed record PlannedOption(
     int? SpellLevel,
     OptionDefinition? Definition,
     IReadOnlyList<EffectPreviewDto> Preview,
-    string? SpellCategory = null);
+    string? SpellCategory = null)
+{
+    /// <summary>Damage type of a trait option (draconic ancestry), or null.</summary>
+    public string? DamageType { get; init; }
+}
 
 /// <summary>A choice of the plan: the rule, how many picks are required, the options and the replaceable picks.</summary>
 public sealed record PlannedChoice(LevelChoiceRule Rule, int Required, bool FreeText, IReadOnlyList<PlannedOption> Options, IReadOnlyList<ChoiceItem> Known)
@@ -74,6 +78,9 @@ public sealed class LevelUpPlan
 
     public required LevelUpSpellcastingDto? Spellcasting { get; init; }
 
+    /// <summary>Invalid options and feats that this level-up must replace (their choices are also in <see cref="Choices"/>).</summary>
+    public IReadOnlyList<PlannedReplacement> Replacements { get; init; } = [];
+
     public bool IsNew => Entry is null;
 
     public LevelUpClassDto SelectedClass => Classes.First(c => c.ClassIndex == Class.Index);
@@ -100,7 +107,7 @@ public sealed class LevelUpPlan
 /// character as it is now. Picks of the same request (<c>pendingPicks</c>) count for prerequisites such as a
 /// pact boon or a cantrip chosen at the same level.
 /// </summary>
-public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetService sheets)
+public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetService sheets, InvalidChoicesPlanner invalidChoices)
 {
     /// <summary>Feature indexes of the dataset that are options of the shared <c>fighting-styles</c> set.</summary>
     private static readonly string[] FightingStyleAliasPrefixes = ["fighter-fighting-style-", "ranger-fighting-style-", "paladin-fighting-style-"];
@@ -154,6 +161,10 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         var classLevel = classLevels.FirstOrDefault(l => l.Level == newLevel);
         var subclasses = await catalog.ListSubclassesAsync(definition.Index, cancellationToken);
         var rules = SelectRules(await catalog.ListLevelChoiceRulesAsync(definition.Index, cancellationToken), entry?.SubclassIndex, newLevel);
+        if (entry is null && character.Classes.Count > 0 && MulticlassSkillRule(definition) is { } multiclassSkill)
+        {
+            rules.Insert(0, multiclassSkill);
+        }
 
         var setIds = rules.Select(r => r.Kind == LevelChoiceKind.AsiOrFeat ? OptionSets.Feats : r.SetId).OfType<string>().ToHashSet(StringComparer.Ordinal);
         if (setIds.Count > 0)
@@ -173,6 +184,8 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
 
         var context = new PlanContext(character, sheet, definition, newLevel, pendingPicks, options, spells, skills, subclasses, classLevel);
         var choices = rules.Select(context.Plan).ToList();
+        var replacements = await invalidChoices.PlanAsync(character, sheet, cancellationToken);
+        choices.AddRange(replacements.Select(r => r.Choice));
 
         return new LevelUpPlan
         {
@@ -185,6 +198,47 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             AutomaticFeatures = await AutomaticFeaturesAsync(definition.Index, entry?.SubclassIndex, newLevel, classLevel, rules, subclasses, cancellationToken),
             Choices = choices,
             Spellcasting = Spellcasting(character, definition, classLevel, newLevel, spells),
+            Replacements = replacements,
+        };
+    }
+
+    /// <summary>Key of the skill gained when multiclassing into a bard, ranger or rogue.</summary>
+    public const string MulticlassSkillKey = "multiclass-skill";
+
+    /// <summary>
+    /// Multiclassing into a bard (any skill), ranger or rogue (a skill of the class list) gives one skill proficiency
+    /// (PHB): a <see cref="LevelChoiceKind.Skill"/> choice of the plan.
+    /// </summary>
+    private static LevelChoiceRule? MulticlassSkillRule(ClassDefinition definition)
+    {
+        if (MulticlassRules.SkillsFor(definition.Index) is not { } skills)
+        {
+            return null;
+        }
+
+        string? from = null;
+        if (skills.FromClassList)
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(definition.SkillChoicesJson);
+            if (document.RootElement.TryGetProperty("from", out var list) && list.ValueKind == System.Text.Json.JsonValueKind.Array && list.GetArrayLength() > 0)
+            {
+                from = list.GetRawText();
+            }
+        }
+
+        return new LevelChoiceRule
+        {
+            Id = LevelChoiceRule.IdFor(definition.Index, null, 1, MulticlassSkillKey),
+            ClassIndex = definition.Index,
+            Level = 1,
+            Key = MulticlassSkillKey,
+            Name = "Habilidad de multiclase",
+            Kind = LevelChoiceKind.Skill,
+            Choose = skills.Choose,
+            FromJson = from,
+            Note = skills.FromClassList
+                ? $"Al entrar en {BreakdownLabels.Class(definition.Index)} como multiclase ganas una habilidad de su lista."
+                : $"Al entrar en {BreakdownLabels.Class(definition.Index)} como multiclase ganas una habilidad cualquiera.",
         };
     }
 

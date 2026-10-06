@@ -97,6 +97,7 @@ public sealed class ApproveChangeRequestHandler(
     ICharacterRepository characters,
     ICharacterSheetService sheets,
     SpellPreparationPlanner preparation,
+    OriginChoicesPlanner originChoices,
     IValidator<SheetPatch> patchValidator,
     InventoryOperations inventory,
     IUnitOfWork unitOfWork,
@@ -121,6 +122,11 @@ public sealed class ApproveChangeRequestHandler(
         switch (request.Type)
         {
             case ChangeRequestType.Activate:
+                if (character.Status == CharacterStatus.Draft)
+                {
+                    await originChoices.EnsureCompleteAsync(character, cancellationToken);
+                }
+
                 var sheet = await sheets.CalculateAsync(character, cancellationToken);
                 character.Activate(sheet.HitPointsMax, now);
                 await preparation.RequireInitialPreparationAsync(character, now, cancellationToken);

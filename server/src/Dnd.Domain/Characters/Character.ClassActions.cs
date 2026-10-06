@@ -11,6 +11,7 @@ public sealed partial class Character
     private const string BarbarianClass = "barbarian";
     private const string PaladinClass = "paladin";
     private const string WizardClass = "wizard";
+    private const string DruidClass = "druid";
 
     /// <summary>Divine Smite is gained at paladin level 2.</summary>
     public const int DivineSmiteMinLevel = 2;
@@ -78,9 +79,33 @@ public sealed partial class Character
         ArgumentNullException.ThrowIfNull(slotLevels);
         var wizardLevel = RequireClass(WizardClass, 1, "Solo un mago puede usar Recuperación arcana.");
         var resource = FindAutoResource(ClassResourceRules.ArcaneRecovery, "Recuperación arcana");
+        RecoverSlots(resource, "Recuperación arcana", slotLevels, CombatCalculator.ArcaneRecoveryLevels(wizardLevel), CombatCalculator.ArcaneRecoveryMaxSlotLevel, now);
+    }
+
+    /// <summary>
+    /// Druid Natural Recovery (Circle of the Land, druid level 2; once per long rest, after a short rest): recovers
+    /// spent slots of the given levels (one entry per slot). Their sum cannot exceed half the druid level rounded up
+    /// and no slot can be of 6th level or higher. Marks the <see cref="ClassResourceRules.NaturalRecovery"/> resource as used.
+    /// </summary>
+    public void NaturalRecovery(IReadOnlyList<int> slotLevels, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(slotLevels);
+        var druidLevel = RequireClass(DruidClass, ClassResourceRules.NaturalRecoveryMinLevel, "Solo un druida del Círculo de la Tierra de nivel 2 puede usar Recuperación natural.");
+        if (!ClassResourceRules.IsCircleOfTheLand(_classes.First(c => c.ClassIndex == DruidClass).SubclassIndex))
+        {
+            throw DomainException.RuleViolation("Recuperación natural es un rasgo del Círculo de la Tierra.");
+        }
+
+        var resource = FindAutoResource(ClassResourceRules.NaturalRecovery, "Recuperación natural");
+        RecoverSlots(resource, "Recuperación natural", slotLevels, CombatCalculator.ArcaneRecoveryLevels(druidLevel), CombatCalculator.NaturalRecoveryMaxSlotLevel, now);
+    }
+
+    /// <summary>Shared rules of Arcane and Natural Recovery: one use, slot levels summing at most <paramref name="allowed"/>, none above <paramref name="maxSlotLevel"/>.</summary>
+    private void RecoverSlots(CharacterResource resource, string label, IReadOnlyList<int> slotLevels, int allowed, int maxSlotLevel, DateTimeOffset now)
+    {
         if (resource.Remaining == 0)
         {
-            throw DomainException.RuleViolation("Ya has usado Recuperación arcana desde el último descanso largo.");
+            throw DomainException.RuleViolation($"Ya has usado {label} desde el último descanso largo.");
         }
 
         if (slotLevels.Count == 0)
@@ -93,16 +118,14 @@ public sealed partial class Character
             throw DomainException.RuleViolation("El nivel del espacio de conjuro debe ser al menos 1.");
         }
 
-        if (slotLevels.Any(l => l > CombatCalculator.ArcaneRecoveryMaxSlotLevel))
+        if (slotLevels.Any(l => l > maxSlotLevel))
         {
-            throw DomainException.RuleViolation(
-                $"Recuperación arcana no recupera espacios de nivel superior a {CombatCalculator.ArcaneRecoveryMaxSlotLevel}.");
+            throw DomainException.RuleViolation($"{label} no recupera espacios de nivel superior a {maxSlotLevel}.");
         }
 
-        var allowed = CombatCalculator.ArcaneRecoveryLevels(wizardLevel);
         if (slotLevels.Sum() > allowed)
         {
-            throw DomainException.RuleViolation($"Recuperación arcana recupera como máximo {allowed} niveles de espacios de conjuro.");
+            throw DomainException.RuleViolation($"{label} recupera como máximo {allowed} niveles de espacios de conjuro.");
         }
 
         var byLevel = slotLevels.GroupBy(l => l).ToDictionary(g => g.Key, g => g.Count());

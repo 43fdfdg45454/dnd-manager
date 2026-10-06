@@ -25,6 +25,15 @@ public sealed record SpellcastingValue(string ClassIndex, string Ability, int Sa
     public bool PreparesSpells => PreparedMax is not null && MaxSpellLevel > 0;
 }
 
+/// <summary>A damage type the character resists, with where it comes from (<see cref="Source"/> is a <see cref="BreakdownSources"/> value).</summary>
+public sealed record ResistanceValue(string DamageType, string Source, string Label);
+
+/// <summary>
+/// Breath weapon of a draconic ancestry: damage dice at the character level, damage type, saving throw ability, area and
+/// DC (8 + Constitution + proficiency, see the "breathWeapon.dc" breakdown).
+/// </summary>
+public sealed record BreathWeaponValue(string Name, string Source, string DamageType, string Dice, string SaveAbility, string Area, int Dc);
+
 /// <summary>Warlock Pact Magic: <see cref="Slots"/> slots, all of spell level <see cref="SlotLevel"/>.</summary>
 public sealed record PactMagicValue(int SlotLevel, int Slots);
 
@@ -101,6 +110,12 @@ public sealed record CharacterSheet
 
     /// <summary>Automatic resources granted by the chosen options, for <see cref="Character.SyncAutoResources"/>.</summary>
     public IReadOnlyList<ResourceTemplate> ChoiceResources { get; init; } = [];
+
+    /// <summary>Damage resistances of the race (dwarf: poison) and of the chosen trait options (draconic ancestry).</summary>
+    public IReadOnlyList<ResistanceValue> Resistances { get; init; } = [];
+
+    /// <summary>Breath weapon of the chosen draconic ancestry, or null.</summary>
+    public BreathWeaponValue? BreathWeapon { get; init; }
 
     /// <summary>Whether the character wears armor (conditions such as Defense depend on it).</summary>
     public bool WearsArmor { get; init; }
