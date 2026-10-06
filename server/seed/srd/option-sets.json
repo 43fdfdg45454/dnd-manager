@@ -1,0 +1,1964 @@
+{
+  "sets": [
+    {
+      "setId": "fighting-styles",
+      "name": "Fighting Styles",
+      "options": [
+        {
+          "index": "fighting-style-archery",
+          "name": "Archery",
+          "description": [
+            "You gain a +2 bonus to attack rolls you make with ranged weapons."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [
+            {
+              "kind": "AttackBonus",
+              "target": null,
+              "value": 2,
+              "condition": "rangedWeapon"
+            }
+          ],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "fighting-style-defense",
+          "name": "Defense",
+          "description": [
+            "While you are wearing armor, you gain a +1 bonus to AC."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [
+            {
+              "kind": "ArmorClassBonus",
+              "target": null,
+              "value": 1,
+              "condition": "wearingArmor"
+            }
+          ],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "fighting-style-dueling",
+          "name": "Dueling",
+          "description": [
+            "When you are wielding a melee weapon in one hand and no other weapons, you gain a +2 bonus to damage rolls with that weapon."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [
+            {
+              "kind": "DamageBonus",
+              "target": null,
+              "value": 2,
+              "condition": "oneHandedMeleeNoOtherWeapon"
+            }
+          ],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "fighting-style-great-weapon-fighting",
+          "name": "Great Weapon Fighting",
+          "description": [
+            "When you roll a 1 or 2 on a damage die for an attack you make with a melee weapon that you are wielding with two hands, you can reroll the die and must use the new roll. The weapon must have the two-handed or versatile property for you to gain this benefit."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "fighting-style-protection",
+          "name": "Protection",
+          "description": [
+            "When a creature you can see attacks a target other than you that is within 5 feet of you, you can use your reaction to impose disadvantage on the attack roll. You must be wielding a shield."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "fighting-style-two-weapon-fighting",
+          "name": "Two-Weapon Fighting",
+          "description": [
+            "When you engage in two-weapon fighting, you can add your ability modifier to the damage of the second attack."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        }
+      ]
+    },
+    {
+      "setId": "eldritch-invocations",
+      "name": "Eldritch Invocations",
+      "options": [
+        {
+          "index": "eldritch-invocation-agonizing-blast",
+          "name": "Agonizing Blast",
+          "description": [
+            "When you cast eldritch blast, add your Charisma modifier to the damage it deals on a hit."
+          ],
+          "prerequisitesText": "Prerequisite: eldritch blast cantrip",
+          "prerequisites": {
+            "cantrip": "eldritch-blast"
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-armor-of-shadows",
+          "name": "Armor of Shadows",
+          "description": [
+            "You can cast mage armor on yourself at will, without expending a spell slot or material components."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "mage-armor"
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-ascendant-step",
+          "name": "Ascendant Step",
+          "description": [
+            "You can cast levitate on yourself at will, without expending a spell slot or material components."
+          ],
+          "prerequisitesText": "Prerequisite: 9th level",
+          "prerequisites": {
+            "minLevel": 9
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "levitate"
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-beast-speech",
+          "name": "Beast Speech",
+          "description": [
+            "You can cast speak with animals at will, without expending a spell slot."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "speak-with-animals"
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-beguiling-influence",
+          "name": "Beguiling Influence",
+          "description": [
+            "You gain proficiency in the Deception and Persuasion skills."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "skills": [
+              "deception",
+              "persuasion"
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-bewitching-whispers",
+          "name": "Bewitching Whispers",
+          "description": [
+            "You can cast compulsion once using a warlock spell slot. You can't do so again until you finish a long rest."
+          ],
+          "prerequisitesText": "Prerequisite: 7th level",
+          "prerequisites": {
+            "minLevel": 7
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "compulsion"
+              }
+            ]
+          },
+          "resource": {
+            "key": "bewitching-whispers",
+            "name": "Bewitching Whispers",
+            "max": 1,
+            "recharge": "LongRest"
+          }
+        },
+        {
+          "index": "eldritch-invocation-book-of-ancient-secrets",
+          "name": "Book of Ancient Secrets",
+          "description": [
+            "You can now inscribe magical rituals in your Book of Shadows. Choose two 1st-level spells that have the ritual tag from any class's spell list (the two needn't be from the same list). The spells appear in the book and don't count against the number of spells you know. With your Book of Shadows in hand, you can cast the chosen spells as rituals. You can't cast the spells except as rituals, unless you've learned them by some other means. You can also cast a warlock spell you know as a ritual if it has the ritual tag.",
+            "On your adventures, you can add other ritual spells to your Book of Shadows. When you find such a spell, you can add it to the book if the spell's level is equal to or less than half your warlock level (rounded up) and if you can spare the time to transcribe the spell. For each level of the spell, the transcription process takes 2 hours and costs 50 gp for the rare inks needed to inscribe it."
+          ],
+          "prerequisitesText": "Prerequisite: Pact of the Tome feature",
+          "prerequisites": {
+            "pactBoon": "pact-of-the-tome"
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-chains-of-carceri",
+          "name": "Chains of Carceri",
+          "description": [
+            "You can cast hold monster at will--targeting a celestial, fiend, or elemental--without expending a spell slot or material components. You must finish a long rest before you can use this invocation on the same creature again."
+          ],
+          "prerequisitesText": "Prerequisite: 15th level, Pact of the Chain feature",
+          "prerequisites": {
+            "minLevel": 15,
+            "pactBoon": "pact-of-the-chain"
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "hold-monster"
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-devils-sight",
+          "name": "Devil's Sight",
+          "description": [
+            "You can see normally in darkness, both magical and nonmagical, to a distance of 120 feet."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-dreadful-word",
+          "name": "Dreadful Word",
+          "description": [
+            "You can cast confusion once using a warlock spell slot. You can't do so again until you finish a long rest."
+          ],
+          "prerequisitesText": "Prerequisite: 7th level",
+          "prerequisites": {
+            "minLevel": 7
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "confusion"
+              }
+            ]
+          },
+          "resource": {
+            "key": "dreadful-word",
+            "name": "Dreadful Word",
+            "max": 1,
+            "recharge": "LongRest"
+          }
+        },
+        {
+          "index": "eldritch-invocation-eldritch-sight",
+          "name": "Eldritch Sight",
+          "description": [
+            "You can cast detect magic at will, without expending a spell slot."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "detect-magic"
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-eldritch-spear",
+          "name": "Eldritch Spear",
+          "description": [
+            "When you cast eldritch blast, its range is 300 feet."
+          ],
+          "prerequisitesText": "Prerequisite: eldritch blast cantrip",
+          "prerequisites": {
+            "cantrip": "eldritch-blast"
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-eyes-of-the-rune-keeper",
+          "name": "Eyes of the Rune Keeper",
+          "description": [
+            "You can read all writing."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-fiendish-vigor",
+          "name": "Fiendish Vigor",
+          "description": [
+            "You can cast false life on yourself at will as a 1st-level spell, without expending a spell slot or material components."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "false-life"
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-gaze-of-two-minds",
+          "name": "Gaze of Two Minds",
+          "description": [
+            "You can use your action to touch a willing humanoid and perceive through its senses until the end of your next turn. As long as the creature is on the same plane of existence as you, you can use your action on subsequent turns to maintain this connection, extending the duration until the end of your next turn. While perceiving through the other creature's senses, you benefit from any special senses possessed by that creature, and you are blinded and deafened to your own surroundings."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-lifedrinker",
+          "name": "Lifedrinker",
+          "description": [
+            "When you hit a creature with your pact weapon, the creature takes extra necrotic damage equal to your Charisma modifier (minimum 1)."
+          ],
+          "prerequisitesText": "Prerequisite: 12th level, Pact of the Blade feature",
+          "prerequisites": {
+            "minLevel": 12,
+            "pactBoon": "pact-of-the-blade"
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-mask-of-many-faces",
+          "name": "Mask of Many Faces",
+          "description": [
+            "You can cast disguise self at will, without expending a spell slot."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "disguise-self"
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-master-of-myriad-forms",
+          "name": "Master of Myriad Forms",
+          "description": [
+            "You can cast alter self at will, without expending a spell slot."
+          ],
+          "prerequisitesText": "Prerequisite: 15th level",
+          "prerequisites": {
+            "minLevel": 15
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "alter-self"
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-minions-of-chaos",
+          "name": "Minions of Chaos",
+          "description": [
+            "You can cast conjure elemental once using a warlock spell slot. You can't do so again until you finish a long rest."
+          ],
+          "prerequisitesText": "Prerequisite: 9th level",
+          "prerequisites": {
+            "minLevel": 9
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "conjure-elemental"
+              }
+            ]
+          },
+          "resource": {
+            "key": "minions-of-chaos",
+            "name": "Minions of Chaos",
+            "max": 1,
+            "recharge": "LongRest"
+          }
+        },
+        {
+          "index": "eldritch-invocation-mire-the-mind",
+          "name": "Mire the Mind",
+          "description": [
+            "You can cast slow once using a warlock spell slot. You can't do so again until you finish a long rest."
+          ],
+          "prerequisitesText": "Prerequisite: 5th level",
+          "prerequisites": {
+            "minLevel": 5
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "slow"
+              }
+            ]
+          },
+          "resource": {
+            "key": "mire-the-mind",
+            "name": "Mire the Mind",
+            "max": 1,
+            "recharge": "LongRest"
+          }
+        },
+        {
+          "index": "eldritch-invocation-misty-visions",
+          "name": "Misty Visions",
+          "description": [
+            "You can cast silent image at will, without expending a spell slot or material components."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "silent-image"
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-one-with-shadows",
+          "name": "One with Shadows",
+          "description": [
+            "When you are in an area of dim light or darkness, you can use your action to become invisible until you move or take an action or a reaction."
+          ],
+          "prerequisitesText": "Prerequisite: 5th level",
+          "prerequisites": {
+            "minLevel": 5
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-otherworldly-leap",
+          "name": "Otherworldly Leap",
+          "description": [
+            "You can cast jump on yourself at will, without expending a spell slot or material components."
+          ],
+          "prerequisitesText": "Prerequisite: 9th level",
+          "prerequisites": {
+            "minLevel": 9
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "jump"
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-repelling-blast",
+          "name": "Repelling Blast",
+          "description": [
+            "When you hit a creature with eldritch blast, you can push the creature up to 10 feet away from you in a straight line."
+          ],
+          "prerequisitesText": "Prerequisite: eldritch blast cantrip",
+          "prerequisites": {
+            "cantrip": "eldritch-blast"
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-sculptor-of-flesh",
+          "name": "Sculptor of Flesh",
+          "description": [
+            "You can cast polymorph once using a warlock spell slot. You can't do so again until you finish a long rest."
+          ],
+          "prerequisitesText": "Prerequisite: 7th level",
+          "prerequisites": {
+            "minLevel": 7
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "polymorph"
+              }
+            ]
+          },
+          "resource": {
+            "key": "sculptor-of-flesh",
+            "name": "Sculptor of Flesh",
+            "max": 1,
+            "recharge": "LongRest"
+          }
+        },
+        {
+          "index": "eldritch-invocation-sign-of-ill-omen",
+          "name": "Sign of Ill Omen",
+          "description": [
+            "You can cast bestow curse once using a warlock spell slot. You can't do so again until you finish a long rest."
+          ],
+          "prerequisitesText": "Prerequisite: 5th level",
+          "prerequisites": {
+            "minLevel": 5
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "bestow-curse"
+              }
+            ]
+          },
+          "resource": {
+            "key": "sign-of-ill-omen",
+            "name": "Sign of Ill Omen",
+            "max": 1,
+            "recharge": "LongRest"
+          }
+        },
+        {
+          "index": "eldritch-invocation-thief-of-five-fates",
+          "name": "Thief of Five Fates",
+          "description": [
+            "You can cast bane once using a warlock spell slot. You can't do so again until you finish a long rest."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "bane"
+              }
+            ]
+          },
+          "resource": {
+            "key": "thief-of-five-fates",
+            "name": "Thief of Five Fates",
+            "max": 1,
+            "recharge": "LongRest"
+          }
+        },
+        {
+          "index": "eldritch-invocation-thirsting-blade",
+          "name": "Thirsting Blade",
+          "description": [
+            "You can attack with your pact weapon twice, instead of once, whenever you take the Attack action on your turn."
+          ],
+          "prerequisitesText": "Prerequisite: 5th level, Pact of the Blade feature",
+          "prerequisites": {
+            "minLevel": 5,
+            "pactBoon": "pact-of-the-blade"
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-visions-of-distant-realms",
+          "name": "Visions of Distant Realms",
+          "description": [
+            "You can cast arcane eye at will, without expending a spell slot."
+          ],
+          "prerequisitesText": "Prerequisite: 15th level",
+          "prerequisites": {
+            "minLevel": 15
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "arcane-eye"
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-voice-of-the-chain-master",
+          "name": "Voice of the Chain Master",
+          "description": [
+            "You can communicate telepathically with your familiar and perceive through your familiar's senses as long as you are on the same plane of existence.",
+            "Additionally, while perceiving through your familiar's senses, you can also speak through your familiar in your own voice, even if your familiar is normally incapable of speech."
+          ],
+          "prerequisitesText": "Prerequisite: Pact of the Chain feature",
+          "prerequisites": {
+            "pactBoon": "pact-of-the-chain"
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-whispers-of-the-grave",
+          "name": "Whispers of the Grave",
+          "description": [
+            "You can cast speak with dead at will, without expending a spell slot."
+          ],
+          "prerequisitesText": "Prerequisite: 9th level",
+          "prerequisites": {
+            "minLevel": 9
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "speak-with-dead"
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "eldritch-invocation-witch-sight",
+          "name": "Witch Sight",
+          "description": [
+            "You can see the true form of any shapechanger or creature concealed by illusion or transmutation magic while the creature is within 30 feet of you and within line of sight."
+          ],
+          "prerequisitesText": "Prerequisite: 15th level",
+          "prerequisites": {
+            "minLevel": 15
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        }
+      ]
+    },
+    {
+      "setId": "metamagic",
+      "name": "Metamagic",
+      "options": [
+        {
+          "index": "metamagic-careful-spell",
+          "name": "Careful Spell",
+          "description": [
+            "When you cast a spell that forces other creatures to make a saving throw, you can protect some of those creatures from the spell's full force. To do so, you spend 1 sorcery point and choose a number of those creatures up to your Charisma modifier (minimum of one creature). A chosen creature automatically succeeds on its saving throw against the spell."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "metamagic-distant-spell",
+          "name": "Distant Spell",
+          "description": [
+            "When you cast a spell that has a range of 5 feet or greater, you can spend 1 sorcery point to double the range of the spell.",
+            "When you cast a spell that has a range of touch, you can spend 1 sorcery point to make the range of the spell 30 feet."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "metamagic-empowered-spell",
+          "name": "Empowered Spell",
+          "description": [
+            "When you roll damage for a spell, you can spend 1 sorcery point to reroll a number of the damage dice up to your Charisma modifier (minimum of one). You must use the new rolls.",
+            "You can use Empowered Spell even if you have already used a different Metamagic option during the casting of the spell."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "metamagic-extended-spell",
+          "name": "Extended Spell",
+          "description": [
+            "When you cast a spell that has a duration of 1 minute or longer, you can spend 1 sorcery point to double its duration, to a maximum duration of 24 hours."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "metamagic-heightened-spell",
+          "name": "Heightened Spell",
+          "description": [
+            "When you cast a spell that forces a creature to make a saving throw to resist its effects, you can spend 3 sorcery points to give one target of the spell disadvantage on its first saving throw made against the spell."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "metamagic-quickened-spell",
+          "name": "Quickened Spell",
+          "description": [
+            "When you cast a spell that has a casting time of 1 action, you can spend 2 sorcery points to change the casting time to 1 bonus action for this casting."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "metamagic-subtle-spell",
+          "name": "Subtle Spell",
+          "description": [
+            "When you cast a spell, you can spend 1 sorcery point to cast it without any somatic or verbal components."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "metamagic-twinned-spell",
+          "name": "Twinned Spell",
+          "description": [
+            "When you cast a spell that targets only one creature and doesn't have a range of self, you can spend a number of sorcery points equal to the spell's level to target a second creature in range with the same spell (1 sorcery point if the spell is a cantrip).",
+            "To be eligible, a spell must be incapable of targeting more than one creature at the spell's current level. For example, magic missile and scorching ray aren't eligible, but ray of frost is."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        }
+      ]
+    },
+    {
+      "setId": "pact-boons",
+      "name": "Pact Boons",
+      "options": [
+        {
+          "index": "pact-of-the-blade",
+          "name": "Pact of the Blade",
+          "description": [
+            "You can use your action to create a pact weapon in your empty hand. You can choose the form that this melee weapon takes each time you create it. You are proficient with it while you wield it. This weapon counts as magical for the purpose of overcoming resistance and immunity to nonmagical attacks and damage.",
+            "Your pact weapon disappears if it is more than 5 feet away from you for 1 minute or more. It also disappears if you use this feature again, if you dismiss the weapon (no action required), or if you die.",
+            "You can transform one magic weapon into your pact weapon by performing a special ritual while you hold the weapon. You perform the ritual over the course of 1 hour, which can be done during a short rest. You can then dismiss the weapon, shunting it into an extradimensional space, and it appears whenever you create your pact weapon thereafter. You can't affect an artifact or a sentient weapon in this way. The weapon ceases being your pact weapon if you die, if you perform the 1-hour ritual on a different weapon, or if you use a 1-hour ritual to break your bond to it. The weapon appears at your feet if it is in the extradimensional space when the bond breaks.",
+            "If you serve the Fiend, your weapon could be an axe made of black metal and adorned with decorative flames."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "pact-of-the-chain",
+          "name": "Pact of the Chain",
+          "description": [
+            "You learn the find familiar spell and can cast it as a ritual. The spell doesn't count against your number of spells known.",
+            "When you cast the spell, you can choose one of the normal forms for your familiar or one of the following special forms: imp, pseudodragon, quasit, or sprite.",
+            "Additionally, when you take the Attack action, you can forgo one of your own attacks to allow your familiar to make one attack of its own with its reaction.",
+            "Your familiar is more cunning than a typical familiar. Its default form can be a reflection of your patron, with imps and quasits tied to the Fiend."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "find-familiar"
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "pact-of-the-tome",
+          "name": "Pact of the Tome",
+          "description": [
+            "Your patron gives you a grimoire called a Book of Shadows. When you gain this feature, choose three cantrips from any class's spell list (the three needn't be from the same list). While the book is on your person, you can cast those cantrips at will. They don't count against your number of cantrips known. If they don't appear on the warlock spell list, they are nonetheless warlock spells for you.",
+            "If you lose your Book of Shadows, you can perform a 1-hour ceremony to receive a replacement from your patron. This ceremony can be performed during a short or long rest, and it destroys the previous book. The book turns to ash when you die.",
+            "Your Book of Shadows could be a weighty tome bound in demon hide studded with iron, holding spells of conjuration and a wealth of forbidden lore about the sinister regions of the cosmos, a gift of the Fiend."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        }
+      ]
+    },
+    {
+      "setId": "favored-enemies",
+      "name": "Favored Enemies",
+      "options": [
+        {
+          "index": "favored-enemy-aberrations",
+          "name": "Aberrations",
+          "description": [
+            "You have advantage on Wisdom (Survival) checks to track your favored enemies, as well as on Intelligence checks to recall information about them.",
+            "When you gain this feature, you also learn one language of your choice that is spoken by your favored enemies, if they speak one at all."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "favored-enemy-beasts",
+          "name": "Beasts",
+          "description": [
+            "You have advantage on Wisdom (Survival) checks to track your favored enemies, as well as on Intelligence checks to recall information about them.",
+            "When you gain this feature, you also learn one language of your choice that is spoken by your favored enemies, if they speak one at all."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "favored-enemy-celestials",
+          "name": "Celestials",
+          "description": [
+            "You have advantage on Wisdom (Survival) checks to track your favored enemies, as well as on Intelligence checks to recall information about them.",
+            "When you gain this feature, you also learn one language of your choice that is spoken by your favored enemies, if they speak one at all."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "favored-enemy-constructs",
+          "name": "Constructs",
+          "description": [
+            "You have advantage on Wisdom (Survival) checks to track your favored enemies, as well as on Intelligence checks to recall information about them.",
+            "When you gain this feature, you also learn one language of your choice that is spoken by your favored enemies, if they speak one at all."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "favored-enemy-dragons",
+          "name": "Dragons",
+          "description": [
+            "You have advantage on Wisdom (Survival) checks to track your favored enemies, as well as on Intelligence checks to recall information about them.",
+            "When you gain this feature, you also learn one language of your choice that is spoken by your favored enemies, if they speak one at all."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "favored-enemy-elementals",
+          "name": "Elementals",
+          "description": [
+            "You have advantage on Wisdom (Survival) checks to track your favored enemies, as well as on Intelligence checks to recall information about them.",
+            "When you gain this feature, you also learn one language of your choice that is spoken by your favored enemies, if they speak one at all."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "favored-enemy-fey",
+          "name": "Fey",
+          "description": [
+            "You have advantage on Wisdom (Survival) checks to track your favored enemies, as well as on Intelligence checks to recall information about them.",
+            "When you gain this feature, you also learn one language of your choice that is spoken by your favored enemies, if they speak one at all."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "favored-enemy-fiends",
+          "name": "Fiends",
+          "description": [
+            "You have advantage on Wisdom (Survival) checks to track your favored enemies, as well as on Intelligence checks to recall information about them.",
+            "When you gain this feature, you also learn one language of your choice that is spoken by your favored enemies, if they speak one at all."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "favored-enemy-giants",
+          "name": "Giants",
+          "description": [
+            "You have advantage on Wisdom (Survival) checks to track your favored enemies, as well as on Intelligence checks to recall information about them.",
+            "When you gain this feature, you also learn one language of your choice that is spoken by your favored enemies, if they speak one at all."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "favored-enemy-monstrosities",
+          "name": "Monstrosities",
+          "description": [
+            "You have advantage on Wisdom (Survival) checks to track your favored enemies, as well as on Intelligence checks to recall information about them.",
+            "When you gain this feature, you also learn one language of your choice that is spoken by your favored enemies, if they speak one at all."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "favored-enemy-oozes",
+          "name": "Oozes",
+          "description": [
+            "You have advantage on Wisdom (Survival) checks to track your favored enemies, as well as on Intelligence checks to recall information about them.",
+            "When you gain this feature, you also learn one language of your choice that is spoken by your favored enemies, if they speak one at all."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "favored-enemy-plants",
+          "name": "Plants",
+          "description": [
+            "You have advantage on Wisdom (Survival) checks to track your favored enemies, as well as on Intelligence checks to recall information about them.",
+            "When you gain this feature, you also learn one language of your choice that is spoken by your favored enemies, if they speak one at all."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "favored-enemy-undead",
+          "name": "Undead",
+          "description": [
+            "You have advantage on Wisdom (Survival) checks to track your favored enemies, as well as on Intelligence checks to recall information about them.",
+            "When you gain this feature, you also learn one language of your choice that is spoken by your favored enemies, if they speak one at all."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "favored-enemy-humanoids",
+          "name": "Humanoids (two races)",
+          "description": [
+            "Alternatively, you can select two races of humanoid (such as gnolls and orcs) as favored enemies.",
+            "You have advantage on Wisdom (Survival) checks to track your favored enemies, as well as on Intelligence checks to recall information about them.",
+            "When you gain this feature, you also learn one language of your choice that is spoken by your favored enemies, if they speak one at all."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        }
+      ]
+    },
+    {
+      "setId": "natural-explorer-terrains",
+      "name": "Favored Terrains",
+      "options": [
+        {
+          "index": "natural-explorer-arctic",
+          "name": "Arctic",
+          "description": [
+            "When you make an Intelligence or Wisdom check related to your favored terrain, your proficiency bonus is doubled if you are using a skill that you're proficient in.",
+            "While traveling for an hour or more in your favored terrain, you gain the following benefits:",
+            "- Difficult terrain doesn't slow your group's travel.",
+            "- Your group can't become lost except by magical means.",
+            "- Even when you are engaged in another activity while traveling (such as foraging, navigating, or tracking), you remain alert to danger.",
+            "- If you are traveling alone, you can move stealthily at a normal pace.",
+            "- When you forage, you find twice as much food as you normally would.",
+            "- While tracking other creatures, you also learn their exact number, their sizes, and how long ago they passed through the area."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "natural-explorer-coast",
+          "name": "Coast",
+          "description": [
+            "When you make an Intelligence or Wisdom check related to your favored terrain, your proficiency bonus is doubled if you are using a skill that you're proficient in.",
+            "While traveling for an hour or more in your favored terrain, you gain the following benefits:",
+            "- Difficult terrain doesn't slow your group's travel.",
+            "- Your group can't become lost except by magical means.",
+            "- Even when you are engaged in another activity while traveling (such as foraging, navigating, or tracking), you remain alert to danger.",
+            "- If you are traveling alone, you can move stealthily at a normal pace.",
+            "- When you forage, you find twice as much food as you normally would.",
+            "- While tracking other creatures, you also learn their exact number, their sizes, and how long ago they passed through the area."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "natural-explorer-desert",
+          "name": "Desert",
+          "description": [
+            "When you make an Intelligence or Wisdom check related to your favored terrain, your proficiency bonus is doubled if you are using a skill that you're proficient in.",
+            "While traveling for an hour or more in your favored terrain, you gain the following benefits:",
+            "- Difficult terrain doesn't slow your group's travel.",
+            "- Your group can't become lost except by magical means.",
+            "- Even when you are engaged in another activity while traveling (such as foraging, navigating, or tracking), you remain alert to danger.",
+            "- If you are traveling alone, you can move stealthily at a normal pace.",
+            "- When you forage, you find twice as much food as you normally would.",
+            "- While tracking other creatures, you also learn their exact number, their sizes, and how long ago they passed through the area."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "natural-explorer-forest",
+          "name": "Forest",
+          "description": [
+            "When you make an Intelligence or Wisdom check related to your favored terrain, your proficiency bonus is doubled if you are using a skill that you're proficient in.",
+            "While traveling for an hour or more in your favored terrain, you gain the following benefits:",
+            "- Difficult terrain doesn't slow your group's travel.",
+            "- Your group can't become lost except by magical means.",
+            "- Even when you are engaged in another activity while traveling (such as foraging, navigating, or tracking), you remain alert to danger.",
+            "- If you are traveling alone, you can move stealthily at a normal pace.",
+            "- When you forage, you find twice as much food as you normally would.",
+            "- While tracking other creatures, you also learn their exact number, their sizes, and how long ago they passed through the area."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "natural-explorer-grassland",
+          "name": "Grassland",
+          "description": [
+            "When you make an Intelligence or Wisdom check related to your favored terrain, your proficiency bonus is doubled if you are using a skill that you're proficient in.",
+            "While traveling for an hour or more in your favored terrain, you gain the following benefits:",
+            "- Difficult terrain doesn't slow your group's travel.",
+            "- Your group can't become lost except by magical means.",
+            "- Even when you are engaged in another activity while traveling (such as foraging, navigating, or tracking), you remain alert to danger.",
+            "- If you are traveling alone, you can move stealthily at a normal pace.",
+            "- When you forage, you find twice as much food as you normally would.",
+            "- While tracking other creatures, you also learn their exact number, their sizes, and how long ago they passed through the area."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "natural-explorer-mountain",
+          "name": "Mountain",
+          "description": [
+            "When you make an Intelligence or Wisdom check related to your favored terrain, your proficiency bonus is doubled if you are using a skill that you're proficient in.",
+            "While traveling for an hour or more in your favored terrain, you gain the following benefits:",
+            "- Difficult terrain doesn't slow your group's travel.",
+            "- Your group can't become lost except by magical means.",
+            "- Even when you are engaged in another activity while traveling (such as foraging, navigating, or tracking), you remain alert to danger.",
+            "- If you are traveling alone, you can move stealthily at a normal pace.",
+            "- When you forage, you find twice as much food as you normally would.",
+            "- While tracking other creatures, you also learn their exact number, their sizes, and how long ago they passed through the area."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "natural-explorer-swamp",
+          "name": "Swamp",
+          "description": [
+            "When you make an Intelligence or Wisdom check related to your favored terrain, your proficiency bonus is doubled if you are using a skill that you're proficient in.",
+            "While traveling for an hour or more in your favored terrain, you gain the following benefits:",
+            "- Difficult terrain doesn't slow your group's travel.",
+            "- Your group can't become lost except by magical means.",
+            "- Even when you are engaged in another activity while traveling (such as foraging, navigating, or tracking), you remain alert to danger.",
+            "- If you are traveling alone, you can move stealthily at a normal pace.",
+            "- When you forage, you find twice as much food as you normally would.",
+            "- While tracking other creatures, you also learn their exact number, their sizes, and how long ago they passed through the area."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        }
+      ]
+    },
+    {
+      "setId": "druid-lands",
+      "name": "Circle of the Land",
+      "options": [
+        {
+          "index": "circle-of-the-land-arctic",
+          "name": "Arctic",
+          "description": [
+            "Your mystical connection to the land infuses you with the ability to cast certain spells. At 3rd, 5th, 7th, and 9th level you gain access to circle spells connected to the land where you became a druid.",
+            "Choose that land--arctic, coast, desert, forest, grassland, mountain, or swamp--and consult the associated list of spells.",
+            "Once you gain access to a circle spell, you always have it prepared, and it doesn't count against the number of spells you can prepare each day. If you gain access to a spell that doesn't appear on the druid spell list, the spell is nonetheless a druid spell for you.",
+            "Arctic circle spells (druid level) - 3rd: Hold Person, Spike Growth; 5th: Sleet Storm, Slow; 7th: Freedom of Movement, Ice Storm; 9th: Commune With Nature, Cone of Cold."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "hold-person",
+                "minLevel": 3
+              },
+              {
+                "index": "spike-growth",
+                "minLevel": 3
+              },
+              {
+                "index": "sleet-storm",
+                "minLevel": 5
+              },
+              {
+                "index": "slow",
+                "minLevel": 5
+              },
+              {
+                "index": "freedom-of-movement",
+                "minLevel": 7
+              },
+              {
+                "index": "ice-storm",
+                "minLevel": 7
+              },
+              {
+                "index": "commune-with-nature",
+                "minLevel": 9
+              },
+              {
+                "index": "cone-of-cold",
+                "minLevel": 9
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "circle-of-the-land-coast",
+          "name": "Coast",
+          "description": [
+            "Your mystical connection to the land infuses you with the ability to cast certain spells. At 3rd, 5th, 7th, and 9th level you gain access to circle spells connected to the land where you became a druid.",
+            "Choose that land--arctic, coast, desert, forest, grassland, mountain, or swamp--and consult the associated list of spells.",
+            "Once you gain access to a circle spell, you always have it prepared, and it doesn't count against the number of spells you can prepare each day. If you gain access to a spell that doesn't appear on the druid spell list, the spell is nonetheless a druid spell for you.",
+            "Coast circle spells (druid level) - 3rd: Mirror Image, Misty Step; 5th: Water Breathing, Water Walk; 7th: Control Water, Freedom of Movement; 9th: Conjure Elemental, Scrying."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "mirror-image",
+                "minLevel": 3
+              },
+              {
+                "index": "misty-step",
+                "minLevel": 3
+              },
+              {
+                "index": "water-breathing",
+                "minLevel": 5
+              },
+              {
+                "index": "water-walk",
+                "minLevel": 5
+              },
+              {
+                "index": "control-water",
+                "minLevel": 7
+              },
+              {
+                "index": "freedom-of-movement",
+                "minLevel": 7
+              },
+              {
+                "index": "conjure-elemental",
+                "minLevel": 9
+              },
+              {
+                "index": "scrying",
+                "minLevel": 9
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "circle-of-the-land-desert",
+          "name": "Desert",
+          "description": [
+            "Your mystical connection to the land infuses you with the ability to cast certain spells. At 3rd, 5th, 7th, and 9th level you gain access to circle spells connected to the land where you became a druid.",
+            "Choose that land--arctic, coast, desert, forest, grassland, mountain, or swamp--and consult the associated list of spells.",
+            "Once you gain access to a circle spell, you always have it prepared, and it doesn't count against the number of spells you can prepare each day. If you gain access to a spell that doesn't appear on the druid spell list, the spell is nonetheless a druid spell for you.",
+            "Desert circle spells (druid level) - 3rd: Blur, Silence; 5th: Create Food and Water, Protection From Energy; 7th: Blight, Hallucinatory Terrain; 9th: Insect Plague, Wall of Stone."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "blur",
+                "minLevel": 3
+              },
+              {
+                "index": "silence",
+                "minLevel": 3
+              },
+              {
+                "index": "create-food-and-water",
+                "minLevel": 5
+              },
+              {
+                "index": "protection-from-energy",
+                "minLevel": 5
+              },
+              {
+                "index": "blight",
+                "minLevel": 7
+              },
+              {
+                "index": "hallucinatory-terrain",
+                "minLevel": 7
+              },
+              {
+                "index": "insect-plague",
+                "minLevel": 9
+              },
+              {
+                "index": "wall-of-stone",
+                "minLevel": 9
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "circle-of-the-land-forest",
+          "name": "Forest",
+          "description": [
+            "Your mystical connection to the land infuses you with the ability to cast certain spells. At 3rd, 5th, 7th, and 9th level you gain access to circle spells connected to the land where you became a druid.",
+            "Choose that land--arctic, coast, desert, forest, grassland, mountain, or swamp--and consult the associated list of spells.",
+            "Once you gain access to a circle spell, you always have it prepared, and it doesn't count against the number of spells you can prepare each day. If you gain access to a spell that doesn't appear on the druid spell list, the spell is nonetheless a druid spell for you.",
+            "Forest circle spells (druid level) - 3rd: Barkskin, Spider Climb; 5th: Call Lightning, Plant Growth; 7th: Divination, Freedom of Movement; 9th: Commune With Nature, Tree Stride."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "barkskin",
+                "minLevel": 3
+              },
+              {
+                "index": "spider-climb",
+                "minLevel": 3
+              },
+              {
+                "index": "call-lightning",
+                "minLevel": 5
+              },
+              {
+                "index": "plant-growth",
+                "minLevel": 5
+              },
+              {
+                "index": "divination",
+                "minLevel": 7
+              },
+              {
+                "index": "freedom-of-movement",
+                "minLevel": 7
+              },
+              {
+                "index": "commune-with-nature",
+                "minLevel": 9
+              },
+              {
+                "index": "tree-stride",
+                "minLevel": 9
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "circle-of-the-land-grassland",
+          "name": "Grassland",
+          "description": [
+            "Your mystical connection to the land infuses you with the ability to cast certain spells. At 3rd, 5th, 7th, and 9th level you gain access to circle spells connected to the land where you became a druid.",
+            "Choose that land--arctic, coast, desert, forest, grassland, mountain, or swamp--and consult the associated list of spells.",
+            "Once you gain access to a circle spell, you always have it prepared, and it doesn't count against the number of spells you can prepare each day. If you gain access to a spell that doesn't appear on the druid spell list, the spell is nonetheless a druid spell for you.",
+            "Grassland circle spells (druid level) - 3rd: Invisibility, Pass Without Trace; 5th: Daylight, Haste; 7th: Divination, Freedom of Movement; 9th: Dream, Insect Plague."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "invisibility",
+                "minLevel": 3
+              },
+              {
+                "index": "pass-without-trace",
+                "minLevel": 3
+              },
+              {
+                "index": "daylight",
+                "minLevel": 5
+              },
+              {
+                "index": "haste",
+                "minLevel": 5
+              },
+              {
+                "index": "divination",
+                "minLevel": 7
+              },
+              {
+                "index": "freedom-of-movement",
+                "minLevel": 7
+              },
+              {
+                "index": "dream",
+                "minLevel": 9
+              },
+              {
+                "index": "insect-plague",
+                "minLevel": 9
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "circle-of-the-land-mountain",
+          "name": "Mountain",
+          "description": [
+            "Your mystical connection to the land infuses you with the ability to cast certain spells. At 3rd, 5th, 7th, and 9th level you gain access to circle spells connected to the land where you became a druid.",
+            "Choose that land--arctic, coast, desert, forest, grassland, mountain, or swamp--and consult the associated list of spells.",
+            "Once you gain access to a circle spell, you always have it prepared, and it doesn't count against the number of spells you can prepare each day. If you gain access to a spell that doesn't appear on the druid spell list, the spell is nonetheless a druid spell for you.",
+            "Mountain circle spells (druid level) - 3rd: Spider Climb, Spike Growth; 5th: Lightning Bolt, Meld Into Stone; 7th: Stone Shape, Stoneskin; 9th: Passwall, Wall of Stone."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "spider-climb",
+                "minLevel": 3
+              },
+              {
+                "index": "spike-growth",
+                "minLevel": 3
+              },
+              {
+                "index": "lightning-bolt",
+                "minLevel": 5
+              },
+              {
+                "index": "meld-into-stone",
+                "minLevel": 5
+              },
+              {
+                "index": "stone-shape",
+                "minLevel": 7
+              },
+              {
+                "index": "stoneskin",
+                "minLevel": 7
+              },
+              {
+                "index": "passwall",
+                "minLevel": 9
+              },
+              {
+                "index": "wall-of-stone",
+                "minLevel": 9
+              }
+            ]
+          },
+          "resource": null
+        },
+        {
+          "index": "circle-of-the-land-swamp",
+          "name": "Swamp",
+          "description": [
+            "Your mystical connection to the land infuses you with the ability to cast certain spells. At 3rd, 5th, 7th, and 9th level you gain access to circle spells connected to the land where you became a druid.",
+            "Choose that land--arctic, coast, desert, forest, grassland, mountain, or swamp--and consult the associated list of spells.",
+            "Once you gain access to a circle spell, you always have it prepared, and it doesn't count against the number of spells you can prepare each day. If you gain access to a spell that doesn't appear on the druid spell list, the spell is nonetheless a druid spell for you.",
+            "Swamp circle spells (druid level) - 3rd: Acid Arrow, Darkness; 5th: Stinking Cloud, Water Walk; 7th: Freedom of Movement, Locate Creature; 9th: Insect Plague, Scrying."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": {
+            "spells": [
+              {
+                "index": "acid-arrow",
+                "minLevel": 3
+              },
+              {
+                "index": "darkness",
+                "minLevel": 3
+              },
+              {
+                "index": "stinking-cloud",
+                "minLevel": 5
+              },
+              {
+                "index": "water-walk",
+                "minLevel": 5
+              },
+              {
+                "index": "freedom-of-movement",
+                "minLevel": 7
+              },
+              {
+                "index": "locate-creature",
+                "minLevel": 7
+              },
+              {
+                "index": "insect-plague",
+                "minLevel": 9
+              },
+              {
+                "index": "scrying",
+                "minLevel": 9
+              }
+            ]
+          },
+          "resource": null
+        }
+      ]
+    },
+    {
+      "setId": "hunter-3",
+      "name": "Hunter's Prey",
+      "options": [
+        {
+          "index": "hunters-prey-colossus-slayer",
+          "name": "Colossus Slayer",
+          "description": [
+            "Your tenacity can wear down the most potent foes. When you hit a creature with a weapon attack, the creature takes an extra 1d8 damage if it's below its hit point maximum. You can deal this extra damage only once per turn."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "hunters-prey-giant-killer",
+          "name": "Giant Killer",
+          "description": [
+            "When a Large or larger creature within 5 feet of you hits or misses you with an attack, you can use your reaction to attack that creature immediately after its attack, provided that you can see the creature."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "hunters-prey-horde-breaker",
+          "name": "Horde Breaker",
+          "description": [
+            "Once on each of your turns when you make a weapon attack, you can make another attack with the same weapon against a different creature that is within 5 feet of the original target and within range of your weapon."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        }
+      ]
+    },
+    {
+      "setId": "hunter-7",
+      "name": "Defensive Tactics",
+      "options": [
+        {
+          "index": "defensive-tactics-escape-the-horde",
+          "name": "Escape the Horde",
+          "description": [
+            "Opportunity attacks against you are made with disadvantage."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "defensive-tactics-multiattack-defense",
+          "name": "Multiattack Defense",
+          "description": [
+            "When a creature hits you with an attack, you gain a +4 bonus to AC against all subsequent attacks made by that creature for the rest of the turn."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "defensive-tactics-steel-will",
+          "name": "Steel Will",
+          "description": [
+            "You have advantage on saving throws against being frightened."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        }
+      ]
+    },
+    {
+      "setId": "hunter-11",
+      "name": "Multiattack",
+      "options": [
+        {
+          "index": "multiattack-volley",
+          "name": "Volley",
+          "description": [
+            "You can use your action to make a ranged attack against any number of creatures within 10 feet of a point you can see within your weapon's range. You must have ammunition for each target, as normal, and you make a separate attack roll for each target."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "multiattack-whirlwind-attack",
+          "name": "Whirlwind Attack",
+          "description": [
+            "You can use your action to make a melee attack against any number of creatures within 5 feet of you, with a separate attack roll for each target."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        }
+      ]
+    },
+    {
+      "setId": "hunter-15",
+      "name": "Superior Hunter's Defense",
+      "options": [
+        {
+          "index": "superior-hunters-defense-evasion",
+          "name": "Evasion",
+          "description": [
+            "When you are subjected to an effect, such as a red dragon's fiery breath or a lightning bolt spell, that allows you to make a Dexterity saving throw to take only half damage, you instead take no damage if you succeed on the saving throw, and only half damage if you fail."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "superior-hunters-defense-stand-against-the-tide",
+          "name": "Stand Against the Tide",
+          "description": [
+            "When a hostile creature misses you with a melee attack, you can use your reaction to force that creature to repeat the same attack against another creature (other than itself) of your choice."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "superior-hunters-defense-uncanny-dodge",
+          "name": "Uncanny Dodge",
+          "description": [
+            "When an attacker that you can see hits you with an attack, you can use your reaction to halve the attack's damage against you."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        }
+      ]
+    },
+    {
+      "setId": "dragon-ancestors",
+      "name": "Dragon Ancestor",
+      "options": [
+        {
+          "index": "dragon-ancestor-black---acid-damage",
+          "name": "Black (Acid)",
+          "description": [
+            "At 1st level, you choose one type of dragon as your ancestor. The damage type associated with each dragon is used by features you gain later.",
+            "You can speak, read, and write Draconic. Additionally, whenever you make a Charisma check when interacting with dragons, your proficiency bonus is doubled if it applies to the check.",
+            "Damage type: Acid."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "dragon-ancestor-blue---lightning-damage",
+          "name": "Blue (Lightning)",
+          "description": [
+            "At 1st level, you choose one type of dragon as your ancestor. The damage type associated with each dragon is used by features you gain later.",
+            "You can speak, read, and write Draconic. Additionally, whenever you make a Charisma check when interacting with dragons, your proficiency bonus is doubled if it applies to the check.",
+            "Damage type: Lightning."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "dragon-ancestor-brass---fire-damage",
+          "name": "Brass (Fire)",
+          "description": [
+            "At 1st level, you choose one type of dragon as your ancestor. The damage type associated with each dragon is used by features you gain later.",
+            "You can speak, read, and write Draconic. Additionally, whenever you make a Charisma check when interacting with dragons, your proficiency bonus is doubled if it applies to the check.",
+            "Damage type: Fire."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "dragon-ancestor-bronze---lightning-damage",
+          "name": "Bronze (Lightning)",
+          "description": [
+            "At 1st level, you choose one type of dragon as your ancestor. The damage type associated with each dragon is used by features you gain later.",
+            "You can speak, read, and write Draconic. Additionally, whenever you make a Charisma check when interacting with dragons, your proficiency bonus is doubled if it applies to the check.",
+            "Damage type: Lightning."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "dragon-ancestor-copper---acid-damage",
+          "name": "Copper (Acid)",
+          "description": [
+            "At 1st level, you choose one type of dragon as your ancestor. The damage type associated with each dragon is used by features you gain later.",
+            "You can speak, read, and write Draconic. Additionally, whenever you make a Charisma check when interacting with dragons, your proficiency bonus is doubled if it applies to the check.",
+            "Damage type: Acid."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "dragon-ancestor-gold---fire-damage",
+          "name": "Gold (Fire)",
+          "description": [
+            "At 1st level, you choose one type of dragon as your ancestor. The damage type associated with each dragon is used by features you gain later.",
+            "You can speak, read, and write Draconic. Additionally, whenever you make a Charisma check when interacting with dragons, your proficiency bonus is doubled if it applies to the check.",
+            "Damage type: Fire."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "dragon-ancestor-green---poison-damage",
+          "name": "Green (Poison)",
+          "description": [
+            "At 1st level, you choose one type of dragon as your ancestor. The damage type associated with each dragon is used by features you gain later.",
+            "You can speak, read, and write Draconic. Additionally, whenever you make a Charisma check when interacting with dragons, your proficiency bonus is doubled if it applies to the check.",
+            "Damage type: Poison."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "dragon-ancestor-red---fire-damage",
+          "name": "Red (Fire)",
+          "description": [
+            "At 1st level, you choose one type of dragon as your ancestor. The damage type associated with each dragon is used by features you gain later.",
+            "You can speak, read, and write Draconic. Additionally, whenever you make a Charisma check when interacting with dragons, your proficiency bonus is doubled if it applies to the check.",
+            "Damage type: Fire."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "dragon-ancestor-silver---cold-damage",
+          "name": "Silver (Cold)",
+          "description": [
+            "At 1st level, you choose one type of dragon as your ancestor. The damage type associated with each dragon is used by features you gain later.",
+            "You can speak, read, and write Draconic. Additionally, whenever you make a Charisma check when interacting with dragons, your proficiency bonus is doubled if it applies to the check.",
+            "Damage type: Cold."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        },
+        {
+          "index": "dragon-ancestor-white---cold-damage",
+          "name": "White (Cold)",
+          "description": [
+            "At 1st level, you choose one type of dragon as your ancestor. The damage type associated with each dragon is used by features you gain later.",
+            "You can speak, read, and write Draconic. Additionally, whenever you make a Charisma check when interacting with dragons, your proficiency bonus is doubled if it applies to the check.",
+            "Damage type: Cold."
+          ],
+          "prerequisitesText": null,
+          "prerequisites": null,
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        }
+      ]
+    },
+    {
+      "setId": "feats",
+      "name": "Feats",
+      "options": [
+        {
+          "index": "grappler",
+          "name": "Grappler",
+          "description": [
+            "You've developed the skills necessary to hold your own in close-quarters grappling. You gain the following benefits:",
+            "- You have advantage on attack rolls against a creature you are grappling.",
+            "- You can use your action to try to pin a creature grappled by you. To do so, make another grapple check. If you succeed, you and the creature are both restrained until the grapple ends."
+          ],
+          "prerequisitesText": "Prerequisite: Strength 13 or higher",
+          "prerequisites": {
+            "abilities": {
+              "str": 13
+            }
+          },
+          "modifiers": [],
+          "abilityIncrease": null,
+          "grants": null,
+          "resource": null
+        }
+      ]
+    }
+  ]
+}
