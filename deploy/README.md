@@ -42,52 +42,59 @@ curl http://127.0.0.1:8080/health/ready
   ```
 
   Abre ese enlace, elige tu contraseña e inicia sesión en la app. El enlace se escribe con nivel
-  `Warning`: no pongas `LOG_LEVEL=Error` en el primer arranque. Si caduca, usa «He olvidado mi
+  `Warning`: no bajes el nivel de log a `Error` en el primer arranque. Si caduca, usa «He olvidado mi
   contraseña» (necesita SMTP).
 - Las **migraciones de base de datos se aplican solas** al arrancar la API
   (`Database__AutoMigrate=true`), igual que la importación del catálogo SRD.
 
 ## Variables de `.env`
 
-| Variable | Para qué sirve | Por defecto |
-|----------|----------------|-------------|
-| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base de datos (la contraseña es obligatoria) | `dnd`, `dnd`, — |
-| `PUBLIC_URL` | Respaldo opcional de la URL pública; normalmente vacío (la aporta tu proxy) | vacío |
-| `ADMIN_EMAIL` | Correo del administrador inicial | `admin@example.com` |
-| `JWT_SECRET` | Firma de los tokens y enlaces de asistencia (obligatoria) | — |
-| `MAX_UPLOAD_MB` | Tamaño máximo de subida en la API (ver [Límites de subida](#límites-de-subida)) | `200` |
-| `DEFAULT_TIME_ZONE` | Zona horaria IANA de las campañas nuevas (cada campaña puede cambiarla en sus ajustes) | `Europe/Madrid` |
-| `REMINDERS_ENABLED` | Activa el envío de recordatorios de sesión por correo | `true` |
-| `REMINDERS_POLL_SECONDS` | Cada cuántos segundos busca recordatorios pendientes | `60` |
-| `LOG_LEVEL` | Nivel mínimo de logs: `Trace`, `Debug`, `Information`, `Warning`, `Error` | `Information` |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_ADDRESS`, `SMTP_FROM_NAME` | Correo saliente. `SMTP_SECURITY`: `Auto` (465 → TLS implícito, 587 → STARTTLS), `SslOnConnect`, `StartTls` o `None` | puerto `465`, `Auto` |
-| `SMTP_CHECK_REVOCATION` | Comprobar revocación del certificado del SMTP; `false` solo si tu CA no publica CRL/OCSP | `true` |
-| `SSL_CERT_FILE` / `SSL_CERT_DIR` | CA propia para el SMTP u otras conexiones TLS salientes (variables estándar de OpenSSL que .NET respeta) | bundle del sistema |
-| `API_BIND`, `API_PORT` | Dirección y puerto del host en los que escucha la API (`127.0.0.1` solo para un proxy local; `0.0.0.0` para exponerla en la LAN/VPN) | `127.0.0.1`, `8080` |
-| `API_IMAGE` | Imagen de la API en GitHub Packages (`:dev-latest` de la CI o `:1.2.0` de una release). Para usar una compilada en local: `docker build -t dnd-companion-api:local ../server` y `API_IMAGE=dnd-companion-api:local` | — |
-| `CA_BUNDLE_HOST_PATH` | Fichero PEM del host que se monta en el contenedor como `SSL_CERT_FILE` (bundle del sistema si no tienes CA propia) | — |
-| `BACKUP_RETENTION_DAYS` | Días que `backup.sh` conserva las copias | `14` |
+| Variable | Para qué sirve |
+|----------|----------------|
+| `API_IMAGE` | Imagen de la API en GitHub Packages (`:dev-latest` de la CI o `:1.2.0` de una release). Para una compilada en local: `docker build -t dnd-companion-api:local ../server` y `API_IMAGE=dnd-companion-api:local` |
+| `API_BIND`, `API_PORT` | Dirección y puerto del host en los que escucha la API (`127.0.0.1` solo para un proxy local; `0.0.0.0` para exponerla en la LAN/VPN) |
+| `POSTGRES_PASSWORD` | Contraseña de la base de datos (usuario y base se llaman `dnd`) |
+| `ADMIN_EMAIL` | Correo del administrador inicial |
+| `JWT_SECRET` | Firma de los tokens y de los enlaces de asistencia (mínimo 32 caracteres) |
+| `DEFAULT_TIME_ZONE` | Zona horaria IANA de las campañas nuevas (cada campaña puede cambiarla en sus ajustes) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_ADDRESS` | Correo saliente. Puerto `465` = TLS implícito, `587` = STARTTLS (se detecta por el puerto). El remitente debe estar autorizado para la cuenta |
+| `CA_BUNDLE_HOST_PATH` | Fichero PEM del host con tu CA propia, montado en el contenedor como `/certs/ca.pem` (deja el bundle del sistema si no tienes CA propia) |
+
+### Ajustes opcionales
+
+Tienen un valor razonable dentro de la imagen. Para cambiarlos, añade la variable de entorno al
+servicio `api` del `docker-compose.yml`:
+
+| Variable de entorno | Por defecto | Para qué sirve |
+|---------------------|-------------|----------------|
+| `Logging__LogLevel__Default` | `Information` | Nivel mínimo de logs: `Trace`, `Debug`, `Information`, `Warning`, `Error` |
+| `FileStorage__MaxUploadMegabytes` | `200` | Tamaño máximo de subida (ver [Límites de subida](#límites-de-subida)) |
+| `Reminders__Enabled`, `Reminders__PollSeconds` | `true`, `60` | Envío de recordatorios de sesión y frecuencia de comprobación |
+| `Smtp__Security` | `Auto` | `Auto`, `SslOnConnect`, `StartTls` o `None` |
+| `Smtp__CheckCertificateRevocation` | `true` | `false` solo si tu CA privada no publica CRL/OCSP y el envío falla por revocación |
+| `Smtp__FromName` | `D&D Companion` | Nombre del remitente |
+| `App__PublicUrl` | vacío | Respaldo de la URL pública para correos enviados antes de la primera petición por el proxy |
+| `SSL_CERT_DIR` | — | Alternativa a `SSL_CERT_FILE`: directorio de PEM procesado con `openssl rehash` |
+| `BACKUP_RETENTION_DAYS` (en `.env`) | `14` | Días que `backup.sh` conserva las copias |
 
 Cada recordatorio se calcula en la zona horaria de su campaña y los avisos (24 h y 2 h antes por
-defecto) los ajusta el DM en los ajustes de la campaña. Con `REMINDERS_ENABLED=false` no se envía
-ninguno.
+defecto) los ajusta el DM en los ajustes de la campaña.
 
 ## Correo con tu propio SMTP
 
 La API envía los correos de alta, recuperación de contraseña y recordatorios con MailKit. Con
-`SMTP_PORT=465` y `SMTP_SECURITY=Auto` conecta con TLS implícito; con `587` usa STARTTLS.
+`SMTP_PORT=465` conecta con TLS implícito; con `587` usa STARTTLS.
 
 Si tu servidor de correo presenta un certificado firmado por **tu propia CA**, el contenedor debe
 confiar en ella. .NET en Linux respeta las variables estándar de OpenSSL, así que basta con montar
 el fichero y apuntar la variable:
 
-```yaml
-# docker-compose.yml (servicio api)
-    environment:
-      SSL_CERT_FILE: /certs/ca.pem        # un bundle PEM; las CA públicas siguen cargándose del directorio por defecto
-    volumes:
-      - ./certs/ca.pem:/certs/ca.pem:ro
+```bash
+# .env
+CA_BUNDLE_HOST_PATH=/ruta/a/tu/ca.pem
 ```
+
+El Compose lo monta como `/certs/ca.pem` y apunta `SSL_CERT_FILE` a él.
 
 Alternativa con directorio: `SSL_CERT_DIR=/certs` con los PEM procesados por `openssl rehash /certs`
 (los nombres deben ser los hashes que genera ese comando). Nunca se desactiva la validación del
@@ -252,10 +259,10 @@ Rota el secreto si sospechas que se ha filtrado y, de forma periódica, en las f
 
 ## Límites de subida
 
-El tamaño máximo de un fichero (mapa, PDF, APK) es `MAX_UPLOAD_MB` (200 MB por defecto) y se aplica
+El tamaño máximo de un fichero (mapa, PDF, APK) es de 200 MB por defecto y se aplica
 en dos sitios que deben coincidir:
 
-1. **API**: `MAX_UPLOAD_MB` en `.env` (`FileStorage__MaxUploadMegabytes`). Responde `413` por encima.
+1. **API**: `FileStorage__MaxUploadMegabytes` en el servicio `api` del Compose (200 por defecto). Responde `413` por encima.
 2. **Tu reverse proxy**: `client_max_body_size` en nginx (Caddy no limita por defecto). El proxy
    responde `413` antes de que la petición llegue a la API.
 
