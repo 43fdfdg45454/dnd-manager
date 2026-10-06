@@ -25,7 +25,7 @@ RUN apt-get update \
 RUN mkdir -p /data/files && chown -R "$APP_UID" /data
 COPY --from=build /app/publish .
 
-ENV ASPNETCORE_URLS=http://+:8080 \
+ENV ASPNETCORE_HTTP_PORTS=8080 \
     FileStorage__RootPath=/data/files
 EXPOSE 8080
 USER $APP_UID

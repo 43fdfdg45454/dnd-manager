@@ -7,6 +7,7 @@ using Dnd.Application.Abstractions;
 using Dnd.Application.Common;
 using Dnd.Infrastructure;
 using Dnd.Infrastructure.Files;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -39,6 +40,13 @@ builder.Services.AddOptions<KestrelServerOptions>().Configure<IOptions<FileStora
     kestrel.Limits.MaxRequestBodySize = files.Value.MaxUploadMegabytes * 1024L * 1024L + FileEndpoints.MultipartOverheadBytes);
 builder.Services.AddOptions<FormOptions>().Configure<IOptions<FileStorageOptions>>((form, files) =>
     form.MultipartBodyLengthLimit = files.Value.MaxUploadMegabytes * 1024L * 1024L + FileEndpoints.MultipartOverheadBytes);
+
+// Data Protection keys (used by ASP.NET internals such as antiforgery; auth uses JWT) persist next to the
+// uploaded files so they survive container restarts instead of living in the ephemeral home directory.
+builder.Services.AddDataProtection()
+    .SetApplicationName("dnd-companion")
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(
+        Path.GetFullPath(builder.Configuration["FileStorage:RootPath"] ?? "data/files"), ".dataprotection")));
 
 // Background sender of the session reminders (Reminders:Enabled / Reminders:PollSeconds).
 builder.Services.AddOptions<ReminderOptions>()
