@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Dnd.Api.Auth;
 using Dnd.Api.Filters;
 using Dnd.Application.Party;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Dnd.Api.Endpoints;
 
@@ -26,13 +27,25 @@ public static class PartyEndpoints
         group.MapPost("/rest", async (Guid campaignId, PartyRestRequest request, ClaimsPrincipal user, PartyRestHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), campaignId, request, ct)))
             .WithName("PartyRest")
-            .WithSummary("Descanso corto o largo forzado para todos los personajes activos o los indicados (el corto no gasta dados de golpe). Requiere al menos DM.")
+            .WithSummary("Descanso corto o largo forzado para todos los personajes activos o los indicados (el corto no gasta dados de golpe). Cancela sus peticiones de descanso pendientes. Requiere al menos DM.")
             .ProducesValidationProblem();
 
         group.MapPost("/adjust", async (Guid campaignId, List<PartyAdjustment> request, ClaimsPrincipal user, PartyAdjustHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), campaignId, request, ct)))
             .WithName("PartyAdjust")
             .WithSummary("Daño o curación, PG temporales, condiciones y PG máximos (0 quita el valor sobrescrito) de varios personajes a la vez. Requiere al menos DM.")
+            .ProducesValidationProblem();
+
+        group.MapPost("/grant-level", async (Guid campaignId, PartyLevelRequest? request, ClaimsPrincipal user, PartyLevelHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.GrantAsync(user.GetUserId(), campaignId, request, ct)))
+            .WithName("PartyGrantLevel")
+            .WithSummary("Concede el siguiente nivel ({ characterIds? }; sin lista, a todos los activos): pendingLevelUpTo = nivel + 1. No se acumula y no pasa de 20. Requiere al menos DM.")
+            .ProducesValidationProblem();
+
+        group.MapDelete("/grant-level", async (Guid campaignId, [FromBody] PartyLevelRequest? request, ClaimsPrincipal user, PartyLevelHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.RevokeAsync(user.GetUserId(), campaignId, request, ct)))
+            .WithName("PartyRevokeLevel")
+            .WithSummary("Retira el nivel concedido y aún no completado ({ characterIds? } opcional; sin lista, a todos). Requiere al menos DM.")
             .ProducesValidationProblem();
 
         return app;

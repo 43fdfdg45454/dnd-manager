@@ -30,6 +30,18 @@ public static class CampaignEventTypes
     public const string SessionUpdated = "session.updated";
 
     public const string PartyStashUpdated = "party.stash.updated";
+
+    /// <summary>
+    /// The user was removed from the campaign or left it (sent to that user only; their connections no
+    /// longer receive the campaign's events).
+    /// </summary>
+    public const string MembershipRemoved = "membership.removed";
+
+    /// <summary>A rest request was created, approved, rejected or cancelled (<see cref="CampaignEvent.EntityId"/> = request).</summary>
+    public const string RestRequestUpdated = "restRequest.updated";
+
+    /// <summary>A DM granted a level-up to the character (sent to the campaign and to the character's owner).</summary>
+    public const string LevelUpGranted = "levelUp.granted";
 }
 
 /// <summary>
@@ -64,6 +76,12 @@ public static class CampaignNotifierExtensions
 
     public static Task SessionUpdatedAsync(this ICampaignNotifier notifier, GameSession session, DateTimeOffset at, CancellationToken cancellationToken = default) =>
         notifier.NotifyAsync(new CampaignEvent(CampaignEventTypes.SessionUpdated, session.CampaignId, null, session.Id, at), cancellationToken);
+
+    public static Task RestRequestUpdatedAsync(this ICampaignNotifier notifier, Guid campaignId, Guid characterId, Guid requestId, DateTimeOffset at, CancellationToken cancellationToken = default) =>
+        notifier.NotifyAsync(new CampaignEvent(CampaignEventTypes.RestRequestUpdated, campaignId, characterId, requestId, at), cancellationToken);
+
+    public static Task MembershipRemovedAsync(this ICampaignNotifier notifier, Guid campaignId, Guid userId, DateTimeOffset at, CancellationToken cancellationToken = default) =>
+        notifier.NotifyUserAsync(userId, new CampaignEvent(CampaignEventTypes.MembershipRemoved, campaignId, null, null, at), cancellationToken);
 
     public static Task StashUpdatedAsync(this ICampaignNotifier notifier, Guid campaignId, DateTimeOffset at, CancellationToken cancellationToken = default) =>
         notifier.NotifyAsync(new CampaignEvent(CampaignEventTypes.PartyStashUpdated, campaignId, null, null, at), cancellationToken);

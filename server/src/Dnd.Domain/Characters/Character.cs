@@ -1218,6 +1218,7 @@ public sealed partial class Character : EntityBase
             .Where(u => classes.Any(c => c.ClassIndex == u.Key))
             .ToDictionary(u => u.Key, u => Math.Min(u.Value, classes.First(c => c.ClassIndex == u.Key).Level), StringComparer.Ordinal);
         SetHitDiceUsed(used);
+        ClearStaleLevelUp();
     }
 
     private void ApplyProficiencies(List<ProficiencyEntry> proficiencies)

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Dnd.Api.Auth;
 using Dnd.Api.Filters;
+using Dnd.Api.Hosting;
 using Dnd.Application.Auth;
 
 namespace Dnd.Api.Endpoints;
@@ -16,10 +17,13 @@ public static class AuthEndpoints
         group.MapPost("/login", async (LoginRequest request, LoginHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(request, ct)))
             .AllowAnonymous()
+            .RequireRateLimiting(RateLimitingSetup.LoginPolicy)
+            .AddEndpointFilter<LoginAccountRateLimitFilter>()
             .WithName("Login")
-            .WithSummary("Inicia sesión con email y contraseña.")
+            .WithSummary("Inicia sesión con email y contraseña. 429 tras demasiados intentos por IP o por cuenta.")
             .ProducesValidationProblem()
-            .ProducesProblem(StatusCodes.Status401Unauthorized);
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         group.MapPost("/refresh", async (RefreshRequest request, RefreshHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(request, ct)))

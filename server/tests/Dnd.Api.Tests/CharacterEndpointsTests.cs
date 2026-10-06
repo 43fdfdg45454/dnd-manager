@@ -483,7 +483,7 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
 
         var spent = await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/spell-slots/0/spend", new { amount = 2 });
         Assert.Equal(2, Assert.Single(spent.SpellSlots).Used);
-        var rested = await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/rest/short", new { hitDice = new Dictionary<string, int>() });
+        var rested = await PostAsync(s.Dm, $"{CharacterUrl(character.Id)}/rest/short", new { hitDice = new Dictionary<string, int>() });
         Assert.Equal(0, Assert.Single(rested.SpellSlots).Used);
     }
 
@@ -520,7 +520,7 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
         await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/spell-slots/1/spend", new { amount = 3 });
         await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/concentration", new { spellIndex = "shield" });
 
-        var rested = await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/rest/long", null);
+        var rested = await PostAsync(s.Dm, $"{CharacterUrl(character.Id)}/rest/long", null);
 
         Assert.Equal(max, rested.HitPointsCurrent);
         Assert.Equal(4, rested.TemporaryHitPoints);
@@ -539,8 +539,8 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
         await ActivateAsync(s.Dm, character.Id);
         await PatchCombatAsync(s.Player, character.Id, new { hitPointsCurrent = 1 });
 
-        var rested = await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/rest/short", new { hitDice = new Dictionary<string, int> { ["fighter"] = 2 } });
-        var tooMany = await s.Player.Client.PostAsJsonAsync($"{CharacterUrl(character.Id)}/rest/short", new { hitDice = new Dictionary<string, int> { ["fighter"] = 2 } });
+        var rested = await PostAsync(s.Dm, $"{CharacterUrl(character.Id)}/rest/short", new { hitDice = new Dictionary<string, int> { ["fighter"] = 2 } });
+        var tooMany = await s.Dm.Client.PostAsJsonAsync($"{CharacterUrl(character.Id)}/rest/short", new { hitDice = new Dictionary<string, int> { ["fighter"] = 2 } });
 
         Assert.Equal(2, rested.HitDiceUsed["fighter"]);
         Assert.Equal(1, Assert.Single(rested.Sheet.HitDice).Remaining);

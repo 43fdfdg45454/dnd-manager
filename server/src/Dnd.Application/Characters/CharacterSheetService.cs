@@ -57,6 +57,7 @@ public sealed class CharacterSheetService(
     IEquippedGearProvider gearProvider,
     IUserRepository users,
     IChangeRequestRepository changeRequests,
+    IRestRequestRepository restRequests,
     IItemTemplateRepository itemTemplates) : ICharacterSheetService
 {
     public async Task<CharacterSheet> CalculateAsync(Character character, CancellationToken cancellationToken = default)
@@ -76,6 +77,8 @@ public sealed class CharacterSheetService(
         var sheetCatalog = await SheetCatalog.LoadAsync(catalog, characters, includeSpells: false, cancellationToken);
         var sheetsById = await CalculateManyAsync(characters, sheetCatalog, cancellationToken);
         var owners = await users.GetDisplayNamesAsync(characters.Select(c => c.OwnerUserId).OfType<Guid>().Distinct().ToList(), cancellationToken);
+        var pendingRests = (await restRequests.ListPendingAsync(characters.Select(c => c.Id).ToList(), cancellationToken))
+            .ToDictionary(r => r.CharacterId);
 
         return characters
             .OrderBy(c => c.Name, StringComparer.InvariantCultureIgnoreCase)
@@ -116,7 +119,9 @@ public sealed class CharacterSheetService(
                         .ToList(),
                     sheet.PactMagic is { } pact
                         ? new SpellSlotDto(pact.SlotLevel, pact.Slots, c.SpellSlotsUsed(SpellSlotState.PactLevel))
-                        : null);
+                        : null,
+                    pendingRests.TryGetValue(c.Id, out var rest) ? PendingRestDto.From(rest) : null,
+                    c.PendingLevelUpTo);
             })
             .ToList();
     }
@@ -208,6 +213,7 @@ public sealed class CharacterSheetService(
         var pending = await changeRequests.ListViewsAsync(
             new ChangeRequestQuery(CharacterId: character.Id, Status: ChangeRequestStatus.Pending),
             cancellationToken);
+        var pendingRest = (await restRequests.ListPendingAsync([character.Id], cancellationToken)).FirstOrDefault();
         var templates = await InventoryView.LoadTemplatesAsync(itemTemplates, character.Items.Select(i => i.TemplateId), cancellationToken);
         var resources = character.Resources
             .OrderBy(r => r.IsAuto ? 0 : 1)
@@ -302,6 +308,8 @@ public sealed class CharacterSheetService(
             PendingChangeRequests = pending.Select(ChangeRequestDto.From).ToList(),
             Inventory = InventoryView.Build(character, templates, sheet.Abilities[Abilities.Str].Score),
             Combat = CombatSummaryBuilder.Build(character, sheet, sheetCatalog, templates, resources),
+            PendingRest = pendingRest is null ? null : PendingRestDto.From(pendingRest),
+            PendingLevelUpTo = character.PendingLevelUpTo,
         };
     }
 

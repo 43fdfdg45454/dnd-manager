@@ -132,11 +132,26 @@ server {
         proxy_set_header   X-Forwarded-Proto $scheme;
         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header   X-Real-IP         $remote_addr;
-        # WebSocket del hub de tiempo real (/hubs/campaign).
-        proxy_set_header   Upgrade           $http_upgrade;
-        proxy_set_header   Connection        $connection_upgrade;
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
+    }
+
+    # Hub de tiempo real (SignalR) en su propia ruta: WebSocket con tiempos de espera largos.
+    # Si tu nginx es anterior a 1.25 y no soporta WebSocket sobre HTTP/2, no pasa nada: el cliente
+    # negocia HTTP/1.1 para esta ruta.
+    location /hubs/ {
+        proxy_pass         http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $http_host;
+        proxy_set_header   X-Forwarded-Host  $http_host;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   Upgrade           $http_upgrade;
+        proxy_set_header   Connection        $connection_upgrade;
+        proxy_buffering    off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
     }
 }
 ```
@@ -149,6 +164,18 @@ máquina, pon `API_BIND=0.0.0.0` y apunta `proxy_pass` a la IP del host.
 SignalR en `/hubs/campaign`. Las cabeceras `Upgrade`/`Connection` de arriba permiten WebSocket; si el
 proxy no lo negocia, SignalR cae solo a Server-Sent Events o long polling, que funcionan sin tocar
 nada pero con más latencia y peticiones. Caddy reenvía WebSocket sin configuración extra.
+
+**Límites de peticiones y diagnóstico**: cada usuario puede tener 5 conexiones abiertas al hub a la
+vez (`Realtime__MaxConnectionsPerUser`) y 30 intentos de conexión por minuto (`RateLimits__Hub__PermitLimit`,
+por usuario o por IP si no hay sesión; los sondeos de una conexión ya abierta no cuentan). El login
+admite 10 intentos por minuto por IP (`RateLimits__Login__PermitLimit`) y otros 10 por cuenta, sea cual
+sea la IP (`RateLimits__LoginAccount__PermitLimit`); la ventana se cambia con `…__WindowSeconds`. Al
+superarlos la API responde `429` con `Retry-After`. El límite por IP usa la IP que manda el proxy en
+`X-Forwarded-For` (sin esa cabecera todos los clientes compartirían la IP del proxy); como esa cabecera
+se puede falsear, el límite por cuenta es el que protege de verdad cada contraseña. Para cambiar un
+valor, añade la variable al bloque `environment` de `api` en `docker-compose.yml`. La pantalla
+«Servidor → Probar conexión» de la app comprueba la API, la sesión, el hub a través del proxy y el
+transporte usado (`GET /api/v1/realtime/status`); si no es WebSockets, revisa `Upgrade`/`Connection`.
 
 **CA propia o certificado autofirmado**: la app Android confía en los certificados de usuario del
 dispositivo. Instala tu CA en Ajustes → Seguridad → Credenciales de usuario (o fija la huella del

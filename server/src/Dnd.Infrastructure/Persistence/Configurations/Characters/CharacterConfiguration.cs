@@ -53,6 +53,10 @@ internal sealed class CharacterConfiguration : IEntityTypeConfiguration<Characte
         builder.HasOne<StoredFile>().WithMany().HasForeignKey(x => x.PortraitFileId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
         builder.HasIndex(x => x.PortraitFileId);
 
+        // Level-up granted by a DM (phase 16b); the granting user is kept like the resolver of a request.
+        builder.HasOne<User>().WithMany().HasForeignKey(x => x.LevelGrantedByUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => x.LevelGrantedByUserId);
+
         ConfigureChildren<CharacterClassLevel>(builder, nameof(Character.Classes), "_classes");
         ConfigureChildren<CharacterProficiency>(builder, nameof(Character.Proficiencies), "_proficiencies");
         ConfigureChildren<CharacterSpell>(builder, nameof(Character.Spells), "_spells");
@@ -174,6 +178,40 @@ internal sealed class ChangeRequestConfiguration : IEntityTypeConfiguration<Chan
         builder.HasIndex(x => new { x.CampaignId, x.Status });
 
         builder.HasOne<Character>().WithMany().HasForeignKey(x => x.CharacterId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(x => new { x.CharacterId, x.Status });
+
+        builder.HasOne<User>().WithMany().HasForeignKey(x => x.RequestedByUserId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => x.RequestedByUserId);
+        builder.HasOne<User>().WithMany().HasForeignKey(x => x.ResolvedByUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => x.ResolvedByUserId);
+    }
+}
+
+internal sealed class RestRequestConfiguration : IEntityTypeConfiguration<RestRequest>
+{
+    public void Configure(EntityTypeBuilder<RestRequest> builder)
+    {
+        builder.ToTable("RestRequests");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(16).IsRequired();
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
+        builder.Property(x => x.HitDiceJson).IsRequired();
+        builder.Property(x => x.Comment).HasMaxLength(RestRequest.CommentMaxLength);
+        builder.Property(x => x.RequestedAt).IsRequired();
+        builder.Property(x => x.CreatedAt).IsRequired();
+        builder.Ignore(x => x.IsPending);
+        builder.Ignore(x => x.HitDice);
+
+        builder.HasOne<Campaign>().WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(x => new { x.CampaignId, x.Status });
+
+        // At most one pending request per character (filtered unique index; PostgreSQL and SQLite).
+        builder.HasOne<Character>().WithMany().HasForeignKey(x => x.CharacterId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(x => x.CharacterId)
+            .IsUnique()
+            .HasFilter($"\"Status\" = '{nameof(RestRequestStatus.Pending)}'")
+            .HasDatabaseName("IX_RestRequests_CharacterId_Pending");
         builder.HasIndex(x => new { x.CharacterId, x.Status });
 
         builder.HasOne<User>().WithMany().HasForeignKey(x => x.RequestedByUserId).OnDelete(DeleteBehavior.Restrict);

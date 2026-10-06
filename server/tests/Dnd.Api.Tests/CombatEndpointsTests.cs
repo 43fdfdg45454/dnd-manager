@@ -153,10 +153,13 @@ public class CombatEndpointsTests(CatalogApiFactory factory)
 
         var tooMuch = await s.Player.Client.PostAsJsonAsync(ActionUrl(character.Id, "lay-on-hands"), new { amount = 6 });
         var healed = await ActionAsync<CharacterDetailDto>(s.Player, character.Id, "lay-on-hands", new { amount = 3 });
-        var other = await ActionAsync<CharacterDetailDto>(s.Player, character.Id, "lay-on-hands", new { amount = 2, targetSelf = false });
+        var longNote = await s.Player.Client.PostAsJsonAsync(ActionUrl(character.Id, "lay-on-hands"), new { amount = 1, targetSelf = false, note = new string('x', 201) });
+        var other = await ActionAsync<CharacterDetailDto>(s.Player, character.Id, "lay-on-hands", new { amount = 2, targetSelf = false, note = "Curar a Thorin" });
         var exhausted = await s.Player.Client.PostAsJsonAsync(ActionUrl(character.Id, "lay-on-hands"), new { amount = 1 });
 
         Assert.Equal(HttpStatusCode.BadRequest, tooMuch.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, longNote.StatusCode);
+        Assert.Contains(factory.Logs.Entries, e => e.Message.Contains("Curar a Thorin", StringComparison.Ordinal));
         Assert.Equal(7, healed.HitPointsCurrent);
         Assert.Equal(7, other.HitPointsCurrent);
         Assert.Equal(5, other.Resources.Single(r => r.Key == "lay-on-hands").Used);

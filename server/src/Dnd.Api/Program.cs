@@ -30,8 +30,26 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // Realtime campaign events (ADR 0006): the SignalR hub replaces the no-op notifier of the application layer.
-builder.Services.AddSignalR();
+builder.Services.AddSignalR(options =>
+{
+    options.MaximumReceiveMessageSize = 32 * 1024;
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+});
 builder.Services.Replace(ServiceDescriptor.Singleton<ICampaignNotifier, SignalRCampaignNotifier>());
+
+// Open hub connections by user (Realtime:MaxConnectionsPerUser); also how removed members and
+// deactivated users lose their connections.
+builder.Services.AddOptions<RealtimeOptions>()
+    .Bind(builder.Configuration.GetSection(RealtimeOptions.SectionName))
+    .Validate(o => o.MaxConnectionsPerUser >= 1, "Realtime:MaxConnectionsPerUser must be at least 1.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<ConnectionTracker>();
+builder.Services.Replace(ServiceDescriptor.Singleton<IRealtimeConnections>(sp => sp.GetRequiredService<ConnectionTracker>()));
+
+// Rate limits (RateLimits:*): hub connection attempts and login (per IP and per account).
+builder.Services.AddAppRateLimiting(builder.Configuration);
 
 // The public URL comes from the mandatory App:PublicUrl; the forwarded headers only keep the scheme and host
 // of the requests correct (logs, redirects).
@@ -125,6 +143,8 @@ app.UseSwaggerUI();
 app.UseStaticFiles();
 
 app.UseAuthentication();
+// After authentication (the hub limit is per user) and before authorization (anonymous attempts count per IP).
+app.UseRateLimiter();
 app.UseAuthorization();
 
 // Liveness: the process is up. Readiness: dependencies (PostgreSQL) answer.
@@ -155,7 +175,9 @@ app.MapPageEndpoints();
 app.MapPartyEndpoints();
 app.MapPartyStashEndpoints();
 app.MapMessageEndpoints();
-app.MapHub<CampaignHub>(CampaignHub.Path);
+app.MapRestRequestEndpoints();
+app.MapRealtimeEndpoints();
+app.MapHub<CampaignHub>(CampaignHub.Path).RequireRateLimiting(RateLimitingSetup.HubPolicy);
 
 await app.RunAsync();
 

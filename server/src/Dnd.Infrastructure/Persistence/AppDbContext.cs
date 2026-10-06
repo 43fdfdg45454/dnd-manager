@@ -74,6 +74,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<ChangeRequest> ChangeRequests => Set<ChangeRequest>();
 
+    public DbSet<RestRequest> RestRequests => Set<RestRequest>();
+
     public DbSet<CharacterItem> CharacterItems => Set<CharacterItem>();
 
     public DbSet<Shop> Shops => Set<Shop>();

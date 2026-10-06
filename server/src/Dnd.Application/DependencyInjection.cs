@@ -81,6 +81,7 @@ public static class DependencyInjection
 
         // Realtime events: nothing by default; the API host replaces it with the SignalR notifier.
         services.AddSingleton<ICampaignNotifier, NoopCampaignNotifier>();
+        services.AddSingleton<IRealtimeConnections, NoopRealtimeConnections>();
 
         services.AddScoped<IEquippedGearProvider, InventoryEquippedGearProvider>();
         services.AddSingleton<IDiceRoller>(RandomDiceRoller.Instance);
@@ -107,6 +108,14 @@ public static class DependencyInjection
         services.AddScoped<ApproveChangeRequestHandler>();
         services.AddScoped<RejectChangeRequestHandler>();
         services.AddScoped<CancelChangeRequestHandler>();
+
+        services.AddScoped<RestRequestLoader>();
+        services.AddScoped<CreateRestRequestHandler>();
+        services.AddScoped<CancelRestRequestHandler>();
+        services.AddScoped<ListRestRequestsHandler>();
+        services.AddScoped<GetRestRequestHandler>();
+        services.AddScoped<ApproveRestRequestHandler>();
+        services.AddScoped<RejectRestRequestHandler>();
 
         services.AddScoped<SearchCampaignItemsHandler>();
         services.AddScoped<GetCampaignItemHandler>();
@@ -148,6 +157,7 @@ public static class DependencyInjection
         services.AddScoped<GetPartyHandler>();
         services.AddScoped<PartyRestHandler>();
         services.AddScoped<PartyAdjustHandler>();
+        services.AddScoped<PartyLevelHandler>();
 
         services.AddScoped<SendMessageHandler>();
         services.AddScoped<ListMessagesHandler>();

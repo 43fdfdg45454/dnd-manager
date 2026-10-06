@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Dnd.Api.Realtime;
 using Dnd.Api.Tests.Items;
 using Dnd.Application.Abstractions;
 using Microsoft.AspNetCore.Http.Connections;
@@ -128,6 +129,162 @@ public sealed class RealtimeTests(ApiFactory factory) : IClassFixture<ApiFactory
         Assert.Equal(HttpStatusCode.Unauthorized, api.StatusCode);
     }
 
+    [Fact]
+    public async Task The_sixth_connection_of_a_user_is_refused()
+    {
+        var user = await factory.CreateSignedInUserAsync();
+        var open = new List<HubConnection>();
+        try
+        {
+            for (var i = 0; i < 5; i++)
+            {
+                open.Add(await ConnectAsync(user));
+            }
+
+            var status = await user.Client.GetFromJsonAsync<RealtimeStatusDto>("/api/v1/realtime/status");
+            Assert.Equal((5, "LongPolling"), (status!.Connections, status.Transport));
+
+            await using var sixth = BuildConnection(user.Client.DefaultRequestHeaders.Authorization!.Parameter);
+            var closed = new TaskCompletionSource<Exception?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            sixth.Closed += e =>
+            {
+                closed.TrySetResult(e);
+                return Task.CompletedTask;
+            };
+
+            Exception? error;
+            try
+            {
+                await sixth.StartAsync();
+                error = await closed.Task.WaitAsync(EventTimeout);
+            }
+            catch (Exception e) when (e is not TimeoutException)
+            {
+                error = e;
+            }
+
+            Assert.Contains("Demasiadas conexiones abiertas.", error?.Message);
+            Assert.Equal(5, (await user.Client.GetFromJsonAsync<RealtimeStatusDto>("/api/v1/realtime/status"))!.Connections);
+        }
+        finally
+        {
+            foreach (var connection in open)
+            {
+                await connection.DisposeAsync();
+            }
+        }
+
+        // Closed connections free their slots.
+        await WaitUntilAsync(async () => (await user.Client.GetFromJsonAsync<RealtimeStatusDto>("/api/v1/realtime/status"))!.Connections == 0);
+        Assert.Null((await user.Client.GetFromJsonAsync<RealtimeStatusDto>("/api/v1/realtime/status"))!.Transport);
+    }
+
+    [Fact]
+    public async Task A_removed_member_stops_receiving_the_campaign_events()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        await using var playerConnection = await ConnectAsync(s.Player);
+        await using var dmConnection = await ConnectAsync(s.Dm);
+        var playerEvents = new List<CampaignEvent>();
+        playerConnection.On<CampaignEvent>("campaignEvent", e => { lock (playerEvents) { playerEvents.Add(e); } });
+        var removed = Expect(playerConnection, CampaignEventTypes.MembershipRemoved);
+        var dmStash = Expect(dmConnection, CampaignEventTypes.PartyStashUpdated);
+        await playerConnection.InvokeAsync("JoinCampaign", s.CampaignId);
+        await dmConnection.InvokeAsync("JoinCampaign", s.CampaignId);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Owner.Client.DeleteAsync($"/api/v1/campaigns/{s.CampaignId}/members/{s.Player.Id}")).StatusCode);
+        Assert.Equal(s.CampaignId, (await removed.WaitAsync(EventTimeout)).CampaignId);
+
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/stash/gold", new { deltaCp = 5 })).StatusCode);
+        await dmStash.WaitAsync(EventTimeout);
+        await Task.Delay(TimeSpan.FromMilliseconds(500));
+
+        lock (playerEvents)
+        {
+            Assert.DoesNotContain(playerEvents, e => e.Type == CampaignEventTypes.PartyStashUpdated);
+        }
+
+        var rejoin = await Assert.ThrowsAsync<HubException>(() => playerConnection.InvokeAsync("JoinCampaign", s.CampaignId));
+        Assert.Contains("No perteneces a esta campaña.", rejoin.Message);
+    }
+
+    [Fact]
+    public async Task Deactivating_a_user_closes_their_connections_and_refuses_new_ones()
+    {
+        var user = await factory.CreateSignedInUserAsync();
+        var admin = await factory.CreateAdminClientAsync();
+        await using var connection = await ConnectAsync(user);
+        var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        connection.Closed += _ =>
+        {
+            closed.TrySetResult();
+            return Task.CompletedTask;
+        };
+
+        Assert.Equal(HttpStatusCode.OK, (await admin.PatchAsJsonAsync($"/api/v1/admin/users/{user.Id}", new { isActive = false })).StatusCode);
+
+        await closed.Task.WaitAsync(EventTimeout);
+        await using var again = BuildConnection(user.Client.DefaultRequestHeaders.Authorization!.Parameter);
+        var refused = new TaskCompletionSource<Exception?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        again.Closed += e =>
+        {
+            refused.TrySetResult(e);
+            return Task.CompletedTask;
+        };
+        Exception? error;
+        try
+        {
+            await again.StartAsync();
+            error = await refused.Task.WaitAsync(EventTimeout);
+        }
+        catch (Exception e) when (e is not TimeoutException)
+        {
+            error = e;
+        }
+
+        Assert.Contains("La cuenta está desactivada.", error?.Message);
+    }
+
+    [Fact]
+    public async Task The_owner_hears_about_a_granted_level()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var hero = await s.Player.CreateActiveCharacterAsync(s.Dm, s.CampaignId);
+        await using var connection = await ConnectAsync(s.Player);
+        var granted = Expect(connection, CampaignEventTypes.LevelUpGranted);
+
+        // Not joined to the campaign: the event still reaches the owner through their user group.
+        var response = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { hero.Id } });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        Assert.Equal((Guid?)hero.Id, (await granted.WaitAsync(EventTimeout)).CharacterId);
+    }
+
+    [Fact]
+    public async Task A_rest_request_reaches_the_campaign()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var hero = await s.Player.CreateActiveCharacterAsync(s.Dm, s.CampaignId);
+        await using var connection = await ConnectAsync(s.Dm);
+        var updated = Expect(connection, CampaignEventTypes.RestRequestUpdated);
+        await connection.InvokeAsync("JoinCampaign", s.CampaignId);
+
+        var response = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/rest-requests", new { kind = "long" });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        Assert.Equal((Guid?)hero.Id, (await updated.WaitAsync(EventTimeout)).CharacterId);
+    }
+
+    private static async Task WaitUntilAsync(Func<Task<bool>> condition)
+    {
+        var deadline = DateTime.UtcNow + EventTimeout;
+        while (!await condition())
+        {
+            Assert.True(DateTime.UtcNow < deadline, "The condition was not met in time.");
+            await Task.Delay(50);
+        }
+    }
+
     /// <summary>Completes with the first event of <paramref name="type"/> received by the connection.</summary>
     private static Task<CampaignEvent> Expect(HubConnection connection, string type)
     {
@@ -142,12 +299,22 @@ public sealed class RealtimeTests(ApiFactory factory) : IClassFixture<ApiFactory
         return source.Task;
     }
 
+    /// <summary>
+    /// Starts a connection and waits until the hub registered it: <c>StartAsync</c> completes with the handshake,
+    /// before <c>OnConnectedAsync</c> runs, and the test database (one shared SQLite connection) must not be used
+    /// by two requests at once.
+    /// </summary>
     private async Task<HubConnection> ConnectAsync(SignedInUser user)
     {
+        var before = await ConnectionCountAsync(user);
         var connection = BuildConnection(user.Client.DefaultRequestHeaders.Authorization!.Parameter);
         await connection.StartAsync();
+        await WaitUntilAsync(async () => await ConnectionCountAsync(user) > before);
         return connection;
     }
+
+    private static async Task<int> ConnectionCountAsync(SignedInUser user) =>
+        (await user.Client.GetFromJsonAsync<RealtimeStatusDto>("/api/v1/realtime/status"))!.Connections;
 
     private HubConnection BuildConnection(string? token) =>
         new HubConnectionBuilder()

@@ -200,6 +200,12 @@ public sealed record CharacterDetailDto
 
     /// <summary>Precalculated data of the combat view.</summary>
     public required CombatSummaryDto Combat { get; init; }
+
+    /// <summary>Rest the owner is asking the DM for, or null.</summary>
+    public PendingRestDto? PendingRest { get; init; }
+
+    /// <summary>Level granted by a DM that the player has not completed yet, or null.</summary>
+    public int? PendingLevelUpTo { get; init; }
 }
 
 // ---- Combat view (phase 6) -------------------------------------------------------------------

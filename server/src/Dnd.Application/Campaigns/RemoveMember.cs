@@ -5,7 +5,13 @@ using Dnd.Domain.Campaigns;
 namespace Dnd.Application.Campaigns;
 
 /// <summary>Removes another member: the owner removes anyone but themselves; a DM only players.</summary>
-public sealed class RemoveMemberHandler(ICampaignAccess access, ICampaignRepository campaigns, IUnitOfWork unitOfWork)
+public sealed class RemoveMemberHandler(
+    ICampaignAccess access,
+    ICampaignRepository campaigns,
+    IUnitOfWork unitOfWork,
+    IRealtimeConnections realtime,
+    ICampaignNotifier notifier,
+    IDateTimeProvider clock)
 {
     public async Task HandleAsync(Guid currentUserId, Guid campaignId, Guid userId, CancellationToken cancellationToken = default)
     {
@@ -14,5 +20,9 @@ public sealed class RemoveMemberHandler(ICampaignAccess access, ICampaignReposit
         var campaign = await campaigns.GetWithMembersAsync(campaignId, cancellationToken) ?? throw CampaignErrors.CampaignNotFound();
         campaign.RemoveMember(currentUserId, userId);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Their open connections stop receiving the campaign's events; the app learns it was removed.
+        await realtime.RemoveFromCampaignAsync(userId, campaignId, cancellationToken);
+        await notifier.MembershipRemovedAsync(campaignId, userId, clock.UtcNow, cancellationToken);
     }
 }

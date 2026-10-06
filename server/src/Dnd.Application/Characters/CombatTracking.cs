@@ -234,23 +234,54 @@ public sealed class ResourceHandler(CharacterTracker tracker, IUnitOfWork unitOf
     }
 }
 
-public sealed class RestHandler(CharacterTracker tracker, IDiceRoller dice, IDateTimeProvider clock)
+/// <summary>
+/// Direct rests: DMs only (players ask for one with a rest request). A direct rest also cancels the
+/// character's pending rest request, which it makes moot.
+/// </summary>
+public sealed class RestHandler(
+    CharacterLoader loader,
+    CharacterTracker tracker,
+    RestRequestLoader restRequests,
+    ICampaignNotifier notifier,
+    IDiceRoller dice,
+    IDateTimeProvider clock)
 {
     public async Task<CharacterDetailDto> ShortRestAsync(Guid currentUserId, Guid characterId, ShortRestRequest? request, CancellationToken cancellationToken = default)
     {
-        var character = await tracker.LoadAsync(currentUserId, characterId, cancellationToken);
+        var character = await LoadForDmAsync(currentUserId, characterId, cancellationToken);
         var sheet = await tracker.SheetAsync(character, cancellationToken);
         var hitDice = request?.HitDice?.ToDictionary(d => d.Key, d => d.Value, StringComparer.Ordinal)
             ?? new Dictionary<string, int>(StringComparer.Ordinal);
-        character.ShortRest(hitDice, sheet, dice, clock.UtcNow);
-        return await tracker.SaveAsync(character, cancellationToken);
+        var now = clock.UtcNow;
+        character.ShortRest(hitDice, sheet, dice, now);
+        return await SaveAsync(currentUserId, character, now, cancellationToken);
     }
 
     public async Task<CharacterDetailDto> LongRestAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken = default)
     {
-        var character = await tracker.LoadAsync(currentUserId, characterId, cancellationToken);
+        var character = await LoadForDmAsync(currentUserId, characterId, cancellationToken);
         var sheet = await tracker.SheetAsync(character, cancellationToken);
-        character.LongRest(sheet.HitPointsMax, clock.UtcNow);
-        return await tracker.SaveAsync(character, cancellationToken);
+        var now = clock.UtcNow;
+        character.LongRest(sheet.HitPointsMax, now);
+        return await SaveAsync(currentUserId, character, now, cancellationToken);
+    }
+
+    private async Task<Character> LoadForDmAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken)
+    {
+        var loaded = await loader.LoadAsync(characterId, currentUserId, cancellationToken);
+        if (!loaded.IsDm)
+        {
+            throw AppException.Forbidden(RestRequestErrors.AskTheDm);
+        }
+
+        return loaded.Character;
+    }
+
+    private async Task<CharacterDetailDto> SaveAsync(Guid currentUserId, Character character, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var cancelled = await restRequests.CancelPendingAsync([character.Id], currentUserId, now, cancellationToken);
+        var detail = await tracker.SaveAsync(character, cancellationToken);
+        await RestRequestLoader.NotifyAsync(notifier, cancelled, now, cancellationToken);
+        return detail;
     }
 }

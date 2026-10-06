@@ -63,6 +63,13 @@ public class ApiFactory : WebApplicationFactory<Program>
     /// <summary><c>App:PublicUrl</c> of the host (mandatory in the API).</summary>
     protected virtual string PublicUrl => DefaultPublicUrl;
 
+    /// <summary>
+    /// Whether the login rate limits (per IP and per account) are raised. Every test client comes from the same
+    /// address and the helpers log in often, so they are raised by default; <c>RateLimitApiFactory</c> keeps the
+    /// real limits. The hub limit always keeps its default.
+    /// </summary>
+    protected virtual bool RelaxLoginRateLimits => true;
+
     /// <summary>Address the test server reports as the client's, i.e. the proxy the request came from.</summary>
     protected virtual string RemoteIpAddress => "127.0.0.1";
 
@@ -80,6 +87,11 @@ public class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("FileStorage:RootPath", _filesRoot);
         builder.UseSetting("FileStorage:MaxUploadMegabytes", MaxUploadMegabytes.ToString(System.Globalization.CultureInfo.InvariantCulture));
         builder.UseSetting("Jwt:Secret", "test-only-secret-that-is-long-enough-0123456789");
+        if (RelaxLoginRateLimits)
+        {
+            builder.UseSetting("RateLimits:Login:PermitLimit", "100000");
+            builder.UseSetting("RateLimits:LoginAccount:PermitLimit", "100000");
+        }
 
         builder.ConfigureLogging(logging => logging.AddProvider(Logs));
 

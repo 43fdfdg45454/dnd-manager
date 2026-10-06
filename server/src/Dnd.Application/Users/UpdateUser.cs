@@ -1,3 +1,4 @@
+using Dnd.Application.Abstractions;
 using Dnd.Application.Abstractions.Persistence;
 using Dnd.Application.Auth;
 using Dnd.Application.Common;
@@ -24,7 +25,7 @@ public sealed class UpdateUserRequestValidator : AbstractValidator<UpdateUserReq
     }
 }
 
-public sealed class UpdateUserHandler(IUserRepository users, AuthSessionIssuer sessions, IUnitOfWork unitOfWork)
+public sealed class UpdateUserHandler(IUserRepository users, AuthSessionIssuer sessions, IUnitOfWork unitOfWork, IRealtimeConnections realtime)
 {
     public async Task<UserDto> HandleAsync(Guid currentUserId, Guid userId, UpdateUserRequest request, CancellationToken cancellationToken = default)
     {
@@ -56,16 +57,24 @@ public sealed class UpdateUserHandler(IUserRepository users, AuthSessionIssuer s
             user.ChangeRole(newRole.Value);
         }
 
+        var deactivated = false;
         if (request.IsActive is { } isActive && isActive != user.IsActive)
         {
             user.SetActive(isActive);
             if (!isActive)
             {
                 await sessions.RevokeAllAsync(user.Id, cancellationToken);
+                deactivated = true;
             }
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        if (deactivated)
+        {
+            // Close their realtime connections too (the hub refuses inactive users when they reconnect).
+            await realtime.AbortAllAsync(user.Id, cancellationToken);
+        }
+
         return UserDto.From(user);
     }
 }

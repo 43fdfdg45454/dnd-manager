@@ -1,6 +1,7 @@
 using Dnd.Application.Abstractions;
 using Dnd.Application.Common;
 using FluentValidation;
+using Microsoft.Extensions.Logging;
 
 namespace Dnd.Application.Characters;
 
@@ -8,14 +9,19 @@ namespace Dnd.Application.Characters;
 
 /// <param name="Amount">Points of the pool to spend.</param>
 /// <param name="TargetSelf">True: the character heals itself; false: only the pool is spent (another creature is healed).</param>
-public sealed record LayOnHandsRequest(int Amount, bool TargetSelf = true);
+/// <param name="Note">Free note of the action (e.g. "Curar a Thorin"); not stored, only logged with the action.</param>
+public sealed record LayOnHandsRequest(int Amount, bool TargetSelf = true, string? Note = null);
 
 public sealed class LayOnHandsRequestValidator : AbstractValidator<LayOnHandsRequest>
 {
+    public const int NoteMaxLength = 200;
+
     public LayOnHandsRequestValidator()
     {
         RuleFor(x => x.Amount).InclusiveBetween(1, AmountRequestValidator.MaxAmount)
             .WithMessage($"La cantidad debe estar entre 1 y {AmountRequestValidator.MaxAmount}.");
+        RuleFor(x => x.Note).MaximumLength(NoteMaxLength)
+            .WithMessage($"La nota no puede superar los {NoteMaxLength} caracteres.");
     }
 }
 
@@ -46,7 +52,7 @@ public sealed class ArcaneRecoveryRequestValidator : AbstractValidator<ArcaneRec
 }
 
 /// <summary>Rage, Lay on Hands, Divine Smite and Arcane Recovery. 400 when the class does not apply or no uses remain.</summary>
-public sealed class ClassActionHandler(CharacterTracker tracker, IDateTimeProvider clock)
+public sealed class ClassActionHandler(CharacterTracker tracker, IDateTimeProvider clock, ILogger<ClassActionHandler> logger)
 {
     public const string Rage = "rage";
     public const string LayOnHands = "lay-on-hands";
@@ -67,7 +73,14 @@ public sealed class ClassActionHandler(CharacterTracker tracker, IDateTimeProvid
         var character = await tracker.LoadAsync(currentUserId, characterId, cancellationToken);
         var sheet = await tracker.SheetAsync(character, cancellationToken);
         character.LayOnHands(request.Amount, request.TargetSelf, sheet.HitPointsMax, clock.UtcNow);
-        return await tracker.SaveAsync(character, cancellationToken);
+        var detail = await tracker.SaveAsync(character, cancellationToken);
+        logger.LogInformation(
+            "Lay on Hands of {CharacterId}: {Amount} points, self {TargetSelf}, note {Note}.",
+            character.Id,
+            request.Amount,
+            request.TargetSelf,
+            string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim());
+        return detail;
     }
 
     public async Task<DivineSmiteResultDto> DivineSmiteAsync(Guid currentUserId, Guid characterId, DivineSmiteRequest request, CancellationToken cancellationToken = default)

@@ -36,6 +36,22 @@ public sealed class PartyRestRequestValidator : AbstractValidator<PartyRestReque
     }
 }
 
+/// <param name="CharacterIds">Characters concerned; null or empty = every active character.</param>
+public sealed record PartyLevelRequest(IReadOnlyList<Guid>? CharacterIds);
+
+public sealed class PartyLevelRequestValidator : AbstractValidator<PartyLevelRequest>
+{
+    public PartyLevelRequestValidator()
+    {
+        RuleFor(x => x.CharacterIds!)
+            .Must(ids => ids.Count <= PartyRestRequestValidator.MaxCharacters)
+            .WithMessage($"No se admiten más de {PartyRestRequestValidator.MaxCharacters} personajes.")
+            .Must(ids => ids.All(id => id != Guid.Empty)).WithMessage("Indica personajes válidos.")
+            .When(x => x.CharacterIds is not null)
+            .OverridePropertyName("characterIds");
+    }
+}
+
 /// <summary>
 /// Quick changes of the DM to one character. Null fields do not change.
 /// </summary>
@@ -145,11 +161,12 @@ public sealed class GetPartyHandler(PartyLoader loader, ICharacterSheetService s
 
 /// <summary>
 /// The DM forces a short or long rest on the party (or some characters) with a single save. A short
-/// rest spends no hit dice: each player spends them from their own view if they want.
+/// rest spends no hit dice. The pending rest requests of those characters are cancelled.
 /// </summary>
 public sealed class PartyRestHandler(
     PartyLoader loader,
     ICharacterSheetService sheets,
+    RestRequestLoader restRequests,
     IDiceRoller dice,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
@@ -176,8 +193,12 @@ public sealed class PartyRestHandler(
             }
         }
 
+        // The forced rest answers any rest the players were asking for.
+        var cancelled = await restRequests.CancelPendingAsync(targets.Select(c => c.Id).ToList(), currentUserId, now, cancellationToken);
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await notifier.NotifyAsync(new CampaignEvent(CampaignEventTypes.PartyRest, campaignId, null, null, now), cancellationToken);
+        await RestRequestLoader.NotifyAsync(notifier, cancelled, now, cancellationToken);
         return new PartyDto(await sheets.BuildPartyAsync(party, cancellationToken));
     }
 }
@@ -273,5 +294,55 @@ public sealed class PartyAdjustHandler(
         }
 
         return result;
+    }
+}
+
+/// <summary>
+/// The DM grants the next level to the party (or some characters): each one gets
+/// <c>PendingLevelUpTo = level + 1</c>, which the player then completes. A pending grant is not
+/// accumulated and characters at level 20 are left as they are. The grant can be withdrawn.
+/// </summary>
+public sealed class PartyLevelHandler(
+    PartyLoader loader,
+    ICharacterSheetService sheets,
+    IUnitOfWork unitOfWork,
+    ICampaignNotifier notifier,
+    IDateTimeProvider clock)
+{
+    public async Task<PartyDto> GrantAsync(Guid currentUserId, Guid campaignId, PartyLevelRequest? request, CancellationToken cancellationToken = default)
+    {
+        var party = await loader.LoadAsync(campaignId, currentUserId, cancellationToken);
+        var targets = PartyLoader.Select(party, request?.CharacterIds);
+        var now = clock.UtcNow;
+        var granted = targets.Where(c => c.GrantLevelUp(currentUserId, now)).ToList();
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        foreach (var character in granted)
+        {
+            var e = new CampaignEvent(CampaignEventTypes.LevelUpGranted, campaignId, character.Id, null, now);
+            await notifier.NotifyAsync(e, cancellationToken);
+            if (character.OwnerUserId is { } ownerId)
+            {
+                await notifier.NotifyUserAsync(ownerId, e, cancellationToken);
+            }
+        }
+
+        return new PartyDto(await sheets.BuildPartyAsync(party, cancellationToken));
+    }
+
+    public async Task<PartyDto> RevokeAsync(Guid currentUserId, Guid campaignId, PartyLevelRequest? request, CancellationToken cancellationToken = default)
+    {
+        var party = await loader.LoadAsync(campaignId, currentUserId, cancellationToken);
+        var targets = PartyLoader.Select(party, request?.CharacterIds);
+        var now = clock.UtcNow;
+        var revoked = targets.Where(c => c.RevokeLevelUp(now)).ToList();
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        foreach (var character in revoked)
+        {
+            await notifier.CharacterUpdatedAsync(campaignId, character.Id, now, cancellationToken);
+        }
+
+        return new PartyDto(await sheets.BuildPartyAsync(party, cancellationToken));
     }
 }

@@ -141,13 +141,15 @@ public static class CharacterEndpoints
         group.MapPost("/rest/short", async (Guid id, ShortRestRequest? request, ClaimsPrincipal user, RestHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.ShortRestAsync(user.GetUserId(), id, request, ct)))
             .WithName("ShortRest")
-            .WithSummary("Descanso corto: gasta dados de golpe ({ hitDice: { clase: n } }), repone recursos de descanso corto y slots de pacto.")
-            .ProducesValidationProblem();
+            .WithSummary("Descanso corto aplicado por un DM: gasta dados de golpe ({ hitDice: { clase: n } }), repone recursos de descanso corto y slots de pacto. Jugadores: 403 (piden el descanso con rest-requests).")
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status403Forbidden);
 
         group.MapPost("/rest/long", async (Guid id, ClaimsPrincipal user, RestHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.LongRestAsync(user.GetUserId(), id, ct)))
             .WithName("LongRest")
-            .WithSummary("Descanso largo: PG al máximo, slots y recursos repuestos, recupera dados de golpe y reduce el agotamiento.");
+            .WithSummary("Descanso largo aplicado por un DM: PG al máximo, slots y recursos repuestos, recupera dados de golpe y reduce el agotamiento. Jugadores: 403 (piden el descanso con rest-requests).")
+            .ProducesProblem(StatusCodes.Status403Forbidden);
 
         var classActions = group.MapGroup("/class-actions").ProducesProblem(StatusCodes.Status400BadRequest);
 
