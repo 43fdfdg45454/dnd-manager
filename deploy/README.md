@@ -51,7 +51,7 @@ curl http://127.0.0.1:8080/health/ready
 
 | Variable | Para qué sirve |
 |----------|----------------|
-| `API_IMAGE` | Imagen de la API en GitHub Packages (`:dev-latest` de la CI o `:1.2.0` de una release). Para una compilada en local: `docker build -t dnd-companion-api:local ../server` y `API_IMAGE=dnd-companion-api:local` |
+| `API_IMAGE` | Imagen de la API en GitHub Packages (`:latest` de la CI en `master` o `:1.2.0` de una release). Para una compilada en local: `docker build -t dnd-companion-api:local ../server` y `API_IMAGE=dnd-companion-api:local` |
 | `API_BIND`, `API_PORT` | Dirección y puerto del host en los que escucha la API (`127.0.0.1` solo para un proxy local; `0.0.0.0` para exponerla en la LAN/VPN) |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base de datos |
 | `DB_AUTO_MIGRATE` | Aplicar las migraciones al arrancar la API (`true`) |
@@ -160,7 +160,7 @@ cd deploy
 git pull
 
 # Imagen publicada en GitHub Packages (ghcr.io/<propietario>/dnd-companion-api):
-#   - :dev-latest y :sha-<commit>  → la CI las publica en cada push
+#   - :latest y :sha-<commit>      → la CI las publica en cada push a master
 #   - :1.2.0 y :latest             → las publica el workflow "Release"
 # Cambia API_IMAGE en .env si quieres otra etiqueta y luego:
 docker compose pull api
@@ -291,16 +291,17 @@ pueden borrar desde la app.
 La app comprueba `GET /api/v1/app/latest` y, si hay un `buildNumber` mayor que el suyo, ofrece
 descargar `GET /api/v1/app/download/{buildNumber}` (anónimo, para poder instalarlo desde el navegador).
 
-Hay dos releases en GitHub (pestaña **Releases** del repositorio):
+Las releases de GitHub (pestaña **Releases**) contienen solo el APK:
 
-- **`dev-latest`** (prerelease): la CI la regenera en cada push con el último APK, firmado con la
-  clave de depuración. Descarga directa:
-  `https://github.com/<propietario>/<repo>/releases/download/dev-latest/dnd-companion-dev.apk`.
-- **`vX.Y.Z`**: las crea el workflow manual **Release** (`.github/workflows/release.yml`, Actions →
-  Release → Run workflow con la versión). Compila el APK, lo adjunta a la release, publica la imagen
-  Docker en GHCR y, si están definidos los *secrets* `DND_API_URL` y `DND_ADMIN_TOKEN` (o
-  `DND_ADMIN_EMAIL` y `DND_ADMIN_PASSWORD`), lo sube también a tu servidor. Sin keystore en los
-  *secrets* firma con la clave de depuración y marca la release como prerelease.
+- **`vX.Y.Z-build.N`**: la CI la crea en cada push a `master`, con el APK firmado con el keystore de
+  los *secrets* del repositorio (sin keystore, firma de depuración y marcada como prerelease). El
+  mismo APK queda también como artefacto de la ejecución.
+- **`vX.Y.Z`**: el workflow manual **Release** (`.github/workflows/release.yml`, Actions → Release →
+  Run workflow con la versión). Además de la release, publica la imagen Docker `:X.Y.Z` en GHCR y, si
+  están definidos los *secrets* `DND_API_URL` y `DND_ADMIN_TOKEN` (o `DND_ADMIN_EMAIL` y
+  `DND_ADMIN_PASSWORD`), sube el APK a tu servidor para que la app avise de la actualización.
+
+La versión `X.Y.Z` sale de `version:` en `app/pubspec.yaml`.
 
 Android no actualiza una app instalada con un APK firmado con otra clave: al pasar de la clave de
 depuración a tu keystore (o viceversa) hay que desinstalar antes.
