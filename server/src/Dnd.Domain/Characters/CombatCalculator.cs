@@ -9,9 +9,14 @@ namespace Dnd.Domain.Characters;
 /// <param name="ItemId">Inventory entry id.</param>
 /// <param name="TemplateIndex">Dataset index of the template ("longsword"); null for homebrew or hand-made items.</param>
 /// <param name="Item">The effective item (overrides applied).</param>
-public sealed record EquippedWeapon(Guid? ItemId, string? TemplateIndex, EffectiveItem Item);
+/// <param name="Attuned">Whether the entry is attuned: the weapon's own modifiers need it when the item requires attunement.</param>
+public sealed record EquippedWeapon(Guid? ItemId, string? TemplateIndex, EffectiveItem Item, bool Attuned = false);
 
-/// <summary>One attack of the combat view. <see cref="Damage"/> reads like "1d8+3".</summary>
+/// <summary>
+/// One attack of the combat view. <see cref="Damage"/> reads like "1d8+3". <see cref="AttackBreakdown"/>
+/// explains <see cref="AttackBonus"/> (ability, proficiency, items); <see cref="DamageBreakdown"/> the flat
+/// damage bonus added to the dice (ability, items).
+/// </summary>
 public sealed record AttackValue(
     Guid? ItemId,
     string Name,
@@ -21,7 +26,9 @@ public sealed record AttackValue(
     string? VersatileDamage,
     string? Range,
     IReadOnlyList<string> Properties,
-    string? Notes);
+    string? Notes,
+    ValueBreakdown AttackBreakdown,
+    ValueBreakdown DamageBreakdown);
 
 /// <summary>
 /// Pure combat numbers (SRD 5.1): attacks of the equipped weapons plus the unarmed strike, and the
@@ -52,7 +59,9 @@ public static class CombatCalculator
     /// Attacks of the equipped weapons (in the given order) followed by the unarmed strike.
     /// Ability: Dex for ranged weapons and for finesse weapons when Dex is higher, Str otherwise.
     /// Proficiency: a weapon proficiency with the weapon (index, its plural or its name) or with its
-    /// category ("simple-weapons", "martial-weapons"). Item overrides add attack and damage bonuses.
+    /// category ("simple-weapons", "martial-weapons"). Attack and damage bonuses: those of the weapon
+    /// itself (when active) plus those of the other active items that are not weapons
+    /// (<see cref="CharacterSheet.ItemEffects"/>), which also apply to the unarmed strike.
     /// Monks use Martial Arts with the unarmed strike and monk weapons. Rage is not added.
     /// </summary>
     public static IReadOnlyList<AttackValue> Attacks(Character character, CharacterSheet sheet, IEnumerable<EquippedWeapon> weapons)
@@ -70,40 +79,76 @@ public static class CombatCalculator
             .Select(p => Slug(p.Key))
             .ToHashSet(StringComparer.Ordinal);
 
+        var globalAttack = ItemBonuses(sheet.ItemEffects.Where(e => e.Kind == ItemModifierKind.AttackBonus));
+        var globalDamage = ItemBonuses(sheet.ItemEffects.Where(e => e.Kind == ItemModifierKind.DamageBonus));
+
         var attacks = new List<AttackValue>();
         foreach (var weapon in weapons.Where(w => w.Item.Category == ItemCategory.Weapon))
         {
             var item = weapon.Item;
             var monkWeapon = martialArtsDie is not null && IsMonkWeapon(weapon);
             var useDex = IsRanged(item) || ((HasProperty(item, Finesse) || monkWeapon) && dex > str);
-            var mod = useDex ? dex : str;
+            var ability = useDex ? Abilities.Dex : Abilities.Str;
             var proficient = IsProficient(weaponKeys, weapon);
-            var damageBonus = mod + item.DamageBonus;
+            var active = item.IsActive(equipped: true, weapon.Attuned);
+            var ownAttack = active ? item.Modifiers.Where(m => m.Kind == ItemModifierKind.AttackBonus).Sum(m => m.Value) : 0;
+            var ownDamage = active ? item.Modifiers.Where(m => m.Kind == ItemModifierKind.DamageBonus).Sum(m => m.Value) : 0;
+
+            var attack = new BreakdownBuilder().Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), sheet.Modifier(ability));
+            if (proficient)
+            {
+                attack.Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, sheet.ProficiencyBonus);
+            }
+
+            var damageBonus = new BreakdownBuilder().Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), sheet.Modifier(ability));
+            if (ownAttack != 0)
+            {
+                attack.Add(BreakdownSources.Item, item.Name, ownAttack);
+            }
+
+            if (ownDamage != 0)
+            {
+                damageBonus.Add(BreakdownSources.Item, item.Name, ownDamage);
+            }
+
+            attack.AddAll(globalAttack);
+            damageBonus.AddAll(globalDamage);
             var dice = monkWeapon ? AtLeastDie(item.DamageDice, martialArtsDie!.Value) : item.DamageDice;
 
             attacks.Add(new AttackValue(
                 weapon.ItemId,
                 item.Name,
-                mod + (proficient ? sheet.ProficiencyBonus : 0) + item.AttackBonus,
-                string.IsNullOrWhiteSpace(dice) ? "0" : FormatDamage(dice, damageBonus),
+                attack.Total,
+                string.IsNullOrWhiteSpace(dice) ? "0" : FormatDamage(dice, damageBonus.Total),
                 item.DamageType,
-                string.IsNullOrWhiteSpace(item.VersatileDice) ? null : FormatDamage(item.VersatileDice, damageBonus),
+                string.IsNullOrWhiteSpace(item.VersatileDice) ? null : FormatDamage(item.VersatileDice, damageBonus.Total),
                 FormatRange(item.RangeNormal, item.RangeLong),
                 item.Properties,
-                item.Effects.Count == 0 ? null : string.Join("; ", item.Effects)));
+                item.Effects.Count == 0 ? null : string.Join("; ", item.Effects),
+                attack.Build(),
+                damageBonus.Build()));
         }
 
-        var unarmedMod = martialArtsDie is not null ? Math.Max(str, dex) : str;
+        var unarmedAbility = martialArtsDie is not null && dex > str ? Abilities.Dex : Abilities.Str;
+        var unarmedAttack = new BreakdownBuilder()
+            .Add(BreakdownSources.Ability, BreakdownLabels.Ability(unarmedAbility), sheet.Modifier(unarmedAbility))
+            .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, sheet.ProficiencyBonus)
+            .AddAll(globalAttack);
+        var unarmedDamage = new BreakdownBuilder()
+            .Add(BreakdownSources.Ability, BreakdownLabels.Ability(unarmedAbility), sheet.Modifier(unarmedAbility))
+            .AddAll(globalDamage);
         attacks.Add(new AttackValue(
             null,
             UnarmedStrikeName,
-            unarmedMod + sheet.ProficiencyBonus,
-            FormatDamage(martialArtsDie is { } die ? $"1d{die}" : "1", unarmedMod),
+            unarmedAttack.Total,
+            FormatDamage(martialArtsDie is { } die ? $"1d{die}" : "1", unarmedDamage.Total),
             UnarmedDamageType,
             null,
             null,
             [],
-            null));
+            null,
+            unarmedAttack.Build(),
+            unarmedDamage.Build()));
 
         return attacks;
     }
@@ -219,6 +264,14 @@ public static class CombatCalculator
             ? $"1d{die}"
             : dice;
     }
+
+    /// <summary>Attack or damage bonuses of non-weapon items, one part per item name (non-zero sums only).</summary>
+    private static List<BreakdownPart> ItemBonuses(IEnumerable<AppliedItemEffect> effects) =>
+        effects
+            .GroupBy(e => e.ItemName, StringComparer.Ordinal)
+            .Select(g => new BreakdownPart(BreakdownSources.Item, g.Key, g.Sum(e => e.Value)))
+            .Where(p => p.Value != 0)
+            .ToList();
 
     private static string? FormatRange(int? normal, int? @long) => (normal, @long) switch
     {

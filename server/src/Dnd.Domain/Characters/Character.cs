@@ -764,7 +764,7 @@ public sealed partial class Character : EntityBase
     }
 
     /// <summary>
-    /// Changes the play state of an entry. Equipping requires a weapon, armor or shield; equipping an
+    /// Changes the play state of an entry. Equipping requires a weapon, armor, shield or magic item; equipping an
     /// armor (or a shield) unequips the one worn before. Attuning requires an item that needs it and at
     /// most <see cref="ItemLimits.MaxAttunedItems"/> attuned items. Everything is checked before anything
     /// changes. <paramref name="resolve"/> gives the effective item of any entry.
@@ -778,7 +778,7 @@ public sealed partial class Character : EntityBase
         var effective = resolve(item);
         if (update.Equipped == true && !item.Equipped && !effective.IsEquippable)
         {
-            throw DomainException.RuleViolation("Solo se pueden equipar armas, armaduras y escudos.");
+            throw DomainException.RuleViolation("Solo se pueden equipar armas, armaduras, escudos y objetos mágicos.");
         }
 
         if (update.Attuned == true && !item.Attuned)

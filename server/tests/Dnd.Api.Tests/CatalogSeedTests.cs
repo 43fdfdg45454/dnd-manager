@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Dnd.Application.Abstractions;
 using Dnd.Domain.Catalog;
+using Dnd.Domain.Items;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit.Abstractions;
@@ -49,6 +50,29 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
             Assert.Equal(CatalogImport.SrdRuleset, import.Ruleset);
             Assert.Contains("a6212beb", import.DatasetVersion);
             Assert.Contains("\"spells\":319", import.CountsJson);
+        });
+    }
+
+    [Fact]
+    public async Task Srd_items_with_numeric_effects_get_structured_modifiers()
+    {
+        factory.CreateClient().Dispose();
+
+        await factory.WithDbAsync(async db =>
+        {
+            var gauntlets = await db.ItemTemplates.SingleAsync(x => x.CampaignId == null && x.Index == "gauntlets-of-ogre-power");
+            Assert.Equal([new ItemModifier(ItemModifierKind.AbilitySet, "str", 19)], gauntlets.Modifiers);
+            Assert.Equal(ItemCategory.MagicItem, gauntlets.Category);
+
+            var cloak = await db.ItemTemplates.SingleAsync(x => x.CampaignId == null && x.Index == "cloak-of-protection");
+            Assert.Equal(
+                [new ItemModifier(ItemModifierKind.ArmorClassBonus, null, 1), new ItemModifier(ItemModifierKind.SaveBonus, null, 1)],
+                cloak.Modifiers);
+
+            var weapon = await db.ItemTemplates.SingleAsync(x => x.CampaignId == null && x.Index == "weapon-2");
+            Assert.Equal((2, 2), (weapon.Modifiers.Single(m => m.Kind == ItemModifierKind.AttackBonus).Value, weapon.Modifiers.Single(m => m.Kind == ItemModifierKind.DamageBonus).Value));
+            Assert.Equal(29, (await db.ItemTemplates.SingleAsync(x => x.CampaignId == null && x.Index == "belt-of-giant-strength-storm")).Modifiers.Single().Value);
+            Assert.Empty((await db.ItemTemplates.SingleAsync(x => x.CampaignId == null && x.Index == "longsword")).Modifiers);
         });
     }
 

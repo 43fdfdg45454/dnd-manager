@@ -1,4 +1,5 @@
 using Dnd.Domain.Common;
+using Dnd.Domain.Items;
 
 namespace Dnd.Domain.Catalog;
 
@@ -62,6 +63,9 @@ public sealed class ItemTemplate : EntityBase
     /// <summary>Free-text effects of homebrew items; empty for SRD items.</summary>
     public IReadOnlyList<string> Effects { get; private set; } = [];
 
+    /// <summary>Structured effects on the sheet while the item is active (see <see cref="ItemModifier"/>).</summary>
+    public IReadOnlyList<ItemModifier> Modifiers { get; private set; } = [];
+
     public bool IsSrd => CampaignId is null;
 
     /// <summary>True when the item can be used inside the campaign: SRD items and the campaign's own homebrew.</summary>
@@ -116,6 +120,7 @@ public sealed class ItemTemplate : EntityBase
         StealthDisadvantage = StealthDisadvantage,
         Description = Description,
         Effects = Effects,
+        Modifiers = Modifiers,
     };
 
     /// <summary>Replaces the rules data of an SRD item with a newer version of the dataset.</summary>
@@ -142,6 +147,8 @@ public sealed class ItemTemplate : EntityBase
             throw DomainException.RuleViolation("La categoría o la rareza del objeto no son válidas.");
         }
 
+        var modifiers = ItemModifier.NormalizeAll(data.Modifiers) ?? [];
+
         Name = name;
         Category = data.Category;
         Subcategory = data.Subcategory;
@@ -162,5 +169,6 @@ public sealed class ItemTemplate : EntityBase
         StealthDisadvantage = data.StealthDisadvantage;
         Description = data.Description;
         Effects = data.Effects;
+        Modifiers = modifiers;
     }
 }

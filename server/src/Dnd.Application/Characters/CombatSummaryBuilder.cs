@@ -35,8 +35,10 @@ public static class CombatSummaryBuilder
         var attacks = CombatCalculator.Attacks(
                 character,
                 sheet,
-                equipped.Select(i => new EquippedWeapon(i.Entry.Id, i.Template?.Index, i.Effective)))
-            .Select(a => new AttackDto(a.ItemId, a.Name, a.AttackBonus, a.Damage, a.DamageType, a.VersatileDamage, a.Range, a.Properties, a.Notes))
+                equipped.Select(i => new EquippedWeapon(i.Entry.Id, i.Template?.Index, i.Effective, i.Entry.Attuned)))
+            .Select(a => new AttackDto(
+                a.ItemId, a.Name, a.AttackBonus, a.Damage, a.DamageType, a.VersatileDamage, a.Range, a.Properties, a.Notes,
+                ValueBreakdownDto.From(a.AttackBreakdown), ValueBreakdownDto.From(a.DamageBreakdown)))
             .ToList();
 
         var spellSlots = Enumerable.Range(1, 9)
@@ -52,9 +54,9 @@ public static class CombatSummaryBuilder
             .Select(i => new QuickConsumableDto(i.Entry.Id, i.Effective.Name, i.Entry.Quantity, i.Entry.Charges))
             .ToList();
 
-        var hasShield = EquippedGear.FromEquipped(equipped.Select(i => i.Effective)).HasShield;
+        var gear = EquippedGear.FromEquipped(equipped.Select(i => (i.Effective, i.Entry.Attuned)));
         var classPanels = character.OrderedClasses
-            .Select(c => Panel(character, sheet, catalog, c, spellSlots, hasShield))
+            .Select(c => Panel(character, sheet, catalog, c, spellSlots, gear))
             .OfType<ClassPanelDto>()
             .ToList();
 
@@ -74,7 +76,7 @@ public static class CombatSummaryBuilder
         SheetCatalog catalog,
         CharacterClassLevel characterClass,
         IReadOnlyList<SpellSlotDto> spellSlots,
-        bool hasShield)
+        EquippedGear gear)
     {
         var level = characterClass.Level;
         object? data = characterClass.ClassIndex switch
@@ -84,7 +86,8 @@ public static class CombatSummaryBuilder
                 Uses(character, ClassResourceRules.Rage),
                 level >= RecklessAttackLevel,
                 CombatCalculator.BrutalCriticalDice(level),
-                10 + sheet.Modifier(Abilities.Dex) + sheet.Modifier(Abilities.Con) + (hasShield ? SheetCalculator.ShieldBonus : 0)),
+                10 + sheet.Modifier(Abilities.Dex) + sheet.Modifier(Abilities.Con) + (gear.HasShield ? gear.ShieldArmorClass : 0)
+                    + gear.Modifiers.Where(m => m.Modifier.Kind == ItemModifierKind.ArmorClassBonus).Sum(m => m.Modifier.Value)),
             Wizard => WizardPanel(character, sheet, catalog, level),
             Paladin => PaladinPanel(character, spellSlots, level),
             _ => null,

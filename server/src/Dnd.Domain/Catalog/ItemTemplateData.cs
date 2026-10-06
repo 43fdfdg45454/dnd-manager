@@ -1,3 +1,5 @@
+using Dnd.Domain.Items;
+
 namespace Dnd.Domain.Catalog;
 
 /// <summary>Rules data of an item template, shared by the SRD import and campaign homebrew items.</summary>
@@ -47,4 +49,7 @@ public sealed record ItemTemplateData
 
     /// <summary>Free-text effects ("+1 to attack and damage rolls", "Light 20 ft"); empty for SRD items.</summary>
     public IReadOnlyList<string> Effects { get; init; } = [];
+
+    /// <summary>Structured effects on the sheet while the item is active (see <see cref="ItemModifier"/>).</summary>
+    public IReadOnlyList<ItemModifier> Modifiers { get; init; } = [];
 }

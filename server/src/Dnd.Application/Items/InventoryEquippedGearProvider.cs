@@ -5,8 +5,8 @@ using Dnd.Domain.Characters;
 namespace Dnd.Application.Items;
 
 /// <summary>
-/// <see cref="IEquippedGearProvider"/> backed by the inventory: the equipped armor and shield of each
-/// character, with their overrides applied, as stored in the database.
+/// <see cref="IEquippedGearProvider"/> backed by the inventory: the equipped armor, shield and active item
+/// modifiers of each character, with their overrides applied, as stored in the database.
 /// </summary>
 public sealed class InventoryEquippedGearProvider(ICharacterRepository characters, IItemTemplateRepository templates) : IEquippedGearProvider
 {
@@ -28,6 +28,6 @@ public sealed class InventoryEquippedGearProvider(ICharacterRepository character
             .GroupBy(i => i.CharacterId)
             .ToDictionary(
                 g => g.Key,
-                g => EquippedGear.FromEquipped(g.OrderBy(i => i.SortOrder).Select(i => InventoryView.Resolve(loaded, i))));
+                g => InventoryView.Gear(g, loaded));
     }
 }

@@ -1,5 +1,6 @@
 using Dnd.Application.ChangeRequests;
 using Dnd.Application.Items;
+using Dnd.Domain.Characters;
 
 namespace Dnd.Application.Characters;
 
@@ -49,6 +50,25 @@ public sealed record HitDiceDto(string ClassIndex, int Die, int Total, int Remai
 public sealed record SpellcastingDto(string ClassIndex, string Ability, int SaveDc, int AttackBonus, int? PreparedMax);
 
 /// <param name="PactSlotLevel">Spell level of the Pact Magic slots (null without them).</param>
+/// <summary>An item modifier applied to the sheet; <see cref="Kind"/> is an <c>ItemModifierKind</c> name.</summary>
+public sealed record ItemEffectDto(string ItemName, string Kind, string? Target, int Value);
+
+/// <summary>One term of a calculated value; <see cref="Source"/> is a <c>BreakdownSources</c> value ("ability", "item", "override"...).</summary>
+public sealed record BreakdownPartDto(string Source, string Label, int Value);
+
+/// <summary>A calculated value explained point by point: the part values add up to <see cref="Total"/>.</summary>
+public sealed record ValueBreakdownDto(int Total, IReadOnlyList<BreakdownPartDto> Parts)
+{
+    public static ValueBreakdownDto From(ValueBreakdown breakdown) =>
+        new(breakdown.Total, breakdown.Parts.Select(p => new BreakdownPartDto(p.Source, p.Label, p.Value)).ToList());
+}
+
+/// <param name="ItemEffects">Item modifiers applied to the sheet, for the UI to mark the values affected by items.</param>
+/// <param name="Breakdowns">
+/// How every value was obtained, keyed like the override fields ("ability.dex", "save.wis", "skill.stealth",
+/// "armorClass", "initiative", "speed", "hitPointsMax", "passivePerception", "proficiencyBonus") plus
+/// "spellSaveDc.&lt;classIndex&gt;" and "spellAttackBonus.&lt;classIndex&gt;".
+/// </param>
 public sealed record CharacterSheetDto(
     IReadOnlyDictionary<string, AbilityDto> Abilities,
     int TotalLevel,
@@ -63,7 +83,9 @@ public sealed record CharacterSheetDto(
     IReadOnlyList<HitDiceDto> HitDice,
     IReadOnlyList<SpellcastingDto> Spellcasting,
     int? PactSlotLevel,
-    IReadOnlyList<string> OverriddenFields);
+    IReadOnlyList<string> OverriddenFields,
+    IReadOnlyList<ItemEffectDto> ItemEffects,
+    IReadOnlyDictionary<string, ValueBreakdownDto> Breakdowns);
 
 /// <summary>Full character: stored fields, child collections, calculated sheet, inventory and pending change requests.</summary>
 public sealed record CharacterDetailDto
@@ -178,7 +200,9 @@ public sealed record AttackDto(
     string? VersatileDamage,
     string? Range,
     IReadOnlyList<string> Properties,
-    string? Notes);
+    string? Notes,
+    ValueBreakdownDto AttackBreakdown,
+    ValueBreakdownDto DamageBreakdown);
 
 /// <summary>A consumable of the inventory (potions, scrolls, ammunition...) for the quick-use list.</summary>
 public sealed record QuickConsumableDto(Guid ItemId, string Name, int Quantity, int? Charges);

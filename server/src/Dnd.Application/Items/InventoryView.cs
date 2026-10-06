@@ -29,6 +29,18 @@ public static class InventoryView
     public static EffectiveItem Resolve(IReadOnlyDictionary<Guid, ItemTemplate> templates, CharacterItem item) =>
         EffectiveItem.Resolve(TemplateOf(templates, item.TemplateId), item.Overrides);
 
+    /// <summary>
+    /// Gear of the equipped entries among <paramref name="items"/> (in inventory order): armor, shield
+    /// and the modifiers of the active items (attunement included).
+    /// </summary>
+    public static EquippedGear Gear(IEnumerable<CharacterItem> items, IReadOnlyDictionary<Guid, ItemTemplate> templates) =>
+        EquippedGear.FromEquipped(items
+            .Where(i => i.Equipped)
+            .OrderBy(i => i.SortOrder)
+            .ThenBy(i => i.CreatedAt)
+            .ThenBy(i => i.Id)
+            .Select(i => (Resolve(templates, i), i.Attuned)));
+
     /// <param name="strengthScore">Final Strength score from the calculated sheet.</param>
     public static InventoryDto Build(Character character, IReadOnlyDictionary<Guid, ItemTemplate> templates, int strengthScore)
     {

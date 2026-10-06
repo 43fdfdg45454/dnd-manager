@@ -1,3 +1,5 @@
+using Dnd.Domain.Items;
+
 namespace Dnd.Domain.Characters;
 
 /// <summary>Final ability score (base + racial bonuses, or the override) and its modifier.</summary>
@@ -15,6 +17,12 @@ public sealed record SpellcastingValue(string ClassIndex, string Ability, int Sa
 
 /// <summary>Warlock Pact Magic: <see cref="Slots"/> slots, all of spell level <see cref="SlotLevel"/>.</summary>
 public sealed record PactMagicValue(int SlotLevel, int Slots);
+
+/// <summary>
+/// An item modifier applied to the sheet, for the UI to mark the values affected by items. Attack and
+/// damage bonuses of non-weapon items are listed too (they apply to every attack).
+/// </summary>
+public sealed record AppliedItemEffect(string ItemName, ItemModifierKind Kind, string? Target, int Value);
 
 /// <summary>Calculated character sheet produced by <see cref="SheetCalculator.Calculate"/>.</summary>
 public sealed record CharacterSheet
@@ -60,6 +68,20 @@ public sealed record CharacterSheet
 
     /// <summary>Fields replaced by an override (<see cref="OverrideFields"/>), sorted.</summary>
     public required IReadOnlyList<string> OverriddenFields { get; init; }
+
+    /// <summary>
+    /// Modifiers of active items applied to the sheet, in inventory order. Excludes the attack and damage
+    /// bonuses of weapons (they apply to their own attack) and ability sets that did not raise the score.
+    /// </summary>
+    public IReadOnlyList<AppliedItemEffect> ItemEffects { get; init; } = [];
+
+    /// <summary>
+    /// How every value was obtained, point by point, keyed like <see cref="OverrideFields"/>:
+    /// "ability.str", "save.dex", "skill.stealth", "armorClass", "initiative", "speed", "hitPointsMax",
+    /// "passivePerception", "proficiencyBonus", plus "spellSaveDc.&lt;classIndex&gt;" and
+    /// "spellAttackBonus.&lt;classIndex&gt;" per spellcasting class.
+    /// </summary>
+    public IReadOnlyDictionary<string, ValueBreakdown> Breakdowns { get; init; } = new Dictionary<string, ValueBreakdown>();
 
     /// <summary>Modifier of each ability by index; input for <see cref="ClassResourceRules"/>.</summary>
     public IReadOnlyDictionary<string, int> AbilityModifiers => Abilities.ToDictionary(a => a.Key, a => a.Value.Modifier);

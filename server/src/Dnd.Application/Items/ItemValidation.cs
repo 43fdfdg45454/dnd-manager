@@ -16,6 +16,31 @@ internal static class ItemRules
 
     public static string ListMessage(string label, int entryMaxLength) =>
         $"{label} admiten como máximo {ItemLimits.MaxListEntries} entradas de {entryMaxLength} caracteres.";
+
+    public const string NullModifierMessage = "El modificador no puede estar vacío.";
+
+    public static bool IsValidModifierCount(IReadOnlyList<ItemModifierDto>? modifiers) =>
+        modifiers is null || modifiers.Count <= ItemLimits.MaxModifiers;
+}
+
+/// <summary>A modifier: a known kind, then the domain rules (<see cref="ItemModifier.Validate"/>).</summary>
+public sealed class ItemModifierDtoValidator : AbstractValidator<ItemModifierDto>
+{
+    public static readonly string KindMessage = $"El tipo de modificador debe ser {EnumNames.Describe<ItemModifierKind>()}.";
+
+    public ItemModifierDtoValidator()
+    {
+        RuleFor(x => x.Kind).Must(EnumNames.IsValid<ItemModifierKind>).WithMessage(KindMessage);
+        RuleFor(x => x)
+            .Custom((modifier, context) =>
+            {
+                if (modifier.ToDomain().Validate() is { } error)
+                {
+                    context.AddFailure(nameof(ItemModifierDto.Value), error);
+                }
+            })
+            .When(x => EnumNames.IsValid<ItemModifierKind>(x.Kind));
+    }
 }
 
 public sealed class ItemOverridesDtoValidator : AbstractValidator<ItemOverridesDto>
@@ -52,6 +77,8 @@ public sealed class ItemOverridesDtoValidator : AbstractValidator<ItemOverridesD
             .WithMessage($"El bono de ataque debe estar entre {ItemLimits.MinBonus} y {ItemLimits.MaxBonus}.");
         RuleFor(x => x.DamageBonus).InclusiveBetween(ItemLimits.MinBonus, ItemLimits.MaxBonus)
             .WithMessage($"El bono de daño debe estar entre {ItemLimits.MinBonus} y {ItemLimits.MaxBonus}.");
+        RuleFor(x => x.Modifiers).Must(ItemRules.IsValidModifierCount).WithMessage(ItemModifier.TooManyMessage);
+        RuleForEach(x => x.Modifiers).NotNull().WithMessage(ItemRules.NullModifierMessage).SetValidator(new ItemModifierDtoValidator());
     }
 }
 
@@ -98,6 +125,8 @@ public sealed record ItemTemplateInput
 
     public IReadOnlyList<string>? Effects { get; init; }
 
+    public IReadOnlyList<ItemModifierDto>? Modifiers { get; init; }
+
     public static ItemTemplateInput From(ItemTemplateData d) => new()
     {
         Name = d.Name,
@@ -120,6 +149,7 @@ public sealed record ItemTemplateInput
         StealthDisadvantage = d.StealthDisadvantage,
         Description = d.Description,
         Effects = d.Effects,
+        Modifiers = ItemModifierDto.FromAll(d.Modifiers),
     };
 
     /// <summary>Maps to the domain data (texts trimmed, blank optional texts and list entries dropped). Call only on a validated input.</summary>
@@ -145,6 +175,7 @@ public sealed record ItemTemplateInput
         StealthDisadvantage = StealthDisadvantage,
         Description = Clean(Description),
         Effects = Clean(Effects),
+        Modifiers = (Modifiers ?? []).Select(m => m.ToDomain().Normalize()).ToArray(),
     };
 
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
@@ -189,6 +220,8 @@ public sealed class ItemTemplateInputValidator : AbstractValidator<ItemTemplateI
             .WithMessage($"El máximo de Destreza debe estar entre 0 y {ItemLimits.MaxDexBonus}.");
         RuleFor(x => x.StrengthMinimum).InclusiveBetween(0, ItemLimits.MaxStrengthMinimum)
             .WithMessage($"La Fuerza mínima debe estar entre 0 y {ItemLimits.MaxStrengthMinimum}.");
+        RuleFor(x => x.Modifiers).Must(ItemRules.IsValidModifierCount).WithMessage(ItemModifier.TooManyMessage);
+        RuleForEach(x => x.Modifiers).NotNull().WithMessage(ItemRules.NullModifierMessage).SetValidator(new ItemModifierDtoValidator());
     }
 }
 
@@ -239,6 +272,9 @@ public sealed record ItemTemplatePatch
 
     public Optional<IReadOnlyList<string>?> Effects { get; init; }
 
+    /// <summary>Replaces the whole list of modifiers; <c>null</c> or <c>[]</c> removes them.</summary>
+    public Optional<IReadOnlyList<ItemModifierDto>?> Modifiers { get; init; }
+
     /// <summary>The current data with the given fields applied (null required fields become empty/false).</summary>
     public ItemTemplateInput ApplyTo(ItemTemplateInput current) => current with
     {
@@ -262,6 +298,7 @@ public sealed record ItemTemplatePatch
         StealthDisadvantage = StealthDisadvantage.IsSet ? StealthDisadvantage.Value ?? false : current.StealthDisadvantage,
         Description = Pick(Description, current.Description),
         Effects = Pick(Effects, current.Effects),
+        Modifiers = Pick(Modifiers, current.Modifiers),
     };
 
     private static T Pick<T>(Optional<T> value, T current) => value.IsSet ? value.Value : current;

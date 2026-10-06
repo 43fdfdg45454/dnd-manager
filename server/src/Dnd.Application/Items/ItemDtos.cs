@@ -6,9 +6,24 @@ using Dnd.Domain.Items;
 namespace Dnd.Application.Items;
 
 /// <summary>
+/// A structured item modifier (<see cref="ItemModifier"/>). <see cref="Kind"/> is an
+/// <see cref="ItemModifierKind"/> name; <see cref="Target"/> an ability or skill index, or null.
+/// </summary>
+public sealed record ItemModifierDto(string Kind, string? Target, int Value)
+{
+    public static ItemModifierDto From(ItemModifier m) => new(m.Kind.ToString(), m.Target, m.Value);
+
+    public static IReadOnlyList<ItemModifierDto> FromAll(IEnumerable<ItemModifier> modifiers) => modifiers.Select(From).ToList();
+
+    /// <summary>Maps to the domain (not normalized). Call only on modifiers accepted by <see cref="ItemModifierDtoValidator"/>.</summary>
+    public ItemModifier ToDomain() => new(EnumNames.Parse<ItemModifierKind>(Kind), Target, Value);
+}
+
+/// <summary>
 /// Overridden fields of an item, used both in requests and responses. Only the defined fields are
 /// written to JSON. <see cref="Category"/> and <see cref="Rarity"/> are enum names
-/// (<see cref="ItemCategory"/>, <see cref="ItemRarity"/>). An empty list or blank text counts as not overridden.
+/// (<see cref="ItemCategory"/>, <see cref="ItemRarity"/>). An empty list or blank text counts as not overridden,
+/// except for <see cref="Modifiers"/>: absent or null keeps the template's, an empty list removes them.
 /// </summary>
 public sealed record ItemOverridesDto
 {
@@ -72,6 +87,10 @@ public sealed record ItemOverridesDto
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<string>? Effects { get; init; }
 
+    /// <summary>Null (or absent) keeps the template's modifiers; an empty list removes them all.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<ItemModifierDto>? Modifiers { get; init; }
+
     public static ItemOverridesDto From(ItemOverrides o) => new()
     {
         Name = o.Name,
@@ -94,6 +113,7 @@ public sealed record ItemOverridesDto
         AttackBonus = o.AttackBonus,
         DamageBonus = o.DamageBonus,
         Effects = o.Effects,
+        Modifiers = o.Modifiers is null ? null : ItemModifierDto.FromAll(o.Modifiers),
     };
 
     /// <summary>Maps to a new domain instance. Call only on overrides accepted by <see cref="ItemOverridesDtoValidator"/>.</summary>
@@ -119,6 +139,7 @@ public sealed record ItemOverridesDto
         AttackBonus = AttackBonus,
         DamageBonus = DamageBonus,
         Effects = Effects,
+        Modifiers = Modifiers?.Select(m => m.ToDomain()).ToArray(),
     };
 }
 
@@ -128,7 +149,10 @@ public sealed record RangeDto(int Normal, int? Long);
 
 public sealed record ArmorDto(int Base, bool AddDex, int? MaxDex, int? StrengthMinimum, bool StealthDisadvantage);
 
-/// <summary>Template ∪ overrides, as used in play.</summary>
+/// <summary>
+/// Template ∪ overrides, as used in play. <see cref="AttackBonus"/>/<see cref="DamageBonus"/> are the sums
+/// of the corresponding <see cref="Modifiers"/> (kept for compatibility).
+/// </summary>
 public sealed record EffectiveItemDto(
     string Name,
     string Category,
@@ -143,7 +167,8 @@ public sealed record EffectiveItemDto(
     int AttackBonus,
     int DamageBonus,
     IReadOnlyList<string> Effects,
-    IReadOnlyList<string> Description)
+    IReadOnlyList<string> Description,
+    IReadOnlyList<ItemModifierDto> Modifiers)
 {
     public static EffectiveItemDto From(EffectiveItem e) => new(
         e.Name,
@@ -159,7 +184,8 @@ public sealed record EffectiveItemDto(
         e.AttackBonus,
         e.DamageBonus,
         e.Effects,
-        e.Description);
+        e.Description,
+        ItemModifierDto.FromAll(e.Modifiers));
 }
 
 /// <param name="TemplateName">Name of the template (null for items made by hand).</param>

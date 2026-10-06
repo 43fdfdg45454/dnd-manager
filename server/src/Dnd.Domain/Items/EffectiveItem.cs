@@ -48,11 +48,20 @@ public sealed record EffectiveItem
 
     public bool StealthDisadvantage { get; init; }
 
-    public int AttackBonus { get; init; }
+    /// <summary>Sum of the <see cref="ItemModifierKind.AttackBonus"/> modifiers (kept for API compatibility).</summary>
+    public int AttackBonus => SumOf(ItemModifierKind.AttackBonus);
 
-    public int DamageBonus { get; init; }
+    /// <summary>Sum of the <see cref="ItemModifierKind.DamageBonus"/> modifiers (kept for API compatibility).</summary>
+    public int DamageBonus => SumOf(ItemModifierKind.DamageBonus);
 
     public IReadOnlyList<string> Effects { get; init; } = [];
+
+    /// <summary>
+    /// Structured modifiers: the overrides' list, or the template's when the overrides do not define one,
+    /// followed by the legacy <see cref="ItemOverrides.AttackBonus"/>/<see cref="ItemOverrides.DamageBonus"/>
+    /// converted to modifiers. They apply only while the item is active (<see cref="IsActiveFor(CharacterItem)"/>).
+    /// </summary>
+    public IReadOnlyList<ItemModifier> Modifiers { get; init; } = [];
 
     public IReadOnlyList<string> Description { get; init; } = [];
 
@@ -69,8 +78,18 @@ public sealed record EffectiveItem
     /// </summary>
     public bool IsStackable => IsConsumable || Category == ItemCategory.AdventuringGear;
 
-    /// <summary>Only weapons, armor and shields can be equipped.</summary>
-    public bool IsEquippable => Category is ItemCategory.Weapon or ItemCategory.Armor or ItemCategory.Shield;
+    /// <summary>Weapons, armor, shields and magic items (rings, cloaks and gauntlets are worn) can be equipped.</summary>
+    public bool IsEquippable => Category is ItemCategory.Weapon or ItemCategory.Armor or ItemCategory.Shield or ItemCategory.MagicItem;
+
+    /// <summary>Whether the modifiers of the item apply to the character that has <paramref name="item"/>: equipped and, when required, attuned.</summary>
+    public bool IsActiveFor(CharacterItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        return IsActive(item.Equipped, item.Attuned);
+    }
+
+    /// <summary>Whether the modifiers apply for an entry in that state: equipped and, when the item requires attunement, attuned.</summary>
+    public bool IsActive(bool equipped, bool attuned) => equipped && (!RequiresAttunement || attuned);
 
     /// <summary>Resolves template ∪ overrides. Overrides replace only the fields they define.</summary>
     public static EffectiveItem Resolve(ItemTemplate? template, ItemOverrides overrides)
@@ -96,11 +115,34 @@ public sealed record EffectiveItem
             MaxDexBonus = overrides.MaxDexBonus ?? template?.MaxDexBonus,
             StrengthMinimum = overrides.StrengthMinimum ?? template?.StrengthMinimum,
             StealthDisadvantage = overrides.StealthDisadvantage ?? template?.StealthDisadvantage ?? false,
-            AttackBonus = overrides.AttackBonus ?? 0,
-            DamageBonus = overrides.DamageBonus ?? 0,
+            Modifiers = ResolveModifiers(template, overrides),
             Effects = overrides.Effects ?? template?.Effects ?? [],
             Description = overrides.Description ?? template?.Description ?? [],
             IsCustom = template is null || !overrides.IsEmpty,
         };
     }
+
+    private static IReadOnlyList<ItemModifier> ResolveModifiers(ItemTemplate? template, ItemOverrides overrides)
+    {
+        var modifiers = overrides.Modifiers ?? template?.Modifiers ?? [];
+        if (overrides.AttackBonus is null && overrides.DamageBonus is null)
+        {
+            return modifiers;
+        }
+
+        var result = modifiers.ToList();
+        if (overrides.AttackBonus is { } attack)
+        {
+            result.Add(new ItemModifier(ItemModifierKind.AttackBonus, null, attack));
+        }
+
+        if (overrides.DamageBonus is { } damage)
+        {
+            result.Add(new ItemModifier(ItemModifierKind.DamageBonus, null, damage));
+        }
+
+        return result;
+    }
+
+    private int SumOf(ItemModifierKind kind) => Modifiers.Where(m => m.Kind == kind).Sum(m => m.Value);
 }

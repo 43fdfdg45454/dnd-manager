@@ -277,8 +277,16 @@ public sealed class AddInventoryItemHandler(CharacterLoader loader, InventoryOpe
     }
 }
 
-/// <summary>Equip, attune, notes, order and charges: owner and DMs, without approval.</summary>
-public sealed class UpdateInventoryItemHandler(CharacterLoader loader, InventoryReader reader, IUnitOfWork unitOfWork, IDateTimeProvider clock)
+/// <summary>
+/// Equip, attune, notes, order and charges: owner and DMs, without approval. Equipping or attuning
+/// recalculates the sheet (item modifiers), capping the current hit points at the new maximum.
+/// </summary>
+public sealed class UpdateInventoryItemHandler(
+    CharacterLoader loader,
+    InventoryReader reader,
+    ICharacterSheetService sheets,
+    IUnitOfWork unitOfWork,
+    IDateTimeProvider clock)
 {
     public async Task<CharacterItemDto> HandleAsync(Guid currentUserId, Guid characterId, Guid itemId, UpdateInventoryItemRequest request, CancellationToken cancellationToken = default)
     {
@@ -301,6 +309,11 @@ public sealed class UpdateInventoryItemHandler(CharacterLoader loader, Inventory
             },
             i => InventoryView.Resolve(templates, i),
             clock.UtcNow);
+        if (request.Equipped is not null || request.Attuned is not null)
+        {
+            await sheets.RecalculateAsync(character, cancellationToken);
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return CharacterItemDto.From(item, InventoryView.TemplateOf(templates, item.TemplateId));
     }
@@ -323,8 +336,17 @@ public sealed class UseInventoryItemHandler(CharacterLoader loader, InventoryRea
     }
 }
 
-/// <summary>Removes units of an item: DMs and the owner of a draft directly; the owner of an active character via a RemoveItem request.</summary>
-public sealed class RemoveInventoryItemHandler(CharacterLoader loader, InventoryOperations operations, InventoryReader reader, IUnitOfWork unitOfWork, IDateTimeProvider clock)
+/// <summary>
+/// Removes units of an item: DMs and the owner of a draft directly (removing an equipped entry
+/// recalculates the sheet); the owner of an active character via a RemoveItem request.
+/// </summary>
+public sealed class RemoveInventoryItemHandler(
+    CharacterLoader loader,
+    InventoryOperations operations,
+    InventoryReader reader,
+    ICharacterSheetService sheets,
+    IUnitOfWork unitOfWork,
+    IDateTimeProvider clock)
 {
     public async Task<ChangeRequestDto?> HandleAsync(Guid currentUserId, Guid characterId, Guid itemId, RemoveInventoryItemRequest? request, CancellationToken cancellationToken = default)
     {
@@ -340,7 +362,13 @@ public sealed class RemoveInventoryItemHandler(CharacterLoader loader, Inventory
 
         if (mode == SheetEditMode.Direct)
         {
+            var wasEquipped = item.Equipped;
             character.RemoveItem(itemId, quantity, clock.UtcNow);
+            if (wasEquipped)
+            {
+                await sheets.RecalculateAsync(character, cancellationToken);
+            }
+
             await unitOfWork.SaveChangesAsync(cancellationToken);
             return null;
         }

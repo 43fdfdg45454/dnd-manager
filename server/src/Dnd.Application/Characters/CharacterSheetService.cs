@@ -15,12 +15,13 @@ namespace Dnd.Application.Characters;
 /// </summary>
 public interface ICharacterSheetService
 {
-    /// <summary>Calculates the sheet of a character with all its child collections loaded.</summary>
+    /// <summary>Calculates the sheet of a character with all its child collections (inventory included) loaded.</summary>
     Task<CharacterSheet> CalculateAsync(Character character, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// After a sheet edit (or on creation): calculates the sheet, regenerates the automatic class
-    /// resources and refreshes the current hit points. Returns the new sheet.
+    /// After a sheet edit, an inventory change that can affect the sheet (equip, attune, remove) or on
+    /// creation: calculates the sheet, regenerates the automatic class resources and refreshes the
+    /// current hit points (capped at the new maximum). Returns the new sheet.
     /// </summary>
     Task<CharacterSheet> RecalculateAsync(Character character, CancellationToken cancellationToken = default);
 
@@ -272,10 +273,15 @@ public sealed class CharacterSheetService(
             .ToList();
     }
 
+    /// <summary>
+    /// The gear comes from the loaded inventory (<see cref="Character.Items"/>), not from the database, so
+    /// that unsaved changes (equip, attune, remove) are already reflected before saving.
+    /// </summary>
     private async Task<CharacterSheet> CalculateAsync(Character character, SheetCatalog sheetCatalog, CancellationToken cancellationToken)
     {
-        var gear = await gearProvider.GetAsync([character.Id], cancellationToken);
-        return SheetCalculator.Calculate(sheetCatalog.InputFor(character, gear.GetValueOrDefault(character.Id) ?? EquippedGear.None));
+        var equipped = character.Items.Where(i => i.Equipped).ToList();
+        var templates = await InventoryView.LoadTemplatesAsync(itemTemplates, equipped.Select(i => i.TemplateId), cancellationToken);
+        return SheetCalculator.Calculate(sheetCatalog.InputFor(character, InventoryView.Gear(equipped, templates)));
     }
 
     /// <summary>Levels with slots (or spent ones), pact slots first as level 0.</summary>
@@ -302,5 +308,7 @@ public sealed class CharacterSheetService(
         sheet.HitDice.Select(h => new HitDiceDto(h.ClassIndex, h.Die, h.Total, h.Remaining)).ToList(),
         sheet.Spellcasting.Select(s => new SpellcastingDto(s.ClassIndex, s.Ability, s.SaveDc, s.AttackBonus, s.PreparedMax)).ToList(),
         sheet.PactMagic?.SlotLevel,
-        sheet.OverriddenFields);
+        sheet.OverriddenFields,
+        sheet.ItemEffects.Select(e => new ItemEffectDto(e.ItemName, e.Kind.ToString(), e.Target, e.Value)).ToList(),
+        sheet.Breakdowns.ToDictionary(b => b.Key, b => ValueBreakdownDto.From(b.Value), StringComparer.Ordinal));
 }

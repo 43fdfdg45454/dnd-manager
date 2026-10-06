@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -8,11 +9,14 @@ namespace Dnd.Infrastructure.Persistence;
 
 /// <summary>
 /// Stores a list as a JSON array in a text column. Used instead of provider-specific array or
-/// JSON types so the same model works on PostgreSQL and SQLite.
+/// JSON types so the same model works on PostgreSQL and SQLite. Enums are stored by name.
 /// </summary>
 internal static class JsonListConversion
 {
-    private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.General);
+    private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.General)
+    {
+        Converters = { new JsonStringEnumConverter() },
+    };
 
     public static PropertyBuilder<IReadOnlyList<T>> HasJsonListConversion<T>(this PropertyBuilder<IReadOnlyList<T>> builder)
     {

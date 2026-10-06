@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Dnd.Application.Items;
 using Dnd.Domain.Catalog;
 
 namespace Dnd.Application.Catalog;
@@ -203,13 +204,14 @@ public sealed record ItemDetailDto(
     bool IsSrd,
     DateTimeOffset CreatedAt,
     IReadOnlyList<string> Effects,
-    string Source)
+    string Source,
+    IReadOnlyList<ItemModifierDto> Modifiers)
 {
     public static ItemDetailDto From(ItemTemplate i) => new(
         i.Id, i.CampaignId, i.Index, i.Name, i.Category.ToString(), i.Subcategory, i.Rarity?.ToString(), i.RequiresAttunement,
         i.CostCp, i.WeightLb, i.DamageDice, i.DamageType, i.VersatileDice, i.Properties, i.RangeNormal, i.RangeLong,
         i.ArmorClassBase, i.AddDexModifier, i.MaxDexBonus, i.StrengthMinimum, i.StealthDisadvantage, i.Description, i.IsSrd, i.CreatedAt,
-        i.Effects, ItemSources.Of(i));
+        i.Effects, ItemSources.Of(i), ItemModifierDto.FromAll(i.Modifiers));
 }
 
 public sealed record ConditionDto(string Index, string Name, IReadOnlyList<string> Description)

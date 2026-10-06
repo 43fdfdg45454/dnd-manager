@@ -107,6 +107,7 @@ public sealed class SellHandler(
     TradeLoader loader,
     ITransactionRepository transactions,
     InventoryReader inventory,
+    ICharacterSheetService sheets,
     IUnitOfWork unitOfWork,
     IDateTimeProvider clock)
 {
@@ -134,8 +135,15 @@ public sealed class SellHandler(
         var now = clock.UtcNow;
 
         var total = shop.BuyFromCharacter(matching, referencePrice, request.Quantity, now);
+        var wasEquipped = item.Equipped;
         character.RemoveItem(item.Id, request.Quantity, now);
         character.AdjustMoney(total, now);
+        if (wasEquipped)
+        {
+            // Selling an equipped item can lower the sheet (item modifiers): cap the current hit points.
+            await sheets.RecalculateAsync(character, cancellationToken);
+        }
+
         var transaction = Transaction.Record(shop.CampaignId, shop.Id, character.Id, TransactionType.Sale, effective.Name, request.Quantity, total, now);
         transactions.Add(transaction);
 

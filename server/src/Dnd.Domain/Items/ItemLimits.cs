@@ -22,6 +22,19 @@ public static class ItemLimits
     public const int MaxBonus = 20;
     public const int MaxCostCp = 1_000_000_000;
 
+    /// <summary>Range of the value of an <see cref="ItemModifier"/> (except <see cref="ItemModifierKind.AbilitySet"/>).</summary>
+    public const int MinModifier = -10;
+
+    public const int MaxModifier = 30;
+
+    /// <summary>Lowest score an <see cref="ItemModifierKind.AbilitySet"/> modifier can set (the highest is <see cref="MaxModifier"/>).</summary>
+    public const int MinAbilitySet = 1;
+
+    /// <summary>Modifiers of one item.</summary>
+    public const int MaxModifiers = 10;
+
+    public const int ModifierTargetMaxLength = 64;
+
     /// <summary>Maximum quantity of one inventory entry or one shop operation.</summary>
     public const int MaxQuantity = 100_000;
 

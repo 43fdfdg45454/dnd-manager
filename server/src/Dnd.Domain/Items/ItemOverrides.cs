@@ -52,13 +52,19 @@ public sealed class ItemOverrides
     /// <summary>Free-text effects, e.g. "+1 a ataque y daño", "Luz 20 ft".</summary>
     public IReadOnlyList<string>? Effects { get; init; }
 
+    /// <summary>
+    /// Structured modifiers that replace the template's: null keeps the template's, an empty list
+    /// removes them all.
+    /// </summary>
+    public IReadOnlyList<ItemModifier>? Modifiers { get; init; }
+
     /// <summary>True when no field is overridden.</summary>
     public bool IsEmpty =>
         Name is null && Description is null && Category is null && DamageDice is null && DamageType is null
         && VersatileDice is null && Properties is null && RangeNormal is null && RangeLong is null
         && ArmorClassBase is null && AddDexModifier is null && MaxDexBonus is null && StrengthMinimum is null
         && StealthDisadvantage is null && WeightLb is null && Rarity is null && RequiresAttunement is null
-        && AttackBonus is null && DamageBonus is null && Effects is null;
+        && AttackBonus is null && DamageBonus is null && Effects is null && Modifiers is null;
 
     /// <summary>A new instance without overridden fields.</summary>
     public static ItemOverrides None() => new();
@@ -86,12 +92,13 @@ public sealed class ItemOverrides
         AttackBonus = AttackBonus,
         DamageBonus = DamageBonus,
         Effects = Effects?.ToArray(),
+        Modifiers = Modifiers?.ToArray(),
     };
 
     /// <summary>
     /// Validated copy: strings trimmed (blank → not overridden), list entries trimmed and blank ones
-    /// dropped (an empty list → not overridden). Throws a <see cref="DomainException"/> when a value is
-    /// out of range.
+    /// dropped (an empty list → not overridden), modifiers normalized (an empty list of modifiers stays:
+    /// it removes the template's). Throws a <see cref="DomainException"/> when a value is out of range.
     /// </summary>
     public ItemOverrides Normalize()
     {
@@ -121,6 +128,8 @@ public sealed class ItemOverrides
             throw DomainException.RuleViolation($"El peso debe estar entre 0 y {ItemLimits.MaxWeightLb} lb.");
         }
 
+        var modifiers = ItemModifier.NormalizeAll(Modifiers);
+
         return new ItemOverrides
         {
             Name = name,
@@ -143,6 +152,7 @@ public sealed class ItemOverrides
             AttackBonus = AttackBonus,
             DamageBonus = DamageBonus,
             Effects = List(Effects, ItemLimits.EffectMaxLength, "Los efectos"),
+            Modifiers = modifiers,
         };
     }
 

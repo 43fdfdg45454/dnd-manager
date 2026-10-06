@@ -13,7 +13,7 @@ namespace Dnd.Domain.Characters;
 /// <param name="Race">Race of the character, or null when it has none.</param>
 /// <param name="Subrace">Subrace of the character, or null.</param>
 /// <param name="Skills">The skills to list in the sheet, in display order (usually every SRD skill).</param>
-/// <param name="Gear">Equipped armor and shield; null means nothing equipped.</param>
+/// <param name="Gear">Equipped armor, shield and active item modifiers; null means nothing equipped.</param>
 public sealed record SheetInput(
     Character Character,
     IReadOnlyList<ClassInfo> Classes,
@@ -97,9 +97,20 @@ public sealed record SkillInfo(string Index, string Name, string Ability)
     }
 }
 
+/// <summary>A modifier of an active item (equipped and, when required, attuned) as seen by the sheet.</summary>
+/// <param name="ItemName">Name of the effective item, shown next to the effect.</param>
+/// <param name="Modifier">The modifier.</param>
+/// <param name="FromWeapon">
+/// The item is a weapon: its <see cref="ItemModifierKind.AttackBonus"/>/<see cref="ItemModifierKind.DamageBonus"/>
+/// apply only to its own attack (see <see cref="CombatCalculator"/>), not to the sheet.
+/// </param>
+public sealed record ActiveModifier(string ItemName, ItemModifier Modifier, bool FromWeapon);
+
 /// <summary>
-/// Equipped armor and shield as seen by the armor class rule. <see cref="ArmorClassBase"/> null means
-/// no armor. Built from the equipped inventory entries (<see cref="From(EffectiveItem?, bool)"/>).
+/// Equipped gear as seen by the sheet: the armor (<see cref="ArmorClassBase"/> null means no armor),
+/// whether a shield is worn and its armor class (<see cref="ShieldArmorClass"/>), and the modifiers of
+/// every active item (<see cref="Modifiers"/>). Built from the equipped inventory entries
+/// (<see cref="FromEquipped(IEnumerable{ValueTuple{EffectiveItem, bool}})"/>).
 /// </summary>
 public sealed record EquippedGear(int? ArmorClassBase, bool AddDexModifier, int? MaxDexBonus, bool HasShield)
 {
@@ -107,22 +118,56 @@ public sealed record EquippedGear(int? ArmorClassBase, bool AddDexModifier, int?
 
     public bool WearsArmor => ArmorClassBase is not null;
 
+    /// <summary>Armor class added by the shield when <see cref="HasShield"/>: its <see cref="EffectiveItem.ArmorClassBase"/>, 2 when it has none.</summary>
+    public int ShieldArmorClass { get; init; } = SheetCalculator.ShieldBonus;
+
+    /// <summary>Modifiers of the active items, in inventory order.</summary>
+    public IReadOnlyList<ActiveModifier> Modifiers { get; init; } = [];
+
+    /// <summary>Name of the worn armor, for the armor class breakdown (null: a generic label).</summary>
+    public string? ArmorName { get; init; }
+
+    /// <summary>Name of the worn shield, for the armor class breakdown (null: a generic label).</summary>
+    public string? ShieldName { get; init; }
+
     /// <summary>Gear from an equipped armor template (null for none) and whether a shield is equipped.</summary>
     public static EquippedGear From(ItemTemplate? armor, bool hasShield) => armor?.ArmorClassBase is { } armorClass
-        ? new EquippedGear(armorClass, armor.AddDexModifier ?? false, armor.MaxDexBonus, hasShield)
+        ? new EquippedGear(armorClass, armor.AddDexModifier ?? false, armor.MaxDexBonus, hasShield) { ArmorName = armor.Name }
         : None with { HasShield = hasShield };
 
     /// <summary>Gear from an equipped effective armor (overrides applied; null for none) and whether a shield is equipped.</summary>
     public static EquippedGear From(EffectiveItem? armor, bool hasShield) => armor?.ArmorClassBase is { } armorClass
-        ? new EquippedGear(armorClass, armor.AddDexModifier, armor.MaxDexBonus, hasShield)
+        ? new EquippedGear(armorClass, armor.AddDexModifier, armor.MaxDexBonus, hasShield) { ArmorName = armor.Name }
         : None with { HasShield = hasShield };
 
-    /// <summary>Gear from the effective items a character has equipped: the first armor and whether any shield is among them.</summary>
+    /// <summary>
+    /// Gear from the effective items a character has equipped, none of them attuned (items that require
+    /// attunement give no modifiers). See <see cref="FromEquipped(IEnumerable{ValueTuple{EffectiveItem, bool}})"/>.
+    /// </summary>
     public static EquippedGear FromEquipped(IEnumerable<EffectiveItem> equipped)
     {
         ArgumentNullException.ThrowIfNull(equipped);
+        return FromEquipped(equipped.Select(i => (i, false)));
+    }
+
+    /// <summary>
+    /// Gear from the effective items a character has equipped and whether each one is attuned: the first
+    /// armor, the first shield (its armor class, 2 when it has none) and the modifiers of the active items.
+    /// </summary>
+    public static EquippedGear FromEquipped(IEnumerable<(EffectiveItem Item, bool Attuned)> equipped)
+    {
+        ArgumentNullException.ThrowIfNull(equipped);
         var items = equipped.ToList();
-        return From(items.FirstOrDefault(i => i.Category == ItemCategory.Armor), items.Any(i => i.Category == ItemCategory.Shield));
+        var shield = items.Select(i => i.Item).FirstOrDefault(i => i.Category == ItemCategory.Shield);
+        return From(items.Select(i => i.Item).FirstOrDefault(i => i.Category == ItemCategory.Armor), shield is not null) with
+        {
+            ShieldArmorClass = shield?.ArmorClassBase ?? SheetCalculator.ShieldBonus,
+            ShieldName = shield?.Name,
+            Modifiers = items
+                .Where(i => i.Item.IsActive(equipped: true, i.Attuned))
+                .SelectMany(i => i.Item.Modifiers.Select(m => new ActiveModifier(i.Item.Name, m, i.Item.Category == ItemCategory.Weapon)))
+                .ToList(),
+        };
     }
 }
 

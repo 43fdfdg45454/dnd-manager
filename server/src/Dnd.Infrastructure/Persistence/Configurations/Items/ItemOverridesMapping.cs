@@ -39,6 +39,7 @@ internal static class ItemOverridesMapping
             o.Property(x => x.AttackBonus).HasColumnName(ColumnPrefix + nameof(ItemOverrides.AttackBonus));
             o.Property(x => x.DamageBonus).HasColumnName(ColumnPrefix + nameof(ItemOverrides.DamageBonus));
             o.Property(x => x.Effects).HasColumnName(ColumnPrefix + nameof(ItemOverrides.Effects)).HasNullableJsonListConversion();
+            o.Property(x => x.Modifiers).HasColumnName(ColumnPrefix + nameof(ItemOverrides.Modifiers)).HasNullableJsonListConversion();
             o.Ignore(x => x.IsEmpty);
         });
         builder.Navigation("Overrides").IsRequired();

@@ -29,7 +29,7 @@ internal sealed record SrdCatalog(
 internal static class SrdDataset
 {
     /// <summary>Commit and date of the 5e-database snapshot in <c>server/seed/srd</c>.</summary>
-    public const string Version = "5e-database@a6212beb (2026-10-02) consumables 2026-10-06";
+    public const string Version = "5e-database@a6212beb (2026-10-02) consumables 2026-10-06, item modifiers 2026-10-06";
 
     private const string ResourcePrefix = "5e-SRD-";
 
@@ -323,6 +323,7 @@ internal static class SrdDataset
             StrengthMinimum = e.StrMinimum is > 0 ? e.StrMinimum : null,
             StealthDisadvantage = e.StealthDisadvantage ?? false,
             Description = description,
+            Modifiers = SrdItemModifiers.For(e.Index),
         };
     }
 
@@ -361,6 +362,7 @@ internal static class SrdDataset
             // The first line of the description reads like "Ring, rare (requires attunement)".
             RequiresAttunement = description.Count > 0 && description[0].Contains("requires attunement", StringComparison.OrdinalIgnoreCase),
             Description = description,
+            Modifiers = SrdItemModifiers.For(m.Index),
         };
     }
 

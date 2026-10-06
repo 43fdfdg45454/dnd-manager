@@ -127,6 +127,9 @@ public sealed class ApproveChangeRequestHandler(
                 break;
             case ChangeRequestType.AddItem or ChangeRequestType.CustomItem or ChangeRequestType.RemoveItem or ChangeRequestType.AdjustMoney:
                 await inventory.ApplyApprovedAsync(character, request, now, cancellationToken);
+
+                // Removing an equipped item can lower the sheet (item modifiers): cap the current hit points.
+                await sheets.RecalculateAsync(character, cancellationToken);
                 break;
             default:
                 throw AppException.Conflict("Este tipo de solicitud todavía no está soportado.");

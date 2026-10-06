@@ -1,3 +1,4 @@
+using Dnd.Domain.Items;
 using Dnd.Domain.Rules;
 
 namespace Dnd.Domain.Characters;
@@ -5,13 +6,16 @@ namespace Dnd.Domain.Characters;
 /// <summary>
 /// Pure calculation of the character sheet (SRD 5.1) from stored data and catalog info. Every
 /// calculated value can be replaced by a <see cref="CharacterOverride"/>; overridden values (ability
-/// scores, proficiency bonus, Perception) feed the values derived from them.
+/// scores, proficiency bonus, Perception) feed the values derived from them. Modifiers of active items
+/// (<see cref="EquippedGear.Modifiers"/>) are added to the calculated values before the overrides,
+/// except for the maximum hit points (see <see cref="Calculate"/>).
 /// </summary>
 public static class SheetCalculator
 {
     /// <summary>Speed used when the character has no race.</summary>
     public const int DefaultSpeed = 30;
 
+    /// <summary>Armor class of a shield without an armor class of its own.</summary>
     public const int ShieldBonus = 2;
 
     private const string Barbarian = "barbarian";
@@ -21,21 +25,69 @@ public static class SheetCalculator
     private const string SkillProficiencyPrefix = "skill-";
     private const string SavingThrowProficiencyPrefix = "saving-throw-";
 
+    /// <summary>
+    /// Calculates the sheet, with a <see cref="ValueBreakdown"/> of every value. Item modifiers: ability
+    /// bonuses are added to base + racial scores, then ability sets raise the score when higher, then the
+    /// override applies (clamped to 1-30). Save, skill, armor class, speed and initiative bonuses are added
+    /// to the calculated value; an override replaces the result. The maximum hit points bonus is added to
+    /// the calculated average <b>and</b> to the <see cref="OverrideFields.HitPointsMax"/> override, because
+    /// the override stands for the character's own hit points (rolled or chosen), not for the final value.
+    /// </summary>
     public static CharacterSheet Calculate(SheetInput input)
     {
         ArgumentNullException.ThrowIfNull(input);
 
         var character = input.Character;
-        var overrides = character.Overrides.ToDictionary(o => o.Field, o => o.Value, StringComparer.Ordinal);
+        var overrides = character.Overrides.ToDictionary(o => o.Field, StringComparer.Ordinal);
         var classes = ResolveClasses(character, input.Classes);
         var gear = input.Gear ?? EquippedGear.None;
+        var breakdowns = new Dictionary<string, ValueBreakdown>(StringComparer.Ordinal);
 
-        var abilities = CalculateAbilities(character, input.Race, input.Subrace, overrides);
+        // Attack and damage bonuses of weapons apply only to the weapon's own attack (CombatCalculator).
+        var modifiers = gear.Modifiers
+            .Where(m => !(m.FromWeapon && m.Modifier.Kind is ItemModifierKind.AttackBonus or ItemModifierKind.DamageBonus))
+            .ToList();
+
+        BreakdownBuilder Items(BreakdownBuilder builder, ItemModifierKind kind, string? target = null)
+        {
+            foreach (var m in modifiers.Where(m => m.Modifier.Kind == kind && (m.Modifier.Target is null || m.Modifier.Target == target)))
+            {
+                builder.Add(BreakdownSources.Item, m.ItemName, m.Modifier.Value);
+            }
+
+            return builder;
+        }
+
+        BreakdownBuilder WithOverride(BreakdownBuilder builder, string field) =>
+            overrides.TryGetValue(field, out var o) ? builder.SetTo(BreakdownSources.Override, BreakdownLabels.Override(o.Note), o.Value) : builder;
+
+        int Record(string key, BreakdownBuilder builder)
+        {
+            breakdowns[key] = builder.Build();
+            return builder.Total;
+        }
+
+        var appliedSets = new HashSet<ActiveModifier>(ReferenceEqualityComparer.Instance);
+        var abilities = Abilities.All.ToDictionary(
+            a => a,
+            a =>
+            {
+                var field = OverrideFields.Ability(a);
+                var builder = AbilityScore(character, a, input.Race, input.Subrace, modifiers, appliedSets);
+                var score = Record(field, WithOverride(builder, field).Clamp(AbilityRules.MinScore, AbilityRules.MaxScore, BreakdownLabels.ScoreLimit));
+                return new AbilityValue(score, AbilityRules.Modifier(score), overrides.ContainsKey(field));
+            });
         int Mod(string ability) => abilities[ability].Modifier;
+        BreakdownBuilder FromAbility(string ability) =>
+            new BreakdownBuilder().Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), Mod(ability));
 
         var totalLevel = classes.Sum(c => c.Level.Level);
-        var proficiencyBonus = Override(overrides, OverrideFields.ProficiencyBonus)
-            ?? AbilityRules.ProficiencyBonus(Math.Max(AbilityRules.MinLevel, totalLevel));
+        var level = Math.Max(AbilityRules.MinLevel, totalLevel);
+        var proficiencyBonus = Record(
+            OverrideFields.ProficiencyBonus,
+            WithOverride(
+                new BreakdownBuilder().Add(BreakdownSources.Base, BreakdownLabels.Level(level), AbilityRules.ProficiencyBonus(level)),
+                OverrideFields.ProficiencyBonus));
 
         var savingThrows = Abilities.All.ToDictionary(
             a => a,
@@ -43,23 +95,92 @@ public static class SheetCalculator
             {
                 var proficient = HasProficiency(character, ProficiencyType.SavingThrow, a, SavingThrowProficiencyPrefix);
                 var field = OverrideFields.Save(a);
-                var computed = Mod(a) + (proficient ? proficiencyBonus : 0);
-                return new SavingThrowValue(Override(overrides, field) ?? computed, proficient, overrides.ContainsKey(field));
+                var builder = FromAbility(a);
+                if (proficient)
+                {
+                    builder.Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus);
+                }
+
+                var value = Record(field, WithOverride(Items(builder, ItemModifierKind.SaveBonus, a), field));
+                return new SavingThrowValue(value, proficient, overrides.ContainsKey(field));
             });
 
         SkillValue Skill(string index, string name, string ability)
         {
             var proficiency = FindProficiency(character, ProficiencyType.Skill, index, SkillProficiencyPrefix);
             var expertise = proficiency?.Expertise ?? false;
-            var bonus = expertise ? 2 * proficiencyBonus : proficiency is not null ? proficiencyBonus : 0;
             var field = OverrideFields.Skill(index);
-            var value = Override(overrides, field) ?? Mod(ability) + bonus;
+            var builder = FromAbility(ability);
+            if (proficiency is not null)
+            {
+                builder.Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus);
+            }
+
+            if (expertise)
+            {
+                builder.Add(BreakdownSources.Expertise, BreakdownLabels.Expertise, proficiencyBonus);
+            }
+
+            var value = Record(field, WithOverride(Items(builder, ItemModifierKind.SkillBonus, index), field));
             return new SkillValue(index, name, ability, value, proficiency is not null, expertise, overrides.ContainsKey(field));
         }
 
         var skills = input.Skills.Select(s => Skill(s.Index, s.Name, s.Ability)).ToList();
         var perception = skills.FirstOrDefault(s => s.Index == PerceptionSkill)
             ?? Skill(PerceptionSkill, PerceptionSkill, Abilities.Wis);
+        var passivePerception = Record(
+            OverrideFields.PassivePerception,
+            WithOverride(
+                new BreakdownBuilder()
+                    .Add(BreakdownSources.Base, BreakdownLabels.Base, 10)
+                    .AddAll(breakdowns[OverrideFields.Skill(PerceptionSkill)].Parts),
+                OverrideFields.PassivePerception));
+
+        var initiative = Record(
+            OverrideFields.Initiative,
+            WithOverride(Items(FromAbility(Abilities.Dex), ItemModifierKind.InitiativeBonus), OverrideFields.Initiative));
+
+        var armorClass = Record(
+            OverrideFields.ArmorClass,
+            WithOverride(Items(ArmorClass(classes, gear, Mod), ItemModifierKind.ArmorClassBonus), OverrideFields.ArmorClass));
+
+        var speedBuilder = input.Race is { } race
+            ? new BreakdownBuilder().Add(BreakdownSources.Race, BreakdownLabels.Race, race.Speed)
+            : new BreakdownBuilder().Add(BreakdownSources.Base, BreakdownLabels.BaseSpeed, DefaultSpeed);
+        var speed = Record(
+            OverrideFields.Speed,
+            WithOverride(Items(speedBuilder, ItemModifierKind.SpeedBonus).Clamp(0, int.MaxValue, BreakdownLabels.Minimum), OverrideFields.Speed));
+
+        var hitPointsBuilder = character.HpMode == HpMode.Average ? AverageHitPoints(classes, Mod(Abilities.Con)) : new BreakdownBuilder();
+        var hitPointsMax = Record(
+            OverrideFields.HitPointsMax,
+            Items(WithOverride(hitPointsBuilder, OverrideFields.HitPointsMax), ItemModifierKind.HitPointsMaxBonus)
+                .Clamp(0, int.MaxValue, BreakdownLabels.Minimum));
+
+        var spellcasting = classes
+            .Where(c => c.Info.SpellcastingAbility is { } ability && Abilities.IsValid(ability))
+            .Select(c =>
+            {
+                var ability = c.Info.SpellcastingAbility!;
+                var classIndex = c.Level.ClassIndex;
+                var saveDc = Record(
+                    $"{OverrideFields.SpellSaveDc}.{classIndex}",
+                    WithOverride(
+                        new BreakdownBuilder()
+                            .Add(BreakdownSources.Base, BreakdownLabels.Base, 8)
+                            .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus)
+                            .Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), Mod(ability)),
+                        OverrideFields.SpellSaveDc));
+                var attackBonus = Record(
+                    $"{OverrideFields.SpellAttackBonus}.{classIndex}",
+                    WithOverride(
+                        new BreakdownBuilder()
+                            .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus)
+                            .Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), Mod(ability)),
+                        OverrideFields.SpellAttackBonus));
+                return new SpellcastingValue(classIndex, ability, saveDc, attackBonus, PreparedMax(classIndex, c.Level.Level, Mod(ability)));
+            })
+            .ToList();
 
         var (spellSlots, casterLevel) = CalculateSpellSlots(classes);
 
@@ -70,20 +191,24 @@ public static class SheetCalculator
             ProficiencyBonus = proficiencyBonus,
             SavingThrows = savingThrows,
             Skills = skills,
-            PassivePerception = Override(overrides, OverrideFields.PassivePerception) ?? 10 + perception.Value,
-            Initiative = Override(overrides, OverrideFields.Initiative) ?? Mod(Abilities.Dex),
-            ArmorClass = Override(overrides, OverrideFields.ArmorClass) ?? CalculateArmorClass(classes, gear, Mod),
-            Speed = Override(overrides, OverrideFields.Speed) ?? input.Race?.Speed ?? DefaultSpeed,
-            HitPointsMax = Override(overrides, OverrideFields.HitPointsMax)
-                ?? (character.HpMode == HpMode.Average ? AverageHitPoints(classes, Mod(Abilities.Con)) : 0),
+            PassivePerception = passivePerception,
+            Initiative = initiative,
+            ArmorClass = armorClass,
+            Speed = speed,
+            HitPointsMax = hitPointsMax,
             HitDice = classes
                 .Select(c => new HitDiceValue(c.Level.ClassIndex, c.Info.HitDie, c.Level.Level, character.HitDiceRemaining(c.Level.ClassIndex)))
                 .ToList(),
-            Spellcasting = CalculateSpellcasting(classes, proficiencyBonus, overrides, Mod),
+            Spellcasting = spellcasting,
             MulticlassCasterLevel = casterLevel,
             SpellSlotsMax = spellSlots,
             PactMagic = CalculatePactMagic(classes),
             OverriddenFields = [.. overrides.Keys.Order(StringComparer.Ordinal)],
+            ItemEffects = modifiers
+                .Where(m => m.Modifier.Kind != ItemModifierKind.AbilitySet || appliedSets.Contains(m))
+                .Select(m => new AppliedItemEffect(m.ItemName, m.Modifier.Kind, m.Modifier.Target, m.Modifier.Value))
+                .ToList(),
+            Breakdowns = breakdowns,
         };
     }
 
@@ -106,62 +231,115 @@ public static class SheetCalculator
             .ToList();
     }
 
-    private static Dictionary<string, AbilityValue> CalculateAbilities(
+    /// <summary>
+    /// Base score + racial bonuses + item bonuses, raised by the highest item set when it is higher
+    /// (recorded in <paramref name="appliedSets"/>). Before the override and the 1-30 limit.
+    /// </summary>
+    private static BreakdownBuilder AbilityScore(
         Character character,
+        string ability,
         RaceInfo? race,
         SubraceInfo? subrace,
-        Dictionary<string, int> overrides)
+        List<ActiveModifier> modifiers,
+        HashSet<ActiveModifier> appliedSets)
     {
-        var bonuses = character.ApplyRacialBonuses
-            ? (race?.AbilityBonuses ?? []).Concat(subrace?.AbilityBonuses ?? []).ToList()
-            : [];
-        var baseScores = character.BaseAbilities;
-
-        return Abilities.All.ToDictionary(
-            a => a,
-            a =>
+        var builder = new BreakdownBuilder().Add(BreakdownSources.Base, BreakdownLabels.BaseScore, character.BaseAbilities[ability]);
+        if (character.ApplyRacialBonuses)
+        {
+            var raceBonus = (race?.AbilityBonuses ?? []).Where(b => b.Ability == ability).Sum(b => b.Bonus);
+            if (raceBonus != 0)
             {
-                var field = OverrideFields.Ability(a);
-                var computed = baseScores[a] + bonuses.Where(b => b.Ability == a).Sum(b => b.Bonus);
-                var score = Math.Clamp(Override(overrides, field) ?? computed, AbilityRules.MinScore, AbilityRules.MaxScore);
-                return new AbilityValue(score, AbilityRules.Modifier(score), overrides.ContainsKey(field));
-            });
+                builder.Add(BreakdownSources.Race, BreakdownLabels.Race, raceBonus);
+            }
+
+            var subraceBonus = (subrace?.AbilityBonuses ?? []).Where(b => b.Ability == ability).Sum(b => b.Bonus);
+            if (subraceBonus != 0)
+            {
+                builder.Add(BreakdownSources.Subrace, BreakdownLabels.Subrace, subraceBonus);
+            }
+        }
+
+        foreach (var m in modifiers.Where(m => m.Modifier.Kind == ItemModifierKind.AbilityBonus && m.Modifier.Target == ability))
+        {
+            builder.Add(BreakdownSources.Item, m.ItemName, m.Modifier.Value);
+        }
+
+        var set = modifiers
+            .Where(m => m.Modifier.Kind == ItemModifierKind.AbilitySet && m.Modifier.Target == ability)
+            .OrderByDescending(m => m.Modifier.Value)
+            .FirstOrDefault();
+        if (set is not null && set.Modifier.Value > builder.Total)
+        {
+            builder.SetTo(BreakdownSources.Item, set.ItemName, set.Modifier.Value);
+            appliedSets.Add(set);
+        }
+
+        return builder;
     }
 
-    private static int CalculateArmorClass(List<ResolvedClass> classes, EquippedGear gear, Func<string, int> mod)
+    /// <summary>
+    /// Armor: its base, Dex (capped) when it adds it, and the shield. Without armor: 10 + Dex + shield, or
+    /// Unarmored Defense when higher (barbarian: + Con, shield allowed; monk: + Wis, without shield).
+    /// </summary>
+    private static BreakdownBuilder ArmorClass(List<ResolvedClass> classes, EquippedGear gear, Func<string, int> mod)
     {
         var dex = mod(Abilities.Dex);
-        var shield = gear.HasShield ? ShieldBonus : 0;
+        var shield = gear.HasShield ? gear.ShieldArmorClass : 0;
+        var builder = new BreakdownBuilder();
 
         if (gear.ArmorClassBase is { } armorBase)
         {
-            var dexBonus = !gear.AddDexModifier ? 0 : gear.MaxDexBonus is { } maxDex ? Math.Min(dex, maxDex) : dex;
-            return armorBase + dexBonus + shield;
+            builder.Add(BreakdownSources.Armor, gear.ArmorName ?? BreakdownLabels.Armor, armorBase);
+            if (gear.AddDexModifier)
+            {
+                builder.Add(BreakdownSources.Ability, BreakdownLabels.Ability(Abilities.Dex), gear.MaxDexBonus is { } maxDex ? Math.Min(dex, maxDex) : dex);
+            }
         }
-
-        var armorClass = 10 + dex + shield;
-        if (classes.Any(c => c.Level.ClassIndex == Barbarian))
+        else
         {
-            armorClass = Math.Max(armorClass, 10 + dex + mod(Abilities.Con) + shield);
+            builder.Add(BreakdownSources.Base, BreakdownLabels.Unarmored, 10).Add(BreakdownSources.Ability, BreakdownLabels.Ability(Abilities.Dex), dex);
+
+            // Unarmored Defense: the higher option wins (ties keep the plain 10 + Dex).
+            var bonus = 0;
+            string? bonusAbility = null;
+            if (classes.Any(c => c.Level.ClassIndex == Barbarian) && mod(Abilities.Con) > bonus)
+            {
+                (bonus, bonusAbility) = (mod(Abilities.Con), Abilities.Con);
+            }
+
+            if (!gear.HasShield && classes.Any(c => c.Level.ClassIndex == Monk) && mod(Abilities.Wis) > bonus)
+            {
+                (bonus, bonusAbility) = (mod(Abilities.Wis), Abilities.Wis);
+            }
+
+            if (bonusAbility is not null)
+            {
+                builder.Add(BreakdownSources.Class, BreakdownLabels.UnarmoredDefense(bonusAbility), bonus);
+            }
         }
 
-        if (!gear.HasShield && classes.Any(c => c.Level.ClassIndex == Monk))
+        if (gear.HasShield)
         {
-            armorClass = Math.Max(armorClass, 10 + dex + mod(Abilities.Wis));
+            builder.Add(BreakdownSources.Shield, gear.ShieldName ?? BreakdownLabels.Shield, shield);
         }
 
-        return armorClass;
+        return builder;
     }
 
-    /// <summary>Max die + Con at 1st level of the main class; (die / 2 + 1) + Con per other level; at least 1 per level.</summary>
-    private static int AverageHitPoints(List<ResolvedClass> classes, int conModifier)
+    /// <summary>
+    /// Max die + Con at 1st level of the main class; (die / 2 + 1) + Con per other level; at least 1 per
+    /// level. One part per class (its dice) and one part for Constitution.
+    /// </summary>
+    private static BreakdownBuilder AverageHitPoints(List<ResolvedClass> classes, int conModifier)
     {
-        var total = 0;
+        var builder = new BreakdownBuilder();
+        var conTotal = 0;
         for (var i = 0; i < classes.Count; i++)
         {
             var die = classes[i].Info.HitDie;
             var perLevel = Math.Max(1, die / 2 + 1 + conModifier);
             var levels = classes[i].Level.Level;
+            var total = 0;
             if (i == 0)
             {
                 total += Math.Max(1, die + conModifier);
@@ -169,34 +347,15 @@ public static class SheetCalculator
             }
 
             total += levels * perLevel;
+            var classLevel = classes[i].Level.Level;
+            conTotal += classLevel * conModifier;
+            builder.Add(
+                BreakdownSources.Class,
+                $"{BreakdownLabels.Class(classes[i].Level.ClassIndex)} {classLevel} (d{die})",
+                total - classLevel * conModifier);
         }
 
-        return total;
-    }
-
-    private static List<SpellcastingValue> CalculateSpellcasting(
-        List<ResolvedClass> classes,
-        int proficiencyBonus,
-        Dictionary<string, int> overrides,
-        Func<string, int> mod)
-    {
-        var saveDcOverride = Override(overrides, OverrideFields.SpellSaveDc);
-        var attackOverride = Override(overrides, OverrideFields.SpellAttackBonus);
-
-        return classes
-            .Where(c => c.Info.SpellcastingAbility is { } ability && Abilities.IsValid(ability))
-            .Select(c =>
-            {
-                var ability = c.Info.SpellcastingAbility!;
-                var modifier = mod(ability);
-                return new SpellcastingValue(
-                    c.Level.ClassIndex,
-                    ability,
-                    saveDcOverride ?? 8 + proficiencyBonus + modifier,
-                    attackOverride ?? proficiencyBonus + modifier,
-                    PreparedMax(c.Level.ClassIndex, c.Level.Level, modifier));
-            })
-            .ToList();
+        return classes.Count == 0 ? builder : builder.Add(BreakdownSources.Ability, BreakdownLabels.Ability(Abilities.Con), conTotal);
     }
 
     /// <summary>
@@ -250,9 +409,6 @@ public static class SheetCalculator
             .Where(p => p.Type == type && (p.Key == index || p.Key == datasetPrefix + index))
             .OrderByDescending(p => p.Expertise)
             .FirstOrDefault();
-
-    private static int? Override(Dictionary<string, int> overrides, string field) =>
-        overrides.TryGetValue(field, out var value) ? value : null;
 
     private sealed record ResolvedClass(CharacterClassLevel Level, ClassInfo Info);
 }
