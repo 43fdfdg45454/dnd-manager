@@ -103,8 +103,6 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<Reminder> Reminders => Set<Reminder>();
 
-    public DbSet<InstanceSetting> InstanceSettings => Set<InstanceSetting>();
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);

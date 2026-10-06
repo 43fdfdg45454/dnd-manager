@@ -39,6 +39,22 @@ public static class PageEndpoints
             .AllowAnonymous()
             .ExcludeFromDescription();
 
+        // First-boot page: creates the initial administrator through /api/v1/setup. No secret in the URL.
+        app.MapGet("/admin", (HttpContext context, IWebHostEnvironment environment) =>
+            {
+                var file = environment.WebRootFileProvider.GetFileInfo("admin.html");
+                if (!file.Exists)
+                {
+                    return Results.NotFound();
+                }
+
+                context.Response.Headers.CacheControl = "no-store";
+                context.Response.Headers["Referrer-Policy"] = "no-referrer";
+                return Results.Stream(file.CreateReadStream(), "text/html; charset=utf-8");
+            })
+            .AllowAnonymous()
+            .ExcludeFromDescription();
+
         return app;
     }
 }

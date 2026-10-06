@@ -29,7 +29,7 @@ internal sealed record SrdCatalog(
 internal static class SrdDataset
 {
     /// <summary>Commit and date of the 5e-database snapshot in <c>server/seed/srd</c>.</summary>
-    public const string Version = "5e-database@a6212beb (2026-10-02)";
+    public const string Version = "5e-database@a6212beb (2026-10-02) consumables 2026-10-06";
 
     private const string ResourcePrefix = "5e-SRD-";
 
@@ -261,6 +261,7 @@ internal static class SrdDataset
             "weapon" => ItemCategory.Weapon,
             "armor" when string.Equals(e.ArmorCategory, "Shield", StringComparison.OrdinalIgnoreCase) => ItemCategory.Shield,
             "armor" => ItemCategory.Armor,
+            "adventuring-gear" when IsAmmunition(e) => ItemCategory.Consumable,
             "adventuring-gear" => ItemCategory.AdventuringGear,
             "tools" => ItemCategory.Tool,
             "mounts-and-vehicles" => ItemCategory.Mount,
@@ -272,7 +273,7 @@ internal static class SrdDataset
             ItemCategory.Weapon => e.CategoryRange ?? Join(e.WeaponCategory, e.WeaponRange),
             ItemCategory.Shield => "Shield",
             ItemCategory.Armor => e.ArmorCategory is null ? null : $"{e.ArmorCategory} Armor",
-            ItemCategory.AdventuringGear => e.GearCategory?.Name,
+            ItemCategory.AdventuringGear or ItemCategory.Consumable => e.GearCategory?.Name,
             ItemCategory.Tool => e.ToolCategory,
             ItemCategory.Mount => e.VehicleCategory,
             _ => e.EquipmentCategory?.Name,
@@ -325,14 +326,30 @@ internal static class SrdDataset
         };
     }
 
+    /// <summary>Plain arrows, bolts, bullets and needles: the adventuring gear of the "Ammunition" gear category.</summary>
+    private static bool IsAmmunition(EquipmentJson e) =>
+        string.Equals(e.GearCategory?.Index, "ammunition", StringComparison.OrdinalIgnoreCase);
+
+    private static readonly string[] ConsumableNamePrefixes = ["Potion of", "Oil of", "Elixir of", "Philter of", "Spell Scroll", "Scroll of"];
+
+    /// <summary>
+    /// Magic items that are used up: potions (oils and philters are filed as potions in the SRD), scrolls and magic
+    /// ammunition, by equipment category or, for items filed elsewhere, by name.
+    /// </summary>
+    private static bool IsMagicConsumable(MagicItemJson m) =>
+        m.EquipmentCategory?.Index is "potion" or "scroll" or "ammunition"
+        || (m.Name is { } name && ConsumableNamePrefixes.Any(p => name.StartsWith(p, StringComparison.OrdinalIgnoreCase)));
+
     private static ItemTemplateData MapMagicItem(MagicItemJson m)
     {
-        var category = m.EquipmentCategory?.Index switch
-        {
-            "weapon" => ItemCategory.Weapon,
-            "armor" => ItemCategory.Armor,
-            _ => ItemCategory.MagicItem,
-        };
+        var category = IsMagicConsumable(m)
+            ? ItemCategory.Consumable
+            : m.EquipmentCategory?.Index switch
+            {
+                "weapon" => ItemCategory.Weapon,
+                "armor" => ItemCategory.Armor,
+                _ => ItemCategory.MagicItem,
+            };
 
         var description = m.Desc ?? [];
         return new ItemTemplateData

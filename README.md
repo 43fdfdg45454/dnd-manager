@@ -31,6 +31,7 @@ cd deploy
 cp .env.sample .env                  # editar valores
 docker compose pull && docker compose up -d
 curl http://127.0.0.1:8080/health/ready
+# Primera vez: abre https://<tu PUBLIC_URL>/admin para crear el administrador
 
 # Cliente
 cd app

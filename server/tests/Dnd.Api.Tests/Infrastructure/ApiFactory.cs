@@ -19,8 +19,8 @@ namespace Dnd.Api.Tests;
 
 /// <summary>
 /// Boots the API against an in-memory SQLite database (one open connection per factory, schema
-/// created with <c>EnsureCreated</c>) and a fake email sender. The initial admin bootstrap runs
-/// with <see cref="AdminEmail"/> unless a subclass disables it. The SRD catalog import is off by
+/// created with <c>EnsureCreated</c>) and a fake email sender. The initial admin is created through
+/// <c>POST /api/v1/setup/admin</c> (see <see cref="CreateAdminClientAsync"/>) unless a subclass disables it. The SRD catalog import is off by
 /// default to keep unrelated tests fast; <see cref="CatalogApiFactory"/> turns it on.
 /// </summary>
 public class ApiFactory : WebApplicationFactory<Program>
@@ -28,13 +28,13 @@ public class ApiFactory : WebApplicationFactory<Program>
     public const string AdminEmail = "admin@example.com";
     public const string AdminPassword = "admin-password-1234";
 
-    /// <summary>Origin of the requests made with <c>CreateClient()</c> (the test server's base address).</summary>
-    public const string TestOrigin = "http://localhost";
+    /// <summary>Default <c>App:PublicUrl</c> of the test host: the origin of every link in the emails.</summary>
+    public const string DefaultPublicUrl = "https://dnd.example.com";
 
     private readonly SqliteConnection _connection;
     private readonly string _filesRoot = Path.Combine(Path.GetTempPath(), $"dnd-tests-{Guid.NewGuid():N}");
     private readonly SemaphoreSlim _adminLock = new(1, 1);
-    private bool _adminPasswordSet;
+    private bool _adminCreated;
 
     public ApiFactory()
     {
@@ -49,7 +49,8 @@ public class ApiFactory : WebApplicationFactory<Program>
 
     public LogCapture Logs { get; } = new();
 
-    protected virtual bool SeedInitialAdmin => true;
+    /// <summary>Whether <see cref="CreateAdminClientAsync"/> creates the initial admin (<see cref="AdminEmail"/>) on first use.</summary>
+    protected virtual bool CreateInitialAdmin => true;
 
     protected virtual bool SeedCatalog => false;
 
@@ -59,8 +60,8 @@ public class ApiFactory : WebApplicationFactory<Program>
     /// <summary>Maximum upload size configured for the host (<c>FileStorage:MaxUploadMegabytes</c>).</summary>
     protected virtual int MaxUploadMegabytes => 200;
 
-    /// <summary>Optional <c>App:PublicUrl</c> fallback. Null by default: the API must work without it.</summary>
-    protected virtual string? PublicUrlFallback => null;
+    /// <summary><c>App:PublicUrl</c> of the host (mandatory in the API).</summary>
+    protected virtual string PublicUrl => DefaultPublicUrl;
 
     /// <summary>Address the test server reports as the client's, i.e. the proxy the request came from.</summary>
     protected virtual string RemoteIpAddress => "127.0.0.1";
@@ -72,13 +73,7 @@ public class ApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("Database:AutoMigrate", "false");
-        if (PublicUrlFallback is not null)
-        {
-            builder.UseSetting("App:PublicUrl", PublicUrlFallback);
-        }
-
-        builder.UseSetting("App:InitialAdminEmail", AdminEmail);
-        builder.UseSetting("App:SeedInitialAdmin", SeedInitialAdmin ? "true" : "false");
+        builder.UseSetting("App:PublicUrl", PublicUrl);
         builder.UseSetting("Reminders:Enabled", RunReminderDispatcher ? "true" : "false");
         builder.UseSetting("Reminders:PollSeconds", "1");
         builder.UseSetting("Catalog:SeedOnStartup", SeedCatalog ? "true" : "false");
@@ -109,26 +104,36 @@ public class ApiFactory : WebApplicationFactory<Program>
         await action(scope.ServiceProvider.GetRequiredService<AppDbContext>());
     }
 
-    /// <summary>Client authenticated as the seeded admin (its password is set on first use).</summary>
-    public async Task<HttpClient> CreateAdminClientAsync()
+    /// <summary>
+    /// Creates the initial admin through <c>POST /api/v1/setup/admin</c> the first time it is needed (setup only
+    /// works while there are no users, so every helper that adds users must call this first). Does nothing when
+    /// <see cref="CreateInitialAdmin"/> is false.
+    /// </summary>
+    public async Task EnsureInitialAdminAsync()
     {
-        var client = CreateClient();
         await _adminLock.WaitAsync();
         try
         {
-            if (!_adminPasswordSet)
+            if (CreateInitialAdmin && !_adminCreated)
             {
-                var token = Emails.LastTokenSentTo(AdminEmail);
-                var response = await client.PostAsJsonAsync("/api/v1/auth/password/set", new { token, password = AdminPassword });
-                Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-                _adminPasswordSet = true;
+                var response = await CreateClient().PostAsJsonAsync(
+                    "/api/v1/setup/admin",
+                    new { email = AdminEmail, displayName = "Administrador", password = AdminPassword });
+                Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+                _adminCreated = true;
             }
         }
         finally
         {
             _adminLock.Release();
         }
+    }
 
+    /// <summary>Client authenticated as the initial admin (created through the setup endpoint on first use).</summary>
+    public async Task<HttpClient> CreateAdminClientAsync()
+    {
+        await EnsureInitialAdminAsync();
+        var client = CreateClient();
         var auth = await client.LoginAsync(AdminEmail, AdminPassword);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth.AccessToken);
         return client;
@@ -195,10 +200,10 @@ public sealed class CatalogCollection : ICollectionFixture<CatalogApiFactory>
     public const string Name = "Catalog";
 }
 
-/// <summary>Factory whose initial admin bootstrap is turned off.</summary>
+/// <summary>Factory that never creates the initial admin: the instance stays in its first-boot state.</summary>
 public sealed class ApiFactoryWithoutInitialAdmin : ApiFactory
 {
-    protected override bool SeedInitialAdmin => false;
+    protected override bool CreateInitialAdmin => false;
 }
 
 internal sealed class RemoteIpStartupFilter(IPAddress address) : IStartupFilter

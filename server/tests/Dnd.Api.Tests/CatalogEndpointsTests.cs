@@ -259,7 +259,7 @@ public class CatalogEndpointsTests(CatalogApiFactory factory)
     [Fact]
     public async Task Magic_items_with_variants_import_each_variant_as_an_item()
     {
-        var page = await GetAsync<PagedResult<ItemSummaryDto>>($"{Base}/items?search=healing&category=MagicItem&pageSize=200");
+        var page = await GetAsync<PagedResult<ItemSummaryDto>>($"{Base}/items?search=healing&category=Consumable&pageSize=200");
         var names = page.Items.Select(i => i.Name).ToList();
 
         Assert.Contains("Potion of Greater Healing", names);

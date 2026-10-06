@@ -36,6 +36,15 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
             Assert.Equal(237 + 362, srdItems);
             Assert.Equal(237, await db.ItemTemplates.CountAsync(x => x.CampaignId == null && x.Category != ItemCategory.MagicItem && x.Rarity == null));
 
+            // Potions, scrolls, oils and ammunition are consumables, magic or not.
+            Assert.Equal(ItemCategory.Consumable, (await db.ItemTemplates.SingleAsync(x => x.CampaignId == null && x.Index == "potion-of-healing")).Category);
+            Assert.Equal(ItemCategory.Consumable, (await db.ItemTemplates.SingleAsync(x => x.CampaignId == null && x.Index == "spell-scroll-3rd")).Category);
+            Assert.Equal(ItemCategory.Consumable, (await db.ItemTemplates.SingleAsync(x => x.CampaignId == null && x.Index == "oil-of-sharpness")).Category);
+            Assert.Equal(ItemCategory.Consumable, (await db.ItemTemplates.SingleAsync(x => x.CampaignId == null && x.Index == "arrow-of-slaying")).Category);
+            Assert.Equal(ItemCategory.Consumable, (await db.ItemTemplates.SingleAsync(x => x.CampaignId == null && x.Index == "arrow")).Category);
+            Assert.Equal(ItemCategory.MagicItem, (await db.ItemTemplates.SingleAsync(x => x.CampaignId == null && x.Index == "wand-of-lightning-bolts")).Category);
+            Assert.True(await db.ItemTemplates.AnyAsync(x => x.CampaignId == null && x.Category == ItemCategory.Consumable));
+
             var import = await db.CatalogImports.SingleAsync();
             Assert.Equal(CatalogImport.SrdRuleset, import.Ruleset);
             Assert.Contains("a6212beb", import.DatasetVersion);

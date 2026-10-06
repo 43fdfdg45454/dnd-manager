@@ -5,7 +5,8 @@ namespace Dnd.Api.Hosting;
 /// <summary>
 /// Forwarded headers (<c>X-Forwarded-For/Proto/Host</c>) set by the reverse proxy of the operator are honoured
 /// from any source: the API is meant to sit behind the operator's proxy and must answer whoever reaches it.
-/// The scheme and host they carry become the origin of the links in emails (see <c>PublicUrlProvider</c>).
+/// They only keep the scheme, host and client address of each request correct (logs); the origin of the links
+/// in emails is the mandatory <c>App:PublicUrl</c> (see <c>PublicUrlProvider</c>).
 /// </summary>
 public static class ForwardedHeadersSetup
 {

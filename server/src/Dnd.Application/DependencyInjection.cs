@@ -11,6 +11,7 @@ using Dnd.Application.Lore;
 using Dnd.Application.Maps;
 using Dnd.Application.Releases;
 using Dnd.Application.Sessions;
+using Dnd.Application.Setup;
 using Dnd.Application.Items;
 using Dnd.Application.Users;
 using Dnd.Domain.Characters;
@@ -42,7 +43,6 @@ public static class DependencyInjection
         services.AddScoped<CreateUserHandler>();
         services.AddScoped<UpdateUserHandler>();
         services.AddScoped<ResendSetupEmailHandler>();
-        services.AddScoped<InitialAdminSeeder>();
         services.AddScoped<SearchUsersHandler>();
 
         services.AddScoped<ListMyCampaignsHandler>();
@@ -182,6 +182,9 @@ public static class DependencyInjection
         services.AddScoped<PublishReleaseHandler>();
         services.AddScoped<DeleteReleaseHandler>();
         services.AddScoped<GetAdminStatsHandler>();
+
+        services.AddScoped<GetSetupStatusHandler>();
+        services.AddScoped<CreateInitialAdminHandler>();
 
         return services;
     }

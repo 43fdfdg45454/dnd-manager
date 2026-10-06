@@ -42,6 +42,8 @@ public static class TestUsers
     /// </summary>
     public static async Task<SignedInUser> CreateSignedInUserAsync(this ApiFactory factory, string? displayName = null, string? email = null)
     {
+        // The first user of an instance is its admin: it must exist before users are inserted directly.
+        await factory.EnsureInitialAdminAsync();
         var user = User.Create(email ?? $"user-{Guid.NewGuid():N}@example.com", displayName ?? "Test User", UserRole.User, DateTimeOffset.UtcNow);
         await factory.WithDbAsync(async db =>
         {

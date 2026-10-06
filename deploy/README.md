@@ -27,23 +27,16 @@ curl http://127.0.0.1:8080/health/ready
 ```
 
 - `JWT_SECRET`: genera uno con `openssl rand -base64 48`. Debe tener al menos 32 caracteres.
-- **URL pública**: la decide tu reverse proxy. La API toma el esquema y el host de las cabeceras
-  `X-Forwarded-Proto` y `X-Forwarded-Host` que envía tu proxy y los usa en los enlaces de los correos. Recuerda el último origen visto, así los recordatorios que se envían en
-  segundo plano también llevan la URL correcta. `App__PublicUrl` queda como respaldo opcional para los
-  correos enviados antes de la primera petición a través del proxy (p. ej. el del administrador
-  inicial): si no lo informas, ese primer enlace sale en los logs como ruta relativa y basta con
-  anteponerle tu URL.
-- **Administrador inicial**: cuando la base de datos no tiene usuarios, la API crea un administrador
-  con `ADMIN_EMAIL`, le envía el correo de alta y además escribe el enlace para fijar su contraseña en
-  los logs (válido 48 h), por si el SMTP aún no funciona:
-
-  ```bash
-  docker compose logs api | grep "Initial admin" | grep -o 'https\?://[^"\\ ]*set-password?token=[A-Za-z0-9_-]*' | head -n 1
-  ```
-
-  Abre ese enlace, elige tu contraseña e inicia sesión en la app. El enlace se escribe con nivel
-  `Warning`: no bajes el nivel de log a `Error` en el primer arranque. Si caduca, usa «He olvidado mi
-  contraseña» (necesita SMTP).
+- `PUBLIC_URL` (obligatoria): la URL pública con la que tus usuarios llegan a la API a través del
+  reverse proxy, por ejemplo `https://dnd.example.com` (esquema `http` o `https`, sin ruta ni barra
+  final). Es la que llevan los enlaces de los correos (alta, contraseña, recordatorios). La API no
+  arranca sin ella.
+- **Administrador inicial**: cuando la base de datos no tiene usuarios, abre
+  `https://dnd.example.com/admin` (tu `PUBLIC_URL` más `/admin`), rellena correo, nombre y contraseña
+  y pulsa «Crear administrador». Solo funciona **la primera vez**: en cuanto existe un usuario, la
+  página indica que la instancia ya está configurada. Después inicia sesión en la app con esos datos y
+  crea al resto de usuarios desde ella. Hazlo nada más arrancar la instancia: hasta que exista el primer
+  usuario, esa página está abierta a quien llegue a la URL.
 - Las **migraciones de base de datos se aplican solas** al arrancar la API
   (`Database__AutoMigrate=true`), igual que la importación del catálogo SRD.
 
@@ -56,7 +49,7 @@ curl http://127.0.0.1:8080/health/ready
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base de datos |
 | `DB_AUTO_MIGRATE` | Aplicar las migraciones al arrancar la API (`true`) |
 | `ASPNETCORE_ENVIRONMENT` | `Production` (logs JSON) o `Development` (logs legibles, más detalle) |
-| `ADMIN_EMAIL` | Correo del administrador inicial |
+| `PUBLIC_URL` | URL pública de la API tras tu reverse proxy (obligatoria, sin ruta ni barra final). Se usa en los enlaces de los correos |
 | `JWT_SECRET` | Firma de los tokens y de los enlaces de asistencia (mínimo 32 caracteres) |
 | `DEFAULT_TIME_ZONE` | Zona horaria IANA de las campañas nuevas (cada campaña puede cambiarla en sus ajustes) |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_ADDRESS` | Correo saliente. Puerto `465` = TLS implícito, `587` = STARTTLS (se detecta por el puerto). El remitente debe estar autorizado para la cuenta |
@@ -75,7 +68,6 @@ servicio `api` del `docker-compose.yml`:
 | `Reminders__Enabled`, `Reminders__PollSeconds` | `true`, `60` | Envío de recordatorios de sesión y frecuencia de comprobación |
 | `Smtp__Security` | `Auto` | `Auto`, `SslOnConnect`, `StartTls` o `None` |
 | `Smtp__FromName` | `D&D Companion` | Nombre del remitente |
-| `App__PublicUrl` | vacío | Respaldo de la URL pública para correos enviados antes de la primera petición por el proxy |
 | `SSL_CERT_DIR` | — | Alternativa a `SSL_CERT_FILE`: directorio de PEM procesado con `openssl rehash` |
 | `BACKUP_RETENTION_DAYS` (en `.env`) | `14` | Días que `backup.sh` conserva las copias |
 
@@ -126,7 +118,8 @@ server {
     location / {
         proxy_pass         http://127.0.0.1:8080;
         proxy_http_version 1.1;
-        # Host y X-Forwarded-* son los que la API usa para construir los enlaces de los correos.
+        # La API usa Host y X-Forwarded-* para el esquema y el host correctos en sus logs;
+        # los enlaces de los correos salen de PUBLIC_URL.
         proxy_set_header   Host              $http_host;
         proxy_set_header   X-Forwarded-Host  $http_host;
         proxy_set_header   X-Forwarded-Proto $scheme;
@@ -139,7 +132,7 @@ server {
 ```
 
 Todo va bajo `location /`: además de `/api`, la API sirve en la raíz las páginas de contraseña
-(`/set-password`) y de asistencia (`/sessions/{id}`) y Swagger (`/swagger`). Si el proxy corre en otra
+(`/set-password`), de asistencia (`/sessions/{id}`) y de creación del primer administrador (`/admin`), y Swagger (`/swagger`). Si el proxy corre en otra
 máquina, pon `API_BIND=0.0.0.0` y apunta `proxy_pass` a la IP del host.
 
 **CA propia o certificado autofirmado**: la app Android confía en los certificados de usuario del
@@ -148,7 +141,7 @@ certificado desde la pantalla «Servidor» de la app). Con Caddy basta `reverse_
 dentro de su bloque de sitio.
 
 **LAN o VPN sin TLS**: puedes prescindir del proxy y exponer la API directamente con
-`API_BIND=0.0.0.0`; sin proxy, la API usa el `Host` de cada petición (p. ej. `http://192.168.1.50:8080`)
+`API_BIND=0.0.0.0`; sin proxy, pon en `PUBLIC_URL` esa dirección (p. ej. `http://192.168.1.50:8080`)
 para los enlaces. No lo hagas en Internet: contraseñas y
 tokens viajarían en claro.
 

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <title>Crear administrador · D&amp;D Companion</title>
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --card: #ffffff;
+      --text: #1f1b16;
+      --muted: #6b6259;
+      --border: #d8d0c4;
+      --accent: #8b1e1e;
+      --accent-text: #ffffff;
+      --ok-bg: #e6f4ea;
+      --ok-text: #1e5b2e;
+      --err-bg: #fbe9e7;
+      --err-text: #8b1e1e;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #171512;
+        --card: #221f1b;
+        --text: #eee8df;
+        --muted: #a89f94;
+        --border: #3a352f;
+        --accent: #c2413b;
+        --accent-text: #ffffff;
+        --ok-bg: #1d3324;
+        --ok-text: #a6d9b3;
+        --err-bg: #3a1f1d;
+        --err-text: #f2b8b2;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.5;
+    }
+    main {
+      width: 100%;
+      max-width: 420px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    h1 { font-size: 1.4rem; margin: 0 0 4px; }
+    p.lead { margin: 0 0 20px; color: var(--muted); }
+    label { display: block; font-weight: 600; margin: 12px 0 4px; }
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+    }
+    input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .hint { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+    button {
+      width: 100%;
+      margin-top: 20px;
+      padding: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: 0;
+      border-radius: 8px;
+      background: var(--accent);
+      color: var(--accent-text);
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.6; cursor: default; }
+    .message { margin-top: 16px; padding: 12px; border-radius: 8px; }
+    .message.ok { background: var(--ok-bg); color: var(--ok-text); }
+    .message.error { background: var(--err-bg); color: var(--err-text); }
+    input:invalid:not(:placeholder-shown) { border-color: var(--err-text); }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Crear administrador</h1>
+    <p class="lead">D&amp;D Companion</p>
+
+    <div id="loading" class="message" role="status" aria-live="polite">Comprobando el estado de la instancia…</div>
+
+    <form id="form" novalidate hidden>
+      <label for="email">Correo electrónico</label>
+      <input id="email" name="email" type="email" autocomplete="username" maxlength="254" required>
+
+      <label for="displayName">Nombre</label>
+      <input id="displayName" name="displayName" type="text" autocomplete="name" maxlength="100" required>
+
+      <label for="password">Contraseña</label>
+      <input id="password" name="password" type="password" autocomplete="new-password" minlength="10" required>
+      <div class="hint">Mínimo 10 caracteres.</div>
+
+      <label for="confirm">Repite la contraseña</label>
+      <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="10" required>
+
+      <button id="submit" type="submit">Crear administrador</button>
+    </form>
+
+    <div id="message" class="message" role="status" aria-live="polite" hidden></div>
+  </main>
+
+  <script>
+    (function () {
+      var MIN_LENGTH = 10;
+      var form = document.getElementById('form');
+      var loading = document.getElementById('loading');
+      var email = document.getElementById('email');
+      var displayName = document.getElementById('displayName');
+      var password = document.getElementById('password');
+      var confirm = document.getElementById('confirm');
+      var submit = document.getElementById('submit');
+      var message = document.getElementById('message');
+
+      function show(text, ok) {
+        message.textContent = text;
+        message.className = 'message ' + (ok ? 'ok' : 'error');
+        message.hidden = false;
+      }
+
+      function showAlreadyConfigured() {
+        form.hidden = true;
+        show('Esta instancia ya está configurada. La administración se hace desde la app.', false);
+      }
+
+      function firstError(problem) {
+        if (problem && problem.errors) {
+          var keys = ['email', 'displayName', 'password'];
+          for (var i = 0; i < keys.length; i++) {
+            var list = problem.errors[keys[i]] || problem.errors[keys[i].charAt(0).toUpperCase() + keys[i].slice(1)];
+            if (list && list.length) { return list[0]; }
+          }
+          for (var key in problem.errors) {
+            if (problem.errors[key] && problem.errors[key].length) { return problem.errors[key][0]; }
+          }
+        }
+        return (problem && problem.detail) || 'No se ha podido crear el administrador.';
+      }
+
+      fetch('/api/v1/setup/status', { headers: { 'Accept': 'application/json' } })
+        .then(function (response) {
+          if (!response.ok) { throw new Error('status ' + response.status); }
+          return response.json();
+        })
+        .then(function (status) {
+          loading.hidden = true;
+          if (status && status.needsSetup) {
+            form.hidden = false;
+            email.focus();
+          } else {
+            showAlreadyConfigured();
+          }
+        })
+        .catch(function () {
+          loading.hidden = true;
+          show('No se ha podido conectar con el servidor. Recarga la página para intentarlo de nuevo.', false);
+        });
+
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        message.hidden = true;
+
+        if (!email.value.trim() || email.value.indexOf('@') < 1) {
+          show('Introduce un correo electrónico válido.', false);
+          email.focus();
+          return;
+        }
+        if (!displayName.value.trim()) {
+          show('Introduce el nombre.', false);
+          displayName.focus();
+          return;
+        }
+        if (password.value.length < MIN_LENGTH) {
+          show('La contraseña debe tener al menos ' + MIN_LENGTH + ' caracteres.', false);
+          password.focus();
+          return;
+        }
+        if (password.value !== confirm.value) {
+          show('Las contraseñas no coinciden.', false);
+          confirm.focus();
+          return;
+        }
+
+        submit.disabled = true;
+        fetch('/api/v1/setup/admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            email: email.value.trim(),
+            displayName: displayName.value.trim(),
+            password: password.value
+          })
+        })
+          .then(function (response) {
+            if (response.status === 201) {
+              form.hidden = true;
+              show('Administrador creado. Ya puedes iniciar sesión en la app de D&D Companion.', true);
+              return;
+            }
+            if (response.status === 409) {
+              showAlreadyConfigured();
+              return;
+            }
+            return response.json()
+              .catch(function () { return null; })
+              .then(function (problem) {
+                show(firstError(problem), false);
+                submit.disabled = false;
+              });
+          })
+          .catch(function () {
+            show('No se ha podido conectar con el servidor. Inténtalo de nuevo.', false);
+            submit.disabled = false;
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

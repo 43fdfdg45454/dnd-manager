@@ -51,8 +51,9 @@ cd deploy && cp .env.sample .env && docker compose pull && docker compose up -d
 - **Sin tiempo real**: dados privados con historial local. No usar SignalR.
 - **Offline solo lectura**: la app cachea el último estado; las escrituras se deshabilitan sin red.
 - Hosting: Docker Compose solo con `api` y `postgres`; la API escucha en un puerto del host y el
-  operador pone su propio reverse proxy con TLS. La URL pública se toma de las cabeceras
-  `X-Forwarded-*` del proxy; `App:PublicUrl` es solo un respaldo.
+  operador pone su propio reverse proxy con TLS. La URL pública se configura con `App:PublicUrl`
+  (obligatoria, `PUBLIC_URL` en `.env`) y es la que llevan los correos. El primer administrador se
+  crea desde `https://<host>/admin` la primera vez.
   Email por **SMTP del operador** (465 TLS implícito o 587 STARTTLS; CA propia vía `SSL_CERT_FILE`).
 - La app Android confía en los certificados de usuario del dispositivo (CA propia) y permite fijar
   la huella de un certificado por host.
