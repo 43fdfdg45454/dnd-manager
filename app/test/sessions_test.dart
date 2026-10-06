@@ -28,6 +28,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'helpers/app_pump.dart';
 import 'helpers/fake_realtime_hub.dart';
 import 'helpers/fakes.dart';
+import 'helpers/motion.dart';
 import 'helpers/party_fakes.dart';
 import 'helpers/session_fakes.dart';
 
@@ -92,7 +93,7 @@ Future<GoRouter> _pumpApp(
         fakeServerConfigOverride(),
         fakeServerInfoOverride,
       ],
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(routerConfig: router, builder: reducedMotionBuilder),
     ),
   );
   await tester.pumpAndSettle();

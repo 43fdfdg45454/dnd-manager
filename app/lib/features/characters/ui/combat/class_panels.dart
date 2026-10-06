@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../catalog/ui/detail_widgets.dart' show SectionTitle;
+import '../../../../core/theme/components.dart';
 import '../../data/models.dart';
 import '../../domain/class_theme.dart';
 import '../character_tabs.dart' show titleFromSpellIndex;
@@ -117,9 +117,10 @@ Widget buildGenericPanel(BuildContext context, ClassPanelContext panel) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      SectionTitle(
+      SectionHeader(
         '${_className(panel.character, panel.panel, titleFromSpellIndex(panel.panel.classIndex))} '
         '(nivel ${panel.panel.level})',
+        padding: combatSectionPadding,
       ),
       CombatCard(
         key: Key('class-panel-${panel.panel.classIndex}'),

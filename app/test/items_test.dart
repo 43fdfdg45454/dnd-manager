@@ -28,8 +28,9 @@ import 'helpers/catalog_fakes.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/fake_realtime_hub.dart';
 import 'helpers/fakes.dart';
-import 'helpers/party_fakes.dart';
 import 'helpers/item_fakes.dart';
+import 'helpers/motion.dart';
+import 'helpers/party_fakes.dart';
 
 const _sword = ItemSummary(id: 't-sword', name: 'Longsword', category: 'Weapon', costCp: 1500);
 const _rope = ItemSummary(id: 't-rope', name: 'Rope', category: 'AdventuringGear', costCp: 100);
@@ -138,7 +139,7 @@ Future<void> _pumpApp(
           campaignItems ?? FakeCampaignItemsRepository(srd: [_sword, _rope]),
         ),
       ],
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(routerConfig: router, builder: reducedMotionBuilder),
     ),
   );
   await tester.pumpAndSettle();

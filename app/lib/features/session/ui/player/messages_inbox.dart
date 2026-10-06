@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/motion/wax_seal.dart';
 import '../../../../core/theme/app_icon.dart';
 import '../../../../core/theme/components.dart';
 import '../../../../core/theme/icons.dart';
@@ -12,14 +13,16 @@ import '../../data/session_controllers.dart';
 import '../session_feedback.dart';
 
 /// "Mensajes del DM": the secret messages received in the campaign, newest
-/// first, with the unread count. Opening one shows it and marks it as read.
+/// first, with the unread count. Opening one shows it and marks it as read;
+/// an unread one opens by breaking its wax seal ([SealBreak]).
 class MessagesInbox extends ConsumerWidget {
   const MessagesInbox({super.key, required this.campaignId});
 
   final String campaignId;
 
   Future<void> _open(BuildContext context, WidgetRef ref, DirectMessage message) async {
-    if (!message.isRead) {
+    final sealed = !message.isRead;
+    if (sealed) {
       // Marked as read on opening; a failure only leaves it unread.
       runTableAction(
         context,
@@ -37,6 +40,7 @@ class MessagesInbox extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (sealed) const Center(child: _BreakingSeal()),
                 Text(_from(message), style: Theme.of(dialogContext).textTheme.bodySmall),
                 const SizedBox(height: 8),
                 MarkdownView(
@@ -115,10 +119,9 @@ class MessagesInbox extends ConsumerWidget {
                         ListTile(
                           key: Key('message-${m.id}'),
                           contentPadding: EdgeInsets.zero,
-                          leading: Icon(
-                            m.isRead ? Icons.drafts_outlined : Icons.mark_email_unread_outlined,
-                            color: m.isRead ? null : tokens.crimson,
-                          ),
+                          leading: m.isRead
+                              ? AppIcon(AppIcons.envelope, color: tokens.inkMuted)
+                              : AppIcon(AppIcons.seal, color: tokens.blood),
                           title: Text(
                             m.body.split('\n').first,
                             maxLines: 1,
@@ -135,4 +138,31 @@ class MessagesInbox extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// The wax seal of an unread message: whole when the dialog opens, it breaks
+/// right after the first frame (at once under reduced motion).
+class _BreakingSeal extends StatefulWidget {
+  const _BreakingSeal();
+
+  @override
+  State<_BreakingSeal> createState() => _BreakingSealState();
+}
+
+class _BreakingSealState extends State<_BreakingSeal> {
+  bool _broken = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _broken = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: SealBreak(key: const Key('message-seal'), broken: _broken, size: 48),
+  );
 }

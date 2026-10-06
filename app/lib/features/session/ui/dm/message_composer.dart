@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_icon.dart';
+import '../../../../core/theme/icons.dart';
 import '../session_feedback.dart';
 
 /// What the DM wrote in the secret message composer.
@@ -87,7 +89,7 @@ class _MessageComposerState extends State<_MessageComposer> {
                     Navigator.of(context)
                         .pop((characterIds: _targets.toList(), body: _body.text.trim()))
               : null,
-          icon: const Icon(Icons.send_outlined),
+          icon: const AppIcon(AppIcons.envelope, size: 20),
           label: const Text('Enviar'),
         ),
       ],

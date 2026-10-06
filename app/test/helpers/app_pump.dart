@@ -25,6 +25,7 @@ import 'character_fakes.dart';
 import 'fake_realtime_hub.dart';
 import 'fakes.dart';
 import 'item_fakes.dart';
+import 'motion.dart';
 import 'party_fakes.dart';
 import 'session_fakes.dart';
 
@@ -105,6 +106,7 @@ class AppFakes {
 /// and campaign-role redirects) starting at [location], signed in as [user]
 /// (`u1` by default) against a configured server and the in-memory [fakes].
 /// The realtime hub is [realtime] (a fresh [FakeRealtimeHub] by default).
+/// Motion is reduced ([reducedMotionBuilder]) unless [reducedMotion] is false.
 /// Returns the router so tests can check `routeInformationProvider.value`.
 Future<GoRouter> pumpRealApp(
   WidgetTester tester, {
@@ -114,6 +116,8 @@ Future<GoRouter> pumpRealApp(
   FakeRealtimeHub? realtime,
   List<Override> overrides = const [],
   Size size = const Size(800, 2400),
+  bool reducedMotion = true,
+  bool settle = true,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -136,12 +140,21 @@ Future<GoRouter> pumpRealApp(
       child: Consumer(
         builder: (context, ref, _) {
           router = ref.watch(routerProvider);
-          return MaterialApp.router(theme: AppTheme.light(), routerConfig: router);
+          return MaterialApp.router(
+            theme: AppTheme.light(),
+            routerConfig: router,
+            builder: reducedMotion ? reducedMotionBuilder : null,
+          );
         },
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+    await tester.pump();
+  }
   return router;
 }
 

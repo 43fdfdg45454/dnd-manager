@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../motion/pulse.dart';
 import '../theme/app_icon.dart';
 import '../theme/icons.dart';
 import '../theme/tokens.dart';
@@ -8,8 +9,9 @@ import 'realtime_hub.dart';
 import 'realtime_provider.dart';
 
 /// Realtime connection status of a campaign in its app bar
-/// (`Key('realtime-status')`): golden sparkles ("En vivo") when connected and
-/// the same icon in grey otherwise (the banner under the app bar explains why).
+/// (`Key('realtime-status')`): a golden rune seal that beats ([PulseSeal],
+/// "En vivo") when connected and the same seal, still and grey, otherwise (the
+/// banner under the app bar explains why).
 class RealtimeStatusIcon extends ConsumerWidget {
   const RealtimeStatusIcon({super.key, required this.campaignId});
 
@@ -40,13 +42,15 @@ class RealtimeStatusIcon extends ConsumerWidget {
       message: label,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: AppIcon(
-          AppIcons.sparkles,
-          key: key,
-          color: connected ? tokens.gold : tokens.inkMuted.withValues(alpha: 0.6),
-          size: 22,
-          semanticLabel: label,
-        ),
+        child: connected
+            ? PulseSeal(key: key, size: 22, color: tokens.gold, semanticLabel: label)
+            : AppIcon(
+                AppIcons.seal,
+                key: key,
+                color: tokens.inkMuted.withValues(alpha: 0.6),
+                size: 22,
+                semanticLabel: label,
+              ),
       ),
     );
   }

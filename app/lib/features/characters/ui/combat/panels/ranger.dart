@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/theme/app_icon.dart';
+import '../../../../../core/theme/icons.dart';
+
 import '../../../../dice/ui/dice_sheet.dart';
 import '../combat_support.dart';
 import 'panel_support.dart';
@@ -69,7 +72,7 @@ class RangerPanel extends ConsumerWidget {
                             success: 'Concentración: Marca del cazador.',
                           )
                         : null,
-                    icon: const Icon(Icons.gps_fixed),
+                    icon: const AppIcon(AppIcons.bow, size: 20),
                     label: Text(marking ? 'Marca del cazador (activa)' : 'Marca del cazador'),
                   ),
                 ),
@@ -88,7 +91,7 @@ class RangerPanel extends ConsumerWidget {
             children: [
               FeatureReminder(
                 key: const Key('ranger-favored-enemy'),
-                icon: Icons.track_changes,
+                icon: AppIcons.eye,
                 title: 'Enemigo predilecto ($enemies)',
                 text:
                     'Ventaja en pruebas de Sabiduría (Supervivencia) para rastrearlos y de '
@@ -96,7 +99,7 @@ class RangerPanel extends ConsumerWidget {
               ),
               FeatureReminder(
                 key: const Key('ranger-natural-explorer'),
-                icon: Icons.terrain,
+                icon: AppIcons.map,
                 title: 'Explorador natural ($terrains)',
                 text:
                     'En tu terreno predilecto el terreno difícil no te ralentiza y no te '
@@ -105,7 +108,7 @@ class RangerPanel extends ConsumerWidget {
               if (level >= 5)
                 const FeatureReminder(
                   key: Key('ranger-extra-attack'),
-                  icon: Icons.call_split,
+                  icon: AppIcons.sword,
                   title: 'Ataque adicional',
                   text: 'Dos ataques por acción de Atacar.',
                 ),

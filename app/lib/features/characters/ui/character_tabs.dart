@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_error.dart';
+import '../../../core/theme/components.dart';
+import '../../../core/theme/textures.dart';
+import '../../../core/theme/typography.dart';
 import '../../../core/ui/stat_value.dart';
 import '../../catalog/data/catalog_controllers.dart';
 import '../../catalog/data/models.dart' show ClassDetail, Feature, ItemModifier, RaceDetail, Trait;
@@ -218,39 +221,34 @@ class _AbilityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final ability = character.sheet.ability(abilityKey);
-    return Card(
+    return RuneCard(
       key: Key('ability-$abilityKey'),
       margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => rollAndShow(
-          context,
-          d20Expression(ability.modifier),
-          label: 'Prueba de ${abilityLabel(abilityKey)}',
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+      padding: const EdgeInsets.all(8),
+      onTap: () => rollAndShow(
+        context,
+        d20Expression(ability.modifier),
+        label: 'Prueba de ${abilityLabel(abilityKey)}',
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(abilityLabel(abilityKey), style: theme.textTheme.labelMedium),
+          Text(formatModifier(ability.modifier), style: _numeric(theme.textTheme.headlineSmall)),
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(abilityLabel(abilityKey), style: theme.textTheme.labelMedium),
-              Text(formatModifier(ability.modifier), style: theme.textTheme.headlineSmall),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  StatValue(
-                    statKey: 'ability.$abilityKey',
-                    title: abilityLabel(abilityKey),
-                    text: '${ability.score}',
-                    breakdown: character.sheet.breakdown('ability.$abilityKey'),
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                  OverrideMark(character: character, field: 'ability.$abilityKey'),
-                ],
+              StatValue(
+                statKey: 'ability.$abilityKey',
+                title: abilityLabel(abilityKey),
+                text: '${ability.score}',
+                breakdown: character.sheet.breakdown('ability.$abilityKey'),
+                style: _numeric(theme.textTheme.bodyMedium),
               ),
+              OverrideMark(character: character, field: 'ability.$abilityKey'),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -282,43 +280,39 @@ class _StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
+    return StoneCard(
       key: Key('tile-$statKey'),
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              label,
-              style: theme.textTheme.labelMedium,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelMedium,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                StatValue(
+                  statKey: breakdownKey ?? statKey,
+                  title: label,
+                  text: value,
+                  totalText: totalText,
+                  breakdown: breakdownKey == null ? null : character.sheet.breakdown(breakdownKey!),
+                  style: _numeric(theme.textTheme.titleLarge),
+                ),
+                if (field != null) OverrideMark(character: character, field: field!),
+              ],
             ),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  StatValue(
-                    statKey: breakdownKey ?? statKey,
-                    title: label,
-                    text: value,
-                    totalText: totalText,
-                    breakdown: breakdownKey == null
-                        ? null
-                        : character.sheet.breakdown(breakdownKey!),
-                    style: theme.textTheme.titleLarge,
-                  ),
-                  if (field != null) OverrideMark(character: character, field: field!),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -360,6 +354,7 @@ class _SavingThrowRow extends StatelessWidget {
             title: 'Salvación de ${abilityLabel(abilityKey)}',
             text: formatModifier(save?.value ?? 0),
             breakdown: character.sheet.breakdown('save.$abilityKey'),
+            style: _numeric(Theme.of(context).textTheme.bodyLarge),
           ),
           OverrideMark(character: character, field: 'save.$abilityKey'),
         ],
@@ -437,6 +432,7 @@ class SkillsTab extends StatelessWidget {
                   title: skillLabel(skill.index, skill.name),
                   text: formatModifier(skill.value),
                   breakdown: character.sheet.breakdown('skill.${skill.index}'),
+                  style: _numeric(Theme.of(context).textTheme.bodyLarge),
                 ),
                 OverrideMark(character: character, field: 'skill.${skill.index}'),
               ],
@@ -747,3 +743,7 @@ class NotesTab extends StatelessWidget {
     );
   }
 }
+
+/// [style] with the tabular figures of [AppTypography.numeric].
+TextStyle? _numeric(TextStyle? style) =>
+    style == null ? AppTypography.numeric : style.merge(AppTypography.numeric);

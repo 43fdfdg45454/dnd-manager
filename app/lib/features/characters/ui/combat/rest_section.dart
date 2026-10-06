@@ -12,6 +12,7 @@ import '../../data/models.dart';
 import '../character_tabs.dart' show titleFromSpellIndex;
 import 'combat_state.dart';
 import 'combat_support.dart';
+import 'rest_celebration.dart';
 
 /// "Descansos". The DM (and the Owner) rests the character directly: "Descanso
 /// corto" asks for the hit dice to spend and "Descanso largo" confirms. A
@@ -20,7 +21,8 @@ import 'combat_support.dart';
 /// to the DM, and while it is pending a card says "Esperando al DM" with a
 /// "Cancelar" button. When the character is refreshed without the pending
 /// request and with different hit points, hit dice or exhaustion, the DM
-/// approved it ("Descanso aprobado").
+/// approved it ("Descanso aprobado") and the campfire or the moon plays over
+/// the screen ([showRestCelebration]).
 class RestSection extends ConsumerStatefulWidget {
   const RestSection({super.key, required this.character, required this.canEdit, this.isDm = false});
 
@@ -140,6 +142,7 @@ class _RestSectionState extends ConsumerState<RestSection> {
     if (changed && before.pendingRest!.kind == RestKind.long) {
       ref.read(rageControllerProvider(after.id).notifier).end();
     }
+    if (changed) showRestCelebration(context, before.pendingRest!.kind);
     showCombatMessage(
       context,
       changed ? 'Descanso aprobado' : 'La petición de descanso ya no está pendiente.',
@@ -167,7 +170,7 @@ class _RestSectionState extends ConsumerState<RestSection> {
             child: OutlinedButton.icon(
               key: const Key('rest-short'),
               onPressed: canEdit ? _shortRest : null,
-              icon: const Icon(Icons.local_cafe_outlined),
+              icon: const AppIcon(AppIcons.campfire, size: 20),
               label: const Text('Descanso corto'),
             ),
           ),
@@ -176,7 +179,7 @@ class _RestSectionState extends ConsumerState<RestSection> {
             child: FilledButton.icon(
               key: const Key('rest-long'),
               onPressed: canEdit ? _longRest : null,
-              icon: const Icon(Icons.bedtime_outlined),
+              icon: const AppIcon(AppIcons.moon, size: 20),
               label: const Text('Descanso largo'),
             ),
           ),
@@ -281,7 +284,11 @@ class _HitDicePicker extends StatelessWidget {
               ),
               SizedBox(
                 width: 24,
-                child: Text('${spent[d.classIndex] ?? 0}', textAlign: TextAlign.center),
+                child: Text(
+                  '${spent[d.classIndex] ?? 0}',
+                  textAlign: TextAlign.center,
+                  style: numericStyle(Theme.of(context).textTheme.bodyMedium),
+                ),
               ),
               IconButton(
                 key: Key('hit-dice-${d.classIndex}-plus'),

@@ -49,8 +49,9 @@ import 'helpers/character_fakes.dart';
 import 'helpers/content_fakes.dart';
 import 'helpers/fake_realtime_hub.dart';
 import 'helpers/fakes.dart';
-import 'helpers/party_fakes.dart';
 import 'helpers/item_fakes.dart';
+import 'helpers/motion.dart';
+import 'helpers/party_fakes.dart';
 
 /// App with the routes of the phase 7 screens. The signed-in user is `u1`.
 Future<void> _pumpApp(
@@ -142,7 +143,7 @@ Future<void> _pumpApp(
         fakeImageLoaderOverride(),
         ...overrides,
       ],
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(routerConfig: router, builder: reducedMotionBuilder),
     ),
   );
   await tester.pumpAndSettle();

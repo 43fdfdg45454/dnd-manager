@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/theme/app_icon.dart';
+import '../../../../../core/theme/icons.dart';
+
 import '../../../../dice/ui/dice_sheet.dart';
 import '../combat_support.dart';
 import 'panel_support.dart';
@@ -42,7 +45,7 @@ class RoguePanel extends ConsumerWidget {
               FilledButton.tonalIcon(
                 key: const Key('rogue-sneak-attack-roll'),
                 onPressed: () => rollAndShow(context, dice, label: 'Ataque furtivo'),
-                icon: const Icon(Icons.casino_outlined),
+                icon: const AppIcon(AppIcons.d20, size: 20),
                 label: Text('Tirar $dice'),
               ),
             ],
@@ -55,21 +58,21 @@ class RoguePanel extends ConsumerWidget {
               children: [
                 const FeatureReminder(
                   key: Key('rogue-cunning-action'),
-                  icon: Icons.directions_run,
+                  icon: AppIcons.hood,
                   title: 'Acción astuta',
                   text: 'Correr, Destrabarse u Ocultarse como acción adicional.',
                 ),
                 if (level >= 5)
                   const FeatureReminder(
                     key: Key('rogue-uncanny-dodge'),
-                    icon: Icons.shield_moon_outlined,
+                    icon: AppIcons.shield,
                     title: 'Esquiva asombrosa',
                     text: 'Con tu reacción, reduces a la mitad el daño de un ataque que veas.',
                   ),
                 if (level >= 7)
                   const FeatureReminder(
                     key: Key('rogue-evasion'),
-                    icon: Icons.flash_on,
+                    icon: AppIcons.bolt,
                     title: 'Evasión',
                     text: 'Salvación de Destreza superada: sin daño; fallada: la mitad.',
                   ),

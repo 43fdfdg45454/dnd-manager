@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:dnd_companion/core/network/api_client.dart';
+import 'package:dnd_companion/core/theme/components.dart';
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
 import 'package:dnd_companion/features/catalog/data/models.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
@@ -278,7 +279,7 @@ void main() {
           reason: key,
         );
       }
-      expect(find.descendant(of: grid, matching: find.byType(Card)), findsNWidgets(6));
+      expect(find.descendant(of: grid, matching: find.byType(StoneCard)), findsNWidgets(6));
       // Order: CA, Iniciativa, Velocidad / PG máx, Percepción pasiva, Competencia.
       expect(
         find.descendant(of: find.byKey(const Key('tile-hp')), matching: find.text('PG máx')),

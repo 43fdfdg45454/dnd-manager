@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/theme/icons.dart';
+
 import '../combat_support.dart';
 import 'panel_support.dart';
 
@@ -41,7 +43,7 @@ class ClericPanel extends ConsumerWidget {
           title: 'Canalizar divinidad',
           actionKey: 'cleric-channel-divinity',
           buttonLabel: 'Canalizar divinidad',
-          icon: Icons.brightness_7_outlined,
+          icon: AppIcons.sun,
           minLevel: 2,
           success: 'Canalizar divinidad gastado.',
           extra: [

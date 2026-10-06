@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/theme/icons.dart';
+
 import '../../../../dice/data/dice_controller.dart';
 import '../../../../dice/domain/dice_expression.dart';
 import '../../../data/characters_controller.dart';
@@ -78,7 +80,7 @@ class FighterPanel extends ConsumerWidget {
           title: 'Segundo aliento',
           actionKey: 'fighter-second-wind',
           buttonLabel: 'Recuperar 1d10 + $level PG',
-          icon: Icons.favorite_outline,
+          icon: AppIcons.heart,
           onUse: _secondWind,
           description: 'Acción adicional: recuperas 1d10 + tu nivel de guerrero en PG.',
         ),
@@ -88,7 +90,7 @@ class FighterPanel extends ConsumerWidget {
           title: 'Oleada de acción',
           actionKey: 'fighter-action-surge',
           buttonLabel: 'Oleada de acción',
-          icon: Icons.bolt,
+          icon: AppIcons.bolt,
           minLevel: 2,
           success: 'Oleada de acción: tienes una acción adicional este turno.',
           description: 'Una acción más en tu turno (no otra Oleada en el mismo turno).',
@@ -99,7 +101,7 @@ class FighterPanel extends ConsumerWidget {
           title: 'Indomable',
           actionKey: 'fighter-indomitable',
           buttonLabel: 'Repetir salvación',
-          icon: Icons.replay,
+          icon: AppIcons.d20,
           minLevel: 9,
           success: 'Indomable: repite la salvación fallida.',
           description: 'Repites una salvación fallida y te quedas con la nueva tirada.',

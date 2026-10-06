@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../catalog/ui/detail_widgets.dart' show SectionTitle;
+import '../../../../../core/theme/app_icon.dart';
+import '../../../../../core/theme/components.dart';
+import '../../../../../core/theme/icons.dart';
 import '../../../data/characters_controller.dart';
 import '../../../data/models.dart';
 import '../../character_tabs.dart' show titleFromSpellIndex;
@@ -44,7 +46,7 @@ class WizardPanel extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionTitle('Mago'),
+        const SectionHeader('Mago', padding: combatSectionPadding),
         CombatCard(
           key: const Key('class-panel-wizard'),
           child: Column(
@@ -87,7 +89,7 @@ class WizardPanel extends ConsumerWidget {
                 onPressed: panel.canEdit && !recovered
                     ? () => _arcaneRecovery(context, ref, budget)
                     : null,
-                icon: const Icon(Icons.auto_fix_high),
+                icon: const AppIcon(AppIcons.spellbook, size: 20),
                 label: Text(recovered ? 'Recuperación arcana (usada)' : 'Recuperación arcana'),
               ),
               Padding(

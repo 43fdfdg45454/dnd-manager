@@ -2,6 +2,12 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/motion/shake.dart';
+import '../../../../core/theme/app_icon.dart';
+import '../../../../core/theme/components.dart';
+import '../../../../core/theme/icons.dart';
+import '../../../../core/theme/textures.dart';
+import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/stat_value.dart';
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/data/models.dart' show Condition;
@@ -23,6 +29,10 @@ CharacterController _controller(WidgetRef ref, CharacterDetail character) =>
 // ---------------------------------------------------------------------------
 
 /// Hit points with the quick damage / healing controls and temporary hit points.
+///
+/// When the hit points of the same character go down the card shakes and is
+/// tinted with blood ([ShakeAndTint]); when they go up it pulses in moss
+/// ([PulseTint]).
 class HpCard extends ConsumerStatefulWidget {
   const HpCard({super.key, required this.character, required this.canEdit});
 
@@ -36,6 +46,23 @@ class HpCard extends ConsumerStatefulWidget {
 class _HpCardState extends ConsumerState<HpCard> {
   final _amount = TextEditingController(text: '1');
   late final _maxTap = TapGestureRecognizer()..onTap = _editMax;
+
+  /// Bumped when the hit points go down (damage) or up (healing).
+  int _hits = 0;
+  int _heals = 0;
+
+  @override
+  void didUpdateWidget(HpCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final before = oldWidget.character;
+    final after = widget.character;
+    if (before.id != after.id) return;
+    if (after.hitPointsCurrent < before.hitPointsCurrent) {
+      _hits++;
+    } else if (after.hitPointsCurrent > before.hitPointsCurrent) {
+      _heals++;
+    }
+  }
 
   @override
   void dispose() {
@@ -154,101 +181,128 @@ class _HpCardState extends ConsumerState<HpCard> {
     final c = widget.character;
     final max = c.sheet.hitPointsMax;
     final fraction = max <= 0 ? 0.0 : (c.hitPointsCurrent / max).clamp(0.0, 1.0);
+    final tokens = context.tokens;
     final barColor = fraction > .5
-        ? Colors.green.shade600
+        ? tokens.moss
         : fraction > .25
-        ? Colors.orange.shade700
-        : theme.colorScheme.error;
-    final bigNumber = theme.textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold);
+        ? tokens.ember
+        : tokens.blood;
+    final bigNumber = numericStyle(theme.textTheme.displaySmall);
+    const tintRadius = BorderRadius.all(Radius.circular(RuneCard.corner));
     return ClassAccent(
       classIndex: mainClassIndex(c),
-      child: CombatCard(
-        title: 'Puntos de golpe',
-        trailing: ActionChip(
-          key: const Key('temp-hp'),
-          avatar: const Icon(Icons.shield_outlined, size: 18),
-          label: Text('PG temp.: ${c.temporaryHitPoints}'),
-          onPressed: widget.canEdit ? _editTemp : null,
+      child: ShakeAndTint(
+        key: const Key('hp-shake'),
+        trigger: _hits == 0 ? null : _hits,
+        borderRadius: tintRadius,
+        child: PulseTint(
+          key: const Key('hp-pulse'),
+          trigger: _heals == 0 ? null : _heals,
+          borderRadius: tintRadius,
+          child: _card(context, c, max, fraction, barColor, bigNumber),
         ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Only " / max" reacts to taps: it opens the maximum editor.
-                KeyedSubtree(
-                  key: const Key('hp-max-edit'),
-                  child: Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(text: '${c.hitPointsCurrent}'),
-                        TextSpan(
-                          text: ' / $max',
-                          recognizer: widget.canEdit ? _maxTap : null,
-                          mouseCursor: widget.canEdit ? SystemMouseCursors.click : null,
-                          style: widget.canEdit
-                              ? TextStyle(
-                                  decoration: TextDecoration.underline,
-                                  decorationStyle: TextDecorationStyle.dotted,
-                                  decorationColor: classThemeOf(mainClassIndex(c))
-                                      .accent(theme.brightness),
-                                )
-                              : null,
-                        ),
-                      ],
-                    ),
-                    key: const Key('combat-hp'),
-                    style: bigNumber,
-                    semanticsLabel: '${c.hitPointsCurrent} de $max puntos de golpe',
+      ),
+    );
+  }
+
+  Widget _card(
+    BuildContext context,
+    CharacterDetail c,
+    int max,
+    double fraction,
+    Color barColor,
+    TextStyle? bigNumber,
+  ) {
+    final theme = Theme.of(context);
+    return CombatCard(
+      title: 'Puntos de golpe',
+      trailing: ActionChip(
+        key: const Key('temp-hp'),
+        avatar: const AppIcon(AppIcons.shield, size: 18),
+        label: Text(
+          'PG temp.: ${c.temporaryHitPoints}',
+          style: numericStyle(theme.textTheme.labelLarge),
+        ),
+        onPressed: widget.canEdit ? _editTemp : null,
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Only " / max" reacts to taps: it opens the maximum editor.
+              KeyedSubtree(
+                key: const Key('hp-max-edit'),
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: '${c.hitPointsCurrent}'),
+                      TextSpan(
+                        text: ' / $max',
+                        recognizer: widget.canEdit ? _maxTap : null,
+                        mouseCursor: widget.canEdit ? SystemMouseCursors.click : null,
+                        style: widget.canEdit
+                            ? TextStyle(
+                                decoration: TextDecoration.underline,
+                                decorationStyle: TextDecorationStyle.dotted,
+                                decorationColor: classThemeOf(mainClassIndex(c))
+                                    .accent(theme.brightness),
+                              )
+                            : null,
+                      ),
+                    ],
+                  ),
+                  key: const Key('combat-hp'),
+                  style: bigNumber,
+                  semanticsLabel: '${c.hitPointsCurrent} de $max puntos de golpe',
+                ),
+              ),
+              OverrideMark(character: c, field: hitPointsMaxField),
+            ],
+          ),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            key: const Key('hp-bar'),
+            value: fraction,
+            minHeight: 12,
+            borderRadius: BorderRadius.circular(6),
+            color: barColor,
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              IconButton.filledTonal(
+                key: const Key('hp-minus'),
+                tooltip: 'Daño',
+                iconSize: 32,
+                onPressed: widget.canEdit ? _damage : null,
+                icon: const AppIcon(AppIcons.splash, size: 32),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  key: const Key('hp-amount'),
+                  controller: _amount,
+                  textAlign: TextAlign.center,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Daño / curación',
+                    border: OutlineInputBorder(),
+                    isDense: true,
                   ),
                 ),
-                OverrideMark(character: c, field: hitPointsMaxField),
-              ],
-            ),
-            const SizedBox(height: 8),
-            LinearProgressIndicator(
-              key: const Key('hp-bar'),
-              value: fraction,
-              minHeight: 12,
-              borderRadius: BorderRadius.circular(6),
-              color: barColor,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                IconButton.filledTonal(
-                  key: const Key('hp-minus'),
-                  tooltip: 'Daño',
-                  iconSize: 32,
-                  onPressed: widget.canEdit ? _damage : null,
-                  icon: const Icon(Icons.remove),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    key: const Key('hp-amount'),
-                    controller: _amount,
-                    textAlign: TextAlign.center,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Daño / curación',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                IconButton.filledTonal(
-                  key: const Key('hp-plus'),
-                  tooltip: 'Curación',
-                  iconSize: 32,
-                  onPressed: widget.canEdit ? _heal : null,
-                  icon: const Icon(Icons.add),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+              const SizedBox(width: 12),
+              IconButton.filledTonal(
+                key: const Key('hp-plus'),
+                tooltip: 'Curación',
+                iconSize: 32,
+                onPressed: widget.canEdit ? _heal : null,
+                icon: const AppIcon(AppIcons.drop, size: 32),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -372,26 +426,24 @@ class StatsCard extends ConsumerWidget {
       Widget? action,
       required String breakdownKey,
       String? totalText,
-    }) => Card(
+    }) => StoneCard(
       key: Key('combat-$key'),
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(label, style: theme.textTheme.labelMedium),
-            StatValue(
-              statKey: breakdownKey,
-              title: label,
-              text: value,
-              totalText: totalText,
-              breakdown: sheet.breakdown(breakdownKey),
-              style: theme.textTheme.headlineSmall,
-            ),
-            ?action,
-          ],
-        ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: theme.textTheme.labelMedium),
+          StatValue(
+            statKey: breakdownKey,
+            title: label,
+            text: value,
+            totalText: totalText,
+            breakdown: sheet.breakdown(breakdownKey),
+            style: numericStyle(theme.textTheme.headlineSmall),
+          ),
+          ?action,
+        ],
       ),
     );
 
@@ -431,7 +483,7 @@ class StatsCard extends ConsumerWidget {
               ),
               FilterChip(
                 key: const Key('inspiration'),
-                avatar: const Icon(Icons.auto_awesome, size: 18),
+                avatar: const AppIcon(AppIcons.sparkles, size: 18),
                 label: const Text('Inspiración'),
                 selected: c.inspiration,
                 onSelected: canEdit
@@ -451,7 +503,7 @@ class StatsCard extends ConsumerWidget {
                   Flexible(
                     child: Chip(
                       key: const Key('concentration-chip'),
-                      avatar: const Icon(Icons.psychology_outlined, size: 18),
+                      avatar: const AppIcon(AppIcons.anchor, size: 18),
                       label: Text('Concentración: $spellName', overflow: TextOverflow.ellipsis),
                     ),
                   ),
@@ -513,10 +565,8 @@ class DeathSavesCard extends ConsumerWidget {
               child: SizedBox(
                 width: 44,
                 height: 44,
-                child: Icon(
-                  i < count ? Icons.circle : Icons.circle_outlined,
-                  color: color,
-                  size: 32,
+                child: Center(
+                  child: Pip(filled: i < count, color: color, size: 32),
                 ),
               ),
             ),
@@ -534,14 +584,8 @@ class DeathSavesCard extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          row('Éxitos', 'death-success', c.deathSaveSuccesses, Colors.green.shade700, true),
-          row(
-            'Fallos',
-            'death-failure',
-            c.deathSaveFailures,
-            Theme.of(context).colorScheme.error,
-            false,
-          ),
+          row('Éxitos', 'death-success', c.deathSaveSuccesses, context.tokens.moss, true),
+          row('Fallos', 'death-failure', c.deathSaveFailures, context.tokens.blood, false),
         ],
       ),
     );

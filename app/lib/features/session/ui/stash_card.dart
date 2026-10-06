@@ -5,6 +5,7 @@ import '../../../core/theme/app_icon.dart';
 import '../../../core/theme/components.dart';
 import '../../../core/theme/icons.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/theme/typography.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/domain/campaign_models.dart';
@@ -184,7 +185,7 @@ class PartyStashCard extends ConsumerWidget {
                     key: const Key('stash-add'),
                     tooltip: 'Añadir botín',
                     onPressed: canWrite ? () => _add(context) : null,
-                    icon: const Icon(Icons.add_box_outlined),
+                    icon: const AppIcon(AppIcons.treasure),
                   ),
                 ),
             ],
@@ -265,7 +266,7 @@ class _StashContent extends StatelessWidget {
               child: Text(
                 formatMoney(stash.copperPieces),
                 key: const Key('stash-gold'),
-                style: theme.textTheme.titleSmall,
+                style: theme.textTheme.titleSmall?.merge(AppTypography.numeric),
               ),
             ),
             if (isDm) ...[
@@ -274,7 +275,7 @@ class _StashContent extends StatelessWidget {
                   key: const Key('stash-gold-add'),
                   tooltip: 'Añadir oro',
                   onPressed: canWrite ? onAdjustGold : null,
-                  icon: const Icon(Icons.savings_outlined),
+                  icon: const AppIcon(AppIcons.coins),
                 ),
               ),
               OfflineAware(
@@ -282,7 +283,7 @@ class _StashContent extends StatelessWidget {
                   key: const Key('stash-gold-split'),
                   tooltip: 'Repartir oro',
                   onPressed: canWrite && stash.copperPieces > 0 ? onSplitGold : null,
-                  icon: const Icon(Icons.call_split),
+                  icon: const AppIcon(AppIcons.users),
                 ),
               ),
             ],

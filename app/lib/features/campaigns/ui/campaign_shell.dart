@@ -15,6 +15,8 @@ import '../../../core/realtime/realtime_status_icon.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_icon.dart';
 import '../../../core/theme/icons.dart';
+import '../../../core/theme/textures.dart';
+import '../../../core/theme/tokens.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../characters/data/characters_controller.dart';
 import '../../session/data/session_controllers.dart';
@@ -160,12 +162,24 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
       _ => (null, null),
     };
     if (key == null || text == null) return;
+    final tokens = context.tokens;
     ScaffoldMessenger.maybeOf(context)
       ?..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
           key: Key(key),
-          content: Text(text),
+          content: Row(
+            children: [
+              AppIcon(
+                event is MessageReceived ? AppIcons.seal : AppIcons.campfire,
+                key: Key('$key-icon'),
+                size: 20,
+                color: event is MessageReceived ? tokens.blood : tokens.ember,
+              ),
+              const SizedBox(width: 10),
+              Expanded(child: Text(text)),
+            ],
+          ),
           action: event is MessageReceived
               ? SnackBarAction(
                   label: 'Ver',
@@ -199,7 +213,7 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
               key: const Key('transactions-button'),
               tooltip: 'Transacciones',
               onPressed: () => context.push(AppRoutes.transactions(campaignId)),
-              icon: const Icon(Icons.receipt_long_outlined),
+              icon: const AppIcon(AppIcons.coins),
             ),
             ChangeRequestsButton(campaign: campaign),
           ],
@@ -221,38 +235,40 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          ConnectionBanner(campaignId: campaignId),
-          Expanded(
-            child: OfflineBannerLayout(
-              scopes: [staleTree(CampaignsRepository.campaignPath(campaignId))],
-              child: detail.when(
-                skipLoadingOnReload: true,
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(describeCampaignError(error), textAlign: TextAlign.center),
-                        const SizedBox(height: 12),
-                        FilledButton.icon(
-                          onPressed: () =>
-                              ref.invalidate(campaignDetailControllerProvider(campaignId)),
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Reintentar'),
-                        ),
-                      ],
+      body: GrainBackground(
+        child: Column(
+          children: [
+            ConnectionBanner(campaignId: campaignId),
+            Expanded(
+              child: OfflineBannerLayout(
+                scopes: [staleTree(CampaignsRepository.campaignPath(campaignId))],
+                child: detail.when(
+                  skipLoadingOnReload: true,
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (error, _) => Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(describeCampaignError(error), textAlign: TextAlign.center),
+                          const SizedBox(height: 12),
+                          FilledButton.icon(
+                            onPressed: () =>
+                                ref.invalidate(campaignDetailControllerProvider(campaignId)),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Reintentar'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
+                  data: (_) => navigationShell,
                 ),
-                data: (_) => navigationShell,
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       bottomNavigationBar: role == null
           ? null
@@ -328,7 +344,7 @@ class ChangeRequestsButton extends ConsumerWidget {
         key: const Key('change-requests-badge'),
         isLabelVisible: pending > 0,
         label: Text('$pending'),
-        child: const Icon(Icons.fact_check_outlined),
+        child: const AppIcon(AppIcons.quill),
       ),
     );
   }

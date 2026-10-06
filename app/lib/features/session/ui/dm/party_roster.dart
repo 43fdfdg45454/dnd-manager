@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../../../../core/files/authenticated_image.dart';
 import '../../../../core/theme/app_icon.dart';
 import '../../../../core/theme/components.dart';
+import '../../../../core/theme/icons.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../../../core/theme/typography.dart';
 import '../../../catalog/data/models.dart' show Condition;
-import '../../../characters/data/models.dart' show classesLabel;
+import '../../../characters/data/models.dart' show RestKind, classesLabel;
 import '../../../characters/domain/character_format.dart';
 import '../../../characters/domain/class_theme.dart';
 import '../../../characters/ui/character_tabs.dart' show titleFromSpellIndex;
@@ -121,8 +123,8 @@ class PartyMemberRow extends StatelessWidget {
                         Tooltip(
                           message:
                               'Concentración: ${titleFromSpellIndex(m.concentratingOnSpellIndex!)}',
-                          child: Icon(
-                            Icons.psychology_outlined,
+                          child: AppIcon(
+                            AppIcons.anchor,
                             key: Key('party-concentration-${m.id}'),
                             size: 20,
                             color: tokens.arcane,
@@ -133,7 +135,7 @@ class PartyMemberRow extends StatelessWidget {
                           padding: const EdgeInsets.only(left: 4),
                           child: Tooltip(
                             message: 'Inspiración',
-                            child: Icon(Icons.star, size: 18, color: tokens.gold),
+                            child: AppIcon(AppIcons.sparkles, size: 18, color: tokens.gold),
                           ),
                         ),
                     ],
@@ -160,14 +162,14 @@ class PartyMemberRow extends StatelessWidget {
                         child: Text(
                           hpText,
                           key: Key('party-hp-${m.id}'),
-                          style: theme.textTheme.labelLarge,
+                          style: theme.textTheme.labelLarge?.merge(AppTypography.numeric),
                         ),
                       ),
                       Text(
                         'CA ${m.armorClass} · Inic. ${formatModifier(m.initiative)} · '
                         'Perc. ${m.passivePerception}',
                         key: Key('party-stats-${m.id}'),
-                        style: theme.textTheme.bodySmall,
+                        style: theme.textTheme.bodySmall?.merge(AppTypography.numeric),
                       ),
                     ],
                   ),
@@ -178,7 +180,9 @@ class PartyMemberRow extends StatelessWidget {
                         'Salvaciones de muerte: ${m.deathSaveSuccesses} éxitos · '
                         '${m.deathSaveFailures} fallos',
                         key: Key('party-death-${m.id}'),
-                        style: theme.textTheme.bodySmall?.copyWith(color: tokens.crimson),
+                        style: theme.textTheme.bodySmall
+                            ?.merge(AppTypography.numeric)
+                            .copyWith(color: tokens.blood),
                       ),
                     ),
                   if (m.conditions.isNotEmpty ||
@@ -196,7 +200,11 @@ class PartyMemberRow extends StatelessWidget {
                               message: 'Nivel concedido: sube a nivel ${m.pendingLevelUpTo}',
                               child: Chip(
                                 key: Key('party-levelup-${m.id}'),
-                                label: Text('↑ ${m.pendingLevelUpTo}'),
+                                avatar: AppIcon(AppIcons.levelUp, size: 16, color: tokens.gold),
+                                label: Text(
+                                  '↑ ${m.pendingLevelUpTo}',
+                                  style: AppTypography.numeric,
+                                ),
                                 visualDensity: VisualDensity.compact,
                                 padding: EdgeInsets.zero,
                               ),
@@ -206,6 +214,13 @@ class PartyMemberRow extends StatelessWidget {
                               message: 'Pide un ${m.pendingRest!.description}',
                               child: Chip(
                                 key: Key('party-rest-${m.id}'),
+                                avatar: AppIcon(
+                                  m.pendingRest!.kind == RestKind.short
+                                      ? AppIcons.campfire
+                                      : AppIcons.moon,
+                                  size: 16,
+                                  color: tokens.gold,
+                                ),
                                 label: const Text('Zz'),
                                 visualDensity: VisualDensity.compact,
                                 padding: EdgeInsets.zero,
@@ -214,6 +229,7 @@ class PartyMemberRow extends StatelessWidget {
                           for (final c in m.conditions)
                             Chip(
                               key: Key('party-condition-${m.id}-${c.index}'),
+                              avatar: AppIcon(AppIcons.chains, size: 16, color: tokens.boneMuted),
                               label: Text(conditionNames[c.index] ?? titleFromSpellIndex(c.index)),
                               visualDensity: VisualDensity.compact,
                               padding: EdgeInsets.zero,

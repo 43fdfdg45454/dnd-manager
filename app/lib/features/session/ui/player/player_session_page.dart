@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/auth/auth_controller.dart';
 import '../../../../core/auth/auth_state.dart';
+import '../../../../core/motion/pulse.dart';
+import '../../../../core/motion/vignette.dart';
 import '../../../../core/network/api_error.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_icon.dart';
@@ -201,7 +203,7 @@ class _NoCharacter extends ConsumerWidget {
             builder: (context, canWrite) => FilledButton.icon(
               key: const Key('player-create-character'),
               onPressed: canWrite ? () => _create(context) : null,
-              icon: const Icon(Icons.person_add_alt_1),
+              icon: const AppIcon(AppIcons.hood, size: 20),
               label: const Text('Crear personaje'),
             ),
           ),
@@ -245,10 +247,15 @@ class _CharacterSession extends ConsumerWidget {
         message: describeCharacterError(error),
         onRetry: () => ref.invalidate(characterControllerProvider(characterId)),
       ),
-      data: (character) => switch (subview) {
-        PlayerSubview.combat => _CombatSubview(character: character),
-        PlayerSubview.outside => _OutsideSubview(campaign: campaign, character: character),
-      },
+      // At 0 hit points a dark vignette closes in on the edges of the session.
+      data: (character) => DarkVignette(
+        key: const Key('player-vignette'),
+        active: character.hitPointsCurrent == 0,
+        child: switch (subview) {
+          PlayerSubview.combat => _CombatSubview(character: character),
+          PlayerSubview.outside => _OutsideSubview(campaign: campaign, character: character),
+        },
+      ),
     );
   }
 }
@@ -271,7 +278,7 @@ class _CombatSubview extends StatelessWidget {
       children: [
         _PlayerHeader(character: c),
         if (c.pendingLevelUpTo != null) _LevelUpCard(character: c),
-        HpCard(character: c, canEdit: true),
+        HpCard(key: const ValueKey('player-hp-card'), character: c, canEdit: true),
         StatsCard(character: c, canEdit: true),
         if (c.hitPointsCurrent == 0) DeathSavesCard(character: c, canEdit: true),
         ConditionsCard(character: c, canEdit: true),
@@ -285,8 +292,9 @@ class _CombatSubview extends StatelessWidget {
   }
 }
 
-/// "¡Puedes subir a nivel N!": a DM granted the next level. Until the
-/// level-up wizard exists its button opens the full sheet.
+/// "¡Puedes subir a nivel N!": a DM granted the next level, with the level-up
+/// glyph beating softly ([PulseSeal]). Until the level-up wizard exists its
+/// button opens the full sheet.
 class _LevelUpCard extends StatelessWidget {
   const _LevelUpCard({required this.character});
 
@@ -302,7 +310,10 @@ class _LevelUpCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          AppIcon(AppIcons.levelUp, size: 32, color: context.tokens.gold),
+          PulseSeal(
+            key: const Key('level-up-seal'),
+            child: AppIcon(AppIcons.levelUp, size: 32, color: context.tokens.gold),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -402,17 +413,13 @@ class _OutsideSubview extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = character;
-    final tiles = <(String, String, IconData, Widget Function(CharacterDetail))>[
-      (
-        'spells',
-        'Preparar hechizos',
-        Icons.auto_stories_outlined,
-        (ch) => SpellsTab(character: ch),
-      ),
-      ('traits', 'Rasgos', Icons.workspace_premium_outlined, (ch) => TraitsTab(character: ch)),
-      ('notes', 'Trasfondo y notas', Icons.history_edu_outlined, (ch) => NotesTab(character: ch)),
-      ('inventory', 'Inventario', Icons.backpack_outlined, (ch) => InventoryTab(character: ch)),
+    final tiles = <(String, String, AppIcons, Widget Function(CharacterDetail))>[
+      ('spells', 'Preparar hechizos', AppIcons.spellbook, (ch) => SpellsTab(character: ch)),
+      ('traits', 'Rasgos', AppIcons.rune, (ch) => TraitsTab(character: ch)),
+      ('notes', 'Trasfondo y notas', AppIcons.quill, (ch) => NotesTab(character: ch)),
+      ('inventory', 'Inventario', AppIcons.backpack, (ch) => InventoryTab(character: ch)),
     ];
+    final gold = context.tokens.gold;
     return ListView(
       key: const Key('player-outside'),
       padding: _listPadding(context),
@@ -426,14 +433,14 @@ class _OutsideSubview extends ConsumerWidget {
               for (final (key, title, icon, builder) in tiles)
                 ListTile(
                   key: Key('player-open-$key'),
-                  leading: Icon(icon),
+                  leading: AppIcon(icon, color: gold),
                   title: Text(title),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _open(context, title, builder),
                 ),
               ListTile(
                 key: const Key('player-open-sheet'),
-                leading: const Icon(Icons.description_outlined),
+                leading: AppIcon(AppIcons.scroll, color: gold),
                 title: const Text('Hoja completa'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push(AppRoutes.character(c.id)),
@@ -527,7 +534,7 @@ class _OpenShopsCard extends ConsumerWidget {
               ListTile(
                 key: Key('player-shop-${shop.id}'),
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.storefront_outlined),
+                leading: const AppIcon(AppIcons.treasure),
                 title: Text(shop.name),
                 subtitle: shop.description == null || shop.description!.isEmpty
                     ? null

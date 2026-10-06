@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_router.dart';
+import '../../../../core/theme/app_icon.dart';
+import '../../../../core/theme/icons.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../../../core/theme/typography.dart';
 import '../../../../core/ui/offline_widgets.dart';
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/data/models.dart' show Condition;
@@ -171,14 +174,14 @@ class _DmCharacterSheetState extends ConsumerState<DmCharacterSheet> {
                       'PG ${m.hitPointsCurrent} / ${m.hitPointsMax}'
                       '${m.temporaryHitPoints > 0 ? ' · ${m.temporaryHitPoints} temporales' : ''}',
                       key: const Key('dm-sheet-hp'),
-                      style: theme.textTheme.titleMedium,
+                      style: theme.textTheme.titleMedium?.merge(AppTypography.numeric),
                     ),
                   ),
                   OfflineAware(
                     builder: (context, canWrite) => TextButton.icon(
                       key: const Key('dm-hp-max'),
                       onPressed: canWrite ? () => _maximum(m) : null,
-                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      icon: const AppIcon(AppIcons.quill, size: 18),
                       label: const Text('PG máx.'),
                     ),
                   ),
@@ -206,20 +209,20 @@ class _DmCharacterSheetState extends ConsumerState<DmCharacterSheet> {
                       key: const Key('dm-damage'),
                       style: FilledButton.styleFrom(backgroundColor: tokens.crimson),
                       onPressed: canWrite && hasValue ? () => _damage(m) : null,
-                      icon: const Icon(Icons.remove),
+                      icon: const AppIcon(AppIcons.splash, size: 20),
                       label: const Text('Daño'),
                     ),
                     FilledButton.icon(
                       key: const Key('dm-heal'),
                       style: FilledButton.styleFrom(backgroundColor: tokens.emerald),
                       onPressed: canWrite && hasValue ? () => _heal(m) : null,
-                      icon: const Icon(Icons.add),
+                      icon: const AppIcon(AppIcons.drop, size: 20),
                       label: const Text('Curar'),
                     ),
                     OutlinedButton.icon(
                       key: const Key('dm-temp'),
                       onPressed: canWrite && _value != null ? () => _temporary(m) : null,
-                      icon: const Icon(Icons.shield_outlined),
+                      icon: const AppIcon(AppIcons.shield, size: 20),
                       label: const Text('Fijar temporales'),
                     ),
                   ],
@@ -236,6 +239,7 @@ class _DmCharacterSheetState extends ConsumerState<DmCharacterSheet> {
                     for (final c in m.conditions)
                       InputChip(
                         key: Key('dm-condition-${c.index}'),
+                        avatar: AppIcon(AppIcons.chains, size: 16, color: tokens.boneMuted),
                         label: Text(names[c.index] ?? titleFromSpellIndex(c.index)),
                         deleteButtonTooltipMessage: 'Quitar',
                         onDeleted: canWrite
@@ -266,7 +270,7 @@ class _DmCharacterSheetState extends ConsumerState<DmCharacterSheet> {
                     Navigator.of(context).pop();
                     router.push(AppRoutes.character(m.id));
                   },
-                  icon: const Icon(Icons.open_in_new),
+                  icon: const AppIcon(AppIcons.scroll, size: 20),
                   label: const Text('Ver hoja completa'),
                 ),
               ),

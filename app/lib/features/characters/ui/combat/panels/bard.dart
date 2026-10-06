@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/theme/icons.dart';
+
 import '../combat_support.dart';
 import 'panel_support.dart';
 
@@ -45,7 +47,7 @@ class BardPanel extends ConsumerWidget {
           title: 'Inspiración bárdica',
           actionKey: 'bard-inspire',
           buttonLabel: 'Inspirar (1$die)',
-          icon: Icons.music_note,
+          icon: AppIcons.bard,
           success: 'Inspiración bárdica concedida: 1$die.',
           trailing: Text('Dado: $die', key: const Key('bard-inspiration-die')),
           description:

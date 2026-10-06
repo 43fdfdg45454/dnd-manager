@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_icon.dart';
+import '../../../../core/theme/icons.dart';
+import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/offline_widgets.dart';
 import '../../../catalog/domain/catalog_format.dart';
 import '../../../characters/data/characters_controller.dart';
@@ -57,6 +60,10 @@ class CombatItemsSection extends ConsumerWidget {
                 ListTile(
                   key: Key('combat-item-${item.id}'),
                   contentPadding: EdgeInsets.zero,
+                  leading: AppIcon(
+                    item.charges != null ? AppIcons.staff : AppIcons.potion,
+                    color: context.tokens.gold,
+                  ),
                   title: Text(item.effective.name),
                   subtitle: Text(
                     [

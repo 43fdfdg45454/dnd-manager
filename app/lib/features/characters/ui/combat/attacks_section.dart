@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_icon.dart';
+import '../../../../core/theme/components.dart';
+import '../../../../core/theme/icons.dart';
 import '../../../../core/ui/stat_value.dart';
-import '../../../catalog/ui/detail_widgets.dart' show SectionTitle;
 import '../../../dice/domain/dice_expression.dart';
 import '../../../dice/ui/dice_sheet.dart';
 import '../../data/models.dart';
@@ -24,7 +26,7 @@ class AttacksSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionTitle('Ataques'),
+        const SectionHeader('Ataques', padding: combatSectionPadding),
         if (attacks.isEmpty) const Text('Sin ataques disponibles.'),
         for (var i = 0; i < attacks.length; i++)
           AttackCard(
@@ -81,7 +83,7 @@ class _AttackCardState extends State<AttackCard> {
             ListTile(title: Text('Ataque: ${_attack.name}')),
             ListTile(
               key: const Key('mode-normal'),
-              leading: const Icon(Icons.casino_outlined),
+              leading: const AppIcon(AppIcons.d20),
               title: const Text('Normal'),
               onTap: () => Navigator.of(sheetContext).pop(AdvantageMode.normal),
             ),
@@ -129,7 +131,7 @@ class _AttackCardState extends State<AttackCard> {
         title: 'Ataque: ${a.name}',
         text: formatModifier(a.attackBonus),
         breakdown: a.attackBreakdown,
-        style: theme.textTheme.headlineSmall,
+        style: numericStyle(theme.textTheme.headlineSmall),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,7 +146,7 @@ class _AttackCardState extends State<AttackCard> {
             ].join(' '),
             totalText: a.damageBreakdown == null ? null : formatModifier(a.damageBreakdown!.total),
             breakdown: a.damage.isEmpty ? null : a.damageBreakdown,
-            style: theme.textTheme.bodyLarge,
+            style: numericStyle(theme.textTheme.bodyLarge),
           ),
           if (details.isNotEmpty) Text(details, style: theme.textTheme.bodySmall),
           if (a.notes != null) Text(a.notes!, style: theme.textTheme.bodySmall),
@@ -153,7 +155,7 @@ class _AttackCardState extends State<AttackCard> {
               padding: const EdgeInsets.only(top: 4),
               child: Chip(
                 key: Key('attack-rage-${widget.index}'),
-                avatar: const Icon(Icons.local_fire_department, size: 18),
+                avatar: const AppIcon(AppIcons.flame, size: 18),
                 label: Text('Furia ${formatModifier(widget.rageBonus)} al daño'),
                 visualDensity: VisualDensity.compact,
               ),

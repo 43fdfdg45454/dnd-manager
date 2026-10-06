@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/theme/icons.dart';
+
 import '../../../data/models.dart';
 import '../combat_state.dart';
 import 'panel_support.dart';
@@ -48,7 +50,7 @@ class DruidPanel extends ConsumerWidget {
           title: 'Forma salvaje',
           actionKey: 'druid-wild-shape',
           buttonLabel: 'Adoptar forma salvaje',
-          icon: Icons.pets,
+          icon: AppIcons.druid,
           minLevel: 2,
           onUse: transform,
           extra: [

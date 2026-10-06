@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/theme/app_icon.dart';
+import '../../../../../core/theme/icons.dart';
+
 import '../../../../dice/domain/dice_expression.dart' show bonusSuffix;
 import '../../../../dice/ui/dice_sheet.dart';
 import '../combat_support.dart';
@@ -50,13 +53,13 @@ class MonkPanel extends ConsumerWidget {
     final attackMod = strMod > dexMod ? strMod : dexMod;
     final movement = unarmoredMovement(level);
 
-    Widget kiButton(String key, String label, IconData icon, String success) =>
+    Widget kiButton(String key, String label, AppIcons icon, String success) =>
         FilledButton.tonalIcon(
           key: Key(key),
           onPressed: panel.canEdit && ki != null && remaining > 0
               ? () => spendClassResource(context, ref, c, ki, success: success)
               : null,
-          icon: Icon(icon),
+          icon: AppIcon(icon, size: 20),
           label: Text(label),
         );
 
@@ -86,19 +89,19 @@ class MonkPanel extends ConsumerWidget {
                     kiButton(
                       'monk-flurry-of-blows',
                       'Ráfaga de golpes',
-                      Icons.sports_mma,
+                      AppIcons.monk,
                       'Ráfaga de golpes: dos ataques sin armas como acción adicional.',
                     ),
                     kiButton(
                       'monk-patient-defense',
                       'Defensa paciente',
-                      Icons.shield_outlined,
+                      AppIcons.shield,
                       'Defensa paciente: Esquivar como acción adicional.',
                     ),
                     kiButton(
                       'monk-step-of-the-wind',
                       'Paso del viento',
-                      Icons.air,
+                      AppIcons.bolt,
                       'Paso del viento: Destrabarse o Correr como acción adicional.',
                     ),
                   ],

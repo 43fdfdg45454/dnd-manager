@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../catalog/ui/detail_widgets.dart' show SectionTitle;
+import '../../../../core/theme/components.dart';
 import '../../../items/data/inventory_repository.dart';
 import '../../../items/data/items_controllers.dart';
 import '../../data/characters_controller.dart';
@@ -93,7 +93,7 @@ class SpellSlotsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionTitle('Espacios de conjuro'),
+        const SectionHeader('Espacios de conjuro', padding: combatSectionPadding),
         CombatCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -138,7 +138,7 @@ class ResourcesSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionTitle('Recursos'),
+        const SectionHeader('Recursos', padding: combatSectionPadding),
         for (final resource in resources)
           ResourceTile(
             key: Key('resource-${resource.id}'),
@@ -156,7 +156,11 @@ class ResourcesSection extends ConsumerWidget {
                 for (final item in once)
                   Chip(
                     key: Key('once-${item.key}'),
-                    avatar: Icon(item.used ? Icons.check_circle : Icons.circle_outlined, size: 18),
+                    avatar: Pip(
+                      filled: !item.used,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 18,
+                    ),
                     label: Text(item.used ? '${item.name} (usado)' : item.name),
                   ),
               ],
@@ -245,7 +249,10 @@ class ResourceTile extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       child: Column(
                         children: [
-                          Text('$remaining / ${r.max}', style: theme.textTheme.titleLarge),
+                          Text(
+                            '$remaining / ${r.max}',
+                            style: numericStyle(theme.textTheme.titleLarge),
+                          ),
                           const SizedBox(height: 4),
                           LinearProgressIndicator(
                             value: r.max == 0 ? 0 : remaining / r.max,
@@ -306,7 +313,7 @@ class ConsumablesSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionTitle('Consumibles rápidos'),
+        const SectionHeader('Consumibles rápidos', padding: combatSectionPadding),
         CombatCard(
           child: Column(
             children: [

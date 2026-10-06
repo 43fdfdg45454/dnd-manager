@@ -22,6 +22,7 @@ import 'helpers/catalog_fakes.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
 import 'helpers/item_fakes.dart';
+import 'helpers/motion.dart';
 
 /// Opens the combat view of `ch1` with the fakes; every die shows [face].
 Future<void> _pump(
@@ -59,7 +60,7 @@ Future<void> _pump(
         diceRandomProvider.overrideWithValue(SequenceRandom.always(face)),
         localPreferencesProvider.overrideWithValue(prefs),
       ],
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(routerConfig: router, builder: reducedMotionBuilder),
     ),
   );
   await tester.pumpAndSettle();

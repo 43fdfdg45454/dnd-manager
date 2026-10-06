@@ -5,8 +5,8 @@ import 'package:dio/dio.dart';
 import 'package:dnd_companion/core/auth/auth_controller.dart';
 import 'package:dnd_companion/core/auth/auth_state.dart';
 import 'package:dnd_companion/core/network/api_client.dart';
-import 'package:dnd_companion/core/storage/local_preferences.dart';
 import 'package:dnd_companion/core/router/app_router.dart';
+import 'package:dnd_companion/core/storage/local_preferences.dart';
 import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart';
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
 import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
@@ -30,6 +30,7 @@ import 'helpers/catalog_fakes.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
 import 'helpers/item_fakes.dart';
+import 'helpers/motion.dart';
 
 /// Opens `/characters/ch1` (or [location]) with the fakes. [face] is what every
 /// die shows. The view is tall so the whole combat screen is built.
@@ -78,7 +79,7 @@ Future<void> _pump(
         diceRandomProvider.overrideWithValue(SequenceRandom.always(face)),
         localPreferencesProvider.overrideWithValue(prefs),
       ],
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(routerConfig: router, builder: reducedMotionBuilder),
     ),
   );
   await tester.pumpAndSettle();

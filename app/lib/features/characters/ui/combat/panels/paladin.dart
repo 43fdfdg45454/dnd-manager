@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../catalog/ui/detail_widgets.dart' show SectionTitle;
+import '../../../../../core/motion/flash.dart';
+import '../../../../../core/theme/app_icon.dart';
+import '../../../../../core/theme/components.dart';
+import '../../../../../core/theme/icons.dart';
 import '../../../../dice/ui/dice_sheet.dart';
 import '../../../data/characters_controller.dart';
 import '../../../data/models.dart';
@@ -38,6 +41,9 @@ class PaladinPanel extends ConsumerStatefulWidget {
 class _PaladinPanelState extends ConsumerState<PaladinPanel> {
   int? _smiteLevel;
   int _amount = 1;
+
+  /// Bumped on every Divine Smite the server accepts: plays the golden flash.
+  int _smites = 0;
 
   CharacterDetail get _character => widget.panel.character;
   bool get _canEdit => widget.panel.canEdit;
@@ -76,6 +82,7 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
       dice = await panelController(ref, _character).divineSmite(level);
     });
     if (!done || !mounted) return;
+    setState(() => _smites++);
     final damage = dice ?? '';
     final roll = await showDialog<bool>(
       context: context,
@@ -141,11 +148,15 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionTitle('Paladín'),
+        const SectionHeader('Paladín', padding: combatSectionPadding),
         CombatCard(
           key: const Key('class-panel-paladin'),
           title: 'Imposición de manos',
-          trailing: Text('$remaining / $pool', key: const Key('loh-remaining')),
+          trailing: Text(
+            '$remaining / $pool',
+            key: const Key('loh-remaining'),
+            style: numericStyle(theme.textTheme.bodyMedium),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -168,7 +179,14 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
                         onChanged: _canEdit ? (v) => setState(() => _amount = v.round()) : null,
                       ),
                     ),
-                    SizedBox(width: 32, child: Text('$amount', key: const Key('loh-amount'))),
+                    SizedBox(
+                      width: 32,
+                      child: Text(
+                        '$amount',
+                        key: const Key('loh-amount'),
+                        style: numericStyle(theme.textTheme.bodyMedium),
+                      ),
+                    ),
                   ],
                 )
               else
@@ -182,7 +200,7 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
                     child: FilledButton.icon(
                       key: const Key('loh-heal-self'),
                       onPressed: _canEdit && remaining > 0 ? () => _healSelf(remaining) : null,
-                      icon: const Icon(Icons.back_hand_outlined),
+                      icon: const AppIcon(AppIcons.drop, size: 20),
                       label: const Text('Curarme'),
                     ),
                   ),
@@ -191,7 +209,7 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
                     child: FilledButton.tonalIcon(
                       key: const Key('loh-heal-other'),
                       onPressed: _canEdit && remaining > 0 ? () => _healOther(remaining) : null,
-                      icon: const Icon(Icons.favorite_border),
+                      icon: const AppIcon(AppIcons.heart, size: 20),
                       label: const Text('Curar a otro'),
                     ),
                   ),
@@ -200,52 +218,63 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
             ],
           ),
         ),
-        CombatCard(
-          title: 'Castigo divino',
-          child: slots.isEmpty
-              ? const Text('No tienes espacios de conjuro disponibles.')
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        for (final slot in slots)
-                          ChoiceChip(
-                            key: Key('smite-level-${slot.level}'),
-                            label: Text('Nivel ${slot.level} (${slot.available})'),
-                            selected: slot.level == selected!.level,
-                            onSelected: (_) => setState(() => _smiteLevel = slot.level),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Dados extra: ${selected!.dice}',
-                      key: const Key('smite-dice'),
-                      style: theme.textTheme.titleMedium,
-                    ),
-                    Text('+1d8 contra no-muertos e infernales.', style: theme.textTheme.bodySmall),
-                    const SizedBox(height: 8),
-                    FilledButton.icon(
-                      key: const Key('smite-confirm'),
-                      onPressed: _canEdit ? () => _smite(selected.level) : null,
-                      icon: const Icon(Icons.flare),
-                      label: const Text('Castigo divino'),
-                    ),
-                  ],
-                ),
+        RadialFlash(
+          key: const Key('smite-flash'),
+          trigger: _smites == 0 ? null : _smites,
+          child: CombatCard(
+            title: 'Castigo divino',
+            child: slots.isEmpty
+                ? const Text('No tienes espacios de conjuro disponibles.')
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          for (final slot in slots)
+                            ChoiceChip(
+                              key: Key('smite-level-${slot.level}'),
+                              label: Text('Nivel ${slot.level} (${slot.available})'),
+                              selected: slot.level == selected!.level,
+                              onSelected: (_) => setState(() => _smiteLevel = slot.level),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Dados extra: ${selected!.dice}',
+                        key: const Key('smite-dice'),
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      Text(
+                        '+1d8 contra no-muertos e infernales.',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 8),
+                      FilledButton.icon(
+                        key: const Key('smite-confirm'),
+                        onPressed: _canEdit ? () => _smite(selected.level) : null,
+                        icon: const AppIcon(AppIcons.sun, size: 20),
+                        label: const Text('Castigo divino'),
+                      ),
+                    ],
+                  ),
+          ),
         ),
         CombatCard(
           title: 'Canalizar divinidad',
-          trailing: Text('Usos: $channelLeft / ${channel.max}', key: const Key('channel-uses')),
+          trailing: Text(
+            'Usos: $channelLeft / ${channel.max}',
+            key: const Key('channel-uses'),
+            style: numericStyle(theme.textTheme.bodyMedium),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               FilledButton.tonalIcon(
                 key: const Key('channel-divinity'),
                 onPressed: _canEdit && channelLeft > 0 ? _channel : null,
-                icon: const Icon(Icons.brightness_7_outlined),
+                icon: const AppIcon(AppIcons.sparkles, size: 20),
                 label: const Text('Canalizar divinidad'),
               ),
               if (aura != null)
@@ -314,7 +343,7 @@ class _TargetSheetState extends ConsumerState<_TargetSheet> {
                   ListTile(
                     key: Key('loh-target-${c.id}'),
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.person_outline),
+                    leading: const AppIcon(AppIcons.hood),
                     title: Text(c.name),
                     subtitle: c.ownerDisplayName == null ? null : Text(c.ownerDisplayName!),
                     onTap: () => Navigator.of(context).pop(c.name),

@@ -7,6 +7,7 @@ import '../../../../core/theme/app_icon.dart';
 import '../../../../core/theme/components.dart';
 import '../../../../core/theme/icons.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../../../core/theme/typography.dart';
 import '../../../../core/ui/offline_widgets.dart';
 import '../../../campaigns/data/campaigns_controller.dart';
 import '../../../campaigns/domain/campaign_models.dart';
@@ -14,6 +15,7 @@ import '../../../campaigns/ui/confirm_dialog.dart';
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../characters/data/characters_controller.dart';
 import '../../../characters/data/models.dart' show RestKind, RestRequest;
+import '../../../characters/ui/combat/rest_celebration.dart';
 import '../../../dice/ui/dice_sheet.dart';
 import '../../../items/data/items_controllers.dart';
 import '../../../items/data/models.dart' show ShopSummary;
@@ -326,7 +328,7 @@ class _ShopsCard extends ConsumerWidget {
                               key: Key('dm-shop-open-${shop.id}'),
                               tooltip: 'Abrir tienda',
                               onPressed: () => context.push(AppRoutes.shop(campaign.id, shop.id)),
-                              icon: const Icon(Icons.storefront_outlined),
+                              icon: const AppIcon(AppIcons.treasure),
                             ),
                           ),
                         ),
@@ -341,17 +343,20 @@ class _ShopsCard extends ConsumerWidget {
 
 /// "Peticiones": the rest requests of the players with Aprobar / Rechazar in
 /// the row itself, and the count of pending change requests with a link to
-/// the list.
+/// the list. Approving a rest plays its campfire or moon over the screen.
 class _PetitionsCard extends ConsumerWidget {
   const _PetitionsCard({required this.campaignId});
 
   final String campaignId;
 
-  Future<void> _approve(BuildContext context, WidgetRef ref, RestRequest request) => runTableAction(
-    context,
-    () => ref.read(restRequestsControllerProvider(campaignId).notifier).approve(request),
-    success: 'Descanso aprobado para ${request.characterName}.',
-  );
+  Future<void> _approve(BuildContext context, WidgetRef ref, RestRequest request) async {
+    final done = await runTableAction(
+      context,
+      () => ref.read(restRequestsControllerProvider(campaignId).notifier).approve(request),
+      success: 'Descanso aprobado para ${request.characterName}.',
+    );
+    if (done && context.mounted) showRestCelebration(context, request.kind);
+  }
 
   Future<void> _reject(BuildContext context, WidgetRef ref, RestRequest request) => runTableAction(
     context,
@@ -413,8 +418,8 @@ class _PetitionsCard extends ConsumerWidget {
             contentPadding: EdgeInsets.zero,
             leading: Badge(
               isLabelVisible: pending > 0,
-              label: Text('$pending'),
-              child: const Icon(Icons.fact_check_outlined),
+              label: Text('$pending', style: AppTypography.numeric),
+              child: AppIcon(AppIcons.quill, color: context.tokens.gold),
             ),
             title: const Text('Solicitudes pendientes'),
             subtitle: Text(

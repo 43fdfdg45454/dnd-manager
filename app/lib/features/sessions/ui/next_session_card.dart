@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_icon.dart';
+import '../../../core/theme/icons.dart';
+import '../../../core/theme/textures.dart';
+import '../../../core/theme/tokens.dart';
 import '../data/sessions_controllers.dart';
 import 'session_widgets.dart';
 
@@ -20,40 +24,37 @@ class NextSessionCard extends ConsumerWidget {
     final s = sessions.first;
     final theme = Theme.of(context);
 
-    return Card(
+    return RuneCard(
       key: const Key('next-session-card'),
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => context.push(AppRoutes.session(s.campaignId, s.id)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(Icons.event, color: theme.colorScheme.primary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Próxima sesión', style: theme.textTheme.labelMedium),
-                    Text(
-                      '${s.campaignName} · ${sessionHeading(s.number, s.title)}',
-                      key: const Key('next-session-title'),
-                      style: theme.textTheme.titleSmall,
-                    ),
-                    Text(sessionWhen(s), key: const Key('next-session-when')),
-                    const SizedBox(height: 2),
-                    KeyedSubtree(
-                      key: const Key('next-session-rsvp'),
-                      child: MyRsvpLabel(rsvp: s.myRsvp),
-                    ),
-                  ],
-                ),
+      onTap: () => context.push(AppRoutes.session(s.campaignId, s.id)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            AppIcon(AppIcons.calendar, color: context.tokens.gold),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Próxima sesión', style: theme.textTheme.labelMedium),
+                  Text(
+                    '${s.campaignName} · ${sessionHeading(s.number, s.title)}',
+                    key: const Key('next-session-title'),
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  Text(sessionWhen(s), key: const Key('next-session-when')),
+                  const SizedBox(height: 2),
+                  KeyedSubtree(
+                    key: const Key('next-session-rsvp'),
+                    child: MyRsvpLabel(rsvp: s.myRsvp),
+                  ),
+                ],
               ),
-              const Icon(Icons.chevron_right),
-            ],
-          ),
+            ),
+            const Icon(Icons.chevron_right),
+          ],
         ),
       ),
     );

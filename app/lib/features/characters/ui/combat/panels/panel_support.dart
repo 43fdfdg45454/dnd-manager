@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/app_icon.dart';
+import '../../../../../core/theme/icons.dart';
+
 import '../../../data/characters_controller.dart';
 import '../../../data/models.dart';
 import '../../../domain/class_theme.dart';
@@ -240,7 +242,7 @@ class ClassResourceUses extends ConsumerWidget {
             Text(
               r.max >= unlimitedUses ? '∞' : '$remaining / ${r.max}',
               key: Key('$keyPrefix-uses'),
-              style: theme.textTheme.titleSmall,
+              style: numericStyle(theme.textTheme.titleSmall),
             ),
           ],
         ),
@@ -318,7 +320,7 @@ class ClassResourceActionCard extends ConsumerWidget {
   final String title;
   final String actionKey;
   final String buttonLabel;
-  final IconData icon;
+  final AppIcons icon;
   final int minLevel;
   final String? success;
   final String? description;
@@ -368,7 +370,7 @@ class ClassResourceActionCard extends ConsumerWidget {
                                 success: success,
                               )
                       : null,
-                  icon: Icon(icon),
+                  icon: AppIcon(icon, size: 20),
                   label: Text(buttonLabel),
                 ),
               ),
@@ -389,7 +391,7 @@ class ClassResourceActionCard extends ConsumerWidget {
 class FeatureReminder extends StatelessWidget {
   const FeatureReminder({super.key, required this.icon, required this.title, required this.text});
 
-  final IconData icon;
+  final AppIcons icon;
   final String title;
   final String text;
 
@@ -398,7 +400,7 @@ class FeatureReminder extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       dense: true,
-      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+      leading: AppIcon(icon, color: Theme.of(context).colorScheme.primary),
       title: Text(title),
       subtitle: Text(text),
     );
