@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:dnd_companion/core/network/connectivity.dart';
 import 'package:dnd_companion/core/realtime/connection_diagnostics.dart';
@@ -194,6 +196,20 @@ void main() {
         data: '',
       );
       expect(describeResponse(response), 'HTTP 204 · sin content-type · cuerpo vacío');
+    });
+  });
+
+  group('decodeJsonBody', () {
+    test('acepta texto, bytes con BOM y cuerpos ya decodificados', () {
+      const json = '{"negotiateVersion":1,"availableTransports":[]}';
+      expect(decodeJsonBody(json), isA<Map<String, dynamic>>());
+      expect(decodeJsonBody(utf8.encode('\uFEFF $json \n')), isA<Map<String, dynamic>>());
+      expect(decodeJsonBody({'negotiateVersion': 1}), {'negotiateVersion': 1});
+    });
+
+    test('rechaza lo que no es JSON', () {
+      expect(() => decodeJsonBody('<html></html>'), throwsFormatException);
+      expect(() => decodeJsonBody(''), throwsFormatException);
     });
   });
 }

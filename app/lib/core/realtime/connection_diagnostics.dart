@@ -276,6 +276,26 @@ class ConnectionDiagnostics {
   }
 }
 
+/// The JSON of a response body, whatever the HTTP client handed back: already
+/// decoded (a map or a list), bytes or text (with a possible BOM or blanks
+/// around it). Throws [FormatException] when it is not JSON.
+Object? decodeJsonBody(Object? data) {
+  final text = switch (data) {
+    final Uint8List bytes => utf8.decode(bytes, allowMalformed: true),
+    Map() || List() => null,
+    null => '',
+    _ => '$data',
+  };
+  if (text == null) return data;
+  final trimmed = text.replaceFirst('\uFEFF', '').trim();
+  if (trimmed.isEmpty) throw const FormatException('cuerpo vacío');
+  try {
+    return jsonDecode(trimmed);
+  } on FormatException catch (e) {
+    throw FormatException('no es JSON: ${e.message}');
+  }
+}
+
 /// Status, content type and the start of the body of an unexpected answer, so
 /// the user can tell who answered (the API, the proxy or something else).
 String describeResponse(Response<Object?> response) {
@@ -327,9 +347,11 @@ final diagnosticsProvider = Provider<ConnectionDiagnostics>((ref) {
       if (status < 200 || status >= 300) throw DiagnosticHttpError(status);
       final Object? body;
       try {
-        body = jsonDecode('${response.data}');
-      } catch (_) {
-        throw DiagnosticFailure('Respuesta no válida (no es JSON): ${describeResponse(response)}');
+        body = decodeJsonBody(response.data);
+      } on FormatException catch (e) {
+        throw DiagnosticFailure(
+          'Respuesta no válida (${e.message}): ${describeResponse(response)}',
+        );
       }
       final transports = body is Map ? body['availableTransports'] : null;
       if (transports is! List || transports.isEmpty) {
