@@ -105,6 +105,22 @@ public sealed class RealtimeTests(ApiFactory factory) : IClassFixture<ApiFactory
     }
 
     [Fact]
+    public async Task Handing_an_npc_to_a_player_reaches_the_campaign()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var created = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/characters", new { name = "Escudero", ownerUserId = (Guid?)null });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var npc = (await created.Content.ReadFromJsonAsync<Dnd.Application.Characters.CharacterDetailDto>())!;
+        await using var connection = await ConnectAsync(s.Player);
+        var updated = Expect(connection, CampaignEventTypes.CharacterUpdated);
+        await connection.InvokeAsync("JoinCampaign", s.CampaignId);
+
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PutAsJsonAsync($"/api/v1/characters/{npc.Id}/owner", new { ownerUserId = s.Player.Id })).StatusCode);
+
+        Assert.Equal((Guid?)npc.Id, (await updated.WaitAsync(EventTimeout)).CharacterId);
+    }
+
+    [Fact]
     public async Task Connecting_without_a_token_fails_with_401()
     {
         var connection = BuildConnection(token: null);

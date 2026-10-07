@@ -57,13 +57,54 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
     }
 
     [Fact]
-    public async Task Owner_user_id_absent_makes_the_creator_the_owner()
+    public async Task Owner_user_id_absent_makes_the_player_the_owner()
     {
         var s = await factory.CreateCampaignScenarioAsync();
 
-        var character = await CreateAsync(s.Dm, s.CampaignId, new { name = "Propio" });
+        var character = await CreateAsync(s.Player, s.CampaignId, new { name = "Propio" });
 
-        Assert.Equal(s.Dm.Id, character.OwnerUserId);
+        Assert.Equal(s.Player.Id, character.OwnerUserId);
+    }
+
+    [Theory]
+    [InlineData(CampaignScenario.DmRole, false)]
+    [InlineData(CampaignScenario.DmRole, true)]
+    [InlineData(CampaignScenario.OwnerRole, false)]
+    [InlineData(CampaignScenario.OwnerRole, true)]
+    public async Task Dm_cannot_own_a_character(string role, bool explicitSelf)
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var actor = s.As(role);
+
+        object body = explicitSelf ? new { name = "Propio", ownerUserId = actor.Id } : new { name = "Propio" };
+        var response = await actor.Client.PostAsJsonAsync(CharactersUrl(s.CampaignId), body);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.ReadProblemAsync();
+        Assert.True(problem.HasFieldError("ownerUserId"));
+        Assert.Equal(
+            "Un DM no tiene personajes propios: crea un PNJ o asígnalo a un jugador.",
+            problem.GetProperty("errors").GetProperty("ownerUserId")[0].GetString());
+        Assert.Empty(await ListAsync(s.Dm, s.CampaignId));
+    }
+
+    [Theory]
+    [InlineData(CampaignScenario.DmRole, CampaignScenario.OwnerRole)]
+    [InlineData(CampaignScenario.OwnerRole, CampaignScenario.DmRole)]
+    public async Task Dm_cannot_create_a_character_for_another_dm(string actorRole, string ownerRole)
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+
+        var response = await s.As(actorRole).Client.PostAsJsonAsync(
+            CharactersUrl(s.CampaignId), new { name = "Ajeno", ownerUserId = s.As(ownerRole).Id });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.ReadProblemAsync();
+        Assert.True(problem.HasFieldError("ownerUserId"));
+        Assert.Equal(
+            "El dueño debe ser un jugador de la campaña.",
+            problem.GetProperty("errors").GetProperty("ownerUserId")[0].GetString());
+        Assert.Empty(await ListAsync(s.Dm, s.CampaignId));
     }
 
     [Fact]
@@ -119,6 +160,81 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(HttpStatusCode.Forbidden, npc.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, other.StatusCode);
         Assert.Equal(HttpStatusCode.Created, self.StatusCode);
+    }
+
+    // ---- Owner reassignment ----------------------------------------------------------------------
+
+    [Theory]
+    [InlineData(CampaignScenario.DmRole)]
+    [InlineData(CampaignScenario.OwnerRole)]
+    public async Task Dm_hands_an_npc_to_a_player_and_turns_it_back_into_an_npc(string role)
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var dm = s.As(role);
+        var npc = await CreateAsync(dm, s.CampaignId, new { name = "Escudero", ownerUserId = (Guid?)null });
+
+        var handed = await PutOwnerAsync(dm, npc.Id, new { ownerUserId = s.Player.Id });
+
+        Assert.Equal(s.Player.Id, handed.OwnerUserId);
+        Assert.Equal("Player User", handed.OwnerDisplayName);
+        Assert.Equal(s.Player.Id, (await GetDetailAsync(s.Player, npc.Id)).OwnerUserId);
+        Assert.Equal(s.Player.Id, Assert.Single(await ListAsync(s.Player, s.CampaignId)).OwnerUserId);
+
+        var back = await PutOwnerAsync(dm, npc.Id, new { ownerUserId = (Guid?)null });
+
+        Assert.Null(back.OwnerUserId);
+        Assert.Null(back.OwnerDisplayName);
+        Assert.Equal(HttpStatusCode.Forbidden, (await s.Player.Client.GetAsync(CharacterUrl(npc.Id))).StatusCode);
+        Assert.Empty(await ListChangeRequestsAsync(s.Dm, s.CampaignId, null));
+    }
+
+    [Fact]
+    public async Task Dm_reassigns_a_character_between_players()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var second = await factory.CreateSignedInUserAsync("Second Player");
+        await s.Owner.AddMemberAsync(s.CampaignId, second, CampaignScenario.PlayerRole);
+        var hero = await CreateAsync(s.Player, s.CampaignId, new { name = "Heredado" });
+
+        var moved = await PutOwnerAsync(s.Dm, hero.Id, new { ownerUserId = second.Id });
+
+        Assert.Equal(second.Id, moved.OwnerUserId);
+        Assert.Equal(HttpStatusCode.OK, (await second.Client.GetAsync(CharacterUrl(hero.Id))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await s.Player.Client.GetAsync(CharacterUrl(hero.Id))).StatusCode);
+    }
+
+    [Fact]
+    public async Task Owner_reassignment_rejects_dms_non_members_and_a_missing_owner()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var hero = await CreateAsync(s.Player, s.CampaignId, new { name = "Firme" });
+
+        var toDm = await s.Dm.Client.PutAsJsonAsync(OwnerUrl(hero.Id), new { ownerUserId = s.Dm.Id });
+        var toOwner = await s.Dm.Client.PutAsJsonAsync(OwnerUrl(hero.Id), new { ownerUserId = s.Owner.Id });
+        var toOutsider = await s.Dm.Client.PutAsJsonAsync(OwnerUrl(hero.Id), new { ownerUserId = s.Outsider.Id });
+        var missing = await s.Dm.Client.PutAsJsonAsync(OwnerUrl(hero.Id), new { });
+
+        foreach (var response in new[] { toDm, toOwner, toOutsider, missing })
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.True((await response.ReadProblemAsync()).HasFieldError("ownerUserId"));
+        }
+
+        Assert.Equal(s.Player.Id, (await GetDetailAsync(s.Dm, hero.Id)).OwnerUserId);
+    }
+
+    [Fact]
+    public async Task Player_cannot_reassign_a_character()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var hero = await CreateAsync(s.Player, s.CampaignId, new { name = "Mío" });
+
+        var toNpc = await s.Player.Client.PutAsJsonAsync(OwnerUrl(hero.Id), new { ownerUserId = (Guid?)null });
+        var outsider = await s.Outsider.Client.PutAsJsonAsync(OwnerUrl(hero.Id), new { ownerUserId = (Guid?)null });
+
+        Assert.Equal(HttpStatusCode.Forbidden, toNpc.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, outsider.StatusCode);
+        Assert.Equal(s.Player.Id, (await GetDetailAsync(s.Player, hero.Id)).OwnerUserId);
     }
 
     [Fact]
@@ -632,6 +748,15 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
     private static string CharacterUrl(Guid id) => $"/api/v1/characters/{id}";
 
     private static string SheetUrl(Guid id) => $"{CharacterUrl(id)}/sheet";
+
+    private static string OwnerUrl(Guid id) => $"{CharacterUrl(id)}/owner";
+
+    private static async Task<CharacterDetailDto> PutOwnerAsync(SignedInUser actor, Guid id, object body)
+    {
+        var response = await actor.Client.PutAsJsonAsync(OwnerUrl(id), body);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        return (await response.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
+    }
 
     private static async Task<CharacterDetailDto> CreateAsync(SignedInUser actor, Guid campaignId, object body)
     {

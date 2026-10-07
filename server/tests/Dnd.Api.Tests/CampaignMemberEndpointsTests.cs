@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Dnd.Application.Campaigns;
+using Dnd.Application.Characters;
 using Dnd.Domain.Campaigns;
 using Microsoft.EntityFrameworkCore;
 
@@ -305,6 +306,85 @@ public class CampaignMemberEndpointsTests(ApiFactory factory) : IClassFixture<Ap
         Assert.Equal(scenario.Owner.Id, campaign.OwnerId);
         await factory.WithDbAsync(async db =>
             Assert.False(await db.OwnershipTransfers.AnyAsync(t => t.CampaignId == scenario.CampaignId)));
+    }
+
+    [Fact]
+    public async Task Player_with_characters_cannot_become_dm_until_they_are_reassigned()
+    {
+        var scenario = await factory.CreateCampaignScenarioAsync();
+        var url = $"{scenario.Url}/members/{scenario.Player.Id}";
+        var first = await CreatePlayerCharacterAsync(scenario, "Brisa");
+        await CreatePlayerCharacterAsync(scenario, "Albor");
+
+        var blocked = await scenario.Owner.Client.PatchAsJsonAsync(url, new { role = "DM" });
+
+        Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+        Assert.Equal(
+            "Player User tiene personajes en la campaña (Albor, Brisa). Reasígnalos o conviértelos en PNJ antes de nombrarlo DM.",
+            await ReadDetailAsync(blocked));
+        Assert.Equal("Player", await RoleOfAsync(scenario, scenario.Player.Id));
+
+        var characters = (await scenario.Owner.Client.GetFromJsonAsync<List<CharacterSummaryDto>>($"{scenario.Url}/characters"))!;
+        foreach (var character in characters)
+        {
+            (await scenario.Owner.Client.PutAsJsonAsync($"/api/v1/characters/{character.Id}/owner", new { ownerUserId = (Guid?)null })).EnsureSuccessStatusCode();
+        }
+
+        var promoted = await scenario.Owner.Client.PatchAsJsonAsync(url, new { role = "DM" });
+
+        Assert.Equal(HttpStatusCode.OK, promoted.StatusCode);
+        Assert.Equal("DM", await RoleOfAsync(scenario, scenario.Player.Id));
+        Assert.Equal(HttpStatusCode.OK, (await scenario.Player.Client.GetAsync($"/api/v1/characters/{first}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Player_without_characters_becomes_dm_and_a_dm_goes_back_to_player()
+    {
+        var scenario = await factory.CreateCampaignScenarioAsync();
+
+        var promoted = await scenario.Owner.Client.PatchAsJsonAsync($"{scenario.Url}/members/{scenario.Player.Id}", new { role = "DM" });
+        var demoted = await scenario.Owner.Client.PatchAsJsonAsync($"{scenario.Url}/members/{scenario.Dm.Id}", new { role = "Player" });
+
+        Assert.Equal(HttpStatusCode.OK, promoted.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, demoted.StatusCode);
+        Assert.Equal("DM", await RoleOfAsync(scenario, scenario.Player.Id));
+        Assert.Equal("Player", await RoleOfAsync(scenario, scenario.Dm.Id));
+    }
+
+    [Fact]
+    public async Task Ownership_cannot_go_to_a_player_with_characters()
+    {
+        var scenario = await factory.CreateCampaignScenarioAsync();
+        await CreatePlayerCharacterAsync(scenario, "Brisa");
+
+        var response = await scenario.Owner.Client.PostAsJsonAsync(
+            $"{scenario.Url}/transfer-ownership",
+            new { toUserId = scenario.Player.Id, previousOwnerRole = "Player" });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal(
+            "Player User tiene personajes en la campaña (Brisa). Reasígnalos o conviértelos en PNJ antes de nombrarlo DM.",
+            await ReadDetailAsync(response));
+        var campaign = (await scenario.Owner.Client.GetFromJsonAsync<CampaignDto>(scenario.Url))!;
+        Assert.Equal(scenario.Owner.Id, campaign.OwnerId);
+        await factory.WithDbAsync(async db =>
+            Assert.False(await db.OwnershipTransfers.AnyAsync(t => t.CampaignId == scenario.CampaignId)));
+    }
+
+    private static async Task<Guid> CreatePlayerCharacterAsync(CampaignScenario scenario, string name)
+    {
+        var response = await scenario.Player.Client.PostAsJsonAsync($"{scenario.Url}/characters", new { name });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        return (await response.Content.ReadFromJsonAsync<CharacterDetailDto>())!.Id;
+    }
+
+    private static async Task<string?> ReadDetailAsync(HttpResponseMessage response) =>
+        (await response.ReadProblemAsync()).GetProperty("detail").GetString();
+
+    private static async Task<string> RoleOfAsync(CampaignScenario scenario, Guid userId)
+    {
+        var campaign = (await scenario.Owner.Client.GetFromJsonAsync<CampaignDto>(scenario.Url))!;
+        return campaign.Members.Single(m => m.UserId == userId).Role;
     }
 
     [Fact]

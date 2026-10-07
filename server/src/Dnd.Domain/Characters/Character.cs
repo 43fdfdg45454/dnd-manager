@@ -347,6 +347,16 @@ public sealed partial class Character : EntityBase
         Touch(now);
     }
 
+    /// <summary>
+    /// Hands the character to another owner, or makes it a non-player character with <c>null</c>.
+    /// The caller checks that the new owner is a player of the campaign.
+    /// </summary>
+    public void ChangeOwner(Guid? ownerUserId, DateTimeOffset now)
+    {
+        OwnerUserId = ownerUserId;
+        Touch(now);
+    }
+
     public void SetBaseAbilities(AbilityScores abilities, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(abilities);

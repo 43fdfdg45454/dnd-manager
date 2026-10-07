@@ -29,7 +29,7 @@ public static class CharacterEndpoints
                 return TypedResults.Created($"/api/v1/characters/{character.Id}", character);
             })
             .WithName("CreateCharacter")
-            .WithSummary("Crea un personaje en borrador. Un DM puede asignarlo a otro miembro (ownerUserId) o crear un PNJ (ownerUserId: null).")
+            .WithSummary("Crea un personaje en borrador. Un jugador crea el suyo; un DM no tiene personajes propios y debe indicar ownerUserId: un jugador de la campaña o null para un PNJ (400 si falta o es él mismo u otro DM).")
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
@@ -91,6 +91,12 @@ public static class CharacterEndpoints
                 TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, request, ct)))
             .WithName("SetCharacterPortrait")
             .WithSummary("Fija (o quita, con fileId: null) el retrato del personaje con un fichero Portrait de la campaña. Dueño o DM.")
+            .ProducesValidationProblem();
+
+        group.MapPut("/owner", async (Guid id, SetCharacterOwnerRequest request, ClaimsPrincipal user, SetCharacterOwnerHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, request, ct)))
+            .WithName("SetCharacterOwner")
+            .WithSummary("Un DM reasigna el personaje a un jugador de la campaña ({ ownerUserId }) o lo convierte en PNJ ({ ownerUserId: null }), sin aprobación.")
             .ProducesValidationProblem();
 
         group.MapDelete("", async (Guid id, ClaimsPrincipal user, DeleteCharacterHandler handler, CancellationToken ct) =>

@@ -61,6 +61,14 @@ internal sealed class CharacterRepository(AppDbContext db) : ICharacterRepositor
             ? []
             : await db.CharacterItems.AsNoTracking().Where(x => x.Equipped && characterIds.Contains(x.CharacterId)).ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<string>> ListNamesOwnedByAsync(Guid campaignId, Guid ownerUserId, CancellationToken cancellationToken = default) =>
+        await db.Characters
+            .AsNoTracking()
+            .Where(x => x.CampaignId == campaignId && x.OwnerUserId == ownerUserId)
+            .OrderBy(x => x.Name)
+            .Select(x => x.Name)
+            .ToListAsync(cancellationToken);
+
     public void Add(Character character) => db.Characters.Add(character);
 
     public void Remove(Character character) => db.Characters.Remove(character);

@@ -9,8 +9,9 @@ using FluentValidation;
 namespace Dnd.Application.Characters;
 
 /// <summary>
-/// <see cref="OwnerUserId"/> absent: the creator owns the character. Present (DM only, unless it is
-/// the creator): a member of the campaign, or <c>null</c> for a non-player character without owner.
+/// A player always owns what they create (<see cref="OwnerUserId"/> absent or their own id). A DM has no
+/// characters of their own and must send <see cref="OwnerUserId"/>: a player of the campaign, or
+/// <c>null</c> for a non-player character without owner.
 /// </summary>
 public sealed record CreateCharacterRequest
 {
@@ -31,9 +32,10 @@ public sealed class CreateCharacterRequestValidator : AbstractValidator<CreateCh
     }
 }
 
-/// <summary>Creates a draft (all scores at 10). Any member creates their own; a DM can create one for another member or an NPC.</summary>
+/// <summary>Creates a draft (all scores at 10). A player creates their own; a DM creates one for a player or an NPC.</summary>
 public sealed class CreateCharacterHandler(
     ICampaignAccess access,
+    CharacterOwnerRules ownerRules,
     ICharacterRepository characters,
     ICharacterSheetService sheets,
     IUnitOfWork unitOfWork,
@@ -43,18 +45,27 @@ public sealed class CreateCharacterHandler(
     {
         var role = await access.RequireAsync(campaignId, currentUserId, CampaignRole.Player, cancellationToken);
 
-        Guid? owner = currentUserId;
-        if (request.OwnerUserId.IsSet && request.OwnerUserId.Value != currentUserId)
+        Guid? owner;
+        if (!role.IsAtLeast(CampaignRole.DM))
         {
-            if (!role.IsAtLeast(CampaignRole.DM))
+            if (request.OwnerUserId.IsSet && request.OwnerUserId.Value != currentUserId)
             {
                 throw AppException.Forbidden("Solo un DM puede crear personajes para otros miembros o personajes sin dueño.");
             }
 
-            owner = request.OwnerUserId.Value;
-            if (owner is { } ownerId && await access.GetRoleAsync(campaignId, ownerId, cancellationToken) is null)
+            owner = currentUserId;
+        }
+        else
+        {
+            if (!request.OwnerUserId.IsSet || request.OwnerUserId.Value == currentUserId)
             {
-                throw AppException.Validation("ownerUserId", "El dueño debe ser miembro de la campaña.");
+                throw AppException.Validation("ownerUserId", "Un DM no tiene personajes propios: crea un PNJ o asígnalo a un jugador.");
+            }
+
+            owner = request.OwnerUserId.Value;
+            if (owner is { } ownerId)
+            {
+                await ownerRules.EnsurePlayerAsync(campaignId, ownerId, cancellationToken);
             }
         }
 

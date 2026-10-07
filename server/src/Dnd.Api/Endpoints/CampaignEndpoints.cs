@@ -81,10 +81,11 @@ public static class CampaignEndpoints
         group.MapPatch("/{id:guid}/members/{userId:guid}", async (Guid id, Guid userId, ChangeMemberRoleRequest request, ClaimsPrincipal user, ChangeMemberRoleHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, userId, request, ct)))
             .WithName("ChangeCampaignMemberRole")
-            .WithSummary("Cambia el rol de un miembro entre DM y Player. Solo el propietario.")
+            .WithSummary("Cambia el rol de un miembro entre DM y Player. Solo el propietario. 409 si el jugador que pasa a DM tiene personajes en la campaña.")
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapDelete("/{id:guid}/members/{userId:guid}", async (Guid id, Guid userId, ClaimsPrincipal user, RemoveMemberHandler handler, CancellationToken ct) =>
             {
@@ -110,10 +111,11 @@ public static class CampaignEndpoints
         group.MapPost("/{id:guid}/transfer-ownership", async (Guid id, TransferOwnershipRequest request, ClaimsPrincipal user, TransferOwnershipHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, request, ct)))
             .WithName("TransferCampaignOwnership")
-            .WithSummary("Transfiere la propiedad a otro miembro; el propietario saliente queda como DM o Player.")
+            .WithSummary("Transfiere la propiedad a otro miembro; el propietario saliente queda como DM o Player. 409 si el destinatario tiene personajes en la campaña.")
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         return app;
     }

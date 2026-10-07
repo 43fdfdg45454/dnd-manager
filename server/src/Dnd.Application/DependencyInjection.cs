@@ -90,7 +90,9 @@ public static class DependencyInjection
         services.AddScoped<CharacterLoader>();
         services.AddScoped<CharacterTracker>();
         services.AddScoped<ListCharactersHandler>();
+        services.AddScoped<CharacterOwnerRules>();
         services.AddScoped<CreateCharacterHandler>();
+        services.AddScoped<SetCharacterOwnerHandler>();
         services.AddScoped<GetCharacterHandler>();
         services.AddScoped<UpdateSheetHandler>();
         services.AddScoped<SubmitCharacterHandler>();

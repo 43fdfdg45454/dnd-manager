@@ -29,6 +29,9 @@ public interface ICharacterRepository
     /// <summary>Read-only equipped inventory entries of the given characters.</summary>
     Task<IReadOnlyList<CharacterItem>> ListEquippedItemsAsync(IReadOnlyCollection<Guid> characterIds, CancellationToken cancellationToken = default);
 
+    /// <summary>Names of the characters the user owns in the campaign, sorted by name.</summary>
+    Task<IReadOnlyList<string>> ListNamesOwnedByAsync(Guid campaignId, Guid ownerUserId, CancellationToken cancellationToken = default);
+
     void Add(Character character);
 
     /// <summary>Deletes the character; children and change requests are deleted in cascade.</summary>

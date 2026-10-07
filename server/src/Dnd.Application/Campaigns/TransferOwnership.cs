@@ -1,5 +1,6 @@
 using Dnd.Application.Abstractions;
 using Dnd.Application.Abstractions.Persistence;
+using Dnd.Application.Characters;
 using Dnd.Domain.Campaigns;
 using FluentValidation;
 
@@ -17,10 +18,15 @@ public sealed class TransferOwnershipRequestValidator : AbstractValidator<Transf
     }
 }
 
-/// <summary>Hands the campaign over to another member and records an <see cref="OwnershipTransfer"/>. Owner only.</summary>
+/// <summary>
+/// Hands the campaign over to another member and records an <see cref="OwnershipTransfer"/>. Owner only.
+/// A member who still owns characters in the campaign cannot become owner (409).
+/// </summary>
 public sealed class TransferOwnershipHandler(
     ICampaignAccess access,
     ICampaignRepository campaigns,
+    IUserRepository users,
+    CharacterOwnerRules ownerRules,
     IUnitOfWork unitOfWork,
     IDateTimeProvider clock)
 {
@@ -29,6 +35,13 @@ public sealed class TransferOwnershipHandler(
         await access.RequireAsync(campaignId, currentUserId, CampaignRole.Owner, cancellationToken);
 
         var campaign = await campaigns.GetWithMembersAsync(campaignId, cancellationToken) ?? throw CampaignErrors.CampaignNotFound();
+        if (request.ToUserId != currentUserId
+            && campaign.FindMember(request.ToUserId) is not null
+            && await users.GetByIdAsync(request.ToUserId, cancellationToken) is { } target)
+        {
+            await ownerRules.EnsureOwnsNoCharactersAsync(campaignId, target.Id, target.DisplayName, cancellationToken);
+        }
+
         var transfer = campaign.TransferOwnership(
             currentUserId,
             request.ToUserId,

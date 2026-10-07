@@ -132,7 +132,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         var admin = await factory.CreateAdminClientAsync();
         await ImportAsync(admin, Example(id));
         var s = await factory.CreateCampaignScenarioAsync();
-        var created = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/characters", new { name = "Vigía" });
+        var created = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/characters", new { name = "Vigía", ownerUserId = (Guid?)null });
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         var characterId = (await created.Content.ReadFromJsonAsync<CharacterDetailDto>())!.Id;
 
