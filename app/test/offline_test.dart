@@ -383,8 +383,11 @@ void main() {
 
       await expectLater(dio.get<void>('/api/v1/campaigns'), throwsA(isA<DioException>()));
       expect(container.read(connectivityProvider).isOffline, isTrue);
+      // The failure drops the connection pool: the client has a new adapter.
+      expect(dio.httpClientAdapter, isNot(same(adapter)));
 
       adapter.offline = false;
+      dio.httpClientAdapter = adapter;
       await dio.get<Object?>('/api/v1/campaigns');
       expect(container.read(connectivityProvider).isOffline, isFalse);
     });

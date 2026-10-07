@@ -240,8 +240,20 @@ final Provider<ApiClient> apiClientProvider = Provider<ApiClient>((ref) {
     connectivityProvider.select((status) => status.networkGeneration),
     (_, _) => client.resetConnections(),
   );
+  var lastReset = DateTime.fromMillisecondsSinceEpoch(0);
   client.dio.interceptors.add(
     _ConnectivityInterceptor((reached) {
+      // A request that could not reach the server may have gone through a
+      // pooled connection opened on another network (a VPN can hide the
+      // change): drop the pool so the next request connects, and resolves the
+      // host through the system, again.
+      // At most once every few seconds: the requests the reset aborts fail
+      // too and must not reset the new pool again.
+      final now = DateTime.now();
+      if (!reached && now.difference(lastReset) > const Duration(seconds: 5)) {
+        lastReset = now;
+        client.resetConnections();
+      }
       if (!ref.mounted) return;
       final connectivity = ref.read(connectivityProvider.notifier);
       reached ? connectivity.reportRequestSucceeded() : connectivity.reportRequestFailed();
