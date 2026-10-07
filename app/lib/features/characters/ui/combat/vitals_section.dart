@@ -240,14 +240,6 @@ class _HpCardState extends ConsumerState<HpCard> {
                         text: ' / $max',
                         recognizer: widget.canEdit ? _maxTap : null,
                         mouseCursor: widget.canEdit ? SystemMouseCursors.click : null,
-                        style: widget.canEdit
-                            ? TextStyle(
-                                decoration: TextDecoration.underline,
-                                decorationStyle: TextDecorationStyle.dotted,
-                                decorationColor: classThemeOf(mainClassIndex(c))
-                                    .accent(theme.brightness),
-                              )
-                            : null,
                       ),
                     ],
                   ),
