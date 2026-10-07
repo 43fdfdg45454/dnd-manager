@@ -40,6 +40,11 @@ abstract interface class RealtimeHub {
   /// the user.
   Future<void> connect(String campaignId);
 
+  /// Drops the current connection without waiting for it (it may be stuck on
+  /// a network that is gone) and connects again to [campaignId] with a new
+  /// one. Used when the network changes. Throws like [connect].
+  Future<void> restart();
+
   /// Opens a throwaway connection to the hub and answers with the transport it
   /// negotiated (`WebSockets`, `ServerSentEvents` or `LongPolling`), trying them
   /// in that order. Throws when none of them connects. Used by the connection

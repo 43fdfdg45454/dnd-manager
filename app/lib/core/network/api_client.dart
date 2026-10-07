@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../auth/auth_controller.dart';
@@ -62,15 +63,26 @@ class ApiClient {
     String? pinnedFingerprint,
     ResponseCache? cache,
     this.onFreshness,
-  }) : dio = dio ?? _createDio(baseUrl, pinnedFingerprint),
-       cache = cache ?? InMemoryResponseCache();
+    HttpClientAdapter Function()? adapterFactory,
+  }) : _adapterFactory =
+           adapterFactory ??
+           (dio == null ? () => _createAdapter(baseUrl, pinnedFingerprint) : null),
+       dio = dio ?? _createDio(baseUrl),
+       cache = cache ?? InMemoryResponseCache() {
+    final factory = _adapterFactory;
+    if (factory != null) this.dio.httpClientAdapter = factory();
+  }
 
   final String baseUrl;
   final Dio dio;
   final ResponseCache cache;
   final FreshnessReporter? onFreshness;
 
-  static Dio _createDio(String baseUrl, String? pinnedFingerprint) {
+  /// Creates the adapter (and so the `HttpClient` and its connection pool);
+  /// null when the client was given a [Dio] without one (tests).
+  final HttpClientAdapter Function()? _adapterFactory;
+
+  static Dio _createDio(String baseUrl) {
     final dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
@@ -79,12 +91,33 @@ class ApiClient {
         headers: const {'Accept': 'application/json'},
       ),
     );
-    final host = serverHost(baseUrl);
-    if (pinnedFingerprint != null && host != null && baseUrl.startsWith('https://')) {
-      dio.httpClientAdapter = pinnedCertificateAdapter(host: host, fingerprint: pinnedFingerprint);
-    }
     dio.interceptors.add(_RequireServerInterceptor());
     return dio;
+  }
+
+  /// A plain `dart:io` adapter (it inherits the user CAs of
+  /// `HttpOverrides.global`), or one that also accepts the certificate pinned
+  /// for the server host. DNS is not cached here: every new connection
+  /// resolves the host again.
+  static HttpClientAdapter _createAdapter(String baseUrl, String? pinnedFingerprint) {
+    final host = serverHost(baseUrl);
+    if (pinnedFingerprint != null && host != null && baseUrl.startsWith('https://')) {
+      return pinnedCertificateAdapter(host: host, fingerprint: pinnedFingerprint);
+    }
+    return IOHttpClientAdapter();
+  }
+
+  /// Drops every pooled (keep-alive) connection and starts a new pool. Called
+  /// when the network changes: an idle connection may be bound to the old
+  /// interface or to the address the host had on the previous network, and
+  /// reusing it would hang until it times out. Requests in flight fail and
+  /// are retried by their callers as any network failure.
+  void resetConnections() {
+    final factory = _adapterFactory;
+    if (factory == null) return;
+    final previous = dio.httpClientAdapter;
+    dio.httpClientAdapter = factory();
+    previous.close(force: true);
   }
 
   /// Absolute URL of [url], which may be relative to the server (`/api/...`).
@@ -201,6 +234,11 @@ final Provider<ApiClient> apiClientProvider = Provider<ApiClient>((ref) {
       },
       onSessionExpired: () => ref.read(authControllerProvider.notifier).onSessionExpired(),
     ),
+  );
+  // A new network: forget the connections opened on the previous one.
+  ref.listen(
+    connectivityProvider.select((status) => status.networkGeneration),
+    (_, _) => client.resetConnections(),
   );
   client.dio.interceptors.add(
     _ConnectivityInterceptor((reached) {

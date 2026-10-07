@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:dnd_companion/core/network/connectivity.dart';
 import 'package:dnd_companion/core/realtime/connection_diagnostics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,7 +28,9 @@ ConnectionDiagnostics _diagnostics({
   DiagnosticAction? negotiate,
   DiagnosticAction? hub,
   bool signedIn = true,
+  Future<NetworkReport> Function()? network,
 }) => ConnectionDiagnostics(
+  network: network,
   health: health ?? _ok('HTTP 200'),
   session: session ?? _ok('Sesión válida'),
   negotiate: negotiate ?? _ok('transportes: WebSockets, ServerSentEvents, LongPolling'),
@@ -143,6 +146,29 @@ void main() {
       expect(find.text('HTTP 404'), findsOneWidget);
       expect(find.byKey(const Key('diagnose-cause-negotiate')), findsOneWidget);
       expect(find.textContaining('proxy no reenvía /hubs/'), findsOneWidget);
+    });
+
+    testWidgets('muestra la red actual y a qué IP resuelve el servidor ahora', (tester) async {
+      await pump(
+        tester,
+        _diagnostics(
+          network: () async => const NetworkReport(
+            network: NetworkInterfaces({NetworkKind.mobile}),
+            host: 'dnd.example.com',
+            addresses: ['192.168.1.20'],
+          ),
+        ),
+      );
+
+      await tester.ensureVisible(find.byKey(const Key('server-diagnose')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('server-diagnose')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('diagnose-network')), findsOneWidget);
+      expect(find.text('Red actual: datos móviles'), findsOneWidget);
+      expect(find.text('dnd.example.com → 192.168.1.20'), findsOneWidget);
+      expect(find.byKey(const Key('diagnose-network-hint')), findsOneWidget);
     });
   });
 }

@@ -140,8 +140,30 @@ class CampaignRealtime extends Notifier<RealtimeState> {
       unawaited(statuses.cancel());
       if (link.hub.campaignId == campaignId) unawaited(link.hub.disconnect());
     });
+    // Another network (Wi-Fi <-> mobile data, another Wi-Fi) or back from a
+    // long time in the background: the connection may be bound to an
+    // interface or address that is gone, so a new one is opened at once.
+    ref.listen(
+      connectivityProvider.select((s) => s.networkGeneration),
+      (_, _) => unawaited(_restart(link)),
+    );
     unawaited(_connect(link));
     return const RealtimeState(status: RealtimeStatus.connecting);
+  }
+
+  Future<void> _restart(_Connection link) async {
+    if (!link.alive) return;
+    link.retry?.cancel();
+    link.retry = null;
+    link.attempt = 0;
+    state = state.copyWith(status: RealtimeStatus.connecting, nextRetryAt: () => null);
+    try {
+      await link.hub.restart();
+    } catch (_) {
+      if (!link.alive) return;
+      state = state.copyWith(status: RealtimeStatus.disconnected);
+      _scheduleRetry(link);
+    }
   }
 
   /// Tries to connect now instead of waiting for the next scheduled attempt.

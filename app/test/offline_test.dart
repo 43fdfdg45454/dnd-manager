@@ -617,8 +617,9 @@ class _FixedSource implements ConnectivitySource {
   final bool connected;
 
   @override
-  Future<bool> hasNetwork() async => connected;
+  Future<NetworkInterfaces> current() async =>
+      connected ? const NetworkInterfaces({NetworkKind.wifi}) : const NetworkInterfaces.none();
 
   @override
-  Stream<bool> get changes => const Stream.empty();
+  Stream<NetworkInterfaces> get changes => const Stream.empty();
 }

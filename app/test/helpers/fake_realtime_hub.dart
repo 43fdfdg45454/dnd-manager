@@ -21,6 +21,9 @@ class FakeRealtimeHub implements RealtimeHub {
   final List<String> connects = [];
   int disconnects = 0;
 
+  /// Campaign ids [restart] reconnected to (null: nothing to reconnect).
+  final List<String?> restarts = [];
+
   final _events = StreamController<CampaignEvent>.broadcast();
   final _statuses = StreamController<RealtimeStatus>.broadcast();
   RealtimeStatus _status = RealtimeStatus.disconnected;
@@ -42,6 +45,19 @@ class FakeRealtimeHub implements RealtimeHub {
   Future<void> connect(String campaignId) async {
     connects.add(campaignId);
     _campaignId = campaignId;
+    if (failConnect) {
+      setStatus(RealtimeStatus.disconnected);
+      throw StateError('Fake connection failure');
+    }
+    setStatus(RealtimeStatus.connected);
+  }
+
+  @override
+  Future<void> restart() async {
+    restarts.add(_campaignId);
+    final campaignId = _campaignId;
+    if (campaignId == null) return;
+    setStatus(RealtimeStatus.connecting);
     if (failConnect) {
       setStatus(RealtimeStatus.disconnected);
       throw StateError('Fake connection failure');

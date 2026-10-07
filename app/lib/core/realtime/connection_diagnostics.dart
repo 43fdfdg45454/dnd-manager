@@ -1,12 +1,17 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../auth/auth_controller.dart';
 import '../auth/auth_repository.dart';
 import '../auth/auth_state.dart';
 import '../network/api_client.dart';
+import '../network/connectivity.dart';
+import '../server/server_config_controller.dart';
+import '../server/server_url.dart';
 import 'realtime_provider.dart';
 
 /// The four checks of the connection diagnostics, in order.
@@ -71,6 +76,64 @@ class DiagnosticFailure implements Exception {
   String toString() => message;
 }
 
+/// Where the device is and where the server host points from there: the
+/// network in use and the addresses the host resolves to right now (no cache:
+/// a fresh lookup). Useful when the same name resolves differently at home
+/// (a LAN address) and outside (the public one).
+@immutable
+class NetworkReport {
+  const NetworkReport({required this.network, this.host, this.addresses = const [], this.error});
+
+  /// The interfaces that are up.
+  final NetworkInterfaces network;
+
+  /// Host of the saved server (null when there is none).
+  final String? host;
+
+  /// What [host] resolves to now.
+  final List<String> addresses;
+
+  /// Why the lookup failed.
+  final String? error;
+
+  /// "Red: Wi-Fi", "dnd.example.com → 192.0.2.10"...
+  String get networkLine => 'Red actual: ${network.label}';
+
+  String? get resolutionLine {
+    final host = this.host;
+    if (host == null) return null;
+    if (error != null) return '$host → no se pudo resolver ($error)';
+    return '$host → ${addresses.isEmpty ? 'sin direcciones' : addresses.join(', ')}';
+  }
+
+  /// A warning when the answer cannot work from this network: a private
+  /// address while on mobile data (the name resolves to the LAN).
+  String? get hint {
+    if (!network.kinds.contains(NetworkKind.mobile) || network.kinds.contains(NetworkKind.vpn)) {
+      return null;
+    }
+    if (!addresses.any(isPrivateAddress)) return null;
+    return 'Con datos móviles el servidor resuelve a una IP privada: fuera de tu red no se '
+        'alcanza. Revisa el DNS (debe dar la IP pública fuera de casa).';
+  }
+
+  /// Private, loopback or link-local addresses (only reachable inside a LAN).
+  static bool isPrivateAddress(String address) {
+    final parsed = InternetAddress.tryParse(address);
+    if (parsed == null) return false;
+    if (parsed.isLoopback || parsed.isLinkLocal) return true;
+    final bytes = parsed.rawAddress;
+    if (parsed.type == InternetAddressType.IPv4) {
+      return bytes[0] == 10 ||
+          (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
+          (bytes[0] == 192 && bytes[1] == 168) ||
+          (bytes[0] == 100 && bytes[1] >= 64 && bytes[1] <= 127);
+    }
+    // IPv6 unique local addresses (fc00::/7).
+    return (bytes[0] & 0xfe) == 0xfc;
+  }
+}
+
 /// A check that answers with a short description of what it found (the
 /// transports, the transport used...) and throws when it fails.
 typedef DiagnosticAction = Future<String> Function();
@@ -85,6 +148,7 @@ class ConnectionDiagnostics {
     required this.negotiate,
     required this.hub,
     required this.isSignedIn,
+    this.network,
   });
 
   final DiagnosticAction health;
@@ -95,6 +159,10 @@ class ConnectionDiagnostics {
   final DiagnosticAction hub;
 
   final bool Function() isSignedIn;
+
+  /// Current network and DNS answer for the server host (shown above the
+  /// steps); null hides it.
+  final Future<NetworkReport> Function()? network;
 
   static const signInHint = 'Inicia sesión para probar los pasos 2-4';
   static const proxyHint = 'Tu proxy no reenvía Upgrade/Connection: funciona, pero más lento.';
@@ -255,5 +323,27 @@ final diagnosticsProvider = Provider<ConnectionDiagnostics>((ref) {
       return 'HTTP $status · transportes: ${names.join(', ')}';
     },
     hub: () => ref.read(realtimeHubProvider).probe(),
+    network: () async {
+      final network = ref.read(connectivityProvider).network;
+      final host = serverHost(ref.read(serverConfigProvider).baseUrl);
+      if (host == null) return NetworkReport(network: network);
+      try {
+        // A fresh lookup every time: nothing in the app caches DNS answers.
+        final addresses = await InternetAddress.lookup(host).timeout(const Duration(seconds: 5));
+        return NetworkReport(
+          network: network,
+          host: host,
+          addresses: [for (final address in addresses) address.address],
+        );
+      } catch (error) {
+        return NetworkReport(
+          network: network,
+          host: host,
+          error: error is SocketException
+              ? error.message
+              : ConnectionDiagnostics.describeFailure(error),
+        );
+      }
+    },
   );
 });

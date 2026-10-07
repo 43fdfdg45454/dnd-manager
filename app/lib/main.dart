@@ -20,6 +20,8 @@ Future<void> main() async {
   final responseCache = DriftResponseCache(CacheDatabase.open());
   // Old searches and pages add up; trimming is best effort.
   responseCache.prune().ignore();
+  // Coming back after a while: the network may have changed unnoticed.
+  final resumeWatcher = AppResumeWatcher()..attach();
   runApp(
     ProviderScope(
       overrides: [
@@ -27,6 +29,7 @@ Future<void> main() async {
         localPreferencesProvider.overrideWithValue(prefs),
         responseCacheProvider.overrideWithValue(responseCache),
         connectivitySourceProvider.overrideWithValue(PlatformConnectivitySource()),
+        appResumedAfterBackgroundProvider.overrideWithValue(resumeWatcher.resumedAfterBackground),
         trustedUserCertificateCountProvider.overrideWithValue(trustStore.certificateCount),
         installedBuildProvider.overrideWithValue(await _installedBuild()),
       ],

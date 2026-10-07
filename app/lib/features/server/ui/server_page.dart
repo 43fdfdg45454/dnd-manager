@@ -30,6 +30,7 @@ class _ServerPageState extends ConsumerState<ServerPage> {
   ServerProbeException? _failure;
   bool _diagnosing = false;
   List<DiagnosticResult>? _diagnostics;
+  NetworkReport? _network;
 
   @override
   void initState() {
@@ -83,15 +84,20 @@ class _ServerPageState extends ConsumerState<ServerPage> {
     setState(() {
       _diagnosing = true;
       _diagnostics = const [];
+      _network = null;
     });
     try {
-      await ref
-          .read(diagnosticsProvider)
-          .run(
-            onProgress: (results) {
-              if (mounted) setState(() => _diagnostics = results);
-            },
-          );
+      final diagnostics = ref.read(diagnosticsProvider);
+      final network = diagnostics.network;
+      if (network != null) {
+        final report = await network();
+        if (mounted) setState(() => _network = report);
+      }
+      await diagnostics.run(
+        onProgress: (results) {
+          if (mounted) setState(() => _diagnostics = results);
+        },
+      );
     } finally {
       if (mounted) setState(() => _diagnosing = false);
     }
@@ -193,6 +199,10 @@ class _ServerPageState extends ConsumerState<ServerPage> {
                     style: theme.textTheme.bodySmall,
                   ),
                 ),
+                if (_network != null) ...[
+                  const SizedBox(height: 12),
+                  _NetworkLines(report: _network!),
+                ],
                 if (_diagnostics != null && _diagnostics!.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   for (final result in _diagnostics!) _DiagnosticLine(result: result),
@@ -294,6 +304,48 @@ class _ServerPageState extends ConsumerState<ServerPage> {
         ),
       ],
     ];
+  }
+}
+
+/// The network in use and what the server host resolves to from it.
+class _NetworkLines extends StatelessWidget {
+  const _NetworkLines({required this.report});
+
+  final NetworkReport report;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final resolution = report.resolutionLine;
+    final hint = report.hint;
+    return Row(
+      key: const Key('diagnose-network'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.router_outlined, size: 20),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(report.networkLine, style: theme.textTheme.titleSmall),
+              if (resolution != null)
+                Text(
+                  resolution,
+                  key: const Key('diagnose-resolution'),
+                  style: theme.textTheme.bodySmall,
+                ),
+              if (hint != null)
+                Text(
+                  hint,
+                  key: const Key('diagnose-network-hint'),
+                  style: theme.textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 
