@@ -66,6 +66,11 @@ public static class CatalogEndpoints
             .WithSummary("Detalle de un objeto del SRD, o de un objeto homebrew si eres miembro de su campaña (404 si no).")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        group.MapGet("/trinkets", async (ListTrinketsHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(ct)))
+            .WithName("ListCatalogTrinkets")
+            .WithSummary("Tabla de baratijas (d100) de los paquetes de contenido, ordenada por tirada; vacía con solo el SRD.");
+
         group.MapGet("/conditions", async (ListConditionsHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(ct)))
             .WithName("ListCatalogConditions")

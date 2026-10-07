@@ -169,6 +169,7 @@ Notación: `string?` admite `null` o ausencia; **obligatorio** indica que no pue
 | `races` | `Race[]?` | Razas con sus rasgos y subrazas. |
 | `backgrounds` | `Background[]?` | Trasfondos. |
 | `optionSets` | `OptionSet[]?` | Formato 2. Conjuntos de opciones (dotes, estilos de combate, invocaciones...). |
+| `trinkets` | `Trinket[]?` | Tabla de baratijas (d100) del asistente de creación ([ver abajo](#trinket)). Formatos 1 y 2. |
 
 ### `ClassExtension`
 
@@ -387,6 +388,36 @@ La API devuelve el equipo resuelto en `GET /api/v1/catalog/backgrounds` (`starti
 `null` si el trasfondo no lo define): cada objeto con `item`, `templateId`, `name` y `quantity`, y
 cada categoría con `category`, `name` y `choose`.
 
+### `Trinket`
+
+Tabla de baratijas que el jugador tira (1d100) al crear el personaje. La tabla no forma parte del SRD,
+así que solo existe si algún paquete la define; sin ella el asistente pide describir la baratija y la
+añade como objeto personalizado "Baratija".
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `roll` | `int` | **Obligatorio**, 1..100, sin repetir dentro del paquete. Los números sin entrada se describen a mano. |
+| `item` | `string` | **Obligatorio**. Índice de un objeto del SRD o del propio paquete. |
+
+Lo habitual es que cada baratija sea un objeto del paquete con `"category": "Other"`,
+`"subcategory": "Trinket"` y sin `costCp` ni `weightLb`:
+
+```json
+"items": [
+  { "index": "reinos-ejemplo-canica-azul", "name": "Canica azul de ejemplo",
+    "category": "Other", "subcategory": "Trinket",
+    "description": ["Una canica de cristal que nunca rueda cuesta abajo (texto ficticio)."] }
+],
+"trinkets": [
+  { "roll": 1, "item": "reinos-ejemplo-canica-azul" },
+  { "roll": 2, "item": "dagger" }
+]
+```
+
+Si varios paquetes definen el mismo `roll`, gana el **último importado** (reimportar un paquete lo
+vuelve a poner por delante). `GET /api/v1/catalog/trinkets` devuelve la tabla efectiva ordenada por
+tirada: `[{ roll, templateId, index, name, description }]` (vacía con solo el SRD).
+
 ## Errores de validación
 
 El paquete se valida entero antes de escribir nada. Si tiene errores, la API responde `400` con un
@@ -443,7 +474,7 @@ Solo el administrador de la instancia.
 | `GET /api/v1/catalog/sources` (cualquier usuario) | `200 [{ id, name, version }]`: `srd` y los paquetes, para etiquetar el contenido |
 
 `counts` tiene el número de `subclasses`, `features`, `items`, `spells`, `races`, `subraces`,
-`traits`, `backgrounds`, `optionSets`, `options` y `levelChoices` importados.
+`traits`, `backgrounds`, `optionSets`, `options`, `levelChoices` y `trinkets` importados.
 
 **Reimportar** (mismo `id`, misma u otra `version`) reemplaza todo el contenido del paquete en una
 transacción. Los objetos se actualizan por `index` y **conservan su identificador**, así que los

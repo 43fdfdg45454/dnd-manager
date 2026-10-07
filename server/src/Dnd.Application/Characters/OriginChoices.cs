@@ -441,7 +441,13 @@ public sealed class OriginChoicesHandler(
             throw AppException.Validation("choices", $"La elección «{choice.Name}» repite una opción.");
         }
 
-        if (picks.Count != choice.Choose)
+        // Languages are optional: the creation wizard may save fewer than offered, never more.
+        if (choice.Kind == OriginChoiceKeys.LanguageKind && picks.Count > choice.Choose)
+        {
+            throw AppException.Validation("choices", $"La elección «{choice.Name}» admite como máximo {choice.Choose} {(choice.Choose == 1 ? "opción" : "opciones")}.");
+        }
+
+        if (choice.Kind != OriginChoiceKeys.LanguageKind && picks.Count != choice.Choose)
         {
             throw AppException.Validation("choices", $"La elección «{choice.Name}» necesita exactamente {choice.Choose} {(choice.Choose == 1 ? "opción" : "opciones")}.");
         }

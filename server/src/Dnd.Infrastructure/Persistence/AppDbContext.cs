@@ -66,6 +66,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<LevelChoiceRule> CatalogLevelChoiceRules => Set<LevelChoiceRule>();
 
+    public DbSet<TrinketEntry> CatalogTrinkets => Set<TrinketEntry>();
+
     public DbSet<Character> Characters => Set<Character>();
 
     public DbSet<CharacterClassLevel> CharacterClassLevels => Set<CharacterClassLevel>();

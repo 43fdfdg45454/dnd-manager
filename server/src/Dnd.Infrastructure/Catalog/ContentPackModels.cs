@@ -28,6 +28,17 @@ internal sealed class PackJson
 
     /// <summary>Format 2: option sets (new ones, or options added to sets of the SRD or other packs).</summary>
     public List<PackOptionSetJson?>? OptionSets { get; set; }
+
+    /// <summary>Trinket table rolled at character creation (d100), pointing to items of the SRD or of the pack.</summary>
+    public List<PackTrinketJson?>? Trinkets { get; set; }
+}
+
+internal sealed class PackTrinketJson
+{
+    public int? Roll { get; set; }
+
+    /// <summary>Item index (SRD or this pack).</summary>
+    public string? Item { get; set; }
 }
 
 internal sealed class PackClassExtensionJson

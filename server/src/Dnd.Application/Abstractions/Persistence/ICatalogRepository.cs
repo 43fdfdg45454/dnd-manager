@@ -86,4 +86,9 @@ public interface ICatalogRepository
     Task<EquipmentCategory?> GetEquipmentCategoryAsync(string index, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<EquipmentCategory>> ListEquipmentCategoriesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default);
+
+    // Trinkets (phase 21).
+
+    /// <summary>Effective trinket table ordered by roll: one entry per roll, from the most recently imported pack.</summary>
+    Task<IReadOnlyList<TrinketEntry>> ListTrinketsAsync(CancellationToken cancellationToken = default);
 }

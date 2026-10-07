@@ -192,4 +192,30 @@ internal sealed class CatalogRepository(AppDbContext db) : ICatalogRepository
 
     public async Task<IReadOnlyList<EquipmentCategory>> ListEquipmentCategoriesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
         indexes.Count == 0 ? [] : await db.CatalogEquipmentCategories.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<TrinketEntry>> ListTrinketsAsync(CancellationToken cancellationToken = default)
+    {
+        var entries = await db.CatalogTrinkets.AsNoTracking().ToListAsync(cancellationToken);
+        if (entries.Count == 0)
+        {
+            return [];
+        }
+
+        var imports = await db.CatalogImports.AsNoTracking()
+            .Where(x => x.Ruleset.StartsWith(CatalogSources.PackRulesetPrefix))
+            .Select(x => new { x.Ruleset, x.ImportedAt })
+            .ToListAsync(cancellationToken);
+        var importedAt = imports.ToDictionary(
+            x => x.Ruleset[CatalogSources.PackRulesetPrefix.Length..],
+            x => x.ImportedAt,
+            StringComparer.Ordinal);
+
+        // Same roll in several packs: the most recently imported pack wins.
+        return entries
+            .Where(e => importedAt.ContainsKey(e.Source))
+            .GroupBy(e => e.Roll)
+            .Select(g => g.OrderByDescending(e => importedAt[e.Source]).ThenBy(e => e.Source, StringComparer.Ordinal).First())
+            .OrderBy(e => e.Roll)
+            .ToList();
+    }
 }

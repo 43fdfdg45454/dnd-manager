@@ -65,6 +65,7 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
             db.CatalogOptionSets.AddRange(rows.OptionSets);
             db.CatalogOptions.AddRange(rows.Options);
             db.CatalogLevelChoiceRules.AddRange(rows.LevelChoiceRules);
+            db.CatalogTrinkets.AddRange(rows.Trinkets);
             await db.SaveChangesAsync(cancellationToken);
             db.ChangeTracker.Clear();
 
@@ -289,6 +290,7 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
     /// <summary>Deletes every definition of the pack except item templates (dependents first).</summary>
     private async Task DeleteDefinitionsAsync(string id, CancellationToken cancellationToken)
     {
+        await db.CatalogTrinkets.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogLevelChoiceRules.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogOptions.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogOptionSets.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);

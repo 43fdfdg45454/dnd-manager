@@ -54,6 +54,8 @@ internal sealed class ContentPackRows
 
     public List<LevelChoiceRule> LevelChoiceRules { get; } = [];
 
+    public List<TrinketEntry> Trinkets { get; } = [];
+
     public Dictionary<string, int> Counts() => new()
     {
         ["optionSets"] = OptionSets.Count,
@@ -67,6 +69,7 @@ internal sealed class ContentPackRows
         ["subraces"] = Subraces.Count,
         ["traits"] = Traits.Count,
         ["backgrounds"] = Backgrounds.Count,
+        ["trinkets"] = Trinkets.Count,
     };
 }
 
@@ -174,6 +177,7 @@ internal sealed partial class ContentPackValidator
         ForEach("spells", pack.Spells, (path, spell) => Spell(path, spell, rows, packSubclasses));
         ForEach("races", pack.Races, (path, race) => Race(path, race, rows));
         ForEach("backgrounds", pack.Backgrounds, (path, background) => Background(path, background, rows));
+        Trinkets(pack.Trinkets, rows);
         CheckLevelChoiceReferences(rows);
         CheckStartingEquipmentReferences(rows);
         return rows;

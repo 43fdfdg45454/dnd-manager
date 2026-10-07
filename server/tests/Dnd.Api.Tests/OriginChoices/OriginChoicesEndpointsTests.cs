@@ -186,6 +186,45 @@ public class OriginChoicesEndpointsTests(CatalogApiFactory factory)
 
     // ---- Helpers ---------------------------------------------------------------------------------------
 
+    [Fact]
+    public async Task Origin_languages_accept_up_to_the_offered_number()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var hero = await DraftAsync(s, "elf", "high-elf", "wizard");
+        await PatchSheetAsync(s.Player, hero.Id, new { backgroundIndex = "acolyte" });
+
+        var plan = await OriginAsync(s.Player, hero.Id);
+        Assert.Equal(1, Assert.Single(plan.Choices, c => c.Key == "race.subrace.languages").Choose);
+        var background = Assert.Single(plan.Choices, c => c.Key == "background.languages");
+        Assert.Equal((2, 0), (background.Choose, background.Required));
+
+        // Fewer than offered is fine (the wizard warns); more is refused.
+        var tooMany = await SaveAsync(s.Player, hero.Id, new { key = "race.subrace.languages", selected = new[] { "Dwarvish", "Giant" } });
+        Assert.Equal(HttpStatusCode.BadRequest, tooMany.StatusCode);
+        await SaveOkAsync(s.Player, hero.Id,
+            new { key = "race.subrace.languages", selected = new[] { "Dwarvish" } },
+            new { key = "background.languages", selected = new[] { "Giant" } });
+
+        var detail = await s.Player.GetCharacterAsync(hero.Id);
+        Assert.Contains(detail.Proficiencies, p => p is { Type: "Language", Key: "Dwarvish" });
+        Assert.Contains(detail.Proficiencies, p => p is { Type: "Language", Key: "Giant", Source: "Background" });
+    }
+
+    [Fact]
+    public async Task Only_the_dm_adds_languages_to_an_active_character_through_the_sheet()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var hero = await s.Player.CreateActiveCharacterAsync(s.Dm, s.CampaignId);
+        var patch = new { proficiencies = new[] { new { type = "Language", key = "Orc", expertise = false } } };
+
+        var owner = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/sheet", patch);
+        Assert.Equal(HttpStatusCode.Accepted, owner.StatusCode);
+        Assert.DoesNotContain((await s.Player.GetCharacterAsync(hero.Id)).Proficiencies, p => p is { Type: "Language", Key: "Orc" });
+
+        await PatchSheetAsync(s.Dm, hero.Id, patch);
+        Assert.Contains((await s.Player.GetCharacterAsync(hero.Id)).Proficiencies, p => p is { Type: "Language", Key: "Orc" });
+    }
+
     private static string Url(Guid id) => $"{ItemTestHelpers.CharacterUrl(id)}/origin-choices";
 
     private static async Task<CharacterDetailDto> DraftAsync(CampaignScenario s, string race, string? subrace, string classIndex)
