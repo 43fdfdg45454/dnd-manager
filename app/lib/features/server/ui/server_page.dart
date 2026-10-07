@@ -10,6 +10,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/server/server_config_controller.dart';
 import '../../../core/server/server_probe.dart';
 import '../../../core/server/server_url.dart';
+import '../../../core/theme/tokens.dart';
 
 /// Lets the user choose the server the app talks to (LAN, VPN or a public
 /// domain), check that it answers and keep a short list of recent ones.
@@ -212,7 +213,7 @@ class _ServerPageState extends ConsumerState<ServerPage> {
                   Text(
                     'Conectado a ${_result!.name} v${_result!.version}',
                     key: const Key('server-result'),
-                    style: theme.textTheme.bodyMedium?.copyWith(color: Colors.green.shade700),
+                    style: theme.textTheme.bodyMedium?.copyWith(color: context.tokens.mossText),
                   ),
                 ],
                 if (_failure != null) ..._failureWidgets(theme, _failure!),
@@ -358,7 +359,7 @@ class _DiagnosticLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final (icon, color) = switch (result.outcome) {
-      DiagnosticOutcome.ok => (Icons.check_circle, Colors.green.shade700),
+      DiagnosticOutcome.ok => (Icons.check_circle, context.tokens.mossText),
       DiagnosticOutcome.failed => (Icons.cancel, theme.colorScheme.error),
       DiagnosticOutcome.skipped => (Icons.remove_circle_outline, theme.disabledColor),
     };
@@ -374,7 +375,7 @@ class _DiagnosticLine extends StatelessWidget {
             warning ? Icons.warning_amber_rounded : icon,
             key: Key('diagnose-icon-${result.step.name}-${result.outcome.name}'),
             size: 20,
-            color: warning ? Colors.amber.shade800 : color,
+            color: warning ? context.tokens.oldGoldText : color,
           ),
           const SizedBox(width: 8),
           Expanded(

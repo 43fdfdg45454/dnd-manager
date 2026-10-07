@@ -133,7 +133,7 @@ class _ClassCard extends StatelessWidget {
     final tokens = context.tokens;
     final theme = Theme.of(context);
     final classTheme = classThemeOf(option.classIndex);
-    final accent = classTheme.accent(theme.brightness);
+    final accent = classAccentOf(context, option.classIndex);
     final name = classThemes[option.classIndex]?.labelEs ?? option.name;
     final levels = option.isNew
         ? 'Nueva clase · nivel 1'

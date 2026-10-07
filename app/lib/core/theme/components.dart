@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
 
+import 'contrast.dart';
 import 'textures.dart';
 import 'tokens.dart';
 import 'typography.dart';
 
 /// Component themes built from the [AppTokens] of one brightness.
 class AppComponentThemes {
-  AppComponentThemes(this.tokens, this.scheme, this.textTheme);
+  AppComponentThemes(this.tokens, this.scheme, this.textTheme, [this.fonts = AppFontSet.standard]);
 
   final AppTokens tokens;
   final ColorScheme scheme;
   final TextTheme textTheme;
+  final AppFontSet fonts;
 
-  bool get _dark => scheme.brightness == Brightness.dark;
+  TextStyle _label() => AppTypography.sans(weight: FontWeight.w600, fonts: fonts);
+
+  /// First of [candidates] that reads (WCAG AA) on [background], else the
+  /// most readable of them.
+  static Color _firstReadable(Color background, List<Color> candidates) =>
+      candidates.where((c) => contrastRatio(c, background) >= 4.5).firstOrNull ??
+      bestOn(background, candidates);
 
   Color get _goldBorder => tokens.oldGold.withValues(alpha: 0.45);
 
@@ -47,7 +55,7 @@ class AppComponentThemes {
     style: FilledButton.styleFrom(
       backgroundColor: tokens.ember,
       foregroundColor: scheme.onPrimary,
-      textStyle: AppTypography.sans(weight: FontWeight.w600),
+      textStyle: _label(),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
     ),
   );
@@ -56,16 +64,17 @@ class AppComponentThemes {
     style: OutlinedButton.styleFrom(
       foregroundColor: tokens.bone,
       side: BorderSide(color: tokens.oldGold),
-      textStyle: AppTypography.sans(weight: FontWeight.w600),
+      textStyle: _label(),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
     ),
   );
 
   TextButtonThemeData get textButton => TextButtonThemeData(
-    // Ember reads well on obsidian; on bone it is too light for text.
+    // The primary when it reads on the page (ember on obsidian); otherwise
+    // blood (ember is too light on bone) or the text colour.
     style: TextButton.styleFrom(
-      foregroundColor: _dark ? tokens.ember : tokens.blood,
-      textStyle: AppTypography.sans(weight: FontWeight.w600),
+      foregroundColor: _firstReadable(tokens.obsidian, [tokens.ember, tokens.blood, tokens.bone]),
+      textStyle: _label(),
     ),
   );
 
@@ -80,11 +89,8 @@ class AppComponentThemes {
     indicatorSize: TabBarIndicatorSize.tab,
     labelColor: tokens.bone,
     unselectedLabelColor: tokens.boneMuted,
-    labelStyle: const TextStyle(fontFamily: AppFonts.display, fontWeight: FontWeight.w700),
-    unselectedLabelStyle: const TextStyle(
-      fontFamily: AppFonts.display,
-      fontWeight: FontWeight.w400,
-    ),
+    labelStyle: AppTypography.title(fonts: fonts),
+    unselectedLabelStyle: AppTypography.title(weight: FontWeight.w400, fonts: fonts),
     dividerColor: tokens.rune.withValues(alpha: 0.7),
   );
 
@@ -99,7 +105,7 @@ class AppComponentThemes {
     surfaceTintColor: Colors.transparent,
     indicatorColor: tokens.oldGold.withValues(alpha: 0.3),
     labelTextStyle: WidgetStatePropertyAll(
-      AppTypography.sans(weight: FontWeight.w600, color: tokens.bone),
+      AppTypography.sans(weight: FontWeight.w600, color: tokens.bone, fonts: fonts),
     ),
   );
 
@@ -109,7 +115,7 @@ class AppComponentThemes {
       selectedForegroundColor: tokens.bone,
       selectedBackgroundColor: tokens.oldGold.withValues(alpha: 0.3),
       side: BorderSide(color: tokens.rune),
-      textStyle: AppTypography.sans(weight: FontWeight.w600),
+      textStyle: _label(),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
     ),
   );
@@ -124,8 +130,9 @@ class AppComponentThemes {
 
   SnackBarThemeData get snackBar => SnackBarThemeData(
     backgroundColor: tokens.bone,
-    contentTextStyle: AppTypography.sans(fontSize: 15, color: tokens.obsidian),
-    actionTextColor: _dark ? tokens.blood : tokens.oldGold,
+    contentTextStyle: AppTypography.sans(fontSize: 15, color: tokens.obsidian, fonts: fonts),
+    // The snack bar is inverted (text colour as background).
+    actionTextColor: _firstReadable(tokens.bone, [tokens.blood, tokens.oldGold, tokens.obsidian]),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
   );
 
@@ -195,7 +202,7 @@ class StoneCard extends StatelessWidget {
   }
 }
 
-/// Section title in Almendra with a gold rule on both sides.
+/// Section title in the title font with a gold rule on both sides.
 class SectionHeader extends StatelessWidget {
   const SectionHeader(
     this.title, {

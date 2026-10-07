@@ -51,7 +51,8 @@ class AttributionPage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Almendra y Source Sans 3 se distribuyen bajo la SIL Open Font License 1.1.',
+                  'Almendra, Cinzel, IM Fell English, Source Sans 3, Atkinson Hyperlegible Next '
+                  'y Lora se distribuyen bajo la SIL Open Font License 1.1.',
                   key: const Key('attributions-fonts'),
                   style: theme.textTheme.bodyMedium,
                 ),
@@ -65,6 +66,26 @@ class AttributionPage extends ConsumerWidget {
                   key: Key('attributions-license-source-sans'),
                   title: 'Licencia de Source Sans 3',
                   asset: 'assets/licenses/OFL-SourceSans3.txt',
+                ),
+                const _LicenseTile(
+                  key: Key('attributions-license-cinzel'),
+                  title: 'Licencia de Cinzel',
+                  asset: 'assets/licenses/OFL-Cinzel.txt',
+                ),
+                const _LicenseTile(
+                  key: Key('attributions-license-im-fell-english'),
+                  title: 'Licencia de IM Fell English',
+                  asset: 'assets/licenses/OFL-IMFellEnglish.txt',
+                ),
+                const _LicenseTile(
+                  key: Key('attributions-license-atkinson'),
+                  title: 'Licencia de Atkinson Hyperlegible Next',
+                  asset: 'assets/licenses/OFL-AtkinsonHyperlegibleNext.txt',
+                ),
+                const _LicenseTile(
+                  key: Key('attributions-license-lora'),
+                  title: 'Licencia de Lora',
+                  asset: 'assets/licenses/OFL-Lora.txt',
                 ),
               ],
             ),

@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import 'app_style.dart';
 import 'tokens.dart';
 
 /// Very subtle film grain: deterministic dots on a [tile]-sized square that is
@@ -77,7 +78,8 @@ class GrainPainter extends CustomPainter {
 
 /// Fills its area with the page background ([AppTokens.obsidian] by default)
 /// plus a [GrainPainter] behind [child]. The grain sits in its own layer so it
-/// is not repainted with the content.
+/// is not repainted with the content, and is left out when the textures are
+/// off ([AppStyle.textures]).
 class GrainBackground extends StatelessWidget {
   const GrainBackground({super.key, required this.child, this.color, this.opacity = 0.05});
 
@@ -92,6 +94,9 @@ class GrainBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    if (!context.appStyle.textures) {
+      return ColoredBox(color: color ?? tokens.obsidian, child: child);
+    }
     return ColoredBox(
       color: color ?? tokens.obsidian,
       child: CustomPaint(
@@ -115,6 +120,7 @@ class RuneBorderPainter extends CustomPainter {
     this.jitter = 0.7,
     this.strokeWidth = 1.2,
     this.shadow = true,
+    this.brush = true,
   });
 
   final Color fill;
@@ -131,11 +137,16 @@ class RuneBorderPainter extends CustomPainter {
   /// Whether to draw a soft drop shadow under the card.
   final bool shadow;
 
+  /// Hand-inked look: wobbling edges and a second, fainter stroke. Off draws
+  /// a clean octagon with a single stroke.
+  final bool brush;
+
   /// The card outline for [size]: an octagon (rectangle with cut corners)
   /// whose straight edges are split into short segments moved by a seeded
   /// jitter perpendicular to the edge.
   Path outline(Size size, {int salt = 0, double inset = 0}) {
     final random = math.Random(seed * 31 + salt);
+    final jitter = brush ? this.jitter : 0.0;
     final c = math.min(corner, math.min(size.width, size.height) / 4);
     final l = inset, t = inset, r = size.width - inset, b = size.height - inset;
     final corners = [
@@ -181,6 +192,7 @@ class RuneBorderPainter extends CustomPainter {
       ..strokeWidth = strokeWidth
       ..color = border;
     canvas.drawPath(body, stroke);
+    if (!brush) return;
     // Second pass of the "brush": thinner, fainter and slightly off.
     canvas.drawPath(
       outline(size, salt: 1, inset: strokeWidth / 2 + 1.5),
@@ -198,7 +210,8 @@ class RuneBorderPainter extends CustomPainter {
       old.seed != seed ||
       old.jitter != jitter ||
       old.strokeWidth != strokeWidth ||
-      old.shadow != shadow;
+      old.shadow != shadow ||
+      old.brush != brush;
 }
 
 /// Card of the "carved stone" identity: [AppTokens.stone] fill with a brush
@@ -257,6 +270,7 @@ class RuneCard extends StatelessWidget {
           border: borderColor ?? tokens.oldGold.withValues(alpha: 0.55),
           corner: corner,
           seed: seed ?? (key?.hashCode ?? 1),
+          brush: context.appStyle.textures,
         ),
         child: content,
       ),

@@ -19,8 +19,16 @@ class DndCompanionApp extends ConsumerWidget {
     final reducedMotion = ref.watch(motionSettingsProvider) == MotionPreference.reduced;
     return MaterialApp.router(
       title: AppConfig.appName,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      theme: AppTheme.light(
+        palette: appearance.palette,
+        fonts: appearance.fonts,
+        style: appearance.style,
+      ),
+      darkTheme: AppTheme.dark(
+        palette: appearance.palette,
+        fonts: appearance.fonts,
+        style: appearance.style,
+      ),
       themeMode: appearance.themeMode,
       locale: const Locale('es'),
       supportedLocales: const [Locale('es'), Locale('en')],

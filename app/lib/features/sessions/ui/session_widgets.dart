@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_error.dart';
+import '../../../core/theme/tokens.dart';
 import '../data/models.dart';
 import '../domain/sessions_format.dart';
 
@@ -23,10 +24,12 @@ String describeSessionError(Object error, {Map<int, String> byStatus = const {}}
   return describeApiError(error, byStatus: {...sessionErrorMessages, ...byStatus});
 }
 
-Color rsvpColor(ColorScheme scheme, RsvpStatus status) => switch (status) {
-  RsvpStatus.yes => Colors.green.shade700,
-  RsvpStatus.no => scheme.error,
-  RsvpStatus.maybe => Colors.orange.shade800,
+/// Colour of an answer: healing green for yes, error for no and the palette
+/// highlight for maybe, all readable as text.
+Color rsvpColor(BuildContext context, RsvpStatus status) => switch (status) {
+  RsvpStatus.yes => context.tokens.mossText,
+  RsvpStatus.no => Theme.of(context).colorScheme.error,
+  RsvpStatus.maybe => context.tokens.oldGoldText,
 };
 
 IconData rsvpIcon(RsvpStatus status) => switch (status) {
@@ -44,7 +47,6 @@ class RsvpCountChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Wrap(
       spacing: 6,
       runSpacing: 4,
@@ -54,7 +56,7 @@ class RsvpCountChips extends StatelessWidget {
             key: Key('count-${status.apiValue.toLowerCase()}'),
             visualDensity: VisualDensity.compact,
             padding: EdgeInsets.zero,
-            avatar: Icon(rsvpIcon(status), size: 16, color: rsvpColor(scheme, status)),
+            avatar: Icon(rsvpIcon(status), size: 16, color: rsvpColor(context, status)),
             label: Text('${status.label} ${counts.of(status)}'),
           ),
         if (showPending)
@@ -85,7 +87,7 @@ class MyRsvpLabel extends StatelessWidget {
     }
     return Text(
       'Tu respuesta: ${rsvp!.label}',
-      style: base?.copyWith(color: rsvpColor(scheme, rsvp!), fontWeight: FontWeight.w600),
+      style: base?.copyWith(color: rsvpColor(context, rsvp!), fontWeight: FontWeight.w600),
     );
   }
 }

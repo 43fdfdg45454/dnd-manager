@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/tokens.dart';
 import '../data/dice_controller.dart';
 import '../domain/dice_expression.dart';
 
@@ -67,8 +68,9 @@ class DiceResultView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final tokens = context.tokens;
     final color = result.isCritical
-        ? Colors.green.shade700
+        ? tokens.mossText
         : result.isFumble
         ? scheme.error
         : scheme.onSurface;
@@ -104,7 +106,7 @@ class DiceResultView extends StatelessWidget {
             key: const Key('dice-critical'),
             avatar: const Icon(Icons.auto_awesome, size: 18),
             label: const Text('¡Crítico!'),
-            backgroundColor: Colors.green.shade100,
+            backgroundColor: Color.alphaBlend(tokens.moss.withValues(alpha: 0.3), tokens.stone),
           ),
         if (result.isFumble)
           Chip(
@@ -364,7 +366,7 @@ class _HistoryTile extends StatelessWidget {
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             color: entry.critical
-                ? Colors.green.shade700
+                ? context.tokens.mossText
                 : entry.fumble
                 ? scheme.error
                 : null,

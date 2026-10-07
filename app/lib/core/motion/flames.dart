@@ -111,7 +111,8 @@ class _FlameBorderState extends State<FlameBorder> with TickerProviderStateMixin
         ignite: _ignite,
         ember: _ember,
         color: color,
-        core: Color.lerp(color, const Color(0xFFFFD27A), 0.6)!,
+        // A paler core of the same hue, so the fire follows the palette.
+        core: Color.lerp(color, const Color(0xFFFFFFFF), 0.6)!,
         inset: widget.inset,
       ),
       child: widget.child,

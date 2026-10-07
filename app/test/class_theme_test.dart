@@ -1,5 +1,4 @@
-import 'package:dnd_companion/core/theme/icons.dart';
-import 'package:dnd_companion/core/theme/tokens.dart';
+import 'package:dnd_companion/core/theme/app_theme.dart';
 import 'package:dnd_companion/features/characters/data/models.dart';
 import 'package:dnd_companion/features/characters/domain/class_theme.dart';
 import 'package:flutter/material.dart';
@@ -120,6 +119,32 @@ void main() {
 
       final none = await themeInside(tester, Brightness.light, null);
       expect(none.colorScheme.primary, AppTokens.light.gold);
+    });
+
+    testWidgets('sin colores de clase usa el acento de la paleta', (tester) async {
+      late ThemeData inner;
+      late Color accent;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.dark(
+            palette: AppPalette.graphite,
+            style: const AppStyle(classColors: false),
+          ),
+          home: ClassAccent(
+            classIndex: 'barbarian',
+            child: Builder(
+              builder: (context) {
+                inner = Theme.of(context);
+                accent = classAccentOf(context, 'barbarian');
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(inner.colorScheme.primary, AppPalette.graphite.dark.oldGold);
+      expect(accent, AppPalette.graphite.dark.oldGold);
     });
 
     testWidgets('no toca el resto del esquema', (tester) async {

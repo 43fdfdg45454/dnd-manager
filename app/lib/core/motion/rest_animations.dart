@@ -38,7 +38,7 @@ class _CampfireBurstState extends OneShotMotionState<CampfireBurst> {
       painter: CampfirePainter(
         progress: controller,
         flame: tokens.ember,
-        core: const Color(0xFFFFD27A),
+        core: Color.lerp(tokens.ember, const Color(0xFFFFFFFF), 0.6)!,
         logs: tokens.oldGold,
       ),
       child: widget.child,
@@ -78,7 +78,7 @@ class _MoonPassState extends OneShotMotionState<MoonPass> {
       painter: MoonPassPainter(
         progress: controller,
         night: const Color(0xFF0B0D1A),
-        moon: const Color(0xFFE7DCC6),
+        moon: Color.lerp(tokens.oldGold, const Color(0xFFFFFFFF), 0.75)!,
         stars: tokens.oldGold,
       ),
       child: widget.child,

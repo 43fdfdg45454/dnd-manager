@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'contrast.dart';
+
 /// Design tokens of the "carved stone" identity: an obsidian / stone / bone
 /// palette with ember, arcane, moss, blood and old-gold accents.
 ///
@@ -84,7 +86,27 @@ class AppTokens extends ThemeExtension<AppTokens> {
   /// Healing (alias of [moss]).
   Color get emerald => moss;
 
-  /// Dark variant: the default look.
+  // Text variants of the semantic accents: the accent itself when it already
+  // reads (WCAG AA, 4.5:1) on the page, card and raised surfaces, otherwise
+  // moved towards [bone] just enough. Same meaning and hue family, safe for
+  // labels and numbers.
+
+  /// Healing / success text.
+  Color get mossText => _readable(moss);
+
+  /// Damage / danger text.
+  Color get bloodText => _readable(blood);
+
+  /// Magic text.
+  Color get arcaneText => _readable(arcane);
+
+  /// Highlight / warning text.
+  Color get oldGoldText => _readable(oldGold);
+
+  Color _readable(Color color) => readableOn(color, [obsidian, stone, stoneRaised], toward: bone);
+
+  /// Dark variant of the default palette ("Obsidiana y brasa"); the other
+  /// palettes live in `palettes.dart`.
   static const dark = AppTokens(
     obsidian: Color(0xFF14110F),
     stone: Color(0xFF231D19),

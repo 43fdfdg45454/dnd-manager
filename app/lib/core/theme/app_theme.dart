@@ -2,24 +2,101 @@ import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 
 import '../motion/page_transitions.dart';
+import 'app_style.dart';
 import 'components.dart';
+import 'contrast.dart';
+import 'palettes.dart';
 import 'tokens.dart';
 import 'typography.dart';
 
 export 'app_icon.dart';
+export 'app_style.dart';
 export 'components.dart' show ParchmentCard, RuneDivider, SectionHeader, StoneCard;
+export 'contrast.dart';
 export 'icons.dart';
+export 'palettes.dart';
 export 'textures.dart' show GrainBackground, GrainPainter, RuneBorderPainter, RuneCard;
 export 'tokens.dart';
-export 'typography.dart' show AppFonts, AppTypography;
+export 'typography.dart' show AppFontSet, AppFonts, AppTypography, BodyFont, TitleFont;
 
-/// Dark (default) and light themes of the app ("carved stone" identity).
+/// Dark (default) and light themes of the app ("carved stone" identity), in
+/// the chosen [AppPalette], fonts and [AppStyle].
 abstract final class AppTheme {
-  static ThemeData light() => _build(Brightness.light);
+  static ThemeData light({
+    AppPalette palette = AppPalette.ember,
+    AppFontSet fonts = AppFontSet.standard,
+    AppStyle style = AppStyle.standard,
+  }) => build(Brightness.light, palette: palette, fonts: fonts, style: style);
 
-  static ThemeData dark() => _build(Brightness.dark);
+  static ThemeData dark({
+    AppPalette palette = AppPalette.ember,
+    AppFontSet fonts = AppFontSet.standard,
+    AppStyle style = AppStyle.standard,
+  }) => build(Brightness.dark, palette: palette, fonts: fonts, style: style);
 
-  static ColorScheme _scheme(Brightness brightness) {
+  /// The colour scheme of [palette] in [brightness]. The original palette
+  /// keeps its hand-tuned containers; the others derive them from the tokens.
+  static ColorScheme scheme(AppPalette palette, Brightness brightness) =>
+      palette == AppPalette.ember
+      ? _emberScheme(brightness)
+      : _derivedScheme(palette.tokens(brightness), brightness, palette.tokens(_flip(brightness)));
+
+  static Brightness _flip(Brightness b) =>
+      b == Brightness.dark ? Brightness.light : Brightness.dark;
+
+  /// A full [ColorScheme] from the tokens alone: containers are the accent
+  /// blended into the cards, "on" colours the most readable of the palette's
+  /// text and page colours (or black / white), and the error colour is
+  /// [AppTokens.blood] moved towards the text colour until it reads on the
+  /// page (WCAG AA).
+  static ColorScheme _derivedScheme(AppTokens t, Brightness brightness, AppTokens other) {
+    final dark = brightness == Brightness.dark;
+    Color on(Color background) =>
+        bestOn(background, [t.bone, t.obsidian, const Color(0xFFFFFFFF), const Color(0xFF000000)]);
+    Color container(Color accent) => Color.alphaBlend(accent.withValues(alpha: 0.28), t.stone);
+    final error = readableOn(t.blood, [t.obsidian], toward: t.bone);
+    final primaryContainer = container(t.ember);
+    final secondaryContainer = container(t.oldGold);
+    final tertiaryContainer = container(t.arcane);
+    final errorContainer = container(t.blood);
+    return ColorScheme(
+      brightness: brightness,
+      primary: t.ember,
+      onPrimary: on(t.ember),
+      primaryContainer: primaryContainer,
+      onPrimaryContainer: on(primaryContainer),
+      secondary: t.oldGold,
+      onSecondary: on(t.oldGold),
+      secondaryContainer: secondaryContainer,
+      onSecondaryContainer: on(secondaryContainer),
+      tertiary: t.arcane,
+      onTertiary: on(t.arcane),
+      tertiaryContainer: tertiaryContainer,
+      onTertiaryContainer: on(tertiaryContainer),
+      error: error,
+      onError: on(error),
+      errorContainer: errorContainer,
+      onErrorContainer: on(errorContainer),
+      surface: t.obsidian,
+      onSurface: t.bone,
+      onSurfaceVariant: t.boneMuted,
+      surfaceContainerLowest: Color.lerp(t.obsidian, dark ? Colors.black : Colors.white, 0.35)!,
+      surfaceContainerLow: t.stone,
+      surfaceContainer: Color.lerp(t.stone, t.stoneRaised, 0.5)!,
+      surfaceContainerHigh: t.stoneRaised,
+      surfaceContainerHighest: Color.lerp(t.stoneRaised, t.bone, 0.08)!,
+      outline: t.rune,
+      outlineVariant: Color.lerp(t.rune, t.obsidian, 0.35)!,
+      shadow: const Color(0xFF000000),
+      scrim: const Color(0xFF000000),
+      inverseSurface: t.bone,
+      onInverseSurface: t.obsidian,
+      inversePrimary: other.ember,
+      surfaceTint: Colors.transparent,
+    );
+  }
+
+  static ColorScheme _emberScheme(Brightness brightness) {
     final t = AppTokens.of(brightness);
     if (brightness == Brightness.light) {
       return ColorScheme(
@@ -97,11 +174,21 @@ abstract final class AppTheme {
     );
   }
 
-  static ThemeData _build(Brightness brightness) {
-    final tokens = AppTokens.of(brightness);
-    final scheme = _scheme(brightness);
-    final text = AppTypography.textTheme(tokens);
-    final components = AppComponentThemes(tokens, scheme, text);
+  /// The theme of [palette] in [brightness] with [fonts] and [style]. Unless
+  /// [activateFonts] is false (a preview), also makes [fonts] the
+  /// [AppFonts.active] ones.
+  static ThemeData build(
+    Brightness brightness, {
+    AppPalette palette = AppPalette.ember,
+    AppFontSet fonts = AppFontSet.standard,
+    AppStyle style = AppStyle.standard,
+    bool activateFonts = true,
+  }) {
+    if (activateFonts) AppFonts.active = fonts;
+    final tokens = palette.tokens(brightness);
+    final scheme = AppTheme.scheme(palette, brightness);
+    final text = AppTypography.textTheme(tokens, fonts);
+    final components = AppComponentThemes(tokens, scheme, text, fonts);
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
@@ -109,7 +196,7 @@ abstract final class AppTheme {
       scaffoldBackgroundColor: tokens.obsidian,
       canvasColor: tokens.obsidian,
       textTheme: text,
-      extensions: [tokens],
+      extensions: [tokens, style],
       appBarTheme: components.appBar,
       cardTheme: components.card,
       filledButtonTheme: components.filledButton,

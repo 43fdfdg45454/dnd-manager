@@ -235,7 +235,6 @@ class ClassStep extends ConsumerWidget {
     final state = ref.watch(characterWizardControllerProvider(args));
     final controller = ref.read(characterWizardControllerProvider(args).notifier);
     final classes = ref.watch(classesProvider);
-    final brightness = Theme.of(context).brightness;
 
     return classes.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -251,11 +250,11 @@ class ClassStep extends ConsumerWidget {
             WizardChoiceCard(
               key: Key('class-${c.index}'),
               selected: c.index == state.classIndex,
-              accent: classThemeOf(c.index).accent(brightness),
+              accent: classAccentOf(context, c.index),
               leading: AppIcon(
                 classThemeOf(c.index).icon,
                 size: 28,
-                color: classThemeOf(c.index).accent(brightness),
+                color: classAccentOf(context, c.index),
               ),
               title: classThemeOf(c.index).labelEs == adventurerTheme.labelEs
                   ? c.name

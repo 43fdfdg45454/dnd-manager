@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../cache/stale_data.dart';
 import '../../features/campaigns/data/campaigns_repository.dart';
+import '../theme/contrast.dart';
+import '../theme/tokens.dart';
 import '../ui/offline_widgets.dart';
 import 'realtime_hub.dart';
 import 'realtime_provider.dart';
@@ -41,7 +43,7 @@ class ConnectionBanner extends ConsumerWidget {
       return _Strip(
         key: const Key('connection-banner-reconnecting'),
         amber: true,
-        builder: (context) {
+        builder: (context, foreground) {
           final next = state.nextRetryAt;
           final seconds = next == null
               ? null
@@ -49,7 +51,7 @@ class ConnectionBanner extends ConsumerWidget {
           final countdown = seconds == null ? '' : ' (${seconds < 0 ? 0 : seconds} s)';
           return [
             Expanded(child: Text('Reconectando…$countdown')),
-            if (next != null) retryButton(Colors.black87),
+            if (next != null) retryButton(foreground),
           ];
         },
         ticking: state.nextRetryAt != null,
@@ -66,7 +68,7 @@ class ConnectionBanner extends ConsumerWidget {
       key: const Key('connection-banner-offline'),
       amber: false,
       ticking: false,
-      builder: (context) => [Expanded(child: Text(text)), retryButton(Colors.white)],
+      builder: (context, foreground) => [Expanded(child: Text(text)), retryButton(foreground)],
     );
   }
 }
@@ -77,7 +79,9 @@ class _Strip extends StatefulWidget {
 
   final bool amber;
   final bool ticking;
-  final List<Widget> Function(BuildContext context) builder;
+
+  /// Content of the strip, given the readable [foreground] colour.
+  final List<Widget> Function(BuildContext context, Color foreground) builder;
 
   @override
   State<_Strip> createState() => _StripState();
@@ -117,8 +121,11 @@ class _StripState extends State<_Strip> {
 
   @override
   Widget build(BuildContext context) {
-    final background = widget.amber ? Colors.amber.shade700 : Colors.red.shade700;
-    final foreground = widget.amber ? Colors.black87 : Colors.white;
+    // Warning (palette highlight) while retrying, danger when offline; the
+    // text is black or white, whichever reads better.
+    final tokens = context.tokens;
+    final background = widget.amber ? tokens.oldGold : tokens.blood;
+    final foreground = bestOn(background, const [Colors.white, Colors.black]);
     return Material(
       color: background,
       child: DefaultTextStyle.merge(
@@ -133,7 +140,7 @@ class _StripState extends State<_Strip> {
                 color: foreground,
               ),
               const SizedBox(width: 8),
-              ...widget.builder(context),
+              ...widget.builder(context, foreground),
             ],
           ),
         ),

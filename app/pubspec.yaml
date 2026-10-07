@@ -49,8 +49,9 @@ flutter:
     - assets/licenses/
   fonts:
     # SIL OFL, see assets/licenses. Almendra ships static Regular and Bold
-    # files; Source Sans 3 is a variable font (one file serves every weight,
-    # selected with fontVariations).
+    # files and IM Fell English a static Regular; Source Sans 3, Cinzel,
+    # Atkinson Hyperlegible Next and Lora are variable fonts (one file serves
+    # every weight, selected with fontVariations). Chosen on "Personalización".
     - family: Almendra
       fonts:
         - asset: assets/fonts/Almendra-Regular.ttf
@@ -72,5 +73,49 @@ flutter:
           weight: 600
           style: italic
         - asset: assets/fonts/SourceSans3-Italic.ttf
+          weight: 700
+          style: italic
+    - family: Cinzel
+      fonts:
+        - asset: assets/fonts/Cinzel.ttf
+          weight: 400
+        - asset: assets/fonts/Cinzel.ttf
+          weight: 700
+    - family: IMFellEnglish
+      fonts:
+        - asset: assets/fonts/IMFellEnglish-Regular.ttf
+          weight: 400
+    - family: AtkinsonHyperlegibleNext
+      fonts:
+        - asset: assets/fonts/AtkinsonHyperlegibleNext.ttf
+          weight: 400
+        - asset: assets/fonts/AtkinsonHyperlegibleNext.ttf
+          weight: 600
+        - asset: assets/fonts/AtkinsonHyperlegibleNext.ttf
+          weight: 700
+        - asset: assets/fonts/AtkinsonHyperlegibleNext-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/AtkinsonHyperlegibleNext-Italic.ttf
+          weight: 600
+          style: italic
+        - asset: assets/fonts/AtkinsonHyperlegibleNext-Italic.ttf
+          weight: 700
+          style: italic
+    - family: Lora
+      fonts:
+        - asset: assets/fonts/Lora.ttf
+          weight: 400
+        - asset: assets/fonts/Lora.ttf
+          weight: 600
+        - asset: assets/fonts/Lora.ttf
+          weight: 700
+        - asset: assets/fonts/Lora-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Lora-Italic.ttf
+          weight: 600
+          style: italic
+        - asset: assets/fonts/Lora-Italic.ttf
           weight: 700
           style: italic

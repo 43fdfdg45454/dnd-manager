@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_style.dart';
 import '../../../core/theme/icons.dart';
 import '../../../core/theme/tokens.dart';
 import '../data/models.dart';
@@ -137,6 +138,15 @@ final Map<String, ClassTheme> classThemes = {
 /// The theme of [index]; [adventurerTheme] for null or unknown classes.
 ClassTheme classThemeOf(String? index) => classThemes[index] ?? adventurerTheme;
 
+/// The accent [classIndex] shows at [context]: the class colour, or the
+/// palette accent ([AppTokens.oldGold]) when class colours are off
+/// ([AppStyle.classColors]) or there is no SRD class.
+Color classAccentOf(BuildContext context, String? classIndex) {
+  final theme = classThemes[classIndex];
+  if (theme == null || !context.appStyle.classColors) return context.tokens.oldGold;
+  return theme.accent(Theme.of(context).brightness);
+}
+
 /// The class that gives a character its colour: the highest level one (the
 /// first on a tie); null without classes.
 String? mainClassIndex(CharacterDetail character) => mainClassIndexOf(character.classes);
@@ -152,7 +162,8 @@ String? mainClassIndexOf(List<CharacterClass> classes) {
 
 /// Gives [child] the accent of [classIndex] as `colorScheme.primary` (with a
 /// readable `onPrimary`). Used only on the character header, the hit point
-/// card and the class panels.
+/// card and the class panels. Follows [classAccentOf], so with class colours
+/// off it is the palette accent.
 class ClassAccent extends StatelessWidget {
   const ClassAccent({super.key, required this.classIndex, required this.child});
 
@@ -162,7 +173,7 @@ class ClassAccent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final accent = classThemeOf(classIndex).accent(theme.brightness);
+    final accent = classAccentOf(context, classIndex);
     final onAccent = ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
         ? Colors.white
         : Colors.black;

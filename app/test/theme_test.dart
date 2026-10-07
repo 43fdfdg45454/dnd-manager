@@ -215,9 +215,25 @@ void main() {
       final families = {
         for (final f in manifest) (f as Map)['family'] as String: f['fonts'] as List,
       };
-      expect(families.keys, containsAll(['Almendra', 'SourceSans3']));
-      expect(families.keys, isNot(contains('Cinzel')));
+      expect(
+        families.keys,
+        containsAll([
+          'Almendra',
+          'SourceSans3',
+          'Cinzel',
+          'IMFellEnglish',
+          'AtkinsonHyperlegibleNext',
+          'Lora',
+        ]),
+      );
       expect(families.keys, isNot(contains('Alegreya')));
+      // Every selectable bundled family is declared.
+      for (final family in [
+        ...TitleFont.values.map((f) => f.family),
+        ...BodyFont.values.map((f) => f.family),
+      ].nonNulls) {
+        expect(families.keys, contains(family));
+      }
       final assets = {
         for (final fonts in families.values)
           for (final font in fonts) (font as Map)['asset'] as String,
@@ -229,6 +245,12 @@ void main() {
           'assets/fonts/Almendra-Bold.ttf',
           'assets/fonts/SourceSans3.ttf',
           'assets/fonts/SourceSans3-Italic.ttf',
+          'assets/fonts/Cinzel.ttf',
+          'assets/fonts/IMFellEnglish-Regular.ttf',
+          'assets/fonts/AtkinsonHyperlegibleNext.ttf',
+          'assets/fonts/AtkinsonHyperlegibleNext-Italic.ttf',
+          'assets/fonts/Lora.ttf',
+          'assets/fonts/Lora-Italic.ttf',
         ]),
       );
       for (final asset in assets.where((a) => a.startsWith('assets/fonts/'))) {
@@ -236,7 +258,14 @@ void main() {
         // TrueType signature.
         expect(data.getUint32(0), 0x00010000, reason: asset);
       }
-      for (final license in ['OFL-Almendra.txt', 'OFL-SourceSans3.txt']) {
+      for (final license in [
+        'OFL-Almendra.txt',
+        'OFL-SourceSans3.txt',
+        'OFL-Cinzel.txt',
+        'OFL-IMFellEnglish.txt',
+        'OFL-AtkinsonHyperlegibleNext.txt',
+        'OFL-Lora.txt',
+      ]) {
         final text = await rootBundle.loadString('assets/licenses/$license');
         expect(text, contains('SIL Open Font License'), reason: license);
       }
@@ -401,9 +430,16 @@ void main() {
     expect(find.byKey(const Key('attributions-icons')), findsNothing);
     expect(find.textContaining('game-icons'), findsNothing);
     expect(find.byKey(const Key('attributions-fonts')), findsOneWidget);
-    expect(find.textContaining('Almendra y Source Sans 3'), findsOneWidget);
+    expect(find.textContaining('Almendra, Cinzel, IM Fell English, Source Sans 3'), findsOneWidget);
 
-    for (final key in ['attributions-license-almendra', 'attributions-license-source-sans']) {
+    for (final key in [
+      'attributions-license-almendra',
+      'attributions-license-source-sans',
+      'attributions-license-cinzel',
+      'attributions-license-im-fell-english',
+      'attributions-license-atkinson',
+      'attributions-license-lora',
+    ]) {
       await tester.ensureVisible(find.byKey(Key(key)));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(Key(key)));

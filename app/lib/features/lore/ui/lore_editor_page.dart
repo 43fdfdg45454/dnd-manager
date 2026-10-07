@@ -400,7 +400,7 @@ class _AttachmentThumb extends StatelessWidget {
               tooltip: isCover ? 'Quitar portada' : 'Usar como portada',
               visualDensity: VisualDensity.compact,
               style: IconButton.styleFrom(backgroundColor: Colors.black45),
-              icon: Icon(isCover ? Icons.star : Icons.star_border, color: Colors.amber, size: 20),
+              icon: Icon(isCover ? Icons.star : Icons.star_border, color: Colors.white, size: 20),
               onPressed: onCover,
             ),
           ),

@@ -405,7 +405,7 @@ class _ResponsesSection extends StatelessWidget {
             key: Key('response-${r.userId}'),
             dense: true,
             contentPadding: EdgeInsets.zero,
-            leading: Icon(rsvpIcon(r.status), color: rsvpColor(theme.colorScheme, r.status)),
+            leading: Icon(rsvpIcon(r.status), color: rsvpColor(context, r.status)),
             title: Text(r.displayName),
             subtitle: r.comment == null ? null : Text(r.comment!),
             trailing: Text(r.status.label),

@@ -84,7 +84,7 @@ class PartyMemberRow extends StatelessWidget {
     final theme = Theme.of(context);
     final tokens = context.tokens;
     final classTheme = classThemeOf(mainClassIndexOf(m.classes));
-    final accent = classTheme.accent(theme.brightness);
+    final accent = classAccentOf(context, mainClassIndexOf(m.classes));
     final classes = m.classes.isEmpty ? 'Sin clase' : classesLabel(m.classes);
     final hpText = m.temporaryHitPoints > 0
         ? 'PG ${m.hitPointsCurrent} / ${m.hitPointsMax} (+${m.temporaryHitPoints} temp.)'

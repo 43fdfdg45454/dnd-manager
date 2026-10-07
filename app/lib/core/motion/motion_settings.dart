@@ -30,6 +30,12 @@ class MotionSettingsController extends Notifier<MotionPreference> {
     state = preference;
     ref.read(localPreferencesProvider)?.setString(motionPreferenceKey, preference.name).ignore();
   }
+
+  /// Back to [MotionPreference.all]; the stored value is removed.
+  void reset() {
+    state = MotionPreference.all;
+    ref.read(localPreferencesProvider)?.remove(motionPreferenceKey).ignore();
+  }
 }
 
 final motionSettingsProvider = NotifierProvider<MotionSettingsController, MotionPreference>(

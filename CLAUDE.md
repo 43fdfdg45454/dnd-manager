@@ -70,9 +70,12 @@ cd deploy && cp .env.sample .env && docker compose pull && docker compose up -d
   Wizards of the Coast en el repo. El administrador puede subir otros PDF a la biblioteca de la
   instancia y **paquetes de contenido** JSON (ADR 0007, `docs/content-packs.md`) que viven solo en
   su base de datos; `content-packs/` está en `.gitignore` y los ejemplos son ficticios.
-- Fuentes e iconos empaquetados: Almendra y Source Sans 3 (SIL OFL, con sus avisos de licencia en
-  `app/assets/licenses/`) e iconos **propios** dibujados en `app/assets/icons/` (licencia del
-  proyecto). Paleta oscura por defecto; el usuario la cambia en "Personalización".
+- Fuentes e iconos empaquetados: Almendra, Cinzel e IM Fell English (títulos) y Source Sans 3,
+  Atkinson Hyperlegible Next y Lora (texto), todas SIL OFL con su aviso de licencia en
+  `app/assets/licenses/`, e iconos **propios** dibujados en `app/assets/icons/` (licencia del
+  proyecto). Seis paletas con variante oscura y clara (`app/lib/core/theme/palettes.dart`, contraste
+  AA verificado por test; Obsidiana y brasa por defecto, Grafito sin naranja); el usuario elige
+  paleta, modo y fuentes en "Personalización". Ningún color fijo fuera de los tokens.
 - Descansos corto y largo los **pide** el jugador y los aprueba el DM; el nivel lo **concede** el DM
   y el jugador completa el asistente de subida (PG por tirada física; dotes siempre disponibles).
 
