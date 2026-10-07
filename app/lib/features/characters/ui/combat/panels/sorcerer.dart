@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../catalog/data/catalog_controllers.dart';
+import '../../../../catalog/data/models.dart' show RollTable;
+import '../../../../catalog/ui/roll_table_widgets.dart';
 import '../../../data/models.dart';
 import '../combat_support.dart';
 import '../resources_section.dart' show regularSlots;
@@ -60,10 +63,35 @@ class SorcererPanel extends ConsumerWidget {
     final remaining = remainingOf(points);
     final slots = regularSlots(c);
     final canConvert = panel.canEdit && points != null && points.max > 0;
+    final subclass = c.classes
+        .where((k) => k.classIndex == panel.classIndex)
+        .firstOrNull
+        ?.subclassIndex;
+    // Roll tables of the subclass from the content packs (Wild Magic Surge…).
+    final tables = subclass == null
+        ? const <RollTable>[]
+        : ref.watch(rollTablesProvider(subclass)).value ?? const <RollTable>[];
 
     return ClassPanelFrame(
       panel: panel,
       children: [
+        if (tables.isNotEmpty)
+          CombatCard(
+            title: 'Tablas de la subclase',
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                for (final table in tables)
+                  OutlinedButton.icon(
+                    key: Key('roll-table-open-${table.key}'),
+                    onPressed: () => showRollTableSheet(context, table),
+                    icon: const Icon(Icons.casino_outlined, size: 18),
+                    label: Text(table.name),
+                  ),
+              ],
+            ),
+          ),
         CombatCard(
           title: 'Puntos de hechicería',
           child: Column(

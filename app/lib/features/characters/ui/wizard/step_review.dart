@@ -117,6 +117,13 @@ class _ReviewStepState extends ConsumerState<ReviewStep> {
           if (state.allLanguages.isNotEmpty)
             'Idiomas: ${state.allLanguages.map(languageLabel).join(', ')}',
         ]),
+        section(WizardStep.personality, [
+          for (final kind in PersonalityKind.values)
+            if (state.personalityText(kind) != null)
+              '${kind.label}: ${state.personalityText(kind)!.replaceAll('\n', ' · ')}',
+          if (state.backgroundDetail.trim().isNotEmpty) state.backgroundDetail.trim(),
+          if (state.personalityWarning != null) 'Incompleta (puedes completarla en la hoja)',
+        ]),
         section(WizardStep.equipment, [
           if (state.allEquipment.isEmpty &&
               state.startingCopper == 0 &&

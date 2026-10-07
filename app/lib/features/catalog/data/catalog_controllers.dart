@@ -153,6 +153,13 @@ final equipmentCategoryProvider = FutureProvider.autoDispose.family<EquipmentCat
   retry: _noRetry,
 );
 
+/// Roll tables of the content packs; the argument keeps only the tables of
+/// that subclass (null: every table).
+final rollTablesProvider = FutureProvider.autoDispose.family<List<RollTable>, String?>(
+  (ref, subclass) => ref.watch(catalogRepositoryProvider).rollTables(subclass: subclass),
+  retry: _noRetry,
+);
+
 final conditionsProvider = FutureProvider.autoDispose<List<Condition>>(
   (ref) => ref.watch(catalogRepositoryProvider).conditions(),
   retry: _noRetry,

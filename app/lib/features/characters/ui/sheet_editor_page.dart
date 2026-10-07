@@ -101,6 +101,11 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
   late final _nameController = TextEditingController(text: _initial.name);
   late final _notesController = TextEditingController(text: _initial.notes);
   late final _backstoryController = TextEditingController(text: _initial.backstory);
+  late final _traitsController = TextEditingController(text: _initial.personalityTraits);
+  late final _idealsController = TextEditingController(text: _initial.ideals);
+  late final _bondsController = TextEditingController(text: _initial.bonds);
+  late final _flawsController = TextEditingController(text: _initial.flaws);
+  late final _backgroundDetailController = TextEditingController(text: _initial.backgroundDetail);
   late final _goldController = TextEditingController(text: copperToGoldText(_initial.copperPieces));
   late final Map<String, TextEditingController> _baseControllers = {
     for (final k in abilityKeys)
@@ -151,6 +156,11 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
     _nameController.dispose();
     _notesController.dispose();
     _backstoryController.dispose();
+    _traitsController.dispose();
+    _idealsController.dispose();
+    _bondsController.dispose();
+    _flawsController.dispose();
+    _backgroundDetailController.dispose();
     _goldController.dispose();
     for (final c in _baseControllers.values) {
       c.dispose();
@@ -385,9 +395,20 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
       overrides: overridesChanged ? overrides : null,
       notes: _notesController.text == c.notes ? null : _notesController.text,
       backstory: _backstoryController.text == c.backstory ? null : _backstoryController.text,
+      personalityTraits: _changed(_traitsController, c.personalityTraits),
+      ideals: _changed(_idealsController, c.ideals),
+      bonds: _changed(_bondsController, c.bonds),
+      flaws: _changed(_flawsController, c.flaws),
+      backgroundDetail: _changed(_backgroundDetailController, c.backgroundDetail),
       copperPieces: copper == c.copperPieces ? null : copper,
       clear: clear,
     );
+  }
+
+  /// Trimmed text of [controller], or null when it did not change.
+  static String? _changed(TextEditingController controller, String initial) {
+    final text = controller.text.trim();
+    return text == initial.trim() ? null : text;
   }
 
   static bool _sameSet(Set<String> a, Set<String> b) => a.length == b.length && a.containsAll(b);
@@ -538,6 +559,37 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
                   alignLabelWithHint: true,
                 ),
               ),
+              const SectionTitle('Personalidad'),
+              _personalityField(
+                const Key('editor-personality-traits'),
+                _traitsController,
+                'Rasgos de personalidad',
+                personalityTextMaxLength,
+              ),
+              _personalityField(
+                const Key('editor-ideals'),
+                _idealsController,
+                'Ideal',
+                personalityTextMaxLength,
+              ),
+              _personalityField(
+                const Key('editor-bonds'),
+                _bondsController,
+                'Vínculo',
+                personalityTextMaxLength,
+              ),
+              _personalityField(
+                const Key('editor-flaws'),
+                _flawsController,
+                'Defecto',
+                personalityTextMaxLength,
+              ),
+              _personalityField(
+                const Key('editor-background-detail'),
+                _backgroundDetailController,
+                'Detalle del trasfondo',
+                backgroundDetailMaxLength,
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -555,6 +607,20 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
       ),
     );
   }
+
+  Widget _personalityField(Key key, TextEditingController controller, String label, int max) =>
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: TextFormField(
+          key: key,
+          controller: controller,
+          minLines: 1,
+          maxLines: 5,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(labelText: label, alignLabelWithHint: true),
+          validator: (v) => (v ?? '').trim().length > max ? 'Como máximo $max caracteres' : null,
+        ),
+      );
 
   Widget _buildRaceSection() {
     final races = ref.watch(racesProvider);

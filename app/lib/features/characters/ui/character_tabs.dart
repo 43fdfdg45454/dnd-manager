@@ -872,11 +872,50 @@ class NotesTab extends StatelessWidget {
       children: [
         FactRow('Trasfondo', background),
         FactRow('Alineamiento', c.alignment == null ? null : alignmentLabel(c.alignment!)),
+        const SectionTitle('Personalidad'),
+        if (!c.hasPersonality)
+          const Text('Sin personalidad.', key: Key('sheet-personality-empty'))
+        else
+          Column(
+            key: const Key('sheet-personality'),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _PersonalityRow('Rasgos de personalidad', c.personalityTraits),
+              _PersonalityRow('Ideal', c.ideals),
+              _PersonalityRow('Vínculo', c.bonds),
+              _PersonalityRow('Defecto', c.flaws),
+              _PersonalityRow('Detalle del trasfondo', c.backgroundDetail),
+            ],
+          ),
         const SectionTitle('Notas'),
         c.notes.trim().isEmpty ? const Text('Sin notas.') : SelectableText(c.notes),
         const SectionTitle('Historia del personaje'),
         c.backstory.trim().isEmpty ? const Text('Sin historia.') : SelectableText(c.backstory),
       ],
+    );
+  }
+}
+
+/// A labelled personality text; nothing when [text] is empty.
+class _PersonalityRow extends StatelessWidget {
+  const _PersonalityRow(this.label, this.text);
+
+  final String label;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    if (text.trim().isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: theme.textTheme.labelMedium),
+          SelectableText(text.trim()),
+        ],
+      ),
     );
   }
 }

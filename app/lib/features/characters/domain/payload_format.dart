@@ -19,6 +19,11 @@ const _fieldLabels = <String, String>{
   'overrides': 'Valores modificados',
   'notes': 'Notas',
   'backstory': 'Trasfondo (historia)',
+  'personalityTraits': 'Rasgos de personalidad',
+  'ideals': 'Ideal',
+  'bonds': 'Vínculo',
+  'flaws': 'Defecto',
+  'backgroundDetail': 'Detalle del trasfondo',
   'copperPieces': 'Dinero',
 };
 

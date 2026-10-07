@@ -1071,6 +1071,11 @@ class CharacterDetail {
     this.hitDiceUsed = const {},
     this.notes = '',
     this.backstory = '',
+    this.personalityTraits = '',
+    this.ideals = '',
+    this.bonds = '',
+    this.flaws = '',
+    this.backgroundDetail = '',
     this.portraitUrl,
     this.classes = const [],
     this.proficiencies = const [],
@@ -1129,6 +1134,11 @@ class CharacterDetail {
       hitDiceUsed: {for (final e in used.entries) e.key: _int(e.value) ?? 0},
       notes: _str(json['notes']),
       backstory: _str(json['backstory']),
+      personalityTraits: _str(json['personalityTraits']),
+      ideals: _str(json['ideals']),
+      bonds: _str(json['bonds']),
+      flaws: _str(json['flaws']),
+      backgroundDetail: _str(json['backgroundDetail']),
       portraitUrl: _strOrNull(json['portraitUrl']),
       classes: _objects(json['classes'], CharacterClass.fromJson),
       proficiencies: _objects(json['proficiencies'], CharacterProficiency.fromJson),
@@ -1188,6 +1198,18 @@ class CharacterDetail {
   final Map<String, int> hitDiceUsed;
   final String notes;
   final String backstory;
+
+  /// Personality of the background (phase 22): traits (one per line), ideal,
+  /// bond, flaw and the result of the optional table ("Especialidad: …").
+  final String personalityTraits;
+  final String ideals;
+  final String bonds;
+  final String flaws;
+  final String backgroundDetail;
+
+  /// True when any personality field has text.
+  bool get hasPersonality =>
+      [personalityTraits, ideals, bonds, flaws, backgroundDetail].any((t) => t.trim().isNotEmpty);
   final String? portraitUrl;
   final List<CharacterClass> classes;
   final List<CharacterProficiency> proficiencies;
@@ -1341,6 +1363,11 @@ class SheetPatch {
     this.overrides,
     this.notes,
     this.backstory,
+    this.personalityTraits,
+    this.ideals,
+    this.bonds,
+    this.flaws,
+    this.backgroundDetail,
     this.copperPieces,
     this.clear = const {},
   });
@@ -1359,6 +1386,11 @@ class SheetPatch {
   final List<CharacterOverride>? overrides;
   final String? notes;
   final String? backstory;
+  final String? personalityTraits;
+  final String? ideals;
+  final String? bonds;
+  final String? flaws;
+  final String? backgroundDetail;
   final int? copperPieces;
 
   /// Nullable keys to send as `null`: raceIndex, subraceIndex, backgroundIndex, alignment.
@@ -1381,6 +1413,11 @@ class SheetPatch {
     if (overrides != null) 'overrides': [for (final o in overrides!) o.toPatchJson()],
     'notes': ?notes,
     'backstory': ?backstory,
+    'personalityTraits': ?personalityTraits,
+    'ideals': ?ideals,
+    'bonds': ?bonds,
+    'flaws': ?flaws,
+    'backgroundDetail': ?backgroundDetail,
     'copperPieces': ?copperPieces,
     for (final key in clear) key: null,
   };

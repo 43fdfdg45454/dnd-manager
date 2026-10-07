@@ -95,11 +95,16 @@ class SelectionTile extends StatelessWidget {
     this.caption,
     required this.state,
     this.onTap,
+    this.wrap = false,
   });
 
   final String label;
   final String? caption;
   final SelectionState state;
+
+  /// Shows the whole label and caption over as many lines as they need (a
+  /// one-column list of long texts) instead of a fixed-height grid tile.
+  final bool wrap;
 
   /// Null when the tile cannot be changed (locked or blocked by the limit).
   final VoidCallback? onTap;
@@ -130,7 +135,7 @@ class SelectionTile extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            padding: EdgeInsets.symmetric(horizontal: 10, vertical: wrap ? 10 : 0),
             child: Row(
               children: [
                 Icon(icon, size: 20, color: picked ? accent : tokens.boneMuted),
@@ -142,8 +147,8 @@ class SelectionTile extends StatelessWidget {
                     children: [
                       Text(
                         label,
-                        maxLines: caption == null ? 2 : 1,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: wrap ? null : (caption == null ? 2 : 1),
+                        overflow: wrap ? null : TextOverflow.ellipsis,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: picked ? FontWeight.w600 : null,
                         ),
@@ -151,8 +156,8 @@ class SelectionTile extends StatelessWidget {
                       if (caption != null)
                         Text(
                           caption!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: wrap ? null : 1,
+                          overflow: wrap ? null : TextOverflow.ellipsis,
                           style: theme.textTheme.labelSmall?.copyWith(color: tokens.boneMuted),
                         ),
                     ],

@@ -12,6 +12,7 @@ import 'step_abilities.dart';
 import 'step_basics.dart';
 import 'step_equipment.dart';
 import 'step_origin.dart';
+import 'step_personality.dart';
 import 'step_proficiencies.dart';
 import 'step_review.dart';
 import 'step_spells.dart';
@@ -24,6 +25,7 @@ extension WizardStepInfo on WizardStep {
     WizardStep.classChoice => 'Clase',
     WizardStep.abilities => 'Características',
     WizardStep.background => 'Trasfondo',
+    WizardStep.personality => 'Personalidad',
     WizardStep.origin => 'Elecciones de raza y trasfondo',
     WizardStep.equipment => 'Equipo',
     WizardStep.spells => 'Hechizos',
@@ -36,6 +38,7 @@ extension WizardStepInfo on WizardStep {
     WizardStep.classChoice => AppIcons.sword,
     WizardStep.abilities => AppIcons.d20,
     WizardStep.background => AppIcons.book,
+    WizardStep.personality => AppIcons.quill,
     WizardStep.origin => AppIcons.hood,
     WizardStep.equipment => AppIcons.backpack,
     WizardStep.spells => AppIcons.spellbook,
@@ -80,9 +83,18 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
     final before = ref.read(characterWizardControllerProvider(_args));
     final step = before.step;
     final validation = before.validate(step);
+    // The personality is optional: leaving it incomplete only warns.
+    final warning = before.currentStep == WizardStep.personality ? before.personalityWarning : null;
     setState(() => _advancing = true);
     final error = await _controller.advance();
     if (!mounted) return;
+    if (error == null && warning != null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(key: const Key('personality-next-warning'), content: Text(warning)),
+        );
+    }
     setState(() {
       _advancing = false;
       _attemptedStep = error == null ? null : step;
@@ -279,6 +291,7 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
     WizardStep.classChoice => ClassStep(args: _args),
     WizardStep.abilities => AbilitiesStep(args: _args),
     WizardStep.background => BackgroundStep(args: _args),
+    WizardStep.personality => PersonalityStep(args: _args),
     WizardStep.origin => OriginStep(args: _args),
     WizardStep.equipment => EquipmentStep(args: _args),
     WizardStep.spells => SpellsStep(args: _args),

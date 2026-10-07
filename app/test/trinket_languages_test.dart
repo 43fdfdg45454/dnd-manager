@@ -91,7 +91,14 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _next(WidgetTester tester) => _tap(tester, find.byKey(const Key('wizard-next')));
+/// Taps "Siguiente"; the optional personality step (phase 22, tested in
+/// personality_roll_tables_test.dart) is passed through.
+Future<void> _next(WidgetTester tester) async {
+  await _tap(tester, find.byKey(const Key('wizard-next')));
+  if (find.byKey(const Key('step-personality')).evaluate().isNotEmpty) {
+    await _tap(tester, find.byKey(const Key('wizard-next')));
+  }
+}
 
 /// Name, race, fighter and abilities; stops on the background step.
 Future<_Setup> _toBackground(

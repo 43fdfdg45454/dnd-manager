@@ -1039,6 +1039,8 @@ class Background {
     this.startingEquipment,
     this.source,
     this.choices = const OriginChoiceSpec(),
+    this.personality,
+    this.optionalTables = const [],
   });
 
   factory Background.fromJson(Map<String, dynamic> json) => Background(
@@ -1051,6 +1053,8 @@ class Background {
     startingEquipment: _map(json['startingEquipment']).let(StartingEquipment.fromJson),
     source: _strOrNull(json['source']),
     choices: OriginChoiceSpec.fromJson(json['choices']),
+    personality: _map(json['personality']).let(BackgroundPersonality.fromJson),
+    optionalTables: _objects(json['optionalTables'], BackgroundTable.fromJson),
   );
 
   final String index;
@@ -1061,11 +1065,68 @@ class Background {
 
   /// Decisions the background asks for at creation (phase 19).
   final OriginChoiceSpec choices;
+
+  /// Tables of traits, ideals, bonds and flaws (phase 22); null without them.
+  final BackgroundPersonality? personality;
+
+  /// Optional tables (specialty, scheme…); the player keeps one entry.
+  final List<BackgroundTable> optionalTables;
   final String? featureName;
   final List<String> featureDescription;
   final List<String> skillProficiencies;
   final String? startingEquipmentText;
   final StartingEquipment? startingEquipment;
+}
+
+/// An ideal of a background table with the alignment it points to.
+class BackgroundIdeal {
+  const BackgroundIdeal({required this.text, this.alignment});
+
+  factory BackgroundIdeal.fromJson(Map<String, dynamic> json) =>
+      BackgroundIdeal(text: _str(json['text']), alignment: _strOrNull(json['alignment']));
+
+  final String text;
+
+  /// "Lawful", "Any"… (SRD) or free text of a content pack; null without one.
+  final String? alignment;
+}
+
+/// Personality tables of a background: the die of each one is the number of
+/// its entries (d8 for eight traits).
+class BackgroundPersonality {
+  const BackgroundPersonality({
+    this.traits = const [],
+    this.ideals = const [],
+    this.bonds = const [],
+    this.flaws = const [],
+  });
+
+  factory BackgroundPersonality.fromJson(Map<String, dynamic> json) => BackgroundPersonality(
+    traits: _strList(json['traits']),
+    ideals: _objects(json['ideals'], BackgroundIdeal.fromJson),
+    bonds: _strList(json['bonds']),
+    flaws: _strList(json['flaws']),
+  );
+
+  final List<String> traits;
+  final List<BackgroundIdeal> ideals;
+  final List<String> bonds;
+  final List<String> flaws;
+}
+
+/// Optional table of a background ("Especialidad"); one entry is kept.
+class BackgroundTable {
+  const BackgroundTable({required this.key, required this.name, this.entries = const []});
+
+  factory BackgroundTable.fromJson(Map<String, dynamic> json) => BackgroundTable(
+    key: _str(json['key']),
+    name: _str(json['name'], _str(json['key'])),
+    entries: _strList(json['entries']),
+  );
+
+  final String key;
+  final String name;
+  final List<String> entries;
 }
 
 // ---------------------------------------------------------------------------
@@ -1253,4 +1314,76 @@ class Trinket {
   final String index;
   final String name;
   final String description;
+}
+
+// ---------------------------------------------------------------------------
+// Roll tables (phase 22)
+// ---------------------------------------------------------------------------
+
+/// One range of a [RollTable]: the results [from]..[to] give [text].
+class RollTableEntry {
+  const RollTableEntry({required this.from, required this.to, required this.text});
+
+  factory RollTableEntry.fromJson(Map<String, dynamic> json) {
+    final from = _int(json['from']) ?? 0;
+    return RollTableEntry(from: from, to: _int(json['to']) ?? from, text: _str(json['text']));
+  }
+
+  final int from;
+  final int to;
+  final String text;
+
+  /// "7" or "7–12".
+  String get range => from == to ? '$from' : '$from–$to';
+}
+
+/// Generic roll table of the content packs (the Wild Magic Surge of a
+/// sorcerer subclass, d100…).
+class RollTable {
+  const RollTable({
+    required this.key,
+    required this.name,
+    required this.dice,
+    this.classIndex,
+    this.subclassIndex,
+    this.source,
+    this.entries = const [],
+  });
+
+  factory RollTable.fromJson(Map<String, dynamic> json) => RollTable(
+    key: _str(json['key']),
+    name: _str(json['name'], _str(json['key'])),
+    dice: _str(json['dice'], 'd100'),
+    classIndex: _strOrNull(json['classIndex']),
+    subclassIndex: _strOrNull(json['subclassIndex']),
+    source: _strOrNull(json['source']),
+    entries: _objects(json['entries'], RollTableEntry.fromJson),
+  );
+
+  final String key;
+  final String name;
+
+  /// "d100", "d20"…
+  final String dice;
+  final String? classIndex;
+  final String? subclassIndex;
+  final String? source;
+  final List<RollTableEntry> entries;
+
+  /// Faces of [dice] ("d100" → 100); 0 when it cannot be read.
+  int get faces => int.tryParse(dice.toLowerCase().replaceFirst('d', '')) ?? 0;
+
+  /// Reads a typed result: a number 1..[faces]; on a d100 "00" (and "0") is 100.
+  /// Null when it is not a valid result.
+  int? parseRoll(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty || int.tryParse(trimmed) == null) return null;
+    var value = int.parse(trimmed);
+    if (faces == 100 && value == 0) value = 100;
+    return value >= 1 && value <= faces ? value : null;
+  }
+
+  /// Entry for the result [roll], or null.
+  RollTableEntry? entryFor(int roll) =>
+      entries.where((e) => roll >= e.from && roll <= e.to).firstOrNull;
 }

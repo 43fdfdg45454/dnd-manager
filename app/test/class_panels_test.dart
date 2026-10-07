@@ -324,6 +324,56 @@ void main() {
     expect(repo.resourceSpends.last, (id: 's1', amount: 1));
   });
 
+  testWidgets('hechicero: la tabla de su subclase se abre y busca el resultado (fase 22)', (
+    tester,
+  ) async {
+    final repo = FakeCharactersRepository(
+      characters: [
+        makeCharacterJson(
+          status: 'Active',
+          classes: [
+            {
+              'classIndex': 'sorcerer',
+              'className': 'sorcerer',
+              'subclassIndex': 'pack-chispa',
+              'level': 1,
+            },
+          ],
+          combat: makeCombatJson(),
+        ),
+      ],
+    );
+    final catalog = FakeCatalogRepository(
+      rollTableList: const [
+        RollTable(
+          key: 'surge-example',
+          name: 'Oleada de magia salvaje',
+          dice: 'd100',
+          classIndex: 'sorcerer',
+          subclassIndex: 'pack-chispa',
+          entries: [
+            RollTableEntry(from: 1, to: 50, text: 'Efecto ficticio bajo.'),
+            RollTableEntry(from: 51, to: 100, text: 'Efecto ficticio alto.'),
+          ],
+        ),
+        RollTable(key: 'otra', name: 'Otra subclase', dice: 'd4', subclassIndex: 'otra'),
+      ],
+    );
+    await _pump(tester, characters: repo, catalog: catalog);
+    expect(find.byKey(const Key('roll-table-open-otra')), findsNothing);
+
+    await _tap(tester, 'roll-table-open-surge-example');
+    await tester.enterText(find.byKey(const Key('roll-table-input')), '00');
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('roll-table-result')),
+        matching: find.text('Efecto ficticio alto.'),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('brujo: los espacios de pacto se gastan y lista invocaciones de los rasgos', (
     tester,
   ) async {

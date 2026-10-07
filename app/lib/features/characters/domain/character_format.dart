@@ -83,6 +83,25 @@ const alignments = <String, String>{
 
 String alignmentLabel(String alignment) => alignments[alignment] ?? alignment;
 
+/// Longest text of a personality field (server limit).
+const personalityTextMaxLength = 1000;
+
+/// Longest background detail ("Especialidad: …", server limit).
+const backgroundDetailMaxLength = 200;
+
+/// Spanish label of the alignment of a background ideal ("Lawful" -> "Legal",
+/// "Any" -> "Cualquiera"); full alignments and unknown texts as [alignmentLabel].
+String idealAlignmentLabel(String alignment) =>
+    const {
+      'Lawful': 'Legal',
+      'Chaotic': 'Caótico',
+      'Good': 'Bueno',
+      'Evil': 'Malvado',
+      'Neutral': 'Neutral',
+      'Any': 'Cualquiera',
+    }[alignment] ??
+    alignmentLabel(alignment);
+
 /// Spanish label of an override field ("armorClass", "ability.str", ...).
 String overrideFieldLabel(String field) {
   const fixed = {

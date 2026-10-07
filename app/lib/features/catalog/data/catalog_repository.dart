@@ -106,6 +106,14 @@ class CatalogRepository {
   /// Trinket table of the content packs, ordered by roll (empty with the SRD only).
   Future<List<Trinket>> trinkets() => _list('trinkets', Trinket.fromJson);
 
+  /// Roll tables of the content packs (empty with the SRD only); [subclass]
+  /// keeps only the tables of that subclass.
+  Future<List<RollTable>> rollTables({String? subclass}) async => (await _client.getCached(
+    '$_base/roll-tables',
+    query: {'subclass': subclass},
+    parse: parseList(RollTable.fromJson),
+  )).data;
+
   Future<Feature> feature(String index) =>
       _one('features/${Uri.encodeComponent(index)}', Feature.fromJson);
 }

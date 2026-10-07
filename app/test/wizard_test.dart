@@ -234,7 +234,14 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _next(WidgetTester tester) => _tap(tester, find.byKey(const Key('wizard-next')));
+/// Taps "Siguiente"; the optional personality step (phase 22, tested in
+/// personality_roll_tables_test.dart) is passed through.
+Future<void> _next(WidgetTester tester) async {
+  await _tap(tester, find.byKey(const Key('wizard-next')));
+  if (find.byKey(const Key('step-personality')).evaluate().isNotEmpty) {
+    await _tap(tester, find.byKey(const Key('wizard-next')));
+  }
+}
 
 Future<void> _name(WidgetTester tester, [String name = 'Merlina']) async {
   await tester.enterText(find.byKey(const Key('wizard-name')), name);
@@ -599,14 +606,14 @@ void main() {
       await _toBackground(tester, classIndex: 'fighter');
 
       expect(find.byKey(const Key('wizard-dot-spells')), findsNothing);
-      expect(find.text('Paso 5 de 7 · Trasfondo'), findsOneWidget);
+      expect(find.text('Paso 5 de 8 · Trasfondo'), findsOneWidget);
     });
 
     testWidgets('aparece para un mago y limita trucos y hechizos al nivel 1', (tester) async {
       await _pump(tester);
       await _toBackground(tester);
       expect(find.byKey(const Key('wizard-dot-spells')), findsOneWidget);
-      expect(find.text('Paso 5 de 8 · Trasfondo'), findsOneWidget);
+      expect(find.text('Paso 5 de 9 · Trasfondo'), findsOneWidget);
       await _tap(tester, find.byKey(const Key('skill-arcana')));
       await _tap(tester, find.byKey(const Key('skill-history')));
       await _next(tester);
@@ -719,9 +726,7 @@ void main() {
       expect(find.byKey(const Key('step-review')), findsOneWidget);
     }
 
-    testWidgets('un DM crea un PNJ por defecto: la revisión dice PNJ, nunca "Yo"', (
-      tester,
-    ) async {
+    testWidgets('un DM crea un PNJ por defecto: la revisión dice PNJ, nunca "Yo"', (tester) async {
       final setup = await _pump(tester, role: CampaignRole.dm);
       await toReview(tester);
 
@@ -1017,9 +1022,8 @@ void main() {
       expect(find.text('Usuario Demo'), findsNothing);
       await _tap(tester, find.text('Beto').last);
 
-      final state = ProviderScope.containerOf(
-        tester.element(find.byKey(const Key('step-name'))),
-      ).read(characterWizardControllerProvider(_args));
+      final state = ProviderScope.containerOf(tester.element(find.byKey(const Key('step-name'))))
+          .read(characterWizardControllerProvider(_args));
       expect(state.owner, (userId: 'p2'));
     });
 

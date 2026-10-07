@@ -84,7 +84,14 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _next(WidgetTester tester) => _tap(tester, find.byKey(const Key('wizard-next')));
+/// Taps "Siguiente"; the optional personality step (phase 22, tested in
+/// personality_roll_tables_test.dart) is passed through.
+Future<void> _next(WidgetTester tester) async {
+  await _tap(tester, find.byKey(const Key('wizard-next')));
+  if (find.byKey(const Key('step-personality')).evaluate().isNotEmpty) {
+    await _tap(tester, find.byKey(const Key('wizard-next')));
+  }
+}
 
 const _args = (campaignId: 'c1', ownerUserId: null);
 
@@ -135,7 +142,7 @@ void main() {
       await _next(tester);
 
       expect(find.byKey(const Key('step-origin')), findsOneWidget);
-      expect(find.text('Paso 6 de 8 · Elecciones de raza y trasfondo'), findsOneWidget);
+      expect(find.text('Paso 7 de 9 · Elecciones de raza y trasfondo'), findsOneWidget);
       // The draft carries the identity needed to plan the choices.
       expect(characters.created.single.name, 'Merlina');
       final early = characters.patches.single;

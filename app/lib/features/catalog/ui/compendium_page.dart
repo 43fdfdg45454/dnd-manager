@@ -16,6 +16,7 @@ import '../data/models.dart';
 import '../domain/catalog_format.dart';
 import 'condition_sheet.dart';
 import 'detail_widgets.dart';
+import 'roll_table_widgets.dart';
 
 const searchDebounce = Duration(milliseconds: 300);
 
@@ -61,7 +62,7 @@ class _CompendiumPageState extends ConsumerState<CompendiumPage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 5,
+      length: 6,
       child: Scaffold(
         appBar: AppBar(
           title: TextField(
@@ -92,6 +93,7 @@ class _CompendiumPageState extends ConsumerState<CompendiumPage> {
               Tab(key: Key('tab-classes'), text: 'Clases'),
               Tab(key: Key('tab-races'), text: 'Razas'),
               Tab(key: Key('tab-conditions'), text: 'Condiciones'),
+              Tab(key: Key('tab-tables'), text: 'Tablas'),
             ],
           ),
         ),
@@ -106,6 +108,7 @@ class _CompendiumPageState extends ConsumerState<CompendiumPage> {
                   _KeepAlive(child: _ClassesTab()),
                   _KeepAlive(child: _RacesTab()),
                   _KeepAlive(child: _ConditionsTab()),
+                  _KeepAlive(child: _TablesTab()),
                 ],
               ),
             ),
@@ -531,6 +534,35 @@ class _ConditionsTab extends ConsumerWidget {
         title: Text(c.name),
         trailing: const Icon(Icons.info_outline),
         onTap: () => showConditionSheet(context, c),
+      ),
+    );
+  }
+}
+
+/// Roll tables of the content packs (wild magic surge…); empty with the SRD only.
+class _TablesTab extends ConsumerWidget {
+  const _TablesTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return _LocalList<RollTable>(
+      value: ref.watch(rollTablesProvider(null)),
+      onRetry: () => ref.invalidate(rollTablesProvider(null)),
+      nameOf: (t) => t.name,
+      emptyText: 'No hay tablas de tirada. Llegan con los paquetes de contenido.',
+      itemBuilder: (context, t) => ListTile(
+        key: Key('roll-table-${t.key}'),
+        title: NameWithSource(t.name, t.source),
+        subtitle: Text(
+          [
+            '1${t.dice}',
+            '${t.entries.length} ${t.entries.length == 1 ? 'entrada' : 'entradas'}',
+          ].join(' · '),
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () =>
+            Navigator.of(context)
+                .push(MaterialPageRoute<void>(builder: (_) => RollTablePage(table: t))),
       ),
     );
   }

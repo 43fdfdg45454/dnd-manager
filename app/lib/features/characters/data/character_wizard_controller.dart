@@ -9,6 +9,7 @@ import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models.dart'
     show
         Background,
+        BackgroundTable,
         ClassDetail,
         ClassLevel,
         EquipmentCategoryItem,
@@ -61,6 +62,7 @@ enum WizardStep {
   classChoice,
   abilities,
   background,
+  personality,
   origin,
   equipment,
   spells,
@@ -75,6 +77,28 @@ const wizardClassIndex = 'wizard';
 
 /// Spells a level 1 wizard copies into the spellbook (PHB).
 const wizardSpellbookSize = 6;
+
+/// Personality tables of a background: two traits, one ideal, one bond and
+/// one flaw (PHB, chapter 4).
+enum PersonalityKind {
+  traits('Rasgos de personalidad', 2),
+  ideal('Ideal', 1),
+  bond('Vínculo', 1),
+  flaw('Defecto', 1);
+
+  const PersonalityKind(this.label, this.slots);
+
+  final String label;
+
+  /// Entries the character keeps.
+  final int slots;
+}
+
+/// Random source of the personality rolls (overridden in tests).
+final wizardRandomProvider = Provider<math.Random>((ref) => math.Random());
+
+/// Text kept from an optional background table: "Especialidad: Bibliotecario".
+String backgroundTableDetail(BackgroundTable table, String entry) => '${table.name}: $entry';
 
 /// What the player answered to one origin choice: the picked indexes (or
 /// texts), or a feat with the ability it raises.
@@ -185,6 +209,13 @@ class WizardState {
     this.trinketTable,
     this.trinketRoll,
     this.trinketText = '',
+    this.personality = const {
+      PersonalityKind.traits: ['', ''],
+      PersonalityKind.ideal: [''],
+      PersonalityKind.bond: [''],
+      PersonalityKind.flaw: [''],
+    },
+    this.backgroundDetail = '',
   });
 
   /// Index in [steps].
@@ -275,6 +306,12 @@ class WizardState {
 
   /// Description of the trinket when the table has no entry for the roll.
   final String trinketText;
+
+  /// Texts of the personality by kind, one per slot ([PersonalityKind.slots]).
+  final Map<PersonalityKind, List<String>> personality;
+
+  /// Result of the optional table of the background, or free text.
+  final String backgroundDetail;
 
   List<CharacterSpell> get spells => [...cantrips, ...leveledSpells];
 
@@ -524,6 +561,55 @@ class WizardState {
       ? 'La tirada de baratija va de $trinketRollMin a $trinketRollMax'
       : null;
 
+  // -- Derived: personality ----------------------------------------------------------
+
+  /// Slots of [kind], padded to [PersonalityKind.slots].
+  List<String> personalityOf(PersonalityKind kind) {
+    final values = [...?personality[kind]];
+    while (values.length < kind.slots) {
+      values.add('');
+    }
+    return values.take(kind.slots).toList();
+  }
+
+  /// Entries of the table of [kind] in the background (empty without one).
+  List<String> personalityEntries(PersonalityKind kind) {
+    final tables = background?.personality;
+    if (tables == null) return const [];
+    return switch (kind) {
+      PersonalityKind.traits => tables.traits,
+      PersonalityKind.ideal => [for (final i in tables.ideals) i.text],
+      PersonalityKind.bond => tables.bonds,
+      PersonalityKind.flaw => tables.flaws,
+    };
+  }
+
+  /// Spanish warning listing what is still empty in the personality, or null.
+  /// It does not block the wizard.
+  String? get personalityWarning {
+    final missing = <String>[];
+    final traits = personalityOf(PersonalityKind.traits).where((t) => t.trim().isEmpty).length;
+    if (traits == 2) missing.add('los rasgos');
+    if (traits == 1) missing.add('un rasgo');
+    if (personalityOf(PersonalityKind.ideal).first.trim().isEmpty) missing.add('el ideal');
+    if (personalityOf(PersonalityKind.bond).first.trim().isEmpty) missing.add('el vínculo');
+    if (personalityOf(PersonalityKind.flaw).first.trim().isEmpty) missing.add('el defecto');
+    if ((background?.optionalTables.isNotEmpty ?? false) && backgroundDetail.trim().isEmpty) {
+      missing.add('el detalle del trasfondo');
+    }
+    if (missing.isEmpty) return null;
+    final list = missing.length == 1
+        ? missing.single
+        : '${missing.take(missing.length - 1).join(', ')} y ${missing.last}';
+    return 'Personalidad incompleta: falta $list. Puedes completarla más tarde en la hoja.';
+  }
+
+  /// Text sent for [kind]: the non-empty slots, one per line (null when empty).
+  String? personalityText(PersonalityKind kind) {
+    final text = personalityOf(kind).map((t) => t.trim()).where((t) => t.isNotEmpty).join('\n');
+    return text.isEmpty ? null : text;
+  }
+
   /// Skills granted by the background, as skill indexes.
   Set<String> get backgroundSkills => {
     for (final s in background?.skillProficiencies ?? const <String>[]) skillIndexOf(s),
@@ -719,6 +805,8 @@ class WizardState {
     Object? trinketTable = _unset,
     Object? trinketRoll = _unset,
     String? trinketText,
+    Map<PersonalityKind, List<String>>? personality,
+    String? backgroundDetail,
   }) => WizardState(
     step: step ?? this.step,
     name: name ?? this.name,
@@ -763,6 +851,8 @@ class WizardState {
         : trinketTable as List<Trinket>?,
     trinketRoll: identical(trinketRoll, _unset) ? this.trinketRoll : trinketRoll as int?,
     trinketText: trinketText ?? this.trinketText,
+    personality: personality ?? this.personality,
+    backgroundDetail: backgroundDetail ?? this.backgroundDetail,
   );
 
   // -- Validation ----------------------------------------------------------------
@@ -800,6 +890,17 @@ class WizardState {
         if (languages.length > m || distributeLanguages(languages.toList()) == null) {
           if (m == 0) return 'Tu raza y trasfondo no te dan idiomas adicionales';
           return m == 1 ? 'Como máximo 1 idioma a elegir' : 'Como máximo $m idiomas a elegir';
+        }
+        return null;
+      case WizardStep.personality:
+        // Optional: "Siguiente" only warns (see [personalityWarning]).
+        for (final kind in PersonalityKind.values) {
+          if ((personalityText(kind)?.length ?? 0) > personalityTextMaxLength) {
+            return '${kind.label}: como máximo $personalityTextMaxLength caracteres';
+          }
+        }
+        if (backgroundDetail.trim().length > backgroundDetailMaxLength) {
+          return 'El detalle del trasfondo admite como máximo $backgroundDetailMaxLength caracteres';
         }
         return null;
       case WizardStep.origin:
@@ -910,6 +1011,11 @@ class WizardState {
       ],
       overrides: const [],
       notes: notes.trim().isEmpty ? null : notes.trim(),
+      personalityTraits: personalityText(PersonalityKind.traits),
+      ideals: personalityText(PersonalityKind.ideal),
+      bonds: personalityText(PersonalityKind.bond),
+      flaws: personalityText(PersonalityKind.flaw),
+      backgroundDetail: backgroundDetail.trim().isEmpty ? null : backgroundDetail.trim(),
       copperPieces: startingCopper > 0 ? startingCopper : null,
       // Going back to change the race may leave an earlier draft with a subrace
       // or background the character no longer has.
@@ -1055,7 +1161,9 @@ class CharacterWizardController extends Notifier<WizardState> {
         s.equipment.isNotEmpty ||
         s.equipmentOptions.isNotEmpty ||
         s.notes.isNotEmpty ||
-        s.alignment != null;
+        s.alignment != null ||
+        s.personality.values.any((v) => v.any((t) => t.isNotEmpty)) ||
+        s.backgroundDetail.isNotEmpty;
   }
 
   // -- Step 1: name --------------------------------------------------------------
@@ -1245,7 +1353,69 @@ class CharacterWizardController extends Notifier<WizardState> {
     state = state.copyWith(languages: languages);
   }
 
-  // -- Step 6: equipment ---------------------------------------------------------
+  // -- Step 6: personality -------------------------------------------------------
+
+  void _setPersonality(PersonalityKind kind, List<String> values) =>
+      state = state.copyWith(personality: {...state.personality, kind: values});
+
+  /// Writes the text of slot [slot] of [kind].
+  void setPersonalityText(PersonalityKind kind, int slot, String text) {
+    final values = state.personalityOf(kind);
+    if (slot < 0 || slot >= values.length) return;
+    values[slot] = text;
+    _setPersonality(kind, values);
+  }
+
+  /// Picks or unpicks [entry] of the table of [kind]: it goes to the first
+  /// empty slot (with one slot, it replaces the text); with every slot taken
+  /// it is ignored.
+  void togglePersonalityEntry(PersonalityKind kind, String entry) {
+    final values = state.personalityOf(kind);
+    final at = values.indexOf(entry);
+    if (at >= 0) {
+      values[at] = '';
+    } else if (kind.slots == 1) {
+      values[0] = entry;
+    } else {
+      final empty = values.indexWhere((v) => v.trim().isEmpty);
+      if (empty < 0) return;
+      values[empty] = entry;
+    }
+    _setPersonality(kind, values);
+  }
+
+  /// Rolls the die of the table of [kind] (as many entries as it has): every
+  /// slot gets a different random entry.
+  void rollPersonality(PersonalityKind kind) {
+    final entries = state.personalityEntries(kind);
+    if (entries.isEmpty) return;
+    final random = ref.read(wizardRandomProvider);
+    final pool = [...entries];
+    final values = <String>[];
+    for (var i = 0; i < kind.slots && pool.isNotEmpty; i++) {
+      values.add(pool.removeAt(random.nextInt(pool.length)));
+    }
+    _setPersonality(kind, values);
+  }
+
+  void setBackgroundDetail(String text) => state = state.copyWith(backgroundDetail: text);
+
+  /// Picks or unpicks [entry] of the optional [table] as the background detail.
+  void toggleBackgroundTableEntry(BackgroundTable table, String entry) {
+    final detail = backgroundTableDetail(table, entry);
+    setBackgroundDetail(state.backgroundDetail == detail ? '' : detail);
+  }
+
+  /// Rolls the optional [table] (its die is the number of entries).
+  void rollBackgroundTable(BackgroundTable table) {
+    if (table.entries.isEmpty) return;
+    final random = ref.read(wizardRandomProvider);
+    setBackgroundDetail(
+      backgroundTableDetail(table, table.entries[random.nextInt(table.entries.length)]),
+    );
+  }
+
+  // -- Step 7: equipment ---------------------------------------------------------
 
   void setEquipmentMode(EquipmentMode mode) {
     if (mode == EquipmentMode.gold && state.startingGold == null) return;
@@ -1339,7 +1509,7 @@ class CharacterWizardController extends Notifier<WizardState> {
   /// "Sin baratija".
   void clearTrinket() => state = state.copyWith(trinketRoll: null, trinketText: '');
 
-  // -- Step 7: spells ------------------------------------------------------------
+  // -- Step 8: spells ------------------------------------------------------------
 
   void addSpells(List<CharacterSpell> spells) {
     final cantrips = [...state.cantrips];
