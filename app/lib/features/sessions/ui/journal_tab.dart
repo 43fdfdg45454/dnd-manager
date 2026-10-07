@@ -114,7 +114,8 @@ class _JournalEntryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final heading = '${sessionHeading(entry.number, entry.title)} · ${formatDate(entry.localStart)}';
+    final heading =
+        '${sessionHeading(entry.number, entry.title)} · ${formatDate(entry.localStart)}';
     return Card(
       key: Key('journal-entry-${entry.id}'),
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

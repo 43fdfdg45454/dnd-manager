@@ -105,7 +105,12 @@ enum ReminderState {
 
 /// A reminder email scheduled for a session (only DMs receive them).
 class SessionReminder {
-  const SessionReminder({required this.offsetMinutes, required this.sendAt, this.sentAt, this.failedAt});
+  const SessionReminder({
+    required this.offsetMinutes,
+    required this.sendAt,
+    this.sentAt,
+    this.failedAt,
+  });
 
   factory SessionReminder.fromJson(Map<String, dynamic> json) => SessionReminder(
     offsetMinutes: (json['offsetMinutes'] as num).toInt(),

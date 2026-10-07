@@ -109,17 +109,15 @@ class SessionStatusBadge extends StatelessWidget {
       ),
       child: Text(
         status.label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: cancelled ? scheme.onErrorContainer : scheme.onSecondaryContainer,
-        ),
+        style: Theme.of(context).textTheme.labelSmall
+            ?.copyWith(color: cancelled ? scheme.onErrorContainer : scheme.onSecondaryContainer),
       ),
     );
   }
 }
 
 /// "Sesión 3 · El Valle" heading used by lists.
-String sessionHeading(int number, String title) =>
-    number > 0 ? 'Sesión $number · $title' : title;
+String sessionHeading(int number, String title) => number > 0 ? 'Sesión $number · $title' : title;
 
 /// Local date of a session as "sáb 10 oct 2026 · 20:00".
 String sessionWhen(Session s) => formatShortDateTime(s.localStart);

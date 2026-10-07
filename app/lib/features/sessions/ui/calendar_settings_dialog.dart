@@ -116,9 +116,7 @@ class _CalendarSettingsDialogState extends State<CalendarSettingsDialog> {
                 initialValue: _zone,
                 isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Zona horaria'),
-                items: [
-                  for (final z in _zones) DropdownMenuItem(value: z, child: Text(z)),
-                ],
+                items: [for (final z in _zones) DropdownMenuItem(value: z, child: Text(z))],
                 onChanged: (value) => setState(() {
                   _zone = value ?? _zone;
                   _zoneError = null;
@@ -137,10 +135,7 @@ class _CalendarSettingsDialogState extends State<CalendarSettingsDialog> {
               const SizedBox(height: 20),
               Text('Recordatorios por correo', style: theme.textTheme.titleSmall),
               const SizedBox(height: 4),
-              Text(
-                'Se envían antes de cada sesión programada.',
-                style: theme.textTheme.bodySmall,
-              ),
+              Text('Se envían antes de cada sesión programada.', style: theme.textTheme.bodySmall),
               const SizedBox(height: 8),
               if (_offsets.isEmpty)
                 const Text('Sin recordatorios.', key: Key('settings-no-offsets'))

@@ -76,7 +76,8 @@ class _SessionsTabState extends ConsumerState<SessionsTab> {
                 onRetry: () => ref.invalidate(sessionsControllerProvider(campaign.id)),
               ),
               data: (list) => RefreshIndicator(
-                onRefresh: () => ref.read(sessionsControllerProvider(campaign.id).notifier).reload(),
+                onRefresh: () =>
+                    ref.read(sessionsControllerProvider(campaign.id).notifier).reload(),
                 child: _calendar
                     ? _CalendarView(
                         campaign: campaign,
@@ -285,7 +286,10 @@ class SessionTile extends StatelessWidget {
               RsvpCountChips(counts: s.counts),
               const SizedBox(height: 4),
               if (s.status != SessionStatus.cancelled)
-                KeyedSubtree(key: Key('session-my-rsvp-${s.id}'), child: MyRsvpLabel(rsvp: s.myRsvp)),
+                KeyedSubtree(
+                  key: Key('session-my-rsvp-${s.id}'),
+                  child: MyRsvpLabel(rsvp: s.myRsvp),
+                ),
             ],
           ),
         ),

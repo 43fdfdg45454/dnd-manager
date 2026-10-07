@@ -26,7 +26,10 @@ class SessionFormPage extends ConsumerWidget {
     final title = sessionId == null ? 'Nueva sesión' : 'Editar sesión';
     final campaign = ref.watch(campaignDetailControllerProvider(campaignId));
 
-    Widget shell(Widget body) => Scaffold(appBar: AppBar(title: Text(title)), body: body);
+    Widget shell(Widget body) => Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: body,
+    );
 
     if (campaign.hasValue && !campaign.value!.myRole.isAtLeastDm) {
       return shell(const Center(child: Text('Solo el DM puede programar sesiones.')));
@@ -299,9 +302,7 @@ class _SessionFormState extends ConsumerState<_SessionForm> {
                     key: const Key('session-field-duration'),
                     controller: _duration,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Duración en minutos (opcional)',
-                    ),
+                    decoration: const InputDecoration(labelText: 'Duración en minutos (opcional)'),
                     validator: (v) {
                       final text = (v ?? '').trim();
                       if (text.isEmpty) return null;

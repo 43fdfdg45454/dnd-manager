@@ -115,7 +115,10 @@ class JournalController extends AsyncNotifier<List<SessionSummary>> {
 }
 
 final journalControllerProvider = AsyncNotifierProvider.autoDispose
-    .family<JournalController, List<SessionSummary>, String>(JournalController.new, retry: _noRetry);
+    .family<JournalController, List<SessionSummary>, String>(
+      JournalController.new,
+      retry: _noRetry,
+    );
 
 /// Upcoming sessions of every campaign of the signed-in user, soonest first.
 class MySessionsController extends AsyncNotifier<List<Session>> {

@@ -54,10 +54,7 @@ class _NotifyDialogState extends State<NotifyDialog> {
                 maxLength: 5000,
                 minLines: 3,
                 maxLines: 6,
-                decoration: const InputDecoration(
-                  labelText: 'Mensaje',
-                  alignLabelWithHint: true,
-                ),
+                decoration: const InputDecoration(labelText: 'Mensaje', alignLabelWithHint: true),
                 validator: (v) => (v ?? '').trim().isEmpty ? 'Escribe el mensaje.' : null,
               ),
             ],

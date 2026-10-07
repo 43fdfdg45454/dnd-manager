@@ -262,7 +262,11 @@ class FakeSessionsRepository implements SessionsRepository {
   }
 
   @override
-  Future<Page<SessionSummary>> journal(String campaignId, {int page = 1, int pageSize = 100}) async {
+  Future<Page<SessionSummary>> journal(
+    String campaignId, {
+    int page = 1,
+    int pageSize = 100,
+  }) async {
     _fail();
     final all =
         sessions

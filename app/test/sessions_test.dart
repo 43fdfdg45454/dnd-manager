@@ -270,7 +270,9 @@ void main() {
       final updated = await campaigns.updateSettings('c1', reminderOffsetsMinutes: [60]);
       expect(adapter.requests.last.method, 'PATCH');
       expect(adapter.requests.last.path, '/api/v1/campaigns/c1/settings');
-      expect(adapter.requests.last.data, {'reminderOffsetsMinutes': [60]});
+      expect(adapter.requests.last.data, {
+        'reminderOffsetsMinutes': [60],
+      });
       expect(updated.timeZoneId, 'Asia/Tokyo');
       expect(updated.reminderOffsetsMinutes, [60]);
 
@@ -348,7 +350,10 @@ void main() {
       expect(find.text('No hay sesiones programadas.'), findsOneWidget);
       await _tap(tester, find.byKey(const Key('sessions-new')));
       expect(find.byKey(const Key('session-field-title')), findsOneWidget);
-      expect(find.textContaining('Zona horaria de la campaña: Europe/Madrid (UTC+'), findsOneWidget);
+      expect(
+        find.textContaining('Zona horaria de la campaña: Europe/Madrid (UTC+'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('la vista mensual marca los días con sesión y lista las del día elegido', (
@@ -534,10 +539,7 @@ void main() {
     });
 
     testWidgets('el DM cancela y borra la sesión', (tester) async {
-      final fake = FakeSessionsRepository(
-        isDm: true,
-        sessions: [makeSession(id: 's3', number: 3)],
-      );
+      final fake = FakeSessionsRepository(isDm: true, sessions: [makeSession(id: 's3', number: 3)]);
       await _pumpApp(
         tester,
         location: '/campaigns/c1/sessions/s3',
@@ -606,9 +608,7 @@ void main() {
   });
 
   group('sesiones: edición', () {
-    testWidgets('editar solo envía los campos cambiados y permite vaciar el lugar', (
-      tester,
-    ) async {
+    testWidgets('editar solo envía los campos cambiados y permite vaciar el lugar', (tester) async {
       final fake = FakeSessionsRepository(
         isDm: true,
         sessions: [makeSession(id: 's3', number: 3, title: 'Antes', location: 'Casa de Marta')],
@@ -895,7 +895,11 @@ void main() {
     });
 
     testWidgets('sin sesiones próximas no hay tarjeta', (tester) async {
-      await _pumpApp(tester, location: '/', sessions: FakeSessionsRepository(sessions: [_past]));
+      await _pumpApp(
+        tester,
+        location: '/',
+        sessions: FakeSessionsRepository(sessions: [_past]),
+      );
 
       expect(find.byKey(const Key('next-session-card')), findsNothing);
     });
@@ -906,7 +910,10 @@ void main() {
 
       await tester.tap(find.byKey(const Key('home-user-menu')));
       await tester.pumpAndSettle();
-      expect(tester.widget<Switch>(find.byKey(const Key('home-notifications-switch'))).value, isTrue);
+      expect(
+        tester.widget<Switch>(find.byKey(const Key('home-notifications-switch'))).value,
+        isTrue,
+      );
 
       await tester.tap(find.byKey(const Key('home-notifications')));
       await tester.pumpAndSettle();
@@ -960,7 +967,12 @@ void main() {
         ],
         'counts': {'yes': 1, 'no': 0, 'maybe': 2, 'pending': 3},
         'reminders': [
-          {'offsetMinutes': 120, 'sendAt': '2026-10-10T16:00:00Z', 'sentAt': null, 'failedAt': null},
+          {
+            'offsetMinutes': 120,
+            'sendAt': '2026-10-10T16:00:00Z',
+            'sentAt': null,
+            'failedAt': null,
+          },
         ],
       });
       expect(s.number, 4);
@@ -1021,48 +1033,54 @@ void main() {
       expect(formatOffsetBefore(1440), '24 h antes');
     });
 
-    test('splitSessions separa próximas (primero la más cercana) y pasadas (primero la última)', () {
-      final a = makeSession(id: 'a', startsAt: DateTime.utc(2026, 10, 20));
-      final b = makeSession(id: 'b', startsAt: DateTime.utc(2026, 10, 8));
-      final c = makeSession(id: 'c', startsAt: DateTime.utc(2026, 9, 1));
-      final d = makeSession(id: 'd', startsAt: DateTime.utc(2026, 9, 15));
-      final split = splitSessions([a, c, b, d], sessionsTestNow);
-      expect([for (final s in split.upcoming) s.id], ['b', 'a']);
-      expect([for (final s in split.past) s.id], ['d', 'c']);
-    });
+    test(
+      'splitSessions separa próximas (primero la más cercana) y pasadas (primero la última)',
+      () {
+        final a = makeSession(id: 'a', startsAt: DateTime.utc(2026, 10, 20));
+        final b = makeSession(id: 'b', startsAt: DateTime.utc(2026, 10, 8));
+        final c = makeSession(id: 'c', startsAt: DateTime.utc(2026, 9, 1));
+        final d = makeSession(id: 'd', startsAt: DateTime.utc(2026, 9, 15));
+        final split = splitSessions([a, c, b, d], sessionsTestNow);
+        expect([for (final s in split.upcoming) s.id], ['b', 'a']);
+        expect([for (final s in split.past) s.id], ['d', 'c']);
+      },
+    );
 
-    test('buildJournalEntries ordena por fecha y solo añade al DM las sesiones sin resumen ya pasadas', () {
-      final summaries = [
-        SessionSummary(
-          id: 's2',
-          number: 2,
-          title: 'B',
-          startsAt: DateTime.utc(2026, 9, 20),
-          startsAtLocal: '2026-09-20T20:00:00+02:00',
-          status: SessionStatus.done,
-          summaryMarkdown: 'texto',
-        ),
-      ];
-      final missing = makeSession(id: 's1', number: 1, startsAt: DateTime.utc(2026, 9, 6));
-      final future = makeSession(id: 's3', number: 3, startsAt: DateTime.utc(2026, 11, 1));
-      final cancelled = makeSession(
-        id: 's4',
-        number: 4,
-        startsAt: DateTime.utc(2026, 9, 7),
-        status: SessionStatus.cancelled,
-      );
+    test(
+      'buildJournalEntries ordena por fecha y solo añade al DM las sesiones sin resumen ya pasadas',
+      () {
+        final summaries = [
+          SessionSummary(
+            id: 's2',
+            number: 2,
+            title: 'B',
+            startsAt: DateTime.utc(2026, 9, 20),
+            startsAtLocal: '2026-09-20T20:00:00+02:00',
+            status: SessionStatus.done,
+            summaryMarkdown: 'texto',
+          ),
+        ];
+        final missing = makeSession(id: 's1', number: 1, startsAt: DateTime.utc(2026, 9, 6));
+        final future = makeSession(id: 's3', number: 3, startsAt: DateTime.utc(2026, 11, 1));
+        final cancelled = makeSession(
+          id: 's4',
+          number: 4,
+          startsAt: DateTime.utc(2026, 9, 7),
+          status: SessionStatus.cancelled,
+        );
 
-      final player = buildJournalEntries(summaries, now: sessionsTestNow);
-      expect([for (final e in player) e.id], ['s2']);
-      final dm = buildJournalEntries(
-        summaries,
-        dmSessions: [future, cancelled, missing],
-        now: sessionsTestNow,
-      );
-      expect([for (final e in dm) e.id], ['s1', 's2']);
-      expect(dm.first.hasSummary, isFalse);
-      expect(filterJournal(dm, 'texto').single.id, 's2');
-      expect(filterJournal(dm, 'sesión 1').single.id, 's1');
-    });
+        final player = buildJournalEntries(summaries, now: sessionsTestNow);
+        expect([for (final e in player) e.id], ['s2']);
+        final dm = buildJournalEntries(
+          summaries,
+          dmSessions: [future, cancelled, missing],
+          now: sessionsTestNow,
+        );
+        expect([for (final e in dm) e.id], ['s1', 's2']);
+        expect(dm.first.hasSummary, isFalse);
+        expect(filterJournal(dm, 'texto').single.id, 's2');
+        expect(filterJournal(dm, 'sesión 1').single.id, 's1');
+      },
+    );
   });
 }

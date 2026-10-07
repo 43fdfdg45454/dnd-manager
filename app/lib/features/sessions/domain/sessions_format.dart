@@ -70,8 +70,7 @@ String formatOffsetBefore(int minutes) => '${formatMinutes(minutes)} antes';
 DateTime dayOf(DateTime wallClock) => DateTime.utc(wallClock.year, wallClock.month, wallClock.day);
 
 /// Whole-day key of a date picked in the calendar widget.
-bool sameDay(DateTime a, DateTime b) =>
-    a.year == b.year && a.month == b.month && a.day == b.day;
+bool sameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
 
 /// Sessions grouped by the calendar day (in the campaign's zone) they start on.
 Map<DateTime, List<Session>> sessionsByDay(Iterable<Session> sessions) {
