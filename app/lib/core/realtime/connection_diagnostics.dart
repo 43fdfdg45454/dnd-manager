@@ -276,6 +276,17 @@ class ConnectionDiagnostics {
   }
 }
 
+/// Status, content type and the start of the body of an unexpected answer, so
+/// the user can tell who answered (the API, the proxy or something else).
+String describeResponse(Response<Object?> response) {
+  final type = response.headers.value('content-type') ?? 'sin content-type';
+  final body = '${response.data ?? ''}'.replaceAll(RegExp(r'\s+'), ' ').trim();
+  final start = body.isEmpty
+      ? 'cuerpo vacío'
+      : '"${body.length > 80 ? '${body.substring(0, 80)}…' : body}"';
+  return 'HTTP ${response.statusCode} · $type · $start';
+}
+
 /// The real checks, against the saved server.
 final diagnosticsProvider = Provider<ConnectionDiagnostics>((ref) {
   final dio = ref.read(apiClientProvider).dio;
@@ -288,9 +299,17 @@ final diagnosticsProvider = Provider<ConnectionDiagnostics>((ref) {
   return ConnectionDiagnostics(
     isSignedIn: () => ref.read(authControllerProvider) is AuthSignedIn,
     health: () async {
-      final response = await dio.get<Object?>('/health', options: options);
+      final response = await dio.get<Object?>(
+        '/health',
+        options: options.copyWith(responseType: ResponseType.plain),
+      );
       final status = response.statusCode ?? 0;
       if (status < 200 || status >= 300) throw DiagnosticHttpError(status);
+      // Something else (another proxy, a router page, a captive portal) may
+      // answer 200 to any path: only the API answers "Healthy".
+      if ('${response.data}'.trim() != 'Healthy') {
+        throw DiagnosticFailure('No responde la API: ${describeResponse(response)}');
+      }
       return 'HTTP $status';
     },
     session: () async {
@@ -310,7 +329,7 @@ final diagnosticsProvider = Provider<ConnectionDiagnostics>((ref) {
       try {
         body = jsonDecode('${response.data}');
       } catch (_) {
-        throw const DiagnosticFailure('Respuesta no válida (no es JSON)');
+        throw DiagnosticFailure('Respuesta no válida (no es JSON): ${describeResponse(response)}');
       }
       final transports = body is Map ? body['availableTransports'] : null;
       if (transports is! List || transports.isEmpty) {

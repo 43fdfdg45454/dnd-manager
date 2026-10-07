@@ -171,4 +171,29 @@ void main() {
       expect(find.byKey(const Key('diagnose-network-hint')), findsOneWidget);
     });
   });
+
+  group('describeResponse', () {
+    test('muestra estado, tipo y el inicio del cuerpo de una respuesta inesperada', () {
+      final response = Response<Object?>(
+        requestOptions: RequestOptions(path: '/health'),
+        statusCode: 200,
+        data: '<html>\n  <title>Router</title>${'x' * 100}',
+        headers: Headers.fromMap({
+          'content-type': ['text/html'],
+        }),
+      );
+      final text = describeResponse(response);
+      expect(text, startsWith('HTTP 200 · text/html · "<html> <title>Router</title>'));
+      expect(text, endsWith('…"'));
+    });
+
+    test('indica el cuerpo vacío', () {
+      final response = Response<Object?>(
+        requestOptions: RequestOptions(path: '/x'),
+        statusCode: 204,
+        data: '',
+      );
+      expect(describeResponse(response), 'HTTP 204 · sin content-type · cuerpo vacío');
+    });
+  });
 }
