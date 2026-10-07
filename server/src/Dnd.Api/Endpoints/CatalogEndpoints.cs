@@ -3,6 +3,7 @@ using Dnd.Api.Auth;
 using Dnd.Api.Filters;
 using Dnd.Application.Catalog;
 using Dnd.Application.ContentPacks;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Dnd.Api.Endpoints;
 
@@ -70,6 +71,11 @@ public static class CatalogEndpoints
                 TypedResults.Ok(await handler.HandleAsync(ct)))
             .WithName("ListCatalogTrinkets")
             .WithSummary("Tabla de baratijas (d100) de los paquetes de contenido, ordenada por tirada; vacía con solo el SRD.");
+
+        group.MapGet("/roll-tables", async (string? subclass, [FromQuery(Name = "class")] string? classIndex, ListRollTablesHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(new ListRollTablesQuery(subclass, classIndex), ct)))
+            .WithName("ListCatalogRollTables")
+            .WithSummary("Tablas de tirada de los paquetes de contenido (p. ej. la oleada de magia salvaje), con filtros subclass= y class=; vacía con solo el SRD.");
 
         group.MapGet("/conditions", async (ListConditionsHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(ct)))

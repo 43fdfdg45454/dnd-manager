@@ -53,5 +53,15 @@ public sealed record SheetEdit
 
     public string? Backstory { get; init; }
 
+    public string? PersonalityTraits { get; init; }
+
+    public string? Ideals { get; init; }
+
+    public string? Bonds { get; init; }
+
+    public string? Flaws { get; init; }
+
+    public string? BackgroundDetail { get; init; }
+
     public int? CopperPieces { get; init; }
 }

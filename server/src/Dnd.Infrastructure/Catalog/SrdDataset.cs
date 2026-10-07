@@ -29,8 +29,11 @@ internal sealed record SrdCatalog(
 /// </summary>
 internal static class SrdDataset
 {
-    /// <summary>Commit and date of the 5e-database snapshot in <c>server/seed/srd</c>.</summary>
-    public const string Version = "5e-database@a6212beb (2026-10-02); 2026-10-07: consumables, modifiers, skill choices, level choices, starting equipment, spell categories; 2026-10-08: race and background choices, racial resistances";
+    /// <summary>
+    /// Commit and date of the 5e-database snapshot in <c>server/seed/srd</c>, plus the revision of the mapping (bumped
+    /// whenever the import derives new data, so that existing instances re-seed). Stored in a 200-character column.
+    /// </summary>
+    public const string Version = "5e-database@a6212beb (2026-10-02); mapping 2026-10-09: consumables, modifiers, skill choices, level choices, starting equipment, spell categories, origin choices, resistances, personality";
 
     private const string ResourcePrefix = "5e-SRD-";
 
@@ -625,7 +628,68 @@ internal static class SrdDataset
         StartingEquipmentJson = StructuredStartingEquipment(
             b.StartingEquipment, b.StartingEquipmentOptions, null, ToCopper(b.StartingGold?.Quantity, b.StartingGold?.Unit), contents).ToJson(),
         ChoicesJson = OriginChoices(null, b.LanguageOptions, b.StartingProficiencyOptions, [], new Dictionary<string, TraitJson>()).ToJson(),
+        PersonalityJson = Personality(b)?.ToJson(),
     };
+
+    // ---- Background personality (phase 22) --------------------------------------------------------
+
+    /// <summary>Traits, ideals (with their alignment), bonds and flaws of the dataset option sets, or null without any.</summary>
+    private static BackgroundPersonality? Personality(BackgroundJson b)
+    {
+        static List<string> Strings(PersonalityOptionSetJson? set) =>
+            (set?.From?.Options ?? [])
+                .Select(o => (o.String ?? o.Desc)?.Trim())
+                .Where(t => !string.IsNullOrEmpty(t))
+                .Select(t => t!)
+                .ToList();
+
+        var ideals = (b.Ideals?.From?.Options ?? [])
+            .Where(o => !string.IsNullOrWhiteSpace(o.Desc ?? o.String))
+            .Select(o => new BackgroundIdeal((o.Desc ?? o.String)!.Trim(), IdealAlignment(o.Alignments)))
+            .ToList();
+        var personality = new BackgroundPersonality(Strings(b.PersonalityTraits), ideals, Strings(b.Bonds), Strings(b.Flaws));
+        return personality.IsEmpty ? null : personality;
+    }
+
+    private static readonly string[] AllAlignments =
+    [
+        "lawful-good", "neutral-good", "chaotic-good", "lawful-neutral", "neutral", "chaotic-neutral", "lawful-evil", "neutral-evil", "chaotic-evil",
+    ];
+
+    /// <summary>
+    /// Summarizes the alignments of an ideal as the book does: "Any" for all of them, the shared axis ("Lawful",
+    /// "Good", "Neutral"...) for a row or column, the name for a single one, and the names joined otherwise.
+    /// </summary>
+    private static string? IdealAlignment(IReadOnlyCollection<ReferenceJson>? alignments)
+    {
+        var indexes = (alignments ?? []).Select(a => a.Index).Where(i => !string.IsNullOrEmpty(i)).Select(i => i!).Distinct().ToList();
+        if (indexes.Count == 0)
+        {
+            return null;
+        }
+
+        if (AllAlignments.All(indexes.Contains))
+        {
+            return "Any";
+        }
+
+        // "neutral" is both the law/chaos and the good/evil part of the true neutral alignment.
+        static string Part(string index, int part) => index == "neutral" ? "neutral" : index.Split('-')[part];
+        if (indexes.Count == 3)
+        {
+            foreach (var part in new[] { 0, 1 })
+            {
+                var axis = Part(indexes[0], part);
+                if (indexes.All(i => Part(i, part) == axis))
+                {
+                    return char.ToUpperInvariant(axis[0]) + axis[1..];
+                }
+            }
+        }
+
+        var names = (alignments ?? []).Where(a => !string.IsNullOrEmpty(a.Name)).Select(a => a.Name!).Distinct().ToList();
+        return names.Count == 0 ? null : string.Join(", ", names);
+    }
 
     private static EquipmentCategory MapEquipmentCategory(EquipmentCategoryJson c) => new()
     {
@@ -1350,6 +1414,36 @@ internal static class SrdDataset
         public OptionSetJson? LanguageOptions { get; set; }
 
         public OptionSetJson? StartingProficiencyOptions { get; set; }
+
+        public PersonalityOptionSetJson? PersonalityTraits { get; set; }
+
+        public PersonalityOptionSetJson? Ideals { get; set; }
+
+        public PersonalityOptionSetJson? Bonds { get; set; }
+
+        public PersonalityOptionSetJson? Flaws { get; set; }
+    }
+
+    /// <summary><c>{"choose": N, "from": {"options": [{"string": ...} | {"desc": ..., "alignments": [...]}]}}</c>.</summary>
+    private sealed class PersonalityOptionSetJson
+    {
+        public int? Choose { get; set; }
+
+        public PersonalityOptionSourceJson? From { get; set; }
+    }
+
+    private sealed class PersonalityOptionSourceJson
+    {
+        public List<PersonalityOptionJson>? Options { get; set; }
+    }
+
+    private sealed class PersonalityOptionJson
+    {
+        public string? String { get; set; }
+
+        public string? Desc { get; set; }
+
+        public List<ReferenceJson>? Alignments { get; set; }
     }
 
     /// <summary>Reads a list of strings that may also come as a single string (e.g. subrace <c>desc</c>).</summary>

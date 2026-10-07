@@ -25,6 +25,16 @@ public sealed class BackgroundDefinition
 
     public RaceChoices Choices => RaceChoices.Parse(ChoicesJson);
 
+    /// <summary>Personality tables (<see cref="Catalog.BackgroundPersonality"/>) as JSON, or null when the background has none.</summary>
+    public string? PersonalityJson { get; init; }
+
+    public BackgroundPersonality? Personality => BackgroundPersonality.Parse(PersonalityJson);
+
+    /// <summary>Optional tables (<see cref="BackgroundTable"/>) as a JSON list, or null when there are none.</summary>
+    public string? OptionalTablesJson { get; init; }
+
+    public IReadOnlyList<BackgroundTable> OptionalTables => BackgroundTable.ParseList(OptionalTablesJson);
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = CatalogSources.Srd;
 }

@@ -170,6 +170,7 @@ Notación: `string?` admite `null` o ausencia; **obligatorio** indica que no pue
 | `backgrounds` | `Background[]?` | Trasfondos. |
 | `optionSets` | `OptionSet[]?` | Formato 2. Conjuntos de opciones (dotes, estilos de combate, invocaciones...). |
 | `trinkets` | `Trinket[]?` | Tabla de baratijas (d100) del asistente de creación ([ver abajo](#trinket)). Formatos 1 y 2. |
+| `rollTables` | `RollTable[]?` | Tablas de tirada genéricas (oleada de magia salvaje...), [ver abajo](#rolltable). Formatos 1 y 2. |
 
 ### `ClassExtension`
 
@@ -290,6 +291,60 @@ de los dos mapas.
 | `startingEquipmentText` | `string?` | ≤ 10 000. |
 | `startingEquipment` | `StartingEquipment?` | Equipo inicial estructurado (formatos 1 y 2). Sin él, el asistente de creación solo muestra `startingEquipmentText` y el jugador añade los objetos a mano. |
 | `choices` | `OriginChoices?` | Decisiones que el trasfondo pide al crear el personaje (idiomas, herramientas...). |
+| `personality` | `Personality?` | Tablas de rasgos de personalidad, ideales, vínculos y defectos ([ver abajo](#personality)). Formatos 1 y 2. |
+| `optionalTables` | `BackgroundTable[]?` | Tablas opcionales del trasfondo (especialidad, origen...), ≤ 20 ([ver abajo](#backgroundtable)). |
+
+#### `Personality`
+
+Cada personaje tiene dos rasgos, un ideal, un vínculo y un defecto, que el asistente tira o deja elegir
+en estas tablas (o escribir a mano). El dado es implícito: el número de entradas (8 rasgos → d8). El
+SRD trae las del acólito; las demás solo llegan por paquetes.
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `traits` | `string[]?` | 1..20 entradas, cada una ≤ 500. |
+| `ideals` | `Ideal[]?` | 1..20 entradas: `{ "text": string (obligatorio, ≤ 500), "alignment": string? (≤ 100) }`. |
+| `bonds` | `string[]?` | 1..20 entradas, cada una ≤ 500. |
+| `flaws` | `string[]?` | 1..20 entradas, cada una ≤ 500. |
+
+Hay que dar al menos una de las cuatro listas; una lista ausente es una tabla que el trasfondo no
+tiene (el asistente pide escribir el texto). `alignment` es un texto libre que la app muestra junto al
+ideal; el SRD usa `Lawful`, `Chaotic`, `Good`, `Evil`, `Neutral` y `Any` (la app los traduce), y
+cualquier otro texto se muestra tal cual.
+
+#### `BackgroundTable`
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `key` | `string` | **Obligatorio**, minúsculas, números y guiones, ≤ 100, único en el trasfondo. |
+| `name` | `string` | **Obligatorio**, ≤ 200. Es el prefijo del resultado: "Especialidad". |
+| `entries` | `string[]` | **Obligatorio**, 1..20 entradas, cada una ≤ 500. Dado implícito = número de entradas. |
+
+El jugador se queda con una entrada, que se guarda en la hoja como `backgroundDetail`
+(`"<name>: <entrada>"`, ≤ 200).
+
+```json
+"backgrounds": [
+  {
+    "index": "reinos-ejemplo-cartografo", "name": "Cartógrafo de ejemplo",
+    "personality": {
+      "traits": ["Dibujo mapas de todo lo que veo (texto ficticio).", "Nunca me pierdo, o eso digo."],
+      "ideals": [
+        { "text": "Precisión. Un mapa mal hecho mata (texto ficticio).", "alignment": "Lawful" },
+        { "text": "Curiosidad. Siempre hay otro camino.", "alignment": "Any" }
+      ],
+      "bonds": ["Busco el mapa que perdió mi maestra (texto ficticio)."],
+      "flaws": ["No sé decir que no a una ruta sin explorar."]
+    },
+    "optionalTables": [
+      { "key": "specialty", "name": "Especialidad", "entries": ["Costas", "Cuevas", "Ciudades"] }
+    ]
+  }
+]
+```
+
+`GET /api/v1/catalog/backgrounds` devuelve `personality` (`{ traits, ideals: [{ text, alignment }],
+bonds, flaws }` o `null`) y `optionalTables` (`[{ key, name, entries }]`, vacío si no hay).
 
 #### `OriginChoices`
 
@@ -418,6 +473,46 @@ Si varios paquetes definen el mismo `roll`, gana el **último importado** (reimp
 vuelve a poner por delante). `GET /api/v1/catalog/trinkets` devuelve la tabla efectiva ordenada por
 tirada: `[{ roll, templateId, index, name, description }]` (vacía con solo el SRD).
 
+### `RollTable`
+
+Tabla de tirada genérica: la app la muestra en el compendio (sección "Tablas") y, si tiene subclase,
+en el panel de combate de los personajes de esa subclase (p. ej. la oleada de magia salvaje del
+hechicero, d100). No forma parte del SRD.
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `key` | `string` | **Obligatorio**, minúsculas, números y guiones, ≤ 100, único en el paquete. |
+| `name` | `string` | **Obligatorio**, ≤ 200. |
+| `dice` | `string` | **Obligatorio**: `d2`, `d3`, `d4`, `d6`, `d8`, `d10`, `d12`, `d20` o `d100`. |
+| `entries` | `Entry[]` | **Obligatorio**: `{ "from": int, "to": int?, "text": string }`. `to` ausente = `from`; `text` obligatorio, ≤ 2000. |
+| `classIndex` | `string?` | Clase del catálogo. Si se da `subclassIndex`, se deduce de ella. |
+| `subclassIndex` | `string?` | Subclase del SRD, del propio paquete o de otro paquete ya importado. |
+
+Las entradas deben cubrir **todos** los resultados del dado (1..N) **sin huecos ni solapes**; el
+error indica el rango que falta o la entrada que se solapa.
+
+```json
+"classesExtended": [
+  { "classIndex": "sorcerer", "subclasses": [ { "index": "reinos-ejemplo-chispa", "name": "Chispa de ejemplo" } ] }
+],
+"rollTables": [
+  {
+    "key": "reinos-ejemplo-chispa-surge", "name": "Oleada de ejemplo", "dice": "d100",
+    "subclassIndex": "reinos-ejemplo-chispa",
+    "entries": [
+      { "from": 1, "to": 50, "text": "Te salen chispas de los dedos (texto ficticio)." },
+      { "from": 51, "to": 99, "text": "Nada ocurre." },
+      { "from": 100, "text": "Todo el mundo estornuda (texto ficticio)." }
+    ]
+  }
+]
+```
+
+Si varios paquetes definen la misma `key`, gana el **último importado**. `GET
+/api/v1/catalog/roll-tables` (filtros opcionales `subclass=` y `class=`) devuelve las tablas efectivas
+ordenadas por nombre: `[{ key, name, dice, classIndex, subclassIndex, source, entries: [{ from, to,
+text }] }]` (vacía con solo el SRD).
+
 ## Errores de validación
 
 El paquete se valida entero antes de escribir nada. Si tiene errores, la API responde `400` con un
@@ -474,7 +569,7 @@ Solo el administrador de la instancia.
 | `GET /api/v1/catalog/sources` (cualquier usuario) | `200 [{ id, name, version }]`: `srd` y los paquetes, para etiquetar el contenido |
 
 `counts` tiene el número de `subclasses`, `features`, `items`, `spells`, `races`, `subraces`,
-`traits`, `backgrounds`, `optionSets`, `options`, `levelChoices` y `trinkets` importados.
+`traits`, `backgrounds`, `optionSets`, `options`, `levelChoices`, `trinkets` y `rollTables` importados.
 
 **Reimportar** (mismo `id`, misma u otra `version`) reemplaza todo el contenido del paquete en una
 transacción. Los objetos se actualizan por `index` y **conservan su identificador**, así que los

@@ -91,4 +91,9 @@ public interface ICatalogRepository
 
     /// <summary>Effective trinket table ordered by roll: one entry per roll, from the most recently imported pack.</summary>
     Task<IReadOnlyList<TrinketEntry>> ListTrinketsAsync(CancellationToken cancellationToken = default);
+
+    // Roll tables (phase 22).
+
+    /// <summary>Effective roll tables ordered by name: one per key, from the most recently imported pack.</summary>
+    Task<IReadOnlyList<RollTable>> ListRollTablesAsync(CancellationToken cancellationToken = default);
 }

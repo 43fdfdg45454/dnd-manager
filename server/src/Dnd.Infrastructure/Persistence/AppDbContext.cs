@@ -68,6 +68,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<TrinketEntry> CatalogTrinkets => Set<TrinketEntry>();
 
+    public DbSet<RollTable> CatalogRollTables => Set<RollTable>();
+
     public DbSet<Character> Characters => Set<Character>();
 
     public DbSet<CharacterClassLevel> CharacterClassLevels => Set<CharacterClassLevel>();

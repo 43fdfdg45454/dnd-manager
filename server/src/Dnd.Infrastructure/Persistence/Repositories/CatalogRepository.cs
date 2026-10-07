@@ -201,14 +201,7 @@ internal sealed class CatalogRepository(AppDbContext db) : ICatalogRepository
             return [];
         }
 
-        var imports = await db.CatalogImports.AsNoTracking()
-            .Where(x => x.Ruleset.StartsWith(CatalogSources.PackRulesetPrefix))
-            .Select(x => new { x.Ruleset, x.ImportedAt })
-            .ToListAsync(cancellationToken);
-        var importedAt = imports.ToDictionary(
-            x => x.Ruleset[CatalogSources.PackRulesetPrefix.Length..],
-            x => x.ImportedAt,
-            StringComparer.Ordinal);
+        var importedAt = await PackImportTimesAsync(cancellationToken);
 
         // Same roll in several packs: the most recently imported pack wins.
         return entries
@@ -217,5 +210,38 @@ internal sealed class CatalogRepository(AppDbContext db) : ICatalogRepository
             .Select(g => g.OrderByDescending(e => importedAt[e.Source]).ThenBy(e => e.Source, StringComparer.Ordinal).First())
             .OrderBy(e => e.Roll)
             .ToList();
+    }
+
+    public async Task<IReadOnlyList<RollTable>> ListRollTablesAsync(CancellationToken cancellationToken = default)
+    {
+        var tables = await db.CatalogRollTables.AsNoTracking().ToListAsync(cancellationToken);
+        if (tables.Count == 0)
+        {
+            return [];
+        }
+
+        var importedAt = await PackImportTimesAsync(cancellationToken);
+
+        // Same key in several packs: the most recently imported pack wins.
+        return tables
+            .Where(t => importedAt.ContainsKey(t.Source))
+            .GroupBy(t => t.Key, StringComparer.Ordinal)
+            .Select(g => g.OrderByDescending(t => importedAt[t.Source]).ThenBy(t => t.Source, StringComparer.Ordinal).First())
+            .OrderBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(t => t.Key, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    /// <summary>Import time of every content pack, by pack id.</summary>
+    private async Task<Dictionary<string, DateTimeOffset>> PackImportTimesAsync(CancellationToken cancellationToken)
+    {
+        var imports = await db.CatalogImports.AsNoTracking()
+            .Where(x => x.Ruleset.StartsWith(CatalogSources.PackRulesetPrefix))
+            .Select(x => new { x.Ruleset, x.ImportedAt })
+            .ToListAsync(cancellationToken);
+        return imports.ToDictionary(
+            x => x.Ruleset[CatalogSources.PackRulesetPrefix.Length..],
+            x => x.ImportedAt,
+            StringComparer.Ordinal);
     }
 }

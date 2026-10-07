@@ -17,6 +17,7 @@ namespace Dnd.Infrastructure.Catalog;
 /// <param name="Spells">Spell index → source.</param>
 /// <param name="SrdItems">Indexes of the SRD item templates (starting equipment references).</param>
 /// <param name="EquipmentCategories">Indexes of the equipment categories ("martial-weapons").</param>
+/// <param name="PackSubclasses">Subclasses of the packs already imported: index → (class index, pack id).</param>
 internal sealed record ContentPackContext(
     IReadOnlyDictionary<string, string> Classes,
     IReadOnlyDictionary<string, string> SrdSubclasses,
@@ -25,7 +26,8 @@ internal sealed record ContentPackContext(
     IReadOnlyDictionary<string, (string SetId, string Source)>? Options = null,
     IReadOnlyDictionary<string, string>? Spells = null,
     IReadOnlySet<string>? SrdItems = null,
-    IReadOnlySet<string>? EquipmentCategories = null);
+    IReadOnlySet<string>? EquipmentCategories = null,
+    IReadOnlyDictionary<string, (string ClassIndex, string Source)>? PackSubclasses = null);
 
 /// <summary>Catalog rows of a valid content pack, every one with <c>Source</c> = the pack id.</summary>
 internal sealed class ContentPackRows
@@ -56,6 +58,8 @@ internal sealed class ContentPackRows
 
     public List<TrinketEntry> Trinkets { get; } = [];
 
+    public List<RollTable> RollTables { get; } = [];
+
     public Dictionary<string, int> Counts() => new()
     {
         ["optionSets"] = OptionSets.Count,
@@ -70,6 +74,7 @@ internal sealed class ContentPackRows
         ["traits"] = Traits.Count,
         ["backgrounds"] = Backgrounds.Count,
         ["trinkets"] = Trinkets.Count,
+        ["rollTables"] = RollTables.Count,
     };
 }
 
@@ -178,6 +183,7 @@ internal sealed partial class ContentPackValidator
         ForEach("races", pack.Races, (path, race) => Race(path, race, rows));
         ForEach("backgrounds", pack.Backgrounds, (path, background) => Background(path, background, rows));
         Trinkets(pack.Trinkets, rows);
+        RollTables(pack.RollTables, rows, packSubclasses);
         CheckLevelChoiceReferences(rows);
         CheckStartingEquipmentReferences(rows);
         return rows;
@@ -684,6 +690,10 @@ internal sealed partial class ContentPackValidator
             StartingEquipmentText = OptionalText($"{path}.startingEquipmentText", background.StartingEquipmentText, LongTextMaxLength),
             StartingEquipmentJson = background.StartingEquipment is { } equipment ? ParseStartingEquipment($"{path}.startingEquipment", equipment) : null,
             ChoicesJson = OriginChoices($"{path}.choices", background.Choices),
+            PersonalityJson = background.Personality is { } personality ? Personality($"{path}.personality", personality)?.ToJson() : null,
+            OptionalTablesJson = BackgroundTables($"{path}.optionalTables", background.OptionalTables) is { Count: > 0 } tables
+                ? BackgroundTable.ToJson(tables)
+                : null,
             Source = _id,
         };
 

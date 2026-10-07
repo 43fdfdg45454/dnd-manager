@@ -22,6 +22,12 @@ public sealed partial class Character : EntityBase
     public const int IndexMaxLength = 100;
     public const int AlignmentMaxLength = 50;
     public const int TextMaxLength = 20000;
+
+    /// <summary>Personality traits, ideals, bonds and flaws (phase 22).</summary>
+    public const int PersonalityMaxLength = 1000;
+
+    /// <summary>Result of the optional table of the background, e.g. "Especialidad: Bibliotecario".</summary>
+    public const int BackgroundDetailMaxLength = 200;
     public const int MaxDeathSaves = 3;
     public const int MaxExhaustionLevel = 6;
     public const int MaxTemporaryHitPoints = 999;
@@ -102,6 +108,18 @@ public sealed partial class Character : EntityBase
     public string Notes { get; private set; } = string.Empty;
 
     public string Backstory { get; private set; } = string.Empty;
+
+    /// <summary>Personality traits of the background (two by the rules; free text, one per line).</summary>
+    public string PersonalityTraits { get; private set; } = string.Empty;
+
+    public string Ideals { get; private set; } = string.Empty;
+
+    public string Bonds { get; private set; } = string.Empty;
+
+    public string Flaws { get; private set; } = string.Empty;
+
+    /// <summary>Result of the optional table of the background (specialty, scheme, origin...).</summary>
+    public string BackgroundDetail { get; private set; } = string.Empty;
 
     public Guid? PortraitFileId { get; private set; }
 
@@ -291,6 +309,13 @@ public sealed partial class Character : EntityBase
         EnsureHpModeConsistent(hpMode, overrides?.Select(o => o.Field) ?? _overrides.Select(o => o.Field));
         var notes = edit.Notes is null ? Notes : NormalizeText(edit.Notes, "Las notas");
         var backstory = edit.Backstory is null ? Backstory : NormalizeText(edit.Backstory, "La historia");
+        var traits = edit.PersonalityTraits is null ? PersonalityTraits : NormalizePersonality(edit.PersonalityTraits, "Los rasgos de personalidad", PersonalityMaxLength);
+        var ideals = edit.Ideals is null ? Ideals : NormalizePersonality(edit.Ideals, "Los ideales", PersonalityMaxLength);
+        var bonds = edit.Bonds is null ? Bonds : NormalizePersonality(edit.Bonds, "Los vínculos", PersonalityMaxLength);
+        var flaws = edit.Flaws is null ? Flaws : NormalizePersonality(edit.Flaws, "Los defectos", PersonalityMaxLength);
+        var backgroundDetail = edit.BackgroundDetail is null
+            ? BackgroundDetail
+            : NormalizePersonality(edit.BackgroundDetail, "Los detalles del trasfondo", BackgroundDetailMaxLength);
         if (edit.CopperPieces is { } copper)
         {
             ValidateCopper(copper);
@@ -337,6 +362,11 @@ public sealed partial class Character : EntityBase
 
         Notes = notes;
         Backstory = backstory;
+        PersonalityTraits = traits;
+        Ideals = ideals;
+        Bonds = bonds;
+        Flaws = flaws;
+        BackgroundDetail = backgroundDetail;
         CopperPieces = edit.CopperPieces ?? CopperPieces;
         Touch(now);
     }
@@ -1115,6 +1145,17 @@ public sealed partial class Character : EntityBase
         }
 
         return trimmed;
+    }
+
+    private static string NormalizePersonality(string value, string label, int maxLength)
+    {
+        var text = value.Trim();
+        if (text.Length > maxLength)
+        {
+            throw DomainException.RuleViolation($"{label} no pueden superar los {maxLength} caracteres.");
+        }
+
+        return text;
     }
 
     private static string NormalizeText(string value, string label)

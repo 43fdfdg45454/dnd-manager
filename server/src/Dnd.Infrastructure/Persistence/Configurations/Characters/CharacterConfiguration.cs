@@ -29,6 +29,11 @@ internal sealed class CharacterConfiguration : IEntityTypeConfiguration<Characte
         builder.Property(x => x.HitDiceUsedJson).IsRequired();
         builder.Property(x => x.Notes).IsRequired();
         builder.Property(x => x.Backstory).IsRequired();
+        builder.Property(x => x.PersonalityTraits).HasMaxLength(Character.PersonalityMaxLength).IsRequired();
+        builder.Property(x => x.Ideals).HasMaxLength(Character.PersonalityMaxLength).IsRequired();
+        builder.Property(x => x.Bonds).HasMaxLength(Character.PersonalityMaxLength).IsRequired();
+        builder.Property(x => x.Flaws).HasMaxLength(Character.PersonalityMaxLength).IsRequired();
+        builder.Property(x => x.BackgroundDetail).HasMaxLength(Character.BackgroundDetailMaxLength).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.UpdatedAt).IsRequired();
 

@@ -46,6 +46,8 @@ internal sealed class BackgroundDefinitionConfiguration : IEntityTypeConfigurati
         builder.Property(x => x.StartingEquipmentText).IsRequired();
         builder.Ignore(x => x.StartingEquipment);
         builder.Ignore(x => x.Choices);
+        builder.Ignore(x => x.Personality);
+        builder.Ignore(x => x.OptionalTables);
         builder.Property(x => x.Source).HasMaxLength(CatalogSources.MaxLength).IsRequired();
         builder.HasIndex(x => x.Source);
     }

@@ -60,6 +60,18 @@ public sealed record SheetPatch
 
     public string? Backstory { get; init; }
 
+    /// <summary>Personality traits of the background (free text; the wizard writes one per line).</summary>
+    public string? PersonalityTraits { get; init; }
+
+    public string? Ideals { get; init; }
+
+    public string? Bonds { get; init; }
+
+    public string? Flaws { get; init; }
+
+    /// <summary>Result of the optional table of the background, e.g. "Especialidad: Bibliotecario".</summary>
+    public string? BackgroundDetail { get; init; }
+
     public int? CopperPieces { get; init; }
 
     /// <summary>Maps to the domain edit. Call only on a patch accepted by <see cref="SheetPatchValidator"/>.</summary>
@@ -85,6 +97,11 @@ public sealed record SheetPatch
         Overrides = Overrides?.Select(o => new OverrideEntry(o.Field, o.Value, o.Note)).ToList(),
         Notes = Notes,
         Backstory = Backstory,
+        PersonalityTraits = PersonalityTraits,
+        Ideals = Ideals,
+        Bonds = Bonds,
+        Flaws = Flaws,
+        BackgroundDetail = BackgroundDetail,
         CopperPieces = CopperPieces,
     };
 
@@ -247,6 +264,16 @@ public sealed class SheetPatchValidator : AbstractValidator<SheetPatch>
             .WithMessage($"Las notas no pueden superar los {Character.TextMaxLength} caracteres.");
         RuleFor(x => x.Backstory).MaximumLength(Character.TextMaxLength)
             .WithMessage($"La historia no puede superar los {Character.TextMaxLength} caracteres.");
+        RuleFor(x => x.PersonalityTraits).MaximumLength(Character.PersonalityMaxLength)
+            .WithMessage($"Los rasgos de personalidad no pueden superar los {Character.PersonalityMaxLength} caracteres.");
+        RuleFor(x => x.Ideals).MaximumLength(Character.PersonalityMaxLength)
+            .WithMessage($"Los ideales no pueden superar los {Character.PersonalityMaxLength} caracteres.");
+        RuleFor(x => x.Bonds).MaximumLength(Character.PersonalityMaxLength)
+            .WithMessage($"Los vínculos no pueden superar los {Character.PersonalityMaxLength} caracteres.");
+        RuleFor(x => x.Flaws).MaximumLength(Character.PersonalityMaxLength)
+            .WithMessage($"Los defectos no pueden superar los {Character.PersonalityMaxLength} caracteres.");
+        RuleFor(x => x.BackgroundDetail).MaximumLength(Character.BackgroundDetailMaxLength)
+            .WithMessage($"El detalle del trasfondo no puede superar los {Character.BackgroundDetailMaxLength} caracteres.");
         RuleFor(x => x.CopperPieces).InclusiveBetween(0, Character.MaxCopperPieces)
             .WithMessage($"El dinero debe estar entre 0 y {Character.MaxCopperPieces} pc.")
             .When(x => x.CopperPieces is not null);

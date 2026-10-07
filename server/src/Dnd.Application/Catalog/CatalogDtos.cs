@@ -339,9 +339,31 @@ public sealed record BackgroundDto(
     /// <summary>Decisions the background asks for at creation (languages, tools...), or null.</summary>
     public RaceChoicesDto? Choices { get; init; }
 
+    /// <summary>Personality tables (traits, ideals, bonds, flaws), or null when the background has none.</summary>
+    public BackgroundPersonalityDto? Personality { get; init; }
+
+    /// <summary>Optional tables (specialty, scheme...); empty when there are none.</summary>
+    public IReadOnlyList<BackgroundTableDto> OptionalTables { get; init; } = [];
+
     public static BackgroundDto From(BackgroundDefinition b, StartingEquipmentDto? startingEquipment) => new(
         b.Index, b.Name, b.FeatureName, b.FeatureDescription, b.SkillProficiencies, b.StartingEquipmentText, startingEquipment, b.Source)
     {
         Choices = RaceChoicesDto.From(b.Choices),
+        Personality = b.Personality is { } p
+            ? new BackgroundPersonalityDto(p.Traits, p.Ideals.Select(i => new BackgroundIdealDto(i.Text, i.Alignment)).ToList(), p.Bonds, p.Flaws)
+            : null,
+        OptionalTables = b.OptionalTables.Select(t => new BackgroundTableDto(t.Key, t.Name, t.Entries)).ToList(),
     };
 }
+
+/// <param name="Alignment">Alignment the ideal points to ("Lawful", "Any"...), or null.</param>
+public sealed record BackgroundIdealDto(string Text, string? Alignment);
+
+/// <summary>Personality tables of a background; the die of each one is the number of its entries.</summary>
+public sealed record BackgroundPersonalityDto(
+    IReadOnlyList<string> Traits,
+    IReadOnlyList<BackgroundIdealDto> Ideals,
+    IReadOnlyList<string> Bonds,
+    IReadOnlyList<string> Flaws);
+
+public sealed record BackgroundTableDto(string Key, string Name, IReadOnlyList<string> Entries);

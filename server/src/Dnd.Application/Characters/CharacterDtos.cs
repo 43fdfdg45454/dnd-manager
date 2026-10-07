@@ -206,6 +206,17 @@ public sealed record CharacterDetailDto
 
     public required string Backstory { get; init; }
 
+    public required string PersonalityTraits { get; init; }
+
+    public required string Ideals { get; init; }
+
+    public required string Bonds { get; init; }
+
+    public required string Flaws { get; init; }
+
+    /// <summary>Result of the optional table of the background, e.g. "Especialidad: Bibliotecario".</summary>
+    public required string BackgroundDetail { get; init; }
+
     public required Guid? PortraitFileId { get; init; }
 
     /// <summary>Relative download URL (<c>/api/v1/files/{id}</c>) of the portrait, or null when there is none.</summary>

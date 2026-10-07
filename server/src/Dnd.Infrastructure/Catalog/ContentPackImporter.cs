@@ -66,6 +66,7 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
             db.CatalogOptions.AddRange(rows.Options);
             db.CatalogLevelChoiceRules.AddRange(rows.LevelChoiceRules);
             db.CatalogTrinkets.AddRange(rows.Trinkets);
+            db.CatalogRollTables.AddRange(rows.RollTables);
             await db.SaveChangesAsync(cancellationToken);
             db.ChangeTracker.Clear();
 
@@ -195,6 +196,10 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
             .Where(x => x.Source == CatalogSources.Srd)
             .Select(x => new { x.Index, x.ClassIndex })
             .ToDictionaryAsync(x => x.Index, x => x.ClassIndex, StringComparer.Ordinal, cancellationToken);
+        var packSubclasses = await db.CatalogSubclasses.AsNoTracking()
+            .Where(x => x.Source != CatalogSources.Srd)
+            .Select(x => new { x.Index, x.ClassIndex, x.Source })
+            .ToDictionaryAsync(x => x.Index, x => (x.ClassIndex, x.Source), StringComparer.Ordinal, cancellationToken);
         var skills = await db.CatalogSkills.AsNoTracking()
             .Select(x => new { x.Index, x.Name })
             .ToDictionaryAsync(x => x.Index, x => x.Name, StringComparer.Ordinal, cancellationToken);
@@ -220,7 +225,8 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
             options,
             spells,
             srdItems.ToHashSet(StringComparer.Ordinal),
-            categories.ToHashSet(StringComparer.Ordinal));
+            categories.ToHashSet(StringComparer.Ordinal),
+            packSubclasses);
     }
 
     /// <summary>Reports the indexes of the pack already used by another source (the SRD or another pack).</summary>
@@ -291,6 +297,7 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
     private async Task DeleteDefinitionsAsync(string id, CancellationToken cancellationToken)
     {
         await db.CatalogTrinkets.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.CatalogRollTables.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogLevelChoiceRules.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogOptions.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogOptionSets.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);

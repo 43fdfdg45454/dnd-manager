@@ -31,6 +31,35 @@ internal sealed class PackJson
 
     /// <summary>Trinket table rolled at character creation (d100), pointing to items of the SRD or of the pack.</summary>
     public List<PackTrinketJson?>? Trinkets { get; set; }
+
+    /// <summary>Generic roll tables (e.g. a d100 Wild Magic Surge), optionally tied to a class or subclass.</summary>
+    public List<PackRollTableJson?>? RollTables { get; set; }
+}
+
+internal sealed class PackRollTableJson
+{
+    public string? Key { get; set; }
+
+    public string? Name { get; set; }
+
+    /// <summary>"d100", "d20"...</summary>
+    public string? Dice { get; set; }
+
+    public List<PackRollTableEntryJson?>? Entries { get; set; }
+
+    public string? ClassIndex { get; set; }
+
+    public string? SubclassIndex { get; set; }
+}
+
+internal sealed class PackRollTableEntryJson
+{
+    public int? From { get; set; }
+
+    /// <summary>Last result of the range; absent means the same as <see cref="From"/>.</summary>
+    public int? To { get; set; }
+
+    public string? Text { get; set; }
 }
 
 internal sealed class PackTrinketJson
@@ -350,6 +379,39 @@ internal sealed class PackBackgroundJson
 
     /// <summary>Decisions asked at creation (languages, tools, skills...).</summary>
     public PackOriginChoicesJson? Choices { get; set; }
+
+    /// <summary>Personality tables: traits, ideals, bonds and flaws.</summary>
+    public PackPersonalityJson? Personality { get; set; }
+
+    /// <summary>Optional tables of the background (specialty, scheme, origin...).</summary>
+    public List<PackBackgroundTableJson?>? OptionalTables { get; set; }
+}
+
+internal sealed class PackPersonalityJson
+{
+    public List<string?>? Traits { get; set; }
+
+    public List<PackIdealJson?>? Ideals { get; set; }
+
+    public List<string?>? Bonds { get; set; }
+
+    public List<string?>? Flaws { get; set; }
+}
+
+internal sealed class PackIdealJson
+{
+    public string? Text { get; set; }
+
+    public string? Alignment { get; set; }
+}
+
+internal sealed class PackBackgroundTableJson
+{
+    public string? Key { get; set; }
+
+    public string? Name { get; set; }
+
+    public List<string?>? Entries { get; set; }
 }
 
 internal sealed class PackStartingEquipmentJson

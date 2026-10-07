@@ -76,6 +76,7 @@ public static class DependencyInjection
         services.AddScoped<GetEquipmentCategoryHandler>();
         services.AddScoped<ListCatalogSourcesHandler>();
         services.AddScoped<ListTrinketsHandler>();
+        services.AddScoped<ListRollTablesHandler>();
 
         services.AddScoped<ListContentPacksHandler>();
         services.AddScoped<ImportContentPackHandler>();
