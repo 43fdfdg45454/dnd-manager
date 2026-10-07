@@ -499,6 +499,7 @@ class Subrace {
     this.traits = const [],
     this.choices = const OriginChoiceSpec(),
     this.resistances = const [],
+    this.languages = const [],
   });
 
   factory Subrace.fromJson(Map<String, dynamic> json) => Subrace(
@@ -509,6 +510,7 @@ class Subrace {
     traits: _objects(json['traits'], Trait.fromJson),
     choices: OriginChoiceSpec.fromJson(json['choices']),
     resistances: _strList(json['resistances']),
+    languages: _nameList(json['languages']),
   );
 
   final String index;
@@ -516,6 +518,9 @@ class Subrace {
   final List<String> description;
   final List<AbilityBonus> abilityBonuses;
   final List<Trait> traits;
+
+  /// Languages the subrace adds to those of the race (none in the SRD).
+  final List<String> languages;
 
   /// Decisions the subrace asks for at creation (phase 19).
   final OriginChoiceSpec choices;
@@ -526,20 +531,28 @@ class Subrace {
 
 /// Which decisions a race, subrace or background asks for at creation
 /// (`RaceChoicesDto`). The wizard only needs to know whether there is
-/// something to ask; the options themselves come from
-/// `GET /characters/{id}/origin-choices`.
+/// something to ask, plus the language picks (asked in its own step); the other
+/// options come from `GET /characters/{id}/origin-choices`.
 class OriginChoiceSpec {
-  const OriginChoiceSpec({this.kinds = const {}});
+  const OriginChoiceSpec({this.kinds = const {}, this.languages});
 
   factory OriginChoiceSpec.fromJson(Object? json) {
     final map = _map(json);
     if (map == null) return const OriginChoiceSpec();
     return OriginChoiceSpec(
       kinds: {
-        for (final key in const ['abilityBonuses', 'skills', 'languages', 'tools', 'cantrip', 'feats'])
+        for (final key in const [
+          'abilityBonuses',
+          'skills',
+          'languages',
+          'tools',
+          'cantrip',
+          'feats',
+        ])
           if (map[key] != null) key,
         if ((map['traitOptions'] as List? ?? const []).isNotEmpty) 'traitOptions',
       },
+      languages: _map(map['languages']).let(LanguagePick.fromJson),
     );
   }
 
@@ -547,11 +560,34 @@ class OriginChoiceSpec {
   /// `tools`, `cantrip`, `feats`, `traitOptions`).
   final Set<String> kinds;
 
+  /// Languages to choose, or null when none are offered.
+  final LanguagePick? languages;
+
   bool get isEmpty => kinds.isEmpty;
 
   /// True when there is a decision other than languages (the wizard asks for
   /// languages in their own step).
   bool get asksBesidesLanguages => kinds.any((k) => k != 'languages');
+}
+
+/// `choices.languages`: [choose] languages, from [from] (empty = any).
+class LanguagePick {
+  const LanguagePick({required this.choose, this.from = const []});
+
+  factory LanguagePick.fromJson(Map<String, dynamic> json) => LanguagePick(
+    choose: _int(json['choose']) ?? 0,
+    from: json['from'] is List
+        ? [
+            for (final e in json['from'] as List)
+              if (e is Map) _str(e['index'] ?? e['name']) else if (e != null) _str(e),
+          ]
+        : const [],
+  );
+
+  final int choose;
+
+  /// Allowed language names (SRD spelling); empty for any language.
+  final List<String> from;
 }
 
 class RaceDetail extends RaceSummary {
@@ -1187,4 +1223,34 @@ class EquipmentCategory {
   final String index;
   final String name;
   final List<EquipmentCategoryItem> items;
+}
+
+// ---------------------------------------------------------------------------
+// Trinkets
+// ---------------------------------------------------------------------------
+
+/// One result of the d100 trinket table (`GET /catalog/trinkets`); the table
+/// only exists when a content pack defines it.
+class Trinket {
+  const Trinket({
+    required this.roll,
+    required this.templateId,
+    required this.index,
+    required this.name,
+    this.description = '',
+  });
+
+  factory Trinket.fromJson(Map<String, dynamic> json) => Trinket(
+    roll: _int(json['roll']) ?? 0,
+    templateId: _str(json['templateId']),
+    index: _str(json['index']),
+    name: _str(json['name'], _str(json['index'])),
+    description: _str(json['description']),
+  );
+
+  final int roll;
+  final String templateId;
+  final String index;
+  final String name;
+  final String description;
 }

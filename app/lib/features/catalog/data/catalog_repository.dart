@@ -103,6 +103,9 @@ class CatalogRepository {
   Future<EquipmentCategory> equipmentCategory(String index) =>
       _one('equipment-categories/${Uri.encodeComponent(index)}', EquipmentCategory.fromJson);
 
+  /// Trinket table of the content packs, ordered by roll (empty with the SRD only).
+  Future<List<Trinket>> trinkets() => _list('trinkets', Trinket.fromJson);
+
   Future<Feature> feature(String index) =>
       _one('features/${Uri.encodeComponent(index)}', Feature.fromJson);
 }

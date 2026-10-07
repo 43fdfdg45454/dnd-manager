@@ -63,7 +63,15 @@ class BackgroundStep extends ConsumerWidget {
     final theme = Theme.of(context);
     final choices = state.classDetail?.skillChoices;
     final granted = state.backgroundSkills;
-    final languages = <String>{...srdLanguages.keys, ...state.languages};
+    final fixed = state.fixedLanguages;
+    final toChoose = state.languagesToChoose;
+    final remaining = state.languagesRemaining;
+    final languages = <String>{
+      ...srdLanguages.keys,
+      ...fixed,
+      ...state.languages,
+      for (final slot in state.languageSlots) ...slot.from,
+    };
 
     return backgrounds.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -136,11 +144,23 @@ class BackgroundStep extends ConsumerWidget {
           ],
           SectionHeader('Idiomas', padding: const EdgeInsets.only(top: 20, bottom: 4)),
           Text(
-            state.languages.isEmpty
-                ? 'Marca los idiomas que habla tu personaje.'
-                : '${state.languages.length} seleccionados',
+            toChoose == 0
+                ? 'Tu raza y trasfondo no te dan idiomas adicionales'
+                : 'Idiomas a elegir ${state.languages.length}/$toChoose',
+            key: const Key('wizard-languages-counter'),
             style: theme.textTheme.bodySmall,
           ),
+          if (toChoose > 0 && remaining > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                remaining == 1
+                    ? 'Te queda 1 idioma por elegir'
+                    : 'Te quedan $remaining idiomas por elegir',
+                key: const Key('wizard-languages-remaining'),
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.tertiary),
+              ),
+            ),
           for (final group in [
             ('Estándar', languages.where(_standardLanguages.contains).toList()),
             ('Exóticos', languages.where((l) => !_standardLanguages.contains(l)).toList()),
@@ -158,9 +178,14 @@ class BackgroundStep extends ConsumerWidget {
                       id: language,
                       tileKey: Key('lang-$language'),
                       label: languageLabel(language),
-                      state: state.languages.contains(language)
+                      caption: fixed.contains(language) ? 'De la raza' : null,
+                      state: fixed.contains(language)
+                          ? SelectionState.locked
+                          : state.languages.contains(language)
                           ? SelectionState.selected
-                          : SelectionState.available,
+                          : state.canPickLanguage(language)
+                          ? SelectionState.available
+                          : SelectionState.blocked,
                     ),
                 ],
               ),

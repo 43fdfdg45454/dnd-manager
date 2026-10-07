@@ -45,6 +45,7 @@ const _countLabels = <String, (String, String)>{
   'subraces': ('subraza', 'subrazas'),
   'traits': ('rasgo racial', 'rasgos raciales'),
   'backgrounds': ('trasfondo', 'trasfondos'),
+  'trinkets': ('baratija', 'baratijas'),
 };
 
 String contentPackCountsSummary(Map<String, int> counts) {

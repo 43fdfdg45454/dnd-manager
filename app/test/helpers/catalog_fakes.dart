@@ -51,6 +51,7 @@ class FakeCatalogRepository implements CatalogRepository {
     this.backgroundList = const [],
     this.equipmentCategories = const {},
     this.sourceList = const [CatalogSource(id: 'srd', name: 'SRD 5.1')],
+    this.trinketList = const [],
   });
 
   final List<SpellSummary> spellList;
@@ -65,6 +66,7 @@ class FakeCatalogRepository implements CatalogRepository {
   final List<Background> backgroundList;
   final Map<String, EquipmentCategory> equipmentCategories;
   final List<CatalogSource> sourceList;
+  final List<Trinket> trinketList;
   Object? error;
   final List<SpellCall> spellCalls = [];
   final List<({String? search, String? category, int page})> itemCalls = [];
@@ -189,6 +191,12 @@ class FakeCatalogRepository implements CatalogRepository {
   Future<EquipmentCategory> equipmentCategory(String index) async {
     _fail();
     return equipmentCategories[index] ?? (throw dioError(404));
+  }
+
+  @override
+  Future<List<Trinket>> trinkets() async {
+    _fail();
+    return trinketList;
   }
 
   @override

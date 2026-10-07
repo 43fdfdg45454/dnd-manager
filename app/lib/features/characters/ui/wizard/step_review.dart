@@ -114,12 +114,18 @@ class _ReviewStepState extends ConsumerState<ReviewStep> {
           'Trasfondo: ${state.background?.name ?? 'ninguno'}',
           if (state.skills.isNotEmpty || state.backgroundSkills.isNotEmpty)
             'Habilidades: ${[...state.skills, ...state.backgroundSkills].map(skillLabel).join(', ')}',
-          if (state.languages.isNotEmpty)
-            'Idiomas: ${state.languages.map(languageLabel).join(', ')}',
+          if (state.allLanguages.isNotEmpty)
+            'Idiomas: ${state.allLanguages.map(languageLabel).join(', ')}',
         ]),
         section(WizardStep.equipment, [
-          if (state.allEquipment.isEmpty && state.startingCopper == 0) 'Sin equipo inicial',
+          if (state.allEquipment.isEmpty &&
+              state.startingCopper == 0 &&
+              state.trinket == null &&
+              state.trinketDescription == null)
+            'Sin equipo inicial',
           for (final e in state.allEquipment) '${e.qty} × ${e.name}',
+          if (state.trinket != null) 'Baratija: ${state.trinket!.name}',
+          if (state.trinketDescription != null) 'Baratija: ${state.trinketDescription}',
           if (state.startingCopper > 0) 'Oro inicial: ${copperToGoldText(state.startingCopper)} po',
         ]),
         if (steps.contains(WizardStep.spells))

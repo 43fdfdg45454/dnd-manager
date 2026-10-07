@@ -12,13 +12,16 @@ import '../../catalog/data/models.dart'
         ClassDetail,
         ClassLevel,
         EquipmentCategoryItem,
+        LanguagePick,
         RaceDetail,
         StartingEquipment,
         StartingEquipmentChoice,
         StartingGold,
         StartingItem,
-        Subrace;
+        Subrace,
+        Trinket;
 import '../../items/data/inventory_repository.dart';
+import '../../items/data/models.dart' show ItemOverrides;
 import '../domain/character_format.dart';
 import 'characters_controller.dart';
 import 'characters_repository.dart';
@@ -118,6 +121,20 @@ typedef WizardEquipment = ({String templateId, String name, int qty});
 /// How the character gets its starting equipment.
 enum EquipmentMode { kit, gold }
 
+/// Range of the trinket roll (1d100).
+const trinketRollMin = 1;
+const trinketRollMax = 100;
+
+/// Longest description of a trinket without a table entry.
+const trinketTextMaxLength = 200;
+
+/// Name of the custom item made from a described trinket.
+const trinketItemName = 'Baratija';
+
+/// A source of languages to choose: the origin choice [key] of the race,
+/// subrace or background, with [choose] picks from [from] (empty = any).
+typedef LanguageSlot = ({String key, int choose, List<String> from});
+
 /// Key of the pick [category] of option [option] of choice [choice].
 String categoryPickKey(int choice, int option, int category) => '$choice-$option-$category';
 
@@ -165,6 +182,9 @@ class WizardState {
     this.originAnswers = const {},
     this.originLoading = false,
     this.originError,
+    this.trinketTable,
+    this.trinketRoll,
+    this.trinketText = '',
   });
 
   /// Index in [steps].
@@ -199,7 +219,8 @@ class WizardState {
   /// Skill indexes chosen from the class list.
   final Set<String> skills;
 
-  /// Language names (SRD spelling).
+  /// Languages chosen beyond the fixed ones of the race (SRD spelling), in
+  /// the order they were picked.
   final Set<String> languages;
   final List<WizardEquipment> equipment;
 
@@ -245,6 +266,15 @@ class WizardState {
 
   /// Spanish error of the last failed load of [originPlan].
   final String? originError;
+
+  /// Trinket table of the content packs (null until loaded; empty without one).
+  final List<Trinket>? trinketTable;
+
+  /// Typed result of the trinket roll (1d100), or null for no trinket.
+  final int? trinketRoll;
+
+  /// Description of the trinket when the table has no entry for the roll.
+  final String trinketText;
 
   List<CharacterSpell> get spells => [...cantrips, ...leveledSpells];
 
@@ -404,6 +434,95 @@ class WizardState {
     }
     return null;
   }
+
+  // -- Derived: languages ------------------------------------------------------------
+
+  /// Languages the race and subrace always give.
+  Set<String> get fixedLanguages => {...?race?.languages, ...?subrace?.languages};
+
+  /// Fixed languages followed by the chosen ones.
+  Set<String> get allLanguages => {...fixedLanguages, ...languages};
+
+  /// Language choices of the race, subrace and background, in that order.
+  List<LanguageSlot> get languageSlots => [
+    for (final (key, pick) in <(String, LanguagePick?)>[
+      ('race.languages', race?.choices.languages),
+      ('race.subrace.languages', subrace?.choices.languages),
+      ('background.languages', background?.choices.languages),
+    ])
+      if (pick != null && pick.choose > 0) (key: key, choose: pick.choose, from: pick.from),
+  ];
+
+  /// Languages to choose in total (m).
+  int get languagesToChoose => languageSlots.fold(0, (n, s) => n + s.choose);
+
+  /// Languages still to choose (only a warning: fewer than offered is allowed).
+  int get languagesRemaining => math.max(0, languagesToChoose - languages.length);
+
+  /// Shares [picks] among [languageSlots] in order, respecting each `from`;
+  /// null when they do not fit.
+  Map<String, List<String>>? distributeLanguages(List<String> picks) {
+    final slots = languageSlots;
+    final assigned = [for (final _ in slots) <String>[]];
+    bool place(int i) {
+      if (i == picks.length) return true;
+      for (var k = 0; k < slots.length; k++) {
+        final slot = slots[k];
+        if (assigned[k].length >= slot.choose) continue;
+        if (slot.from.isNotEmpty && !slot.from.contains(picks[i])) continue;
+        assigned[k].add(picks[i]);
+        if (place(i + 1)) return true;
+        assigned[k].removeLast();
+      }
+      return false;
+    }
+
+    if (!place(0)) return null;
+    return {for (var k = 0; k < slots.length; k++) slots[k].key: assigned[k]};
+  }
+
+  /// True when [language] can be added to the chosen ones.
+  bool canPickLanguage(String language) =>
+      !fixedLanguages.contains(language) &&
+      !languages.contains(language) &&
+      languages.length < languagesToChoose &&
+      distributeLanguages([...languages, language]) != null;
+
+  /// The chosen languages that still fit after a change of race, subrace or
+  /// background (fixed ones and the surplus are dropped, in pick order).
+  Set<String> get trimmedLanguages {
+    final fixed = fixedLanguages;
+    final kept = <String>[];
+    for (final l in languages) {
+      if (fixed.contains(l)) continue;
+      if (distributeLanguages([...kept, l]) != null) kept.add(l);
+    }
+    return kept.toSet();
+  }
+
+  // -- Derived: trinket --------------------------------------------------------------
+
+  bool get _trinketRollValid =>
+      trinketRoll != null && trinketRoll! >= trinketRollMin && trinketRoll! <= trinketRollMax;
+
+  /// Entry of the table for the typed roll, or null.
+  Trinket? get trinket =>
+      _trinketRollValid ? trinketTable?.where((t) => t.roll == trinketRoll).firstOrNull : null;
+
+  /// True when the roll is valid but the table has nothing for it: the player
+  /// describes the trinket instead.
+  bool get trinketNeedsText => _trinketRollValid && trinketTable != null && trinket == null;
+
+  /// Description of a trinket without table entry, or null.
+  String? get trinketDescription {
+    final text = trinketText.trim();
+    return trinketNeedsText && text.isNotEmpty ? text : null;
+  }
+
+  /// Spanish error of the trinket roll, or null (no trinket is fine).
+  String? get trinketError => trinketRoll != null && !_trinketRollValid
+      ? 'La tirada de baratija va de $trinketRollMin a $trinketRollMax'
+      : null;
 
   /// Skills granted by the background, as skill indexes.
   Set<String> get backgroundSkills => {
@@ -597,6 +716,9 @@ class WizardState {
     Map<String, OriginAnswer>? originAnswers,
     bool? originLoading,
     Object? originError = _unset,
+    Object? trinketTable = _unset,
+    Object? trinketRoll = _unset,
+    String? trinketText,
   }) => WizardState(
     step: step ?? this.step,
     name: name ?? this.name,
@@ -636,6 +758,11 @@ class WizardState {
     originAnswers: originAnswers ?? this.originAnswers,
     originLoading: originLoading ?? this.originLoading,
     originError: identical(originError, _unset) ? this.originError : originError as String?,
+    trinketTable: identical(trinketTable, _unset)
+        ? this.trinketTable
+        : trinketTable as List<Trinket>?,
+    trinketRoll: identical(trinketRoll, _unset) ? this.trinketRoll : trinketRoll as int?,
+    trinketText: trinketText ?? this.trinketText,
   );
 
   // -- Validation ----------------------------------------------------------------
@@ -669,11 +796,16 @@ class WizardState {
           final n = choices.choose;
           return n == 1 ? 'Elige 1 habilidad' : 'Elige $n habilidades';
         }
+        final m = languagesToChoose;
+        if (languages.length > m || distributeLanguages(languages.toList()) == null) {
+          if (m == 0) return 'Tu raza y trasfondo no te dan idiomas adicionales';
+          return m == 1 ? 'Como máximo 1 idioma a elegir' : 'Como máximo $m idiomas a elegir';
+        }
         return null;
       case WizardStep.origin:
         return originValidation;
       case WizardStep.equipment:
-        return equipmentError;
+        return equipmentError ?? trinketError;
       case WizardStep.spells:
         if (cantrips.length > maxCantrips) {
           return maxCantrips == 1 ? 'Como máximo 1 truco' : 'Como máximo $maxCantrips trucos';
@@ -757,7 +889,8 @@ class WizardState {
               key: s,
               source: ProficiencySource.background,
             ),
-        for (final l in languages)
+        // Chosen languages travel as origin choices (see [toOriginAnswers]).
+        for (final l in fixedLanguages)
           CharacterProficiency(
             type: ProficiencyType.language,
             key: l,
@@ -818,6 +951,11 @@ class WizardState {
         ]),
       );
     }
+    // Languages: the selection shared among the race, subrace and background.
+    final distribution = distributeLanguages(languages.toList()) ?? const {};
+    for (final slot in languageSlots) {
+      answers.add(LevelUpChoiceAnswer.picks(slot.key, distribution[slot.key] ?? const []));
+    }
     return answers;
   }
 }
@@ -840,6 +978,7 @@ class CharacterWizardController extends Notifier<WizardState> {
   bool _sheetSaved = false;
   bool _originSaved = false;
   int _itemsAdded = 0;
+  bool _trinketAdded = false;
 
   /// Bumped on each load of the origin plan so a late answer is dropped.
   int _originRequest = 0;
@@ -861,6 +1000,9 @@ class CharacterWizardController extends Notifier<WizardState> {
     final last = state.steps.length - 1;
     state = state.copyWith(step: step.clamp(0, last));
     if (state.currentStep == WizardStep.origin) unawaited(loadOrigin());
+    if (state.currentStep == WizardStep.equipment && state.trinketTable == null) {
+      unawaited(loadTrinkets());
+    }
   }
 
   void back() => goTo(state.step - 1);
@@ -948,15 +1090,18 @@ class CharacterWizardController extends Notifier<WizardState> {
     try {
       final detail = await _catalog.raceDetail(index);
       if (!ref.mounted || state.raceIndex != index) return;
-      state = state.copyWith(race: detail, languages: {...detail.languages}, loadError: null);
+      state = state.copyWith(race: detail, loadError: null);
+      state = state.copyWith(languages: state.trimmedLanguages);
     } catch (_) {
       if (!ref.mounted || state.raceIndex != index) return;
       state = state.copyWith(loadError: 'No se pudo cargar la raza. Inténtalo de nuevo.');
     }
   }
 
-  void selectSubrace(String? index) =>
-      state = state.copyWith(subraceIndex: index, originPlan: null, originAnswers: const {});
+  void selectSubrace(String? index) {
+    state = state.copyWith(subraceIndex: index, originPlan: null, originAnswers: const {});
+    state = state.copyWith(languages: state.trimmedLanguages);
+  }
 
   void setApplyRacialBonuses(bool value) => state = state.copyWith(applyRacialBonuses: value);
 
@@ -1076,6 +1221,7 @@ class CharacterWizardController extends Notifier<WizardState> {
           if (!granted.contains(s)) s,
       },
     );
+    state = state.copyWith(languages: state.trimmedLanguages);
   }
 
   void toggleSkill(String index) {
@@ -1088,9 +1234,14 @@ class CharacterWizardController extends Notifier<WizardState> {
     state = state.copyWith(skills: skills);
   }
 
+  /// Picks or unpicks a language; fixed ones and those beyond the limit (or
+  /// outside the lists offered) are ignored.
   void toggleLanguage(String language) {
     final languages = {...state.languages};
-    if (!languages.remove(language)) languages.add(language);
+    if (!languages.remove(language)) {
+      if (!state.canPickLanguage(language)) return;
+      languages.add(language);
+    }
     state = state.copyWith(languages: languages);
   }
 
@@ -1167,6 +1318,26 @@ class CharacterWizardController extends Notifier<WizardState> {
   }
 
   void removeEquipment(String templateId) => setEquipmentQuantity(templateId, 0);
+
+  /// Loads the trinket table of the content packs; without it (or offline)
+  /// the player describes the trinket.
+  Future<void> loadTrinkets() async {
+    List<Trinket> table;
+    try {
+      table = await _catalog.trinkets();
+    } catch (_) {
+      table = const [];
+    }
+    if (!ref.mounted) return;
+    state = state.copyWith(trinketTable: table);
+  }
+
+  void setTrinketRoll(int? roll) => state = state.copyWith(trinketRoll: roll);
+
+  void setTrinketText(String text) => state = state.copyWith(trinketText: text);
+
+  /// "Sin baratija".
+  void clearTrinket() => state = state.copyWith(trinketRoll: null, trinketText: '');
 
   // -- Step 7: spells ------------------------------------------------------------
 
@@ -1371,7 +1542,7 @@ class CharacterWizardController extends Notifier<WizardState> {
       _sheetSaved = true;
     }
     // The full sheet replaces the lists the origin choices add to: answer them again.
-    if (!_originSaved && s.originChoices.isNotEmpty) {
+    if (!_originSaved && s.toOriginAnswers().isNotEmpty) {
       await characters.saveOriginChoices(id, s.toOriginAnswers());
       _originSaved = true;
     }
@@ -1380,6 +1551,19 @@ class CharacterWizardController extends Notifier<WizardState> {
       final line = lines[_itemsAdded];
       await inventory.add(id, templateId: line.templateId, quantity: line.qty);
       _itemsAdded++;
+    }
+    if (!_trinketAdded) {
+      final trinket = s.trinket;
+      final description = s.trinketDescription;
+      if (trinket != null) {
+        await inventory.add(id, templateId: trinket.templateId);
+      } else if (description != null) {
+        await inventory.add(
+          id,
+          overrides: ItemOverrides(name: trinketItemName, description: [description]),
+        );
+      }
+      _trinketAdded = true;
     }
     ref.invalidate(campaignCharactersControllerProvider(campaignId));
     return id;

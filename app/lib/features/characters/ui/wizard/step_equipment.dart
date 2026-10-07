@@ -83,6 +83,7 @@ class EquipmentStep extends ConsumerWidget {
           ],
         ],
         if (structured) _DefaultEquipmentList(args: args),
+        _TrinketSection(args: args),
         const SectionHeader('Otros objetos', padding: EdgeInsets.only(top: 16, bottom: 4)),
         Text('Objetos que añades tú, además del equipo inicial.', style: theme.textTheme.bodySmall),
         if (state.equipment.isEmpty)
@@ -612,6 +613,117 @@ class _GoldRollFieldState extends State<_GoldRollField> {
     ),
     onChanged: (value) => widget.onChanged(int.tryParse(value)),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Trinket
+// ---------------------------------------------------------------------------
+
+/// "Baratija": the player rolls 1d100 and types the result. With a trinket
+/// table (content packs) the item is shown like the other lines; without an
+/// entry for that number the player describes it. Optional.
+class _TrinketSection extends ConsumerStatefulWidget {
+  const _TrinketSection({required this.args});
+
+  final WizardArgs args;
+
+  @override
+  ConsumerState<_TrinketSection> createState() => _TrinketSectionState();
+}
+
+class _TrinketSectionState extends ConsumerState<_TrinketSection> {
+  late final TextEditingController _roll;
+  late final TextEditingController _text;
+
+  @override
+  void initState() {
+    super.initState();
+    final state = ref.read(characterWizardControllerProvider(widget.args));
+    _roll = TextEditingController(text: state.trinketRoll?.toString() ?? '');
+    _text = TextEditingController(text: state.trinketText);
+  }
+
+  @override
+  void dispose() {
+    _roll.dispose();
+    _text.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(characterWizardControllerProvider(widget.args));
+    final controller = ref.read(characterWizardControllerProvider(widget.args).notifier);
+    final theme = Theme.of(context);
+    final trinket = state.trinket;
+
+    return Column(
+      key: const Key('equipment-trinket'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader('Baratija', padding: EdgeInsets.only(top: 16, bottom: 4)),
+        Text(
+          'Opcional: un objeto curioso con el que empieza tu personaje.',
+          style: theme.textTheme.bodySmall,
+        ),
+        TextField(
+          key: const Key('trinket-roll'),
+          controller: _roll,
+          keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(3),
+          ],
+          decoration: InputDecoration(
+            labelText: 'Tira 1d100 y escribe el resultado',
+            helperText: 'Entre $trinketRollMin y $trinketRollMax',
+            errorText: state.trinketError,
+          ),
+          onChanged: (value) => controller.setTrinketRoll(int.tryParse(value)),
+        ),
+        if (state.trinketRoll != null && state.trinketError == null && state.trinketTable == null)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: LinearProgressIndicator(),
+          ),
+        if (trinket != null) ...[
+          EquipmentLineTile(key: const Key('trinket-item'), name: trinket.name, quantity: 1),
+          if (trinket.description.isNotEmpty)
+            Text(cleanText(trinket.description), style: theme.textTheme.bodySmall),
+        ],
+        if (state.trinketNeedsText)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: TextField(
+              key: const Key('trinket-text'),
+              controller: _text,
+              maxLength: trinketTextMaxLength,
+              maxLines: 2,
+              minLines: 1,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Describe tu baratija',
+                helperText: 'Se añade al inventario como "$trinketItemName".',
+              ),
+              onChanged: controller.setTrinketText,
+            ),
+          ),
+        if (state.trinketRoll != null || state.trinketText.isNotEmpty)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              key: const Key('trinket-none'),
+              onPressed: () {
+                _roll.clear();
+                _text.clear();
+                controller.clearTrinket();
+              },
+              child: const Text('Sin baratija'),
+            ),
+          ),
+      ],
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
