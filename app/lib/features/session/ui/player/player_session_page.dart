@@ -225,9 +225,11 @@ class _NoCharacter extends ConsumerWidget {
 }
 
 /// One character of the player in the selected [subview]. While the character
-/// has a granted level or a pending spell preparation, the matching full-screen
-/// page opens by itself and cannot be left: first the level-up wizard, then
-/// "Prepara tus conjuros" (also when a `character.updated` event activates it).
+/// has a granted level, invalid picks, a pending spell preparation or a pending
+/// rest roll, the matching full-screen page opens by itself and cannot be left,
+/// in this order: the level-up wizard, "Sustituye lo que ya no cumples",
+/// "Prepara tus conjuros" and "Tira tus dados" (also when a `character.updated`
+/// event activates it).
 class _CharacterSession extends ConsumerStatefulWidget {
   const _CharacterSession({
     super.key,
@@ -254,8 +256,12 @@ class _CharacterSessionState extends ConsumerState<_CharacterSession> {
     final String? route;
     if (character.pendingLevelUpTo != null) {
       route = AppRoutes.characterLevelUp(character.id);
+    } else if (character.invalidChoices.isNotEmpty) {
+      route = AppRoutes.characterInvalidChoices(character.id);
     } else if (character.spellPreparationPending) {
       route = AppRoutes.characterPrepareSpells(character.id);
+    } else if (character.restRollsPending) {
+      route = AppRoutes.characterRestRolls(character.id);
     } else {
       route = null;
     }

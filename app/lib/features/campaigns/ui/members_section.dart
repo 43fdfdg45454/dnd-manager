@@ -8,6 +8,7 @@ import '../data/campaigns_controller.dart';
 import '../domain/campaign_models.dart';
 import 'add_member_dialog.dart';
 import 'feedback.dart';
+import 'member_error.dart';
 
 CampaignDetailController _controllerOf(WidgetRef ref, String id) =>
     ref.read(campaignDetailControllerProvider(id).notifier);
@@ -37,32 +38,21 @@ class MembersSection extends ConsumerWidget {
     );
   }
 
+  /// The dialog stays open while the role changes, so an error (such as the
+  /// 409 of a player who still owns characters) is shown inline.
   Future<void> _changeRole(BuildContext context, WidgetRef ref, Member member) async {
+    final messenger = ScaffoldMessenger.of(context);
     final role = await showDialog<CampaignRole>(
       context: context,
-      builder: (dialogContext) => SimpleDialog(
-        title: Text('Rol de ${member.displayName}'),
-        children: [
-          for (final r in const [CampaignRole.dm, CampaignRole.player])
-            SimpleDialogOption(
-              onPressed: () => Navigator.of(dialogContext).pop(r),
-              child: Row(
-                children: [
-                  Icon(r == member.role ? Icons.radio_button_checked : Icons.radio_button_off),
-                  const SizedBox(width: 12),
-                  Text(r.label),
-                ],
-              ),
-            ),
-        ],
+      builder: (_) => _RoleDialog(
+        member: member,
+        onSubmit: (role) => _controllerOf(ref, campaign.id).changeRole(member.userId, role),
       ),
     );
-    if (role == null || role == member.role || !context.mounted) return;
-    await runAction(
-      context,
-      () => _controllerOf(ref, campaign.id).changeRole(member.userId, role),
-      success: 'Rol actualizado.',
-    );
+    if (role == null) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('Rol actualizado.')));
   }
 
   Future<void> _remove(BuildContext context, WidgetRef ref, Member member) => runAction(
@@ -159,4 +149,66 @@ class _MemberTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Role choice of a member (DM or Player). Choosing a different role runs
+/// [onSubmit]; the dialog pops with the role once applied or shows the error.
+class _RoleDialog extends StatefulWidget {
+  const _RoleDialog({required this.member, required this.onSubmit});
+
+  final Member member;
+  final Future<void> Function(CampaignRole role) onSubmit;
+
+  @override
+  State<_RoleDialog> createState() => _RoleDialogState();
+}
+
+class _RoleDialogState extends State<_RoleDialog> {
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _choose(CampaignRole role) async {
+    if (role == widget.member.role) {
+      Navigator.of(context).pop();
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await widget.onSubmit(role);
+      if (mounted) Navigator.of(context).pop(role);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = describeMemberError(error);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => SimpleDialog(
+    title: Text('Rol de ${widget.member.displayName}'),
+    children: [
+      for (final r in const [CampaignRole.dm, CampaignRole.player])
+        SimpleDialogOption(
+          key: Key('member-role-${r.apiValue}'),
+          onPressed: _busy ? null : () => _choose(r),
+          child: Row(
+            children: [
+              Icon(r == widget.member.role ? Icons.radio_button_checked : Icons.radio_button_off),
+              const SizedBox(width: 12),
+              Text(r.label),
+            ],
+          ),
+        ),
+      if (_error != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+          child: InlineMemberError(key: const Key('member-role-error'), message: _error!),
+        ),
+    ],
+  );
 }

@@ -114,10 +114,18 @@ class WizardPanel extends ConsumerWidget {
 /// levels stays within [budget] and no slot above level 5 is chosen. Resolves
 /// to the chosen levels, one entry per slot (`[1, 1, 2]`).
 class ArcaneRecoveryDialog extends StatefulWidget {
-  const ArcaneRecoveryDialog({super.key, required this.character, required this.budget});
+  const ArcaneRecoveryDialog({
+    super.key,
+    required this.character,
+    required this.budget,
+    this.title = 'Recuperación arcana',
+  });
 
   final CharacterDetail character;
   final int budget;
+
+  /// "Recuperación natural" for the druid, which follows the same rules.
+  final String title;
 
   @override
   State<ArcaneRecoveryDialog> createState() => _ArcaneRecoveryDialogState();
@@ -136,7 +144,7 @@ class _ArcaneRecoveryDialogState extends State<ArcaneRecoveryDialog> {
     ];
     final left = widget.budget - _sum;
     return AlertDialog(
-      title: const Text('Recuperación arcana'),
+      title: Text(widget.title),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,

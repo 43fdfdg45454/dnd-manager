@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/cache/cached_result.dart';
 import '../../../core/network/api_client.dart';
+import '../../characters/data/models.dart' show DamageOutcome;
 import 'models.dart';
 
 /// DM tools for the table under `/api/v1/campaigns/{id}/party` (at least DM).
@@ -51,13 +52,22 @@ class PartyRepository {
   }
 
   /// Damage or healing, temporary hit points, conditions and maximum hit points
-  /// of several characters at once.
-  Future<List<PartyMember>> adjust(String campaignId, List<PartyAdjustment> adjustments) async {
+  /// of several characters at once. The result also carries the damage
+  /// outcomes (concentration saves to make or concentrations that ended).
+  Future<PartyAdjustResult> adjust(String campaignId, List<PartyAdjustment> adjustments) async {
     final response = await _client.dio.post<Map<String, dynamic>>(
       '${partyPath(campaignId)}/adjust',
       data: [for (final a in adjustments) a.toJson()],
     );
-    return _parse(response.data);
+    final damage = response.data?['damage'];
+    return PartyAdjustResult(
+      members: _parse(response.data),
+      damage: [
+        if (damage is List)
+          for (final d in damage)
+            if (d is Map) DamageOutcome.fromJson(Map<String, dynamic>.from(d)),
+      ],
+    );
   }
 }
 

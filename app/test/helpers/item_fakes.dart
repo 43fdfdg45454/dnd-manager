@@ -144,8 +144,19 @@ class FakeInventoryRepository implements InventoryRepository {
     final list = _of(characterId);
     final index = list.indexWhere((i) => i.id == itemId);
     if (index < 0) throw dioError(404);
-    if (patch.attuned == true && list.where((i) => i.attuned).length >= maxAttunedItems) {
-      throw dioError(400);
+    if (patch.attuned == true &&
+        !list[index].attuned &&
+        list.where((i) => i.attuned).length >= maxAttunedItems) {
+      final drop = patch.replaceAttunedItemId;
+      if (drop == null) {
+        throw dioError(
+          409,
+          data: {'detail': 'Ya estás sintonizado con 3 objetos.', 'code': 'attunement-limit'},
+        );
+      }
+      final dropIndex = list.indexWhere((i) => i.id == drop && i.attuned);
+      if (dropIndex < 0) throw dioError(400);
+      list[dropIndex] = list[dropIndex].copyWith(attuned: false);
     }
     list[index] = list[index].copyWith(
       equipped: patch.equipped,

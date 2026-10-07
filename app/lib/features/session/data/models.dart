@@ -1,5 +1,11 @@
 import '../../characters/data/models.dart'
-    show CharacterClass, CharacterCondition, PendingRest, SpellPreparationReason, SpellSlot;
+    show
+        CharacterClass,
+        CharacterCondition,
+        DamageOutcome,
+        PendingRest,
+        SpellPreparationReason,
+        SpellSlot;
 import '../../items/data/models.dart' show EffectiveItem;
 
 // Hand-written models of the table endpoints (phase 12): the party seen by the
@@ -153,6 +159,15 @@ enum PartyRestKind {
 
   final String apiValue;
   final String label;
+}
+
+/// Response of `party/adjust`: the party and, for each character that took
+/// damage, what it meant for its concentration (phase 19).
+class PartyAdjustResult {
+  const PartyAdjustResult({required this.members, this.damage = const []});
+
+  final List<PartyMember> members;
+  final List<DamageOutcome> damage;
 }
 
 /// Quick change of the DM to one character (`PartyAdjustment`). Null fields do

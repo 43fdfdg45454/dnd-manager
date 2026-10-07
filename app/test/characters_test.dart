@@ -198,14 +198,19 @@ void main() {
       await tester.tap(find.byKey(const Key('characters-quick')));
       await tester.pumpAndSettle();
       await tester.enterText(find.byKey(const Key('character-name')), 'Guardia');
+      // A DM has no characters of their own: the selector starts at NPC.
+      expect(find.text('PNJ (sin jugador)'), findsOneWidget);
       await tester.tap(find.byKey(const Key('character-owner')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Sin dueño (PNJ)').last);
+      expect(find.text('Yo (por defecto)'), findsNothing);
+      expect(find.text('Beto'), findsWidgets);
+      await tester.tap(find.text('PNJ (sin jugador)').last);
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('character-create-submit')));
       await tester.pumpAndSettle();
 
       expect(repository.created.single.owner, (userId: null));
+      expect(find.byKey(const Key('character-npc-new1')), findsOneWidget);
       expect(find.text('PNJ'), findsOneWidget);
     });
 

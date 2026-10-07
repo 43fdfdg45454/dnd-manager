@@ -50,7 +50,11 @@ class CharacterChoicesSection extends StatelessWidget {
               .map((c) => c.className)
               .firstOrNull ??
           choice.classIndex;
-      final title = multiclass ? '$className · nivel ${choice.level}' : 'Nivel ${choice.level}';
+      final title = choice.level == 0
+          ? 'Raza y trasfondo'
+          : multiclass
+          ? '$className · nivel ${choice.level}'
+          : 'Nivel ${choice.level}';
       groups.putIfAbsent(title, () => []).add(choice);
     }
     final theme = Theme.of(context);

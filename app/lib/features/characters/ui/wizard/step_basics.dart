@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/auth/auth_controller.dart';
-import '../../../../core/auth/auth_state.dart';
 import '../../../../core/network/api_error.dart';
 import '../../../../core/theme/app_icon.dart';
 import '../../../../core/theme/icons.dart';
 import '../../../../core/ui/source_chip.dart';
 import '../../../campaigns/data/campaigns_controller.dart';
+import '../../../campaigns/domain/campaign_models.dart';
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/data/models.dart' hide Page;
 import '../../../catalog/domain/catalog_format.dart';
@@ -15,7 +14,6 @@ import '../../data/character_wizard_controller.dart';
 import '../../domain/character_format.dart';
 import '../../domain/class_theme.dart';
 
-const _selfValue = '__self__';
 const _npcValue = '__npc__';
 const _noAlignment = '__none__';
 
@@ -57,7 +55,8 @@ class WizardLoadError extends StatelessWidget {
 // 1. Name
 // ---------------------------------------------------------------------------
 
-/// Name (required), optional alignment and, for DMs, the owner.
+/// Name (required), optional alignment and, for DMs, which player it is for
+/// (an NPC by default: a DM has no characters of their own).
 class NameStep extends ConsumerStatefulWidget {
   const NameStep({super.key, required this.args});
 
@@ -78,10 +77,10 @@ class _NameStepState extends ConsumerState<NameStep> {
     super.dispose();
   }
 
-  String _ownerValue(({String? userId})? owner, String myUserId) {
-    if (owner == null) return _selfValue;
-    if (owner.userId == null) return _npcValue;
-    return owner.userId == myUserId ? _selfValue : owner.userId!;
+  /// A DM has no characters of their own: anything but a player is an NPC.
+  String _ownerValue(({String? userId})? owner, List<Member> players) {
+    final id = owner?.userId;
+    return players.any((m) => m.userId == id) ? id! : _npcValue;
   }
 
   @override
@@ -89,10 +88,12 @@ class _NameStepState extends ConsumerState<NameStep> {
     final args = widget.args;
     final state = ref.watch(characterWizardControllerProvider(args));
     final controller = ref.read(characterWizardControllerProvider(args).notifier);
-    final auth = ref.watch(authControllerProvider);
-    final myUserId = auth is AuthSignedIn ? auth.user.id : '';
     final campaign = ref.watch(campaignDetailControllerProvider(args.campaignId)).value;
     final canChooseOwner = campaign?.myRole.isAtLeastDm ?? false;
+    final players = [
+      for (final m in campaign?.members ?? const <Member>[])
+        if (m.role == CampaignRole.player) m,
+    ];
 
     return ListView(
       key: const Key('step-name'),
@@ -123,24 +124,20 @@ class _NameStepState extends ConsumerState<NameStep> {
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             key: const Key('wizard-owner'),
-            initialValue: _ownerValue(state.owner, myUserId),
+            initialValue: _ownerValue(state.owner, players),
             isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Dueño'),
+            decoration: const InputDecoration(labelText: 'Para'),
             items: [
-              const DropdownMenuItem(value: _selfValue, child: Text('Yo (por defecto)')),
-              for (final m in campaign!.members)
-                if (m.userId != myUserId)
-                  DropdownMenuItem(
-                    value: m.userId,
-                    child: Text(m.displayName, overflow: TextOverflow.ellipsis),
-                  ),
-              const DropdownMenuItem(value: _npcValue, child: Text('Sin dueño (PNJ)')),
+              const DropdownMenuItem(value: _npcValue, child: Text('PNJ (sin jugador)')),
+              for (final m in players)
+                DropdownMenuItem(
+                  value: m.userId,
+                  child: Text(m.displayName, overflow: TextOverflow.ellipsis),
+                ),
             ],
-            onChanged: (value) => controller.setOwner(switch (value) {
-              null || _selfValue => null,
-              _npcValue => (userId: null),
-              final id => (userId: id),
-            }),
+            onChanged: (value) => controller.setOwner(
+              value == null || value == _npcValue ? (userId: null) : (userId: value),
+            ),
           ),
         ],
       ],

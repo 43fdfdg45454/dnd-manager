@@ -229,56 +229,74 @@ class ResourceTile extends ConsumerWidget {
     final r = resource;
     final remaining = r.max - r.used;
     final isPool = r.max > maxPipResource;
-    return CombatCard(
-      title: r.name,
-      trailing: Text(r.recharge.label, style: theme.textTheme.bodySmall),
-      child: isPool
-          ? Row(
-              children: [
-                IconButton.filledTonal(
-                  key: Key('resource-${r.id}-minus'),
-                  tooltip: 'Gastar 1',
-                  onPressed: canEdit ? () => _spend(context, ref) : null,
-                  icon: const Icon(Icons.remove),
-                ),
-                Expanded(
-                  child: InkWell(
-                    key: Key('resource-${r.id}-pool'),
-                    onTap: canEdit ? () => _editPool(context, ref) : null,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      child: Column(
-                        children: [
-                          Text(
-                            '$remaining / ${r.max}',
-                            style: numericStyle(theme.textTheme.titleLarge),
-                          ),
-                          const SizedBox(height: 4),
-                          LinearProgressIndicator(
-                            value: r.max == 0 ? 0 : remaining / r.max,
-                            minHeight: 10,
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                        ],
-                      ),
+    final body = isPool
+        ? Row(
+            children: [
+              IconButton.filledTonal(
+                key: Key('resource-${r.id}-minus'),
+                tooltip: 'Gastar 1',
+                onPressed: canEdit ? () => _spend(context, ref) : null,
+                icon: const Icon(Icons.remove),
+              ),
+              Expanded(
+                child: InkWell(
+                  key: Key('resource-${r.id}-pool'),
+                  onTap: canEdit ? () => _editPool(context, ref) : null,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Column(
+                      children: [
+                        Text(
+                          '$remaining / ${r.max}',
+                          style: numericStyle(theme.textTheme.titleLarge),
+                        ),
+                        const SizedBox(height: 4),
+                        LinearProgressIndicator(
+                          value: r.max == 0 ? 0 : remaining / r.max,
+                          minHeight: 10,
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                IconButton.filledTonal(
-                  key: Key('resource-${r.id}-plus'),
-                  tooltip: 'Recuperar 1',
-                  onPressed: canEdit ? () => _restore(context, ref) : null,
-                  icon: const Icon(Icons.add),
+              ),
+              IconButton.filledTonal(
+                key: Key('resource-${r.id}-plus'),
+                tooltip: 'Recuperar 1',
+                onPressed: canEdit ? () => _restore(context, ref) : null,
+                icon: const Icon(Icons.add),
+              ),
+            ],
+          )
+        : PipRow(
+            key: Key('resource-${r.id}-pips'),
+            total: r.max,
+            filled: remaining,
+            semanticLabel: '${r.name}: $remaining de ${r.max}',
+            onTap: canEdit ? () => _spend(context, ref) : null,
+            onLongPress: canEdit ? () => _restore(context, ref) : null,
+          );
+    return CombatCard(
+      title: r.name,
+      trailing: Text(r.recharge.label, style: theme.textTheme.bodySmall),
+      child: r.rolls.isEmpty && !r.rollsPending
+          ? body
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                body,
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    r.rollsPending
+                        ? 'Tiradas pendientes de anotar'
+                        : 'Tiradas: ${r.rolls.join(' · ')}',
+                    key: Key('resource-${r.id}-rolls'),
+                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ],
-            )
-          : PipRow(
-              key: Key('resource-${r.id}-pips'),
-              total: r.max,
-              filled: remaining,
-              semanticLabel: '${r.name}: $remaining de ${r.max}',
-              onTap: canEdit ? () => _spend(context, ref) : null,
-              onLongPress: canEdit ? () => _restore(context, ref) : null,
             ),
     );
   }

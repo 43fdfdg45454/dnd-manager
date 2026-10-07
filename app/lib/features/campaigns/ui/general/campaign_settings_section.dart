@@ -67,20 +67,21 @@ class CampaignSettingsSection extends ConsumerWidget {
   }
 
   Future<void> _transfer(BuildContext context, WidgetRef ref, String myUserId) async {
+    final messenger = ScaffoldMessenger.of(context);
     final data = await showDialog<TransferData>(
       context: context,
       builder: (_) => TransferOwnershipDialog(
         candidates: campaign.members.where((m) => m.userId != myUserId).toList(),
+        onSubmit: (data) => _controllerOf(
+          ref,
+          campaign.id,
+        ).transferOwnership(data.to.userId, data.previousOwnerRole),
       ),
     );
-    if (data == null || !context.mounted) return;
-    await runAction(
-      context,
-      () =>
-          _controllerOf(ref, campaign.id).transferOwnership(data.to.userId, data.previousOwnerRole),
-      success: 'Propiedad transferida a ${data.to.displayName}.',
-      errors: const {400: 'El destino debe ser otro miembro de la campaña.'},
-    );
+    if (data == null) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text('Propiedad transferida a ${data.to.displayName}.')));
   }
 
   Future<void> _leave(BuildContext context, WidgetRef ref) async {

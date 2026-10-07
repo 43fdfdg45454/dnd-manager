@@ -10,6 +10,7 @@ import '../data/items_controllers.dart';
 import '../data/models.dart';
 import '../domain/items_format.dart';
 import 'add_item_page.dart';
+import 'attunement_dialog.dart';
 import 'effective_item_page.dart';
 import 'item_feedback.dart';
 import 'quantity_dialog.dart';
@@ -176,12 +177,21 @@ class _ItemTile extends ConsumerWidget {
           errors: const {400: 'Este objeto no se puede equipar.'},
         );
       case _ItemAction.attune:
-        await runItemAction(
-          context,
-          () => _controller(ref).patch(item.id, InventoryPatch(attuned: !item.attuned)),
-          success: item.attuned ? 'Sintonía eliminada.' : 'Objeto sintonizado.',
-          errors: const {400: 'Solo puedes estar sintonizado con 3 objetos a la vez.'},
-        );
+        if (item.attuned) {
+          await runItemAction(
+            context,
+            () => _controller(ref).patch(item.id, const InventoryPatch(attuned: false)),
+            success: 'Sintonía eliminada.',
+          );
+        } else {
+          // At the limit of three, the player chooses which item to drop.
+          await attuneWithReplacement(
+            context,
+            item: item,
+            attunedItems: [...?ref.read(inventoryControllerProvider(character.id)).value?.items],
+            write: (patch) => _controller(ref).patch(item.id, patch),
+          );
+        }
       case _ItemAction.use:
         await runItemAction(
           context,

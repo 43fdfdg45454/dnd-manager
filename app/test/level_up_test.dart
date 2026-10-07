@@ -696,4 +696,142 @@ void main() {
       expect(find.descendant(of: section, matching: find.text('+1 Fue, +1 Des')), findsOneWidget);
     });
   });
+
+  group('Fase 19: habilidad de multiclase y sustituciones', () {
+    Map<String, dynamic> multiclassPlan() => _plan(
+      choices: [
+        _choice(
+          'multiclass-skill',
+          'Habilidad de multiclase',
+          'Skill',
+          options: [
+            _option('stealth', 'Sigilo'),
+            _option('acrobatics', 'Acrobacias'),
+            _option('perception', 'Percepción', eligible: false, reason: 'Ya la tienes.'),
+          ],
+        )..['note'] = 'Al entrar en Pícaro como multiclase ganas una habilidad de su lista.',
+      ],
+    );
+
+    testWidgets('la elección multiclass-skill sale sola con tarjetas y se envía', (tester) async {
+      final (:characters, router: _) = await _pump(tester, plan: multiclassPlan());
+      await _next(tester);
+      await _writeHp(tester, '6');
+      await _next(tester);
+
+      expect(find.byKey(const Key('levelup-choice-multiclass-skill')), findsOneWidget);
+      expect(find.text('Habilidad de multiclase'), findsWidgets);
+      expect(
+        find.text('Al entrar en Pícaro como multiclase ganas una habilidad de su lista.'),
+        findsOneWidget,
+      );
+      // The cards are the same as every other choice; an ineligible skill is inert.
+      await _tapKey(tester, 'levelup-option-multiclass-skill-perception');
+      expect(find.text('0 de 1'), findsOneWidget);
+      expect(find.text('Ya la tienes.'), findsOneWidget);
+
+      await _next(tester);
+      expect(_error('Elige 1 opción'), findsOneWidget);
+      await _tapKey(tester, 'levelup-option-multiclass-skill-stealth');
+      await _next(tester);
+      await _tapKey(tester, 'levelup-confirm');
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+
+      expect(characters.levelUpBodies.single['choices'], [
+        {
+          'key': 'multiclass-skill',
+          'selected': ['stealth'],
+        },
+      ]);
+    });
+
+    testWidgets('una sustitución de dote inválida solo ofrece dotes y se responde con la dote', (
+      tester,
+    ) async {
+      final plan = _plan(
+        choices: [
+          _choice(
+            'replace.grappler',
+            'Sustituir «Grappler»',
+            'AsiOrFeat',
+            replaces: true,
+            options: [
+              _option(
+                'sturdy',
+                'Sturdy',
+                abilityIncrease: {
+                  'amount': 1,
+                  'from': ['str', 'con'],
+                },
+              ),
+            ],
+            known: [
+              {'index': 'grappler', 'name': 'Grappler'},
+            ],
+          )..['note'] = 'Ya no cumples sus requisitos: Requiere Fuerza 13. Elige otra opción.',
+        ],
+      );
+      final (:characters, router: _) = await _pump(tester, plan: plan);
+      await _next(tester);
+      await _writeHp(tester, '6');
+      await _next(tester);
+
+      expect(find.byKey(const Key('levelup-choice-replace.grappler')), findsOneWidget);
+      // No ability score improvement tab: only the replacement feat.
+      expect(find.byKey(const Key('levelup-tab-asi')), findsNothing);
+      expect(find.byKey(const Key('levelup-asi-total')), findsNothing);
+      expect(find.byKey(const Key('levelup-replace-replace.grappler-grappler')), findsNothing);
+
+      await _next(tester);
+      expect(_error('Elige una dote'), findsOneWidget);
+      await _tapKey(tester, 'levelup-option-replace.grappler-sturdy');
+      await _tapKey(tester, 'levelup-feat-ability-con');
+      await _next(tester);
+      await _tapKey(tester, 'levelup-confirm');
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+
+      expect(characters.levelUpBodies.single['choices'], [
+        {
+          'key': 'replace.grappler',
+          'selected': {'feat': 'sturdy', 'ability': 'con'},
+        },
+      ]);
+    });
+
+    testWidgets('una sustitución de opción no ofrece "Sustituir uno conocido"', (tester) async {
+      final plan = _plan(
+        choices: [
+          _choice(
+            'replace.dueling',
+            'Sustituir «Dueling»',
+            'OptionSet',
+            replaces: true,
+            options: [_option('defense', 'Defense')],
+            known: [
+              {'index': 'dueling', 'name': 'Dueling'},
+            ],
+          ),
+        ],
+      );
+      final (:characters, router: _) = await _pump(tester, plan: plan);
+      await _next(tester);
+      await _writeHp(tester, '6');
+      await _next(tester);
+
+      expect(find.text('Sustituir uno conocido'), findsNothing);
+      await _tapKey(tester, 'levelup-option-replace.dueling-defense');
+      await _next(tester);
+      await _tapKey(tester, 'levelup-confirm');
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(characters.levelUpBodies.single['choices'], [
+        {
+          'key': 'replace.dueling',
+          'selected': ['defense'],
+        },
+      ]);
+    });
+  });
 }

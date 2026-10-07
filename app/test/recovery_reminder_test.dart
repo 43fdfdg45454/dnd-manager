@@ -111,6 +111,75 @@ void main() {
       expect(find.byKey(const Key('recovery-reminder')), findsNothing);
     });
 
+    testWidgets('el druida del círculo de la tierra usa Recuperación natural', (tester) async {
+      final repo = await _pump(
+        tester,
+        makeCharacterJson(
+          status: 'Active',
+          classes: const [
+            {'classIndex': 'druid', 'className': 'Druid', 'level': 4},
+          ],
+          combat: makeCombatJson(
+            spellSlots: [
+              {'level': 1, 'max': 4, 'used': 3},
+              {'level': 2, 'max': 3, 'used': 2},
+            ],
+            resources: const [],
+            classPanels: [
+              {
+                'classIndex': 'druid',
+                'level': 4,
+                'data': {
+                  'naturalRecovery': {'used': false, 'slotLevelsRecoverable': 2},
+                },
+              },
+            ],
+          ),
+        ),
+      );
+      expect(find.text('¿Usar Recuperación natural?'), findsOneWidget);
+
+      await tester.tap(find.text('Usar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Recuperación natural'), findsOneWidget);
+      expect(find.text('Niveles seleccionados: 0 / 2'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('arcane-level-2-plus')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('arcane-confirm')));
+      await tester.pumpAndSettle();
+      expect(repo.classActions.single.action, 'natural-recovery');
+      expect(repo.classActions.single.body, {
+        'slotLevels': [2],
+      });
+    });
+
+    testWidgets('un druida con la recuperación usada no avisa', (tester) async {
+      await _pump(
+        tester,
+        makeCharacterJson(
+          status: 'Active',
+          classes: const [
+            {'classIndex': 'druid', 'className': 'Druid', 'level': 4},
+          ],
+          combat: makeCombatJson(
+            spellSlots: [
+              {'level': 1, 'max': 4, 'used': 3},
+            ],
+            classPanels: [
+              {
+                'classIndex': 'druid',
+                'level': 4,
+                'data': {
+                  'naturalRecovery': {'used': true, 'slotLevelsRecoverable': 2},
+                },
+              },
+            ],
+          ),
+        ),
+      );
+      expect(find.byKey(const Key('recovery-reminder')), findsNothing);
+    });
+
     testWidgets('con el recurso agotado no avisa', (tester) async {
       await _pump(
         tester,

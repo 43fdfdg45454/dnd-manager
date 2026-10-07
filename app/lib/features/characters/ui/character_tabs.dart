@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_error.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/components.dart';
 import '../../../core/theme/textures.dart';
 import '../../../core/theme/typography.dart';
@@ -80,6 +82,7 @@ class SummaryTab extends StatelessWidget {
     final sheet = c.sheet;
     return _TabList(
       children: [
+        if (c.invalidChoices.isNotEmpty) _InvalidChoicesNotice(character: c),
         const SectionTitle('Características'),
         _EqualGrid(
           key: const Key('abilities-grid'),
@@ -169,6 +172,29 @@ class SummaryTab extends StatelessWidget {
         ),
         const SectionTitle('Salvaciones'),
         for (final key in abilityKeys) _SavingThrowRow(character: c, abilityKey: key),
+        if (sheet.resistances.isNotEmpty) ...[
+          const SectionTitle('Resistencias'),
+          Wrap(
+            key: const Key('resistances'),
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final r in sheet.resistances)
+                Tooltip(
+                  message: r.label,
+                  child: Chip(
+                    key: Key('resistance-${r.damageType}'),
+                    label: Text(
+                      r.label.isEmpty
+                          ? damageTypeLabel(r.damageType)
+                          : '${damageTypeLabel(r.damageType)} · ${r.label}',
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+        if (sheet.breathWeapon != null) _BreathWeaponCard(character: c),
         if (sheet.itemEffects.isNotEmpty) ...[
           const SectionTitle('Efectos de objetos'),
           for (var i = 0; i < sheet.itemEffects.length; i++)
@@ -180,6 +206,113 @@ class SummaryTab extends StatelessWidget {
               ),
             ),
         ],
+      ],
+    );
+  }
+}
+
+/// Warning of the sheet while some option or feat no longer meets its
+/// prerequisites: it lists them and opens the forced replacement page.
+class _InvalidChoicesNotice extends StatelessWidget {
+  const _InvalidChoicesNotice({required this.character});
+
+  final CharacterDetail character;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Card(
+      key: const Key('invalid-choices-notice'),
+      color: scheme.errorContainer,
+      margin: const EdgeInsets.only(top: 4, bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: scheme.onErrorContainer),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Hay elecciones que ya no cumplen sus requisitos',
+                    style: theme.textTheme.titleSmall?.copyWith(color: scheme.onErrorContainer),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            for (final invalid in character.invalidChoices)
+              Text(
+                '${invalid.item.name}: ${invalid.reason}',
+                key: Key('invalid-choice-${invalid.item.index}'),
+                style: theme.textTheme.bodySmall?.copyWith(color: scheme.onErrorContainer),
+              ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                key: const Key('invalid-choices-open'),
+                onPressed: () => context.push(AppRoutes.characterInvalidChoices(character.id)),
+                child: const Text('Sustituir'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Breath weapon of a draconic ancestry: damage, area, saving throw and a DC
+/// that explains itself with its breakdown.
+class _BreathWeaponCard extends StatelessWidget {
+  const _BreathWeaponCard({required this.character});
+
+  final CharacterDetail character;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final weapon = character.sheet.breathWeapon!;
+    return Column(
+      key: const Key('breath-weapon'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionTitle('Arma de aliento'),
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(weapon.name, style: theme.textTheme.titleMedium),
+                  Text(
+                    [
+                      if (weapon.dice.isNotEmpty)
+                        '${weapon.dice} de daño ${damageTypeLabel(weapon.damageType)}',
+                      if (weapon.area.isNotEmpty) weapon.area,
+                      if (weapon.saveAbility.isNotEmpty)
+                        'salvación de ${abilityLabel(weapon.saveAbility)}',
+                    ].join(' · '),
+                    key: const Key('breath-weapon-text'),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            StatValue(
+              statKey: 'breath-weapon-dc',
+              text: 'CD ${weapon.dc}',
+              textKey: const Key('breath-weapon-dc'),
+              title: 'CD de ${weapon.name}',
+              totalText: '${weapon.dc}',
+              breakdown: character.sheet.breakdown('breathWeapon.dc'),
+              style: theme.textTheme.titleLarge,
+            ),
+          ],
+        ),
       ],
     );
   }

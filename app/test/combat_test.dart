@@ -18,6 +18,8 @@ import 'package:dnd_companion/features/characters/ui/character_page.dart';
 import 'package:dnd_companion/features/characters/ui/combat/class_panels.dart';
 import 'package:dnd_companion/features/characters/ui/combat/combat_support.dart' show Pip;
 import 'package:dnd_companion/features/dice/data/dice_controller.dart';
+import 'package:dnd_companion/features/session/data/models.dart' show PartyAdjustment;
+import 'package:dnd_companion/features/session/data/party_repository.dart';
 import 'package:dnd_companion/features/items/data/inventory_repository.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -209,6 +211,214 @@ void main() {
     });
   });
 
+  group('endpoints de la fase 19', () {
+    Future<(CharactersRepository, _Adapter)> repo() async {
+      final adapter = _Adapter();
+      final repository = CharactersRepository(
+        ApiClient(
+          baseUrl: 'http://localhost',
+          dio: Dio(BaseOptions(baseUrl: 'http://localhost'))..httpClientAdapter = adapter,
+        ),
+      );
+      return (repository, adapter);
+    }
+
+    test('el daño usa POST /damage y lee el desenlace de la concentración', () async {
+      final (repository, adapter) = await repo();
+      adapter.body = {
+        'character': makeCharacterJson(hitPointsCurrent: 12),
+        'outcome': {
+          'characterId': 'ch1',
+          'damage': 8,
+          'hitPointsCurrent': 12,
+          'concentratingOn': 'bless',
+          'concentrationCheckDc': 10,
+          'concentrationEnded': false,
+        },
+      };
+      final result = await repository.applyDamage('ch1', 8);
+      expect(adapter.requests.last.method, 'POST');
+      expect(adapter.requests.last.path, '/api/v1/characters/ch1/damage');
+      expect(adapter.requests.last.data, {'amount': 8});
+      expect(result.character.hitPointsCurrent, 12);
+      expect(result.outcome.concentratingOn, 'bless');
+      expect(result.outcome.concentrationCheckDc, 10);
+      expect(result.outcome.concentrationEnded, isFalse);
+      expect(result.outcome.affectsConcentration, isTrue);
+    });
+
+    test('elecciones de origen, sustituciones y tiradas usan sus rutas', () async {
+      final (repository, adapter) = await repo();
+      adapter.body = makeOriginChoicesJson([makeOriginChoiceJson()]);
+      final plan = await repository.originChoices('ch1');
+      expect(adapter.requests.last.method, 'GET');
+      expect(adapter.requests.last.path, '/api/v1/characters/ch1/origin-choices');
+      expect(plan.choices.single.kind, OriginChoiceKind.skill);
+      expect(plan.choices.single.required, 1);
+
+      await repository.saveOriginChoices('ch1', [
+        const LevelUpChoiceAnswer.picks('race.skills', ['insight']),
+        const LevelUpChoiceAnswer.feat('race.feat', 'grappler', ability: 'str'),
+      ]);
+      expect(adapter.requests.last.method, 'PUT');
+      expect(adapter.requests.last.path, '/api/v1/characters/ch1/origin-choices');
+      expect(adapter.requests.last.data, {
+        'choices': [
+          {
+            'key': 'race.skills',
+            'selected': ['insight'],
+          },
+          {
+            'key': 'race.feat',
+            'selected': {'feat': 'grappler', 'ability': 'str'},
+          },
+        ],
+      });
+
+      adapter.body = makeCharacterJson();
+      await repository.replaceInvalidChoices('ch1', [
+        const LevelUpChoiceAnswer.picks('replace.dueling', ['defense']),
+      ]);
+      expect(adapter.requests.last.method, 'POST');
+      expect(adapter.requests.last.path, '/api/v1/characters/ch1/invalid-choices');
+
+      await repository.saveResourceRolls('ch1', 'r1', [14, 3]);
+      expect(adapter.requests.last.path, '/api/v1/characters/ch1/resources/r1/rolls');
+      expect(adapter.requests.last.data, {
+        'values': [14, 3],
+      });
+
+      await repository.classAction('ch1', 'natural-recovery', {
+        'slotLevels': [2],
+      });
+      expect(adapter.requests.last.path, '/api/v1/characters/ch1/class-actions/natural-recovery');
+    });
+
+    test('party/adjust devuelve los desenlaces de daño', () async {
+      final adapter = _Adapter();
+      final repository = PartyRepository(
+        ApiClient(
+          baseUrl: 'http://localhost',
+          dio: Dio(BaseOptions(baseUrl: 'http://localhost'))..httpClientAdapter = adapter,
+        ),
+      );
+      adapter.body = {
+        'characters': <Object>[],
+        'damage': [
+          {
+            'characterId': 'ch1',
+            'damage': 9,
+            'hitPointsCurrent': 0,
+            'concentratingOn': 'bless',
+            'concentrationCheckDc': null,
+            'concentrationEnded': true,
+          },
+        ],
+      };
+      final result = await repository.adjust('c1', [
+        const PartyAdjustment(characterId: 'ch1', hitPointsDelta: -9),
+      ]);
+      expect(adapter.requests.last.path, '/api/v1/campaigns/c1/party/adjust');
+      expect(result.damage.single.concentrationEnded, isTrue);
+      expect(result.damage.single.concentratingOn, 'bless');
+    });
+  });
+
+  group('concentración', () {
+    FakeCharactersRepository concentrating({
+      int? dc,
+      bool ended = false,
+      List<Map<String, dynamic>>? classes,
+      Map<String, dynamic>? combat,
+    }) =>
+        FakeCharactersRepository(
+            characters: [
+              makeCharacterJson(
+                status: 'Active',
+                temporaryHitPoints: 0,
+                combat: combat ?? makeCombatJson(),
+                classes: classes,
+                concentratingOnSpellIndex: 'bless',
+              ),
+            ],
+          )
+          ..nextConcentrationDc = dc
+          ..nextConcentrationEnded = ended;
+
+    testWidgets('el daño a un concentrado pregunta por la salvación con la CD del servidor', (
+      tester,
+    ) async {
+      final repo = concentrating(dc: 12);
+      await _pump(tester, characters: repo);
+      await tester.enterText(find.byKey(const Key('hp-amount')), '24');
+      await _tap(tester, 'hp-minus');
+
+      expect(find.byKey(const Key('concentration-save-dialog')), findsOneWidget);
+      expect(
+        find.textContaining('¿Superaste la salvación de Constitución (CD 12)?'),
+        findsOneWidget,
+      );
+      await _tap(tester, 'concentration-save-yes');
+      expect(repo.concentrationCalls, isEmpty);
+      expect(find.byKey(const Key('concentration-chip')), findsOneWidget);
+    });
+
+    testWidgets('"No" termina la concentración', (tester) async {
+      final repo = concentrating(dc: 10);
+      await _pump(tester, characters: repo);
+      await _tap(tester, 'hp-minus');
+      await _tap(tester, 'concentration-save-no');
+
+      expect(repo.concentrationCalls, [null]);
+      expect(find.byKey(const Key('concentration-chip')), findsNothing);
+      expect(find.text('Pierdes la concentración en Bless.'), findsOneWidget);
+    });
+
+    testWidgets('si la concentración termina sola (0 PG) solo avisa', (tester) async {
+      final repo = concentrating(ended: true);
+      await _pump(tester, characters: repo);
+      await _tap(tester, 'hp-minus');
+
+      expect(find.byKey(const Key('concentration-save-dialog')), findsNothing);
+      expect(find.text('Pierdes la concentración en Bless.'), findsOneWidget);
+      expect(repo.concentrationCalls, isEmpty);
+    });
+
+    testWidgets('sin concentración no se pregunta nada', (tester) async {
+      final repo = _repo(temp: 0);
+      repo.nextConcentrationDc = 10;
+      await _pump(tester, characters: repo);
+      await _tap(tester, 'hp-minus');
+      expect(find.byKey(const Key('concentration-save-dialog')), findsNothing);
+      expect(repo.damageCalls, [1]);
+    });
+
+    testWidgets('lanzar Marca del cazador concentrado en otro conjuro pide confirmación', (
+      tester,
+    ) async {
+      final repo = concentrating(
+        classes: [
+          {'classIndex': 'ranger', 'className': 'Ranger', 'level': 6},
+        ],
+        combat: makeCombatJson(
+          classPanels: [
+            {'classIndex': 'ranger', 'level': 6, 'data': <String, dynamic>{}},
+          ],
+        ),
+      );
+      await _pump(tester, characters: repo);
+
+      await _tap(tester, 'ranger-hunters-mark');
+      expect(find.text('Dejarás de concentrarte en Bless.'), findsOneWidget);
+      await _tap(tester, 'concentration-replace-cancel');
+      expect(repo.concentrationCalls, isEmpty);
+
+      await _tap(tester, 'ranger-hunters-mark');
+      await _tap(tester, 'concentration-replace-confirm');
+      expect(repo.concentrationCalls, ['hunters-mark']);
+    });
+  });
+
   group('conmutador Detallado / Combate', () {
     testWidgets('empieza en Detallado, cambia a Combate y lo recuerda por personaje', (
       tester,
@@ -246,14 +456,16 @@ void main() {
   });
 
   group('puntos de golpe', () {
-    testWidgets('PG - reduce el valor mostrado tras el PATCH', (tester) async {
+    testWidgets('PG - aplica el daño con el endpoint de daño y reduce el valor mostrado', (
+      tester,
+    ) async {
       final repo = _repo(temp: 0);
       await _pump(tester, characters: repo);
       expect(find.text('20 / 28'), findsOneWidget);
 
       await _tap(tester, 'hp-minus');
-      expect(repo.combatPatches.single.hitPointsCurrent, 19);
-      expect(repo.combatPatches.single.temporaryHitPoints, isNull);
+      expect(repo.damageCalls, [1]);
+      expect(repo.combatPatches, isEmpty);
       expect(find.text('19 / 28'), findsOneWidget);
       expect(find.text('20 / 28'), findsNothing);
     });
@@ -265,8 +477,8 @@ void main() {
       await _pump(tester, characters: repo);
       await tester.enterText(find.byKey(const Key('hp-amount')), '5');
       await _tap(tester, 'hp-minus');
-      expect(repo.combatPatches.last.temporaryHitPoints, 0);
-      expect(repo.combatPatches.last.hitPointsCurrent, 18);
+      // The server takes the temporary hit points first.
+      expect(repo.damageCalls, [5]);
       expect(find.text('18 / 28'), findsOneWidget);
       expect(find.text('PG temp.: 0'), findsOneWidget);
 
@@ -1219,7 +1431,7 @@ void main() {
       final repo = _repo(ownerUserId: 'p2', temp: 0);
       await _pump(tester, characters: repo, role: CampaignRole.dm);
       await _tap(tester, 'hp-minus');
-      expect(repo.combatPatches, hasLength(1));
+      expect(repo.damageCalls, hasLength(1));
     });
   });
 }

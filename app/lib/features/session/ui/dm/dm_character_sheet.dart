@@ -8,11 +8,14 @@ import '../../../../core/theme/icons.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/ui/offline_widgets.dart';
+import '../../../campaigns/data/campaigns_controller.dart';
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/data/models.dart' show Condition;
-import '../../../characters/data/models.dart' show CharacterCondition, classesLabel;
+import '../../../characters/data/models.dart' show CharacterCondition, DamageOutcome, classesLabel;
+import '../../../characters/ui/change_owner_dialog.dart';
 import '../../../characters/ui/character_tabs.dart' show titleFromSpellIndex;
 import '../../../characters/ui/combat/combat_support.dart' show promptNumber;
+import '../../../characters/ui/combat/concentration_flow.dart' show resolveDamageOutcome;
 import '../../../characters/ui/combat/vitals_section.dart' show ConditionPickerDialog;
 import '../../data/models.dart';
 import '../../data/session_controllers.dart';
@@ -33,8 +36,9 @@ Future<void> showDmCharacterSheet(
 );
 
 /// Bottom sheet of the DM for one party member: quick damage and healing,
-/// temporary and maximum hit points, conditions and a link to the full sheet.
-/// Every change goes through `party/adjust`.
+/// temporary and maximum hit points, conditions, the player it belongs to and a
+/// link to the full sheet. Hit point and condition changes go through
+/// `party/adjust`.
 class DmCharacterSheet extends ConsumerStatefulWidget {
   const DmCharacterSheet({super.key, required this.campaignId, required this.characterId});
 
@@ -59,13 +63,26 @@ class _DmCharacterSheetState extends ConsumerState<DmCharacterSheet> {
     return value == null || value < 0 ? null : value;
   }
 
-  Future<void> _adjust(PartyAdjustment adjustment, String success) async {
-    final done = await runTableAction(
-      context,
-      () => ref.read(partyControllerProvider(widget.campaignId).notifier).adjust([adjustment]),
-      success: success,
-    );
-    if (done && mounted) setState(_amount.clear);
+  Future<void> _adjust(PartyAdjustment adjustment, String success, {String? name}) async {
+    var damage = const <DamageOutcome>[];
+    final done = await runTableAction(context, () async {
+      damage = await ref.read(partyControllerProvider(widget.campaignId).notifier).adjust([
+        adjustment,
+      ]);
+    }, success: success);
+    if (!done || !mounted) return;
+    setState(_amount.clear);
+    // Damage to a concentrated character asks for the Constitution save.
+    for (final outcome in damage) {
+      if (!mounted) return;
+      await resolveDamageOutcome(
+        context,
+        ref,
+        outcome,
+        characterId: outcome.characterId,
+        characterName: name,
+      );
+    }
   }
 
   Future<void> _damage(PartyMember m) async {
@@ -74,6 +91,7 @@ class _DmCharacterSheetState extends ConsumerState<DmCharacterSheet> {
     await _adjust(
       PartyAdjustment(characterId: m.id, hitPointsDelta: -value),
       '${m.name} recibe $value de daño.',
+      name: m.name,
     );
   }
 
@@ -129,6 +147,26 @@ class _DmCharacterSheetState extends ConsumerState<DmCharacterSheet> {
     );
   }
 
+  Future<void> _changeOwner(PartyMember m) async {
+    final members =
+        ref.read(campaignDetailControllerProvider(widget.campaignId)).value?.members ?? const [];
+    final picked = await pickCharacterOwner(
+      context,
+      characterName: m.name,
+      members: members,
+      currentOwnerUserId: m.ownerUserId,
+    );
+    if (picked == null || !mounted) return;
+    final name = members.where((p) => p.userId == picked.userId).firstOrNull?.displayName;
+    await runTableAction(
+      context,
+      () => ref
+          .read(partyControllerProvider(widget.campaignId).notifier)
+          .setOwner(m.id, picked.userId),
+      success: name == null ? '${m.name} es ahora un PNJ.' : '${m.name} es ahora de $name.',
+    );
+  }
+
   Future<void> _removeCondition(PartyMember m, String index, String name) => _adjust(
     PartyAdjustment(characterId: m.id, removeConditions: [index]),
     'Condición quitada: $name.',
@@ -164,7 +202,28 @@ class _DmCharacterSheetState extends ConsumerState<DmCharacterSheet> {
                 '${m.classes.isEmpty ? 'Sin clase' : classesLabel(m.classes)} · Nivel ${m.level}',
                 style: theme.textTheme.bodyMedium,
               ),
-              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      m.ownerUserId == null
+                          ? 'PNJ'
+                          : 'Jugador: ${m.ownerDisplayName ?? 'Desconocido'}',
+                      key: const Key('dm-sheet-owner'),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                  OfflineAware(
+                    builder: (context, canWrite) => TextButton.icon(
+                      key: const Key('character-owner'),
+                      onPressed: canWrite ? () => _changeOwner(m) : null,
+                      icon: const Icon(Icons.swap_horiz, size: 18),
+                      label: const Text('Cambiar jugador'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               HpBar(member: m),
               const SizedBox(height: 4),
               Row(

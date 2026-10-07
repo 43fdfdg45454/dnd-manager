@@ -15,6 +15,7 @@ import 'package:dnd_companion/features/items/data/models.dart';
 import 'package:dnd_companion/features/items/data/shops_repository.dart';
 import 'package:dnd_companion/features/items/domain/item_form_data.dart';
 import 'package:dnd_companion/features/items/domain/items_format.dart';
+import 'package:dnd_companion/features/items/ui/attunement_dialog.dart' show isAttunementLimit;
 import 'package:dnd_companion/features/items/ui/shop_page.dart';
 import 'package:dnd_companion/features/items/ui/transactions_page.dart';
 import 'package:dnd_companion/features/session/data/messages_repository.dart';
@@ -472,6 +473,114 @@ void main() {
       expect(inventory.used, ['pot']);
       expect(find.byKey(const Key('inv-qty-pot')), findsOneWidget);
       expect(find.text('×1'), findsWidgets);
+    });
+
+    group('sintonización: límite de 3 objetos', () {
+      FakeInventoryRepository threeAttuned() => FakeInventoryRepository(
+        items: {
+          'ch1': [
+            for (final id in ['a', 'b', 'c'])
+              makeCharacterItem(
+                id: id,
+                templateId: 't-$id',
+                attuned: true,
+                effective: makeEffective(
+                  name: 'Amuleto $id',
+                  category: 'MagicItem',
+                  damageDice: null,
+                  requiresAttunement: true,
+                ),
+              ),
+            makeCharacterItem(
+              id: 'ring',
+              templateId: 't-ring',
+              effective: makeEffective(
+                name: 'Anillo',
+                category: 'MagicItem',
+                damageDice: null,
+                requiresAttunement: true,
+              ),
+            ),
+          ],
+        },
+      );
+
+      testWidgets(
+        'un 409 attunement-limit abre "Elige cuál dejar" y reintenta con replaceAttunedItemId',
+        (tester) async {
+          final inventory = threeAttuned();
+          await _pumpApp(tester, location: '/characters/ch1', inventory: inventory);
+          await _openInventory(tester);
+          expect(find.text('Sintonizados 3/3'), findsOneWidget);
+
+          await _menu(tester, 'ring', 'Sintonizar');
+
+          // The first attempt had no replacement and the server refused it.
+          expect(inventory.patches.first.patch.attuned, isTrue);
+          expect(inventory.patches.first.patch.replaceAttunedItemId, isNull);
+          expect(find.byKey(const Key('attunement-dialog')), findsOneWidget);
+          expect(find.text('Elige cuál dejar'), findsOneWidget);
+          for (final id in ['a', 'b', 'c']) {
+            expect(find.byKey(Key('attunement-drop-$id')), findsOneWidget);
+          }
+          // The item that would take its place is not offered.
+          expect(find.byKey(const Key('attunement-drop-ring')), findsNothing);
+
+          await _tap(tester, find.byKey(const Key('attunement-drop-b')));
+
+          final retry = inventory.patches.last.patch;
+          expect(retry.attuned, isTrue);
+          expect(retry.replaceAttunedItemId, 'b');
+          expect(retry.toJson(), {'attuned': true, 'replaceAttunedItemId': 'b'});
+          expect(find.byKey(const Key('attunement-dialog')), findsNothing);
+          expect(find.text('Sintonizados 3/3'), findsOneWidget);
+          expect(find.textContaining('Anillo sintonizado; has dejado Amuleto b.'), findsOneWidget);
+        },
+      );
+
+      testWidgets('cancelar el diálogo no cambia nada', (tester) async {
+        final inventory = threeAttuned();
+        await _pumpApp(tester, location: '/characters/ch1', inventory: inventory);
+        await _openInventory(tester);
+
+        await _menu(tester, 'ring', 'Sintonizar');
+        await _tap(tester, find.byKey(const Key('attunement-cancel')));
+
+        expect(inventory.patches, hasLength(1));
+        expect(find.byKey(const Key('attunement-dialog')), findsNothing);
+        expect(find.text('Sintonizados 3/3'), findsOneWidget);
+      });
+
+      testWidgets('otros errores del servidor no abren el diálogo', (tester) async {
+        final inventory = FakeInventoryRepository(
+          items: {
+            'ch1': [
+              makeCharacterItem(
+                id: 'ring',
+                templateId: 't-ring',
+                effective: makeEffective(
+                  name: 'Anillo',
+                  category: 'MagicItem',
+                  damageDice: null,
+                  requiresAttunement: true,
+                ),
+              ),
+            ],
+          },
+        );
+        await _pumpApp(tester, location: '/characters/ch1', inventory: inventory);
+        await _openInventory(tester);
+        inventory.error = dioError(null);
+        await _menu(tester, 'ring', 'Sintonizar');
+        expect(find.byKey(const Key('attunement-dialog')), findsNothing);
+        expect(find.textContaining('No se pudo conectar'), findsOneWidget);
+      });
+
+      test('el código se lee del ProblemDetails', () {
+        expect(isAttunementLimit(dioError(409, data: {'code': 'attunement-limit'})), isTrue);
+        expect(isAttunementLimit(dioError(409, data: {'code': 'other'})), isFalse);
+        expect(isAttunementLimit(dioError(409)), isFalse);
+      });
     });
 
     testWidgets('quitar con 202 muestra el mensaje de aprobación', (tester) async {

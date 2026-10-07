@@ -6,10 +6,10 @@ import '../../campaigns/domain/campaign_models.dart';
 /// (players always create their own character); `(userId: null)` is an NPC.
 typedef NewCharacterData = ({String name, ({String? userId})? owner});
 
-const _selfValue = '__self__';
 const _npcValue = '__npc__';
 
-/// Asks for the name of a new character and, for DMs, who owns it.
+/// Asks for the name of a new character and, for DMs, which player it is for.
+/// A DM has no characters of their own: an NPC by default, or a player's.
 class NewCharacterDialog extends StatefulWidget {
   const NewCharacterDialog({
     super.key,
@@ -31,7 +31,7 @@ class NewCharacterDialog extends StatefulWidget {
 class _NewCharacterDialogState extends State<NewCharacterDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  String _owner = _selfValue;
+  String _owner = _npcValue;
 
   @override
   void dispose() {
@@ -43,11 +43,7 @@ class _NewCharacterDialogState extends State<NewCharacterDialog> {
     if (!_formKey.currentState!.validate()) return;
     ({String? userId})? owner;
     if (widget.canChooseOwner) {
-      owner = switch (_owner) {
-        _selfValue => (userId: widget.myUserId),
-        _npcValue => (userId: null),
-        final id => (userId: id),
-      };
+      owner = _owner == _npcValue ? (userId: null) : (userId: _owner);
     }
     Navigator.of(context).pop<NewCharacterData>((name: _nameController.text.trim(), owner: owner));
   }
@@ -78,18 +74,17 @@ class _NewCharacterDialogState extends State<NewCharacterDialog> {
                   key: const Key('character-owner'),
                   initialValue: _owner,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Dueño'),
+                  decoration: const InputDecoration(labelText: 'Para'),
                   items: [
-                    const DropdownMenuItem(value: _selfValue, child: Text('Yo (por defecto)')),
+                    const DropdownMenuItem(value: _npcValue, child: Text('PNJ (sin jugador)')),
                     for (final m in widget.members)
-                      if (m.userId != widget.myUserId)
+                      if (m.role == CampaignRole.player && m.userId != widget.myUserId)
                         DropdownMenuItem(
                           value: m.userId,
                           child: Text(m.displayName, overflow: TextOverflow.ellipsis),
                         ),
-                    const DropdownMenuItem(value: _npcValue, child: Text('Sin dueño (PNJ)')),
                   ],
-                  onChanged: (value) => setState(() => _owner = value ?? _selfValue),
+                  onChanged: (value) => setState(() => _owner = value ?? _npcValue),
                 ),
               ],
             ],

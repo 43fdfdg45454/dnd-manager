@@ -497,6 +497,8 @@ class Subrace {
     this.description = const [],
     this.abilityBonuses = const [],
     this.traits = const [],
+    this.choices = const OriginChoiceSpec(),
+    this.resistances = const [],
   });
 
   factory Subrace.fromJson(Map<String, dynamic> json) => Subrace(
@@ -505,6 +507,8 @@ class Subrace {
     description: _strList(json['description']),
     abilityBonuses: _objects(json['abilityBonuses'], AbilityBonus.fromJson),
     traits: _objects(json['traits'], Trait.fromJson),
+    choices: OriginChoiceSpec.fromJson(json['choices']),
+    resistances: _strList(json['resistances']),
   );
 
   final String index;
@@ -512,6 +516,42 @@ class Subrace {
   final List<String> description;
   final List<AbilityBonus> abilityBonuses;
   final List<Trait> traits;
+
+  /// Decisions the subrace asks for at creation (phase 19).
+  final OriginChoiceSpec choices;
+
+  /// Damage types the subrace always resists.
+  final List<String> resistances;
+}
+
+/// Which decisions a race, subrace or background asks for at creation
+/// (`RaceChoicesDto`). The wizard only needs to know whether there is
+/// something to ask; the options themselves come from
+/// `GET /characters/{id}/origin-choices`.
+class OriginChoiceSpec {
+  const OriginChoiceSpec({this.kinds = const {}});
+
+  factory OriginChoiceSpec.fromJson(Object? json) {
+    final map = _map(json);
+    if (map == null) return const OriginChoiceSpec();
+    return OriginChoiceSpec(
+      kinds: {
+        for (final key in const ['abilityBonuses', 'skills', 'languages', 'tools', 'cantrip', 'feats'])
+          if (map[key] != null) key,
+        if ((map['traitOptions'] as List? ?? const []).isNotEmpty) 'traitOptions',
+      },
+    );
+  }
+
+  /// Names of the parts present (`abilityBonuses`, `skills`, `languages`,
+  /// `tools`, `cantrip`, `feats`, `traitOptions`).
+  final Set<String> kinds;
+
+  bool get isEmpty => kinds.isEmpty;
+
+  /// True when there is a decision other than languages (the wizard asks for
+  /// languages in their own step).
+  bool get asksBesidesLanguages => kinds.any((k) => k != 'languages');
 }
 
 class RaceDetail extends RaceSummary {
@@ -529,6 +569,8 @@ class RaceDetail extends RaceSummary {
     this.alignment,
     this.sizeDescription,
     this.subraces = const [],
+    this.choices = const OriginChoiceSpec(),
+    this.resistances = const [],
   });
 
   factory RaceDetail.fromJson(Map<String, dynamic> json) {
@@ -546,6 +588,8 @@ class RaceDetail extends RaceSummary {
       alignment: _strOrNull(json['alignment']),
       sizeDescription: _strOrNull(json['sizeDescription']),
       subraces: _objects(json['subraces'], Subrace.fromJson),
+      choices: OriginChoiceSpec.fromJson(json['choices']),
+      resistances: _strList(json['resistances']),
     );
   }
 
@@ -555,6 +599,12 @@ class RaceDetail extends RaceSummary {
   final String? alignment;
   final String? sizeDescription;
   final List<Subrace> subraces;
+
+  /// Decisions the race asks for at creation (phase 19); subraces carry their own.
+  final OriginChoiceSpec choices;
+
+  /// Damage types the race always resists.
+  final List<String> resistances;
 }
 
 // ---------------------------------------------------------------------------
@@ -952,6 +1002,7 @@ class Background {
     this.startingEquipmentText,
     this.startingEquipment,
     this.source,
+    this.choices = const OriginChoiceSpec(),
   });
 
   factory Background.fromJson(Map<String, dynamic> json) => Background(
@@ -963,6 +1014,7 @@ class Background {
     startingEquipmentText: _strOrNull(json['startingEquipmentText']),
     startingEquipment: _map(json['startingEquipment']).let(StartingEquipment.fromJson),
     source: _strOrNull(json['source']),
+    choices: OriginChoiceSpec.fromJson(json['choices']),
   );
 
   final String index;
@@ -970,6 +1022,9 @@ class Background {
 
   /// "srd", "homebrew" or the id of a content pack; null when not sent.
   final String? source;
+
+  /// Decisions the background asks for at creation (phase 19).
+  final OriginChoiceSpec choices;
   final String? featureName;
   final List<String> featureDescription;
   final List<String> skillProficiencies;

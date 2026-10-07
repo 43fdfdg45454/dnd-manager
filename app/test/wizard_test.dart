@@ -394,13 +394,22 @@ void main() {
       state = state.copyWith(cantrips: [for (var i = 0; i < 4; i++) spell('c$i', 0)]);
       expect(state.validate(spellsStep), 'Como máximo 3 trucos');
 
-      // Int 8 -> modifier -1 -> max(1, 0) = 1 prepared spell.
+      // The spellbook holds six spells; Int 8 -> modifier -1 -> max(1, 0) = 1 prepared.
       state = state.copyWith(
         cantrips: [spell('c1', 0)],
         leveledSpells: [spell('s1', 1), spell('s2', 1)],
+        preparedSpells: {'s1', 's2'},
       );
-      expect(state.maxSpells, 1);
-      expect(state.validate(spellsStep), 'Como máximo 1 hechizo');
+      expect(state.maxSpells, wizardSpellbookSize);
+      expect(state.maxPrepared, 1);
+      expect(state.validate(spellsStep), 'Prepara como máximo 1 hechizo');
+
+      state = state.copyWith(preparedSpells: {'s1'});
+      expect(state.validate(spellsStep), isNull);
+
+      state = state.copyWith(leveledSpells: [for (var i = 0; i < 7; i++) spell('s$i', 1)]);
+      expect(state.validate(spellsStep), 'Como máximo 6 hechizos');
+      state = state.copyWith(leveledSpells: [spell('s1', 1)]);
 
       state = state.copyWith(
         manualScores: {...state.manualScores, 'int': 21},
@@ -605,8 +614,9 @@ void main() {
 
       expect(find.byKey(const Key('step-spells')), findsOneWidget);
       expect(find.text('Trucos 0/3'), findsOneWidget);
-      // Int 15 + 1 (high elf) = 16 -> modifier +3 -> 4 spells.
-      expect(find.text('Hechizos 0/4'), findsOneWidget);
+      // The spellbook holds six spells; Int 15 + 1 (high elf) = 16 -> modifier +3 -> 4 prepared.
+      expect(find.text('Libro de hechizos 0/6'), findsOneWidget);
+      expect(find.text('Preparados 0/4'), findsOneWidget);
 
       await _tap(tester, find.byKey(const Key('wizard-pick-cantrips')));
       for (final spell in ['fire-bolt', 'light', 'mage-hand', 'ray-of-frost']) {
@@ -625,7 +635,9 @@ void main() {
       expect(find.byKey(const Key('picker-spell-fire-bolt')), findsNothing);
       await _tap(tester, find.byKey(const Key('picker-spell-magic-missile')));
       await _tap(tester, find.byKey(const Key('spell-picker-done')));
-      expect(find.text('Hechizos 1/4'), findsOneWidget);
+      expect(find.text('Libro de hechizos 1/6'), findsOneWidget);
+      // The first spells copied are prepared by default.
+      expect(find.text('Preparados 1/4'), findsOneWidget);
 
       await _tap(
         tester,
@@ -634,7 +646,48 @@ void main() {
           matching: find.byIcon(Icons.clear),
         ),
       );
-      expect(find.text('Hechizos 0/4'), findsOneWidget);
+      expect(find.text('Libro de hechizos 0/6'), findsOneWidget);
+      expect(find.text('Preparados 0/4'), findsOneWidget);
+    });
+
+    testWidgets('el mago elige 6 para el libro y prepara solo algunos', (tester) async {
+      final setup = await _pump(tester);
+      await _toBackground(tester);
+      await _tap(tester, find.byKey(const Key('skill-arcana')));
+      await _tap(tester, find.byKey(const Key('skill-history')));
+      await _next(tester);
+      await _next(tester);
+
+      await _tap(tester, find.byKey(const Key('wizard-pick-spells')));
+      await _tap(tester, find.byKey(const Key('picker-spell-magic-missile')));
+      await _tap(tester, find.byKey(const Key('picker-spell-shield')));
+      await _tap(tester, find.byKey(const Key('spell-picker-done')));
+      expect(find.text('Libro de hechizos 2/6'), findsOneWidget);
+      expect(find.text('Preparados 2/4'), findsOneWidget);
+
+      // Unprepare Shield: it stays in the book.
+      await _tap(tester, find.byKey(const Key('prepare-shield')));
+      expect(find.text('Preparados 1/4'), findsOneWidget);
+      expect(find.text('Libro de hechizos 2/6'), findsOneWidget);
+
+      // Removing a spell of the book also removes it from the prepared ones.
+      await _tap(
+        tester,
+        find.descendant(
+          of: find.byKey(const Key('spell-magic-missile')),
+          matching: find.byIcon(Icons.clear),
+        ),
+      );
+      expect(find.text('Preparados 0/4'), findsOneWidget);
+      expect(find.byKey(const Key('prepare-magic-missile')), findsNothing);
+
+      await _tap(tester, find.byKey(const Key('prepare-shield')));
+      expect(find.text('Preparados 1/4'), findsOneWidget);
+      final state = ProviderScope.containerOf(tester.element(find.byType(CharacterWizardPage)))
+          .read(characterWizardControllerProvider(_args));
+      final spells = {for (final s in state.toPatch().spells!) s.spellIndex: s.isPrepared};
+      expect(spells, {'shield': true});
+      expect(setup.characters.created, isEmpty);
     });
   });
 
@@ -665,6 +718,19 @@ void main() {
       await _next(tester);
       expect(find.byKey(const Key('step-review')), findsOneWidget);
     }
+
+    testWidgets('un DM crea un PNJ por defecto: la revisión dice PNJ, nunca "Yo"', (
+      tester,
+    ) async {
+      final setup = await _pump(tester, role: CampaignRole.dm);
+      await toReview(tester);
+
+      expect(find.text('Para: PNJ'), findsOneWidget);
+      expect(find.textContaining('Yo'), findsNothing);
+      await _tap(tester, find.byKey(const Key('wizard-submit')));
+
+      expect(setup.characters.created.single.owner, (userId: null));
+    });
 
     testWidgets('crea el personaje, guarda la hoja, añade el equipo y abre la ficha', (
       tester,
@@ -939,6 +1005,24 @@ void main() {
       expect(find.byKey(const Key('wizard-owner')), findsNothing);
     });
 
+    testWidgets('el selector del DM empieza en PNJ y solo ofrece jugadores, sin "Yo"', (
+      tester,
+    ) async {
+      await _pump(tester, role: CampaignRole.dm);
+
+      expect(find.text('PNJ (sin jugador)'), findsOneWidget);
+      await _tap(tester, find.byKey(const Key('wizard-owner')));
+      expect(find.text('Yo (por defecto)'), findsNothing);
+      // The DM themselves (u1, the Owner) is not offered; the player Beto is.
+      expect(find.text('Usuario Demo'), findsNothing);
+      await _tap(tester, find.text('Beto').last);
+
+      final state = ProviderScope.containerOf(
+        tester.element(find.byKey(const Key('step-name'))),
+      ).read(characterWizardControllerProvider(_args));
+      expect(state.owner, (userId: 'p2'));
+    });
+
     testWidgets('un DM elige el dueño y puede llegar con ownerUserId', (tester) async {
       final setup = await _pump(
         tester,
@@ -952,7 +1036,7 @@ void main() {
       expect(setup.container.read(characterWizardControllerProvider(args)).owner, (userId: 'p2'));
 
       await _tap(tester, find.byKey(const Key('wizard-owner')));
-      await _tap(tester, find.text('Sin dueño (PNJ)').last);
+      await _tap(tester, find.text('PNJ (sin jugador)').last);
       final state = setup.container.read(characterWizardControllerProvider(args));
       expect(state.owner, (userId: null));
     });

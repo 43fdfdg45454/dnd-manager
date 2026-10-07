@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';
+import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
 import 'helpers/item_fakes.dart';
 import 'helpers/party_fakes.dart';
@@ -246,6 +247,68 @@ void main() {
       // 3 temporary hit points absorb part of the damage.
       expect(find.byKey(const Key('dm-sheet-hp')), findsOneWidget);
       expect(find.text('PG 18 / 28'), findsWidgets);
+    });
+
+    testWidgets('el daño a un concentrado pregunta la salvación y "No" termina la concentración', (
+      tester,
+    ) async {
+      final party = _party()
+        ..nextDamage = [
+          const DamageOutcome(
+            characterId: 'ch1',
+            damage: 20,
+            hitPointsCurrent: 3,
+            concentratingOn: 'bless',
+            concentrationCheckDc: 10,
+          ),
+        ];
+      final characters = FakeCharactersRepository(
+        characters: [makeCharacterJson(status: 'Active', concentratingOnSpellIndex: 'bless')],
+      );
+      final fakes = AppFakes(
+        campaigns: FakeCampaignsRepository(campaigns: [makeCampaign(myRole: CampaignRole.dm)]),
+        party: party,
+        characters: characters,
+      );
+      await pumpRealApp(tester, location: '/campaigns/c1/dm', fakes: fakes);
+
+      await _tap(tester, find.byKey(const Key('party-member-ch1')));
+      await tester.enterText(find.byKey(const Key('dm-amount')), '20');
+      await tester.pump();
+      await _tap(tester, find.byKey(const Key('dm-damage')));
+
+      expect(find.text('Concentración de Thorin'), findsOneWidget);
+      expect(
+        find.textContaining('¿Superaste la salvación de Constitución (CD 10)?'),
+        findsOneWidget,
+      );
+      await _tap(tester, find.byKey(const Key('concentration-save-no')));
+      expect(characters.concentrationCalls, [null]);
+      expect(find.text('Thorin: Pierdes la concentración en Bless.'), findsOneWidget);
+    });
+
+    testWidgets('si la concentración termina sola el DM solo recibe el aviso', (tester) async {
+      final party = _party()
+        ..nextDamage = [
+          const DamageOutcome(
+            characterId: 'ch1',
+            damage: 40,
+            concentratingOn: 'bless',
+            concentrationEnded: true,
+          ),
+        ];
+      await pumpRealApp(
+        tester,
+        location: '/campaigns/c1/dm',
+        fakes: _fakes(party: party),
+      );
+      await _tap(tester, find.byKey(const Key('party-member-ch1')));
+      await tester.enterText(find.byKey(const Key('dm-amount')), '40');
+      await tester.pump();
+      await _tap(tester, find.byKey(const Key('dm-damage')));
+
+      expect(find.byKey(const Key('concentration-save-dialog')), findsNothing);
+      expect(find.text('Thorin: Pierdes la concentración en Bless.'), findsOneWidget);
     });
 
     testWidgets('las condiciones se añaden y se quitan con party/adjust', (tester) async {

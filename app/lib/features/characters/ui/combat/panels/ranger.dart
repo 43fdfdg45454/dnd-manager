@@ -6,6 +6,7 @@ import '../../../../../core/theme/icons.dart';
 
 import '../../../../dice/ui/dice_sheet.dart';
 import '../combat_support.dart';
+import '../concentration_flow.dart';
 import 'panel_support.dart';
 
 /// Spell index of Hunter's Mark in the SRD catalog.
@@ -66,11 +67,22 @@ class RangerPanel extends ConsumerWidget {
                   child: FilledButton.tonalIcon(
                     key: const Key('ranger-hunters-mark'),
                     onPressed: panel.canEdit && !marking
-                        ? () => runCombat(
-                            context,
-                            () => panelController(ref, c).setConcentration(huntersMarkIndex),
-                            success: 'Concentración: Marca del cazador.',
-                          )
+                        ? () async {
+                            if (!await confirmReplaceConcentration(
+                              context,
+                              ref,
+                              c,
+                              huntersMarkIndex,
+                            )) {
+                              return;
+                            }
+                            if (!context.mounted) return;
+                            await runCombat(
+                              context,
+                              () => panelController(ref, c).setConcentration(huntersMarkIndex),
+                              success: 'Concentración: Marca del cazador.',
+                            );
+                          }
                         : null,
                     icon: const AppIcon(AppIcons.bow, size: 20),
                     label: Text(marking ? 'Marca del cazador (activa)' : 'Marca del cazador'),

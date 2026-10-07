@@ -81,6 +81,16 @@ String? problemDetail(Object error) {
   return detail is String && detail.trim().isNotEmpty ? detail.trim() : null;
 }
 
+/// The machine-readable `code` of a ProblemDetails response body (for example
+/// `attunement-limit` or `origin-choices-incomplete`), when the server sent one.
+String? problemCode(Object error) {
+  if (error is! DioException) return null;
+  final data = error.response?.data;
+  if (data is! Map) return null;
+  final code = data['code'];
+  return code is String && code.trim().isNotEmpty ? code.trim() : null;
+}
+
 /// Status-specific messages for the items, inventory and shop endpoints.
 const itemErrorMessages = <int, String>{
   400: 'La operación no es válida para este objeto.',

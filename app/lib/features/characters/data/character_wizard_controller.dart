@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/api_error.dart';
+import '../../campaigns/data/campaigns_controller.dart';
 import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models.dart'
     show
@@ -46,12 +49,48 @@ int? parseRollScore(String text) {
   return value != null && value >= rollMin && value <= rollMax ? value : null;
 }
 
-/// Steps of the creation wizard in order. [spells] only exists for classes that
+/// Steps of the creation wizard in order. [origin] only exists when the race,
+/// subrace or background ask for decisions and [spells] only for classes that
 /// cast at level 1.
-enum WizardStep { name, race, classChoice, abilities, background, equipment, spells, review }
+enum WizardStep {
+  name,
+  race,
+  classChoice,
+  abilities,
+  background,
+  origin,
+  equipment,
+  spells,
+  review,
+}
 
 /// Classes that prepare spells (maximum = ability modifier + level).
 const _preparingClasses = {'cleric', 'druid', 'paladin', 'wizard'};
+
+/// The wizard keeps a spellbook apart from the spells it prepares.
+const wizardClassIndex = 'wizard';
+
+/// Spells a level 1 wizard copies into the spellbook (PHB).
+const wizardSpellbookSize = 6;
+
+/// What the player answered to one origin choice: the picked indexes (or
+/// texts), or a feat with the ability it raises.
+class OriginAnswer {
+  const OriginAnswer({this.picks = const [], this.feat, this.ability});
+
+  final List<String> picks;
+  final String? feat;
+  final String? ability;
+
+  bool get isEmpty => picks.every((p) => p.trim().isEmpty) && feat == null;
+
+  OriginAnswer copyWith({List<String>? picks, Object? feat = _unset, Object? ability = _unset}) =>
+      OriginAnswer(
+        picks: picks ?? this.picks,
+        feat: identical(feat, _unset) ? this.feat : feat as String?,
+        ability: identical(ability, _unset) ? this.ability : ability as String?,
+      );
+}
 
 const _unset = Object();
 
@@ -115,19 +154,25 @@ class WizardState {
     this.keepBackgroundEquipment = false,
     this.cantrips = const [],
     this.leveledSpells = const [],
+    this.preparedSpells = const {},
     this.alignment,
     this.notes = '',
     this.race,
     this.classDetail,
     this.background,
     this.loadError,
+    this.originPlan,
+    this.originAnswers = const {},
+    this.originLoading = false,
+    this.originError,
   });
 
   /// Index in [steps].
   final int step;
   final String name;
 
-  /// Null: the user themselves (the owner is not sent). `(userId: null)` is an NPC.
+  /// Null: the user themselves for a player (the owner is not sent), an NPC
+  /// for a DM, who has no characters of their own. `(userId: null)` is an NPC.
   final ({String? userId})? owner;
 
   final String? raceIndex;
@@ -173,7 +218,12 @@ class WizardState {
   /// In gold mode, keep the equipment of the background.
   final bool keepBackgroundEquipment;
   final List<CharacterSpell> cantrips;
+
+  /// Leveled spells chosen (the spellbook, for a wizard).
   final List<CharacterSpell> leveledSpells;
+
+  /// Spell indexes of [leveledSpells] a wizard prepares (empty for other classes).
+  final Set<String> preparedSpells;
   final String? alignment;
   final String notes;
 
@@ -184,6 +234,17 @@ class WizardState {
 
   /// Spanish error of the last failed catalog load.
   final String? loadError;
+
+  /// Decisions of the race, subrace and background as the server plans them
+  /// for the draft (null until loaded).
+  final OriginChoices? originPlan;
+
+  /// Answers by choice key.
+  final Map<String, OriginAnswer> originAnswers;
+  final bool originLoading;
+
+  /// Spanish error of the last failed load of [originPlan].
+  final String? originError;
 
   List<CharacterSpell> get spells => [...cantrips, ...leveledSpells];
 
@@ -260,18 +321,88 @@ class WizardState {
     return detail.isSpellcaster && casts;
   }
 
-  /// Leveled spells known (or prepared) at level 1: the class table, or for
-  /// preparing classes `max(1, modifier + level)`.
-  int get maxSpells {
-    final level = _levelOne;
+  /// True for a class that keeps a spellbook apart from its prepared spells.
+  bool get hasSpellbook => hasSpellStep && classDetail?.index == wizardClassIndex;
+
+  /// Spells prepared at level 1 by a preparing class: `max(1, modifier + level)`.
+  int get maxPrepared {
     final detail = classDetail;
-    if (!hasSpellStep || level == null || detail == null) return 0;
-    if (level.spellsKnown != null) return level.spellsKnown!;
-    if (!_preparingClasses.contains(detail.index)) return 0;
+    if (!hasSpellStep || detail == null || !_preparingClasses.contains(detail.index)) return 0;
     final ability = detail.spellcastingAbility;
     final score = ability == null ? null : finalScore(abilityKeyOf(ability));
     final modifier = score == null ? 0 : ((score - 10) / 2).floor();
     return math.max(1, modifier + 1);
+  }
+
+  /// Leveled spells chosen at level 1: the spellbook of a wizard
+  /// ([wizardSpellbookSize]), the class table, or for preparing classes
+  /// `max(1, modifier + level)`.
+  int get maxSpells {
+    final level = _levelOne;
+    final detail = classDetail;
+    if (!hasSpellStep || level == null || detail == null) return 0;
+    if (hasSpellbook) return wizardSpellbookSize;
+    if (level.spellsKnown != null) return level.spellsKnown!;
+    return maxPrepared;
+  }
+
+  /// Spells of the spellbook that are prepared (only the ones still chosen).
+  Set<String> get preparedChosen => {
+    for (final s in leveledSpells)
+      if (preparedSpells.contains(s.spellIndex)) s.spellIndex,
+  };
+
+  // -- Derived: origin choices -----------------------------------------------------
+
+  /// True when the race, subrace or background ask for something besides
+  /// languages (which have their own step).
+  bool get needsOriginStep =>
+      (race?.choices.asksBesidesLanguages ?? false) ||
+      (subrace?.choices.asksBesidesLanguages ?? false) ||
+      (background?.choices.asksBesidesLanguages ?? false);
+
+  /// Choices of the plan the wizard asks for (languages have their own step).
+  List<OriginChoice> get originChoices => [
+    for (final c in originPlan?.choices ?? const <OriginChoice>[])
+      if (c.kind != OriginChoiceKind.language) c,
+  ];
+
+  OriginAnswer originAnswerOf(OriginChoice choice) =>
+      originAnswers[choice.key] ?? const OriginAnswer();
+
+  /// Spanish error of [choice] while it lacks required picks, or null.
+  String? originChoiceError(OriginChoice choice) {
+    final answer = originAnswerOf(choice);
+    if (choice.kind == OriginChoiceKind.feat) {
+      if (choice.required == 0) return null;
+      final feat = answer.feat == null ? null : choice.option(answer.feat!);
+      if (feat == null) return '${choice.name}: elige una dote';
+      final increase = feat.abilityIncrease;
+      if (increase != null && increase.needsPick && answer.ability == null) {
+        return '${choice.name}: elige la característica que sube ${feat.name}';
+      }
+      return null;
+    }
+    final picks = answer.picks.where((p) => p.trim().isNotEmpty).length;
+    if (picks < choice.required) {
+      final missing = choice.required - picks;
+      return missing == 1
+          ? '${choice.name}: falta 1 elección'
+          : '${choice.name}: faltan $missing elecciones';
+    }
+    return null;
+  }
+
+  /// First error of the origin choices, or null when every required one is answered.
+  String? get originValidation {
+    if (originLoading) return 'Cargando las elecciones…';
+    if (originError != null) return originError;
+    if (originPlan == null) return 'Cargando las elecciones…';
+    for (final c in originChoices) {
+      final error = originChoiceError(c);
+      if (error != null) return error;
+    }
+    return null;
   }
 
   /// Skills granted by the background, as skill indexes.
@@ -419,10 +550,12 @@ class WizardState {
     return merged.values.toList();
   }
 
-  /// Visible steps ("Hechizos" only when the class casts).
+  /// Visible steps ("Elecciones de raza y trasfondo" only when something is
+  /// asked, "Hechizos" only when the class casts).
   List<WizardStep> get steps => [
     for (final s in WizardStep.values)
-      if (s != WizardStep.spells || hasSpellStep) s,
+      if ((s != WizardStep.spells || hasSpellStep) && (s != WizardStep.origin || needsOriginStep))
+        s,
   ];
 
   WizardStep get currentStep => steps[step.clamp(0, steps.length - 1)];
@@ -453,12 +586,17 @@ class WizardState {
     bool? keepBackgroundEquipment,
     List<CharacterSpell>? cantrips,
     List<CharacterSpell>? leveledSpells,
+    Set<String>? preparedSpells,
     Object? alignment = _unset,
     String? notes,
     Object? race = _unset,
     Object? classDetail = _unset,
     Object? background = _unset,
     Object? loadError = _unset,
+    Object? originPlan = _unset,
+    Map<String, OriginAnswer>? originAnswers,
+    bool? originLoading,
+    Object? originError = _unset,
   }) => WizardState(
     step: step ?? this.step,
     name: name ?? this.name,
@@ -487,12 +625,17 @@ class WizardState {
     keepBackgroundEquipment: keepBackgroundEquipment ?? this.keepBackgroundEquipment,
     cantrips: cantrips ?? this.cantrips,
     leveledSpells: leveledSpells ?? this.leveledSpells,
+    preparedSpells: preparedSpells ?? this.preparedSpells,
     alignment: identical(alignment, _unset) ? this.alignment : alignment as String?,
     notes: notes ?? this.notes,
     race: identical(race, _unset) ? this.race : race as RaceDetail?,
     classDetail: identical(classDetail, _unset) ? this.classDetail : classDetail as ClassDetail?,
     background: identical(background, _unset) ? this.background : background as Background?,
     loadError: identical(loadError, _unset) ? this.loadError : loadError as String?,
+    originPlan: identical(originPlan, _unset) ? this.originPlan : originPlan as OriginChoices?,
+    originAnswers: originAnswers ?? this.originAnswers,
+    originLoading: originLoading ?? this.originLoading,
+    originError: identical(originError, _unset) ? this.originError : originError as String?,
   );
 
   // -- Validation ----------------------------------------------------------------
@@ -527,6 +670,8 @@ class WizardState {
           return n == 1 ? 'Elige 1 habilidad' : 'Elige $n habilidades';
         }
         return null;
+      case WizardStep.origin:
+        return originValidation;
       case WizardStep.equipment:
         return equipmentError;
       case WizardStep.spells:
@@ -535,6 +680,11 @@ class WizardState {
         }
         if (leveledSpells.length > maxSpells) {
           return maxSpells == 1 ? 'Como máximo 1 hechizo' : 'Como máximo $maxSpells hechizos';
+        }
+        if (hasSpellbook && preparedChosen.length > maxPrepared) {
+          return maxPrepared == 1
+              ? 'Prepara como máximo 1 hechizo'
+              : 'Prepara como máximo $maxPrepared hechizos';
         }
         return null;
       case WizardStep.review:
@@ -615,13 +765,60 @@ class WizardState {
           ),
       ],
       spells: [
-        for (final s in spells)
+        for (final s in cantrips)
           CharacterSpell(spellIndex: s.spellIndex, classIndex: classKey, isPrepared: true),
+        for (final s in leveledSpells)
+          CharacterSpell(
+            spellIndex: s.spellIndex,
+            classIndex: classKey,
+            // A wizard keeps a spellbook and prepares some of its spells.
+            isPrepared: !hasSpellbook || preparedSpells.contains(s.spellIndex),
+          ),
       ],
       overrides: const [],
       notes: notes.trim().isEmpty ? null : notes.trim(),
       copperPieces: startingCopper > 0 ? startingCopper : null,
+      // Going back to change the race may leave an earlier draft with a subrace
+      // or background the character no longer has.
+      clear: {
+        if (subraceIndex == null) 'subraceIndex',
+        if (backgroundIndex == null) 'backgroundIndex',
+      },
     );
+  }
+
+  /// Answers to send to `PUT /origin-choices`: every choice the wizard asked
+  /// for, with an empty answer for the ones left blank.
+  List<LevelUpChoiceAnswer> toOriginAnswers() {
+    final answers = <LevelUpChoiceAnswer>[];
+    for (final choice in originChoices) {
+      final answer = originAnswerOf(choice);
+      if (choice.kind == OriginChoiceKind.feat) {
+        final feat = answer.feat;
+        if (feat == null) {
+          answers.add(LevelUpChoiceAnswer.picks(choice.key, const []));
+        } else {
+          final increase = choice.option(feat)?.abilityIncrease;
+          answers.add(
+            LevelUpChoiceAnswer.feat(
+              choice.key,
+              feat,
+              ability: increase == null
+                  ? null
+                  : answer.ability ?? (increase.needsPick ? null : increase.options.first),
+            ),
+          );
+        }
+        continue;
+      }
+      answers.add(
+        LevelUpChoiceAnswer.picks(choice.key, [
+          for (final p in answer.picks)
+            if (p.trim().isNotEmpty) choice.freeText ? p.trim() : p,
+        ]),
+      );
+    }
+    return answers;
   }
 }
 
@@ -637,22 +834,33 @@ class CharacterWizardController extends Notifier<WizardState> {
   String get campaignId => args.campaignId;
 
   // Progress of a submission, so a retry after a failure resumes instead of
-  // creating the character twice.
+  // creating the character twice. The draft may already exist when the origin
+  // step asks the server for the race and background decisions.
   String? _createdId;
   bool _sheetSaved = false;
+  bool _originSaved = false;
   int _itemsAdded = 0;
 
+  /// Bumped on each load of the origin plan so a late answer is dropped.
+  int _originRequest = 0;
+
   @override
-  WizardState build() =>
-      WizardState(owner: args.ownerUserId == null ? null : (userId: args.ownerUserId));
+  WizardState build() {
+    // Kept alive for [_ownerToSend]: whether the user is a DM decides the owner.
+    ref.listen(campaignDetailControllerProvider(campaignId), (_, _) {});
+    return WizardState(owner: args.ownerUserId == null ? null : (userId: args.ownerUserId));
+  }
 
   CatalogRepository get _catalog => ref.read(catalogRepositoryProvider);
+
+  CharactersRepository get _characters => ref.read(charactersRepositoryProvider);
 
   // -- Navigation ----------------------------------------------------------------
 
   void goTo(int step) {
     final last = state.steps.length - 1;
     state = state.copyWith(step: step.clamp(0, last));
+    if (state.currentStep == WizardStep.origin) unawaited(loadOrigin());
   }
 
   void back() => goTo(state.step - 1);
@@ -663,6 +871,34 @@ class CharacterWizardController extends Notifier<WizardState> {
     if (error != null) return error;
     goTo(state.step + 1);
     return null;
+  }
+
+  /// Like [next], but leaving the origin step first saves its answers on the
+  /// server. Returns the error that blocks the step, or null once moved on.
+  Future<String?> advance() async {
+    if (state.currentStep != WizardStep.origin) return next();
+    final error = state.validate(state.step);
+    if (error != null) return error;
+    try {
+      await _saveOrigin();
+    } catch (e) {
+      return problemDetail(e) ?? describeCharacterError(e);
+    }
+    if (!ref.mounted) return null;
+    goTo(state.step + 1);
+    return null;
+  }
+
+  /// Deletes the draft created for the origin choices (the wizard was left).
+  Future<void> discardDraft() async {
+    final id = _createdId;
+    if (id == null) return;
+    _createdId = null;
+    try {
+      await _characters.delete(id);
+    } catch (_) {
+      // The draft stays in the list of drafts; nothing else to do.
+    }
   }
 
   String? validate(int step) => state.validate(step);
@@ -688,13 +924,27 @@ class CharacterWizardController extends Notifier<WizardState> {
 
   void setOwner(({String? userId})? owner) => state = state.copyWith(owner: owner);
 
+  /// Owner sent on creation. A DM has no characters of their own: without a
+  /// player chosen, theirs is an NPC (explicit `ownerUserId: null`).
+  Future<({String? userId})?> _ownerToSend(WizardState s) async {
+    final campaign = await ref.read(campaignDetailControllerProvider(campaignId).future);
+    return campaign.myRole.isAtLeastDm ? (userId: s.owner?.userId) : s.owner;
+  }
+
   void setNotes(String value) => state = state.copyWith(notes: value);
 
   // -- Step 2: race --------------------------------------------------------------
 
   Future<void> selectRace(String index) async {
     if (state.raceIndex == index && state.race != null) return;
-    state = state.copyWith(raceIndex: index, subraceIndex: null, race: null, loadError: null);
+    state = state.copyWith(
+      raceIndex: index,
+      subraceIndex: null,
+      race: null,
+      loadError: null,
+      originPlan: null,
+      originAnswers: const {},
+    );
     try {
       final detail = await _catalog.raceDetail(index);
       if (!ref.mounted || state.raceIndex != index) return;
@@ -705,7 +955,8 @@ class CharacterWizardController extends Notifier<WizardState> {
     }
   }
 
-  void selectSubrace(String? index) => state = state.copyWith(subraceIndex: index);
+  void selectSubrace(String? index) =>
+      state = state.copyWith(subraceIndex: index, originPlan: null, originAnswers: const {});
 
   void setApplyRacialBonuses(bool value) => state = state.copyWith(applyRacialBonuses: value);
 
@@ -720,6 +971,7 @@ class CharacterWizardController extends Notifier<WizardState> {
       skills: const {},
       cantrips: const [],
       leveledSpells: const [],
+      preparedSpells: const {},
       equipmentMode: EquipmentMode.kit,
       equipmentOptions: const {},
       categoryPicks: const {},
@@ -808,6 +1060,8 @@ class CharacterWizardController extends Notifier<WizardState> {
     state = state.copyWith(
       backgroundIndex: background?.index,
       background: background,
+      originPlan: null,
+      originAnswers: const {},
       keepBackgroundEquipment: false,
       equipmentOptions: {
         for (final e in state.equipmentOptions.entries)
@@ -919,6 +1173,8 @@ class CharacterWizardController extends Notifier<WizardState> {
   void addSpells(List<CharacterSpell> spells) {
     final cantrips = [...state.cantrips];
     final leveled = [...state.leveledSpells];
+    // A wizard prepares the first spells it copies, up to its maximum.
+    final prepared = {...state.preparedChosen};
     for (final s in spells) {
       final exists = [...cantrips, ...leveled].any((e) => e.spellIndex == s.spellIndex);
       if (exists) continue;
@@ -926,12 +1182,26 @@ class CharacterWizardController extends Notifier<WizardState> {
         cantrips.add(s);
       } else {
         leveled.add(s);
+        if (state.hasSpellbook && prepared.length < state.maxPrepared) prepared.add(s.spellIndex);
       }
     }
-    state = state.copyWith(cantrips: cantrips, leveledSpells: leveled);
+    state = state.copyWith(cantrips: cantrips, leveledSpells: leveled, preparedSpells: prepared);
+  }
+
+  /// Prepares or unprepares a spell of the wizard's spellbook; false when it
+  /// would exceed the maximum.
+  bool togglePrepared(String spellIndex) {
+    final prepared = {...state.preparedChosen};
+    if (!prepared.remove(spellIndex)) {
+      if (prepared.length >= state.maxPrepared) return false;
+      prepared.add(spellIndex);
+    }
+    state = state.copyWith(preparedSpells: prepared);
+    return true;
   }
 
   void removeSpell(String spellIndex) => state = state.copyWith(
+    preparedSpells: {...state.preparedSpells}..remove(spellIndex),
     cantrips: [
       for (final s in state.cantrips)
         if (s.spellIndex != spellIndex) s,
@@ -941,6 +1211,138 @@ class CharacterWizardController extends Notifier<WizardState> {
         if (s.spellIndex != spellIndex) s,
     ],
   );
+
+  // -- Origin choices --------------------------------------------------------------
+
+  /// Creates the draft on the server (once) and saves the identity of the
+  /// character (name, race, background, abilities and class), which is what
+  /// the planning of the race and background decisions needs.
+  Future<String> _ensureDraft() async {
+    final s = state;
+    var id = _createdId;
+    if (id == null) {
+      final created = await _characters.create(
+        campaignId,
+        name: s.name.trim(),
+        owner: await _ownerToSend(s),
+      );
+      id = created.id;
+      _createdId = id;
+    }
+    await _characters.patchSheet(
+      id,
+      SheetPatch(
+        name: s.name.trim(),
+        raceIndex: s.raceIndex,
+        subraceIndex: s.subraceIndex,
+        backgroundIndex: s.backgroundIndex,
+        applyRacialBonuses: s.applyRacialBonuses,
+        baseAbilities: {for (final k in abilityKeys) k: s.abilities[k] ?? 10},
+        classes: s.classIndex == null
+            ? null
+            : [
+                SheetPatchClass(
+                  classIndex: s.classIndex!,
+                  subclassIndex: s.subclassIndex,
+                  level: 1,
+                ),
+              ],
+        clear: {
+          if (s.subraceIndex == null) 'subraceIndex',
+          if (s.backgroundIndex == null) 'backgroundIndex',
+        },
+      ),
+    );
+    return id;
+  }
+
+  /// Loads the decisions of the race, subrace and background of the draft. The
+  /// answers typed before stay; the rest come from the server.
+  Future<void> loadOrigin() async {
+    final request = ++_originRequest;
+    state = state.copyWith(originLoading: true, originError: null);
+    try {
+      final id = await _ensureDraft();
+      final plan = await _characters.originChoices(id);
+      if (!ref.mounted || request != _originRequest) return;
+      final answers = <String, OriginAnswer>{};
+      for (final c in plan.choices) {
+        final typed = state.originAnswers[c.key];
+        answers[c.key] =
+            typed ??
+            OriginAnswer(
+              picks: [for (final i in c.selected) i.index],
+              feat: c.feat?.index,
+              ability: c.ability,
+            );
+      }
+      state = state.copyWith(
+        originPlan: plan,
+        originAnswers: answers,
+        originLoading: false,
+        originError: null,
+      );
+    } catch (error) {
+      if (!ref.mounted || request != _originRequest) return;
+      state = state.copyWith(
+        originLoading: false,
+        originError: problemDetail(error) ?? describeCharacterError(error),
+      );
+    }
+  }
+
+  void _setAnswer(OriginChoice choice, OriginAnswer Function(OriginAnswer) change) {
+    state = state.copyWith(
+      originAnswers: {...state.originAnswers, choice.key: change(state.originAnswerOf(choice))},
+    );
+  }
+
+  /// Picks or unpicks [index]; beyond [OriginChoice.choose] a single pick is
+  /// replaced and further ones are ignored.
+  void toggleOriginOption(OriginChoice choice, String index) {
+    final option = choice.option(index);
+    _setAnswer(choice, (a) {
+      final picks = [...a.picks];
+      if (picks.remove(index)) return a.copyWith(picks: picks);
+      if (option != null && !option.eligible) return a;
+      if (picks.length < choice.choose) return a.copyWith(picks: [...picks, index]);
+      if (choice.choose == 1) return a.copyWith(picks: [index]);
+      return a;
+    });
+  }
+
+  /// Writes the [slot]-th value of a free-text choice (tools of any kind).
+  void setOriginText(OriginChoice choice, int slot, String text) {
+    _setAnswer(choice, (a) {
+      final values = [...a.picks];
+      while (values.length <= slot) {
+        values.add('');
+      }
+      values[slot] = text;
+      return a.copyWith(picks: values);
+    });
+  }
+
+  void selectOriginFeat(OriginChoice choice, String index) {
+    final option = choice.option(index);
+    if (option == null || !option.eligible) return;
+    _setAnswer(
+      choice,
+      (a) => a.feat == index
+          ? a.copyWith(feat: null, ability: null)
+          : a.copyWith(feat: index, ability: null),
+    );
+  }
+
+  void setOriginFeatAbility(OriginChoice choice, String ability) =>
+      _setAnswer(choice, (a) => a.copyWith(ability: ability));
+
+  Future<void> _saveOrigin() async {
+    final id = _createdId ?? await _ensureDraft();
+    final answers = state.toOriginAnswers();
+    final result = await _characters.saveOriginChoices(id, answers);
+    if (ref.mounted) state = state.copyWith(originPlan: result);
+  }
 
   // -- Submit --------------------------------------------------------------------
 
@@ -956,13 +1358,22 @@ class CharacterWizardController extends Notifier<WizardState> {
     final s = state;
     var id = _createdId;
     if (id == null) {
-      final created = await characters.create(campaignId, name: s.name.trim(), owner: s.owner);
+      final created = await characters.create(
+        campaignId,
+        name: s.name.trim(),
+        owner: await _ownerToSend(s),
+      );
       id = created.id;
       _createdId = id;
     }
     if (!_sheetSaved) {
       await characters.patchSheet(id, s.toPatch());
       _sheetSaved = true;
+    }
+    // The full sheet replaces the lists the origin choices add to: answer them again.
+    if (!_originSaved && s.originChoices.isNotEmpty) {
+      await characters.saveOriginChoices(id, s.toOriginAnswers());
+      _originSaved = true;
     }
     final lines = s.allEquipment;
     while (_itemsAdded < lines.length) {

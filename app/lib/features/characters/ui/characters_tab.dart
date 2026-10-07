@@ -25,7 +25,7 @@ class CharactersTab extends ConsumerWidget {
   /// Opens the guided creation wizard.
   void _openWizard(BuildContext context) => context.push(AppRoutes.characterNew(campaign.id));
 
-  /// DM shortcut: name and owner only, for NPCs.
+  /// DM shortcut: name and player only (an NPC by default).
   Future<void> _createQuick(BuildContext context, WidgetRef ref, String myUserId) async {
     final data = await showDialog<NewCharacterData>(
       context: context,
@@ -180,6 +180,17 @@ class CharacterCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(child: Text(c.name, style: theme.textTheme.titleMedium)),
+                  if (c.ownerUserId == null) ...[
+                    const SizedBox(width: 8),
+                    Chip(
+                      key: Key('character-npc-${c.id}'),
+                      label: const Text('PNJ'),
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      backgroundColor: theme.colorScheme.tertiaryContainer,
+                      labelStyle: TextStyle(color: theme.colorScheme.onTertiaryContainer),
+                    ),
+                  ],
                   const SizedBox(width: 8),
                   Chip(
                     label: Text(c.status.label),
@@ -196,7 +207,7 @@ class CharacterCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       c.ownerUserId == null
-                          ? 'PNJ'
+                          ? 'Sin jugador'
                           : 'Jugador: ${c.ownerDisplayName ?? 'Desconocido'}',
                       style: theme.textTheme.bodySmall,
                     ),

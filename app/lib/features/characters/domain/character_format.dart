@@ -210,3 +210,24 @@ class CharacterPermissions {
 
   bool get canDelete => isDm || (isOwner && isDraft);
 }
+
+/// Spanish names of the damage types.
+const damageTypeLabels = <String, String>{
+  'acid': 'ácido',
+  'bludgeoning': 'contundente',
+  'cold': 'frío',
+  'fire': 'fuego',
+  'force': 'fuerza',
+  'lightning': 'relámpago',
+  'necrotic': 'necrótico',
+  'piercing': 'perforante',
+  'poison': 'veneno',
+  'psychic': 'psíquico',
+  'radiant': 'radiante',
+  'slashing': 'cortante',
+  'thunder': 'trueno',
+};
+
+/// Spanish name of a damage type index ("fire" -> "fuego"); unknown ones stay as sent.
+String damageTypeLabel(String damageType) =>
+    damageTypeLabels[damageType.toLowerCase()] ?? damageType;

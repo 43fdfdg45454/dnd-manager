@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 
 import '../domain/campaign_models.dart';
+import 'member_error.dart';
 
 typedef TransferData = ({Member to, CampaignRole previousOwnerRole});
 
-/// Asks which member becomes the Owner and which role the current Owner keeps.
-/// Pops a [TransferData], or null if cancelled.
+/// Asks which member becomes the Owner and which role the current Owner keeps,
+/// and runs [onSubmit] without closing: an error (such as the 409 of a member
+/// who still owns characters) is shown inline. Pops the [TransferData] once
+/// done, or null if cancelled.
 class TransferOwnershipDialog extends StatefulWidget {
-  const TransferOwnershipDialog({super.key, required this.candidates});
+  const TransferOwnershipDialog({super.key, required this.candidates, required this.onSubmit});
 
   /// Members that can receive the ownership (everyone but the current Owner).
   final List<Member> candidates;
+
+  final Future<void> Function(TransferData data) onSubmit;
 
   @override
   State<TransferOwnershipDialog> createState() => _TransferOwnershipDialogState();
@@ -19,6 +24,29 @@ class TransferOwnershipDialog extends StatefulWidget {
 class _TransferOwnershipDialogState extends State<TransferOwnershipDialog> {
   Member? _selected;
   CampaignRole _keptRole = CampaignRole.dm;
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _submit() async {
+    final data = (to: _selected!, previousOwnerRole: _keptRole);
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await widget.onSubmit(data);
+      if (mounted) Navigator.of(context).pop<TransferData>(data);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = describeMemberError(
+          error,
+          byStatus: const {400: 'El destino debe ser otro miembro de la campaña.'},
+        );
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -61,7 +89,10 @@ class _TransferOwnershipDialogState extends State<TransferOwnershipDialog> {
                     ),
                   ),
               ],
-              onChanged: (value) => setState(() => _selected = value),
+              onChanged: (value) => setState(() {
+                _selected = value;
+                _error = null;
+              }),
             ),
             const SizedBox(height: 16),
             const Text('Tu rol después de transferir'),
@@ -76,6 +107,10 @@ class _TransferOwnershipDialogState extends State<TransferOwnershipDialog> {
               selected: {_keptRole},
               onSelectionChanged: (selection) => setState(() => _keptRole = selection.first),
             ),
+            if (_error != null) ...[
+              const SizedBox(height: 16),
+              InlineMemberError(key: const Key('transfer-error'), message: _error!),
+            ],
           ],
         ),
       ),
@@ -83,11 +118,7 @@ class _TransferOwnershipDialogState extends State<TransferOwnershipDialog> {
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
         FilledButton(
           key: const Key('transfer-submit'),
-          onPressed: _selected == null
-              ? null
-              : () =>
-                    Navigator.of(context)
-                        .pop<TransferData>((to: _selected!, previousOwnerRole: _keptRole)),
+          onPressed: _selected == null || _busy ? null : _submit,
           child: const Text('Transferir'),
         ),
       ],

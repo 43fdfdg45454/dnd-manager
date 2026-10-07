@@ -11,6 +11,7 @@ import '../../data/character_wizard_controller.dart';
 import 'step_abilities.dart';
 import 'step_basics.dart';
 import 'step_equipment.dart';
+import 'step_origin.dart';
 import 'step_proficiencies.dart';
 import 'step_review.dart';
 import 'step_spells.dart';
@@ -23,6 +24,7 @@ extension WizardStepInfo on WizardStep {
     WizardStep.classChoice => 'Clase',
     WizardStep.abilities => 'Características',
     WizardStep.background => 'Trasfondo',
+    WizardStep.origin => 'Elecciones de raza y trasfondo',
     WizardStep.equipment => 'Equipo',
     WizardStep.spells => 'Hechizos',
     WizardStep.review => 'Revisión',
@@ -34,6 +36,7 @@ extension WizardStepInfo on WizardStep {
     WizardStep.classChoice => AppIcons.sword,
     WizardStep.abilities => AppIcons.d20,
     WizardStep.background => AppIcons.book,
+    WizardStep.origin => AppIcons.hood,
     WizardStep.equipment => AppIcons.backpack,
     WizardStep.spells => AppIcons.spellbook,
     WizardStep.review => AppIcons.scroll,
@@ -70,11 +73,27 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
     super.dispose();
   }
 
-  void _next() {
-    final step = ref.read(characterWizardControllerProvider(_args)).step;
-    final error = _controller.next();
-    setState(() => _attemptedStep = error == null ? null : step);
+  bool _advancing = false;
+
+  Future<void> _next() async {
+    if (_advancing) return;
+    final before = ref.read(characterWizardControllerProvider(_args));
+    final step = before.step;
+    final validation = before.validate(step);
+    setState(() => _advancing = true);
+    final error = await _controller.advance();
+    if (!mounted) return;
+    setState(() {
+      _advancing = false;
+      _attemptedStep = error == null ? null : step;
+      // Only a failed save is kept; validation errors are recomputed live.
+      _advanceError = error != null && error != validation ? error : null;
+    });
   }
+
+  /// Error of the last "Siguiente" that the state cannot recompute (a failed
+  /// save of the origin choices).
+  String? _advanceError;
 
   Future<void> _submit() async {
     final step = ref.read(characterWizardControllerProvider(_args)).step;
@@ -138,7 +157,7 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
     final step = state.step.clamp(0, steps.length - 1);
     final current = steps[step];
     final isLast = step == steps.length - 1;
-    final error = _attemptedStep == step ? state.validate(step) : null;
+    final error = _attemptedStep == step ? (_advanceError ?? state.validate(step)) : null;
     final scheme = Theme.of(context).colorScheme;
 
     return PopScope(
@@ -146,7 +165,10 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         final navigator = Navigator.of(context);
-        if (await _confirmDiscard()) navigator.pop();
+        if (await _confirmDiscard()) {
+          await _controller.discardDraft();
+          navigator.pop();
+        }
       },
       child: Scaffold(
         appBar: AppBar(title: const Text('Nuevo personaje')),
@@ -237,7 +259,7 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
                     else
                       FilledButton.icon(
                         key: const Key('wizard-next'),
-                        onPressed: _next,
+                        onPressed: _advancing ? null : _next,
                         icon: const Icon(Icons.arrow_forward),
                         label: const Text('Siguiente'),
                       ),
@@ -257,6 +279,7 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
     WizardStep.classChoice => ClassStep(args: _args),
     WizardStep.abilities => AbilitiesStep(args: _args),
     WizardStep.background => BackgroundStep(args: _args),
+    WizardStep.origin => OriginStep(args: _args),
     WizardStep.equipment => EquipmentStep(args: _args),
     WizardStep.spells => SpellsStep(args: _args),
     WizardStep.review => ReviewStep(args: _args),

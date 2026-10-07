@@ -22,6 +22,7 @@ import '../data/models.dart';
 import '../data/view_mode_controller.dart';
 import '../domain/character_format.dart';
 import '../domain/class_theme.dart';
+import 'change_owner_dialog.dart';
 import 'character_avatar.dart';
 import 'character_tabs.dart';
 import 'combat/combat_view.dart';
@@ -108,6 +109,28 @@ class _CharacterView extends ConsumerWidget {
     }
   }
 
+  /// DM only: hands the character to a player or turns it into an NPC.
+  Future<void> _changeOwner(BuildContext context, WidgetRef ref) async {
+    final members =
+        ref.read(campaignDetailControllerProvider(character.campaignId)).value?.members ?? const [];
+    final picked = await pickCharacterOwner(
+      context,
+      characterName: character.name,
+      members: members,
+      currentOwnerUserId: character.ownerUserId,
+    );
+    if (picked == null || !context.mounted) return;
+    final name = members.where((m) => m.userId == picked.userId).firstOrNull?.displayName;
+    await runAction(
+      context,
+      () => _controller(ref).setOwner(picked.userId),
+      success: name == null
+          ? '${character.name} es ahora un PNJ.'
+          : '${character.name} es ahora de $name.',
+      describe: describeCharacterError,
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authControllerProvider);
@@ -131,11 +154,21 @@ class _CharacterView extends ConsumerWidget {
         appBar: AppBar(
           title: const Text('Personaje'),
           actions: [
-            if (permissions.canDelete)
+            if (permissions.canDelete || permissions.isDm)
               PopupMenuButton<String>(
                 key: const Key('character-menu'),
-                onSelected: (_) => _delete(context, ref),
-                itemBuilder: (_) => const [PopupMenuItem(value: 'delete', child: Text('Eliminar'))],
+                onSelected: (value) =>
+                    value == 'owner' ? _changeOwner(context, ref) : _delete(context, ref),
+                itemBuilder: (_) => [
+                  if (permissions.isDm)
+                    const PopupMenuItem(
+                      key: Key('character-menu-owner'),
+                      value: 'owner',
+                      child: Text('Cambiar jugador'),
+                    ),
+                  if (permissions.canDelete)
+                    const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                ],
               ),
           ],
           bottom: combat

@@ -20,6 +20,7 @@ import '../../domain/class_theme.dart';
 import '../../domain/combat_math.dart';
 import '../character_tabs.dart' show OverrideMark, titleFromSpellIndex;
 import 'combat_support.dart';
+import 'concentration_flow.dart';
 
 CharacterController _controller(WidgetRef ref, CharacterDetail character) =>
     ref.read(characterControllerProvider(character.id).notifier);
@@ -129,16 +130,14 @@ class _HpCardState extends ConsumerState<HpCard> {
     final amount = _readAmount();
     if (amount == null) return;
     final c = widget.character;
-    final next = applyDamage(hp: c.hitPointsCurrent, temp: c.temporaryHitPoints, amount: amount);
-    await runCombat(
-      context,
-      () => _controller(ref, c).patchCombat(
-        CombatPatch(
-          hitPointsCurrent: next.hp == c.hitPointsCurrent ? null : next.hp,
-          temporaryHitPoints: next.temp == c.temporaryHitPoints ? null : next.temp,
-        ),
-      ),
-    );
+    // The server applies the damage (temporary hit points first) and says what
+    // it meant for the concentration.
+    DamageOutcome? outcome;
+    final done = await runCombat(context, () async {
+      outcome = await _controller(ref, c).applyDamage(amount);
+    });
+    if (!done || outcome == null || !mounted) return;
+    await resolveDamageOutcome(context, ref, outcome!, characterId: c.id);
   }
 
   Future<void> _heal() async {

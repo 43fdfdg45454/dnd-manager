@@ -64,7 +64,9 @@ class _LevelUpChoiceStepState extends ConsumerState<LevelUpChoiceStep> {
                   ),
                 ),
         ),
-        if (isImprovement)
+        if (isImprovement && choice.isReplacement)
+          _FeatPanel(state: state, choice: choice, selection: selection, controller: controller)
+        else if (isImprovement)
           _ImprovementPicker(characterId: widget.characterId, choice: choice)
         else if (choice.freeText)
           for (var i = 0; i < needed; i++)
@@ -85,7 +87,7 @@ class _LevelUpChoiceStepState extends ConsumerState<LevelUpChoiceStep> {
             )
         else
           ..._options(context, state, choice, selection, controller),
-        if (choice.replaces && choice.known.isNotEmpty) ...[
+        if (choice.replaces && choice.known.isNotEmpty && !choice.isReplacement) ...[
           const SectionHeader(
             'Sustituir uno conocido',
             padding: EdgeInsets.symmetric(vertical: 12),

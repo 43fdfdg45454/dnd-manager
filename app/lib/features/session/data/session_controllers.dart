@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../characters/data/characters_controller.dart';
-import '../../characters/data/models.dart' show RestRequest;
+import '../../characters/data/characters_repository.dart';
+import '../../characters/data/models.dart' show DamageOutcome, RestRequest;
 import '../../items/data/items_controllers.dart';
 import '../../items/data/models.dart' show ItemOverrides;
 import 'messages_repository.dart';
@@ -50,9 +51,20 @@ class PartyController extends AsyncNotifier<List<PartyMember>> {
     _refreshSheets();
   }
 
-  Future<void> adjust(List<PartyAdjustment> adjustments) async {
-    state = AsyncData(await _repository.adjust(campaignId, adjustments));
+  /// Applies the adjustments and returns the damage outcomes (what each
+  /// damage meant for the concentration of its character).
+  Future<List<DamageOutcome>> adjust(List<PartyAdjustment> adjustments) async {
+    final result = await _repository.adjust(campaignId, adjustments);
+    state = AsyncData(result.members);
     _refreshSheets();
+    return result.damage;
+  }
+
+  /// Hands [characterId] to the player [ownerUserId], or makes it an NPC with null.
+  Future<void> setOwner(String characterId, String? ownerUserId) async {
+    await ref.read(charactersRepositoryProvider).setOwner(characterId, ownerUserId);
+    _refreshSheets();
+    await reload();
   }
 
   /// Grants the next level to every active character, or only [characterIds].

@@ -291,9 +291,14 @@ class LevelUpState {
     return null;
   }
 
+  /// The feat tab is the one that applies: a replacement of an invalid feat
+  /// has no ability score improvement.
+  bool _featMode(LevelUpChoice choice, LevelUpSelection selection) =>
+      choice.isReplacement || selection.mode == ImprovementMode.feat;
+
   String? _validateImprovement(LevelUpChoice choice, LevelUpSelection selection) {
     if (choice.required == 0 && selection.isEmpty) return null;
-    if (selection.mode == ImprovementMode.asi) {
+    if (!_featMode(choice, selection)) {
       final values = selection.asi.values.where((v) => v != 0);
       final overCap = selection.asi.entries.any(
         (e) => e.value > 0 && naturalScore(e.key) + e.value > improvementMaxScore,
@@ -356,7 +361,7 @@ class LevelUpState {
       final selection = selectionOf(choice.key);
       if (choice.kind == LevelChoiceKind.asiOrFeat) {
         if (choice.required == 0 && validateChoice(choice) != null) continue;
-        if (selection.mode == ImprovementMode.asi) {
+        if (!_featMode(choice, selection)) {
           answers.add(
             LevelUpChoiceAnswer.asi(choice.key, {
               for (final e in selection.asi.entries)

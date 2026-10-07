@@ -14,8 +14,10 @@ import '../../features/campaigns/ui/general/campaign_general_page.dart';
 import '../../features/campaigns/ui/general/campaign_section_page.dart';
 import '../../features/change_requests/ui/change_requests_page.dart';
 import '../../features/characters/ui/character_page.dart';
+import '../../features/characters/ui/invalid_choices_page.dart';
 import '../../features/characters/ui/level_up/level_up_page.dart';
 import '../../features/characters/ui/prepare_spells_page.dart';
+import '../../features/characters/ui/rest_rolls_page.dart';
 import '../../features/characters/ui/sheet_editor_page.dart';
 import '../../features/characters/ui/wizard/character_wizard_page.dart';
 import '../../features/catalog/ui/class_detail_page.dart';
@@ -65,6 +67,8 @@ abstract final class AppRoutes {
   static const characterEditor = '/characters/:id/edit';
   static const characterLevelUpPath = '/characters/:id/level-up';
   static const characterPrepareSpellsPath = '/characters/:id/prepare-spells';
+  static const characterInvalidChoicesPath = '/characters/:id/invalid-choices';
+  static const characterRestRollsPath = '/characters/:id/rest-rolls';
   static const campaignLoreNew = '/campaigns/:id/lore/new';
   static const campaignLoreEntry = '/campaigns/:id/lore/:entryId';
   static const campaignLoreEdit = '/campaigns/:id/lore/:entryId/edit';
@@ -152,6 +156,12 @@ abstract final class AppRoutes {
 
   /// "Prepara tus conjuros" (forced while the preparation is pending).
   static String characterPrepareSpells(String id) => '/characters/$id/prepare-spells';
+
+  /// "Sustituye lo que ya no cumples" (forced while there are invalid picks).
+  static String characterInvalidChoices(String id) => '/characters/$id/invalid-choices';
+
+  /// "Tira tus dados" (forced while a rest roll is pending).
+  static String characterRestRolls(String id) => '/characters/$id/rest-rolls';
 
   static String spell(String index) => '/compendium/spells/${Uri.encodeComponent(index)}';
 
@@ -404,6 +414,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.characterPrepareSpellsPath,
         builder: (context, state) => PrepareSpellsPage(characterId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.characterInvalidChoicesPath,
+        builder: (context, state) => InvalidChoicesPage(characterId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.characterRestRollsPath,
+        builder: (context, state) => RestRollsPage(characterId: state.pathParameters['id']!),
       ),
       GoRoute(path: AppRoutes.compendium, builder: (context, state) => const CompendiumPage()),
       GoRoute(

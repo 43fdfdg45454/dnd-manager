@@ -42,7 +42,7 @@ AuthResponse makeAuthResponse(UserDto user, {String suffix = '1'}) => AuthRespon
   user: user,
 );
 
-DioException dioError(int? status, {DioExceptionType? type}) {
+DioException dioError(int? status, {DioExceptionType? type, Object? data}) {
   final options = RequestOptions(path: '/test');
   return DioException(
     requestOptions: options,
@@ -50,7 +50,7 @@ DioException dioError(int? status, {DioExceptionType? type}) {
         type ?? (status == null ? DioExceptionType.connectionError : DioExceptionType.badResponse),
     response: status == null
         ? null
-        : Response<dynamic>(requestOptions: options, statusCode: status),
+        : Response<dynamic>(requestOptions: options, statusCode: status, data: data),
   );
 }
 

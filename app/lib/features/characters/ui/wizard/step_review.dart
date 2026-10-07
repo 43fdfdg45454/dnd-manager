@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/auth/auth_controller.dart';
+import '../../../../core/auth/auth_state.dart';
 import '../../../campaigns/data/campaigns_controller.dart';
 import '../../data/character_wizard_controller.dart';
 import '../../data/models.dart';
@@ -31,15 +33,16 @@ class _ReviewStepState extends ConsumerState<ReviewStep> {
     super.dispose();
   }
 
+  /// "PNJ" or the player's name, never "Yo": a player creates their own
+  /// character and a DM has none (without a player chosen it is an NPC).
   String _ownerText(WizardState state) {
-    final owner = state.owner;
-    if (owner == null) return 'Yo';
-    if (owner.userId == null) return 'Sin dueño (PNJ)';
-    final members = ref
-        .read(campaignDetailControllerProvider(widget.args.campaignId))
-        .value
-        ?.members;
-    return members?.where((m) => m.userId == owner.userId).firstOrNull?.displayName ??
+    final campaign = ref.watch(campaignDetailControllerProvider(widget.args.campaignId)).value;
+    final auth = ref.watch(authControllerProvider);
+    final me = auth is AuthSignedIn ? auth.user : null;
+    if (!(campaign?.myRole.isAtLeastDm ?? false)) return me?.displayName ?? 'Jugador';
+    final ownerId = state.owner?.userId;
+    if (ownerId == null) return 'PNJ';
+    return campaign?.members.where((m) => m.userId == ownerId).firstOrNull?.displayName ??
         'Otro jugador';
   }
 
@@ -89,7 +92,7 @@ class _ReviewStepState extends ConsumerState<ReviewStep> {
         section(WizardStep.name, [
           state.name.trim(),
           if (state.alignment != null) alignmentLabel(state.alignment!),
-          'Dueño: ${_ownerText(state)}',
+          'Para: ${_ownerText(state)}',
         ]),
         section(WizardStep.race, [
           [race?.name ?? state.raceIndex ?? '—', if (subrace != null) subrace.name].join(' · '),
@@ -122,7 +125,20 @@ class _ReviewStepState extends ConsumerState<ReviewStep> {
         if (steps.contains(WizardStep.spells))
           section(WizardStep.spells, [
             if (state.spells.isEmpty) 'Sin hechizos elegidos',
-            for (final s in state.spells) s.name ?? s.spellIndex,
+            for (final s in state.spells)
+              if (state.hasSpellbook &&
+                  s.level != 0 &&
+                  !state.preparedChosen.contains(s.spellIndex))
+                '${s.name ?? s.spellIndex} (en el libro)'
+              else
+                s.name ?? s.spellIndex,
+          ]),
+        if (steps.contains(WizardStep.origin))
+          section(WizardStep.origin, [
+            for (final c in state.originChoices)
+              if (!state.originAnswerOf(c).isEmpty)
+                '${c.name}: ${[for (final p in state.originAnswerOf(c).picks)
+                  if (p.trim().isNotEmpty) c.option(p)?.name ?? p, if (state.originAnswerOf(c).feat != null) c.option(state.originAnswerOf(c).feat!)?.name ?? state.originAnswerOf(c).feat!].join(', ')}',
           ]),
         const SizedBox(height: 8),
         TextField(

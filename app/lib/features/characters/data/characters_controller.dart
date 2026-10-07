@@ -99,6 +99,10 @@ class CharacterController extends AsyncNotifier<CharacterDetail> {
   Future<void> setPortrait(String? fileId) async =>
       _apply(await _repository.setPortrait(id, fileId));
 
+  /// DM only: hands the character to the player [ownerUserId] (null: NPC).
+  Future<void> setOwner(String? ownerUserId) async =>
+      _apply(await _repository.setOwner(id, ownerUserId));
+
   Future<void> delete() async {
     final campaignId = state.value?.campaignId;
     await _repository.delete(id);
@@ -109,6 +113,23 @@ class CharacterController extends AsyncNotifier<CharacterDetail> {
 
   Future<void> patchCombat(CombatPatch patch) async =>
       _apply(await _repository.patchCombat(id, patch));
+
+  /// Applies [amount] of damage through the server and reloads the sheet.
+  /// Returns what it meant for the concentration (a Constitution save to make,
+  /// or the concentration ended by itself).
+  Future<DamageOutcome> applyDamage(int amount) async {
+    final result = await _repository.applyDamage(id, amount);
+    _apply(result.character);
+    return result.outcome;
+  }
+
+  /// Writes the dice rolled after a rest for the resource [resourceId].
+  Future<void> saveResourceRolls(String resourceId, List<int> values) async =>
+      _apply(await _repository.saveResourceRolls(id, resourceId, values));
+
+  /// Replaces the invalid picks (`replace.<index>` answers).
+  Future<void> replaceInvalidChoices(List<LevelUpChoiceAnswer> answers) async =>
+      _apply(await _repository.replaceInvalidChoices(id, answers));
 
   Future<void> setConcentration(String? spellIndex) async {
     await _repository.setConcentration(id, spellIndex);
@@ -167,6 +188,10 @@ class CharacterController extends AsyncNotifier<CharacterDetail> {
 
   Future<void> arcaneRecovery(List<int> slotLevels) =>
       classAction('arcane-recovery', {'slotLevels': slotLevels});
+
+  /// Circle of the Land druid: same body and rules as the arcane recovery.
+  Future<void> naturalRecovery(List<int> slotLevels) =>
+      classAction('natural-recovery', {'slotLevels': slotLevels});
 
   /// Spends a slot of [slotLevel] and returns the extra damage dice ("2d8").
   Future<String> divineSmite(int slotLevel) async {
@@ -258,6 +283,12 @@ final spellInfoProvider = FutureProvider.autoDispose.family<Map<String, SpellSum
 
 /// Stable family key for [spellInfoProvider].
 String spellInfoKey(Iterable<String> indexes) => (indexes.toSet().toList()..sort()).join(',');
+
+/// The invalid picks of a character and their replacement choices.
+final invalidChoicesProvider = FutureProvider.autoDispose.family<InvalidChoices, String>(
+  (ref, id) => ref.watch(charactersRepositoryProvider).invalidChoices(id),
+  retry: _noRetry,
+);
 
 /// What a character can prepare (`GET /characters/{id}/spell-preparation`).
 final spellPreparationProvider = FutureProvider.autoDispose.family<SpellPreparation, String>(

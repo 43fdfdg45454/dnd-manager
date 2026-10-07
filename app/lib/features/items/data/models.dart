@@ -385,10 +385,21 @@ const maxAttunedItems = 3;
 
 /// Body of `PATCH /characters/{id}/inventory/{itemId}`; only present fields are sent.
 class InventoryPatch {
-  const InventoryPatch({this.equipped, this.attuned, this.notes, this.sortOrder, this.charges});
+  const InventoryPatch({
+    this.equipped,
+    this.attuned,
+    this.replaceAttunedItemId,
+    this.notes,
+    this.sortOrder,
+    this.charges,
+  });
 
   final bool? equipped;
   final bool? attuned;
+
+  /// With `attuned: true` at the attunement limit: the attuned item to drop in
+  /// the same operation.
+  final String? replaceAttunedItemId;
   final String? notes;
   final int? sortOrder;
   final int? charges;
@@ -396,6 +407,7 @@ class InventoryPatch {
   Map<String, dynamic> toJson() => {
     'equipped': ?equipped,
     'attuned': ?attuned,
+    'replaceAttunedItemId': ?replaceAttunedItemId,
     'notes': ?notes,
     'sortOrder': ?sortOrder,
     'charges': ?charges,

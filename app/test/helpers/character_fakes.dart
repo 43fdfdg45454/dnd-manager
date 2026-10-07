@@ -31,6 +31,12 @@ Map<String, dynamic> makeCharacterJson({
   int? pendingLevelUpTo,
   bool spellPreparationPending = false,
   String? spellPreparationReason,
+  List<Map<String, dynamic>> invalidChoices = const [],
+  bool restRollsPending = false,
+  List<Map<String, dynamic>> resistances = const [],
+  Map<String, dynamic>? breathWeapon,
+  List<Map<String, dynamic>> resources = const [],
+  String? concentratingOnSpellIndex,
 }) => {
   'id': id,
   'campaignId': campaignId,
@@ -66,7 +72,8 @@ Map<String, dynamic> makeCharacterJson({
   'proficiencies': proficiencies,
   'spells': spells,
   'overrides': overrides,
-  'resources': <Object>[],
+  'resources': resources,
+  'concentratingOnSpellIndex': concentratingOnSpellIndex,
   'spellSlots': spellSlots,
   'combat': ?combat,
   'sheet': {
@@ -117,13 +124,56 @@ Map<String, dynamic> makeCharacterJson({
     'overriddenFields': overriddenFields,
     'itemEffects': itemEffects,
     'breakdowns': breakdowns,
+    'resistances': resistances,
+    'breathWeapon': ?breathWeapon,
   },
   'pendingChangeRequests': pending,
   'pendingRest': pendingRest,
   'pendingLevelUpTo': pendingLevelUpTo,
   'spellPreparationPending': spellPreparationPending,
   'spellPreparationReason': spellPreparationReason,
+  'invalidChoices': invalidChoices,
+  'restRollsPending': restRollsPending,
 };
+
+/// An `OriginChoiceDto` as JSON: a required one-pick skill choice by default.
+Map<String, dynamic> makeOriginChoiceJson({
+  String key = 'race.skills',
+  String name = 'Habilidades (raza)',
+  String kind = 'Skill',
+  String source = 'race',
+  int choose = 1,
+  int? required,
+  int? amount,
+  bool freeText = false,
+  String note = '',
+  List<Map<String, dynamic>>? options,
+  List<Map<String, dynamic>> selected = const [],
+}) => {
+  'key': key,
+  'name': name,
+  'kind': kind,
+  'source': source,
+  'choose': choose,
+  'required': required ?? choose,
+  'amount': ?amount,
+  'freeText': freeText,
+  'note': note,
+  'options':
+      options ??
+      [
+        {'index': 'insight', 'name': 'Perspicacia', 'eligible': true, 'description': <String>[]},
+        {'index': 'perception', 'name': 'Percepción', 'eligible': true, 'description': <String>[]},
+      ],
+  'selected': selected,
+};
+
+/// An `OriginChoicesDto` as JSON.
+Map<String, dynamic> makeOriginChoicesJson(
+  List<Map<String, dynamic>> choices, {
+  String characterId = 'new1',
+  bool complete = false,
+}) => {'characterId': characterId, 'complete': complete, 'choices': choices};
 
 /// A `PreparationSpellDto` as JSON.
 Map<String, dynamic> makePreparationSpellJson(
@@ -412,6 +462,163 @@ class FakeCharactersRepository implements CharactersRepository {
     _fail();
     deleted.add(id);
     _characters.remove(id);
+  }
+
+  /// Owner changes requested with [setOwner] (character id, new owner).
+  final List<({String id, String? ownerUserId})> ownerChanges = [];
+
+  @override
+  Future<CharacterDetail> setOwner(String id, String? ownerUserId) async {
+    _fail();
+    ownerChanges.add((id: id, ownerUserId: ownerUserId));
+    _json(id)['ownerUserId'] = ownerUserId;
+    return get(id);
+  }
+
+  // -- Origin choices (phase 19) ----------------------------------------------
+
+  /// Plan answered by `GET /origin-choices` (without `selected`: the answers
+  /// saved with the PUT are merged in).
+  Map<String, dynamic>? originPlan;
+
+  /// Bodies of every `PUT /origin-choices`, as JSON.
+  final List<List<Map<String, dynamic>>> originSaves = [];
+
+  /// Thrown by [saveOriginChoices] when set.
+  Object? originSaveError;
+  final Map<String, Map<String, dynamic>> _originAnswers = {};
+
+  OriginChoices _originPlanFor(String id) {
+    final plan = jsonDecode(jsonEncode(originPlan ?? makeOriginChoicesJson(const [])));
+    final choices = [
+      for (final c in (plan['choices'] as List))
+        {
+          ...(c as Map<String, dynamic>),
+          if (_originAnswers[c['key']] != null) ..._originAnswers[c['key']]!,
+        },
+    ];
+    return OriginChoices.fromJson({
+      ...(plan as Map<String, dynamic>),
+      'characterId': id,
+      'choices': choices,
+    });
+  }
+
+  @override
+  Future<OriginChoices> originChoices(String id) async {
+    _fail();
+    _json(id);
+    return _originPlanFor(id);
+  }
+
+  @override
+  Future<OriginChoices> saveOriginChoices(String id, List<LevelUpChoiceAnswer> answers) async {
+    _fail();
+    originSaves.add([
+      for (final a in answers) jsonDecode(jsonEncode(a.toJson())) as Map<String, dynamic>,
+    ]);
+    if (originSaveError != null) throw originSaveError!;
+    for (final a in answers) {
+      _originAnswers[a.key] = {
+        'selected': [
+          for (final i in a.selected) {'index': i, 'name': i},
+        ],
+        'feat': a.feat == null ? null : {'index': a.feat, 'name': a.feat},
+        'ability': a.ability,
+      };
+    }
+    return _originPlanFor(id);
+  }
+
+  // -- Invalid choices, damage and rest rolls (phase 19) -------------------------
+
+  /// Plan answered by `GET /invalid-choices` by character id.
+  final Map<String, Map<String, dynamic>> invalidPlans = {};
+
+  /// Bodies of `POST /invalid-choices`.
+  final List<List<Map<String, dynamic>>> invalidReplacements = [];
+
+  @override
+  Future<InvalidChoices> invalidChoices(String id) async {
+    _fail();
+    final json = invalidPlans[id];
+    if (json == null) return InvalidChoices(characterId: id);
+    return InvalidChoices.fromJson(jsonDecode(jsonEncode(json)) as Map<String, dynamic>);
+  }
+
+  @override
+  Future<CharacterDetail> replaceInvalidChoices(
+    String id,
+    List<LevelUpChoiceAnswer> answers,
+  ) async {
+    _fail();
+    invalidReplacements.add([
+      for (final a in answers) jsonDecode(jsonEncode(a.toJson())) as Map<String, dynamic>,
+    ]);
+    _json(id)['invalidChoices'] = <Object>[];
+    invalidPlans.remove(id);
+    return get(id);
+  }
+
+  /// Amounts of `POST /damage`.
+  final List<int> damageCalls = [];
+
+  /// Concentration outcome the next damage reports.
+  int? nextConcentrationDc;
+  bool nextConcentrationEnded = false;
+
+  @override
+  Future<DamageResult> applyDamage(String id, int amount) async {
+    _fail();
+    damageCalls.add(amount);
+    final json = _json(id);
+    var temp = json['temporaryHitPoints'] as int? ?? 0;
+    var hp = json['hitPointsCurrent'] as int? ?? 0;
+    final concentrating = json['concentratingOnSpellIndex'] as String?;
+    var rest = amount;
+    final absorbed = rest < temp ? rest : temp;
+    temp -= absorbed;
+    rest -= absorbed;
+    hp = (hp - rest).clamp(0, 9999);
+    json['temporaryHitPoints'] = temp;
+    json['hitPointsCurrent'] = hp;
+    if (nextConcentrationEnded) json['concentratingOnSpellIndex'] = null;
+    final outcome = DamageOutcome(
+      characterId: id,
+      damage: amount,
+      hitPointsCurrent: hp,
+      concentratingOn: concentrating,
+      concentrationCheckDc: concentrating == null ? null : nextConcentrationDc,
+      concentrationEnded: concentrating != null && nextConcentrationEnded,
+    );
+    return DamageResult(character: await get(id), outcome: outcome);
+  }
+
+  /// Bodies of `POST /resources/{id}/rolls`.
+  final List<({String resourceId, List<int> values})> rollSaves = [];
+
+  @override
+  Future<CharacterDetail> saveResourceRolls(String id, String resourceId, List<int> values) async {
+    _fail();
+    rollSaves.add((resourceId: resourceId, values: values));
+    final json = _json(id);
+    void update(List<dynamic> resources) {
+      for (final r in resources) {
+        if ((r as Map)['id'] == resourceId) {
+          r['rolls'] = values;
+          r['rollsPending'] = false;
+        }
+      }
+    }
+
+    update(json['resources'] as List? ?? const []);
+    update((json['combat'] as Map?)?['resources'] as List? ?? const []);
+    final anyPending = [
+      ...(json['resources'] as List? ?? const []),
+      ...((json['combat'] as Map?)?['resources'] as List? ?? const []),
+    ].any((r) => (r as Map)['rollsPending'] == true);
+    json['restRollsPending'] = anyPending;
+    return get(id);
   }
 
   // -- Combat tracking ------------------------------------------------------

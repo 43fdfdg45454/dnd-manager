@@ -136,7 +136,7 @@ class FakePartyRepository implements PartyRepository {
   }
 
   @override
-  Future<List<PartyMember>> adjust(String campaignId, List<PartyAdjustment> list) async {
+  Future<PartyAdjustResult> adjust(String campaignId, List<PartyAdjustment> list) async {
     if (error != null) throw error!;
     adjustments.add(list);
     for (final a in list) {
@@ -169,8 +169,11 @@ class FakePartyRepository implements PartyRepository {
       );
       members[i] = m;
     }
-    return [...members];
+    return PartyAdjustResult(members: [...members], damage: [...nextDamage]);
   }
+
+  /// Damage outcomes the next adjustments report (concentration saves).
+  List<DamageOutcome> nextDamage = [];
 }
 
 StashItem makeStashItem({

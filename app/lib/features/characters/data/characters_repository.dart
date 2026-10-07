@@ -83,7 +83,80 @@ class CharactersRepository {
     await _client.dio.delete<void>('$_api/characters/$id');
   }
 
+  /// DM only: hands the character to the player [ownerUserId], or makes it an
+  /// NPC with null. Applied directly, without approval.
+  Future<CharacterDetail> setOwner(String id, String? ownerUserId) async =>
+      CharacterDetail.fromJson(
+        await _json('PUT', '$_api/characters/$id/owner', data: {'ownerUserId': ownerUserId}),
+      );
+
+  // -- Origin choices (phase 19) ----------------------------------------------
+
+  /// `GET /characters/{id}/origin-choices`: the decisions of the race,
+  /// subrace and background of the character with their current answers.
+  Future<OriginChoices> originChoices(String id) async =>
+      OriginChoices.fromJson(await _json('GET', '$_api/characters/$id/origin-choices'));
+
+  /// `PUT /characters/{id}/origin-choices`: answers some choices (the others
+  /// keep theirs). A feat answer is `LevelUpChoiceAnswer.feat`.
+  Future<OriginChoices> saveOriginChoices(String id, List<LevelUpChoiceAnswer> answers) async =>
+      OriginChoices.fromJson(
+        await _json(
+          'PUT',
+          '$_api/characters/$id/origin-choices',
+          data: {
+            'choices': [for (final a in answers) a.toJson()],
+          },
+        ),
+      );
+
+  // -- Invalid choices (phase 19) ---------------------------------------------
+
+  /// `GET /characters/{id}/invalid-choices`.
+  Future<InvalidChoices> invalidChoices(String id) async =>
+      InvalidChoices.fromJson(await _json('GET', '$_api/characters/$id/invalid-choices'));
+
+  /// `POST /characters/{id}/invalid-choices`: one answer per replacement
+  /// (key `replace.<index>`). Responds with the updated character.
+  Future<CharacterDetail> replaceInvalidChoices(
+    String id,
+    List<LevelUpChoiceAnswer> answers,
+  ) async => CharacterDetail.fromJson(
+    await _json(
+      'POST',
+      '$_api/characters/$id/invalid-choices',
+      data: {
+        'choices': [for (final a in answers) a.toJson()],
+      },
+    ),
+  );
+
   // -- Combat tracking (no approval) ---------------------------------------
+
+  /// `POST /characters/{id}/damage`: applies [amount] of damage (temporary
+  /// hit points first) and says what it meant for the concentration.
+  Future<DamageResult> applyDamage(String id, int amount) async {
+    final json = await _json('POST', '$_api/characters/$id/damage', data: {'amount': amount});
+    final character = json['character'];
+    final outcome = json['outcome'];
+    return DamageResult(
+      character: CharacterDetail.fromJson(
+        character is Map ? Map<String, dynamic>.from(character) : json,
+      ),
+      outcome: DamageOutcome.fromJson(outcome is Map ? Map<String, dynamic>.from(outcome) : {}),
+    );
+  }
+
+  /// `POST /characters/{id}/resources/{resourceId}/rolls`: the dice rolled
+  /// after a rest for a resource that asks for them.
+  Future<CharacterDetail> saveResourceRolls(String id, String resourceId, List<int> values) async =>
+      CharacterDetail.fromJson(
+        await _json(
+          'POST',
+          '$_api/characters/$id/resources/$resourceId/rolls',
+          data: {'values': values},
+        ),
+      );
 
   Future<CharacterDetail> patchCombat(String id, CombatPatch patch) async =>
       CharacterDetail.fromJson(

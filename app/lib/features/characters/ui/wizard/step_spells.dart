@@ -32,7 +32,11 @@ class SpellsStep extends ConsumerWidget {
           minLevel: cantrips ? 0 : 1,
           maxLevel: cantrips ? 0 : null,
           limit: remaining < 0 ? 0 : remaining,
-          title: cantrips ? 'Elegir trucos' : 'Elegir hechizos',
+          title: cantrips
+              ? 'Elegir trucos'
+              : state.hasSpellbook
+              ? 'Elegir hechizos del libro'
+              : 'Elegir hechizos',
         ),
       ),
     );
@@ -51,6 +55,7 @@ class SpellsStep extends ConsumerWidget {
       required int max,
       required List<CharacterSpell> chosen,
       required bool cantrips,
+      String? hint,
     }) {
       final over = chosen.length > max;
       return Column(
@@ -63,6 +68,11 @@ class SpellsStep extends ConsumerWidget {
               color: over ? theme.colorScheme.error : null,
             ),
           ),
+          if (hint != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(hint, style: theme.textTheme.bodySmall),
+            ),
           Wrap(
             spacing: 8,
             runSpacing: 4,
@@ -84,7 +94,13 @@ class SpellsStep extends ConsumerWidget {
                   ? null
                   : () => _pick(context, ref, state, cantrips: cantrips),
               icon: const Icon(Icons.add),
-              label: Text(cantrips ? 'Elegir trucos' : 'Elegir hechizos'),
+              label: Text(
+                cantrips
+                    ? 'Elegir trucos'
+                    : state.hasSpellbook
+                    ? 'Elegir hechizos del libro'
+                    : 'Elegir hechizos',
+              ),
             ),
           ),
         ],
@@ -100,10 +116,48 @@ class SpellsStep extends ConsumerWidget {
         if (state.maxSpells > 0) ...[
           const SizedBox(height: 16),
           section(
-            title: 'Hechizos',
+            title: state.hasSpellbook ? 'Libro de hechizos' : 'Hechizos',
             max: state.maxSpells,
             chosen: state.leveledSpells,
             cantrips: false,
+            hint: state.hasSpellbook
+                ? 'Copias estos hechizos a tu libro; de ellos preparas solo algunos.'
+                : null,
+          ),
+        ],
+        if (state.hasSpellbook) ...[
+          const SizedBox(height: 16),
+          Text(
+            'Preparados ${state.preparedChosen.length}/${state.maxPrepared}',
+            key: const Key('wizard-prepared-counter'),
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: state.preparedChosen.length > state.maxPrepared
+                  ? theme.colorScheme.error
+                  : null,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              'Nivel de mago + modificador de Inteligencia (mínimo 1).',
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+          if (state.leveledSpells.isEmpty)
+            Text('Elige primero los hechizos del libro.', style: theme.textTheme.bodySmall),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final s in state.leveledSpells)
+                FilterChip(
+                  key: Key('prepare-${s.spellIndex}'),
+                  avatar: SpellCategoryIcon(s.category, size: 16),
+                  label: Text(s.name ?? s.spellIndex),
+                  selected: state.preparedChosen.contains(s.spellIndex),
+                  onSelected: (_) => controller.togglePrepared(s.spellIndex),
+                ),
+            ],
           ),
         ],
       ],

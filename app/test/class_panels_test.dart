@@ -174,6 +174,70 @@ void main() {
     expect(repo.resourceSpends, hasLength(1));
   });
 
+  group('druida: Recuperación natural', () {
+    FakeCharactersRepository druid({Map<String, dynamic>? natural, bool used = false}) =>
+        FakeCharactersRepository(
+          characters: [
+            makeCharacterJson(
+              status: 'Active',
+              classes: [
+                {'classIndex': 'druid', 'className': 'Druid', 'level': 4},
+              ],
+              combat: makeCombatJson(
+                spellSlots: [
+                  {'level': 1, 'max': 4, 'used': 3},
+                  {'level': 2, 'max': 3, 'used': 1},
+                ],
+                resources: [_resource('d1', 'wild-shape', 'Wild Shape', 2)],
+                classPanels: [
+                  {
+                    'classIndex': 'druid',
+                    'level': 4,
+                    'data': {
+                      'naturalRecovery': natural ?? {'used': used, 'slotLevelsRecoverable': 2},
+                    },
+                  },
+                ],
+              ),
+            ),
+          ],
+        );
+
+    testWidgets('el panel usa el endpoint nuevo con los niveles elegidos', (tester) async {
+      final repo = druid();
+      await _pump(tester, characters: repo);
+      expect(find.byKey(const Key('druid-natural-recovery-card')), findsOneWidget);
+      expect(_enabled(tester, 'natural-recovery'), isTrue);
+
+      await _tap(tester, 'natural-recovery');
+      expect(find.text('Recuperación natural'), findsWidgets);
+      expect(find.text('Niveles seleccionados: 0 / 2'), findsOneWidget);
+      await _tap(tester, 'arcane-level-1-plus');
+      await _tap(tester, 'arcane-level-1-plus');
+      await _tap(tester, 'arcane-confirm');
+
+      expect(repo.classActions.single.action, 'natural-recovery');
+      expect(repo.classActions.single.body, {
+        'slotLevels': [1, 1],
+      });
+    });
+
+    testWidgets('usada queda deshabilitada', (tester) async {
+      await _pump(tester, characters: druid(used: true));
+      expect(_enabled(tester, 'natural-recovery'), isFalse);
+      expect(find.text('Recuperación natural (usada)'), findsOneWidget);
+    });
+
+    testWidgets('un druida sin el rasgo (el servidor no manda el dato) no ve la tarjeta', (
+      tester,
+    ) async {
+      final repo = _repo('druid', 4, resources: [_resource('d1', 'wild-shape', 'Wild Shape', 2)]);
+      await _pump(tester, characters: repo);
+      expect(find.byKey(const Key('druid-natural-recovery-card')), findsNothing);
+      expect(find.byKey(const Key('natural-recovery')), findsNothing);
+    });
+  });
+
   testWidgets('guerrero: Segundo aliento gasta el recurso y cura 1d10 + nivel', (tester) async {
     final repo = _repo(
       'fighter',

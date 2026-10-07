@@ -367,17 +367,35 @@ class CharacterResource {
     required this.used,
     required this.recharge,
     this.isAuto = false,
+    this.rollOnRest,
+    this.rolls = const [],
+    this.rollsPending = false,
   });
 
-  factory CharacterResource.fromJson(Map<String, dynamic> json) => CharacterResource(
-    id: _str(json['id']),
-    key: _strOrNull(json['key']),
-    name: _str(json['name']),
-    max: _int(json['max']) ?? 0,
-    used: _int(json['used']) ?? 0,
-    recharge: Recharge.fromApi(json['recharge']),
-    isAuto: _bool(json['isAuto']),
-  );
+  factory CharacterResource.fromJson(Map<String, dynamic> json) {
+    final roll = _map(json['rollOnRest']);
+    return CharacterResource(
+      id: _str(json['id']),
+      key: _strOrNull(json['key']),
+      name: _str(json['name']),
+      max: _int(json['max']) ?? 0,
+      used: _int(json['used']) ?? 0,
+      recharge: Recharge.fromApi(json['recharge']),
+      isAuto: _bool(json['isAuto']),
+      rollOnRest: roll == null ? null : RollOnRest.fromJson(roll),
+      rolls: [for (final r in (json['rolls'] as List? ?? const [])) ?_int(r)],
+      rollsPending: _bool(json['rollsPending']),
+    );
+  }
+
+  /// Dice the player rolls after a rest (Portent), or null.
+  final RollOnRest? rollOnRest;
+
+  /// Values rolled after the last rest.
+  final List<int> rolls;
+
+  /// The player still has to write the dice ([rollOnRest]).
+  final bool rollsPending;
 
   final String id;
   final String? key;
@@ -386,6 +404,25 @@ class CharacterResource {
   final int used;
   final Recharge recharge;
   final bool isAuto;
+}
+
+/// Dice a resource asks the player to roll after a rest (`RollOnRestDto`):
+/// [count] x [dice] ("d20") after a [rest] ("short" or "long") rest.
+class RollOnRest {
+  const RollOnRest({required this.dice, this.count = 1, this.rest = 'long'});
+
+  factory RollOnRest.fromJson(Map<String, dynamic> json) => RollOnRest(
+    dice: _str(json['dice'], 'd20'),
+    count: _int(json['count']) ?? 1,
+    rest: _str(json['rest'], 'long'),
+  );
+
+  final String dice;
+  final int count;
+  final String rest;
+
+  /// Faces of [dice] ("d20" -> 20); 20 when it cannot be read.
+  int get sides => int.tryParse(dice.toLowerCase().replaceAll('d', '')) ?? 20;
 }
 
 class SpellSlot {
@@ -693,6 +730,53 @@ class ItemEffect {
   final int value;
 }
 
+/// A resisted damage type (`ResistanceDto`): [source] is "race", "subrace" or
+/// "background" and [label] what grants it.
+class Resistance {
+  const Resistance({required this.damageType, this.source = '', this.label = ''});
+
+  factory Resistance.fromJson(Map<String, dynamic> json) => Resistance(
+    damageType: _str(json['damageType']),
+    source: _str(json['source']),
+    label: _str(json['label']),
+  );
+
+  final String damageType;
+  final String source;
+  final String label;
+}
+
+/// Breath weapon of a draconic ancestry (`BreathWeaponValueDto`).
+class BreathWeapon {
+  const BreathWeapon({
+    required this.name,
+    this.source = '',
+    this.damageType = '',
+    this.dice = '',
+    this.saveAbility = '',
+    this.area = '',
+    this.dc = 0,
+  });
+
+  factory BreathWeapon.fromJson(Map<String, dynamic> json) => BreathWeapon(
+    name: _str(json['name']),
+    source: _str(json['source']),
+    damageType: _str(json['damageType']),
+    dice: _str(json['dice']),
+    saveAbility: _str(json['saveAbility']),
+    area: _str(json['area']),
+    dc: _int(json['dc']) ?? 0,
+  );
+
+  final String name;
+  final String source;
+  final String damageType;
+  final String dice;
+  final String saveAbility;
+  final String area;
+  final int dc;
+}
+
 /// The computed sheet (`CharacterSheetDto`). The client never recomputes it.
 class CharacterSheet {
   const CharacterSheet({
@@ -710,6 +794,8 @@ class CharacterSheet {
     this.overriddenFields = const [],
     this.itemEffects = const [],
     this.breakdowns = const {},
+    this.resistances = const [],
+    this.breathWeapon,
   });
 
   factory CharacterSheet.fromJson(Map<String, dynamic> json) {
@@ -741,6 +827,10 @@ class CharacterSheet {
         for (final e in (_map(json['breakdowns']) ?? const {}).entries)
           if (e.value is Map) e.key: ValueBreakdown.fromJson(e.value),
       },
+      resistances: _objects(json['resistances'], Resistance.fromJson),
+      breathWeapon: _map(json['breathWeapon']) == null
+          ? null
+          : BreathWeapon.fromJson(_map(json['breathWeapon'])!),
     );
   }
 
@@ -767,6 +857,13 @@ class CharacterSheet {
   /// `passivePerception`, `proficiencyBonus`, `spellSaveDc.<class>`,
   /// `spellAttackBonus.<class>`. Empty when the server does not send them.
   final Map<String, ValueBreakdown> breakdowns;
+
+  /// Damage types the character resists (race, subrace and chosen options).
+  final List<Resistance> resistances;
+
+  /// Breath weapon of a draconic ancestry (DC breakdown in
+  /// `breakdowns['breathWeapon.dc']`), or null.
+  final BreathWeapon? breathWeapon;
 
   ValueBreakdown? breakdown(String key) => breakdowns[key];
 
@@ -988,6 +1085,8 @@ class CharacterDetail {
     this.pendingLevelUpTo,
     this.spellPreparationPending = false,
     this.spellPreparationReason,
+    this.invalidChoices = const [],
+    this.restRollsPending = false,
     this.choices = const [],
     this.raceCatalogMissing = false,
     this.backgroundCatalogMissing = false,
@@ -1046,6 +1145,8 @@ class CharacterDetail {
       pendingLevelUpTo: _int(json['pendingLevelUpTo']),
       spellPreparationPending: _bool(json['spellPreparationPending']),
       spellPreparationReason: SpellPreparationReason.fromApi(json['spellPreparationReason']),
+      invalidChoices: _objects(json['invalidChoices'], InvalidChoice.fromJson),
+      restRollsPending: _bool(json['restRollsPending']),
       choices: _objects(json['choices'], CharacterChoice.fromJson),
       raceCatalogMissing: _bool(json['raceCatalogMissing']),
       backgroundCatalogMissing: _bool(json['backgroundCatalogMissing']),
@@ -1110,6 +1211,13 @@ class CharacterDetail {
   /// or the first time). [spellPreparationReason] says why.
   final bool spellPreparationPending;
   final SpellPreparationReason? spellPreparationReason;
+
+  /// Options and feats whose prerequisites no longer hold; the player must
+  /// replace them (forced step of "Mi sesión").
+  final List<InvalidChoice> invalidChoices;
+
+  /// Some resource asks for its dice to be rolled after the last rest.
+  final bool restRollsPending;
 
   /// Choices made when levelling up (subclass, fighting style, ASI...).
   final List<CharacterChoice> choices;
@@ -1602,6 +1710,7 @@ class LevelUpOption {
     this.spellCategory,
     this.effectsPreview = const [],
     this.abilityIncrease,
+    this.damageType,
   });
 
   factory LevelUpOption.fromJson(Map<String, dynamic> json) {
@@ -1618,6 +1727,7 @@ class LevelUpOption {
       spellCategory: _strOrNull(json['spellCategory']),
       effectsPreview: _objects(json['effectsPreview'], EffectPreview.fromJson),
       abilityIncrease: increase == null ? null : AbilityIncrease.fromJson(increase),
+      damageType: _strOrNull(json['damageType']),
     );
   }
 
@@ -1625,6 +1735,9 @@ class LevelUpOption {
   final String name;
   final List<String> description;
   final String? prerequisitesText;
+
+  /// Damage type resisted by a draconic ancestry option ("fire").
+  final String? damageType;
 
   /// False when the prerequisites are not met ([reason]).
   final bool eligible;
@@ -1640,6 +1753,9 @@ class LevelUpOption {
   /// For feats that raise an ability.
   final AbilityIncrease? abilityIncrease;
 }
+
+/// Prefix of the key of a forced replacement choice.
+const replacementKeyPrefix = 'replace.';
 
 /// A choice to make at the new level (`LevelUpChoiceDto`). [required] picks
 /// are needed; with [replaces] one of [known] may be swapped (one more pick).
@@ -1699,6 +1815,9 @@ class LevelUpChoice {
 
   /// The choice only offers replacements ([choose] 0).
   bool get replacementOnly => choose == 0;
+
+  /// Forced replacement of an invalid pick (key `replace.<index>`).
+  bool get isReplacement => key.startsWith(replacementKeyPrefix);
 
   LevelUpOption? option(String index) {
     for (final o in options) {
@@ -1981,4 +2100,209 @@ class SpellPreparation {
   /// Why it is not (Spanish), when [canKeep] is false.
   final String? keepProblem;
   final List<PreparationClass> classes;
+}
+
+// ---------------------------------------------------------------------------
+// Origin choices, invalid choices, damage outcome (phase 19)
+// ---------------------------------------------------------------------------
+
+/// An option or feat whose prerequisites no longer hold (`InvalidChoiceDto`).
+class InvalidChoice {
+  const InvalidChoice({
+    required this.replaceKey,
+    this.classIndex,
+    this.key = '',
+    this.level = 1,
+    this.setId = '',
+    required this.item,
+    this.reason = '',
+  });
+
+  factory InvalidChoice.fromJson(Map<String, dynamic> json) => InvalidChoice(
+    replaceKey: _str(json['replaceKey']),
+    classIndex: _strOrNull(json['classIndex']),
+    key: _str(json['key']),
+    level: _int(json['level']) ?? 1,
+    setId: _str(json['setId']),
+    item: ChoiceItem.fromJson(_map(json['item']) ?? const {}),
+    reason: _str(json['reason']),
+  );
+
+  /// Key to answer in the replacement (`replace.<index>`).
+  final String replaceKey;
+
+  /// Class of the choice that picked it; null for an origin feat.
+  final String? classIndex;
+  final String key;
+  final int level;
+  final String setId;
+  final ChoiceItem item;
+  final String reason;
+}
+
+/// `GET /characters/{id}/invalid-choices`: the invalid picks and one
+/// replacement choice per pick (same shape as the level-up choices).
+class InvalidChoices {
+  const InvalidChoices({this.characterId = '', this.invalid = const [], this.choices = const []});
+
+  factory InvalidChoices.fromJson(Map<String, dynamic> json) => InvalidChoices(
+    characterId: _str(json['characterId']),
+    invalid: _objects(json['invalid'], InvalidChoice.fromJson),
+    choices: _objects(json['choices'], LevelUpChoice.fromJson),
+  );
+
+  final String characterId;
+  final List<InvalidChoice> invalid;
+  final List<LevelUpChoice> choices;
+}
+
+/// Kinds of origin choices (`OriginChoiceDto.kind`).
+enum OriginChoiceKind {
+  abilityBonus('AbilityBonus'),
+  skill('Skill'),
+  language('Language'),
+  tool('Tool'),
+  cantrip('Cantrip'),
+  feat('Feat'),
+  traitOption('TraitOption');
+
+  const OriginChoiceKind(this.apiValue);
+
+  final String apiValue;
+
+  static OriginChoiceKind fromApi(Object? value) =>
+      _enumFromApi(values, (e) => e.apiValue, value, OriginChoiceKind.traitOption);
+}
+
+/// A decision of the race, subrace or background (`OriginChoiceDto`).
+/// [required] picks block the activation; optional ones (languages) have 0.
+class OriginChoice {
+  const OriginChoice({
+    required this.key,
+    required this.name,
+    required this.kind,
+    this.source = 'race',
+    this.choose = 1,
+    this.required = 0,
+    this.amount,
+    this.freeText = false,
+    this.note = '',
+    this.options = const [],
+    this.selected = const [],
+    this.feat,
+    this.ability,
+  });
+
+  factory OriginChoice.fromJson(Map<String, dynamic> json) {
+    final feat = _map(json['feat']);
+    return OriginChoice(
+      key: _str(json['key']),
+      name: _str(json['name'], _str(json['key'])),
+      kind: OriginChoiceKind.fromApi(json['kind']),
+      source: _str(json['source'], 'race'),
+      choose: _int(json['choose']) ?? 1,
+      required: _int(json['required']) ?? 0,
+      amount: _int(json['amount']),
+      freeText: _bool(json['freeText']),
+      note: _str(json['note']),
+      options: _objects(json['options'], LevelUpOption.fromJson),
+      selected: _objects(json['selected'], ChoiceItem.fromJson),
+      feat: feat == null ? null : ChoiceItem.fromJson(feat),
+      ability: _strOrNull(json['ability']),
+    );
+  }
+
+  final String key;
+  final String name;
+  final OriginChoiceKind kind;
+
+  /// "race", "subrace" or "background".
+  final String source;
+  final int choose;
+  final int required;
+
+  /// Bonus of each pick of an ability bonus choice (+1).
+  final int? amount;
+
+  /// No closed list: any text (tools of any kind).
+  final bool freeText;
+  final String note;
+  final List<LevelUpOption> options;
+
+  /// Current answer (empty when not answered).
+  final List<ChoiceItem> selected;
+
+  /// Current feat answer and the ability it raised.
+  final ChoiceItem? feat;
+  final String? ability;
+
+  LevelUpOption? option(String index) {
+    for (final o in options) {
+      if (o.index == index) return o;
+    }
+    return null;
+  }
+}
+
+/// `GET/PUT /characters/{id}/origin-choices` (`OriginChoicesDto`).
+class OriginChoices {
+  const OriginChoices({this.characterId = '', this.complete = true, this.choices = const []});
+
+  factory OriginChoices.fromJson(Map<String, dynamic> json) => OriginChoices(
+    characterId: _str(json['characterId']),
+    complete: _bool(json['complete'], true),
+    choices: _objects(json['choices'], OriginChoice.fromJson),
+  );
+
+  final String characterId;
+
+  /// Every required choice is answered.
+  final bool complete;
+  final List<OriginChoice> choices;
+}
+
+/// Damage outcome of `POST /characters/{id}/damage` and of `party/adjust`
+/// (`DamageOutcomeDto`): what the damage meant for the concentration.
+class DamageOutcome {
+  const DamageOutcome({
+    this.characterId = '',
+    this.damage = 0,
+    this.hitPointsCurrent = 0,
+    this.concentratingOn,
+    this.concentrationCheckDc,
+    this.concentrationEnded = false,
+  });
+
+  factory DamageOutcome.fromJson(Map<String, dynamic> json) => DamageOutcome(
+    characterId: _str(json['characterId']),
+    damage: _int(json['damage']) ?? 0,
+    hitPointsCurrent: _int(json['hitPointsCurrent']) ?? 0,
+    concentratingOn: _strOrNull(json['concentratingOn']),
+    concentrationCheckDc: _int(json['concentrationCheckDc']),
+    concentrationEnded: _bool(json['concentrationEnded']),
+  );
+
+  final String characterId;
+  final int damage;
+  final int hitPointsCurrent;
+
+  /// Spell index the character was concentrating on before the damage.
+  final String? concentratingOn;
+
+  /// DC of the Constitution save to keep concentrating, when it applies.
+  final int? concentrationCheckDc;
+
+  /// The concentration ended by itself (0 hit points).
+  final bool concentrationEnded;
+
+  /// The damage asks for a concentration decision of any kind.
+  bool get affectsConcentration => concentrationCheckDc != null || concentrationEnded;
+}
+
+/// Response of `POST /characters/{id}/damage`.
+class DamageResult {
+  const DamageResult({required this.character, required this.outcome});
+
+  final CharacterDetail character;
+  final DamageOutcome outcome;
 }
