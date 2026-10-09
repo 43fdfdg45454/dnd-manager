@@ -22,6 +22,7 @@ import '../../features/characters/ui/rest_rolls_page.dart';
 import '../../features/characters/ui/sheet_editor_page.dart';
 import '../../features/characters/ui/wizard/character_wizard_page.dart';
 import '../../features/catalog/ui/class_detail_page.dart';
+import '../../features/catalog/ui/beast_page.dart';
 import '../../features/catalog/ui/compendium_page.dart';
 import '../../features/catalog/ui/item_detail_page.dart';
 import '../../features/catalog/ui/race_detail_page.dart';
@@ -92,6 +93,7 @@ abstract final class AppRoutes {
   static const itemDetail = '/compendium/items/:id';
   static const classDetail = '/compendium/classes/:index';
   static const raceDetail = '/compendium/races/:index';
+  static const beastDetail = '/compendium/beasts/:index';
 
   /// Location of the campaign with the given [id]: the router sends it to
   /// "Mi sesión" or "Mesa del DM" according to the role, or to "Campaña"
@@ -188,6 +190,8 @@ abstract final class AppRoutes {
   static String dndClass(String index) => '/compendium/classes/${Uri.encodeComponent(index)}';
 
   static String race(String index) => '/compendium/races/${Uri.encodeComponent(index)}';
+
+  static String beast(String index) => '/compendium/beasts/${Uri.encodeComponent(index)}';
 }
 
 /// Computes the redirect target for [location] given the session [auth] state,
@@ -494,6 +498,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.raceDetail,
         builder: (context, state) => RaceDetailPage(index: state.pathParameters['index']!),
+      ),
+      GoRoute(
+        path: AppRoutes.beastDetail,
+        builder: (context, state) => BeastPage(index: state.pathParameters['index']!),
       ),
     ],
   );

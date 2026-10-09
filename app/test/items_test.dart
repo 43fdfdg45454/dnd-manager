@@ -16,6 +16,7 @@ import 'package:dnd_companion/features/items/data/shops_repository.dart';
 import 'package:dnd_companion/features/items/domain/item_form_data.dart';
 import 'package:dnd_companion/features/items/domain/items_format.dart';
 import 'package:dnd_companion/features/items/ui/attunement_dialog.dart' show isAttunementLimit;
+import 'package:dnd_companion/features/items/ui/shop_catalog_page.dart';
 import 'package:dnd_companion/features/items/ui/shop_page.dart';
 import 'package:dnd_companion/features/items/ui/transactions_page.dart';
 import 'package:dnd_companion/features/session/data/messages_repository.dart';
@@ -183,6 +184,26 @@ void main() {
       expect(parseGoldToCp('-2'), isNull);
       expect(parseGoldToCp('-2', allowNegative: true), -200);
       expect(parseGoldToCp('abc'), isNull);
+    });
+
+    test('canEquip admite objetos sin categoría de equipo que hacen algo', () {
+      const bonus = ItemModifier(kind: 'AbilityBonus', target: 'str', value: 2);
+      expect(canEquip(const EffectiveItem(name: 'Espada', category: 'Weapon')), isTrue);
+      expect(
+        canEquip(const EffectiveItem(name: 'Amuleto', category: 'Other', modifiers: [bonus])),
+        isTrue,
+      );
+      expect(
+        canEquip(
+          const EffectiveItem(name: 'Broche', category: 'AdventuringGear', effects: ['Luz']),
+        ),
+        isTrue,
+      );
+      expect(canEquip(const EffectiveItem(name: 'Cuerda', category: 'AdventuringGear')), isFalse);
+      expect(
+        canEquip(const EffectiveItem(name: 'Elixir', category: 'Consumable', modifiers: [bonus])),
+        isFalse,
+      );
     });
 
     test('sellPayoutCp aplica el porcentaje de recompra', () {
@@ -1127,6 +1148,116 @@ void main() {
       expect(item.stock, 10);
       expect(find.text('Objeto añadido a la tienda.'), findsOneWidget);
       expect(find.text('Antorcha'), findsOneWidget);
+    });
+
+    testWidgets('al elegir una plantilla para la tienda el precio es el de lista', (tester) async {
+      final inventory = FakeInventoryRepository();
+      final dmShops = shopsOf(inventory, isDm: true, shops: [_shop()]);
+      await _pumpApp(
+        tester,
+        location: '/campaigns/c1/shops/s1',
+        inventory: inventory,
+        shops: dmShops,
+        role: CampaignRole.dm,
+      );
+      await _tap(tester, find.byKey(const Key('shop-add-item')));
+      await _tap(tester, find.byKey(const Key('composer-pick')));
+      await _tap(tester, find.byKey(const Key('item-t-sword')));
+
+      expect(
+        tester.widget<TextFormField>(find.byKey(const Key('composer-price'))).controller!.text,
+        '15',
+      );
+    });
+
+    testWidgets('el DM añade varios objetos del catálogo filtrando por categoría', (tester) async {
+      final inventory = FakeInventoryRepository();
+      final dmShops = shopsOf(inventory, isDm: true, shops: [_shop()]);
+      final catalog = FakeCampaignItemsRepository(
+        srd: const [
+          ItemSummary(
+            id: 't-dagger',
+            index: 'dagger',
+            name: 'Dagger',
+            category: 'Weapon',
+            subcategory: 'Simple Melee',
+            costCp: 200,
+          ),
+          ItemSummary(
+            id: 't-sword',
+            index: 'longsword',
+            name: 'Longsword',
+            category: 'Weapon',
+            subcategory: 'Martial Melee',
+            costCp: 1500,
+          ),
+          ItemSummary(id: 't-rope', name: 'Rope', category: 'AdventuringGear', costCp: 100),
+        ],
+      );
+      await _pumpApp(
+        tester,
+        location: '/campaigns/c1/shops/s1',
+        inventory: inventory,
+        shops: dmShops,
+        campaignItems: catalog,
+        role: CampaignRole.dm,
+      );
+      await _tap(tester, find.byKey(const Key('shop-add-catalog')));
+      expect(find.text('Añadir del catálogo'), findsOneWidget);
+      expect(find.text('Arma · 15 gp'), findsOneWidget);
+
+      await _tap(tester, find.byKey(const Key('shop-catalog-filter-simpleWeapons')));
+      expect(catalog.queries.last, (category: 'Weapon', subcategory: 'Simple', indexes: null));
+      expect(find.text('Dagger'), findsOneWidget);
+      expect(find.text('Longsword'), findsNothing);
+      await _tap(tester, find.byKey(const Key('shop-catalog-item-t-dagger')));
+
+      await _tap(tester, find.byKey(const Key('shop-catalog-filter-martialWeapons')));
+      await _tap(tester, find.byKey(const Key('shop-catalog-item-t-sword')));
+      expect(find.text('Añadir 2 objetos'), findsOneWidget);
+      await _tap(tester, find.byKey(const Key('shop-catalog-submit')));
+
+      final added = dmShops.bulkAdds.single;
+      expect(added.map((i) => (i.templateId, i.priceCp)), [('t-dagger', null), ('t-sword', null)]);
+      expect(find.text('2 objetos añadidos a la tienda.'), findsOneWidget);
+      expect(dmShops.shops.single.items, hasLength(2));
+    });
+
+    testWidgets('una tienda predefinida selecciona su lote por índice', (tester) async {
+      final inventory = FakeInventoryRepository();
+      final dmShops = shopsOf(inventory, isDm: true, shops: [_shop()]);
+      final catalog = FakeCampaignItemsRepository(
+        srd: const [
+          ItemSummary(id: 't-acid', index: 'acid-vial', name: 'Acid (vial)', costCp: 2500),
+          ItemSummary(
+            id: 't-potion',
+            index: 'potion-of-healing-common',
+            name: 'Potion of Healing (Common)',
+            category: 'MagicItem',
+          ),
+          ItemSummary(id: 't-sword', index: 'longsword', name: 'Longsword', costCp: 1500),
+        ],
+      );
+      await _pumpApp(
+        tester,
+        location: '/campaigns/c1/shops/s1',
+        inventory: inventory,
+        shops: dmShops,
+        campaignItems: catalog,
+        role: CampaignRole.dm,
+      );
+      await _tap(tester, find.byKey(const Key('shop-add-catalog')));
+      await _tap(tester, find.byKey(const Key('shop-catalog-presets')));
+      await _tap(tester, find.byKey(const Key('shop-preset-alchemist')));
+
+      expect(catalog.queries.last.indexes, ShopPreset.alchemist.items.keys.toList());
+      expect(find.text('Alquimista: 2 objetos seleccionados.'), findsOneWidget);
+      await _tap(tester, find.byKey(const Key('shop-catalog-submit')));
+
+      expect(dmShops.bulkAdds.single.map((i) => (i.templateId, i.priceCp)), [
+        ('t-acid', null),
+        ('t-potion', 5000),
+      ]);
     });
 
     testWidgets('vender muestra el importe calculado según la recompra', (tester) async {

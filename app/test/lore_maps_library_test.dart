@@ -8,6 +8,7 @@ import 'package:dnd_companion/core/auth/auth_state.dart';
 import 'package:dnd_companion/core/auth/user_dto.dart';
 import 'package:dnd_companion/core/content/content_visibility.dart';
 import 'package:dnd_companion/core/files/authenticated_image.dart';
+import 'package:dnd_companion/core/files/external_file_opener.dart';
 import 'package:dnd_companion/core/files/file_disk_cache.dart';
 import 'package:dnd_companion/core/files/files_repository.dart';
 import 'package:dnd_companion/core/files/image_upload.dart';
@@ -713,6 +714,64 @@ void main() {
       expect(find.byKey(const Key('library-download-d2')), findsOneWidget);
     });
 
+    testWidgets('tocar un documento lo descarga y lo abre con una app del sistema', (tester) async {
+      final files = FakeFilesRepository();
+      final opener = _FakeOpener(ExternalOpenResult.opened);
+      await _pumpApp(
+        tester,
+        location: '/library',
+        library: FakeLibraryRepository(documents: docs),
+        files: files,
+        overrides: [externalFileOpenerProvider.overrideWithValue(opener)],
+      );
+      await tester.tap(find.text('La Mina Perdida'));
+      await tester.pumpAndSettle();
+
+      expect(files.downloads, ['/api/v1/files/f-d2']);
+      expect(opener.opened, [('/fake/library/d2.pdf', 'application/pdf')]);
+      expect(find.byKey(const Key('library-open-failed')), findsNothing);
+      expect(find.text('visor d2'), findsNothing);
+
+      // Already downloaded: opens without downloading again.
+      await tester.tap(find.text('La Mina Perdida'));
+      await tester.pumpAndSettle();
+      expect(files.downloads, hasLength(1));
+      expect(opener.opened, hasLength(2));
+    });
+
+    testWidgets('sin app para PDF se ofrece verlo en la app', (tester) async {
+      await _pumpApp(
+        tester,
+        location: '/library',
+        library: FakeLibraryRepository(documents: docs),
+        storage: FakeLibraryStorage({'d1'}),
+        overrides: [
+          externalFileOpenerProvider.overrideWithValue(_FakeOpener(ExternalOpenResult.noApp)),
+        ],
+      );
+      await tester.tap(find.text('Reglas básicas'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('library-open-failed')), findsOneWidget);
+      expect(find.textContaining('No hay ninguna aplicación'), findsOneWidget);
+      await tester.tap(find.text('Ver en la app'));
+      await tester.pumpAndSettle();
+      expect(find.text('visor d1'), findsOneWidget);
+    });
+
+    testWidgets('el menú del documento abre el visor integrado', (tester) async {
+      await _pumpApp(
+        tester,
+        location: '/library',
+        library: FakeLibraryRepository(documents: docs),
+      );
+      await tester.tap(find.byKey(const Key('library-menu-d2')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('library-view-d2')));
+      await tester.pumpAndSettle();
+      expect(find.text('visor d2'), findsOneWidget);
+    });
+
     testWidgets('busca por texto y filtra por categoría', (tester) async {
       await _pumpApp(
         tester,
@@ -737,7 +796,13 @@ void main() {
       final repository = FakeLibraryRepository(documents: docs);
       await _pumpApp(tester, location: '/library', library: repository, userRole: UserRole.admin);
       expect(find.byKey(const Key('library-upload')), findsOneWidget);
-      expect(find.byKey(const Key('library-menu-d1')), findsNothing);
+      // System documents only offer the built-in viewer.
+      await tester.tap(find.byKey(const Key('library-menu-d1')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('library-view-d1')), findsOneWidget);
+      expect(find.text('Eliminar'), findsNothing);
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('library-menu-d2')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Eliminar'));
@@ -1040,4 +1105,18 @@ class _CaptureAdapter implements HttpClientAdapter {
 
   @override
   void close({bool force = false}) {}
+}
+
+/// Records what the library hands to the system and answers [result].
+class _FakeOpener implements ExternalFileOpener {
+  _FakeOpener(this.result);
+
+  final ExternalOpenResult result;
+  final opened = <(String, String?)>[];
+
+  @override
+  Future<ExternalOpenResult> open(String path, {String? mimeType}) async {
+    opened.add((path, mimeType));
+    return result;
+  }
 }

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/api_error.dart';
+import '../../../core/ui/infinite_scroll_list.dart';
 import '../../../core/ui/source_chip.dart';
 import '../../catalog/data/models.dart' show ItemSummary;
 import '../../catalog/domain/catalog_format.dart';
@@ -99,24 +101,14 @@ class _ItemSearchListState extends ConsumerState<ItemSearchList> {
             ),
             data: (page) => page.items.isEmpty
                 ? const Center(child: Text('No hay objetos que coincidan.'))
-                : ListView.builder(
-                    key: const Key('item-results'),
-                    itemCount: page.items.length + (page.hasMore ? 1 : 0),
+                : InfiniteScrollList(
+                    listKey: const Key('item-results'),
+                    itemCount: page.items.length,
+                    hasMore: page.hasMore,
+                    onLoadMore: () =>
+                        ref.read(campaignItemsControllerProvider(key).notifier).loadMore(),
+                    describeError: describeItemError,
                     itemBuilder: (context, index) {
-                      if (index >= page.items.length) {
-                        return Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Center(
-                            child: TextButton(
-                              key: const Key('item-load-more'),
-                              onPressed: () => ref
-                                  .read(campaignItemsControllerProvider(key).notifier)
-                                  .loadMore(),
-                              child: const Text('Cargar más'),
-                            ),
-                          ),
-                        );
-                      }
                       final item = page.items[index];
                       return ListTile(
                         key: Key('item-${item.id}'),

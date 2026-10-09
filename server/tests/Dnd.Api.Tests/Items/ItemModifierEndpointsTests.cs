@@ -215,6 +215,74 @@ public class ItemModifierEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(("Anillo de puntería", "AttackBonus"), (effect.ItemName, effect.Kind));
     }
 
+    private static readonly object[] StrengthBonus = [new { kind = "AbilityBonus", target = "str", value = 2 }];
+
+    [Fact]
+    public async Task A_custom_item_without_category_added_by_the_dm_can_be_equipped_and_raises_the_ability()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var character = await SetupAsync(s.Player, s.CampaignId, str: 14);
+        var amulet = await s.Dm.AddItemAsync(character.Id, new { quantity = 1, overrides = new { name = "Amuleto del toro", modifiers = StrengthBonus } });
+        Assert.Equal(("Other", "AbilityBonus"), (amulet.Effective.Category, Assert.Single(amulet.Effective.Modifiers).Kind));
+
+        Assert.Equal(HttpStatusCode.OK, (await s.Player.PatchItemAsync(character.Id, amulet.Id, new { equipped = true })).StatusCode);
+
+        await AssertStrengthRaisedAsync(s.Player, character.Id, "Amuleto del toro");
+    }
+
+    [Fact]
+    public async Task A_homebrew_gear_template_with_an_ability_bonus_applies_when_equipped()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var character = await SetupAsync(s.Player, s.CampaignId, str: 14);
+        var template = await s.Dm.CreateHomebrewAsync(s.CampaignId, new { name = "Cinto de cuero", category = "AdventuringGear", modifiers = StrengthBonus });
+        var belt = await s.Dm.AddItemAsync(character.Id, new { templateId = template.Id, quantity = 1 });
+
+        Assert.Equal(HttpStatusCode.OK, (await s.Player.PatchItemAsync(character.Id, belt.Id, new { equipped = true })).StatusCode);
+
+        await AssertStrengthRaisedAsync(s.Player, character.Id, "Cinto de cuero");
+    }
+
+    [Fact]
+    public async Task A_custom_item_bought_in_a_shop_keeps_its_modifiers()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var draft = await SetupAsync(s.Player, s.CampaignId, str: 14);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(draft.Id)}/activate", null)).StatusCode);
+        await s.Dm.GiveMoneyAsync(draft.Id, 1000);
+        var shop = await s.Dm.CreateShopAsync(s.CampaignId);
+        var offer = await s.Dm.AddShopItemAsync(shop.Id, new { overrides = new { name = "Brazal del oso", modifiers = StrengthBonus }, priceCp = 500 });
+
+        var bought = Assert.Single((await (await s.Player.BuyAsync(shop.Id, draft.Id, offer.Id)).ReadTradeAsync()).Inventory.Items);
+        Assert.Equal(HttpStatusCode.OK, (await s.Player.PatchItemAsync(draft.Id, bought.Id, new { equipped = true })).StatusCode);
+
+        await AssertStrengthRaisedAsync(s.Player, draft.Id, "Brazal del oso");
+    }
+
+    [Fact]
+    public async Task Plain_gear_without_effects_still_cannot_be_equipped()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var character = await s.Player.CreateCharacterAsync(s.CampaignId);
+        var stone = await s.Dm.AddItemAsync(character.Id, new { quantity = 1, overrides = new { name = "Piedra" } });
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await s.Player.PatchItemAsync(character.Id, stone.Id, new { equipped = true })).StatusCode);
+    }
+
+    /// <summary>Strength 14 + 2 = 16: score, modifier, Strength save, Athletics and carrying capacity follow.</summary>
+    private static async Task AssertStrengthRaisedAsync(SignedInUser player, Guid characterId, string itemName)
+    {
+        var detail = await player.GetCharacterAsync(characterId);
+        var sheet = detail.Sheet;
+        Assert.Equal((16, 3), (sheet.Abilities["str"].Score, sheet.Abilities["str"].Modifier));
+        Assert.Equal($"16 = base:Puntuación base 14, item:{itemName} 2", Text(sheet.Breakdowns["ability.str"]));
+        var save = sheet.SavingThrows["str"];
+        Assert.Equal(3 + (save.Proficient ? sheet.ProficiencyBonus : 0), save.Value);
+        Assert.Equal(3, sheet.Skills.Single(k => k.Index == "athletics").Value);
+        Assert.Equal(16 * InventoryCapacityPerStrength, detail.Inventory.CarryCapacityLb);
+        Assert.Equal(itemName, Assert.Single(sheet.ItemEffects).ItemName);
+    }
+
     private const int InventoryCapacityPerStrength = 15;
 
     /// <summary>"7 = ability:Fuerza 3, proficiency:Competencia 2, ..."; also checks that the parts add up.</summary>

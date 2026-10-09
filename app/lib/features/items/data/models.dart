@@ -645,6 +645,19 @@ class ShopItemInput {
   };
 }
 
+/// One entry of `POST /shops/{id}/items/bulk`: a catalog item, with the
+/// template's list price when [priceCp] is null and unlimited stock when
+/// [stock] is null.
+class BulkShopItem {
+  const BulkShopItem({required this.templateId, this.priceCp, this.stock});
+
+  final String templateId;
+  final int? priceCp;
+  final int? stock;
+
+  Map<String, dynamic> toJson() => {'templateId': templateId, 'priceCp': ?priceCp, 'stock': ?stock};
+}
+
 /// Body of `PATCH /shops/{id}/items/{shopItemId}`. [unlimitedStock] sends an
 /// explicit `stock: null`.
 class ShopItemPatch {

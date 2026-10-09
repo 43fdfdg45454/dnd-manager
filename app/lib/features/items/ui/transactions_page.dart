@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/cache/stale_data.dart';
+import '../../../core/network/api_error.dart';
+import '../../../core/ui/infinite_scroll_list.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_repository.dart';
 import '../data/items_controllers.dart';
@@ -44,25 +46,16 @@ class TransactionsPage extends ConsumerWidget {
                       ),
                     ],
                   )
-                : ListView.builder(
-                    itemCount: page.items.length + (page.hasMore ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index >= page.items.length) {
-                        return Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Center(
-                            child: TextButton(
-                              key: const Key('transactions-more'),
-                              onPressed: () => ref
-                                  .read(transactionsControllerProvider(campaignId).notifier)
-                                  .loadMore(),
-                              child: const Text('Cargar más'),
-                            ),
-                          ),
-                        );
-                      }
-                      return _TransactionTile(transaction: page.items[index]);
-                    },
+                : InfiniteScrollList(
+                    listKey: const Key('transactions-list'),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    itemCount: page.items.length,
+                    hasMore: page.hasMore,
+                    onLoadMore: () =>
+                        ref.read(transactionsControllerProvider(campaignId).notifier).loadMore(),
+                    describeError: describeItemError,
+                    itemBuilder: (context, index) =>
+                        _TransactionTile(transaction: page.items[index]),
                   ),
           ),
         ),

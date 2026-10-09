@@ -225,6 +225,7 @@ class FakeCampaignItemsRepository implements CampaignItemsRepository {
   final List<ItemSummary> homebrew;
   Object? deleteError;
   final List<ItemSource> sources = [];
+  final List<({String? category, String? subcategory, List<String>? indexes})> queries = [];
   final List<ItemTemplateInput> created = [];
   final List<({String id, ItemTemplateInput input})> updated = [];
   final List<String> deleted = [];
@@ -235,16 +236,27 @@ class FakeCampaignItemsRepository implements CampaignItemsRepository {
     String? search,
     String? category,
     String? rarity,
+    String? subcategory,
+    List<String>? indexes,
     ItemSource source = ItemSource.all,
     int page = 1,
     int pageSize = 30,
   }) async {
     sources.add(source);
+    queries.add((category: category, subcategory: subcategory, indexes: indexes));
     final q = (search ?? '').toLowerCase();
-    final all = [
-      if (source != ItemSource.homebrew) ...srd,
-      if (source != ItemSource.srd) ...homebrew,
-    ].where((i) => i.name.toLowerCase().contains(q)).toList();
+    final categories = category?.split(',');
+    final all =
+        [if (source != ItemSource.homebrew) ...srd, if (source != ItemSource.srd) ...homebrew]
+            .where((i) => i.name.toLowerCase().contains(q))
+            .where((i) => categories == null || categories.contains(i.category))
+            .where(
+              (i) =>
+                  subcategory == null ||
+                  (i.subcategory ?? '').toLowerCase().startsWith(subcategory.toLowerCase()),
+            )
+            .where((i) => indexes == null || indexes.contains(i.index))
+            .toList();
     return Page(items: all, total: all.length, page: page, pageSize: pageSize);
   }
 
@@ -374,6 +386,34 @@ class FakeShopsRepository implements ShopsRepository {
       ),
     );
     return item;
+  }
+
+  final List<List<BulkShopItem>> bulkAdds = [];
+
+  @override
+  Future<Shop> addItemsBulk(String shopId, List<BulkShopItem> items) async {
+    bulkAdds.add(items);
+    final shop = _shop(shopId);
+    final added = [
+      for (final (i, entry) in items.indexed)
+        ShopItem(
+          id: 'si${shop.items.length + i + 1}',
+          templateId: entry.templateId,
+          priceCp: entry.priceCp ?? costByTemplate[entry.templateId] ?? 0,
+          stock: entry.stock,
+          effective: makeEffective(name: entry.templateId),
+        ),
+    ];
+    final updated = Shop(
+      id: shop.id,
+      name: shop.name,
+      description: shop.description,
+      isOpen: shop.isOpen,
+      buybackPercent: shop.buybackPercent,
+      items: [...shop.items, ...added],
+    );
+    _replace(updated);
+    return updated;
   }
 
   @override

@@ -38,6 +38,21 @@ internal sealed class ItemTemplateRepository(AppDbContext db) : IItemTemplateRep
             query = query.Where(x => x.Rarity == rarity);
         }
 
+        if (filter.Categories is { Count: > 0 } categories)
+        {
+            query = query.Where(x => categories.Contains(x.Category));
+        }
+
+        if (filter.SubcategoryPrefix is { } prefix)
+        {
+            query = query.Where(x => x.Subcategory.ToLower().StartsWith(prefix));
+        }
+
+        if (filter.Indexes is { Count: > 0 } indexes)
+        {
+            query = query.Where(x => x.Index != null && indexes.Contains(x.Index));
+        }
+
         var total = await query.CountAsync(cancellationToken);
         var items = await query.OrderBy(x => x.Name).ThenBy(x => x.Index).ThenBy(x => x.Id).Skip(skip).Take(take).ToListAsync(cancellationToken);
         return (items, total);

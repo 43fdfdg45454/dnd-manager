@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_error.dart';
+import '../../../core/ui/infinite_scroll_list.dart';
 import '../../../core/ui/spell_category.dart';
 import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models.dart' show SpellSummary;
@@ -137,17 +138,14 @@ class _SpellPickerPageState extends ConsumerState<SpellPickerPage> {
     });
   }
 
+  /// Next page for the infinite scroll. Pages whose spells are all filtered out
+  /// locally (level range) are skipped so the list always grows. Errors reach
+  /// the list, which reports them and offers a retry.
   Future<void> _loadMore() async {
     final generation = _generation;
-    setState(() => _loading = true);
-    try {
+    final before = _items.length;
+    while (mounted && generation == _generation && _hasMore && _items.length == before) {
       await _fetch(generation, _page + 1);
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _error = error;
-        _loading = false;
-      });
     }
   }
 
@@ -278,33 +276,28 @@ class _SpellPickerPageState extends ConsumerState<SpellPickerPage> {
     if (_items.isEmpty) {
       return const Center(child: Text('Ningún hechizo coincide con la búsqueda.'));
     }
-    return ListView(
-      children: [
-        for (final spell in _items)
-          CheckboxListTile(
-            key: Key('picker-spell-${spell.index}'),
-            value: widget.chosen.contains(spell.index) || _isPicked(spell.index),
-            onChanged: widget.chosen.contains(spell.index) ? null : (_) => _toggle(spell),
-            secondary: SpellCategoryIcon(spell.category),
-            title: Text(spell.name),
-            subtitle: Text(
-              [
-                spellLevelLabel(spell.level),
-                if (spell.school != null) spell.school!,
-                if (spell.concentration) 'Concentración',
-              ].join(' · '),
-            ),
+    return InfiniteScrollList(
+      listKey: const Key('spell-picker-list'),
+      itemCount: _items.length,
+      hasMore: _hasMore,
+      onLoadMore: _loadMore,
+      itemBuilder: (context, i) {
+        final spell = _items[i];
+        return CheckboxListTile(
+          key: Key('picker-spell-${spell.index}'),
+          value: widget.chosen.contains(spell.index) || _isPicked(spell.index),
+          onChanged: widget.chosen.contains(spell.index) ? null : (_) => _toggle(spell),
+          secondary: SpellCategoryIcon(spell.category),
+          title: Text(spell.name),
+          subtitle: Text(
+            [
+              spellLevelLabel(spell.level),
+              if (spell.school != null) spell.school!,
+              if (spell.concentration) 'Concentración',
+            ].join(' · '),
           ),
-        if (_hasMore)
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Center(
-              child: _loading
-                  ? const CircularProgressIndicator()
-                  : TextButton(onPressed: _loadMore, child: const Text('Cargar más')),
-            ),
-          ),
-      ],
+        );
+      },
     );
   }
 }

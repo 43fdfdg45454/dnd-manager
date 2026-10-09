@@ -59,11 +59,16 @@ List<String> splitCommas(String text) => [
 ];
 
 /// Whether the equip action makes sense for [item] (the server has the last
-/// word and answers 400 otherwise).
+/// word and answers 400 otherwise): weapons, armor, shields and magic items,
+/// plus any other non-consumable item that does something while worn
+/// (modifiers, effects, armor, damage or attunement), such as custom items
+/// without an equipment category.
 bool canEquip(EffectiveItem item) {
-  if (item.isConsumable) return false;
   const equippable = {'weapon', 'armor', 'shield', 'magicitem'};
-  return equippable.contains(item.category.toLowerCase()) ||
+  if (equippable.contains(item.category.toLowerCase())) return true;
+  if (item.isConsumable) return false;
+  return item.modifiers.isNotEmpty ||
+      item.effects.isNotEmpty ||
       item.armor != null ||
       item.damage != null ||
       item.requiresAttunement;

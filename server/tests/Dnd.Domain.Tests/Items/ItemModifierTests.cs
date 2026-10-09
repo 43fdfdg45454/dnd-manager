@@ -103,6 +103,19 @@ public class ItemModifierTests
     }
 
     [Fact]
+    public void Items_without_an_equipment_category_are_equippable_when_they_do_something()
+    {
+        var bonus = new ItemModifier(ItemModifierKind.AbilityBonus, "str", 2);
+
+        Assert.True(TestItems.Effective(Template("Amuleto", ItemCategory.Other, [bonus])).IsEquippable);
+        Assert.True(TestItems.Effective(Template("Guantelete", ItemCategory.AdventuringGear, [bonus])).IsEquippable);
+        Assert.True(EffectiveItem.Resolve(null, new ItemOverrides { Name = "Talismán", Modifiers = [bonus] }).IsEquippable);
+        Assert.True(EffectiveItem.Resolve(null, new ItemOverrides { Name = "Broche", Effects = ["Luz 20 ft"] }).IsEquippable);
+        Assert.False(EffectiveItem.Resolve(null, new ItemOverrides { Name = "Piedra" }).IsEquippable);
+        Assert.False(TestItems.Effective(Template("Elixir", ItemCategory.Consumable, [bonus])).IsEquippable);
+    }
+
+    [Fact]
     public void An_item_is_active_when_equipped_and_attuned_if_it_requires_attunement()
     {
         var character = NewCharacter();

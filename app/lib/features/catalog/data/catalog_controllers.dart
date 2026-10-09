@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'beast_models.dart';
 import 'catalog_repository.dart';
 import 'models.dart';
 
@@ -157,6 +158,17 @@ final equipmentCategoryProvider = FutureProvider.autoDispose.family<EquipmentCat
 /// that subclass (null: every table).
 final rollTablesProvider = FutureProvider.autoDispose.family<List<RollTable>, String?>(
   (ref, subclass) => ref.watch(catalogRepositoryProvider).rollTables(subclass: subclass),
+  retry: _noRetry,
+);
+
+/// Beasts matching a wild shape (or compendium) query.
+final beastsProvider = FutureProvider.autoDispose.family<List<BeastSummary>, BeastQuery>(
+  (ref, q) => ref.watch(catalogRepositoryProvider).beasts(maxCr: q.maxCr, fly: q.fly, swim: q.swim),
+  retry: _noRetry,
+);
+
+final beastDetailProvider = FutureProvider.autoDispose.family<Beast, String>(
+  (ref, index) => ref.watch(catalogRepositoryProvider).beast(index),
   retry: _noRetry,
 );
 

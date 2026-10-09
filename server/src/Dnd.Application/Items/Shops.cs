@@ -61,6 +61,35 @@ public sealed class AddShopItemRequestValidator : AbstractValidator<AddShopItemR
     }
 }
 
+/// <param name="TemplateId">Catalog item (SRD, content pack or homebrew of the campaign).</param>
+/// <param name="PriceCp">Unit price in copper pieces; null = the template's list price (0 when it has none).</param>
+/// <param name="Stock">Units available; null = unlimited.</param>
+public sealed record BulkShopItem(Guid TemplateId, int? PriceCp = null, int? Stock = null);
+
+/// <summary>Several catalog items added to a shop at once (all or nothing).</summary>
+public sealed record AddShopItemsBulkRequest(IReadOnlyList<BulkShopItem> Items)
+{
+    /// <summary>Most items accepted in one request.</summary>
+    public const int MaxItems = 200;
+}
+
+public sealed class AddShopItemsBulkRequestValidator : AbstractValidator<AddShopItemsBulkRequest>
+{
+    public AddShopItemsBulkRequestValidator()
+    {
+        RuleFor(x => x.Items)
+            .NotNull().WithMessage("Indica los objetos que quieres añadir.")
+            .Must(items => items is { Count: > 0 and <= AddShopItemsBulkRequest.MaxItems })
+            .WithMessage($"Añade entre 1 y {AddShopItemsBulkRequest.MaxItems} objetos a la vez.");
+        RuleForEach(x => x.Items).ChildRules(item =>
+        {
+            item.RuleFor(i => i.TemplateId).NotEmpty().WithMessage("Indica un objeto del catálogo.");
+            item.RuleFor(i => i.PriceCp).InclusiveBetween(0, ItemLimits.MaxCostCp).WithMessage($"El precio debe estar entre 0 y {ItemLimits.MaxCostCp} pc.");
+            item.RuleFor(i => i.Stock).InclusiveBetween(0, ItemLimits.MaxStock).WithMessage($"El stock debe estar entre 0 y {ItemLimits.MaxStock}.");
+        }).When(x => x.Items is not null);
+    }
+}
+
 /// <summary>
 /// Absent fields do not change; <c>stock: null</c> makes the stock unlimited; <see cref="Overrides"/>
 /// replaces every override when given.
@@ -225,6 +254,35 @@ public sealed class AddShopItemHandler(ShopLoader loader, IUnitOfWork unitOfWork
         var item = shop.AddItem(template?.Id, request.Overrides?.ToDomain() ?? ItemOverrides.None(), request.PriceCp, request.Stock, clock.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return ShopItemDto.From(item, template);
+    }
+}
+
+/// <summary>
+/// A DM adds several catalog items to a shop in one operation, each one at its given price or the
+/// template's list price. Every template must be usable in the campaign (400 otherwise, nothing added).
+/// </summary>
+public sealed class AddShopItemsBulkHandler(ShopLoader loader, IItemTemplateRepository templates, IUnitOfWork unitOfWork, IDateTimeProvider clock)
+{
+    public async Task<ShopDto> HandleAsync(Guid currentUserId, Guid shopId, AddShopItemsBulkRequest request, CancellationToken cancellationToken = default)
+    {
+        var shop = await loader.LoadForDmAsync(shopId, currentUserId, cancellationToken);
+        var loaded = (await templates.ListByIdsAsync(request.Items.Select(i => i.TemplateId).Distinct().ToList(), cancellationToken))
+            .Where(t => t.CampaignId is null || t.CampaignId == shop.CampaignId)
+            .ToDictionary(t => t.Id);
+        if (request.Items.Any(i => !loaded.ContainsKey(i.TemplateId)))
+        {
+            throw ItemErrors.UnknownTemplate();
+        }
+
+        var now = clock.UtcNow;
+        foreach (var entry in request.Items)
+        {
+            var template = loaded[entry.TemplateId];
+            shop.AddItem(template.Id, ItemOverrides.None(), entry.PriceCp ?? template.CostCp ?? 0, entry.Stock, now);
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return await loader.ToDtoAsync(shop, cancellationToken);
     }
 }
 

@@ -1,3 +1,4 @@
+import 'package:dnd_companion/features/catalog/data/beast_models.dart';
 import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
 import 'package:dnd_companion/features/catalog/data/models.dart';
 
@@ -53,6 +54,7 @@ class FakeCatalogRepository implements CatalogRepository {
     this.sourceList = const [CatalogSource(id: 'srd', name: 'SRD 5.1')],
     this.trinketList = const [],
     this.rollTableList = const [],
+    this.beastList = const [],
   });
 
   final List<SpellSummary> spellList;
@@ -69,12 +71,35 @@ class FakeCatalogRepository implements CatalogRepository {
   final List<CatalogSource> sourceList;
   final List<Trinket> trinketList;
   final List<RollTable> rollTableList;
+
+  /// Full statblocks; the list endpoint answers their summaries.
+  final List<Beast> beastList;
+  final List<BeastQuery> beastCalls = [];
   Object? error;
   final List<SpellCall> spellCalls = [];
   final List<({String? search, String? category, int page})> itemCalls = [];
 
   void _fail() {
     if (error != null) throw error!;
+  }
+
+  @override
+  Future<List<BeastSummary>> beasts({double? maxCr, bool? fly, bool? swim, String? search}) async {
+    _fail();
+    beastCalls.add((maxCr: maxCr, fly: fly, swim: swim));
+    return [
+      for (final b in beastList)
+        if ((maxCr == null || b.challengeRating <= maxCr) &&
+            (fly == null || b.flies == fly) &&
+            (swim == null || b.swims == swim))
+          b,
+    ];
+  }
+
+  @override
+  Future<Beast> beast(String index) async {
+    _fail();
+    return beastList.firstWhere((b) => b.index == index, orElse: () => throw dioError(404));
   }
 
   Page<T> _slice<T>(List<T> all, int page, int pageSize) {

@@ -25,11 +25,16 @@ class CampaignItemsRepository {
 
   static const _api = '/api/v1/campaigns';
 
+  /// [category] takes one category or several separated by commas
+  /// ("Armor,Shield"), [subcategory] a prefix ("Simple", "Potion") and
+  /// [indexes] the dataset indexes of catalog items (shop presets).
   Future<Page<ItemSummary>> list(
     String campaignId, {
     String? search,
     String? category,
     String? rarity,
+    String? subcategory,
+    List<String>? indexes,
     ItemSource source = ItemSource.all,
     int page = 1,
     int pageSize = 30,
@@ -41,6 +46,8 @@ class CampaignItemsRepository {
         if (text != null && text.isNotEmpty) 'search': text,
         'category': category,
         'rarity': rarity,
+        'subcategory': subcategory,
+        if (indexes != null && indexes.isNotEmpty) 'indexes': indexes.join(','),
         'source': source.apiValue,
         'page': page,
         'pageSize': pageSize,
