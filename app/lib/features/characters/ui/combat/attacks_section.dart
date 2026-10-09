@@ -65,6 +65,7 @@ class _AttackCardState extends State<AttackCard> {
       context,
       d20Expression(_attack.attackBonus, mode: mode),
       label: 'Ataque: ${_attack.name}',
+      kind: RollKind.attack,
       onResult: (result) {
         if (!mounted) return;
         setState(() => _critical = result.isCritical);

@@ -184,6 +184,18 @@ void main() {
       expect(applyHealing(hp: 0, max: 0, amount: 3), 3);
     });
 
+    test('una salvación de muerte tirada suma éxito, fallo, dos fallos o 1 PG', () {
+      final success = applyDeathSaveRoll(natural: 10, successes: 1, failures: 1);
+      expect((success.successes, success.failures, success.revived), (2, 1, false));
+      final failure = applyDeathSaveRoll(natural: 9, successes: 1, failures: 1);
+      expect((failure.successes, failure.failures), (1, 2));
+      final one = applyDeathSaveRoll(natural: 1, successes: 0, failures: 2);
+      expect(one.failures, 3);
+      final twenty = applyDeathSaveRoll(natural: 20, successes: 2, failures: 2);
+      expect((twenty.successes, twenty.failures, twenty.revived), (0, 0, true));
+      expect(applyDeathSaveRoll(natural: 15, successes: 3, failures: 0).successes, 3);
+    });
+
     test('las salvaciones de muerte se marcan y se desmarcan', () {
       expect(toggleDeathSave(0, 0), 1);
       expect(toggleDeathSave(1, 2), 3);
@@ -247,6 +259,41 @@ void main() {
       addTearDown(container.dispose);
       container.read(diceControllerProvider.notifier).record(roll('1d6'));
       expect(container.read(diceControllerProvider).history, hasLength(1));
+    });
+
+    test(
+      'el historial guarda el tipo de tirada y solo resalta ataques y salvaciones de muerte',
+      () async {
+        final container = await open({});
+        final controller = container.read(diceControllerProvider.notifier);
+        final one = DiceExpression.parse('1d20+5').roll(SequenceRandom.always(1));
+        controller.record(one, label: 'Iniciativa');
+        controller.record(one, label: 'Ataque: Espada', kind: RollKind.attack);
+        final history = container.read(diceControllerProvider).history;
+        expect(history[1].kind, RollKind.check);
+        expect(history[1].fumble, isTrue);
+        expect(history[1].showsFumble, isFalse);
+        expect(history[1].natural, 1);
+        expect(history[0].kind, RollKind.attack);
+        expect(history[0].showsFumble, isTrue);
+
+        final restored = DiceHistoryEntry.tryFromJson(history[0].toJson())!;
+        expect(restored.kind, RollKind.attack);
+        expect(restored.natural, 1);
+      },
+    );
+
+    test('las tiradas guardadas sin tipo se deducen de la etiqueta', () async {
+      final container = await open({
+        'dice.history': [
+          '{"expression":"1d20+5","total":6,"label":"Iniciativa","fumble":true}',
+          '{"expression":"1d20+5","total":6,"label":"Ataque: Espada","fumble":true}',
+          '{"expression":"1d20","total":20,"label":"Salvación de muerte","critical":true}',
+        ],
+      });
+      final history = container.read(diceControllerProvider).history;
+      expect(history.map((e) => e.kind), [RollKind.check, RollKind.attack, RollKind.deathSave]);
+      expect(history.map((e) => e.showsFumble || e.showsCritical), [false, true, true]);
     });
 
     test('las líneas corruptas del historial se saltan y el resto se conserva', () async {

@@ -5,11 +5,13 @@ import 'package:dnd_companion/features/catalog/data/models.dart';
 import 'package:dnd_companion/features/characters/data/character_wizard_controller.dart';
 import 'package:dnd_companion/features/characters/data/models.dart';
 import 'package:dnd_companion/features/characters/ui/wizard/character_wizard_page.dart';
+import 'package:dnd_companion/features/dice/data/dice_controller.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'dice_test.dart' show SequenceRandom;
 import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';
 import 'helpers/character_fakes.dart';
@@ -205,6 +207,7 @@ Future<_Setup> _pump(
   bool structured = false,
   CampaignRole role = CampaignRole.player,
   String location = '/campaigns/c1/characters/new',
+  int face = 4,
 }) async {
   final characters = FakeCharactersRepository(isDm: role.isAtLeastDm);
   final inventory = FakeInventoryRepository();
@@ -223,6 +226,7 @@ Future<_Setup> _pump(
         ],
       ),
     ),
+    overrides: [diceRandomProvider.overrideWithValue(SequenceRandom.always(face))],
   );
   return _Setup(tester, router, characters, inventory);
 }
@@ -520,12 +524,33 @@ void main() {
       await _tap(tester, find.byKey(Key('wizard-roll-$ability-slot-$slot')).last);
     }
 
+    testWidgets('el dado virtual rellena una tirada o las seis (4d6kh3)', (tester) async {
+      await _pump(tester, face: 5);
+      await toAbilities(tester);
+      await _tap(tester, find.byKey(const Key('roll-score-dice-0')));
+      expect(
+        tester.widget<TextField>(find.byKey(const Key('roll-score-0'))).controller!.text,
+        '15',
+      );
+      expect(find.byKey(const Key('roll-sorted')), findsNothing);
+
+      await _tap(tester, find.byKey(const Key('roll-all-scores')));
+      for (var i = 0; i < 6; i++) {
+        expect(tester.widget<TextField>(find.byKey(Key('roll-score-$i'))).controller!.text, '15');
+      }
+      expect(
+        find.text('Valores ordenados: 15, 15, 15, 15, 15, 15. Asigna cada uno una sola vez.'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('valida el rango, ordena y exige asignar los seis valores', (tester) async {
       await _pump(tester);
       await toAbilities(tester);
       expect(
         find.text(
-          'Tira 4d6 seis veces, descarta el dado menor de cada tirada y escribe los totales.',
+          'Tira 4d6 seis veces, descarta el dado menor de cada tirada y escribe los totales, '
+          'o usa el dado virtual.',
         ),
         findsOneWidget,
       );
@@ -856,12 +881,31 @@ void main() {
     testWidgets('el modo equipo bloquea hasta completar todas las elecciones', (tester) async {
       await toEquipment(tester);
       // Default items share the look of the player's own items, under their
-      // own heading and marked "Por defecto", without edit buttons.
+      // own heading, grouped and marked by origin, without edit buttons.
       expect(find.text('Equipo inicial'), findsOneWidget);
       final dagger = find.byKey(const Key('equipment-default-dagger'));
       expect(dagger, findsOneWidget);
       expect(find.descendant(of: dagger, matching: find.text('Cantidad: 2')), findsOneWidget);
-      expect(find.descendant(of: dagger, matching: find.text('Por defecto')), findsOneWidget);
+      expect(find.descendant(of: dagger, matching: find.text('Clase')), findsOneWidget);
+      final symbol = find.byKey(const Key('equipment-default-holy-symbol'));
+      expect(find.descendant(of: symbol, matching: find.text('Trasfondo')), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.byKey(const Key('equipment-origin-characterClass'))).dy,
+        lessThan(tester.getTopLeft(dagger).dy),
+      );
+      expect(
+        tester.getTopLeft(find.byKey(const Key('equipment-origin-background'))).dy,
+        allOf(greaterThan(tester.getTopLeft(dagger).dy), lessThan(tester.getTopLeft(symbol).dy)),
+      );
+      expect(find.byKey(const Key('equipment-default-gold-background')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('equipment-choice-0')),
+          matching: find.text('Clase'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('equipment-choices-origin-characterClass')), findsOneWidget);
       expect(find.descendant(of: dagger, matching: find.byType(IconButton)), findsNothing);
       expect(find.text('Holy Symbol'), findsOneWidget);
       expect(find.text('Elecciones 0 de 2'), findsOneWidget);
@@ -900,6 +944,27 @@ void main() {
       expect(find.text('Rope'), findsNothing);
       await _tap(tester, find.byKey(const Key('equipment-default-explorers-pack')));
       expect(find.text('Rope'), findsOneWidget);
+    });
+
+    testWidgets('"Tirar" del oro inicial y de la baratija usa el dado virtual', (tester) async {
+      await _pump(tester, structured: true, face: 3);
+      await _toBackground(tester, classIndex: 'fighter');
+      await _tap(tester, find.byKey(const Key('wizard-background')));
+      await _tap(tester, find.text('Acolyte').last);
+      await _tap(tester, find.byKey(const Key('skill-athletics')));
+      await _tap(tester, find.byKey(const Key('skill-perception')));
+      await _next(tester);
+      await _tap(tester, find.byKey(const Key('equipment-mode-gold')));
+      await _tap(tester, find.byKey(const Key('equipment-gold-roll-dice')));
+      // 5d4 con todos los dados a 3 = 15.
+      expect(_text(tester, 'equipment-gold-preview'), '× 10 = 150 po');
+      expect(
+        tester.widget<TextField>(find.byKey(const Key('equipment-gold-roll'))).controller!.text,
+        '15',
+      );
+
+      await _tap(tester, find.byKey(const Key('trinket-roll-dice')));
+      expect(tester.widget<TextField>(find.byKey(const Key('trinket-roll'))).controller!.text, '3');
     });
 
     testWidgets('el oro inicial valida el rango y muestra la vista previa', (tester) async {

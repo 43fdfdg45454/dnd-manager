@@ -275,9 +275,25 @@ void main() {
     await _tap(tester, 'monk-flurry-of-blows');
     expect(repo.resourceSpends, [(id: 'k1', amount: 1)]);
     expect(_text(tester, 'monk-ki-uses'), '4 / 5');
+    expect(find.byKey(const Key('monk-martial-arts-critical')), findsOneWidget);
     await _tap(tester, 'monk-patient-defense');
     await _tap(tester, 'monk-step-of-the-wind');
     expect(repo.resourceSpends, hasLength(3));
+  });
+
+  testWidgets('clérigo: Intervención divina se tira con 1d100 y responde según el nivel', (
+    tester,
+  ) async {
+    final repo = _repo('cleric', 10);
+    await _pump(tester, characters: repo, face: 7);
+    await _tap(tester, 'cleric-divine-intervention-roll');
+    expect(find.text('Intervención divina'), findsWidgets);
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('7: tu deidad interviene. No podrás pedirlo de nuevo en 7 días.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('pícaro: Ataque furtivo por nivel se tira y hay recordatorios', (tester) async {
@@ -291,6 +307,16 @@ void main() {
     await _tap(tester, 'rogue-sneak-attack-roll');
     expect(find.byKey(const Key('dice-result')), findsOneWidget);
     expect(find.text('Ataque furtivo'), findsWidgets);
+    expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '12');
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+
+    // "Crítico" duplica los dados: 6d6 a 4 = 24.
+    await _tap(tester, 'rogue-sneak-attack-critical');
+    expect(find.text('Tirar 6d6'), findsOneWidget);
+    await _tap(tester, 'rogue-sneak-attack-roll');
+    expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '24');
+    expect(find.text('Ataque furtivo (crítico)'), findsOneWidget);
   });
 
   testWidgets('hechicero: convierte espacio en puntos y puntos en espacio', (tester) async {
@@ -372,6 +398,20 @@ void main() {
       ),
       findsOneWidget,
     );
+
+    // "Tirar" usa el dado virtual (todas las caras a 5) y rellena el resultado.
+    await _tap(tester, 'roll-table-dice');
+    expect(
+      tester.widget<TextField>(find.byKey(const Key('roll-table-input'))).controller!.text,
+      '5',
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('roll-table-result')),
+        matching: find.text('Efecto ficticio bajo.'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('brujo: los espacios de pacto se gastan y lista invocaciones de los rasgos', (
@@ -418,6 +458,8 @@ void main() {
     expect(repo.concentrationCalls, ['hunters-mark']);
     expect(find.byKey(const Key('concentration-chip')), findsOneWidget);
     expect(find.text('Marca del cazador (activa)'), findsOneWidget);
+    await _tap(tester, 'ranger-hunters-mark-critical');
+    expect(find.text('Tirar 2d6'), findsOneWidget);
     expect(_enabled(tester, 'ranger-hunters-mark'), isFalse);
   });
 

@@ -593,13 +593,49 @@ class DeathSavesCard extends ConsumerWidget {
               ),
             ),
           ),
-        _card(context, c, row),
+        _card(context, ref, c, row),
       ],
     );
   }
 
+  /// Rolls the save with the virtual die and, with write access, applies it:
+  /// 10 or more is a success, less a failure, a 1 two failures and a 20
+  /// brings the character back with 1 hit point.
+  Future<void> _roll(BuildContext context, WidgetRef ref, CharacterDetail c) async {
+    Future<void>? applying;
+    await rollAndShow(
+      context,
+      '1d20',
+      label: 'Salvación de muerte',
+      kind: RollKind.deathSave,
+      onResult: (result) {
+        final natural = result.d20Value;
+        if (!canEdit || natural == null) return;
+        final outcome = applyDeathSaveRoll(
+          natural: natural,
+          successes: c.deathSaveSuccesses,
+          failures: c.deathSaveFailures,
+        );
+        final controller = _controller(ref, c);
+        applying = runCombat(
+          context,
+          () => controller.patchCombat(
+            CombatPatch(
+              hitPointsCurrent: outcome.revived ? 1 : null,
+              deathSaveSuccesses: outcome.successes,
+              deathSaveFailures: outcome.failures,
+            ),
+          ),
+          success: outcome.message,
+        );
+      },
+    );
+    await applying;
+  }
+
   Widget _card(
     BuildContext context,
+    WidgetRef ref,
     CharacterDetail c,
     Widget Function(String, String, int, Color, bool) row,
   ) {
@@ -608,7 +644,7 @@ class DeathSavesCard extends ConsumerWidget {
       title: 'Salvaciones de muerte',
       trailing: TextButton(
         key: const Key('roll-death-save'),
-        onPressed: () => rollAndShow(context, '1d20', label: 'Salvación de muerte'),
+        onPressed: () => _roll(context, ref, c),
         child: const Text('Tirar'),
       ),
       child: Column(

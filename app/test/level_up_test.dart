@@ -3,11 +3,14 @@ import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:dnd_companion/features/characters/data/level_up_controller.dart';
 import 'package:dnd_companion/features/characters/data/models.dart';
+import 'package:dnd_companion/features/characters/ui/level_up/hit_points_step.dart';
+import 'package:dnd_companion/features/dice/data/dice_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'dice_test.dart' show SequenceRandom;
 import 'helpers/app_pump.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
@@ -216,6 +219,7 @@ Future<({FakeCharactersRepository characters, GoRouter router})> _pump(
   required Map<String, dynamic> plan,
   Map<String, dynamic>? character,
   String location = '/characters/ch1/level-up',
+  int face = 6,
 }) async {
   final characters = FakeCharactersRepository(characters: [character ?? _character()]);
   characters.levelUpPlans[''] = plan;
@@ -223,7 +227,12 @@ Future<({FakeCharactersRepository characters, GoRouter router})> _pump(
     campaigns: FakeCampaignsRepository(campaigns: [makeCampaign(myRole: CampaignRole.player)]),
     characters: characters,
   );
-  final router = await pumpRealApp(tester, location: location, fakes: fakes);
+  final router = await pumpRealApp(
+    tester,
+    location: location,
+    fakes: fakes,
+    overrides: [diceRandomProvider.overrideWithValue(SequenceRandom.always(face))],
+  );
   return (characters: characters, router: router);
 }
 
@@ -458,6 +467,27 @@ void main() {
 
       await _writeHp(tester, '7');
       expect(find.text('+ Con 2 = +9 PG'), findsOneWidget);
+      await _next(tester);
+      expect(find.byKey(const Key('levelup-choice-subclass')), findsOneWidget);
+    });
+
+    test('el valor fijo de PG es la mitad del dado más uno', () {
+      expect([6, 8, 10, 12].map(fixedHitPoints), [4, 5, 6, 7]);
+    });
+
+    testWidgets('PG: "Tirar" usa el dado virtual y "Usar el valor fijo" rellena el campo', (
+      tester,
+    ) async {
+      await _pump(tester, plan: _archetypePlan(), face: 9);
+      await _next(tester);
+      await _tapKey(tester, 'levelup-hp-roll');
+      expect(find.text('9'), findsWidgets);
+      expect(find.text('+ Con 2 = +11 PG'), findsOneWidget);
+
+      await _tapKey(tester, 'levelup-hp-fixed');
+      expect(find.text('Usar el valor fijo (6)'), findsOneWidget);
+      expect(find.text('+ Con 2 = +8 PG'), findsOneWidget);
+      expect(find.byKey(const Key('levelup-hp-fixed-hint')), findsOneWidget);
       await _next(tester);
       expect(find.byKey(const Key('levelup-choice-subclass')), findsOneWidget);
     });

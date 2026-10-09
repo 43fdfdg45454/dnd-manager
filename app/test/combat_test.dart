@@ -17,6 +17,7 @@ import 'package:dnd_companion/features/characters/domain/spell_combat.dart';
 import 'package:dnd_companion/features/characters/ui/character_page.dart';
 import 'package:dnd_companion/features/characters/ui/combat/class_panels.dart';
 import 'package:dnd_companion/features/characters/ui/combat/combat_support.dart' show Pip;
+import 'package:dnd_companion/features/characters/ui/combat/panels/critical_damage_roll.dart';
 import 'package:dnd_companion/features/dice/data/dice_controller.dart';
 import 'package:dnd_companion/features/session/data/models.dart' show PartyAdjustment;
 import 'package:dnd_companion/features/session/data/party_repository.dart';
@@ -1417,6 +1418,38 @@ void main() {
       expect(find.text('Castigo divino'), findsWidgets);
     });
 
+    test('Castigo divino: +1d8 contra no muertos hasta 6d8 y el crítico duplica los dados', () {
+      expect(smiteDamage('2d8'), '2d8');
+      expect(smiteDamage('2d8', againstUndead: true), '3d8');
+      expect(smiteDamage('5d8', againstUndead: true), '6d8');
+      expect(smiteDamage('6d8', againstUndead: true), '6d8');
+      expect(smiteDamage('3d8', critical: true), '6d8');
+      expect(smiteDamage('5d8', againstUndead: true, critical: true), '12d8');
+      expect(criticalDamage('1d6+3', critical: true), '2d6+3');
+      expect(criticalDamage('1d6+3', critical: false), '1d6+3');
+    });
+
+    testWidgets('Castigo divino: las casillas Crítico y no muerto cambian la tirada', (
+      tester,
+    ) async {
+      final repo = _repo(
+        classes: _paladinClasses,
+        combat: makeCombatJson(classPanels: [_paladinPanel()]),
+      );
+      repo.smiteDice = '3d8';
+      await _pump(tester, characters: repo, face: 5);
+      await _tap(tester, 'smite-level-2');
+      await _tap(tester, 'smite-confirm');
+      await _tap(tester, 'smite-undead');
+      expect(find.text('Daño radiante adicional: 4d8'), findsOneWidget);
+      await _tap(tester, 'smite-critical');
+      expect(find.text('Daño radiante adicional: 8d8'), findsOneWidget);
+
+      await _tap(tester, 'smite-roll');
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '40');
+      expect(find.text('Castigo divino (crítico)'), findsOneWidget);
+    });
+
     testWidgets('Imposición de manos: "Curarme" usa el deslizador', (tester) async {
       final repo = _repo(
         classes: _paladinClasses,
@@ -1723,6 +1756,92 @@ void main() {
       await _pump(tester, characters: repo, role: CampaignRole.dm);
       await _tap(tester, 'hp-minus');
       expect(repo.damageCalls, hasLength(1));
+    });
+  });
+
+  group('tipo de tirada (RollKind)', () {
+    testWidgets('un 1 en la iniciativa no es pifia y muestra el d20 natural', (tester) async {
+      await _pump(tester, characters: _repo(), face: 1);
+      await _tap(tester, 'roll-initiative');
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '3');
+      expect(find.text('d20 natural: 1'), findsOneWidget);
+      expect(find.byKey(const Key('dice-fumble')), findsNothing);
+      expect(find.byKey(const Key('dice-critical')), findsNothing);
+    });
+
+    testWidgets('un 1 en un ataque sí es pifia', (tester) async {
+      await _pump(tester, characters: _repo(), face: 1);
+      await _tap(tester, 'attack-roll-0');
+      expect(find.byKey(const Key('dice-fumble')), findsOneWidget);
+      expect(find.text('d20 natural: 1'), findsOneWidget);
+    });
+
+    testWidgets('"Tirar" en las salvaciones de muerte aplica un éxito con 10 o más', (
+      tester,
+    ) async {
+      final down = _repo(hp: 0, temp: 0);
+      await _pump(tester, characters: down, face: 12);
+      await _tap(tester, 'roll-death-save');
+      expect(down.combatPatches.last.deathSaveSuccesses, 1);
+      expect(down.combatPatches.last.deathSaveFailures, 0);
+      expect(down.combatPatches.last.hitPointsCurrent, isNull);
+      expect(find.byKey(const Key('dice-death-save-revive')), findsNothing);
+    });
+
+    testWidgets('un 1 natural en la salvación de muerte son dos fallos', (tester) async {
+      final down = _repo(hp: 0, temp: 0);
+      await _pump(tester, characters: down, face: 1);
+      await _tap(tester, 'roll-death-save');
+      expect(find.byKey(const Key('dice-death-save-double-failure')), findsOneWidget);
+      expect(find.byKey(const Key('dice-fumble')), findsNothing);
+      expect(down.combatPatches.last.deathSaveFailures, 2);
+    });
+
+    testWidgets('un 20 natural en la salvación de muerte recupera 1 PG', (tester) async {
+      final down = _repo(hp: 0, temp: 0);
+      await _pump(tester, characters: down, face: 20);
+      await _tap(tester, 'roll-death-save');
+      expect(find.byKey(const Key('dice-death-save-revive')), findsOneWidget);
+      expect(down.combatPatches.last.hitPointsCurrent, 1);
+      expect(down.combatPatches.last.deathSaveSuccesses, 0);
+      expect(down.combatPatches.last.deathSaveFailures, 0);
+    });
+
+    FakeCharactersRepository concentrating(int dc) => FakeCharactersRepository(
+      characters: [
+        makeCharacterJson(
+          status: 'Active',
+          temporaryHitPoints: 0,
+          combat: makeCombatJson(),
+          concentratingOnSpellIndex: 'bless',
+        ),
+      ],
+    )..nextConcentrationDc = dc;
+
+    testWidgets('"Tirar salvación" de concentración la supera con d20 + CON contra la CD', (
+      tester,
+    ) async {
+      final repo = concentrating(12);
+      await _pump(tester, characters: repo, face: 8);
+      await _tap(tester, 'hp-minus');
+      await _tap(tester, 'concentration-save-roll');
+      // 8 + 4 (salvación de CON) = 12 contra CD 12.
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '12');
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(repo.concentrationCalls, isEmpty);
+      expect(find.text('12 contra CD 12: mantienes la concentración en Bless.'), findsOneWidget);
+    });
+
+    testWidgets('"Tirar salvación" de concentración la pierde por debajo de la CD', (tester) async {
+      final repo = concentrating(12);
+      await _pump(tester, characters: repo, face: 7);
+      await _tap(tester, 'hp-minus');
+      await _tap(tester, 'concentration-save-roll');
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(repo.concentrationCalls, [null]);
+      expect(find.byKey(const Key('concentration-chip')), findsNothing);
     });
   });
 }
