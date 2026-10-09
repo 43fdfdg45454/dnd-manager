@@ -122,6 +122,23 @@ public static class OriginChoiceKeys
     public const string FeatKind = "Feat";
     public const string TraitOptionKind = "TraitOption";
 
+    /// <summary>
+    /// Fixed grants of the race (<c>race.grant.&lt;kind&gt;</c>) and of the subrace (<c>race.subrace.grant.&lt;kind&gt;</c>),
+    /// recorded as origin choices so that they are undone when the race or the subrace changes.
+    /// </summary>
+    public const string RaceGrantPrefix = "race.grant.";
+    public const string SubraceGrantPrefix = "race.subrace.grant.";
+
+    /// <summary>Kinds that only fixed grants use (skills, languages, tools and cantrips share the choice kinds).</summary>
+    public const string ArmorKind = "Armor";
+    public const string WeaponKind = "Weapon";
+    public const string SavingThrowKind = "SavingThrow";
+    public const string SpellKind = "Spell";
+
+    /// <summary>A fixed grant of the race or subrace (not a decision: hidden from the choices of the sheet).</summary>
+    public static bool IsGrant(string key) =>
+        key.StartsWith(RaceGrantPrefix, StringComparison.Ordinal) || key.StartsWith(SubraceGrantPrefix, StringComparison.Ordinal);
+
     public static bool IsOrigin(string key) =>
         key.StartsWith(RacePrefix, StringComparison.Ordinal) || key.StartsWith(BackgroundPrefix, StringComparison.Ordinal);
 

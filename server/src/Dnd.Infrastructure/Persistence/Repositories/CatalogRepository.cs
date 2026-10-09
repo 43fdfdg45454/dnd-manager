@@ -43,6 +43,14 @@ internal sealed class CatalogRepository(AppDbContext db) : ICatalogRepository
     public async Task<IReadOnlyList<SubraceDefinition>> ListSubracesAsync(string raceIndex, CancellationToken cancellationToken = default) =>
         await db.CatalogSubraces.AsNoTracking().Where(x => x.RaceIndex == raceIndex).OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<SubraceDefinition>> ListAllSubracesAsync(CancellationToken cancellationToken = default) =>
+        await db.CatalogSubraces.AsNoTracking().OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<RaceExtensionDefinition>> ListRaceExtensionsAsync(IReadOnlyCollection<string> raceIndexes, CancellationToken cancellationToken = default) =>
+        raceIndexes.Count == 0
+            ? []
+            : await db.CatalogRaceExtensions.AsNoTracking().Where(x => raceIndexes.Contains(x.RaceIndex)).OrderBy(x => x.Source).ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyList<TraitDefinition>> ListTraitsAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
         indexes.Count == 0
             ? []

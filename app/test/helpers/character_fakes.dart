@@ -37,6 +37,7 @@ Map<String, dynamic> makeCharacterJson({
   Map<String, dynamic>? breathWeapon,
   List<Map<String, dynamic>> resources = const [],
   String? concentratingOnSpellIndex,
+  List<Map<String, dynamic>> spellcasting = const [],
 }) => {
   'id': id,
   'campaignId': campaignId,
@@ -120,7 +121,7 @@ Map<String, dynamic> makeCharacterJson({
     'hitDice': [
       {'classIndex': 'fighter', 'die': 10, 'total': 3, 'remaining': 3},
     ],
-    'spellcasting': <Object>[],
+    'spellcasting': spellcasting,
     'overriddenFields': overriddenFields,
     'itemEffects': itemEffects,
     'breakdowns': breakdowns,

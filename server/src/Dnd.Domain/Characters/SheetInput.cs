@@ -80,7 +80,13 @@ public sealed record RaceInfo(int Speed, IReadOnlyList<AbilityBonus> AbilityBonu
     /// <summary>Damage types always resisted.</summary>
     public IReadOnlyList<string> Resistances { get; init; } = [];
 
-    public static RaceInfo From(RaceDefinition definition)
+    /// <summary>Fixed grants of the race and of the packs that extend it (spells give the "Raza" spellcasting).</summary>
+    public OptionGrants Grants { get; init; } = OptionGrants.None;
+
+    /// <summary>Names of the granted spells (index → name) for their resources; the index is used when missing.</summary>
+    public IReadOnlyDictionary<string, string> SpellNames { get; init; } = new Dictionary<string, string>();
+
+    public static RaceInfo From(RaceDefinition definition, IEnumerable<RaceExtensionDefinition>? extensions = null)
     {
         ArgumentNullException.ThrowIfNull(definition);
         return new RaceInfo(definition.Speed, AbilityBonusJson.Parse(definition.AbilityBonusesJson))
@@ -88,11 +94,12 @@ public sealed record RaceInfo(int Speed, IReadOnlyList<AbilityBonus> AbilityBonu
             Name = definition.Name,
             Choices = definition.Choices,
             Resistances = definition.Resistances,
+            Grants = (extensions ?? []).Aggregate(definition.Grants, (grants, extension) => grants.Merge(extension.Grants)),
         };
     }
 }
 
-/// <summary>Catalog data of a subrace used by the sheet (subraces do not change speed).</summary>
+/// <summary>Catalog data of a subrace used by the sheet.</summary>
 public sealed record SubraceInfo(IReadOnlyList<AbilityBonus> AbilityBonuses)
 {
     public string Name { get; init; } = string.Empty;
@@ -100,6 +107,15 @@ public sealed record SubraceInfo(IReadOnlyList<AbilityBonus> AbilityBonuses)
     public RaceChoices Choices { get; init; } = RaceChoices.None;
 
     public IReadOnlyList<string> Resistances { get; init; } = [];
+
+    /// <summary>Walking speed that replaces the race's, or null (most subraces do not change it).</summary>
+    public int? Speed { get; init; }
+
+    /// <summary>Fixed grants of the subrace.</summary>
+    public OptionGrants Grants { get; init; } = OptionGrants.None;
+
+    /// <summary>Names of the granted spells (index → name) for their resources.</summary>
+    public IReadOnlyDictionary<string, string> SpellNames { get; init; } = new Dictionary<string, string>();
 
     public static SubraceInfo From(SubraceDefinition definition)
     {
@@ -109,6 +125,8 @@ public sealed record SubraceInfo(IReadOnlyList<AbilityBonus> AbilityBonuses)
             Name = definition.Name,
             Choices = definition.Choices,
             Resistances = definition.Resistances,
+            Speed = definition.Speed,
+            Grants = definition.Grants,
         };
     }
 }

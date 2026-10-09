@@ -544,6 +544,107 @@ void main() {
       expect(find.text('Preparado'), findsOneWidget);
     });
 
+    testWidgets('Hechizos muestra la sección Raza con su CD, ataque y usos', (tester) async {
+      final repository = FakeCharactersRepository(
+        characters: [
+          makeCharacterJson(
+            spells: [
+              {
+                'spellIndex': 'glimmer',
+                'classIndex': 'race',
+                'isPrepared': true,
+                'alwaysPrepared': true,
+                'spellName': 'Glimmer',
+                'spellLevel': 0,
+              },
+              {
+                'spellIndex': 'veil-of-dusk',
+                'classIndex': 'race',
+                'isPrepared': true,
+                'alwaysPrepared': true,
+                'spellName': 'Veil of Dusk',
+                'spellLevel': 1,
+              },
+            ],
+            spellcasting: [
+              {'classIndex': 'race', 'ability': 'cha', 'saveDc': 11, 'attackBonus': 3},
+            ],
+            breakdowns: {
+              'spellSaveDc.race': {
+                'total': 11,
+                'parts': [
+                  {'source': 'base', 'label': 'Base', 'value': 8},
+                  {'source': 'proficiency', 'label': 'Competencia', 'value': 2},
+                  {'source': 'ability', 'label': 'Carisma', 'value': 1},
+                ],
+              },
+            },
+            resources: [
+              {
+                'id': 'r1',
+                'key': 'race.veil-of-dusk',
+                'name': 'Veil of Dusk',
+                'max': 1,
+                'used': 0,
+                'recharge': 'LongRest',
+                'isAuto': true,
+              },
+            ],
+          ),
+        ],
+      );
+      await _pumpApp(tester, characters: repository, location: '/characters/ch1');
+
+      await tester.tap(find.byKey(const Key('tab-spells')));
+      await tester.pumpAndSettle();
+
+      final section = find.byKey(const Key('spells-race'));
+      expect(section, findsOneWidget);
+      expect(find.descendant(of: section, matching: find.text('Raza')), findsOneWidget);
+      expect(find.descendant(of: section, matching: find.text('Raza: ')), findsOneWidget);
+      expect(find.descendant(of: section, matching: find.text('11')), findsOneWidget);
+      expect(find.descendant(of: section, matching: find.text('+3')), findsOneWidget);
+      expect(find.byKey(const Key('spell-race-glimmer')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('spell-race-veil-of-dusk')),
+          matching: find.text('Nivel 1 · 1 de 1 uso por descanso largo'),
+        ),
+        findsOneWidget,
+      );
+      // Racial spells are not repeated in the level groups.
+      expect(find.byKey(const Key('spell-glimmer')), findsNothing);
+      expect(find.text('Siempre preparado'), findsNWidgets(2));
+
+      // The DC explains where it comes from.
+      await _tap(tester, find.descendant(of: section, matching: find.text('11')));
+      expect(find.text('Carisma'), findsOneWidget);
+    });
+
+    testWidgets('sin conjuros raciales no hay sección Raza', (tester) async {
+      final repository = FakeCharactersRepository(
+        characters: [
+          makeCharacterJson(
+            spells: [
+              {
+                'spellIndex': 'fire-bolt',
+                'classIndex': 'wizard',
+                'isPrepared': true,
+                'alwaysPrepared': false,
+              },
+            ],
+          ),
+        ],
+      );
+      await _pumpApp(tester, characters: repository, location: '/characters/ch1');
+
+      await tester.tap(find.byKey(const Key('tab-spells')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('spells-race')), findsNothing);
+      expect(find.byKey(const Key('spell-fire-bolt')), findsOneWidget);
+    });
+
     testWidgets('Inventario, Notas y trasfondo', (tester) async {
       final repository = FakeCharactersRepository(
         characters: [makeCharacterJson(notes: 'Debe dinero al herrero')],

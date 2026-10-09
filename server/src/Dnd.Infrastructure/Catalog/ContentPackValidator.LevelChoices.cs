@@ -244,7 +244,11 @@ internal sealed partial class ContentPackValidator
         return amount is null ? null : LevelChoiceJson.Serialize(new { amount, from });
     }
 
-    private string Grants(string path, PackGrantsJson grants)
+    /// <param name="origin">
+    /// Grants of a race or subrace: <c>spells[].minLevel</c> is the total level, and <c>spellcastingAbility</c> (required
+    /// with spells or cantrips) and <c>spells[].usesPerLongRest</c> are allowed.
+    /// </param>
+    private string Grants(string path, PackGrantsJson grants, bool origin = false)
     {
         var skills = new List<string>();
         ForEachText($"{path}.skills", grants.Skills, (skillPath, skill) =>
@@ -275,6 +279,19 @@ internal sealed partial class ContentPackValidator
         {
             var index = Reference($"{spellPath}.index", spell.Index);
             var minLevel = OptionalInt($"{spellPath}.minLevel", spell.MinLevel, 1, 20);
+            int? usesPerLongRest = null;
+            if (spell.UsesPerLongRest is not null)
+            {
+                if (origin)
+                {
+                    usesPerLongRest = OptionalInt($"{spellPath}.usesPerLongRest", spell.UsesPerLongRest, 1, 20);
+                }
+                else
+                {
+                    AddError($"{spellPath}.usesPerLongRest", "Solo se admite en las razas y subrazas (para opciones, usa resource).");
+                }
+            }
+
             if (index is null)
             {
                 AddError($"{spellPath}.index", "Campo obligatorio.");
@@ -282,8 +299,33 @@ internal sealed partial class ContentPackValidator
             }
 
             _spellReferences.Add(($"{spellPath}.index", index));
-            spells.Add(new { index, minLevel });
+            spells.Add(new { index, minLevel, usesPerLongRest });
         });
+
+        string? spellcastingAbility = null;
+        var ability = grants.SpellcastingAbility?.Trim().ToLowerInvariant();
+        if (!origin)
+        {
+            if (!string.IsNullOrEmpty(ability))
+            {
+                AddError($"{path}.spellcastingAbility", "Solo se admite en las razas y subrazas.");
+            }
+        }
+        else if (string.IsNullOrEmpty(ability))
+        {
+            if (spells.Count + cantrips.Count > 0)
+            {
+                AddError($"{path}.spellcastingAbility", "Campo obligatorio cuando se conceden conjuros o trucos (int, wis o cha...).");
+            }
+        }
+        else if (!Abilities.IsValid(ability))
+        {
+            AddError($"{path}.spellcastingAbility", "Característica desconocida (str, dex, con, int, wis o cha).");
+        }
+        else
+        {
+            spellcastingAbility = ability;
+        }
 
         var savingThrows = new List<string>();
         ForEachText($"{path}.savingThrows", grants.SavingThrows, (savePath, save) =>
@@ -309,6 +351,7 @@ internal sealed partial class ContentPackValidator
             tools = TextList($"{path}.tools", grants.Tools, 50, ShortTextMaxLength),
             languages = TextList($"{path}.languages", grants.Languages, 50, ShortTextMaxLength),
             savingThrows,
+            spellcastingAbility,
         });
     }
 

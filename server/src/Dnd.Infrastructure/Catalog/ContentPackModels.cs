@@ -224,6 +224,12 @@ internal sealed class PackSpellDamageJson
 
 internal sealed class PackRaceJson
 {
+    /// <summary>
+    /// Index of a race of the SRD or of another pack to add <see cref="Subraces"/>, <see cref="Traits"/> and
+    /// <see cref="Grants"/> to, instead of defining a new race.
+    /// </summary>
+    public string? Extends { get; set; }
+
     public string? Index { get; set; }
 
     public string? Name { get; set; }
@@ -251,6 +257,9 @@ internal sealed class PackRaceJson
 
     /// <summary>Damage types always resisted ("fire").</summary>
     public List<string?>? Resistances { get; set; }
+
+    /// <summary>Fixed proficiencies and spells of the race (same shape as the grants of the options).</summary>
+    public PackGrantsJson? Grants { get; set; }
 }
 
 internal sealed class PackSubraceJson
@@ -268,6 +277,11 @@ internal sealed class PackSubraceJson
     public PackOriginChoicesJson? Choices { get; set; }
 
     public List<string?>? Resistances { get; set; }
+
+    /// <summary>Walking speed that replaces the race's (0-200).</summary>
+    public int? Speed { get; set; }
+
+    public PackGrantsJson? Grants { get; set; }
 }
 
 /// <summary>Decisions of a race, subrace or background (normalized to <c>RaceChoices</c>).</summary>
@@ -557,6 +571,9 @@ internal sealed class PackGrantsJson
     public List<string?>? Languages { get; set; }
 
     public List<string?>? SavingThrows { get; set; }
+
+    /// <summary>Races and subraces: ability the granted spells are cast with ("cha").</summary>
+    public string? SpellcastingAbility { get; set; }
 }
 
 internal sealed class PackGrantedSpellJson
@@ -564,6 +581,9 @@ internal sealed class PackGrantedSpellJson
     public string? Index { get; set; }
 
     public int? MinLevel { get; set; }
+
+    /// <summary>Races and subraces: casts per long rest (an automatic resource named after the spell).</summary>
+    public int? UsesPerLongRest { get; set; }
 }
 
 internal sealed class PackResourceJson

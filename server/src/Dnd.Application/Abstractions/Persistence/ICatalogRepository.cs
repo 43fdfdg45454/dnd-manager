@@ -28,6 +28,12 @@ public interface ICatalogRepository
 
     Task<IReadOnlyList<SubraceDefinition>> ListSubracesAsync(string raceIndex, CancellationToken cancellationToken = default);
 
+    /// <summary>Every subrace of the catalog (the SRD ones and those packs add to any race).</summary>
+    Task<IReadOnlyList<SubraceDefinition>> ListAllSubracesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>What content packs add to the given races (<c>races[].extends</c>): traits and grants.</summary>
+    Task<IReadOnlyList<RaceExtensionDefinition>> ListRaceExtensionsAsync(IReadOnlyCollection<string> raceIndexes, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<TraitDefinition>> ListTraitsAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default);
 
     /// <summary>Spells matching the filter, ordered by level and name.</summary>

@@ -51,7 +51,7 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
                 ["subclasses"] = await InsertAsync(catalog.Subclasses, cancellationToken),
                 ["subclassLevels"] = await InsertAsync(catalog.SubclassLevels, cancellationToken),
                 ["features"] = await InsertAsync(catalog.Features, cancellationToken),
-                ["races"] = await InsertAsync(catalog.Races, cancellationToken),
+                ["races"] = await UpsertRacesAsync(catalog.Races, cancellationToken),
                 ["subraces"] = await InsertAsync(catalog.Subraces, cancellationToken),
                 ["traits"] = await InsertAsync(catalog.Traits, cancellationToken),
                 ["spells"] = await InsertAsync(catalog.Spells, cancellationToken),
@@ -102,7 +102,6 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
         await db.CatalogSubclasses.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogClassLevels.ExecuteDeleteAsync(cancellationToken);
         await db.CatalogSubraces.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogRaces.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogTraits.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogSpells.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogConditions.ExecuteDeleteAsync(cancellationToken);
@@ -112,6 +111,25 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
         await db.CatalogLevelChoiceRules.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogOptions.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogOptionSets.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Updates the SRD races in place, inserts the new ones and deletes those no longer in the dataset: deleting a race
+    /// would cascade over the subraces and extensions content packs add to it (<c>races[].extends</c>).
+    /// </summary>
+    private async Task<int> UpsertRacesAsync(IReadOnlyList<RaceDefinition> races, CancellationToken cancellationToken)
+    {
+        const string srd = CatalogSources.Srd;
+        var indexes = races.Select(r => r.Index).ToList();
+        await db.CatalogRaces.Where(x => x.Source == srd && !indexes.Contains(x.Index)).ExecuteDeleteAsync(cancellationToken);
+        var existing = (await db.CatalogRaces.AsNoTracking().Where(x => x.Source == srd).Select(x => x.Index).ToListAsync(cancellationToken))
+            .ToHashSet(StringComparer.Ordinal);
+
+        db.CatalogRaces.UpdateRange(races.Where(r => existing.Contains(r.Index)));
+        db.CatalogRaces.AddRange(races.Where(r => !existing.Contains(r.Index)));
+        await db.SaveChangesAsync(cancellationToken);
+        db.ChangeTracker.Clear();
+        return races.Count;
     }
 
     /// <summary>

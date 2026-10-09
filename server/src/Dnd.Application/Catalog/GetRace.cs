@@ -10,7 +10,10 @@ public sealed class GetRaceHandler(ICatalogRepository catalog)
     {
         var race = await catalog.GetRaceAsync(index, cancellationToken) ?? throw CatalogErrors.RaceNotFound();
         var subraces = await catalog.ListSubracesAsync(race.Index, cancellationToken);
-        var traitIndexes = race.TraitIndexes.Concat(subraces.SelectMany(s => s.TraitIndexes)).Distinct().ToList();
+        var extensions = await catalog.ListRaceExtensionsAsync([race.Index], cancellationToken);
+        var raceTraits = race.TraitIndexes.Concat(extensions.SelectMany(e => e.TraitIndexes)).Distinct().ToList();
+        var grants = extensions.Aggregate(race.Grants, (all, extension) => all.Merge(extension.Grants));
+        var traitIndexes = raceTraits.Concat(subraces.SelectMany(s => s.TraitIndexes)).Distinct().ToList();
         var traits = (await catalog.ListTraitsAsync(traitIndexes, cancellationToken)).ToDictionary(t => t.Index);
 
         return new RaceDetailDto(
@@ -23,18 +26,22 @@ public sealed class GetRaceHandler(ICatalogRepository catalog)
             race.Languages,
             race.Age,
             race.Alignment,
-            Traits(race.TraitIndexes, traits),
+            Traits(raceTraits, traits),
             subraces
                 .Select(s => new SubraceDto(s.Index, s.Name, s.Description, CatalogJson.AbilityBonuses(s.AbilityBonusesJson), Traits(s.TraitIndexes, traits))
                 {
                     Choices = RaceChoicesDto.From(s.Choices),
                     Resistances = s.Resistances,
+                    Speed = s.Speed,
+                    Grants = OriginGrantsDto.From(s.Grants),
+                    Source = s.Source,
                 })
                 .ToList(),
             race.Source)
         {
             Choices = RaceChoicesDto.From(race.Choices),
             Resistances = race.Resistances,
+            Grants = OriginGrantsDto.From(grants),
         };
     }
 

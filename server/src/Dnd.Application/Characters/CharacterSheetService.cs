@@ -5,6 +5,7 @@ using Dnd.Application.Common;
 using Dnd.Application.Files;
 using Dnd.Application.Items;
 using Dnd.Application.Party;
+using Dnd.Domain.Catalog;
 using Dnd.Domain.Characters;
 
 namespace Dnd.Application.Characters;
@@ -58,7 +59,8 @@ public sealed class CharacterSheetService(
     IUserRepository users,
     IChangeRequestRepository changeRequests,
     IRestRequestRepository restRequests,
-    IItemTemplateRepository itemTemplates) : ICharacterSheetService
+    IItemTemplateRepository itemTemplates,
+    IDateTimeProvider clock) : ICharacterSheetService
 {
     public async Task<CharacterSheet> CalculateAsync(Character character, CancellationToken cancellationToken = default)
     {
@@ -130,7 +132,16 @@ public sealed class CharacterSheetService(
 
     public async Task<CharacterSheet> RecalculateAsync(Character character, CancellationToken cancellationToken = default)
     {
-        var sheet = await CalculateAsync(character, cancellationToken);
+        var sheetCatalog = await SheetCatalog.LoadAsync(catalog, [character], includeSpells: false, cancellationToken);
+
+        // Fixed proficiencies and spells of the race and subrace (racial spells follow the total level).
+        var subrace = sheetCatalog.Subrace(character.SubraceIndex);
+        character.SyncRaceGrants(
+            sheetCatalog.RaceGrants(character.RaceIndex),
+            subrace is not null && subrace.RaceIndex == character.RaceIndex ? subrace.Grants : null,
+            clock.UtcNow);
+
+        var sheet = await CalculateAsync(character, sheetCatalog, cancellationToken);
         character.SyncAutoResources([.. ClassResourceRules.ForClasses(character.Classes, sheet.AbilityModifiers), .. sheet.ChoiceResources]);
         character.RefreshHitPoints(sheet.HitPointsMax);
         return sheet;
@@ -323,7 +334,7 @@ public sealed class CharacterSheetService(
             RestRollsPending = character.RestRollsPending,
             InvalidChoices = ChoiceValidity.Find(character, sheet, sheetCatalog.Option).Select(InvalidChoicesPlanner.ToDto).ToList(),
             Choices = character.Choices
-                .Where(c => c.Key != CharacterChoice.HitPointsKey)
+                .Where(c => c.Key != CharacterChoice.HitPointsKey && !(c.IsOrigin && OriginChoiceKeys.IsGrant(c.Key)))
                 .OrderBy(c => c.CreatedAt)
                 .ThenBy(c => c.Level)
                 .Select(CharacterChoiceDto.From)

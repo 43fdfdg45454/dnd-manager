@@ -800,8 +800,18 @@ class SpellsTab extends ConsumerWidget {
     String nameOf(CharacterSpell s) =>
         s.name ?? info?[s.spellIndex]?.name ?? titleFromSpellIndex(s.spellIndex);
 
+    // Racial spells (no class: `race`) go to their own "Raza" section.
+    final raceCasting = c.sheet.spellcasting
+        .where((s) => s.classIndex == raceSpellClassIndex)
+        .firstOrNull;
+    final raceSpells = c.spells.where((s) => s.classIndex == raceSpellClassIndex).toList()
+      ..sort((a, b) {
+        final byLevel = levelOf(a).compareTo(levelOf(b));
+        return byLevel != 0 ? byLevel : nameOf(a).compareTo(nameOf(b));
+      });
+
     final byLevel = <int, List<CharacterSpell>>{};
-    for (final s in c.spells) {
+    for (final s in c.spells.where((s) => s.classIndex != raceSpellClassIndex)) {
       byLevel.putIfAbsent(levelOf(s), () => []).add(s);
     }
     final levels = byLevel.keys.toList()..sort((a, b) => a == -1 ? 1 : (b == -1 ? -1 : a - b));
@@ -811,7 +821,9 @@ class SpellsTab extends ConsumerWidget {
 
     return _TabList(
       children: [
-        for (final sc in c.sheet.spellcasting) _SpellcastingRow(character: c, spellcasting: sc),
+        for (final sc in c.sheet.spellcasting)
+          if (sc.classIndex != raceSpellClassIndex)
+            _SpellcastingRow(character: c, spellcasting: sc),
         if (concentrating != null)
           FactRow(
             'Concentración',
@@ -832,6 +844,28 @@ class SpellsTab extends ConsumerWidget {
           const SectionTitle('Hechizos'),
           Text('Este personaje no tiene hechizos.', style: theme.textTheme.bodyMedium),
         ],
+        if (raceCasting != null || raceSpells.isNotEmpty)
+          Column(
+            key: const Key('spells-race'),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SectionTitle('Raza'),
+              if (raceCasting != null) _SpellcastingRow(character: c, spellcasting: raceCasting),
+              for (final s in raceSpells)
+                ListTile(
+                  key: Key('spell-race-${s.spellIndex}'),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: SpellCategoryIcon(s.category ?? info?[s.spellIndex]?.category),
+                  title: Text(nameOf(s)),
+                  subtitle: Text(_racialSpellDetail(c, s, levelOf(s))),
+                  trailing: const Chip(
+                    label: Text('Siempre preparado'),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+            ],
+          ),
         for (final level in levels) ...[
           SectionTitle(level < 0 ? 'Otros' : spellLevelLabel(level)),
           for (final s in byLevel[level]!)
@@ -857,6 +891,26 @@ class SpellsTab extends ConsumerWidget {
   }
 }
 
+/// `classIndex` of the spells granted by the race or subrace (and of the
+/// "Raza" spellcasting of the sheet).
+const raceSpellClassIndex = 'race';
+
+/// "Truco", or "Nivel 3 · 1 de 1 usos por descanso largo" when the race gives
+/// the spell a number of casts per long rest (resource `race.<spell>`).
+String _racialSpellDetail(CharacterDetail character, CharacterSpell spell, int level) {
+  final label = level < 0 ? 'Conjuro' : spellLevelLabel(level);
+  final uses = character.resources
+      .where((r) => r.key == '$raceSpellClassIndex.${spell.spellIndex}')
+      .firstOrNull;
+  if (uses == null) return label;
+  final left = (uses.max - uses.used).clamp(0, uses.max);
+  return '$label · $left de ${uses.max} ${uses.max == 1 ? 'uso' : 'usos'} por descanso largo';
+}
+
+/// Label of a spellcasting entry: "Raza" for the racial one, else the class.
+String spellcastingLabel(String classIndex) =>
+    classIndex == raceSpellClassIndex ? 'Raza' : titleFromSpellIndex(classIndex);
+
 /// "Clase: CD 14 · Ataque +6 · Preparados máx. 5", with the DC and the attack
 /// bonus tappable to see where they come from.
 class _SpellcastingRow extends StatelessWidget {
@@ -868,7 +922,7 @@ class _SpellcastingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sc = spellcasting;
-    final className = titleFromSpellIndex(sc.classIndex);
+    final className = spellcastingLabel(sc.classIndex);
     final sheet = character.sheet;
     final style = Theme.of(context).textTheme.bodyMedium;
     final bold = style?.copyWith(fontWeight: FontWeight.w600);

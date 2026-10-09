@@ -271,10 +271,67 @@ de los dos mapas.
 | `subraces` | `Subrace[]?` | Subrazas. |
 | `choices` | `OriginChoices?` | Decisiones que la raza pide al crear el personaje (ver abajo). |
 | `resistances` | `string[]?` | Tipos de daño que la raza resiste siempre (`fire`, `poison`...). |
+| `grants` | `Grants?` | Formato 2. Competencias, idiomas y conjuros fijos de la raza ([ver abajo](#grants-de-raza-y-subraza)). |
+| `extends` | `string?` | Formato 2. Índice de una raza del SRD o de otro paquete ya importado: la entrada **amplía** esa raza en lugar de definir una nueva ([ver abajo](#ampliar-una-raza-existente)). |
 
 **`Subrace`**: `index` (**obligatorio**, con prefijo), `name` (**obligatorio**, ≤ 200), `description`
 (`string?`, un solo texto de ≤ 10 000), `abilityBonuses` (`AbilityBonus[]?`), `traits` (`Trait[]?`),
-`choices` (`OriginChoices?`) y `resistances` (`string[]?`).
+`choices` (`OriginChoices?`), `resistances` (`string[]?`), `speed` (`int?`, 0–200: velocidad que
+**sustituye** a la de la raza; la hoja la desglosa como "Raza 30" + "<subraza> +5") y `grants`
+(`Grants?`, formato 2, como los de la raza).
+
+#### Ampliar una raza existente
+
+Con `extends` solo se leen `subraces`, `traits` y `grants`; el resto de campos de una raza nueva no
+aplica (`index` y `name` se ignoran y pueden servir de comentario). `speed`, `size`, `abilityBonuses` y
+`languages` dan error: los define la raza base. Reglas:
+
+- La raza base debe existir en el catálogo (SRD u otro paquete ya importado) y no puede ser del propio
+  paquete (sus subrazas van en su definición). Cada raza se amplía una sola vez por paquete.
+- Las subrazas se registran con la raza base y con el paquete como origen: aparecen en el catálogo y en
+  el asistente junto a las del SRD, y al desinstalar el paquete desaparecen. Los personajes que las
+  tenían conservan el índice y la hoja avisa de "Contenido no disponible"; sus competencias y conjuros
+  de subraza se retiran en el siguiente recálculo de la hoja.
+- `traits` y `grants` se añaden a los de la raza base (los rasgos al detalle de la raza; las
+  concesiones a todos los personajes de esa raza) mientras el paquete esté instalado.
+- Reimportar el SRD o el paquete dueño de la raza base no borra las subrazas añadidas.
+
+```json
+"races": [
+  {
+    "extends": "dwarf",
+    "subraces": [
+      {
+        "index": "reinos-ejemplo-deep-folk", "name": "Deep Folk", "speed": 30,
+        "abilityBonuses": [{ "ability": "cha", "bonus": 1 }],
+        "grants": {
+          "weapons": ["warpicks"],
+          "cantrips": ["dancing-lights"],
+          "spells": [{ "index": "faerie-fire", "minLevel": 3, "usesPerLongRest": 1 }],
+          "spellcastingAbility": "cha"
+        }
+      }
+    ]
+  }
+]
+```
+
+#### `Grants` de raza y subraza
+
+Mismo formato que los [`Grants` de las opciones](#option), con estas diferencias:
+
+- Se aplican al crear o cambiar la raza (o la subraza) con origen "Raza" y se retiran al cambiarla. Si
+  el personaje ya tenía la competencia por otra vía, la conserva con su origen.
+- `spells[].minLevel` es el **nivel total** del personaje (no el de una clase).
+- Los conjuros y trucos se conceden siempre preparados y sin clase (en la API, `classIndex` = `race`).
+  La hoja muestra la sección "Raza" en Hechizos con la CD y el ataque calculados con
+  `spellcastingAbility` (`str`..`cha`), **obligatoria** cuando hay `spells` o `cantrips`. Si raza y
+  subraza la indican, manda la de la subraza.
+- `spells[].usesPerLongRest` (`int?`, 1–20) crea un recurso automático con el nombre del conjuro, ese
+  máximo y recarga en descanso largo, desde el nivel en que se concede (clave `race.<conjuro>`).
+
+Las razas del SRD importan así sus competencias fijas (las `proficiencies` de sus rasgos: armas del
+enano, Keen Senses del elfo, entrenamiento con armas del alto elfo, herramientas del gnomo de las rocas…).
 
 **`Trait`**: `index` (**obligatorio**, con prefijo, único en todo el paquete), `name` (**obligatorio**,
 ≤ 200) y `description` (`string[]?`).
@@ -569,7 +626,7 @@ Solo el administrador de la instancia.
 | `GET /api/v1/catalog/sources` (cualquier usuario) | `200 [{ id, name, version }]`: `srd` y los paquetes, para etiquetar el contenido |
 
 `counts` tiene el número de `subclasses`, `features`, `items`, `spells`, `races`, `subraces`,
-`traits`, `backgrounds`, `optionSets`, `options`, `levelChoices`, `trinkets` y `rollTables` importados.
+`raceExtensions` (razas ampliadas con `extends`), `traits`, `backgrounds`, `optionSets`, `options`, `levelChoices`, `trinkets` y `rollTables` importados.
 
 **Reimportar** (mismo `id`, misma u otra `version`) reemplaza todo el contenido del paquete en una
 transacción. Los objetos se actualizan por `index` y **conservan su identificador**, así que los
@@ -737,7 +794,10 @@ Los bonos aparecen en los desgloses con el nombre de la opción y el nivel: "Jur
 `savingThrows` (características), `cantrips` (índices de conjuro) y `spells`
 (`[{ "index": "hold-person", "minLevel": 3 }]`, `minLevel` opcional: nivel de la clase desde el que se
 concede). Las competencias se añaden con origen "Clase"; los conjuros, siempre preparados. Los
-conjuros y trucos deben existir en el SRD o en el paquete.
+conjuros y trucos deben existir en el SRD o en el paquete. En razas y subrazas (`races[].grants`,
+`subraces[].grants`) se admiten además `spellcastingAbility` y `spells[].usesPerLongRest`, y
+`minLevel` es el nivel total ([ver Race](#grants-de-raza-y-subraza)); fuera de ellas esos dos campos
+dan error.
 
 **`Resource`**: `key` (índice, sin prefijo obligatorio), `name` (**obligatorio**, ≤ 100), `max` (entero
 1–999 o fórmula: `proficiencyBonus`, `classLevel`, `halfClassLevel`, `mod:cha`... mínimo 1),
