@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/cache/stale_data.dart';
+import '../../../core/files/external_file_opener.dart';
 import '../../../core/files/image_upload.dart';
 import '../../../core/files/stored_file.dart';
 import '../../../core/network/api_error.dart';
@@ -17,6 +18,7 @@ import '../../campaigns/ui/confirm_dialog.dart';
 import '../../campaigns/ui/feedback.dart';
 import '../data/library_controllers.dart';
 import '../data/library_repository.dart';
+import '../data/library_storage.dart';
 import '../data/models.dart';
 
 /// The PDF library of the instance, with search, category filter and a
@@ -97,6 +99,49 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     success: '"${document.title}" ya está disponible sin conexión.',
     describe: describeContentError,
   );
+
+  /// Downloads the document when needed (the tile shows the progress) and
+  /// hands it to the app the user picks in the system. When no app can open
+  /// it, a SnackBar offers the built-in viewer.
+  Future<void> _open(LibraryDocument document) async {
+    final router = GoRouter.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final viewer = AppRoutes.libraryDocument(document.id);
+    final status = ref.read(libraryDownloadsProvider)[document.id]?.status;
+    if (status == DownloadStatus.downloading) return;
+    if (status != DownloadStatus.available) {
+      try {
+        await ref.read(libraryDownloadsProvider.notifier).download(document);
+      } catch (error) {
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(describeContentError(error))));
+        return;
+      }
+      // Cancelled by the user.
+      if (ref.read(libraryDownloadsProvider)[document.id]?.status != DownloadStatus.available) {
+        return;
+      }
+    }
+    final file = await ref.read(libraryStorageProvider).fileFor(document.id);
+    final result = await ref
+        .read(externalFileOpenerProvider)
+        .open(file.path, mimeType: 'application/pdf');
+    if (result == ExternalOpenResult.opened) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          key: const Key('library-open-failed'),
+          content: Text(
+            result == ExternalOpenResult.noApp
+                ? 'No hay ninguna aplicación para abrir PDF en este dispositivo.'
+                : 'No se pudo abrir el documento con otra aplicación.',
+          ),
+          action: SnackBarAction(label: 'Ver en la app', onPressed: () => router.push(viewer)),
+        ),
+      );
+  }
 
   Future<void> _removeDownload(LibraryDocument document) => runAction(
     context,
@@ -247,7 +292,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                       note: notes[document.id],
                       showRecommend: isDm && !state.offline,
                       canDelete: isAdmin && !document.isSystem && !state.offline,
-                      onOpen: () => context.push(AppRoutes.libraryDocument(document.id)),
+                      onOpen: () => _open(document),
+                      onViewInApp: () => context.push(AppRoutes.libraryDocument(document.id)),
                       onDownload: () => _download(document),
                       onCancel: () =>
                           ref.read(libraryDownloadsProvider.notifier).cancel(document.id),
@@ -274,6 +320,7 @@ class _DocumentTile extends StatelessWidget {
     required this.showRecommend,
     required this.canDelete,
     required this.onOpen,
+    required this.onViewInApp,
     required this.onDownload,
     required this.onCancel,
     required this.onRemoveDownload,
@@ -288,6 +335,7 @@ class _DocumentTile extends StatelessWidget {
   final bool showRecommend;
   final bool canDelete;
   final VoidCallback onOpen;
+  final VoidCallback onViewInApp;
   final VoidCallback onDownload;
   final VoidCallback onCancel;
   final VoidCallback onRemoveDownload;
@@ -372,12 +420,18 @@ class _DocumentTile extends StatelessWidget {
               onPressed: onRemoveDownload,
             ),
           },
-          if (canDelete)
-            PopupMenuButton<String>(
-              key: Key('library-menu-$id'),
-              onSelected: (_) => onDelete(),
-              itemBuilder: (_) => const [PopupMenuItem(value: 'delete', child: Text('Eliminar'))],
-            ),
+          PopupMenuButton<String>(
+            key: Key('library-menu-$id'),
+            onSelected: (value) => value == 'delete' ? onDelete() : onViewInApp(),
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                key: Key('library-view-$id'),
+                value: 'view',
+                child: const Text('Ver en la app'),
+              ),
+              if (canDelete) const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+            ],
+          ),
         ],
       ),
     );
