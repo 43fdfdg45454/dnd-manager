@@ -280,6 +280,21 @@ void main() {
     expect(repo.resourceSpends, hasLength(3));
   });
 
+  testWidgets('clérigo: Intervención divina se tira con 1d100 y responde según el nivel', (
+    tester,
+  ) async {
+    final repo = _repo('cleric', 10);
+    await _pump(tester, characters: repo, face: 7);
+    await _tap(tester, 'cleric-divine-intervention-roll');
+    expect(find.text('Intervención divina'), findsWidgets);
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('7: tu deidad interviene. No podrás pedirlo de nuevo en 7 días.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('pícaro: Ataque furtivo por nivel se tira y hay recordatorios', (tester) async {
     final repo = _repo('rogue', 5);
     await _pump(tester, characters: repo, face: 4);
@@ -369,6 +384,20 @@ void main() {
       find.descendant(
         of: find.byKey(const Key('roll-table-result')),
         matching: find.text('Efecto ficticio alto.'),
+      ),
+      findsOneWidget,
+    );
+
+    // "Tirar" usa el dado virtual (todas las caras a 5) y rellena el resultado.
+    await _tap(tester, 'roll-table-dice');
+    expect(
+      tester.widget<TextField>(find.byKey(const Key('roll-table-input'))).controller!.text,
+      '5',
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('roll-table-result')),
+        matching: find.text('Efecto ficticio bajo.'),
       ),
       findsOneWidget,
     );

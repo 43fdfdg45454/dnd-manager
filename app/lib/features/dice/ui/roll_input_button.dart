@@ -21,8 +21,9 @@ DiceResult? rollVirtualDice(WidgetRef ref, String expression, {String? label}) {
 /// roll: it rolls [expression] with the virtual dice, records the roll in the
 /// history and hands the total to [onRolled] so the caller fills its field.
 ///
-/// A short SnackBar shows the breakdown ("4d6kh3: [6 5 4 (1)] = 15") unless
-/// [announce] is false.
+/// With [announce] a short SnackBar shows the breakdown
+/// ("4d6kh3: [6 5 4 (1)] = 15"); off by default because the field already
+/// shows the total and a SnackBar would cover the buttons at the bottom.
 class RollInputButton extends ConsumerWidget {
   const RollInputButton({
     super.key,
@@ -30,7 +31,7 @@ class RollInputButton extends ConsumerWidget {
     required this.onRolled,
     this.label,
     this.enabled = true,
-    this.announce = true,
+    this.announce = false,
   });
 
   /// What to roll, such as "1d10" or "4d6kh3".

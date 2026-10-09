@@ -293,6 +293,21 @@ void main() {
       expect(find.text('Tiradas: 14 · 3'), findsOneWidget);
     });
 
+    testWidgets('"Tirar" rellena cada tirada con el dado virtual', (tester) async {
+      final (:characters, hub: _, router: _) = await _pump(tester, _character(rollsPending: true));
+      await _tapKey(tester, 'rest-roll-r-portent-0-dice');
+      await _tapKey(tester, 'rest-roll-r-portent-1-dice');
+      final values = [
+        for (var i = 0; i < 2; i++)
+          int.parse(
+            tester.widget<TextField>(find.byKey(Key('rest-roll-r-portent-$i'))).controller!.text,
+          ),
+      ];
+      expect(values, everyElement(inInclusiveRange(1, 20)));
+      await _tapKey(tester, 'rest-rolls-save');
+      expect(characters.rollSaves.single.values, values);
+    });
+
     testWidgets('sin tiradas pendientes no se abre y el recurso muestra las guardadas', (
       tester,
     ) async {

@@ -306,6 +306,7 @@ class _RollInputsState extends ConsumerState<_RollInputs> {
                   key: Key('roll-score-dice-$i'),
                   expression: '4d6kh3',
                   label: 'Característica: tirada ${i + 1}',
+                  announce: true,
                   onRolled: (total, _) => widget.onChanged(i, '$total'),
                 ),
               ],

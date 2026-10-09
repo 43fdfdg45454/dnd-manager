@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/ui/source_chip.dart';
+import '../../dice/ui/roll_input_button.dart';
 import '../data/models.dart';
 
 /// Looks up a physical roll in [table]: the player types the result ("Tira
 /// 1d100", Key `roll-table-input`) and the matching entry is shown (Key
-/// `roll-table-result`). On a d100, "00" is 100.
+/// `roll-table-result`). On a d100, "00" is 100. The "Tirar" button rolls
+/// it with the virtual dice instead.
 class RollTableLookup extends StatefulWidget {
   const RollTableLookup({super.key, required this.table, this.autofocus = false});
 
@@ -46,6 +48,12 @@ class _RollTableLookupState extends State<RollTableLookup> {
             labelText: 'Tira 1${table.dice}',
             helperText: table.faces == 100 ? '00 cuenta como 100' : null,
             counterText: '',
+            suffixIcon: RollInputButton(
+              key: const Key('roll-table-dice'),
+              expression: '1d${table.faces}',
+              label: table.name,
+              onRolled: (total, _) => setState(() => _input.text = '$total'),
+            ),
           ),
           onChanged: (_) => setState(() {}),
         ),
