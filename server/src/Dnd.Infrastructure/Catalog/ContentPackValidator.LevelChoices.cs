@@ -171,12 +171,12 @@ internal sealed partial class ContentPackValidator
         return LevelChoiceJson.Serialize(new { minLevel, pactBoon, cantrip, abilities, races, proficiency = new { armor, weapon }, spellcasting });
     }
 
-    private string ChoiceModifiers(string path, List<PackChoiceModifierJson?>? modifiers)
+    private string ChoiceModifiers(string path, List<PackChoiceModifierJson?>? modifiers, string owner = "Una opción")
     {
         var result = new List<object>();
         if (modifiers is { Count: > ItemLimits.MaxModifiers })
         {
-            AddError(path, $"Una opción admite como máximo {ItemLimits.MaxModifiers} modificadores.");
+            AddError(path, $"{owner} admite como máximo {ItemLimits.MaxModifiers} modificadores.");
             return "[]";
         }
 

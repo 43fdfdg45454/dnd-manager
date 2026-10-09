@@ -146,6 +146,27 @@ public sealed record ChoiceEffects(
             .ToList();
     }
 
+    /// <summary>
+    /// Sheet modifiers of the subclass features the character has reached (same rule as <see cref="FeatureResources"/>),
+    /// labelled with the feature and its level ("Pies ligeros (nivel 3)").
+    /// </summary>
+    public static IReadOnlyList<FeatureModifier> FeatureModifiers(Character character, IEnumerable<FeatureDefinition> features)
+    {
+        ArgumentNullException.ThrowIfNull(character);
+        ArgumentNullException.ThrowIfNull(features);
+        return ReachedFeatures(character, features)
+            .SelectMany(f => f.Modifiers.Select(m => new FeatureModifier(Label(f.Name, f.Level), m.Kind, m.Target, m.Value, m.Condition)))
+            .ToList();
+    }
+
+    /// <summary>Subclass features of one of the character's subclasses whose level is not above its level in that class.</summary>
+    private static IEnumerable<FeatureDefinition> ReachedFeatures(Character character, IEnumerable<FeatureDefinition> features) =>
+        features
+            .Where(f => f.SubclassIndex is not null
+                && character.Classes.Any(c => c.ClassIndex == f.ClassIndex && c.SubclassIndex == f.SubclassIndex && f.Level <= c.Level))
+            .OrderBy(f => f.Level)
+            .ThenBy(f => f.Index, StringComparer.Ordinal);
+
     /// <summary>Option indexes the effects of <paramref name="character"/> may need (picks of option sets and feats).</summary>
     public static IEnumerable<string> OptionIndexes(Character character)
     {
