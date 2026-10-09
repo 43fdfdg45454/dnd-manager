@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../catalog/data/catalog_controllers.dart';
+import '../../characters/domain/character_format.dart' show copperToGoldText;
 import '../../catalog/data/models.dart' show ItemSummary;
 import '../data/models.dart';
 import '../domain/item_form_data.dart';
@@ -86,6 +87,10 @@ class _ItemComposerState extends ConsumerState<ItemComposer> {
     setState(() {
       _template = picked;
       _formKey = GlobalKey<ItemFieldsFormState>();
+      // Shops start from the list price of the template.
+      if (widget.mode == ComposerMode.shop && picked.costCp != null) {
+        _price.text = copperToGoldText(picked.costCp!);
+      }
     });
   }
 

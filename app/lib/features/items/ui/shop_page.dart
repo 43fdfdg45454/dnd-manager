@@ -19,6 +19,7 @@ import '../domain/items_format.dart';
 import 'effective_item_page.dart';
 import 'item_composer.dart';
 import 'item_feedback.dart';
+import 'shop_catalog_page.dart';
 import 'shop_dialogs.dart';
 
 const _shopMissing = 'La tienda no está disponible.';
@@ -160,6 +161,12 @@ class _ShopPageState extends ConsumerState<ShopPage> {
     ),
   );
 
+  Future<void> _addFromCatalog() => Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => ShopCatalogAddPage(campaignId: widget.campaignId, shopId: widget.shopId),
+    ),
+  );
+
   void _openDetail(ShopItem item) => Navigator.of(context)
       .push<void>(MaterialPageRoute(builder: (_) => EffectiveItemPage(effective: item.effective)));
 
@@ -187,6 +194,15 @@ class _ShopPageState extends ConsumerState<ShopPage> {
             onPressed: () => context.push(AppRoutes.transactions(widget.campaignId)),
             icon: const Icon(Icons.receipt_long_outlined),
           ),
+          if (isDm && shop.hasValue)
+            OfflineAware(
+              builder: (context, canWrite) => IconButton(
+                key: const Key('shop-add-catalog'),
+                tooltip: 'Añadir del catálogo',
+                onPressed: canWrite ? _addFromCatalog : null,
+                icon: const Icon(Icons.playlist_add),
+              ),
+            ),
           if (isDm && shop.hasValue)
             PopupMenuButton<String>(
               key: const Key('shop-menu'),

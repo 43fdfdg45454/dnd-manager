@@ -63,6 +63,18 @@ class ShopsRepository {
     return ShopItem.fromJson(response.data!);
   }
 
+  /// Adds several catalog items at once (all or nothing); a missing price
+  /// takes the template's list price. Returns the shop.
+  Future<Shop> addItemsBulk(String shopId, List<BulkShopItem> items) async {
+    final response = await _client.dio.post<Map<String, dynamic>>(
+      '$_api/shops/$shopId/items/bulk',
+      data: {
+        'items': [for (final i in items) i.toJson()],
+      },
+    );
+    return Shop.fromJson(response.data!);
+  }
+
   Future<ShopItem> updateItem(String shopId, String shopItemId, ShopItemPatch patch) async {
     final response = await _client.dio.patch<Map<String, dynamic>>(
       '$_api/shops/$shopId/items/$shopItemId',
