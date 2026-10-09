@@ -148,6 +148,7 @@ public sealed class ApproveChangeRequestHandler(
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await notifier.ChangeRequestUpdatedAsync(request.CampaignId, request.CharacterId, request.Id, now, cancellationToken);
         await notifier.CharacterUpdatedAsync(request.CampaignId, request.CharacterId, now, cancellationToken);
+        await notifier.ChangeRequestResolvedAsync(request.RequestedByUserId, request.CampaignId, request.CharacterId, request.Id, now, cancellationToken);
         return await loader.ToDtoAsync(request.Id, cancellationToken);
     }
 
@@ -196,6 +197,7 @@ public sealed class RejectChangeRequestHandler(ChangeRequestLoader loader, IUnit
         request.Reject(currentUserId, body.Comment, clock.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await notifier.ChangeRequestUpdatedAsync(request.CampaignId, request.CharacterId, request.Id, clock.UtcNow, cancellationToken);
+        await notifier.ChangeRequestResolvedAsync(request.RequestedByUserId, request.CampaignId, request.CharacterId, request.Id, clock.UtcNow, cancellationToken);
         return await loader.ToDtoAsync(request.Id, cancellationToken);
     }
 }

@@ -69,14 +69,31 @@ public static class CampaignEndpoints
             .WithSummary("Miembros de la campaña con su rol.")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        group.MapPost("/{id:guid}/members", async (Guid id, AddMemberRequest request, ClaimsPrincipal user, AddMemberHandler handler, CancellationToken ct) =>
-                TypedResults.Created((string?)null, await handler.HandleAsync(user.GetUserId(), id, request, ct)))
-            .WithName("AddCampaignMember")
-            .WithSummary("Añade un usuario activo como DM o Player. Al menos DM; añadir DMs solo el propietario.")
+        group.MapPost("/{id:guid}/members", async (Guid id, AddMemberRequest request, ClaimsPrincipal user, InviteMemberHandler handler, CancellationToken ct) =>
+                TypedResults.Accepted((string?)null, await handler.HandleAsync(user.GetUserId(), id, request, ct)))
+            .WithName("InviteCampaignMember")
+            .WithSummary("Invita a un usuario activo como DM o Player; entra en la campaña cuando acepta. Al menos DM; invitar DMs solo el propietario.")
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group.MapGet("/{id:guid}/invitations", async (Guid id, ClaimsPrincipal user, ListCampaignInvitationsHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, ct)))
+            .WithName("ListCampaignInvitations")
+            .WithSummary("Invitaciones pendientes de la campaña. Al menos DM.")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapDelete("/{id:guid}/invitations/{invitationId:guid}", async (Guid id, Guid invitationId, ClaimsPrincipal user, CancelInvitationHandler handler, CancellationToken ct) =>
+            {
+                await handler.HandleAsync(user.GetUserId(), id, invitationId, ct);
+                return TypedResults.NoContent();
+            })
+            .WithName("CancelCampaignInvitation")
+            .WithSummary("Cancela una invitación pendiente. Al menos DM.")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPatch("/{id:guid}/members/{userId:guid}", async (Guid id, Guid userId, ChangeMemberRoleRequest request, ClaimsPrincipal user, ChangeMemberRoleHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, userId, request, ct)))

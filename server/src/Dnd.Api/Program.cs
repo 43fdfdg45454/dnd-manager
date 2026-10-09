@@ -159,6 +159,7 @@ app.MapAdminReleaseEndpoints();
 app.MapAdminContentPackEndpoints();
 app.MapUserEndpoints();
 app.MapCampaignEndpoints();
+app.MapInvitationEndpoints();
 app.MapCatalogEndpoints();
 app.MapCharacterEndpoints();
 app.MapChangeRequestEndpoints();

@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Dnd.Application.Abstractions;
 using Dnd.Application.Abstractions.Persistence;
 using Dnd.Application.ChangeRequests;
+using Dnd.Application.Catalog;
 using Dnd.Application.Characters;
 using Dnd.Application.Common;
 using Dnd.Domain.Catalog;
@@ -171,7 +172,8 @@ public sealed class InventoryOperations(
         Guid requestedByUserId,
         ChangeRequestType type,
         TPayload payload,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        object? before = null)
     {
         var request = ChangeRequest.Create(
             character.CampaignId,
@@ -179,7 +181,8 @@ public sealed class InventoryOperations(
             requestedByUserId,
             type,
             JsonSerializer.Serialize(payload, PayloadOptions),
-            clock.UtcNow);
+            clock.UtcNow,
+            before is null ? null : JsonSerializer.Serialize(before, PayloadOptions));
         changeRequests.Add(request);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await notifier.ChangeRequestUpdatedAsync(character.CampaignId, character.Id, request.Id, clock.UtcNow, cancellationToken);
@@ -287,8 +290,9 @@ public sealed class AddInventoryItemHandler(
             return new InventoryChangeResult(await reader.BuildItemAsync(item, cancellationToken), null, null);
         }
 
-        await operations.EnsureCanAddAsync(character.CampaignId, request, cancellationToken);
-        var changeRequest = await operations.RequestAsync(character, currentUserId, InventoryOperations.AddRequestType(request), request, cancellationToken);
+        var (template, _) = await operations.ResolveAddAsync(character.CampaignId, request, cancellationToken);
+        var before = template is null ? null : new { template = ItemDetailDto.From(template) };
+        var changeRequest = await operations.RequestAsync(character, currentUserId, InventoryOperations.AddRequestType(request), request, cancellationToken, before);
         return new InventoryChangeResult(null, null, changeRequest);
     }
 }
@@ -397,7 +401,7 @@ public sealed class RemoveInventoryItemHandler(
 
         var templates = await reader.TemplatesAsync(character, cancellationToken);
         var payload = new RemoveItemPayload(itemId, quantity, InventoryView.Resolve(templates, item).Name);
-        return await operations.RequestAsync(character, currentUserId, ChangeRequestType.RemoveItem, payload, cancellationToken);
+        return await operations.RequestAsync(character, currentUserId, ChangeRequestType.RemoveItem, payload, cancellationToken, new { quantity = item.Quantity });
     }
 }
 
@@ -430,7 +434,7 @@ public sealed class AdjustMoneyHandler(
         }
 
         var trimmed = request with { Reason = string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim() };
-        var changeRequest = await operations.RequestAsync(character, currentUserId, ChangeRequestType.AdjustMoney, trimmed, cancellationToken);
+        var changeRequest = await operations.RequestAsync(character, currentUserId, ChangeRequestType.AdjustMoney, trimmed, cancellationToken, new { copperPieces = character.CopperPieces });
         return new InventoryChangeResult(null, null, changeRequest);
     }
 }

@@ -105,6 +105,32 @@ public sealed class RealtimeTests(ApiFactory factory) : IClassFixture<ApiFactory
     }
 
     [Fact]
+    public async Task The_requester_learns_when_the_dm_resolves_their_request_and_invitations_reach_the_invited_user()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var hero = await s.Player.CreateActiveCharacterAsync(s.Dm, s.CampaignId);
+        var newcomer = await factory.CreateSignedInUserAsync("Newcomer");
+        await using var connection = await ConnectAsync(s.Player);
+        await using var newcomerConnection = await ConnectAsync(newcomer);
+        var resolved = Expect(connection, CampaignEventTypes.ChangeRequestResolved);
+        var invited = Expect(newcomerConnection, CampaignEventTypes.InvitationReceived);
+        await connection.InvokeAsync("JoinCampaign", s.CampaignId);
+
+        var pending = await s.Player.Client.PatchAsJsonAsync($"/api/v1/characters/{hero.Id}/sheet", new { name = "Otro nombre" });
+        Assert.Equal(HttpStatusCode.Accepted, pending.StatusCode);
+        var request = (await pending.Content.ReadFromJsonAsync<Dnd.Application.ChangeRequests.ChangeRequestDto>())!;
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsJsonAsync($"/api/v1/change-requests/{request.Id}/reject", new { comment = "No." })).StatusCode);
+
+        var e = await resolved.WaitAsync(EventTimeout);
+        Assert.Equal((s.CampaignId, (Guid?)hero.Id, (Guid?)request.Id), (e.CampaignId, e.CharacterId, e.EntityId));
+
+        // Invitations reach the invited user without joining the campaign (they are not a member yet).
+        var invitation = await s.Owner.InviteAsync(s.CampaignId, newcomer, "Player");
+        var i = await invited.WaitAsync(EventTimeout);
+        Assert.Equal((s.CampaignId, (Guid?)invitation.Id), (i.CampaignId, i.EntityId));
+    }
+
+    [Fact]
     public async Task Handing_an_npc_to_a_player_reaches_the_campaign()
     {
         var s = await factory.CreateCampaignScenarioAsync();

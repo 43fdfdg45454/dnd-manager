@@ -54,7 +54,12 @@ public static class DependencyInjection
         services.AddScoped<UpdateCampaignHandler>();
         services.AddScoped<DeleteCampaignHandler>();
         services.AddScoped<ListMembersHandler>();
-        services.AddScoped<AddMemberHandler>();
+        services.AddScoped<InviteMemberHandler>();
+        services.AddScoped<ListCampaignInvitationsHandler>();
+        services.AddScoped<ListMyInvitationsHandler>();
+        services.AddScoped<AcceptInvitationHandler>();
+        services.AddScoped<DeclineInvitationHandler>();
+        services.AddScoped<CancelInvitationHandler>();
         services.AddScoped<ChangeMemberRoleHandler>();
         services.AddScoped<RemoveMemberHandler>();
         services.AddScoped<LeaveCampaignHandler>();

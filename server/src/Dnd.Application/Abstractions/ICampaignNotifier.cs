@@ -27,6 +27,9 @@ public static class CampaignEventTypes
 
     public const string ChangeRequestUpdated = "changeRequest.updated";
 
+    /// <summary>A DM approved or rejected the user's request (sent to the requester only; <see cref="CampaignEvent.EntityId"/> = request).</summary>
+    public const string ChangeRequestResolved = "changeRequest.resolved";
+
     public const string SessionUpdated = "session.updated";
 
     public const string PartyStashUpdated = "party.stash.updated";
@@ -45,6 +48,15 @@ public static class CampaignEventTypes
 
     /// <summary>The character completed a level-up (sent to the campaign, together with <see cref="CharacterUpdated"/>).</summary>
     public const string LevelUpCompleted = "levelUp.completed";
+
+    /// <summary>
+    /// The user was invited to the campaign (sent to that user only; <see cref="CampaignEvent.EntityId"/> = invitation).
+    /// The members of the campaign receive <see cref="MembersUpdated"/> when the invitation is accepted or declined.
+    /// </summary>
+    public const string InvitationReceived = "invitation.received";
+
+    /// <summary>Someone accepted or declined an invitation, or an invitation was cancelled.</summary>
+    public const string MembersUpdated = "members.updated";
 }
 
 /// <summary>
@@ -77,6 +89,9 @@ public static class CampaignNotifierExtensions
     public static Task ChangeRequestUpdatedAsync(this ICampaignNotifier notifier, Guid campaignId, Guid characterId, Guid requestId, DateTimeOffset at, CancellationToken cancellationToken = default) =>
         notifier.NotifyAsync(new CampaignEvent(CampaignEventTypes.ChangeRequestUpdated, campaignId, characterId, requestId, at), cancellationToken);
 
+    public static Task ChangeRequestResolvedAsync(this ICampaignNotifier notifier, Guid requesterUserId, Guid campaignId, Guid characterId, Guid requestId, DateTimeOffset at, CancellationToken cancellationToken = default) =>
+        notifier.NotifyUserAsync(requesterUserId, new CampaignEvent(CampaignEventTypes.ChangeRequestResolved, campaignId, characterId, requestId, at), cancellationToken);
+
     public static Task SessionUpdatedAsync(this ICampaignNotifier notifier, GameSession session, DateTimeOffset at, CancellationToken cancellationToken = default) =>
         notifier.NotifyAsync(new CampaignEvent(CampaignEventTypes.SessionUpdated, session.CampaignId, null, session.Id, at), cancellationToken);
 
@@ -85,6 +100,12 @@ public static class CampaignNotifierExtensions
 
     public static Task MembershipRemovedAsync(this ICampaignNotifier notifier, Guid campaignId, Guid userId, DateTimeOffset at, CancellationToken cancellationToken = default) =>
         notifier.NotifyUserAsync(userId, new CampaignEvent(CampaignEventTypes.MembershipRemoved, campaignId, null, null, at), cancellationToken);
+
+    public static Task InvitationReceivedAsync(this ICampaignNotifier notifier, Guid campaignId, Guid userId, Guid invitationId, DateTimeOffset at, CancellationToken cancellationToken = default) =>
+        notifier.NotifyUserAsync(userId, new CampaignEvent(CampaignEventTypes.InvitationReceived, campaignId, null, invitationId, at), cancellationToken);
+
+    public static Task MembersUpdatedAsync(this ICampaignNotifier notifier, Guid campaignId, DateTimeOffset at, CancellationToken cancellationToken = default) =>
+        notifier.NotifyAsync(new CampaignEvent(CampaignEventTypes.MembersUpdated, campaignId, null, null, at), cancellationToken);
 
     public static Task StashUpdatedAsync(this ICampaignNotifier notifier, Guid campaignId, DateTimeOffset at, CancellationToken cancellationToken = default) =>
         notifier.NotifyAsync(new CampaignEvent(CampaignEventTypes.PartyStashUpdated, campaignId, null, null, at), cancellationToken);

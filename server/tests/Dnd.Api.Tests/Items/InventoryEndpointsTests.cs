@@ -81,6 +81,7 @@ public class InventoryEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         var request = (await response.Content.ReadFromJsonAsync<ChangeRequestDto>())!;
         Assert.Equal(("AddItem", "Pending"), (request.Type, request.Status));
+        Assert.Equal("Rope, hempen (50 feet)", request.Before!.Value.GetProperty("template").GetProperty("name").GetString());
         Assert.Empty((await s.Player.GetInventoryAsync(character.Id)).Items);
 
         var approved = await s.Dm.ApproveAsync(request.Id);
@@ -101,6 +102,7 @@ public class InventoryEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         var request = (await response.Content.ReadFromJsonAsync<ChangeRequestDto>())!;
         Assert.Equal("CustomItem", request.Type);
+        Assert.Null(request.Before);
         await s.Dm.ApproveAsync(request.Id);
         var item = Assert.Single((await s.Player.GetInventoryAsync(character.Id)).Items);
         Assert.Equal(("Medallón de la abuela", true, (Guid?)null), (item.Effective.Name, item.IsCustom, item.TemplateId));
@@ -278,6 +280,7 @@ public class InventoryEndpointsTests(CatalogApiFactory factory)
         var request = (await pending.Content.ReadFromJsonAsync<ChangeRequestDto>())!;
         Assert.Equal("RemoveItem", request.Type);
         Assert.Equal("Gema", request.Payload.GetProperty("itemName").GetString());
+        Assert.Equal(3, request.Before!.Value.GetProperty("quantity").GetInt32());
         Assert.Single((await s.Player.GetInventoryAsync(active.Id)).Items);
 
         await s.Dm.ApproveAsync(request.Id);
@@ -302,6 +305,7 @@ public class InventoryEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(HttpStatusCode.Accepted, pending.StatusCode);
         var request = (await pending.Content.ReadFromJsonAsync<ChangeRequestDto>())!;
         Assert.Equal(("AdjustMoney", 250), (request.Type, request.Payload.GetProperty("deltaCp").GetInt32()));
+        Assert.Equal(100, request.Before!.Value.GetProperty("copperPieces").GetInt32());
         Assert.Equal(100, (await s.Player.GetInventoryAsync(active.Id)).CopperPieces);
 
         await s.Dm.ApproveAsync(request.Id);

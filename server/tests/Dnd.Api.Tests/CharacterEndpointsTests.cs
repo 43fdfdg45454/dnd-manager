@@ -378,6 +378,14 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(System.Text.Json.JsonValueKind.Null, request.Payload.GetProperty("raceIndex").ValueKind);
         Assert.False(request.Payload.TryGetProperty("notes", out _));
 
+        // The snapshot carries the previous value of each changed field, and nothing else.
+        var before = request.Before!.Value;
+        Assert.Equal("Activo", before.GetProperty("name").GetString());
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, before.GetProperty("raceIndex").ValueKind);
+        Assert.Equal(0, before.GetProperty("copperPieces").GetInt32());
+        Assert.False(before.TryGetProperty("notes", out _));
+        Assert.False(before.TryGetProperty("baseAbilities", out _));
+
         var pending = await GetDetailAsync(s.Player, character.Id);
         Assert.Equal("Activo", pending.Name);
         Assert.Single(pending.PendingChangeRequests);
