@@ -219,6 +219,26 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
             var knowledgeExpertise = Assert.Single(sagePlan.Choices, c => c.Key == "pericia-del-conocimiento");
             Assert.Equal($"{PackId}-knowledge-domain", knowledgeExpertise.SubclassIndex);
         }
+
+        // From v2.6 the Beast Master's companion is chosen from the beast catalog within the feature's filter.
+        if (Version.Parse(result.Version) >= new Version(2, 6))
+        {
+            var ranger = await s.Player.CreateCharacterAsync(s.CampaignId, "Montaraz");
+            var rangerPatch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(ranger.Id)}/sheet", new
+            {
+                classes = new[] { new { classIndex = "ranger", subclassIndex = $"{PackId}-beast-master", level = 3 } },
+                baseAbilities = new { str = 12, dex = 16, con = 14, @int = 10, wis = 14, cha = 8 },
+                applyRacialBonuses = false,
+            });
+            Assert.Equal(HttpStatusCode.OK, rangerPatch.StatusCode);
+            var rangerSheet = (await rangerPatch.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
+            Assert.True(rangerSheet.CompanionPending);
+            Assert.Equal(0.25, (double)rangerSheet.CompanionFeature!.MaxChallengeRating, 3);
+            var choose = await s.Player.Client.PutAsJsonAsync($"{ItemTestHelpers.CharacterUrl(ranger.Id)}/companion", new { beastIndex = "wolf", name = "Sombra" });
+            Assert.Equal(HttpStatusCode.OK, choose.StatusCode);
+            var withCompanion = (await choose.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
+            Assert.Equal(("wolf", 12), (withCompanion.Companion!.BeastIndex, withCompanion.Companion.HitPointsMax));
+        }
     }
 
     private static async Task<T> GetAsync<T>(HttpClient client, string url)
