@@ -7,6 +7,15 @@ public sealed record ResourceTemplate(string Key, string Name, int Max, Resource
 {
     /// <summary>Dice rolled after a rest whose results are kept in the resource (null for most resources).</summary>
     public RollOnRest? RollOnRest { get; init; }
+
+    /// <summary>Die spent with each use ("d8": Bardic Inspiration), or null.</summary>
+    public string? Dice { get; init; }
+
+    /// <summary>Feature or option that grants the resource, with its level ("Ventaja táctica (nivel 3)"); null for SRD class resources.</summary>
+    public string? Source { get; init; }
+
+    /// <summary>How <see cref="Max"/> was obtained (pack resources); null for SRD class resources.</summary>
+    public ValueBreakdown? Breakdown { get; init; }
 }
 
 /// <summary>
@@ -39,6 +48,9 @@ public static class ClassResourceRules
         subclassIndex is not null
         && (subclassIndex == "land" || subclassIndex.StartsWith("circle-of-the-land", StringComparison.Ordinal));
 
+    /// <summary>Bardic Inspiration die by bard level (SRD): d6, d8 at 5, d10 at 10, d12 at 15.</summary>
+    public static string BardicInspirationDie(int level) => level >= 15 ? "d12" : level >= 10 ? "d10" : level >= 5 ? "d8" : "d6";
+
     /// <summary>Rages per long rest by barbarian level 1-20 (SRD <c>class_specific.rage_count</c>).</summary>
     private static readonly int[] RageCount = [2, 2, 3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, Unlimited];
 
@@ -61,11 +73,14 @@ public static class ClassResourceRules
                 Add(Rage, "Rage", RageCount[level - 1], ResourceRecharge.LongRest);
                 break;
             case "bard":
-                Add(
+                result.Add(new ResourceTemplate(
                     BardicInspiration,
                     "Bardic Inspiration",
                     Math.Max(1, abilityModifiers.GetValueOrDefault(Abilities.Cha)),
-                    level >= 5 ? ResourceRecharge.ShortRest : ResourceRecharge.LongRest);
+                    level >= 5 ? ResourceRecharge.ShortRest : ResourceRecharge.LongRest)
+                {
+                    Dice = BardicInspirationDie(level),
+                });
                 break;
             case "cleric" when level >= 2:
                 Add(ChannelDivinity, "Channel Divinity", level >= 18 ? 3 : level >= 6 ? 2 : 1, ResourceRecharge.ShortRest);

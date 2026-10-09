@@ -14,6 +14,14 @@ public sealed class FeatureDefinition
 
     public IReadOnlyList<string> Description { get; init; } = [];
 
+    /// <summary>
+    /// Limited-use resource the feature grants from its level to the characters with its subclass (content packs, as in
+    /// <see cref="OptionDefinition.ResourceJson"/>); null when it grants none.
+    /// </summary>
+    public string? ResourceJson { get; init; }
+
+    public OptionResource? Resource => LevelChoiceJson.ParseResource(ResourceJson);
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = CatalogSources.Srd;
 }

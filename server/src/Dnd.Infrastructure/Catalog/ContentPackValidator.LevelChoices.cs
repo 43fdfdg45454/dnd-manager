@@ -369,16 +369,7 @@ internal sealed partial class ContentPackValidator
         }
 
         var name = RequiredText($"{path}.name", resource.Name, CharacterResource.NameMaxLength);
-        string? max = resource.Max switch
-        {
-            { ValueKind: JsonValueKind.Number } number when number.TryGetInt32(out var value) => value.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            { ValueKind: JsonValueKind.String } text => text.GetString()?.Trim(),
-            _ => null,
-        };
-        if (max is null || !OptionResource.IsValidMax(max))
-        {
-            AddError($"{path}.max", $"Debe ser un entero entre 1 y {CharacterResource.MaxUses} o una fórmula: proficiencyBonus, classLevel, halfClassLevel o mod:<característica>.");
-        }
+        var max = ResourceMax($"{path}.max", resource.Max);
 
         var recharge = ResourceRecharge.LongRest;
         if (!string.IsNullOrWhiteSpace(resource.Recharge) && !EnumNames.TryParse(resource.Recharge.Trim(), out recharge))
@@ -405,9 +396,192 @@ internal sealed partial class ContentPackValidator
             rollOnRest = new { dice = die is null ? null : $"d{die}", count, rest = rest == RestKind.Short ? "short" : "long" };
         }
 
-        return rollOnRest is null
-            ? LevelChoiceJson.Serialize(new { key, name, max, recharge = recharge.ToString() })
-            : LevelChoiceJson.Serialize(new { key, name, max, recharge = recharge.ToString(), rollOnRest });
+        string? dice = null;
+        if (resource.Dice is not null)
+        {
+            dice = RollOnRest.ParseDie(resource.Dice) is { } die ? $"d{die}" : null;
+            if (dice is null)
+            {
+                AddError($"{path}.dice", $"Dado no válido: usa {string.Join(", ", RollOnRest.AllowedDice.Select(d => $"d{d}"))}.");
+            }
+        }
+
+        SortedDictionary<string, string>? diceByLevel = null;
+        if (resource.DiceByLevel is { } diceTable)
+        {
+            diceByLevel = LevelTable($"{path}.diceByLevel", diceTable, (entryPath, value) =>
+            {
+                if (RollOnRest.ParseDie(value) is { } die)
+                {
+                    return $"d{die}";
+                }
+
+                AddError(entryPath, $"Dado no válido: usa {string.Join(", ", RollOnRest.AllowedDice.Select(d => $"d{d}"))}.");
+                return null;
+            });
+        }
+
+        var result = new Dictionary<string, object?>
+        {
+            ["key"] = key,
+            ["name"] = name,
+            ["max"] = max,
+            ["recharge"] = recharge.ToString(),
+        };
+        if (rollOnRest is not null)
+        {
+            result["rollOnRest"] = rollOnRest;
+        }
+
+        if (dice is not null)
+        {
+            result["dice"] = dice;
+        }
+
+        if (diceByLevel is not null)
+        {
+            result["diceByLevel"] = diceByLevel;
+        }
+
+        return LevelChoiceJson.Serialize(result);
+    }
+
+    private const string ResourceMaxHelp =
+        "un entero entre 1 y 999, una fórmula (términos separados por \"+\", cada uno un entero o [n*]símbolo con proficiencyBonus, " +
+        "classLevel, halfClassLevel o mod:<característica>), { \"formula\": \"...\", \"min\": 0 } o { \"byLevel\": { \"3\": 4 } }";
+
+    /// <summary>
+    /// Normalizes the <c>max</c> of a resource: the formula text (integers and simple formulas included),
+    /// <c>{ formula, min }</c> or <c>{ byLevel }</c>; null (with an error) when invalid.
+    /// </summary>
+    private object? ResourceMax(string path, JsonElement? max)
+    {
+        switch (max)
+        {
+            case { ValueKind: JsonValueKind.Number } number:
+                if (number.TryGetInt32(out var value) && value is >= 1 and <= CharacterResource.MaxUses)
+                {
+                    return value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                }
+
+                break;
+            case { ValueKind: JsonValueKind.String } text:
+                if (text.GetString()?.Trim() is { } formula && OptionResource.IsValidMax(formula))
+                {
+                    return formula;
+                }
+
+                break;
+            case { ValueKind: JsonValueKind.Object } maxObject:
+                return ResourceMaxObject(path, maxObject);
+        }
+
+        AddError(path, $"Debe ser {ResourceMaxHelp}.");
+        return null;
+    }
+
+    private object? ResourceMaxObject(string path, JsonElement maxObject)
+    {
+        var properties = maxObject.EnumerateObject().ToDictionary(p => p.Name, p => p.Value, StringComparer.OrdinalIgnoreCase);
+        if (properties.Keys.FirstOrDefault(k => !k.Equals("formula", StringComparison.OrdinalIgnoreCase) && !k.Equals("min", StringComparison.OrdinalIgnoreCase) && !k.Equals("byLevel", StringComparison.OrdinalIgnoreCase)) is { } unknown)
+        {
+            AddError($"{path}.{unknown}", "Campo desconocido: usa formula y min, o byLevel.");
+            return null;
+        }
+
+        if (properties.TryGetValue("byLevel", out var byLevel))
+        {
+            if (properties.Count > 1)
+            {
+                AddError(path, "byLevel no se combina con formula ni min.");
+                return null;
+            }
+
+            if (byLevel.ValueKind != JsonValueKind.Object)
+            {
+                AddError($"{path}.byLevel", "Debe ser un objeto { \"nivel\": usos }.");
+                return null;
+            }
+
+            var entries = byLevel.EnumerateObject().ToDictionary(
+                p => p.Name,
+                p => (string?)(p.Value.ValueKind == JsonValueKind.Number ? p.Value.GetRawText() : null),
+                StringComparer.Ordinal);
+            var table = LevelTable($"{path}.byLevel", entries, (entryPath, text) =>
+            {
+                if (int.TryParse(text, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var uses)
+                    && uses is >= 0 and <= CharacterResource.MaxUses)
+                {
+                    return uses;
+                }
+
+                AddError(entryPath, $"Debe ser un entero entre 0 y {CharacterResource.MaxUses}.");
+                return (int?)null;
+            });
+            return table is null ? null : new { byLevel = table };
+        }
+
+        var min = 1;
+        if (properties.TryGetValue("min", out var minElement))
+        {
+            if (minElement.ValueKind != JsonValueKind.Number || !minElement.TryGetInt32(out min) || min is < 0 or > CharacterResource.MaxUses)
+            {
+                AddError($"{path}.min", $"Debe ser un entero entre 0 y {CharacterResource.MaxUses}.");
+                return null;
+            }
+        }
+
+        if (!properties.TryGetValue("formula", out var formulaElement) || formulaElement.ValueKind != JsonValueKind.String
+            || formulaElement.GetString()?.Trim() is not { Length: > 0 } formula)
+        {
+            AddError($"{path}.formula", "Campo obligatorio.");
+            return null;
+        }
+
+        if (!OptionResource.IsValidMax(formula, min))
+        {
+            AddError($"{path}.formula", $"Fórmula no válida: debe ser {ResourceMaxHelp}.");
+            return null;
+        }
+
+        return new { formula, min };
+    }
+
+    /// <summary>
+    /// Validates a <c>{ "3": value, "10": value }</c> table: keys are class levels 1-20, at least one entry; each value
+    /// is parsed with <paramref name="parse"/> (which reports its own errors). Null when anything is invalid.
+    /// </summary>
+    private SortedDictionary<string, T>? LevelTable<T>(string path, Dictionary<string, string?> table, Func<string, string?, T?> parse)
+    {
+        if (table.Count == 0)
+        {
+            AddError(path, "Debe tener al menos una entrada.");
+            return null;
+        }
+
+        var result = new SortedDictionary<string, T>(Comparer<string>.Create((a, b) => int.Parse(a, System.Globalization.CultureInfo.InvariantCulture).CompareTo(int.Parse(b, System.Globalization.CultureInfo.InvariantCulture))));
+        var valid = true;
+        foreach (var (levelText, value) in table)
+        {
+            var entryPath = $"{path}.{levelText}";
+            if (!int.TryParse(levelText, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var level) || level is < 1 or > 20)
+            {
+                AddError(entryPath, "La clave debe ser un nivel de clase entre 1 y 20.");
+                valid = false;
+                continue;
+            }
+
+            if (parse(entryPath, value) is { } parsed)
+            {
+                result[level.ToString(System.Globalization.CultureInfo.InvariantCulture)] = parsed;
+            }
+            else
+            {
+                valid = false;
+            }
+        }
+
+        return valid ? result : null;
     }
 
     private void LevelChoice(string path, PackLevelChoiceJson rule, string classIndex, string? subclassIndex, ContentPackRows rows)

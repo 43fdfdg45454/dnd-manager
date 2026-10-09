@@ -10,8 +10,14 @@ public sealed record FeatureModifier(string Label, ItemModifierKind Kind, string
 /// <param name="Source">Breakdown source (<see cref="BreakdownSources.Feature"/>; race or background for origin feats).</param>
 public sealed record AbilityIncreaseEffect(string Label, string Ability, int Amount, string Source = BreakdownSources.Feature);
 
-/// <summary>A limited-use resource granted by a chosen option, tied to the class of the choice (null: the character level).</summary>
-public sealed record ChoiceResourceEffect(string? ClassIndex, OptionResource Resource);
+/// <summary>
+/// A limited-use resource granted by a chosen option or a subclass feature, tied to the class of the choice (null: the
+/// character level). <see cref="Label"/> names its origin in the breakdown ("Ventaja táctica (nivel 3)").
+/// </summary>
+public sealed record ChoiceResourceEffect(string? ClassIndex, OptionResource Resource)
+{
+    public string? Label { get; init; }
+}
 
 /// <summary>
 /// What the level choices of a character change in its sheet: the modifiers of the chosen options and feats,
@@ -72,7 +78,7 @@ public sealed record ChoiceEffects(
 
             if (option.Resource is { } resource)
             {
-                resources.Add(new ChoiceResourceEffect(classIndex, resource));
+                resources.Add(new ChoiceResourceEffect(classIndex, resource) { Label = label });
             }
         }
 
@@ -120,6 +126,24 @@ public sealed record ChoiceEffects(
         }
 
         return new ChoiceEffects(modifiers, increases, resources) { OriginAbilityBonuses = originBonuses };
+    }
+
+    /// <summary>
+    /// Resources of the subclass features the character has reached: features of one of its subclasses whose level is
+    /// not above its level in that class.
+    /// </summary>
+    public static IReadOnlyList<ChoiceResourceEffect> FeatureResources(Character character, IEnumerable<FeatureDefinition> features)
+    {
+        ArgumentNullException.ThrowIfNull(character);
+        ArgumentNullException.ThrowIfNull(features);
+        return features
+            .Where(f => f.SubclassIndex is not null)
+            .Select(f => (Feature: f, Owner: character.Classes.FirstOrDefault(c => c.ClassIndex == f.ClassIndex && c.SubclassIndex == f.SubclassIndex)))
+            .Where(f => f.Owner is not null && f.Feature.Level <= f.Owner.Level && f.Feature.Resource is not null)
+            .OrderBy(f => f.Feature.Level)
+            .ThenBy(f => f.Feature.Index, StringComparer.Ordinal)
+            .Select(f => new ChoiceResourceEffect(f.Owner!.ClassIndex, f.Feature.Resource!) { Label = Label(f.Feature.Name, f.Feature.Level) })
+            .ToList();
     }
 
     /// <summary>Option indexes the effects of <paramref name="character"/> may need (picks of option sets and feats).</summary>

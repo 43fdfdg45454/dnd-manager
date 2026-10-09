@@ -69,6 +69,9 @@ public interface ICatalogRepository
 
     Task<IReadOnlyList<FeatureDefinition>> ListFeaturesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default);
 
+    /// <summary>Features of the given subclasses that grant a limited-use resource (content packs).</summary>
+    Task<IReadOnlyList<FeatureDefinition>> ListSubclassFeatureResourcesAsync(IReadOnlyCollection<string> subclassIndexes, CancellationToken cancellationToken = default);
+
     // Level choices (phase 16c).
 
     /// <summary>Every spell of the catalog (a few hundred), for the spell choices of the level-up plan.</summary>

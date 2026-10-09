@@ -370,6 +370,9 @@ class CharacterResource {
     this.rollOnRest,
     this.rolls = const [],
     this.rollsPending = false,
+    this.dice,
+    this.source,
+    this.breakdown,
   });
 
   factory CharacterResource.fromJson(Map<String, dynamic> json) {
@@ -385,8 +388,20 @@ class CharacterResource {
       rollOnRest: roll == null ? null : RollOnRest.fromJson(roll),
       rolls: [for (final r in (json['rolls'] as List? ?? const [])) ?_int(r)],
       rollsPending: _bool(json['rollsPending']),
+      dice: _strOrNull(json['dice']),
+      source: _strOrNull(json['source']),
+      breakdown: ValueBreakdown.maybeFromJson(json['breakdown']),
     );
   }
+
+  /// Die rolled with each use ("d8": tactics dice, Bardic Inspiration), or null.
+  final String? dice;
+
+  /// Feature or option that grants it, with its level ("Ventaja táctica (nivel 3)").
+  final String? source;
+
+  /// How [max] was obtained (pack resources), or null.
+  final ValueBreakdown? breakdown;
 
   /// Dice the player rolls after a rest (Portent), or null.
   final RollOnRest? rollOnRest;

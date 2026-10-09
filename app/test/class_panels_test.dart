@@ -138,6 +138,17 @@ void main() {
     expect(find.text('Inspiración bárdica concedida: 1d8.'), findsOneWidget);
   });
 
+  testWidgets('bardo: el dado de inspiración llega con el recurso', (tester) async {
+    final resource = {
+      ..._resource('b1', 'bardic-inspiration', 'Bardic Inspiration', 3),
+      'dice': 'd10',
+    };
+    final repo = _repo('bard', 5, resources: [resource]);
+    await _pump(tester, characters: repo);
+    expect(_text(tester, 'bard-inspiration-die'), 'Dado: d10');
+    expect(find.text('Inspirar (1d10)'), findsOneWidget);
+  });
+
   testWidgets('clérigo: Canalizar divinidad y Destruir muertos vivientes por nivel', (
     tester,
   ) async {

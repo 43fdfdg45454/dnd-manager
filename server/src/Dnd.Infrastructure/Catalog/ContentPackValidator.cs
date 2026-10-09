@@ -256,6 +256,9 @@ internal sealed partial class ContentPackValidator
                     var featureIndex = Index($"{featurePath}.index", "features", feature.Index);
                     var featureName = RequiredText($"{featurePath}.name", feature.Name, NameMaxLength);
                     var featureDescription = Paragraphs($"{featurePath}.description", feature.Description);
+                    var featureResource = feature.Resource is not null && RequireLevelChoicesFormat($"{featurePath}.resource", feature.Resource)
+                        ? Resource($"{featurePath}.resource", feature.Resource)
+                        : null;
                     if (featureIndex is null || number is null)
                     {
                         return;
@@ -270,6 +273,7 @@ internal sealed partial class ContentPackValidator
                         SubclassIndex = index,
                         Level = number.Value,
                         Description = featureDescription,
+                        ResourceJson = featureResource,
                         Source = _id,
                     });
                 });

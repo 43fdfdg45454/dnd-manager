@@ -50,6 +50,15 @@ public static class BreakdownLabels
     public const string Minimum = "Mínimo 0";
     public const string ManualAdjustment = "Ajuste manual";
     public const string ImprovementLimit = "Límite de las mejoras (20)";
+    public const string ClassLevel = "Nivel de clase";
+    public const string HalfClassLevel = "Mitad del nivel de clase";
+    public const string UsesLimit = "Límite de usos (999)";
+
+    /// <summary>"Mínimo 1": part that raises a resource maximum to its minimum.</summary>
+    public static string MinimumOf(int minimum) => $"Mínimo {minimum}";
+
+    /// <summary>"Ventaja táctica (nivel 3), tabla desde el nivel 7": entry of a by-level table.</summary>
+    public static string ByLevel(string label, int level) => $"{label}, tabla desde el nivel {level}";
 
     private static readonly Dictionary<string, string> AbilityNames = new(StringComparer.Ordinal)
     {

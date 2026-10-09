@@ -170,39 +170,105 @@ public sealed record OptionGrants(
 }
 
 /// <summary>
-/// Limited-use resource of an option. <see cref="Max"/> is an integer ("2") or a formula:
-/// <c>proficiencyBonus</c>, <c>classLevel</c>, <c>halfClassLevel</c> or <c>mod:&lt;ability&gt;</c> (minimum 1).
+/// Limited-use resource of an option or a subclass feature. Its maximum is <see cref="Max"/>, a
+/// <see cref="ResourceFormula"/> ("2", "proficiencyBonus", "2*classLevel+mod:int"), raised to <see cref="Min"/>,
+/// unless <see cref="MaxByLevel"/> is given: then the value of the highest class level not above the character's.
 /// </summary>
 public sealed record OptionResource(string Key, string Name, string Max, ResourceRecharge Recharge)
 {
     /// <summary>Dice rolled after a rest and kept in the resource (<c>"rollOnRest": {"dice":"d20","count":2,"rest":"long"}</c>), or null.</summary>
     public RollOnRest? RollOnRest { get; init; }
 
-    public const string ProficiencyBonusFormula = "proficiencyBonus";
-    public const string ClassLevelFormula = "classLevel";
-    public const string HalfClassLevelFormula = "halfClassLevel";
-    public const string ModifierFormulaPrefix = "mod:";
+    /// <summary>Maximum by class level (<c>{"byLevel": {"3": 4, "7": 5}}</c>), or null to use <see cref="Max"/>.</summary>
+    public IReadOnlyDictionary<int, int>? MaxByLevel { get; init; }
 
-    /// <summary>True when <paramref name="max"/> is a positive integer or one of the formulas.</summary>
-    public static bool IsValidMax(string max) =>
-        (int.TryParse(max, NumberStyles.None, CultureInfo.InvariantCulture, out var value) && value is >= 1 and <= CharacterResource.MaxUses)
-        || max is ProficiencyBonusFormula or ClassLevelFormula or HalfClassLevelFormula
-        || (max.StartsWith(ModifierFormulaPrefix, StringComparison.Ordinal) && Abilities.IsValid(max[ModifierFormulaPrefix.Length..]));
+    /// <summary>Lowest value of a formula maximum (1 unless the pack says otherwise, <c>{"formula": "mod:wis", "min": 0}</c>).</summary>
+    public int Min { get; init; } = 1;
 
-    /// <summary>Evaluates <see cref="Max"/> (1-999; unknown formulas count as 1).</summary>
-    public int Evaluate(int proficiencyBonus, int classLevel, Func<string, int> abilityModifier)
+    /// <summary>Faces of the die spent with each use (<c>"dice": "d8"</c>), or null.</summary>
+    public int? Die { get; init; }
+
+    /// <summary>Faces of the die by class level (<c>"diceByLevel": {"3": "d8", "10": "d10"}</c>); overrides <see cref="Die"/> from each level.</summary>
+    public IReadOnlyDictionary<int, int>? DieByLevel { get; init; }
+
+    public const string ProficiencyBonusFormula = ResourceFormula.ProficiencyBonus;
+    public const string ClassLevelFormula = ResourceFormula.ClassLevel;
+    public const string HalfClassLevelFormula = ResourceFormula.HalfClassLevel;
+    public const string ModifierFormulaPrefix = ResourceFormula.ModifierPrefix;
+
+    /// <summary>
+    /// True when <paramref name="max"/> follows the <see cref="ResourceFormula"/> grammar; a formula made only of
+    /// constants must add up to 1-999 (0-999 when <paramref name="min"/> is 0).
+    /// </summary>
+    public static bool IsValidMax(string max, int min = 1)
+    {
+        var terms = ResourceFormula.Parse(max);
+        if (terms is null)
+        {
+            return false;
+        }
+
+        if (terms.Any(t => t.Symbol is not null))
+        {
+            return true;
+        }
+
+        var total = terms.Sum(t => t.Factor);
+        return total >= Math.Clamp(min, 0, 1) && total <= CharacterResource.MaxUses;
+    }
+
+    /// <summary>Evaluates the maximum (0 when <see cref="MaxByLevel"/> has no entry up to <paramref name="classLevel"/>).</summary>
+    public int Evaluate(int proficiencyBonus, int classLevel, Func<string, int> abilityModifier) =>
+        Calculate(proficiencyBonus, classLevel, abilityModifier)?.Total ?? 0;
+
+    /// <summary>
+    /// The maximum explained term by term (constants and table entries labelled <paramref name="label"/>, the
+    /// resource name by default), or null when <see cref="MaxByLevel"/> has no entry up to <paramref name="classLevel"/>.
+    /// Unknown formulas count as their integer value, or 1.
+    /// </summary>
+    public ValueBreakdown? Calculate(int proficiencyBonus, int classLevel, Func<string, int> abilityModifier, string? label = null)
     {
         ArgumentNullException.ThrowIfNull(abilityModifier);
-        var value = Max switch
+        label ??= Name;
+        var builder = new BreakdownBuilder();
+        if (MaxByLevel is { Count: > 0 } table)
         {
-            ProficiencyBonusFormula => proficiencyBonus,
-            ClassLevelFormula => classLevel,
-            HalfClassLevelFormula => classLevel / 2,
-            _ when Max.StartsWith(ModifierFormulaPrefix, StringComparison.Ordinal) && Abilities.IsValid(Max[ModifierFormulaPrefix.Length..]) =>
-                abilityModifier(Max[ModifierFormulaPrefix.Length..]),
-            _ => int.TryParse(Max, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number) ? number : 1,
-        };
-        return Math.Clamp(value, 1, CharacterResource.MaxUses);
+            if (AtLevel(table, classLevel) is not { } entry)
+            {
+                return null;
+            }
+
+            builder.Add(BreakdownSources.Feature, BreakdownLabels.ByLevel(label, entry.Level), entry.Value);
+            return builder.Clamp(0, CharacterResource.MaxUses, BreakdownLabels.UsesLimit).Build();
+        }
+
+        if (ResourceFormula.Parse(Max) is { } terms)
+        {
+            ResourceFormula.AddTerms(builder, terms, proficiencyBonus, classLevel, abilityModifier, label);
+        }
+        else
+        {
+            builder.Add(BreakdownSources.Feature, label, int.TryParse(Max, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number) ? number : 1);
+        }
+
+        var min = Math.Clamp(Min, 0, CharacterResource.MaxUses);
+        if (builder.Total < min)
+        {
+            builder.SetTo(BreakdownSources.Base, BreakdownLabels.MinimumOf(min), min);
+        }
+
+        return builder.Clamp(min, CharacterResource.MaxUses, BreakdownLabels.UsesLimit).Build();
+    }
+
+    /// <summary>The die of each use at <paramref name="classLevel"/> ("d8"), or null when the resource has none.</summary>
+    public string? DiceAt(int classLevel) =>
+        (DieByLevel is { Count: > 0 } table && AtLevel(table, classLevel) is { } entry ? entry.Value : Die) is { } die ? $"d{die}" : null;
+
+    /// <summary>The entry of the highest level not above <paramref name="classLevel"/>, or null.</summary>
+    private static (int Level, int Value)? AtLevel(IReadOnlyDictionary<int, int> table, int classLevel)
+    {
+        var levels = table.Keys.Where(l => l <= classLevel).ToList();
+        return levels.Count == 0 ? null : (levels.Max(), table[levels.Max()]);
     }
 }
 
@@ -408,12 +474,28 @@ public static class LevelChoiceJson
                 return null;
             }
 
-            var max = Property(root, "max") switch
+            var max = "1";
+            var min = 1;
+            Dictionary<int, int>? byLevel = null;
+            switch (Property(root, "max"))
             {
-                { ValueKind: JsonValueKind.Number } number when number.TryGetInt32(out var value) => value.ToString(CultureInfo.InvariantCulture),
-                { ValueKind: JsonValueKind.String } text => text.GetString() ?? "1",
-                _ => "1",
-            };
+                case { ValueKind: JsonValueKind.Number } number when number.TryGetInt32(out var value):
+                    max = value.ToString(CultureInfo.InvariantCulture);
+                    break;
+                case { ValueKind: JsonValueKind.String } text:
+                    max = text.GetString() ?? "1";
+                    break;
+                case { ValueKind: JsonValueKind.Object } maxObject:
+                    if (Property(maxObject, "byLevel") is { ValueKind: JsonValueKind.Object } table)
+                    {
+                        byLevel = LevelTable(table, e => Int(e));
+                    }
+
+                    max = Text(Property(maxObject, "formula")) ?? "1";
+                    min = Int(Property(maxObject, "min")) ?? 1;
+                    break;
+            }
+
             var recharge = Text(Property(root, "recharge")) is { } rechargeName
                 && Enum.TryParse<ResourceRecharge>(rechargeName, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed)
                     ? parsed
@@ -427,7 +509,17 @@ public static class LevelChoiceJson
                 roll = new RollOnRest(die, count, rest);
             }
 
-            return new OptionResource(key, name, max, recharge) { RollOnRest = roll };
+            var diceByLevel = Property(root, "diceByLevel") is { ValueKind: JsonValueKind.Object } diceTable
+                ? LevelTable(diceTable, e => RollOnRest.ParseDie(Text(e)))
+                : null;
+            return new OptionResource(key, name, max, recharge)
+            {
+                RollOnRest = roll,
+                MaxByLevel = byLevel is { Count: > 0 } ? byLevel : null,
+                Min = min,
+                Die = RollOnRest.ParseDie(Text(Property(root, "dice"))),
+                DieByLevel = diceByLevel is { Count: > 0 } ? diceByLevel : null,
+            };
         });
 
     public static ChoiceFilter ParseFilter(string? json) =>
@@ -489,6 +581,21 @@ public static class LevelChoiceJson
 
     private static int? Int(JsonElement? element) =>
         element is { ValueKind: JsonValueKind.Number } value && value.TryGetInt32(out var number) ? number : null;
+
+    /// <summary>A <c>{"3": value, "7": value}</c> table keyed by level 1-20; entries that do not parse are skipped.</summary>
+    private static Dictionary<int, int> LevelTable(JsonElement table, Func<JsonElement, int?> value)
+    {
+        var result = new Dictionary<int, int>();
+        foreach (var entry in table.EnumerateObject())
+        {
+            if (int.TryParse(entry.Name, NumberStyles.None, CultureInfo.InvariantCulture, out var level) && level is >= 1 and <= 20 && value(entry.Value) is { } parsed)
+            {
+                result[level] = parsed;
+            }
+        }
+
+        return result;
+    }
 
     private static bool Bool(JsonElement? element) => element is { ValueKind: JsonValueKind.True };
 
