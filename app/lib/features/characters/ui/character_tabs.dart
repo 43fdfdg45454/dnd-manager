@@ -4,10 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
-import '../../../core/theme/components.dart';
 import '../../../core/theme/textures.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/ui/action_type.dart';
+import '../../../core/ui/stat_tiles.dart';
 import '../../../core/ui/stat_value.dart';
 import '../../../core/ui/spell_category.dart';
 import '../../catalog/data/catalog_controllers.dart';
@@ -24,6 +24,7 @@ import '../domain/character_format.dart';
 import '../domain/class_theme.dart';
 import 'combat/companion_section.dart';
 import 'level_up/character_choices_section.dart';
+import 'skill_rolls.dart' show rollSkill, rollSkillWithMode;
 
 /// Icon with the note of an override, shown on long press. Renders nothing for
 /// values that were not overridden.
@@ -93,89 +94,82 @@ class SummaryTab extends StatelessWidget {
       children: [
         if (c.invalidChoices.isNotEmpty) _InvalidChoicesNotice(character: c),
         const SectionTitle('Características'),
-        _EqualGrid(
+        StatTileGrid(
           key: const Key('abilities-grid'),
           columnsWide: 3,
           children: [for (final key in abilityKeys) _AbilityCard(character: c, abilityKey: key)],
         ),
         const SectionTitle('Combate'),
-        _EqualGrid(
+        StatTileGrid(
           key: const Key('combat-grid'),
           columnsWide: 6,
           children: [
-            _StatTile(
+            StatTile(
               statKey: 'armor-class',
               breakdownKey: 'armorClass',
               label: 'CA',
               value: '${sheet.armorClass}',
-              character: c,
-              field: 'armorClass',
+              breakdown: sheet.breakdown('armorClass'),
+              mark: OverrideMark(character: c, field: 'armorClass'),
             ),
-            _StatTile(
+            StatTile(
               statKey: 'initiative',
               breakdownKey: 'initiative',
               label: 'Iniciativa',
               value: formatModifier(sheet.initiative),
-              character: c,
-              field: 'initiative',
+              breakdown: sheet.breakdown('initiative'),
+              mark: OverrideMark(character: c, field: 'initiative'),
             ),
-            _StatTile(
+            StatTile(
               statKey: 'speed',
               breakdownKey: 'speed',
               totalText: '${sheet.speed} pies',
               label: 'Velocidad',
               value: '${sheet.speed} pies',
-              character: c,
-              field: 'speed',
+              breakdown: sheet.breakdown('speed'),
+              mark: OverrideMark(character: c, field: 'speed'),
             ),
-            _StatTile(
+            StatTile(
               statKey: 'hp',
               breakdownKey: 'hitPointsMax',
               label: 'PG máx',
               value: '${sheet.hitPointsMax}',
-              character: c,
-              field: 'hitPointsMax',
+              breakdown: sheet.breakdown('hitPointsMax'),
+              mark: OverrideMark(character: c, field: 'hitPointsMax'),
             ),
-            _StatTile(
+            StatTile(
               statKey: 'passive-perception',
               breakdownKey: 'passivePerception',
               label: 'Percepción pasiva',
               value: '${sheet.passivePerception}',
-              character: c,
-              field: 'passivePerception',
+              breakdown: sheet.breakdown('passivePerception'),
+              mark: OverrideMark(character: c, field: 'passivePerception'),
             ),
-            _StatTile(
+            StatTile(
               statKey: 'proficiency',
               breakdownKey: 'proficiencyBonus',
               label: 'Competencia',
               value: formatModifier(sheet.proficiencyBonus),
-              character: c,
-              field: 'proficiencyBonus',
+              breakdown: sheet.breakdown('proficiencyBonus'),
+              mark: OverrideMark(character: c, field: 'proficiencyBonus'),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        StatTileGrid(
+          key: const Key('state-grid'),
+          columnsWide: 3,
           children: [
-            _StatTile(
+            StatTile(
               statKey: 'hp-current',
               label: 'PG actuales',
               value: '${c.hitPointsCurrent} / ${sheet.hitPointsMax}',
-              character: c,
             ),
-            _StatTile(
-              statKey: 'temp-hp',
-              label: 'PG temporales',
-              value: '${c.temporaryHitPoints}',
-              character: c,
-            ),
-            _StatTile(
+            StatTile(statKey: 'temp-hp', label: 'PG temporales', value: '${c.temporaryHitPoints}'),
+            StatTile(
               statKey: 'inspiration',
               label: 'Inspiración',
               value: c.inspiration ? 'Sí' : 'No',
-              character: c,
             ),
           ],
         ),
@@ -331,34 +325,6 @@ class _BreathWeaponCard extends StatelessWidget {
   }
 }
 
-/// Fixed grid of equal tiles: 3 columns, or [columnsWide] from 600 px wide.
-class _EqualGrid extends StatelessWidget {
-  const _EqualGrid({super.key, required this.columnsWide, required this.children});
-
-  final int columnsWide;
-  final List<Widget> children;
-
-  static const _wideBreakpoint = 600.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final wide = constraints.maxWidth >= _wideBreakpoint;
-        return GridView.count(
-          crossAxisCount: wide ? columnsWide : 3,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          childAspectRatio: wide && columnsWide > 3 ? 1.3 : 1.15,
-          children: children,
-        );
-      },
-    );
-  }
-}
-
 class _AbilityCard extends StatelessWidget {
   const _AbilityCard({required this.character, required this.abilityKey});
 
@@ -395,70 +361,6 @@ class _AbilityCard extends StatelessWidget {
               ),
               OverrideMark(character: character, field: 'ability.$abilityKey'),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  const _StatTile({
-    required this.statKey,
-    required this.label,
-    required this.value,
-    required this.character,
-    this.field,
-    this.breakdownKey,
-    this.totalText,
-  });
-
-  final String statKey;
-  final String label;
-  final String value;
-  final CharacterDetail character;
-  final String? field;
-
-  /// Key in `sheet.breakdowns`; null for values without breakdown.
-  final String? breakdownKey;
-
-  /// Total line of the breakdown sheet when it differs from [value].
-  final String? totalText;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return StoneCard(
-      key: Key('tile-$statKey'),
-      margin: EdgeInsets.zero,
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            label,
-            style: theme.textTheme.labelMedium,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                StatValue(
-                  statKey: breakdownKey ?? statKey,
-                  title: label,
-                  text: value,
-                  totalText: totalText,
-                  breakdown: breakdownKey == null ? null : character.sheet.breakdown(breakdownKey!),
-                  style: _numeric(theme.textTheme.titleLarge),
-                ),
-                if (field != null) OverrideMark(character: character, field: field!),
-              ],
-            ),
           ),
         ],
       ),
@@ -520,8 +422,22 @@ class SkillsTab extends StatelessWidget {
 
   final CharacterDetail character;
 
+  /// Abilities with skills, in the order of the SRD sheet (Constitution has none).
+  static const _skillAbilities = ['str', 'dex', 'int', 'wis', 'cha'];
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final skillGroups = [
+      for (final ability in _skillAbilities)
+        (
+          ability: ability,
+          skills: [
+            for (final skill in character.sheet.skills)
+              if (abilityKeyOf(skill.ability) == ability) skill,
+          ]..sort((a, b) => skillLabel(a.index, a.name).compareTo(skillLabel(b.index, b.name))),
+        ),
+    ];
     final others = [
       for (final t in const [
         ProficiencyType.armor,
@@ -540,52 +456,24 @@ class SkillsTab extends StatelessWidget {
     return _TabList(
       children: [
         const SectionTitle('Habilidades'),
-        for (final skill in character.sheet.skills)
-          ListTile(
-            key: Key('skill-${skill.index}'),
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            onTap: () => rollAndShow(
-              context,
-              d20Expression(skill.value),
-              label: skillLabel(skill.index, skill.name),
+        Text(
+          'Toca para tirar; mantén pulsado para ventaja o desventaja.',
+          key: const Key('skills-hint'),
+          style: theme.textTheme.bodySmall,
+        ),
+        for (final group in skillGroups)
+          if (group.skills.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 12, bottom: 2),
+              child: Text(
+                '${abilityLabel(group.ability)} '
+                '${formatModifier(character.sheet.ability(group.ability).modifier)}',
+                key: Key('skills-group-${group.ability}'),
+                style: theme.textTheme.labelLarge,
+              ),
             ),
-            leading: Icon(
-              skill.expertise
-                  ? Icons.stars
-                  : skill.proficient
-                  ? Icons.circle
-                  : Icons.radio_button_unchecked,
-              size: 18,
-              semanticLabel: skill.expertise
-                  ? 'Pericia'
-                  : skill.proficient
-                  ? 'Competente'
-                  : 'Sin competencia',
-            ),
-            title: Text(skillLabel(skill.index, skill.name)),
-            subtitle: Text(
-              [
-                abilityAbbreviation(skill.ability),
-                if (skill.expertise) 'Pericia' else if (skill.proficient) 'Competente',
-              ].join(' · '),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.casino_outlined, size: 16),
-                const SizedBox(width: 8),
-                StatValue(
-                  statKey: 'skill.${skill.index}',
-                  title: skillLabel(skill.index, skill.name),
-                  text: formatModifier(skill.value),
-                  breakdown: character.sheet.breakdown('skill.${skill.index}'),
-                  style: _numeric(Theme.of(context).textTheme.bodyLarge),
-                ),
-                OverrideMark(character: character, field: 'skill.${skill.index}'),
-              ],
-            ),
-          ),
+            for (final skill in group.skills) _SkillRow(character: character, skill: skill),
+          ],
         for (final group in others)
           if (group.keys.isNotEmpty) ...[
             SectionTitle(switch (group.type) {
@@ -601,6 +489,55 @@ class SkillsTab extends StatelessWidget {
             ),
           ],
       ],
+    );
+  }
+}
+
+/// A skill of [SkillsTab]: tap rolls, long press asks for advantage or
+/// disadvantage first; the value opens its breakdown.
+class _SkillRow extends StatelessWidget {
+  const _SkillRow({required this.character, required this.skill});
+
+  final CharacterDetail character;
+  final SheetSkill skill;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = skill.expertise
+        ? 'Pericia'
+        : skill.proficient
+        ? 'Competente'
+        : null;
+    return ListTile(
+      key: Key('skill-${skill.index}'),
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      onTap: () => rollSkill(context, skill),
+      onLongPress: () => rollSkillWithMode(context, skill),
+      leading: Icon(
+        skill.expertise
+            ? Icons.stars
+            : skill.proficient
+            ? Icons.circle
+            : Icons.radio_button_unchecked,
+        size: 18,
+        semanticLabel: status ?? 'Sin competencia',
+      ),
+      title: Text(skillLabel(skill.index, skill.name)),
+      subtitle: status == null ? null : Text(status),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          StatValue(
+            statKey: 'skill.${skill.index}',
+            title: skillLabel(skill.index, skill.name),
+            text: formatModifier(skill.value),
+            breakdown: character.sheet.breakdown('skill.${skill.index}'),
+            style: _numeric(Theme.of(context).textTheme.titleMedium),
+          ),
+          OverrideMark(character: character, field: 'skill.${skill.index}'),
+        ],
+      ),
     );
   }
 }

@@ -15,10 +15,10 @@ import '../../data/models.dart';
 import '../../domain/character_format.dart';
 import '../../domain/spell_combat.dart';
 import '../level_up/level_up_widgets.dart' show ExpandableText;
+import '../skill_rolls.dart' show pickAdvantageMode;
 import 'combat_support.dart';
 import 'concentration_flow.dart' show confirmReplaceConcentration;
 import 'resources_section.dart' show pactSlotsOf, regularSlots;
-import 'skill_rolls.dart' show pickAdvantageMode;
 import 'wild_magic_surge.dart';
 
 /// A castable spell with its catalog detail.

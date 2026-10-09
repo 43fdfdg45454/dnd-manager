@@ -307,6 +307,32 @@ void main() {
       expect(rect(keys[3]).top, greaterThan(rect(keys[0]).bottom - 1));
     });
 
+    testWidgets('Resumen: PG actuales, temporales e inspiración en una rejilla igual', (
+      tester,
+    ) async {
+      final repository = FakeCharactersRepository(characters: [makeCharacterJson()]);
+      await _pumpApp(tester, characters: repository, location: '/characters/ch1');
+      // Phone width (tall enough to build both grids): three columns in each.
+      tester.view.physicalSize = const Size(400, 2000);
+      await tester.pumpAndSettle();
+
+      const keys = ['tile-hp-current', 'tile-temp-hp', 'tile-inspiration'];
+      final grid = find.byKey(const Key('state-grid'));
+      await tester.ensureVisible(grid);
+      await tester.pumpAndSettle();
+      for (final key in keys) {
+        expect(
+          find.descendant(of: grid, matching: find.byKey(Key(key))),
+          findsOneWidget,
+          reason: key,
+        );
+      }
+      Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+      expect({for (final k in keys) rect(k).top}.length, 1);
+      expect({for (final k in keys) rect(k).width.round()}.length, 1);
+      expect(rect(keys.first).width.round(), rect('tile-armor-class').width.round());
+    });
+
     testWidgets('el icono de override muestra la nota con pulsación larga', (tester) async {
       final repository = FakeCharactersRepository(
         characters: [
@@ -505,8 +531,9 @@ void main() {
 
       expect(find.text('Atletismo'), findsOneWidget);
       expect(find.text('Sigilo'), findsOneWidget);
-      expect(find.text('Des · Competente'), findsNothing);
-      expect(find.text('Fue · Competente'), findsOneWidget);
+      // The ability is the group's header; the row only says "Competente".
+      expect(find.text('Competente'), findsOneWidget);
+      expect(find.text('Fue · Competente'), findsNothing);
     });
 
     testWidgets('Rasgos muestra los de clase hasta el nivel actual y los raciales', (tester) async {
@@ -865,6 +892,86 @@ void main() {
 
       expect(find.text('No tienes permiso para hacer eso con este personaje.'), findsOneWidget);
       expect(find.text('Reintentar'), findsOneWidget);
+    });
+  });
+
+  group('pestaña Habilidades (fase 28)', () {
+    /// The fixture plus one skill of each other ability (and Acrobacias, which
+    /// sorts before Sigilo inside Destreza).
+    FakeCharactersRepository repo() {
+      final json = makeCharacterJson();
+      final sheet = json['sheet'] as Map<String, dynamic>;
+      Map<String, dynamic> skill(String index, String name, String ability, int value) => {
+        'index': index,
+        'name': name,
+        'ability': ability,
+        'value': value,
+        'proficient': false,
+        'expertise': false,
+      };
+      sheet['skills'] = [
+        ...(sheet['skills'] as List),
+        skill('acrobatics', 'Acrobatics', 'dex', 2),
+        skill('arcana', 'Arcana', 'int', 0),
+        skill('insight', 'Insight', 'wis', 1),
+        skill('persuasion', 'Persuasion', 'cha', -1),
+      ];
+      return FakeCharactersRepository(characters: [json]);
+    }
+
+    testWidgets('agrupa por característica en el orden de la hoja, sin Constitución', (
+      tester,
+    ) async {
+      await _pumpApp(tester, characters: repo(), location: '/characters/ch1');
+      await _tap(tester, find.byKey(const Key('tab-skills')));
+
+      expect(find.byKey(const Key('skills-hint')), findsOneWidget);
+      const groups = ['str', 'dex', 'int', 'wis', 'cha'];
+      for (final g in groups) {
+        expect(find.byKey(Key('skills-group-$g')), findsOneWidget, reason: g);
+      }
+      expect(find.byKey(const Key('skills-group-con')), findsNothing);
+      expect(find.text('Fuerza +3'), findsOneWidget);
+      double top(String key) => tester.getTopLeft(find.byKey(Key(key))).dy;
+      for (var i = 1; i < groups.length; i++) {
+        expect(top('skills-group-${groups[i]}'), greaterThan(top('skills-group-${groups[i - 1]}')));
+      }
+      // Inside a group, alphabetical by the Spanish label.
+      expect(top('skill-acrobatics'), lessThan(top('skill-stealth')));
+      expect(top('skill-stealth'), greaterThan(top('skills-group-dex')));
+      expect(top('skill-stealth'), lessThan(top('skills-group-int')));
+      // Only proficient skills carry a subtitle.
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('skill-athletics')),
+          matching: find.text('Competente'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.widget<ListTile>(find.byKey(const Key('skill-stealth'))).subtitle, isNull);
+    });
+
+    testWidgets('tocar tira y la pulsación larga pide ventaja o desventaja', (tester) async {
+      await _pumpApp(tester, characters: repo(), location: '/characters/ch1');
+      await _tap(tester, find.byKey(const Key('tab-skills')));
+
+      await _tap(tester, find.byKey(const Key('skill-athletics')));
+      expect(find.text('1d20+5'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.byKey(const Key('skill-stealth')));
+      await tester.pumpAndSettle();
+      await _tap(tester, find.byKey(const Key('mode-disadvantage')));
+      expect(find.text('dis+2'), findsOneWidget);
+    });
+
+    testWidgets('Combate ya no tiene habilidades', (tester) async {
+      await _pumpApp(tester, characters: repo(), location: '/characters/ch1');
+      await _tap(tester, find.byKey(const Key('tab-combat')));
+      expect(find.byKey(const Key('combat-stats-grid')), findsOneWidget);
+      expect(find.byKey(const Key('quick-skills')), findsNothing);
+      expect(find.byKey(const Key('all-skills')), findsNothing);
     });
   });
 

@@ -955,39 +955,83 @@ void main() {
     });
   });
 
-  group('habilidades en combate', () {
-    testWidgets('las tiradas rápidas usan el valor de la hoja; pulsación larga da ventaja', (
-      tester,
-    ) async {
-      await _pump(tester, characters: _repo(), face: 14);
-      // Solo las habilidades de la lista rápida que tiene la hoja, en su orden.
-      expect(find.text('Sigilo +2'), findsOneWidget);
-      expect(find.text('Atletismo +5'), findsOneWidget);
+  group('fichas de combate (fase 28)', () {
+    const tiles = [
+      'combat-ac',
+      'combat-initiative',
+      'combat-speed',
+      'combat-perception',
+      'combat-proficiency',
+      'combat-inspiration',
+    ];
+
+    testWidgets('las seis fichas miden lo mismo a 400 y a 800 px; sin habilidades', (tester) async {
+      await _pump(tester, characters: _repo());
+      final grid = find.byKey(const Key('combat-stats-grid'));
+      for (final key in tiles) {
+        expect(
+          find.descendant(of: grid, matching: find.byKey(Key(key))),
+          findsOneWidget,
+          reason: key,
+        );
+      }
+      Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+      void expectEqualTiles() {
+        expect({for (final k in tiles) rect(k).width.round()}.length, 1);
+        expect({for (final k in tiles) rect(k).height.round()}.length, 1);
+      }
+
+      // 800 px: one row of six.
+      expectEqualTiles();
+      expect({for (final k in tiles) rect(k).top}.length, 1);
+
+      // 400 px: two rows of three, still equal.
+      tester.view.physicalSize = const Size(400, 7000);
+      await tester.pumpAndSettle();
+      expectEqualTiles();
+      expect({for (final k in tiles) rect(k).top}.length, 2);
+
+      // The dice corner lives inside the initiative tile.
       expect(
-        tester.getTopLeft(find.byKey(const Key('quick-skill-stealth'))).dx,
-        lessThan(tester.getTopLeft(find.byKey(const Key('quick-skill-athletics'))).dx),
+        find.descendant(
+          of: find.byKey(const Key('combat-initiative')),
+          matching: find.byKey(const Key('roll-initiative')),
+        ),
+        findsOneWidget,
       );
-
-      await _tap(tester, 'quick-skill-athletics');
-      expect(find.text('1d20+5'), findsOneWidget);
-      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '19');
-      await tester.tapAt(const Offset(10, 10));
-      await tester.pumpAndSettle();
-
-      await tester.longPress(find.byKey(const Key('quick-skill-stealth')));
-      await tester.pumpAndSettle();
-      await _tap(tester, 'mode-disadvantage');
-      expect(find.text('dis+2'), findsOneWidget);
+      // Skills are no longer in Combate.
+      expect(find.byKey(const Key('quick-skills')), findsNothing);
+      expect(find.byKey(const Key('all-skills')), findsNothing);
+      expect(tester.takeException(), isNull);
     });
 
-    testWidgets('"Todas las habilidades" lista la hoja entera y tira', (tester) async {
-      await _pump(tester, characters: _repo(), face: 10);
-      await _tap(tester, 'all-skills');
-      expect(find.byKey(const Key('all-skills-sheet')), findsOneWidget);
-      expect(find.byKey(const Key('all-skills-athletics')), findsOneWidget);
-      expect(find.byKey(const Key('all-skills-stealth')), findsOneWidget);
-      await _tap(tester, 'all-skills-stealth');
-      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '12');
+    testWidgets('la inspiración se alterna tocando su ficha', (tester) async {
+      final repo = _repo();
+      await _pump(tester, characters: repo);
+      Finder inTile(String text) => find.descendant(
+        of: find.byKey(const Key('combat-inspiration')),
+        matching: find.text(text),
+      );
+      expect(inTile('Sí'), findsOneWidget);
+      await _tap(tester, 'inspiration');
+      expect(repo.combatPatches.last.inspiration, isFalse);
+    });
+
+    testWidgets('la etiqueta "Pacto (niv. 5)" cabe sin desbordar', (tester) async {
+      final repo = _repo(
+        combat: makeCombatJson(spellSlots: const [], pactSlots: {'level': 5, 'max': 2, 'used': 0}),
+      );
+      await _pump(tester, characters: repo);
+      tester.view.physicalSize = const Size(400, 7000);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('combat-pact-slots')),
+          matching: find.text('Pacto (niv. 5)'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
     });
   });
 
