@@ -113,6 +113,9 @@ internal sealed class PackFeatureJson
     public string? Name { get; set; }
 
     public List<string?>? Description { get; set; }
+
+    /// <summary>Format 2: limited-use resource gained with the feature (same shape as an option's).</summary>
+    public PackResourceJson? Resource { get; set; }
 }
 
 internal sealed class PackItemJson
@@ -592,13 +595,22 @@ internal sealed class PackResourceJson
 
     public string? Name { get; set; }
 
-    /// <summary>An integer or a formula text (proficiencyBonus, classLevel, halfClassLevel, mod:cha).</summary>
+    /// <summary>
+    /// An integer, a formula text ("proficiencyBonus", "2*classLevel+mod:int"), <c>{"formula": "...", "min": 0}</c> or
+    /// <c>{"byLevel": {"3": 4, "7": 5}}</c>.
+    /// </summary>
     public JsonElement? Max { get; set; }
 
     public string? Recharge { get; set; }
 
     /// <summary>Dice rolled after a rest and kept in the resource (Portent-like features).</summary>
     public PackRollOnRestJson? RollOnRest { get; set; }
+
+    /// <summary>Die rolled with each use ("d8").</summary>
+    public string? Dice { get; set; }
+
+    /// <summary>Die by class level (<c>{"3": "d8", "10": "d10"}</c>).</summary>
+    public Dictionary<string, string?>? DiceByLevel { get; set; }
 }
 
 internal sealed class PackRollOnRestJson

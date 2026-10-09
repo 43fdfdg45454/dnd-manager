@@ -78,7 +78,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
         Assert.Equal((1, "Enchantment", true), (hex.Level, hex.School, hex.Concentration));
         Assert.Contains("warlock", hex.ClassIndexes);
 
-        // A fighter reaching level 3 is offered the Battle Master and, with it, three maneuvers and the superiority dice.
+        // A fighter reaching level 3 is offered the Battle Master and, with it, three maneuvers; the superiority dice come with the feature itself.
         var s = await factory.CreateCampaignScenarioAsync();
         var hero = await ActiveFighterAsync(s, level: 2);
         var plan = await PlanAsync(s.Player, hero.Id);
@@ -87,8 +87,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
         Assert.Contains(subclass.Options, o => o.Index == $"{PackId}-eldritch-knight");
         var maneuvers = Assert.Single(plan.Choices, c => c.Key == "maniobras");
         Assert.Equal(($"{PackId}-battle-master", 3, 16), (maneuvers.SubclassIndex, maneuvers.Required, maneuvers.Options.Count));
-        var dice = Assert.Single(plan.Choices, c => c.Key == "recurso-dados-de-superioridad");
-        var diceOption = Assert.Single(dice.Options);
+        Assert.DoesNotContain(plan.Choices, c => c.Key.StartsWith("recurso-", StringComparison.Ordinal));
         var tool = Assert.Single(plan.Choices, c => c.Key == "herramienta-de-artesano");
         Assert.Contains(tool.Options, o => o.Index == "Smith's tools");
 
@@ -110,13 +109,13 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
             {
                 new { key = "subclass", selected = new[] { $"{PackId}-battle-master" } },
                 new { key = "maniobras", selected = new[] { $"{PackId}-maneuver-parry", $"{PackId}-maneuver-riposte", $"{PackId}-maneuver-trip-attack" } },
-                new { key = "recurso-dados-de-superioridad", selected = new[] { diceOption.Index } },
                 new { key = "herramienta-de-artesano", selected = new[] { "Smith's tools" } },
             },
         });
         Assert.Equal($"{PackId}-battle-master", level3.Classes.Single().SubclassIndex);
         var superiority = Assert.Single(level3.Resources, r => r.Key == $"{PackId}-superiority-dice");
-        Assert.Equal((4, "ShortRest", true), (superiority.Max, superiority.Recharge, superiority.IsAuto));
+        Assert.Equal((4, "ShortRest", true, "d8"), (superiority.Max, superiority.Recharge, superiority.IsAuto, superiority.Dice));
+        Assert.Contains("Combat Superiority", superiority.Source);
         Assert.Contains(level3.Proficiencies, p => p is { Type: "Tool", Key: "Smith's tools" });
 
         // Level 4: the 41 feats are offered as before, with their prerequisites.
@@ -141,12 +140,10 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
         Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(cleric.Id)}/activate", null)).StatusCode);
         await GrantAsync(s, cleric.Id);
         var clericPlan = await PlanAsync(s.Player, cleric.Id);
-        var flare = Assert.Single(clericPlan.Choices, c => c.Key == "recurso-destello-protector");
-        var level3Cleric = await ApplyAsync(s.Player, cleric.Id, new
-        {
-            hitPointsRolled = 5,
-            choices = new object[] { new { key = "recurso-destello-protector", selected = new[] { flare.Options.Single().Index } } },
-        });
+        Assert.DoesNotContain(clericPlan.Choices, c => c.Key == "recurso-destello-protector");
+        var level3Cleric = await ApplyAsync(s.Player, cleric.Id, new { hitPointsRolled = 5, choices = Array.Empty<object>() });
+        var flare = Assert.Single(level3Cleric.Resources, r => r.Key == $"{PackId}-warding-flare");
+        Assert.Equal((3, "LongRest", true), (flare.Max, flare.Recharge, flare.IsAuto));
         Assert.Contains(level3Cleric.Spells, sp => sp is { SpellIndex: "burning-hands", AlwaysPrepared: true });
         Assert.Contains(level3Cleric.Spells, sp => sp is { SpellIndex: "flaming-sphere", AlwaysPrepared: true });
         Assert.DoesNotContain(level3Cleric.Spells, sp => sp.SpellIndex == "daylight");

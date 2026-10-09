@@ -36,7 +36,9 @@ class BardPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final level = panel.level;
-    final die = bardicInspirationDie(level);
+    // The server sends the die with the resource; older servers do not.
+    final die =
+        findResource(panel.character, 'bardic-inspiration')?.dice ?? bardicInspirationDie(level);
     final song = songOfRestDie(level);
     return ClassPanelFrame(
       panel: panel,

@@ -1315,6 +1315,64 @@ void main() {
       expect(repo.resourceRestores, [(id: 'r1', amount: 1)]);
     });
 
+    testWidgets('un recurso con dado ofrece "Tirar", que gasta un uso y tira', (tester) async {
+      final repo = _repo(
+        combat: makeCombatJson(
+          resources: [
+            {
+              'id': 'r1',
+              'key': 'tacticos-ejemplo-dados',
+              'name': 'Dados de táctica',
+              'max': 4,
+              'used': 1,
+              'recharge': 'ShortRest',
+              'isAuto': true,
+              'dice': 'd8',
+              'source': 'Ventaja táctica (nivel 3)',
+              'breakdown': {
+                'total': 4,
+                'parts': [
+                  {
+                    'source': 'feature',
+                    'label': 'Ventaja táctica (nivel 3), tabla desde el nivel 3',
+                    'value': 4,
+                  },
+                ],
+              },
+            },
+            {
+              'id': 'r2',
+              'name': 'Agotado',
+              'max': 2,
+              'used': 2,
+              'recharge': 'LongRest',
+              'dice': 'd6',
+            },
+            {'id': 'r3', 'name': 'Sin dado', 'max': 2, 'used': 0, 'recharge': 'LongRest'},
+          ],
+        ),
+      );
+      await _pump(tester, characters: repo, face: 5);
+
+      expect(find.text('Tirar 1d8'), findsOneWidget);
+      expect(find.byKey(const Key('resource-r3-roll')), findsNothing);
+      final exhausted = tester.widget<ButtonStyleButton>(find.byKey(const Key('resource-r2-roll')));
+      expect(exhausted.onPressed, isNull);
+      expect(find.text(' · Ventaja táctica (nivel 3)'), findsOneWidget);
+
+      await _tap(tester, 'resource-r1-roll');
+      expect(repo.resourceSpends, [(id: 'r1', amount: 1)]);
+      expect(find.byKey(const Key('dice-result')), findsOneWidget);
+      expect(find.text('Dados de táctica'), findsWidgets);
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '5');
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      // El máximo se explica con un toque.
+      await _tap(tester, 'stat-resource-r1-max');
+      expect(find.text('Ventaja táctica (nivel 3), tabla desde el nivel 3'), findsOneWidget);
+    });
+
     testWidgets('"Usar" gasta el consumible del inventario', (tester) async {
       final inventory = FakeInventoryRepository(
         items: {

@@ -22,5 +22,6 @@ internal sealed class FeatureDefinitionConfiguration : IEntityTypeConfiguration<
         builder.HasOne<SubclassDefinition>().WithMany().HasForeignKey(x => x.SubclassIndex).OnDelete(DeleteBehavior.Cascade);
 
         builder.Property(x => x.Description).HasJsonListConversion();
+        builder.Ignore(x => x.Resource);
     }
 }

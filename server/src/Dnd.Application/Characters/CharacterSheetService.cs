@@ -142,7 +142,7 @@ public sealed class CharacterSheetService(
             clock.UtcNow);
 
         var sheet = await CalculateAsync(character, sheetCatalog, cancellationToken);
-        character.SyncAutoResources([.. ClassResourceRules.ForClasses(character.Classes, sheet.AbilityModifiers), .. sheet.ChoiceResources]);
+        character.SyncAutoResources(AutoResourceTemplates(character, sheet));
         character.RefreshHitPoints(sheet.HitPointsMax);
         return sheet;
     }
@@ -228,10 +228,13 @@ public sealed class CharacterSheetService(
             cancellationToken);
         var pendingRest = (await restRequests.ListPendingAsync([character.Id], cancellationToken)).FirstOrDefault();
         var templates = await InventoryView.LoadTemplatesAsync(itemTemplates, character.Items.Select(i => i.TemplateId), cancellationToken);
+        var autoTemplates = AutoResourceTemplates(character, sheet)
+            .GroupBy(t => t.Key, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.MaxBy(t => t.Max)!, StringComparer.Ordinal);
         var resources = character.Resources
             .OrderBy(r => r.IsAuto ? 0 : 1)
             .ThenBy(r => r.Name, StringComparer.Ordinal)
-            .Select(ToDto)
+            .Select(r => CharacterResourceDto.From(r, r.IsAuto && r.Key is { } key ? autoTemplates.GetValueOrDefault(key) : null))
             .ToList();
         var classes = character.OrderedClasses
             .Select(c => new CharacterClassDto(
@@ -425,7 +428,9 @@ public sealed class CharacterSheetService(
             .Where(s => s.Max > 0 || s.Used > 0)
             .ToList();
 
-    private static CharacterResourceDto ToDto(CharacterResource r) => CharacterResourceDto.From(r);
+    /// <summary>Templates of the automatic resources: SRD class resources and those of chosen options and subclass features.</summary>
+    private static List<ResourceTemplate> AutoResourceTemplates(Character character, CharacterSheet sheet) =>
+        [.. ClassResourceRules.ForClasses(character.Classes, sheet.AbilityModifiers), .. sheet.ChoiceResources];
 
     private static CharacterSheetDto ToDto(CharacterSheet sheet) => new(
         sheet.Abilities.ToDictionary(a => a.Key, a => new AbilityDto(a.Value.Score, a.Value.Modifier, a.Value.Overridden)),

@@ -192,8 +192,9 @@ Notación: `string?` admite `null` o ausencia; **obligatorio** indica que no pue
 **`SubclassLevel`**: `level` (`int`, **obligatorio**, 1–20, sin repetir dentro de la subclase) y
 `features` (`Feature[]?`).
 
-**`Feature`**: `index` (**obligatorio**, con prefijo), `name` (**obligatorio**, ≤ 200) y
-`description` (`string[]?`).
+**`Feature`**: `index` (**obligatorio**, con prefijo), `name` (**obligatorio**, ≤ 200),
+`description` (`string[]?`) y, con `"formatVersion": 2`, `resource` (`Resource?`, ver
+[`levels[].features[].resource`](#levelsfeaturesresource)).
 
 ### `Item`
 
@@ -799,14 +800,56 @@ conjuros y trucos deben existir en el SRD o en el paquete. En razas y subrazas (
 `minLevel` es el nivel total ([ver Race](#grants-de-raza-y-subraza)); fuera de ellas esos dos campos
 dan error.
 
-**`Resource`**: `key` (índice, sin prefijo obligatorio), `name` (**obligatorio**, ≤ 100), `max` (entero
-1–999 o fórmula: `proficiencyBonus`, `classLevel`, `halfClassLevel`, `mod:cha`... mínimo 1),
-`recharge` (`ShortRest`, `LongRest` por defecto, `Dawn` o `Manual`) y `rollOnRest` opcional:
-`{ "dice": "d20", "count": 2, "rest": "long" }` para rasgos cuyos valores se tiran al descansar (al
-estilo de un presagio). Tras ese descanso (`long`: solo el largo; `short`: corto y largo) el recurso
-queda pendiente (`rollsPending`) hasta que el jugador escribe sus tiradas físicas con
+**`Resource`**: recurso de usos limitados que la app crea como recurso automático del personaje.
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `key` | `string` | **Obligatorio**. Índice, sin prefijo obligatorio. Si coincide con otro recurso automático del personaje, se queda el de máximo mayor. |
+| `name` | `string` | **Obligatorio**, ≤ 100. |
+| `max` | `int`, `string` u objeto | Máximo de usos (ver abajo). |
+| `recharge` | `string?` | `ShortRest`, `LongRest` (por defecto), `Dawn` o `Manual`. |
+| `dice` | `string?` | Dado que se tira con cada uso: `d4`, `d6`, `d8`, `d10`, `d12`, `d20` o `d100`. |
+| `diceByLevel` | `object?` | Dado por nivel de la clase: `{ "3": "d8", "10": "d10", "18": "d12" }`. Vale la entrada más alta no superior al nivel; por debajo de la primera, `dice` (o ninguno). |
+| `rollOnRest` | `object?` | Dados que se tiran al descansar (ver abajo). |
+
+**`max`** admite cuatro formas:
+
+| Forma | Ejemplo | Valor |
+| --- | --- | --- |
+| Entero | `2` | 1–999. |
+| Fórmula | `"proficiencyBonus"`, `"2*classLevel+mod:int"` | Suma de los términos; mínimo 1. |
+| Fórmula con mínimo | `{ "formula": "mod:wis", "min": 0 }` | Suma de los términos; mínimo `min` (0–999). |
+| Tabla por nivel | `{ "byLevel": { "3": 4, "7": 5, "15": 6 } }` | La entrada más alta no superior al nivel de la clase (0–999). Por debajo de la primera entrada, el personaje aún no tiene el recurso. |
+
+Gramática de las fórmulas: términos separados por `+` (hasta 10, con espacios opcionales); cada término
+es un entero (0–999) o `[n*]símbolo`, con `n` entero 1–99 y `símbolo` uno de:
+
+| Símbolo | Valor |
+| --- | --- |
+| `proficiencyBonus` | Bonificador de competencia del personaje. |
+| `classLevel` | Nivel en la clase de la elección o del rasgo (las elecciones de origen usan el nivel total). |
+| `halfClassLevel` | Mitad de ese nivel, redondeando hacia abajo. |
+| `mod:str` … `mod:cha` | Modificador de la característica. |
+
+No hay resta ni paréntesis: `"classLevel-1"` o `"classLevel*2"` son errores (se escribe `"2*classLevel"`).
+Una fórmula solo con constantes debe sumar 1–999 (0–999 con `min: 0`). El máximo nunca pasa de 999.
+
+La hoja explica el máximo término a término: `"2*classLevel+mod:int"` a nivel 6 con Inteligencia 16
+se muestra como "2 × Nivel de clase 12" + "Inteligencia 3"; las constantes y la entrada de la tabla
+llevan el nombre del rasgo u opción y su nivel ("Ventaja táctica (nivel 3), tabla desde el nivel 7");
+si se aplica el mínimo, aparece la línea "Mínimo 1". El recurso del personaje incluye `source` (rasgo u
+opción y nivel), `dice` (el dado al nivel actual) y `breakdown` (el desglose); la pestaña Combate
+ofrece **Tirar** con ese dado, que gasta un uso y tira. La inspiración bárdica del SRD usa el mismo
+mecanismo (d6, d8 al 5, d10 al 10, d12 al 15).
+
+**`rollOnRest`**: `{ "dice": "d20", "count": 2, "rest": "long" }` para rasgos cuyos valores se tiran al
+descansar (al estilo de un presagio). Tras ese descanso (`long`: solo el largo; `short`: corto y largo) el
+recurso queda pendiente (`rollsPending`) hasta que el jugador escribe sus tiradas físicas con
 `POST /api/v1/characters/{id}/resources/{resourceId}/rolls` (`{ "values": [14, 3] }`); los valores se
 guardan en el recurso (`rolls`). `dice`: `d4`, `d6`, `d8`, `d10`, `d12`, `d20` o `d100`; `count` 1–20.
+
+Los errores llevan la ruta exacta: `...resource.max`, `...resource.max.formula`, `...resource.max.min`,
+`...resource.max.byLevel.3`, `...resource.dice`, `...resource.diceByLevel.10`.
 
 ### `levelChoices`
 
@@ -834,3 +877,36 @@ elecciones `Custom` se validan solo por número.
 
 Cada nivel de una subclase puede llevar `grants` (mismo formato): se aplican al alcanzar ese nivel de
 la clase con la subclase elegida (dominios con conjuros siempre preparados, competencias extra...).
+
+### `levels[].features[].resource`
+
+Cada rasgo de un nivel de subclase puede llevar un `resource` (el mismo `Resource` de las opciones):
+el personaje lo recibe como recurso automático al alcanzar ese nivel de la clase con esa subclase, sin
+elección en el asistente, y lo pierde si cambia de subclase o baja de nivel. `classLevel` es el nivel
+en la clase de la subclase. El origen del recurso es el rasgo con su nivel ("Ventaja táctica (nivel 3)").
+
+```json
+{
+  "level": 3,
+  "features": [
+    {
+      "index": "tacticos-ejemplo-ventaja",
+      "name": "Ventaja táctica",
+      "description": ["Texto de ejemplo: gastas un dado de táctica para sumar al ataque."],
+      "resource": {
+        "key": "tacticos-ejemplo-dados",
+        "name": "Dados de táctica",
+        "max": { "byLevel": { "3": 4, "7": 5, "15": 6 } },
+        "recharge": "ShortRest",
+        "dice": "d8",
+        "diceByLevel": { "10": "d10", "18": "d12" }
+      }
+    },
+    {
+      "index": "tacticos-ejemplo-escudo",
+      "name": "Escudo de ejemplo",
+      "resource": { "key": "tacticos-ejemplo-escudo", "name": "Escudo", "max": "2*classLevel+mod:int" }
+    }
+  ]
+}
+```

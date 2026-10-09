@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/components.dart';
+import '../../../../core/ui/stat_value.dart';
+import '../../../dice/ui/dice_sheet.dart';
 import '../../../items/data/inventory_repository.dart';
 import '../../../items/data/items_controllers.dart';
 import '../../data/characters_controller.dart';
@@ -229,6 +231,20 @@ class ResourceTile extends ConsumerWidget {
     );
   }
 
+  /// Spends one use and rolls the resource's die ([CharacterResource.dice]).
+  Future<void> _spendAndRoll(BuildContext context, WidgetRef ref, String dice) async {
+    if (resource.used >= resource.max) {
+      showCombatMessage(context, 'No quedan usos de ${resource.name}.');
+      return;
+    }
+    final spent = await runCombat(
+      context,
+      () => _controller(ref, character).spendResource(resource.id, amount: 1),
+    );
+    if (!spent || !context.mounted) return;
+    await rollAndShow(context, '1$dice', label: resource.name);
+  }
+
   Future<void> _editPool(BuildContext context, WidgetRef ref) async {
     final remaining = resource.max - resource.used;
     final value = await promptNumber(
@@ -300,25 +316,65 @@ class ResourceTile extends ConsumerWidget {
             onTap: canEdit ? () => _spend(context, ref) : null,
             onLongPress: _canRestore ? () => _restore(context, ref) : null,
           );
+    final dice = r.dice;
+    final details = <Widget>[
+      if (dice != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: FilledButton.tonalIcon(
+            key: Key('resource-${r.id}-roll'),
+            onPressed: canEdit && remaining > 0 ? () => _spendAndRoll(context, ref, dice) : null,
+            icon: const Icon(Icons.casino_outlined),
+            label: Text('Tirar 1$dice'),
+          ),
+        ),
+      if (r.source != null || r.breakdown != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Row(
+            children: [
+              StatValue(
+                statKey: 'resource-${r.id}-max',
+                text: 'Máximo ${r.max}',
+                title: r.name,
+                breakdown: r.breakdown,
+                totalText: '${r.max}',
+                style: theme.textTheme.bodySmall,
+              ),
+              if (r.source != null)
+                Expanded(
+                  child: Text(
+                    ' · ${r.source}',
+                    key: Key('resource-${r.id}-source'),
+                    style: theme.textTheme.bodySmall,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+          ),
+        ),
+    ];
     return CombatCard(
       title: r.name,
       trailing: Text(r.recharge.label, style: theme.textTheme.bodySmall),
-      child: r.rolls.isEmpty && !r.rollsPending
+      child: r.rolls.isEmpty && !r.rollsPending && details.isEmpty
           ? body
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 body,
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    r.rollsPending
-                        ? 'Tiradas pendientes de anotar'
-                        : 'Tiradas: ${r.rolls.join(' · ')}',
-                    key: Key('resource-${r.id}-rolls'),
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                ...details,
+                if (r.rolls.isNotEmpty || r.rollsPending)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      r.rollsPending
+                          ? 'Tiradas pendientes de anotar'
+                          : 'Tiradas: ${r.rolls.join(' · ')}',
+                      key: Key('resource-${r.id}-rolls'),
+                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    ),
                   ),
-                ),
               ],
             ),
     );

@@ -239,11 +239,16 @@ public static class SheetCalculator
 
         var (spellSlots, casterLevel) = CalculateSpellSlots(classes);
         var choiceResources = choices.Resources
-            .Select(r => (r.Resource, ClassLevel: r.ClassIndex is null ? totalLevel : classes.FirstOrDefault(c => c.Level.ClassIndex == r.ClassIndex)?.Level.Level ?? 0))
+            .Select(r => (r.Resource, r.Label, ClassLevel: r.ClassIndex is null ? totalLevel : classes.FirstOrDefault(c => c.Level.ClassIndex == r.ClassIndex)?.Level.Level ?? 0))
             .Where(r => r.ClassLevel > 0)
-            .Select(r => new ResourceTemplate(r.Resource.Key, r.Resource.Name, r.Resource.Evaluate(proficiencyBonus, r.ClassLevel, Mod), r.Resource.Recharge)
+            .Select(r => (r.Resource, r.Label, r.ClassLevel, Breakdown: r.Resource.Calculate(proficiencyBonus, r.ClassLevel, Mod, r.Label)))
+            .Where(r => r.Breakdown is not null)
+            .Select(r => new ResourceTemplate(r.Resource.Key, r.Resource.Name, r.Breakdown!.Total, r.Resource.Recharge)
             {
                 RollOnRest = r.Resource.RollOnRest,
+                Dice = r.Resource.DiceAt(r.ClassLevel),
+                Source = r.Label,
+                Breakdown = r.Breakdown,
             })
             .ToList();
         choiceResources.AddRange(RacialSpellResources(input.Race, input.Subrace, level));

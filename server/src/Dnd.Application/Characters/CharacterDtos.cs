@@ -39,6 +39,8 @@ public sealed record CharacterOverrideDto(string Field, int Value, string? Note)
 /// <summary>
 /// A limited-use resource. <see cref="RollOnRest"/>: dice rolled after a rest whose results are kept in
 /// <see cref="Rolls"/>; while <see cref="RollsPending"/> the player must write them (<c>POST …/resources/{id}/rolls</c>).
+/// <see cref="Dice"/>: die rolled with each use ("d8"), <see cref="Source"/>: the feature or option that grants it
+/// ("Ventaja táctica (nivel 3)") and <see cref="Breakdown"/>: how its maximum was obtained (pack resources).
 /// </summary>
 public sealed record CharacterResourceDto(Guid Id, string? Key, string Name, int Max, int Used, string Recharge, bool IsAuto)
 {
@@ -48,11 +50,21 @@ public sealed record CharacterResourceDto(Guid Id, string? Key, string Name, int
 
     public bool RollsPending { get; init; }
 
-    public static CharacterResourceDto From(CharacterResource r) => new(r.Id, r.Key, r.Name, r.Max, r.Used, r.Recharge.ToString(), r.IsAuto)
+    public string? Dice { get; init; }
+
+    public string? Source { get; init; }
+
+    public ValueBreakdownDto? Breakdown { get; init; }
+
+    /// <param name="template">Current template of an automatic resource (its die, origin and breakdown), if any.</param>
+    public static CharacterResourceDto From(CharacterResource r, ResourceTemplate? template = null) => new(r.Id, r.Key, r.Name, r.Max, r.Used, r.Recharge.ToString(), r.IsAuto)
     {
         RollOnRest = r.RollOnRest is { } roll ? new RollOnRestDto(roll.Dice, roll.Count, roll.Rest == RestKind.Short ? "short" : "long") : null,
         Rolls = r.Rolls,
         RollsPending = r.RollsPending,
+        Dice = template?.Dice,
+        Source = template?.Source,
+        Breakdown = template?.Breakdown is { } breakdown && breakdown.Total == r.Max ? ValueBreakdownDto.From(breakdown) : null,
     };
 }
 
