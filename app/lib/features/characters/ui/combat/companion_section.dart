@@ -427,24 +427,20 @@ class _CompanionCardState extends ConsumerState<CompanionCard> {
           ),
           const SizedBox(height: 10),
           Wrap(
-            spacing: 16,
+            spacing: 12,
             runSpacing: 4,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               _Fact(
                 label: 'CA',
-                child: StatValue(
+                value: StatValue(
                   statKey: 'companion.armorClass',
                   text: '${p.armorClass}',
                   title: 'CA de ${p.name}',
                   breakdown: p.breakdowns['armorClass'],
-                  style: theme.textTheme.titleMedium,
                 ),
               ),
-              _Fact(
-                label: 'Percepción pasiva',
-                child: Text('${p.passivePerception}', style: theme.textTheme.titleMedium),
-              ),
+              _Fact(label: 'Percepción pasiva', text: '${p.passivePerception}'),
             ],
           ),
           if (p.savingThrows.isNotEmpty) ...[
@@ -452,11 +448,12 @@ class _CompanionCardState extends ConsumerState<CompanionCard> {
             Text('Salvaciones', style: theme.textTheme.labelLarge),
             Wrap(
               spacing: 12,
+              runSpacing: 4,
               children: [
                 for (final e in p.savingThrows.entries)
                   _Fact(
                     label: abilityLabel(e.key),
-                    child: StatValue(
+                    value: StatValue(
                       statKey: 'companion.save.${e.key}',
                       text: formatModifier(e.value),
                       title: 'Salvación de ${abilityLabel(e.key)}',
@@ -471,11 +468,12 @@ class _CompanionCardState extends ConsumerState<CompanionCard> {
             Text('Habilidades', style: theme.textTheme.labelLarge),
             Wrap(
               spacing: 12,
+              runSpacing: 4,
               children: [
                 for (final e in p.skills.entries)
                   _Fact(
                     label: skillLabel(e.key),
-                    child: StatValue(
+                    value: StatValue(
                       statKey: 'companion.skill.${e.key}',
                       text: formatModifier(e.value),
                       title: skillLabel(e.key),
@@ -496,19 +494,28 @@ class _CompanionCardState extends ConsumerState<CompanionCard> {
   }
 }
 
+/// A labelled value of the companion card: the label in `bodySmall`, then the
+/// value (plain [text] or a [value] such as a `StatValue`) always in the same
+/// numeric `titleMedium`.
 class _Fact extends StatelessWidget {
-  const _Fact({required this.label, required this.child});
+  const _Fact({required this.label, this.text, this.value})
+    : assert((text == null) != (value == null));
 
   final String label;
-  final Widget child;
+  final String? text;
+  final Widget? value;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('$label ', style: Theme.of(context).textTheme.bodySmall),
-        child,
+        Text('$label ', style: theme.textTheme.bodySmall),
+        DefaultTextStyle.merge(
+          style: numericStyle(theme.textTheme.titleMedium),
+          child: value ?? Text(text!),
+        ),
       ],
     );
   }
