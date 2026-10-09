@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:dnd_companion/core/theme/app_theme.dart';
+import 'package:dnd_companion/core/ui/action_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -113,6 +114,34 @@ void main() {
                 reason: '$role sobre obsidian',
               );
             }
+          }
+        });
+      }
+    }
+  });
+
+  group('tipos de acción legibles sobre stone (fase 27)', () {
+    for (final palette in AppPalette.values) {
+      for (final brightness in _variants) {
+        test(_name(palette, brightness), () {
+          final t = palette.tokens(brightness);
+          for (final kind in ActionKind.values) {
+            final text = kind.textColor(t);
+            expect(
+              contrastRatio(text, t.stone),
+              greaterThanOrEqualTo(4.5),
+              reason: '${kind.name} sobre stone',
+            );
+            // On the chip's own tint over the card.
+            final chip = Color.alphaBlend(
+              kind.color(t).withValues(alpha: ActionTypeChip.backgroundAlpha),
+              t.stone,
+            );
+            expect(
+              contrastRatio(text, chip),
+              greaterThanOrEqualTo(4.5),
+              reason: '${kind.name} sobre su chip',
+            );
           }
         });
       }

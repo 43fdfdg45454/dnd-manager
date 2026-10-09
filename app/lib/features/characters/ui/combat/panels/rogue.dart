@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/icons.dart';
+import '../../../../../core/ui/action_type.dart';
 
 import '../combat_support.dart';
 import 'critical_damage_roll.dart';
@@ -58,6 +59,8 @@ class RoguePanel extends ConsumerWidget {
                   key: Key('rogue-cunning-action'),
                   icon: AppIcons.hood,
                   title: 'Acción astuta',
+                  // SRD: "you can take a bonus action on each of your turns in combat".
+                  actionKind: ActionKind.bonusAction,
                   text: 'Correr, Destrabarse u Ocultarse como acción adicional.',
                 ),
                 if (level >= 5)
@@ -65,6 +68,8 @@ class RoguePanel extends ConsumerWidget {
                     key: Key('rogue-uncanny-dodge'),
                     icon: AppIcons.shield,
                     title: 'Esquiva asombrosa',
+                    // SRD: "you can use your reaction to halve the attack's damage".
+                    actionKind: ActionKind.reaction,
                     text: 'Con tu reacción, reduces a la mitad el daño de un ataque que veas.',
                   ),
                 if (level >= 7)

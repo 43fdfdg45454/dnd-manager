@@ -924,7 +924,12 @@ void main() {
         findsOneWidget,
       );
       expect(find.byKey(const Key('equipment-choices-origin-characterClass')), findsOneWidget);
-      expect(find.descendant(of: dagger, matching: find.byType(IconButton)), findsNothing);
+      // Default lines cannot be removed (only the detail button sits there).
+      expect(
+        find.descendant(of: dagger, matching: find.byIcon(Icons.delete_outline)),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('equipment-remove-dagger')), findsNothing);
       expect(find.text('Holy Symbol'), findsOneWidget);
       expect(find.text('Elecciones 0 de 2'), findsOneWidget);
 
@@ -1153,15 +1158,12 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.byType(SpellDetailPage), findsNothing);
-      expect(
-        tester.widget<CheckboxListTile>(find.byKey(const Key('picker-spell-light'))).value,
-        isTrue,
+      Checkbox box(String key) => tester.widget<Checkbox>(
+        find.descendant(of: find.byKey(Key(key)), matching: find.byType(Checkbox)),
       );
+      expect(box('picker-spell-light').value, isTrue);
       // The info button does not select the spell.
-      expect(
-        tester.widget<CheckboxListTile>(find.byKey(const Key('picker-spell-fire-bolt'))).value,
-        isFalse,
-      );
+      expect(box('picker-spell-fire-bolt').value, isFalse);
 
       await _tap(tester, find.byKey(const Key('picker-spell-fire-bolt')));
       await _tap(tester, find.byKey(const Key('spell-picker-done')));

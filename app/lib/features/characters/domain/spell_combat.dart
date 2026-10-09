@@ -60,6 +60,26 @@ List<int> castLevels(int spellLevel, List<SpellSlot> slots, SpellSlot? pact) {
   return levels.isEmpty ? [spellLevel] : levels;
 }
 
+/// The entry of the spell's damage table used at [castLevel] or
+/// [characterLevel]: its dice (as written) and whether the table goes by
+/// character level (cantrips). Null without damage.
+({String dice, bool byCharacterLevel})? spellDamageSource(
+  SpellDetail spell, {
+  required int castLevel,
+  required int characterLevel,
+}) {
+  if (spell.level == 0 && spell.damageAtCharacterLevel.isNotEmpty) {
+    return (
+      dice: scaledValue(spell.damageAtCharacterLevel, characterLevel)!,
+      byCharacterLevel: true,
+    );
+  }
+  final bySlot = scaledValue(spell.damageAtSlotLevel, castLevel);
+  if (bySlot != null) return (dice: bySlot, byCharacterLevel: false);
+  final byCharacter = scaledValue(spell.damageAtCharacterLevel, characterLevel);
+  return byCharacter == null ? null : (dice: byCharacter, byCharacterLevel: true);
+}
+
 /// Damage dice of [spell] cast at [castLevel] (cantrips scale with
 /// [characterLevel]); doubled dice on a critical. Null without damage.
 String? spellDamageExpression(
@@ -68,10 +88,7 @@ String? spellDamageExpression(
   required int characterLevel,
   bool critical = false,
 }) {
-  final dice = spell.level == 0 && spell.damageAtCharacterLevel.isNotEmpty
-      ? scaledValue(spell.damageAtCharacterLevel, characterLevel)
-      : scaledValue(spell.damageAtSlotLevel, castLevel) ??
-            scaledValue(spell.damageAtCharacterLevel, characterLevel);
+  final dice = spellDamageSource(spell, castLevel: castLevel, characterLevel: characterLevel)?.dice;
   if (dice == null) return null;
   final text = dice.replaceAll(RegExp(r'\s+'), '');
   if (!critical) return text;

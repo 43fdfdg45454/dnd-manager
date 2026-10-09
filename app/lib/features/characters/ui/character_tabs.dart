@@ -7,6 +7,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/components.dart';
 import '../../../core/theme/textures.dart';
 import '../../../core/theme/typography.dart';
+import '../../../core/ui/action_type.dart';
 import '../../../core/ui/stat_value.dart';
 import '../../../core/ui/spell_category.dart';
 import '../../catalog/data/catalog_controllers.dart';
@@ -868,7 +869,10 @@ class SpellsTab extends ConsumerWidget {
                   contentPadding: EdgeInsets.zero,
                   leading: SpellCategoryIcon(s.category ?? info?[s.spellIndex]?.category),
                   title: Text(nameOf(s)),
-                  subtitle: Text(_racialSpellDetail(c, s, levelOf(s))),
+                  subtitle: CastingTimeSubtitle(
+                    castingTime: info?[s.spellIndex]?.castingTime,
+                    text: _racialSpellDetail(c, s, levelOf(s)),
+                  ),
                   onTap: () => openSpellDetail(context, s.spellIndex),
                   trailing: const Chip(
                     label: Text('Siempre preparado'),
@@ -886,7 +890,10 @@ class SpellsTab extends ConsumerWidget {
               contentPadding: EdgeInsets.zero,
               leading: SpellCategoryIcon(s.category ?? info?[s.spellIndex]?.category),
               title: Text(nameOf(s)),
-              subtitle: Text(titleFromSpellIndex(s.classIndex)),
+              subtitle: CastingTimeSubtitle(
+                castingTime: info?[s.spellIndex]?.castingTime,
+                text: titleFromSpellIndex(s.classIndex),
+              ),
               onTap: () => openSpellDetail(context, s.spellIndex),
               trailing: s.alwaysPrepared
                   ? const Chip(

@@ -21,6 +21,27 @@ class OverrideBadge extends StatelessWidget {
   }
 }
 
+/// Opens the [EffectiveItemPage] of an inventory entry with its quantity,
+/// charges and notes.
+Future<void> openInventoryItemDetail(BuildContext context, CharacterItem item) =>
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => EffectiveItemPage(
+          effective: item.effective,
+          overrides: item.overrides,
+          isCustom: item.isCustom,
+          extraFacts: [
+            ('Cantidad', '${item.quantity}'),
+            (
+              'Cargas',
+              item.charges == null ? null : '${item.charges}/${item.chargesMax ?? item.charges}',
+            ),
+            ('Notas', item.notes),
+          ],
+        ),
+      ),
+    );
+
 /// Detail of an item as the character sees it (template plus overrides), with
 /// the overridden fields marked. Reuses the catalog detail widgets.
 class EffectiveItemPage extends StatelessWidget {

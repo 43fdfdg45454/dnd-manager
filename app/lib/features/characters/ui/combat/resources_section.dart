@@ -6,6 +6,9 @@ import '../../../../core/ui/stat_value.dart';
 import '../../../dice/ui/dice_sheet.dart';
 import '../../../items/data/inventory_repository.dart';
 import '../../../items/data/items_controllers.dart';
+import '../../../items/data/models.dart' show CharacterItem;
+import '../../../items/ui/effective_item_page.dart' show openInventoryItemDetail;
+import '../../../catalog/ui/catalog_detail_links.dart' show DetailInfoButton;
 import '../../data/characters_controller.dart';
 import '../../data/models.dart';
 import 'combat_support.dart';
@@ -416,6 +419,30 @@ class ResourceTile extends ConsumerWidget {
 // Quick consumables
 // ---------------------------------------------------------------------------
 
+/// Opens the detail of the inventory entry [itemId] of [characterId] (the id
+/// that attacks and quick consumables carry), as the inventory shows it.
+Future<void> openCombatItemDetail(
+  BuildContext context,
+  WidgetRef ref,
+  String characterId,
+  String itemId,
+) async {
+  final CharacterItem? item;
+  try {
+    final inventory = await ref.read(inventoryRepositoryProvider).get(characterId);
+    item = inventory.items.where((i) => i.id == itemId).firstOrNull;
+  } catch (error) {
+    if (context.mounted) showCombatMessage(context, describeCombatError(error));
+    return;
+  }
+  if (!context.mounted) return;
+  if (item == null) {
+    showCombatMessage(context, 'El objeto ya no está en el inventario.');
+    return;
+  }
+  await openInventoryItemDetail(context, item);
+}
+
 class ConsumablesSection extends ConsumerWidget {
   const ConsumablesSection({super.key, required this.character, required this.canEdit});
 
@@ -455,10 +482,21 @@ class ConsumablesSection extends ConsumerWidget {
                         ? 'Cantidad: ${item.quantity}'
                         : 'Cantidad: ${item.quantity} · Cargas: ${item.charges}',
                   ),
-                  trailing: FilledButton.tonal(
-                    key: Key('consumable-use-${item.itemId}'),
-                    onPressed: canEdit ? () => _use(context, ref, item) : null,
-                    child: const Text('Usar'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      DetailInfoButton(
+                        key: Key('detail-item-${item.itemId}'),
+                        onPressed: () =>
+                            openCombatItemDetail(context, ref, character.id, item.itemId),
+                      ),
+                      const SizedBox(width: 4),
+                      FilledButton.tonal(
+                        key: Key('consumable-use-${item.itemId}'),
+                        onPressed: canEdit ? () => _use(context, ref, item) : null,
+                        child: const Text('Usar'),
+                      ),
+                    ],
                   ),
                 ),
             ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/icons.dart';
+import '../../../../../core/ui/action_type.dart';
 
 import '../../../../dice/data/dice_controller.dart';
 import '../../../../dice/domain/dice_expression.dart';
@@ -78,6 +79,8 @@ class FighterPanel extends ConsumerWidget {
           panel: panel,
           resourceKey: 'second-wind',
           title: 'Segundo aliento',
+          // SRD: "On your turn, you can use a bonus action to regain hit points".
+          actionKind: ActionKind.bonusAction,
           actionKey: 'fighter-second-wind',
           buttonLabel: 'Recuperar 1d10 + $level PG',
           icon: AppIcons.heart,

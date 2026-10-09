@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_error.dart';
 import '../../../core/theme/components.dart';
+import '../../../core/ui/action_type.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../../core/ui/spell_category.dart';
 import '../../catalog/domain/catalog_format.dart';
@@ -347,35 +348,64 @@ class _ClassSectionState extends State<_ClassSection> {
             child: Text('Ningún conjuro coincide.'),
           ),
         for (final s in shown)
-          CheckboxListTile(
+          _PrepareSpellRow(
             key: Key('prepare-spell-${s.index}'),
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            controlAffinity: ListTileControlAffinity.trailing,
-            value: widget.selected.contains(s.index),
-            onChanged: !widget.selected.contains(s.index) && full
+            spell: s,
+            selected: widget.selected.contains(s.index),
+            // Unchecked spells are disabled once the maximum is reached.
+            onToggle: !widget.selected.contains(s.index) && full
                 ? null
-                : (on) => widget.onToggle(s.index, on ?? false),
-            secondary: SpellCategoryIcon(s.category),
-            title: Row(
-              children: [
-                Expanded(child: Text(s.name)),
-                DetailInfoButton(
-                  key: Key('detail-spell-${s.index}'),
-                  onPressed: () => openSpellDetail(context, s.index),
-                ),
-              ],
-            ),
-            subtitle: Text(
-              [
-                spellLevelLabel(s.level),
-                ?s.school,
-                if (s.concentration) 'Concentración',
-                if (s.ritual) 'Ritual',
-              ].join(' · '),
-            ),
+                : (on) => widget.onToggle(s.index, on),
           ),
       ],
+    );
+  }
+}
+
+/// One spell of the preparation list: the row toggles it; the info button
+/// opens its detail without toggling.
+class _PrepareSpellRow extends StatelessWidget {
+  const _PrepareSpellRow({
+    super.key,
+    required this.spell,
+    required this.selected,
+    required this.onToggle,
+  });
+
+  final PreparationSpell spell;
+  final bool selected;
+  final void Function(bool on)? onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = spell;
+    final toggle = onToggle;
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      enabled: toggle != null,
+      onTap: toggle == null ? null : () => toggle(!selected),
+      leading: SpellCategoryIcon(s.category),
+      title: Text(s.name),
+      subtitle: CastingTimeSubtitle(
+        castingTime: s.castingTime,
+        text: [
+          spellLevelLabel(s.level),
+          ?s.school,
+          if (s.concentration) 'Concentración',
+          if (s.ritual) 'Ritual',
+        ].join(' · '),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DetailInfoButton(
+            key: Key('detail-spell-${s.index}'),
+            onPressed: () => openSpellDetail(context, s.index),
+          ),
+          Checkbox(value: selected, onChanged: toggle == null ? null : (on) => toggle(on ?? false)),
+        ],
+      ),
     );
   }
 }

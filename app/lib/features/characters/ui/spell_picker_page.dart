@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_error.dart';
+import '../../../core/ui/action_type.dart';
 import '../../../core/ui/infinite_scroll_list.dart';
 import '../../../core/ui/spell_category.dart';
 import '../../catalog/data/catalog_repository.dart';
@@ -284,26 +285,35 @@ class _SpellPickerPageState extends ConsumerState<SpellPickerPage> {
       onLoadMore: _loadMore,
       itemBuilder: (context, i) {
         final spell = _items[i];
-        return CheckboxListTile(
+        // Spells chosen before opening the picker stay checked and disabled.
+        final locked = widget.chosen.contains(spell.index);
+        final toggle = locked ? null : () => _toggle(spell);
+        return ListTile(
           key: Key('picker-spell-${spell.index}'),
-          value: widget.chosen.contains(spell.index) || _isPicked(spell.index),
-          onChanged: widget.chosen.contains(spell.index) ? null : (_) => _toggle(spell),
-          secondary: SpellCategoryIcon(spell.category),
-          title: Row(
-            children: [
-              Expanded(child: Text(spell.name)),
-              DetailInfoButton(
-                key: Key('detail-spell-${spell.index}'),
-                onPressed: () => openSpellDetail(context, spell.index),
-              ),
-            ],
-          ),
-          subtitle: Text(
-            [
+          enabled: !locked,
+          onTap: toggle,
+          leading: SpellCategoryIcon(spell.category),
+          title: Text(spell.name),
+          subtitle: CastingTimeSubtitle(
+            castingTime: spell.castingTime,
+            text: [
               spellLevelLabel(spell.level),
               if (spell.school != null) spell.school!,
               if (spell.concentration) 'Concentración',
             ].join(' · '),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DetailInfoButton(
+                key: Key('detail-spell-${spell.index}'),
+                onPressed: () => openSpellDetail(context, spell.index),
+              ),
+              Checkbox(
+                value: locked || _isPicked(spell.index),
+                onChanged: toggle == null ? null : (_) => toggle(),
+              ),
+            ],
           ),
         );
       },
