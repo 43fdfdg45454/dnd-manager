@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/app_icon.dart';
 import '../../../../../core/theme/icons.dart';
+import '../../../../../core/ui/action_type.dart';
 
 import '../combat_support.dart';
 import '../concentration_flow.dart';
@@ -47,6 +48,8 @@ class RangerPanel extends ConsumerWidget {
       children: [
         CombatCard(
           title: 'Marca del cazador',
+          // SRD, Hunter's Mark: "Casting Time: 1 bonus action".
+          actionKind: level >= 2 ? ActionKind.bonusAction : null,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

@@ -37,6 +37,11 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
 
 Future<void> _tapKey(WidgetTester tester, String key) => _tap(tester, find.byKey(Key(key)));
 
+/// The checkbox inside the row [key] (phase 27: rows are `ListTile`s).
+Checkbox _box(WidgetTester tester, String key) => tester.widget<Checkbox>(
+  find.descendant(of: find.byKey(Key(key)), matching: find.byType(Checkbox)),
+);
+
 Future<({FakeCharactersRepository characters, FakeRealtimeHub hub, GoRouter router})> _pump(
   WidgetTester tester, {
   Map<String, dynamic>? character,
@@ -185,28 +190,15 @@ void main() {
       await _pump(tester, preparation: makePreparationJson(max: 2, prepared: ['bless']));
       expect(find.text('1 de 2'), findsOneWidget);
       // Prepared spells start checked.
-      expect(
-        tester.widget<CheckboxListTile>(find.byKey(const Key('prepare-spell-bless'))).value,
-        isTrue,
-      );
+      expect(_box(tester, 'prepare-spell-bless').value, isTrue);
 
       await _tapKey(tester, 'prepare-spell-cure-wounds');
       expect(find.text('2 de 2'), findsOneWidget);
       // The rest are disabled; unchecking one frees a slot.
-      expect(
-        tester
-            .widget<CheckboxListTile>(find.byKey(const Key('prepare-spell-guiding-bolt')))
-            .onChanged,
-        isNull,
-      );
+      expect(_box(tester, 'prepare-spell-guiding-bolt').onChanged, isNull);
       await _tapKey(tester, 'prepare-spell-bless');
       expect(find.text('1 de 2'), findsOneWidget);
-      expect(
-        tester
-            .widget<CheckboxListTile>(find.byKey(const Key('prepare-spell-guiding-bolt')))
-            .onChanged,
-        isNotNull,
-      );
+      expect(_box(tester, 'prepare-spell-guiding-bolt').onChanged, isNotNull);
     });
 
     testWidgets('Preparar solo se activa con 1..max y envía todas las clases', (tester) async {
@@ -362,10 +354,16 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(SpellDetailPage), findsNothing);
       expect(find.text('0 de 2'), findsOneWidget);
-      expect(
-        tester.widget<CheckboxListTile>(find.byKey(const Key('prepare-spell-bless'))).value,
-        isFalse,
-      );
+      expect(_box(tester, 'prepare-spell-bless').value, isFalse);
+    });
+
+    testWidgets('el botón de detalle y la casilla comparten el centro vertical', (tester) async {
+      await _pump(tester, preparation: makePreparationJson(max: 2, prepared: const ['bless']));
+      final row = find.byKey(const Key('prepare-spell-bless'));
+      final info = tester.getCenter(find.byKey(const Key('detail-spell-bless')));
+      final box = tester.getCenter(find.descendant(of: row, matching: find.byType(Checkbox)));
+      expect(info.dy, moreOrLessEquals(box.dy, epsilon: 0.5));
+      expect(info.dx, lessThan(box.dx));
     });
   });
 }

@@ -410,14 +410,22 @@ class WizardChoiceCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    NameWithSource(title, source, style: theme.textTheme.titleMedium),
+                    // The info button and the selection mark stay on the
+                    // title's line, centred with it.
+                    Row(
+                      children: [
+                        Expanded(
+                          child: NameWithSource(title, source, style: theme.textTheme.titleMedium),
+                        ),
+                        if (onInfo != null) DetailInfoButton(key: infoKey, onPressed: onInfo!),
+                        if (selected) Icon(Icons.check_circle, color: color),
+                      ],
+                    ),
                     for (final line in lines.where((l) => l.isNotEmpty))
                       Text(line, style: theme.textTheme.bodySmall),
                   ],
                 ),
               ),
-              if (onInfo != null) DetailInfoButton(key: infoKey, onPressed: onInfo!),
-              if (selected) Icon(Icons.check_circle, color: color),
             ],
           ),
         ),

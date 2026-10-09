@@ -5,6 +5,7 @@ import '../../../../core/network/api_error.dart';
 import '../../../../core/theme/textures.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/theme/typography.dart';
+import '../../../../core/ui/action_type.dart';
 import '../../../campaigns/ui/feedback.dart';
 
 /// Spanish message for a failed combat action. Network failures read
@@ -280,11 +281,15 @@ class PipPainter extends CustomPainter {
 
 /// A titled card that groups a section of the combat view, in the rune card
 /// style; [title] in the display font, numbers in [AppTypography.numeric].
+/// [actionKind] adds its [ActionTypeChip] under the title.
 class CombatCard extends StatelessWidget {
-  const CombatCard({super.key, this.title, this.trailing, required this.child});
+  const CombatCard({super.key, this.title, this.trailing, this.actionKind, required this.child});
 
   final String? title;
   final Widget? trailing;
+
+  /// What using the card's feature costs on the turn (SRD text); null hides it.
+  final ActionKind? actionKind;
   final Widget child;
 
   @override
@@ -307,6 +312,8 @@ class CombatCard extends StatelessWidget {
                 ],
               ),
             ),
+          if (actionKind != null)
+            Padding(padding: const EdgeInsets.only(bottom: 8), child: ActionTypeChip(actionKind!)),
           child,
         ],
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/icons.dart';
+import '../../../../../core/ui/action_type.dart';
 
 import '../combat_support.dart';
 import 'panel_support.dart';
@@ -47,6 +48,8 @@ class BardPanel extends ConsumerWidget {
           panel: panel,
           resourceKey: 'bardic-inspiration',
           title: 'Inspiración bárdica',
+          // SRD: "You can inspire others ... use a bonus action on your turn".
+          actionKind: ActionKind.bonusAction,
           actionKey: 'bard-inspire',
           buttonLabel: 'Inspirar (1$die)',
           icon: AppIcons.bard,

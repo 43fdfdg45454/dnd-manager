@@ -4,15 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_icon.dart';
 import '../../../../core/theme/components.dart';
 import '../../../../core/theme/icons.dart';
+import '../../../../core/ui/action_type.dart';
 import '../../../../core/ui/stat_value.dart';
+import '../../../catalog/ui/catalog_detail_links.dart' show DetailInfoButton;
 import '../../../dice/domain/dice_expression.dart';
 import '../../../dice/ui/dice_sheet.dart';
 import '../../data/models.dart';
 import '../../domain/character_format.dart';
 import 'combat_state.dart';
 import 'combat_support.dart';
+import 'resources_section.dart' show openCombatItemDetail;
 
-/// One card per attack with "Tirar ataque" and "Tirar daño".
+/// One card per attack (an action) with "Tirar ataque" and "Tirar daño"; a
+/// weapon opens its item detail.
 class AttacksSection extends ConsumerWidget {
   const AttacksSection({super.key, required this.character});
 
@@ -34,6 +38,9 @@ class AttacksSection extends ConsumerWidget {
             index: i,
             attack: attacks[i],
             rageBonus: attacks[i].isRanged ? 0 : rageBonus,
+            onDetail: attacks[i].itemId == null
+                ? null
+                : () => openCombatItemDetail(context, ref, character.id, attacks[i].itemId!),
           ),
       ],
     );
@@ -41,13 +48,22 @@ class AttacksSection extends ConsumerWidget {
 }
 
 class AttackCard extends StatefulWidget {
-  const AttackCard({super.key, required this.index, required this.attack, this.rageBonus = 0});
+  const AttackCard({
+    super.key,
+    required this.index,
+    required this.attack,
+    this.rageBonus = 0,
+    this.onDetail,
+  });
 
   final int index;
   final CombatAttack attack;
 
   /// Rage damage added to this attack (0 when not raging or for ranged attacks).
   final int rageBonus;
+
+  /// Opens the weapon's item detail; null for the unarmed strike.
+  final VoidCallback? onDetail;
 
   @override
   State<AttackCard> createState() => _AttackCardState();
@@ -126,13 +142,21 @@ class _AttackCardState extends State<AttackCard> {
     final details = [if (a.range != null) 'Alcance ${a.range}', ...a.properties].join(' · ');
     return CombatCard(
       title: a.name,
-      trailing: StatValue(
-        statKey: 'attack.${widget.index}.bonus',
-        textKey: Key('attack-bonus-${widget.index}'),
-        title: 'Ataque: ${a.name}',
-        text: formatModifier(a.attackBonus),
-        breakdown: a.attackBreakdown,
-        style: numericStyle(theme.textTheme.headlineSmall),
+      actionKind: ActionKind.action,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.onDetail != null)
+            DetailInfoButton(key: Key('detail-item-${a.itemId}'), onPressed: widget.onDetail!),
+          StatValue(
+            statKey: 'attack.${widget.index}.bonus',
+            textKey: Key('attack-bonus-${widget.index}'),
+            title: 'Ataque: ${a.name}',
+            text: formatModifier(a.attackBonus),
+            breakdown: a.attackBreakdown,
+            style: numericStyle(theme.textTheme.headlineSmall),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

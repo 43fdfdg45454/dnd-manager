@@ -2,16 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/components.dart';
+import '../../../../core/ui/action_type.dart';
 import '../../../../core/ui/spell_category.dart';
+import '../../../../core/ui/stat_value.dart';
 import '../../../catalog/data/models.dart' show RollTable, SpellDetail;
 import '../../../catalog/domain/catalog_format.dart' show spellLevelLabel;
+import '../../../catalog/ui/catalog_detail_links.dart';
 import '../../../dice/domain/dice_expression.dart';
 import '../../../dice/ui/dice_sheet.dart';
 import '../../data/characters_controller.dart';
 import '../../data/models.dart';
 import '../../domain/character_format.dart';
 import '../../domain/spell_combat.dart';
+import '../level_up/level_up_widgets.dart' show ExpandableText;
 import 'combat_support.dart';
+import 'concentration_flow.dart' show confirmReplaceConcentration;
 import 'resources_section.dart' show pactSlotsOf, regularSlots;
 import 'skill_rolls.dart' show pickAdvantageMode;
 import 'wild_magic_surge.dart';
@@ -19,10 +24,12 @@ import 'wild_magic_surge.dart';
 /// A castable spell with its catalog detail.
 typedef _CombatSpell = ({CharacterSpell spell, SpellDetail detail});
 
-/// "Conjuros": cantrips and prepared or known spells with an attack, a saving
-/// throw, damage or healing (catalog detail from [spellInfoProvider]). Each
-/// card rolls the spell attack, shows the save DC, rolls damage or healing at
-/// the chosen cast level, doubles the dice with "Crítico" and spends a slot.
+/// "Conjuros": every spell the character can cast now (cantrips, prepared,
+/// always prepared and known spells; catalog detail from [spellInfoProvider]).
+/// Each card opens the spell's detail, shows its action type, rolls the spell
+/// attack, shows the save DC, rolls damage or healing at the chosen cast level
+/// (each number with its breakdown), doubles the dice with "Crítico" and
+/// "Lanzar" spends a slot (and starts concentrating when the spell needs it).
 class SpellsSection extends ConsumerWidget {
   const SpellsSection({super.key, required this.character, required this.canEdit});
 
@@ -43,9 +50,7 @@ class SpellsSection extends ConsumerWidget {
         <_CombatSpell>[
           for (final s in c.spells)
             if (info[s.spellIndex] case final SpellDetail detail
-                when isCombatSpell(detail) &&
-                    isCastable(c, s, s.level ?? detail.level) &&
-                    seen.add(s.spellIndex))
+                when isCastable(c, s, s.level ?? detail.level) && seen.add(s.spellIndex))
               (spell: s, detail: detail),
         ]..sort((a, b) {
           final byLevel = a.detail.level.compareTo(b.detail.level);
@@ -173,8 +178,9 @@ class _SpellCardState extends ConsumerState<SpellCard> {
   }
 
   /// Spends a slot of the cast level: a regular one when there is one left,
-  /// else a pact slot of that level.
-  Future<void> _spendSlot() async {
+  /// else a pact slot of that level. A concentration spell then becomes the
+  /// one the character concentrates on.
+  Future<void> _cast() async {
     final level = _level;
     final regular = regularSlots(widget.character).where((s) => s.level == level).firstOrNull;
     final pact = pactSlotsOf(widget.character);
@@ -187,16 +193,156 @@ class _SpellCardState extends ConsumerState<SpellCard> {
       showCombatMessage(context, 'No quedan espacios de nivel $level.');
       return;
     }
+    final concentration = _detail.concentration;
+    if (concentration &&
+        !await confirmReplaceConcentration(context, ref, widget.character, _index)) {
+      return;
+    }
+    if (!mounted) return;
+    final controller = ref.read(characterControllerProvider(widget.character.id).notifier);
     final spent = await runCombat(
+      context,
+      () => controller.spendSpellSlot(slotLevel),
+      success: concentration ? null : 'Espacio de nivel $level gastado: ${_detail.name}.',
+    );
+    if (!spent || !mounted) return;
+    if (concentration) {
+      await runCombat(
+        context,
+        () => controller.setConcentration(_index),
+        success: 'Espacio de nivel $level gastado. Concentrándote en ${_detail.name}.',
+      );
+      if (!mounted) return;
+    }
+    if (level >= 1 && widget.surgeTable != null) setState(() => _surgePending = true);
+  }
+
+  /// A concentration cantrip: only starts concentrating (nothing is spent).
+  Future<void> _concentrate() async {
+    if (!await confirmReplaceConcentration(context, ref, widget.character, _index)) return;
+    if (!mounted) return;
+    await runCombat(
       context,
       () => ref
           .read(characterControllerProvider(widget.character.id).notifier)
-          .spendSpellSlot(slotLevel),
-      success: 'Espacio de nivel $level gastado: ${_detail.name}.',
+          .setConcentration(_index),
+      success: 'Concentrándote en ${_detail.name}.',
     );
-    if (spent && mounted && level >= 1 && widget.surgeTable != null) {
-      setState(() => _surgePending = true);
-    }
+  }
+
+  /// "Ataque a distancia" / "Ataque cuerpo a cuerpo" / "Ataque".
+  String get _attackLabel => switch (_detail.attackType) {
+    'ranged' => 'Ataque a distancia',
+    'melee' => 'Ataque cuerpo a cuerpo',
+    _ => 'Ataque',
+  };
+
+  String? get _damageTypeText {
+    final type = _detail.damageType;
+    if (type == null || type.isEmpty) return null;
+    return type.split(' + ').map(damageTypeLabel).join(' + ');
+  }
+
+  /// "Ataque a distancia +7": a label and a value with its breakdown.
+  Widget _fact(String label, Widget value) {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(width: 2),
+        value,
+      ],
+    );
+  }
+
+  /// Attack, save DC, damage and healing, each one with its breakdown.
+  List<Widget> _facts(Spellcasting? casting) {
+    final theme = Theme.of(context);
+    final d = _detail;
+    final c = widget.character;
+    final style = numericStyle(theme.textTheme.bodyLarge);
+    final breakdowns = c.sheet.breakdowns;
+    final level = _level;
+    final source = spellDamageSource(d, castLevel: level, characterLevel: c.totalLevel);
+    final damage = _damage;
+    final damageType = _damageTypeText;
+    final healFormula = scaledValue(d.healAtSlotLevel, level);
+    final heal = _heal;
+    final modifier = _abilityModifier;
+    final ability = casting?.ability ?? '';
+    return [
+      if (d.attackType != null && casting != null)
+        _fact(
+          _attackLabel,
+          StatValue(
+            statKey: 'spell.$_index.attack',
+            title: 'Ataque de conjuro: ${d.name}',
+            text: formatModifier(casting.attackBonus),
+            breakdown: breakdowns['spellAttackBonus.${casting.classIndex}'],
+            style: style,
+          ),
+        ),
+      if (d.dcAbility != null)
+        casting == null
+            ? Text('Salvación de ${abilityName(d.dcAbility!)}', style: theme.textTheme.bodyMedium)
+            : _fact(
+                'Salvación',
+                StatValue(
+                  statKey: 'spell.$_index.dc',
+                  title: 'CD de salvación: ${d.name}',
+                  text: 'CD ${casting.saveDc} (${abilityName(d.dcAbility!)})',
+                  totalText: 'CD ${casting.saveDc}',
+                  breakdown: breakdowns['spellSaveDc.${casting.classIndex}'],
+                  style: style,
+                ),
+              ),
+      if (source != null)
+        _fact(
+          'Daño',
+          StatValue(
+            statKey: 'spell.$_index.damage',
+            title: 'Daño: ${d.name}',
+            text: [source.dice.replaceAll(RegExp(r'\s+'), ''), ?damageType].join(' '),
+            totalText: [damage ?? source.dice, ?damageType].join(' '),
+            lines: [
+              source.byCharacterLevel
+                  ? 'Tabla del conjuro a nivel de personaje ${c.totalLevel}: ${source.dice}'
+                  : 'Tabla del conjuro a nivel $level: ${source.dice}',
+              if (_critical && damage != null) 'Crítico: dados doblados ($damage)',
+              'Sin modificador de característica',
+            ],
+            style: style,
+          ),
+        ),
+      if (heal != null && healFormula != null)
+        _fact(
+          'Cura',
+          StatValue(
+            statKey: 'spell.$_index.heal',
+            title: 'Curación: ${d.name}',
+            text: heal,
+            lines: ['Tabla del conjuro a nivel $level: $healFormula'],
+            breakdown: ValueBreakdown(
+              total: modifier,
+              parts: [
+                if (healFormula.toUpperCase().contains('MOD'))
+                  BreakdownPart(
+                    source: 'ability',
+                    label: ability.isEmpty
+                        ? 'Modificador de característica'
+                        : 'Modificador de ${abilityName(ability)}',
+                    value: modifier,
+                  ),
+              ],
+            ),
+            style: style,
+          ),
+        ),
+    ];
   }
 
   @override
@@ -205,36 +351,27 @@ class _SpellCardState extends ConsumerState<SpellCard> {
     final d = _detail;
     final casting = _casting;
     final damage = _damage;
-    final baseDamage = spellDamageExpression(
-      d,
-      castLevel: _level,
-      characterLevel: widget.character.totalLevel,
-    );
     final heal = _heal;
     final levels = _levels;
-    final facts = [
-      if (d.attackType != null && casting != null)
-        'Ataque ${formatModifier(casting.attackBonus)}'
-            '${d.attackType == 'ranged'
-                ? ' a distancia'
-                : d.attackType == 'melee'
-                ? ' cuerpo a cuerpo'
-                : ''}',
-      if (d.dcAbility != null)
-        'Salvación de ${abilityName(d.dcAbility!)}${casting == null ? '' : ' CD ${casting.saveDc}'}',
-      if (baseDamage != null)
-        [
-          baseDamage,
-          if (d.damageType != null) d.damageType!.split(' + ').map(damageTypeLabel).join(' + '),
-        ].join(' '),
-      if (heal != null) 'Cura $heal',
-    ];
+    final facts = _facts(casting);
+    final concentrating = widget.character.concentratingOnSpellIndex == _index;
+    final about = [
+      ?d.range,
+      ?d.duration,
+      if (d.concentration) 'Concentración',
+      if (d.ritual) 'Ritual',
+    ].where((e) => e.isNotEmpty).join(' · ');
 
     return CombatCard(
       title: d.name,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          DetailInfoButton(
+            key: Key('detail-spell-$_index'),
+            onPressed: () => openSpellDetail(context, _index),
+          ),
+          const SizedBox(width: 4),
           SpellCategoryIcon(widget.spell.category ?? d.category),
           const SizedBox(width: 6),
           Text(spellLevelLabel(d.level), style: theme.textTheme.bodySmall),
@@ -243,12 +380,30 @@ class _SpellCardState extends ConsumerState<SpellCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (facts.isNotEmpty)
-            Text(
-              facts.join(' · '),
-              key: Key('spell-facts-$_index'),
-              style: theme.textTheme.bodyMedium,
+          if (d.castingTime != null || about.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  if (d.castingTime != null) ActionTypeChip.castingTime(d.castingTime),
+                  if (about.isNotEmpty)
+                    Text(about, key: Key('spell-about-$_index'), style: theme.textTheme.bodySmall),
+                ],
+              ),
             ),
+          if (facts.isNotEmpty)
+            Wrap(
+              key: Key('spell-facts-$_index'),
+              spacing: 12,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: facts,
+            )
+          else if (d.description.isNotEmpty)
+            ExpandableText([d.description.first], key: Key('spell-summary-$_index')),
           if (d.level > 0 && levels.length > 1)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -300,8 +455,14 @@ class _SpellCardState extends ConsumerState<SpellCard> {
               if (d.level > 0)
                 OutlinedButton(
                   key: Key('spell-spend-$_index'),
-                  onPressed: widget.canEdit ? _spendSlot : null,
-                  child: const Text('Gastar espacio'),
+                  onPressed: widget.canEdit ? _cast : null,
+                  child: const Text('Lanzar'),
+                )
+              else if (d.concentration)
+                OutlinedButton(
+                  key: Key('spell-concentrate-$_index'),
+                  onPressed: widget.canEdit && !concentrating ? _concentrate : null,
+                  child: Text(concentrating ? 'Concentrado' : 'Concentrarse'),
                 ),
             ],
           ),

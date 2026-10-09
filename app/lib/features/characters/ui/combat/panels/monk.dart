@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/app_icon.dart';
 import '../../../../../core/theme/icons.dart';
+import '../../../../../core/ui/action_type.dart';
 
 import '../../../../dice/domain/dice_expression.dart' show bonusSuffix;
 import 'critical_damage_roll.dart';
@@ -68,6 +69,9 @@ class MonkPanel extends ConsumerWidget {
       children: [
         CombatCard(
           title: 'Ki',
+          // SRD: Flurry of Blows, Patient Defense and Step of the Wind are each
+          // taken "as a bonus action".
+          actionKind: level >= 2 ? ActionKind.bonusAction : null,
           trailing: level >= 2 ? Text('CD $dc', key: const Key('monk-ki-dc')) : null,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,6 +149,34 @@ class MonkPanel extends ConsumerWidget {
             ],
           ),
         ),
+        if (level >= 3)
+          CombatCard(
+            title: 'Reacciones',
+            child: Column(
+              children: [
+                // SRD: "you can use your reaction to deflect or catch the missile".
+                FeatureReminder(
+                  key: const Key('monk-deflect-missiles'),
+                  icon: AppIcons.shield,
+                  title: 'Desviar proyectiles',
+                  actionKind: ActionKind.reaction,
+                  text:
+                      'Cuando te impacta un ataque con arma a distancia, reduces el daño en '
+                      '1d10 + tu modificador de Destreza + $level.',
+                ),
+                // SRD: "you can use your reaction when you fall to reduce any falling
+                // damage you take by an amount equal to five times your monk level".
+                if (level >= 4)
+                  FeatureReminder(
+                    key: const Key('monk-slow-fall'),
+                    icon: AppIcons.bolt,
+                    title: 'Caída lenta',
+                    actionKind: ActionKind.reaction,
+                    text: 'Al caer, reduces el daño por caída en ${5 * level}.',
+                  ),
+              ],
+            ),
+          ),
       ],
     );
   }

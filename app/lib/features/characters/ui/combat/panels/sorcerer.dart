@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/ui/action_type.dart';
+
 import '../../../../catalog/data/catalog_controllers.dart';
 import '../../../../catalog/data/models.dart' show RollTable;
 import '../../../../catalog/ui/roll_table_widgets.dart';
@@ -117,6 +119,8 @@ class SorcererPanel extends ConsumerWidget {
         if (level >= 2)
           CombatCard(
             title: 'Magia flexible',
+            // SRD: both conversions of Flexible Casting are made "as a bonus action".
+            actionKind: ActionKind.bonusAction,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
