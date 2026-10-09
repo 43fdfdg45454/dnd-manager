@@ -178,6 +178,15 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
             Assert.False(charm.Eligible);
             Assert.Equal("Solo abjuración o evocación salvo en los niveles 3, 8, 14 y 20", charm.Reason);
         }
+
+        // From v2.4 the Archfey's expanded list reaches the catalog and a warlock with that patron.
+        if (Version.Parse(result.Version) >= new Version(2, 4))
+        {
+            var faerieFire = await GetAsync<SpellDetailDto>(admin, "/api/v1/catalog/spells/faerie-fire");
+            Assert.Contains(faerieFire.ExpandedBy, e => e.SubclassIndex == $"{PackId}-the-archfey" && e.ClassIndex == "warlock");
+            var phantasmal = await GetAsync<SpellDetailDto>(admin, $"/api/v1/catalog/spells/{PackId}-phantasmal-force");
+            Assert.Equal(2, phantasmal.ExpandedBy.Count);
+        }
     }
 
     private static async Task<T> GetAsync<T>(HttpClient client, string url)
