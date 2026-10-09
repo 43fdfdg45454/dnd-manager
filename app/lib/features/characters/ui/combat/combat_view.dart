@@ -16,8 +16,8 @@ import 'vitals_section.dart';
 ///
 /// [canEdit] false (a player looking at someone else's character) disables
 /// every control that writes. [isDm] (a DM or the Owner) rests the character
-/// directly; anyone else asks the DM for the rest. [header] goes on top (name
-/// and view switch). At 0 hit points a dark vignette closes in on the edges.
+/// directly; anyone else asks the DM for the rest. [header], when given, goes
+/// on top. At 0 hit points a dark vignette closes in on the edges.
 class CombatView extends ConsumerWidget {
   const CombatView({
     super.key,

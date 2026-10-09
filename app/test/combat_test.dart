@@ -13,7 +13,6 @@ import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
 import 'package:dnd_companion/features/catalog/data/models.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:dnd_companion/features/characters/data/models.dart';
-import 'package:dnd_companion/features/characters/data/view_mode_controller.dart';
 import 'package:dnd_companion/features/characters/ui/character_page.dart';
 import 'package:dnd_companion/features/characters/ui/combat/class_panels.dart';
 import 'package:dnd_companion/features/characters/ui/combat/combat_support.dart' show Pip;
@@ -48,7 +47,7 @@ Future<void> _pump(
   String location = '/characters/ch1',
 }) async {
   if (prefs == null) {
-    SharedPreferences.setMockInitialValues({if (startInCombat) 'character.ch1.view': 'combat'});
+    SharedPreferences.setMockInitialValues({if (startInCombat) 'character.ch1.tab': 'combat'});
     prefs = await SharedPreferences.getInstance();
   }
   final router = GoRouter(
@@ -419,39 +418,45 @@ void main() {
     });
   });
 
-  group('conmutador Detallado / Combate', () {
-    testWidgets('empieza en Detallado, cambia a Combate y lo recuerda por personaje', (
+  group('pestaña Combate', () {
+    testWidgets('Combate es la primera pestaña y la última elegida se recuerda por personaje', (
       tester,
     ) async {
       final repo = _repo();
-      SharedPreferences.setMockInitialValues({'character.otro.view': 'combat'});
+      SharedPreferences.setMockInitialValues({'character.otro.tab': 'combat'});
       final prefs = await SharedPreferences.getInstance();
       await _pump(tester, characters: repo, prefs: prefs);
-      // Solo cuenta la clave del propio personaje.
-      expect(find.byKey(const Key('tab-summary')), findsOneWidget);
+      // Solo cuenta la clave del propio personaje: abre en Resumen.
+      final tabs = tester.widget<TabBar>(find.byKey(const Key('character-tabs')));
+      expect((tabs.tabs.first as Tab).text, 'Combate');
+      expect(tabs.tabs, hasLength(7));
       expect(find.byKey(const Key('combat-view')), findsNothing);
-      final segmented = tester.widget<SegmentedButton<CharacterViewMode>>(
-        find.byKey(const Key('view-mode')),
-      );
-      expect(segmented.segments.every((s) => s.enabled), isTrue);
+      expect(find.byKey(const Key('view-mode')), findsNothing);
 
-      Finder segment(String label) =>
-          find.descendant(of: find.byKey(const Key('view-mode')), matching: find.text(label));
-      await tester.tap(segment('Combate'));
-      await tester.pumpAndSettle();
+      await _tap(tester, 'tab-combat');
       expect(find.byKey(const Key('combat-view')), findsOneWidget);
-      expect(find.byKey(const Key('tab-summary')), findsNothing);
-      expect(prefs.getString('character.ch1.view'), 'combat');
+      // La cabecera con sus acciones y las pestañas siguen a la vista.
+      expect(find.byKey(const Key('character-status')), findsOneWidget);
+      expect(find.byKey(const Key('tab-summary')), findsOneWidget);
+      expect(prefs.getString('character.ch1.tab'), 'combat');
 
       // Una pantalla nueva con las mismas preferencias abre directamente en Combate.
       await tester.pumpWidget(const SizedBox());
       await _pump(tester, characters: repo, prefs: prefs);
       expect(find.byKey(const Key('combat-view')), findsOneWidget);
 
-      await tester.tap(segment('Detallado'));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('tab-summary')), findsOneWidget);
-      expect(prefs.getString('character.ch1.view'), 'detailed');
+      await _tap(tester, 'tab-spells');
+      expect(find.byKey(const Key('combat-view')), findsNothing);
+      expect(prefs.getString('character.ch1.tab'), 'spells');
+    });
+
+    testWidgets('un personaje que quedó en el antiguo modo Combate abre en esa pestaña', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({'character.ch1.view': 'combat'});
+      final prefs = await SharedPreferences.getInstance();
+      await _pump(tester, characters: _repo(), prefs: prefs);
+      expect(find.byKey(const Key('combat-view')), findsOneWidget);
     });
   });
 
