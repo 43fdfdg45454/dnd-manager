@@ -189,7 +189,7 @@ public static class SheetCalculator
                 .Clamp(0, int.MaxValue, BreakdownLabels.Minimum));
 
         var spellcasting = classes
-            .Where(c => c.Info.SpellcastingAbility is { } ability && Abilities.IsValid(ability))
+            .Where(c => c.Info.SpellcastingAbility is { } ability && Abilities.IsValid(ability) && c.Info.CastsAt(c.Level.Level))
             .Select(c =>
             {
                 var ability = c.Info.SpellcastingAbility!;
@@ -212,6 +212,8 @@ public static class SheetCalculator
                 return new SpellcastingValue(classIndex, ability, saveDc, attackBonus, PreparedMax(classIndex, c.Level.Level, Mod(ability)))
                 {
                     MaxSpellLevel = MaxSpellLevel(c.Info.SlotsByLevel(c.Level.Level)),
+                    SpellsKnownMax = c.Info.SubclassSpellcasting?.SpellsKnownAt(c.Level.Level),
+                    CantripsKnownMax = c.Info.SubclassSpellcasting?.CantripsKnownAt(c.Level.Level),
                 };
             })
             .ToList();
@@ -608,7 +610,7 @@ public static class SheetCalculator
     /// </summary>
     private static (IReadOnlyList<int> Slots, int CasterLevel) CalculateSpellSlots(List<ResolvedClass> classes)
     {
-        var casters = classes.Where(c => c.Info.SpellcastingLevel > 0 && !IsPact(c.Info)).ToList();
+        var casters = classes.Where(c => c.Info.SpellcastingLevel > 0 && !IsPact(c.Info) && c.Level.Level >= c.Info.SpellcastingFromLevel).ToList();
         switch (casters.Count)
         {
             case 0:

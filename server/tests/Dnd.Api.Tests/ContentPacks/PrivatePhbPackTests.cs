@@ -150,6 +150,34 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
         Assert.Contains(level3Cleric.Spells, sp => sp is { SpellIndex: "light", AlwaysPrepared: true });
         var wardingFlare = Assert.Single(level3Cleric.Resources, r => r.Key == $"{PackId}-warding-flare");
         Assert.Equal(3, wardingFlare.Max);
+
+        // From v2.3 the Eldritch Knight is a third caster with Intelligence and its spells are abjuration or evocation
+        // except at levels 3, 8, 14 and 20.
+        if (Version.Parse(result.Version) >= new Version(2, 3))
+        {
+            var knight = await s.Player.CreateCharacterAsync(s.CampaignId, "Caballera");
+            var knightPatch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(knight.Id)}/sheet", new
+            {
+                classes = new[] { new { classIndex = "fighter", subclassIndex = $"{PackId}-eldritch-knight", level = 3 } },
+                baseAbilities = new { str = 16, dex = 12, con = 14, @int = 14, wis = 10, cha = 8 },
+                applyRacialBonuses = false,
+            });
+            Assert.Equal(HttpStatusCode.OK, knightPatch.StatusCode);
+            var knightSheet = (await knightPatch.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
+            var knightCasting = Assert.Single(knightSheet.Sheet.Spellcasting);
+            Assert.Equal(("fighter", "int", 12, 3, 2), (knightCasting.ClassIndex, knightCasting.Ability, knightCasting.SaveDc, knightCasting.SpellsKnownMax, knightCasting.CantripsKnownMax));
+            Assert.Equal(2, knightSheet.SpellSlots.Single(sl => sl.Level == 1).Max);
+
+            Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(knight.Id)}/activate", null)).StatusCode);
+            await GrantAsync(s, knight.Id);
+            var knightPlan = await PlanAsync(s.Player, knight.Id);
+            var level4Spells = Assert.Single(knightPlan.Choices, c => c.Key == "conjuros");
+            Assert.Equal(1, level4Spells.Choose);
+            Assert.True(level4Spells.Options.Single(o => o.Index == "shield").Eligible);
+            var charm = level4Spells.Options.Single(o => o.Index == "charm-person");
+            Assert.False(charm.Eligible);
+            Assert.Equal("Solo abjuración o evocación salvo en los niveles 3, 8, 14 y 20", charm.Reason);
+        }
     }
 
     private static async Task<T> GetAsync<T>(HttpClient client, string url)

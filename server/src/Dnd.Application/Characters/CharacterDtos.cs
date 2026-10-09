@@ -84,7 +84,14 @@ public sealed record SheetSkillDto(string Index, string Name, string Ability, in
 
 public sealed record HitDiceDto(string ClassIndex, int Die, int Total, int Remaining);
 
-public sealed record SpellcastingDto(string ClassIndex, string Ability, int SaveDc, int AttackBonus, int? PreparedMax);
+public sealed record SpellcastingDto(string ClassIndex, string Ability, int SaveDc, int AttackBonus, int? PreparedMax)
+{
+    /// <summary>Spells known allowed at the class level (subclass casters from content packs); null when the class has no fixed number.</summary>
+    public int? SpellsKnownMax { get; init; }
+
+    /// <summary>Cantrips known allowed at the class level (subclass casters); null when the class has no fixed number.</summary>
+    public int? CantripsKnownMax { get; init; }
+}
 
 /// <param name="PactSlotLevel">Spell level of the Pact Magic slots (null without them).</param>
 /// <summary>An item modifier applied to the sheet; <see cref="Kind"/> is an <c>ItemModifierKind</c> name.</summary>

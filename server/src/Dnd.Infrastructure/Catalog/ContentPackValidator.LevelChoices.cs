@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Dnd.Application.Common;
 using Dnd.Domain.Catalog;
@@ -584,7 +585,83 @@ internal sealed partial class ContentPackValidator
         return valid ? result : null;
     }
 
-    private void LevelChoice(string path, PackLevelChoiceJson rule, string classIndex, string? subclassIndex, ContentPackRows rows)
+    /// <summary>Validates <c>subclasses[].spellcasting</c>; null when it has errors.</summary>
+    private SubclassSpellcasting? SubclassSpellcasting(string path, PackSubclassSpellcastingJson spellcasting, string classIndex)
+    {
+        var valid = true;
+        if (_context.CasterClasses?.Contains(classIndex) == true)
+        {
+            AddError(path, $"La clase '{classIndex}' ya lanza conjuros: spellcasting solo vale en subclases de clases que no lanzan conjuros.");
+            valid = false;
+        }
+
+        int? level = null;
+        if (string.IsNullOrWhiteSpace(spellcasting.Progression))
+        {
+            AddError($"{path}.progression", "Campo obligatorio.");
+        }
+        else if ((level = Domain.Catalog.SubclassSpellcasting.LevelOf(spellcasting.Progression)) is null)
+        {
+            AddError($"{path}.progression", $"Valores admitidos: {string.Join(", ", Domain.Catalog.SubclassSpellcasting.Progressions)}.");
+        }
+
+        var ability = spellcasting.Ability?.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(ability))
+        {
+            AddError($"{path}.ability", "Campo obligatorio.");
+        }
+        else if (!Abilities.IsValid(ability))
+        {
+            AddError($"{path}.ability", $"Característica desconocida. Valores admitidos: {string.Join(", ", Abilities.All)}.");
+            ability = null;
+        }
+
+        var fromLevel = OptionalInt($"{path}.fromLevel", spellcasting.FromLevel, 1, 20);
+        var spellList = spellcasting.SpellList?.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(spellList))
+        {
+            AddError($"{path}.spellList", "Campo obligatorio.");
+        }
+        else if (!_context.Classes.ContainsKey(spellList))
+        {
+            AddError($"{path}.spellList", "Debe ser una clase del catálogo.");
+            spellList = null;
+        }
+
+        var cantrips = KnownTable($"{path}.cantripsKnown", spellcasting.CantripsKnown, 10);
+        var spells = KnownTable($"{path}.spellsKnown", spellcasting.SpellsKnown, 30);
+        return valid && level is not null && !string.IsNullOrEmpty(ability) && !string.IsNullOrEmpty(spellList) && cantrips is not null && spells is not null
+            && (spellcasting.FromLevel is null || fromLevel is not null)
+            ? new SubclassSpellcasting(level.Value, ability, fromLevel ?? 1, spellList, cantrips, spells)
+            : null;
+    }
+
+    /// <summary>A <c>{"3": 2, "10": 3}</c> table of known spells or cantrips by class level; null when it has errors.</summary>
+    private Dictionary<int, int>? KnownTable(string path, Dictionary<string, int?>? table, int max)
+    {
+        var result = new Dictionary<int, int>();
+        var valid = true;
+        foreach (var (key, value) in table ?? [])
+        {
+            if (!int.TryParse(key, NumberStyles.None, CultureInfo.InvariantCulture, out var level) || level is < 1 or > 20)
+            {
+                AddError($"{path}.{key}", "La clave debe ser un nivel de clase entre 1 y 20.");
+                valid = false;
+            }
+            else if (RequiredInt($"{path}.{key}", value, 0, max) is { } count)
+            {
+                result[level] = count;
+            }
+            else
+            {
+                valid = false;
+            }
+        }
+
+        return valid ? result : null;
+    }
+
+    private void LevelChoice(string path, PackLevelChoiceJson rule, string classIndex, string? subclassIndex, ContentPackRows rows, SubclassSpellcasting? spellcasting = null)
     {
         var level = RequiredInt($"{path}.level", rule.Level, 1, 20);
         var key = RequiredText($"{path}.key", rule.Key, LevelChoiceRule.KeyMaxLength);
@@ -630,7 +707,16 @@ internal sealed partial class ContentPackValidator
             }
         });
 
-        var choose = RequiredInt($"{path}.choose", rule.Choose, 0, 20);
+        // Spell choices of a subclass with spellcasting may leave "choose" out: the increase of its known table is used.
+        var knownTable = kind switch
+        {
+            LevelChoiceKind.SpellsKnown => spellcasting?.SpellsKnown,
+            LevelChoiceKind.CantripsKnown => spellcasting?.CantripsKnown,
+            _ => null,
+        };
+        var choose = rule.Choose is null && knownTable is { Count: > 0 }
+            ? 0
+            : RequiredInt($"{path}.choose", rule.Choose, 0, 20);
         var filter = Filter($"{path}.filter", rule.Filter);
         var note = OptionalText($"{path}.note", rule.Note, LevelChoiceRule.NoteMaxLength);
         if (level is null || key.Length == 0 || kind is null || choose is null)
@@ -692,6 +778,34 @@ internal sealed partial class ContentPackValidator
             AddError($"{path}.source", $"Valores admitidos: {string.Join(", ", FilterSources)}.");
         }
 
+        var schools = new List<string>();
+        ForEachText($"{path}.schools", filter.Schools, (schoolPath, value) =>
+        {
+            var school = value.ToLowerInvariant();
+            if (!SpellSchools.All.Contains(school, StringComparer.Ordinal))
+            {
+                AddError(schoolPath, $"Escuela desconocida. Valores admitidos: {string.Join(", ", SpellSchools.All)}.");
+            }
+            else if (!schools.Contains(school))
+            {
+                schools.Add(school);
+            }
+        });
+
+        var exceptAt = new List<int>();
+        for (var i = 0; i < (filter.SchoolsExceptAt?.Count ?? 0); i++)
+        {
+            if (RequiredInt($"{path}.schoolsExceptAt[{i}]", filter.SchoolsExceptAt![i], 1, 20) is { } exceptLevel && !exceptAt.Contains(exceptLevel))
+            {
+                exceptAt.Add(exceptLevel);
+            }
+        }
+
+        if (exceptAt.Count > 0 && schools.Count == 0)
+        {
+            AddError($"{path}.schoolsExceptAt", "Solo tiene sentido junto con schools.");
+        }
+
         return LevelChoiceJson.Serialize(new
         {
             spellList,
@@ -699,6 +813,8 @@ internal sealed partial class ContentPackValidator
             maxSpellLevelBySlots = filter.MaxSpellLevelBySlots ?? false,
             source,
             cantripsOnly = filter.CantripsOnly ?? false,
+            schools = schools.Count > 0 ? schools : null,
+            schoolsExceptAt = exceptAt.Count > 0 ? exceptAt.Order().ToList() : null,
         });
     }
 

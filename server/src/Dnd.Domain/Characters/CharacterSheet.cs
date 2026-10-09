@@ -21,6 +21,12 @@ public sealed record SpellcastingValue(string ClassIndex, string Ability, int Sa
     /// </summary>
     public int MaxSpellLevel { get; init; }
 
+    /// <summary>Spells known at the class level when the class learns a fixed number (subclass casters); null otherwise.</summary>
+    public int? SpellsKnownMax { get; init; }
+
+    /// <summary>Cantrips known at the class level when the class learns a fixed number (subclass casters); null otherwise.</summary>
+    public int? CantripsKnownMax { get; init; }
+
     /// <summary>The class prepares spells (cleric, druid, paladin, wizard) and can already cast leveled spells.</summary>
     public bool PreparesSpells => PreparedMax is not null && MaxSpellLevel > 0;
 }

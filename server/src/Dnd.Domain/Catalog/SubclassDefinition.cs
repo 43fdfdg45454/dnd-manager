@@ -13,6 +13,14 @@ public sealed class SubclassDefinition
 
     public IReadOnlyList<string> Description { get; init; } = [];
 
+    /// <summary>
+    /// Spellcasting the subclass adds to a non-casting base class (content packs, see <see cref="SubclassSpellcasting"/>);
+    /// null when it adds none.
+    /// </summary>
+    public string? SpellcastingJson { get; init; }
+
+    public SubclassSpellcasting? Spellcasting => SubclassSpellcasting.Parse(SpellcastingJson);
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = CatalogSources.Srd;
 }
