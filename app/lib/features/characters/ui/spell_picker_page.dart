@@ -9,6 +9,7 @@ import '../../../core/ui/spell_category.dart';
 import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models.dart' show SpellSummary;
 import '../../catalog/domain/catalog_format.dart';
+import '../../catalog/ui/catalog_detail_links.dart';
 import '../data/models.dart';
 
 /// A spellcasting class of the character being edited.
@@ -288,7 +289,15 @@ class _SpellPickerPageState extends ConsumerState<SpellPickerPage> {
           value: widget.chosen.contains(spell.index) || _isPicked(spell.index),
           onChanged: widget.chosen.contains(spell.index) ? null : (_) => _toggle(spell),
           secondary: SpellCategoryIcon(spell.category),
-          title: Text(spell.name),
+          title: Row(
+            children: [
+              Expanded(child: Text(spell.name)),
+              DetailInfoButton(
+                key: Key('detail-spell-${spell.index}'),
+                onPressed: () => openSpellDetail(context, spell.index),
+              ),
+            ],
+          ),
           subtitle: Text(
             [
               spellLevelLabel(spell.level),

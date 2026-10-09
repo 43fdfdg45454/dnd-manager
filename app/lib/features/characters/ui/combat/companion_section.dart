@@ -10,6 +10,7 @@ import '../../../catalog/data/beast_models.dart';
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/domain/catalog_format.dart' show abilityLabel;
 import '../../../catalog/ui/beast_page.dart' show BeastRollChips;
+import '../../../catalog/ui/catalog_detail_links.dart';
 import '../../data/characters_controller.dart';
 import '../../data/models.dart';
 import '../../domain/character_format.dart' show formatModifier, skillLabel;
@@ -154,7 +155,16 @@ class CompanionPickerPage extends ConsumerWidget {
                         formatBeastSpeeds(b.speeds),
                       ].where((e) => e.isNotEmpty).join(' · '),
                     ),
-                    trailing: const Icon(Icons.chevron_right),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        DetailInfoButton(
+                          key: Key('detail-beast-${b.index}'),
+                          onPressed: () => openBeastDetail(context, b.index),
+                        ),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
                     onTap: () => Navigator.of(context).pop(b),
                   ),
             ],

@@ -10,6 +10,7 @@ import '../../../campaigns/domain/campaign_models.dart';
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/data/models.dart' hide Page;
 import '../../../catalog/domain/catalog_format.dart';
+import '../../../catalog/ui/catalog_detail_links.dart';
 import '../../data/character_wizard_controller.dart';
 import '../../domain/character_format.dart';
 import '../../domain/class_theme.dart';
@@ -181,6 +182,8 @@ class RaceStep extends ConsumerWidget {
                 if (race.abilityBonuses.isNotEmpty) bonusesText(race.abilityBonuses),
               ],
               onTap: () => controller.selectRace(race.index),
+              infoKey: Key('detail-race-${race.index}'),
+              onInfo: () => openRaceDetail(context, race.index),
             ),
           if (state.raceIndex != null) ...[
             const SizedBox(height: 8),
@@ -268,6 +271,8 @@ class ClassStep extends ConsumerWidget {
                   'No lanza conjuros',
               ],
               onTap: () => controller.selectClass(c.index),
+              infoKey: Key('detail-class-${c.index}'),
+              onInfo: () => openClassDetail(context, c.index),
             ),
           if (state.classIndex != null) ...[
             const SizedBox(height: 8),
@@ -321,6 +326,8 @@ class _ClassSummary extends StatelessWidget {
               title: sub.name,
               lines: [if (sub.flavor != null) sub.flavor!],
               onTap: () => controller.selectSubclass(sub.index),
+              infoKey: Key('detail-subclass-${sub.index}'),
+              onInfo: () => openClassDetail(context, detail.index),
             ),
         ],
       ],
@@ -360,9 +367,16 @@ class WizardChoiceCard extends StatelessWidget {
     this.leading,
     this.accent,
     this.source,
+    this.onInfo,
+    this.infoKey,
   });
 
   final bool selected;
+
+  /// Opens the catalog detail of the choice; when set, an info button is
+  /// shown next to the selection mark (tapping it does not select).
+  final VoidCallback? onInfo;
+  final Key? infoKey;
   final String title;
 
   /// Origin of the content ('srd', 'homebrew' or a content pack id); shown as a chip.
@@ -402,6 +416,7 @@ class WizardChoiceCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onInfo != null) DetailInfoButton(key: infoKey, onPressed: onInfo!),
               if (selected) Icon(Icons.check_circle, color: color),
             ],
           ),

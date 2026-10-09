@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/ui/spell_category.dart';
+import '../../../catalog/ui/catalog_detail_links.dart';
 
 import '../../data/character_wizard_controller.dart';
 import '../../data/models.dart';
@@ -82,6 +83,8 @@ class SpellsStep extends ConsumerWidget {
                   key: Key('spell-${s.spellIndex}'),
                   avatar: SpellCategoryIcon(s.category, size: 16),
                   label: Text(s.name ?? s.spellIndex),
+                  tooltip: 'Ver detalle',
+                  onPressed: () => openSpellDetail(context, s.spellIndex),
                   onDeleted: () => controller.removeSpell(s.spellIndex),
                 ),
             ],

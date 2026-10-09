@@ -13,6 +13,7 @@ import '../../catalog/data/catalog_controllers.dart';
 import '../../catalog/data/models.dart' show ClassDetail, Feature, ItemModifier, RaceDetail, Trait;
 import '../../catalog/domain/catalog_format.dart';
 import '../../catalog/domain/item_modifier_format.dart';
+import '../../catalog/ui/catalog_detail_links.dart';
 import '../../catalog/ui/detail_widgets.dart';
 import '../../dice/domain/dice_expression.dart';
 import '../../dice/ui/dice_sheet.dart';
@@ -868,6 +869,7 @@ class SpellsTab extends ConsumerWidget {
                   leading: SpellCategoryIcon(s.category ?? info?[s.spellIndex]?.category),
                   title: Text(nameOf(s)),
                   subtitle: Text(_racialSpellDetail(c, s, levelOf(s))),
+                  onTap: () => openSpellDetail(context, s.spellIndex),
                   trailing: const Chip(
                     label: Text('Siempre preparado'),
                     visualDensity: VisualDensity.compact,
@@ -885,6 +887,7 @@ class SpellsTab extends ConsumerWidget {
               leading: SpellCategoryIcon(s.category ?? info?[s.spellIndex]?.category),
               title: Text(nameOf(s)),
               subtitle: Text(titleFromSpellIndex(s.classIndex)),
+              onTap: () => openSpellDetail(context, s.spellIndex),
               trailing: s.alwaysPrepared
                   ? const Chip(
                       label: Text('Siempre preparado'),

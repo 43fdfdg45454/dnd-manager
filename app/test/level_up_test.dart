@@ -1,5 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
+import 'package:dnd_companion/features/catalog/data/models.dart' show SpellDetail;
+import 'package:dnd_companion/features/catalog/ui/catalog_detail_links.dart';
+import 'package:dnd_companion/features/catalog/ui/spell_detail_page.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:dnd_companion/features/characters/data/level_up_controller.dart';
 import 'package:dnd_companion/features/characters/data/models.dart';
@@ -12,6 +15,7 @@ import 'package:go_router/go_router.dart';
 
 import 'dice_test.dart' show SequenceRandom;
 import 'helpers/app_pump.dart';
+import 'helpers/catalog_fakes.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
 
@@ -224,12 +228,14 @@ Future<({FakeCharactersRepository characters, GoRouter router})> _pump(
   Map<String, dynamic>? character,
   String location = '/characters/ch1/level-up',
   int face = 6,
+  FakeCatalogRepository? catalog,
 }) async {
   final characters = FakeCharactersRepository(characters: [character ?? _character()]);
   characters.levelUpPlans[''] = plan;
   final fakes = AppFakes(
     campaigns: FakeCampaignsRepository(campaigns: [makeCampaign(myRole: CampaignRole.player)]),
     characters: characters,
+    catalog: catalog,
   );
   final router = await pumpRealApp(
     tester,
@@ -1234,6 +1240,68 @@ void main() {
         find.descendant(of: section, matching: find.text('Golpe sereno (2 Ki)')),
         findsOneWidget,
       );
+    });
+  });
+
+  group('Fase 26: detalle de los conjuros', () {
+    testWidgets('una opción de conjuro abre su detalle sin elegirla', (tester) async {
+      await _pump(
+        tester,
+        plan: _plan(
+          targetLevel: 4,
+          classLevel: 4,
+          choices: [
+            _choice(
+              'conjuros',
+              'Conjuros',
+              'SpellsKnown',
+              options: [_option('magic-missile', 'Magic Missile', spellLevel: 1)],
+            ),
+          ],
+        ),
+        character: _character(pendingLevelUpTo: 4),
+        catalog: FakeCatalogRepository(
+          spellDetails: const {
+            'magic-missile': SpellDetail(
+              index: 'magic-missile',
+              name: 'Magic Missile',
+              level: 1,
+              description: ['You create three glowing darts of magical force.'],
+            ),
+          },
+        ),
+      );
+      await _next(tester);
+      await _writeHp(tester, '5');
+      await _next(tester);
+
+      expect(find.byKey(const Key('detail-spell-magic-missile')), findsOneWidget);
+      await _tapKey(tester, 'detail-spell-magic-missile');
+      expect(find.byType(SpellDetailPage), findsOneWidget);
+      expect(find.text('You create three glowing darts of magical force.'), findsOneWidget);
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byType(SpellDetailPage), findsNothing);
+      // The info button does not select the option.
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('levelup-option-conjuros-magic-missile')),
+          matching: find.byIcon(Icons.check_circle),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('una opción que no es conjuro (dote) no lleva botón de detalle', (tester) async {
+      await _pump(tester, plan: _improvementPlan(), character: _character(pendingLevelUpTo: 4));
+      await _next(tester);
+      await _writeHp(tester, '5');
+      await _next(tester);
+
+      await _tapKey(tester, 'levelup-tab-feat');
+      expect(find.byKey(const Key('levelup-option-asi-sturdy')), findsOneWidget);
+      expect(find.byType(DetailInfoButton), findsNothing);
     });
   });
 }
