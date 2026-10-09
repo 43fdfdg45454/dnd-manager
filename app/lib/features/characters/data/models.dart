@@ -1812,6 +1812,7 @@ class LevelUpChoice {
     this.freeText = false,
     this.options = const [],
     this.known = const [],
+    this.warning,
   });
 
   factory LevelUpChoice.fromJson(Map<String, dynamic> json) => LevelUpChoice(
@@ -1828,6 +1829,7 @@ class LevelUpChoice {
     freeText: _bool(json['freeText']),
     options: _objects(json['options'], LevelUpOption.fromJson),
     known: _objects(json['known'], ChoiceItem.fromJson),
+    warning: _strOrNull(json['warning']),
   );
 
   final String key;
@@ -1849,6 +1851,9 @@ class LevelUpChoice {
 
   /// Earlier picks that may be replaced.
   final List<ChoiceItem> known;
+
+  /// Why fewer picks than [choose] are required: not enough eligible options.
+  final String? warning;
 
   /// The choice only offers replacements ([choose] 0).
   bool get replacementOnly => choose == 0;
@@ -1876,6 +1881,7 @@ class LevelUpSpellcasting {
     this.currentCantrips = 0,
     this.currentSpells = 0,
     this.spellSlots = const [],
+    this.preparesSpells = false,
   });
 
   factory LevelUpSpellcasting.fromJson(Map<String, dynamic> json) => LevelUpSpellcasting(
@@ -1888,6 +1894,7 @@ class LevelUpSpellcasting {
     currentCantrips: _int(json['currentCantrips']) ?? 0,
     currentSpells: _int(json['currentSpells']) ?? 0,
     spellSlots: [for (final s in (json['spellSlots'] as List? ?? const [])) _int(s) ?? 0],
+    preparesSpells: _bool(json['preparesSpells']),
   );
 
   final String classIndex;
@@ -1899,6 +1906,26 @@ class LevelUpSpellcasting {
   final int currentCantrips;
   final int currentSpells;
   final List<int> spellSlots;
+
+  /// The class prepares spells (cleric, druid, paladin, wizard) and already
+  /// has slots: "Preparar conjuros" opens after the level-up.
+  final bool preparesSpells;
+}
+
+/// A feature gained at the new level, for the review step
+/// (`LevelUpNewFeatureDto`). [subclassIndex] is set for subclass features.
+class LevelUpNewFeature {
+  const LevelUpNewFeature({required this.name, this.description = const [], this.subclassIndex});
+
+  factory LevelUpNewFeature.fromJson(Map<String, dynamic> json) => LevelUpNewFeature(
+    name: _str(json['name']),
+    description: _strings(json['description']),
+    subclassIndex: _strOrNull(json['subclassIndex']),
+  );
+
+  final String name;
+  final List<String> description;
+  final String? subclassIndex;
 }
 
 /// What gaining the next level in [classIndex] means (`LevelUpPlanDto`).
@@ -1915,6 +1942,7 @@ class LevelUpPlan {
     this.automaticFeatures = const [],
     this.choices = const [],
     this.spellcasting,
+    this.newFeatures = const [],
   });
 
   factory LevelUpPlan.fromJson(Map<String, dynamic> json) {
@@ -1932,6 +1960,7 @@ class LevelUpPlan {
       automaticFeatures: _objects(json['automaticFeatures'], LevelUpFeature.fromJson),
       choices: _objects(json['choices'], LevelUpChoice.fromJson),
       spellcasting: spellcasting == null ? null : LevelUpSpellcasting.fromJson(spellcasting),
+      newFeatures: _objects(json['newFeatures'], LevelUpNewFeature.fromJson),
     );
   }
 
@@ -1948,6 +1977,15 @@ class LevelUpPlan {
   final List<LevelUpFeature> automaticFeatures;
   final List<LevelUpChoice> choices;
   final LevelUpSpellcasting? spellcasting;
+
+  /// Class and subclass features gained at the new level.
+  final List<LevelUpNewFeature> newFeatures;
+
+  /// The features of the class and of [subclassIndex] (null: only the class).
+  List<LevelUpNewFeature> newFeaturesFor(String? subclassIndex) => [
+    for (final f in newFeatures)
+      if (f.subclassIndex == null || f.subclassIndex == subclassIndex) f,
+  ];
 
   /// The entry of [classIndex] in [classes], or null.
   LevelUpClassOption? get selectedClass {

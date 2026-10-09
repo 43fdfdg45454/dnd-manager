@@ -20,13 +20,15 @@ class LevelUpStepList extends StatelessWidget {
   }
 }
 
-/// Big title of a wizard page with an optional line below.
+/// Big title of a wizard page with an optional line below and, when the
+/// choice cannot be fully answered, a [warning] in the error color.
 class LevelUpHeading extends StatelessWidget {
-  const LevelUpHeading(this.title, {super.key, this.subtitle, this.trailing});
+  const LevelUpHeading(this.title, {super.key, this.subtitle, this.trailing, this.warning});
 
   final String title;
   final String? subtitle;
   final Widget? trailing;
+  final String? warning;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +48,14 @@ class LevelUpHeading extends StatelessWidget {
                   Text(
                     subtitle!,
                     style: theme.textTheme.bodyMedium?.copyWith(color: context.tokens.boneMuted),
+                  ),
+                ],
+                if (warning != null && warning!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    warning!,
+                    key: const Key('levelup-choice-warning'),
+                    style: theme.textTheme.bodySmall?.copyWith(color: context.tokens.blood),
                   ),
                 ],
               ],
@@ -127,8 +137,10 @@ class EffectChip extends StatelessWidget {
   }
 }
 
-/// An option of a level choice: name, prerequisites, why it cannot be taken,
-/// its effects and its description. Ineligible options are dimmed and inert.
+/// An option of a level choice: name, its prerequisites ("Requisito: …",
+/// always shown when it has any), why it cannot be taken (in the error
+/// color), its effects and its description. Ineligible options are dimmed
+/// and inert.
 class LevelUpOptionCard extends StatelessWidget {
   const LevelUpOptionCard({
     super.key,
@@ -183,6 +195,7 @@ class LevelUpOptionCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 'Requisito: ${option.prerequisitesText}',
+                key: Key('levelup-prerequisite-${option.index}'),
                 style: theme.textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
               ),
             ],

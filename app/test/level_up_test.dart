@@ -261,6 +261,32 @@ void main() {
       final sturdy = choice.option('sturdy')!;
       expect(sturdy.abilityIncrease!.needsPick, isTrue);
       expect(sturdy.effectsPreview.single.text, 'PG máx 28 → 32');
+      expect(plan.newFeatures, isEmpty);
+      expect(choice.warning, isNull);
+    });
+
+    test('LevelUpPlan lee newFeatures, warning y preparesSpells', () {
+      final plan = LevelUpPlan.fromJson(
+        _plan(
+            choices: [
+              _choice('expertise', 'Expertise', 'Expertise', choose: 2, required: 0)
+                ..['warning'] = 'Aviso.',
+            ],
+          )
+          ..['newFeatures'] = [
+            {
+              'name': 'Base',
+              'description': <String>['x'],
+              'subclassIndex': null,
+            },
+            {'name': 'Sub', 'description': <String>[], 'subclassIndex': 'champion'},
+          ]
+          ..['spellcasting'] = {'classIndex': 'fighter', 'preparesSpells': true},
+      );
+      expect(plan.choices.single.warning, 'Aviso.');
+      expect(plan.newFeaturesFor(null).map((f) => f.name), ['Base']);
+      expect(plan.newFeaturesFor('champion').map((f) => f.name), ['Base', 'Sub']);
+      expect(plan.spellcasting!.preparesSpells, isTrue);
     });
 
     test('CharacterDetail lee choices[] con selección, mejora y dote', () {
@@ -499,6 +525,84 @@ void main() {
       expect(find.text('Feint, Parry, Rally'), findsOneWidget);
       final confirm = tester.widget<ButtonStyleButton>(find.byKey(const Key('levelup-confirm')));
       expect(confirm.onPressed, isNotNull);
+    });
+
+    testWidgets('el resumen lista los rasgos nuevos de la subclase elegida y avisa de preparar', (
+      tester,
+    ) async {
+      final plan = _archetypePlan()
+        ..['newFeatures'] = [
+          {
+            'name': 'Martial Archetype',
+            'description': <String>['Archetype description.'],
+            'subclassIndex': null,
+          },
+          {
+            'name': 'Keen Edge',
+            'description': <String>['Keen Edge description.'],
+            'subclassIndex': 'champion',
+          },
+          {
+            'name': 'Drill Master',
+            'description': <String>['Drill Master description.'],
+            'subclassIndex': 'tactician',
+          },
+        ]
+        ..['spellcasting'] = {
+          'classIndex': 'fighter',
+          'ability': 'int',
+          'isPactCaster': false,
+          'cantripsKnown': null,
+          'spellsKnown': null,
+          'maxSpellLevel': 1,
+          'currentCantrips': 0,
+          'currentSpells': 0,
+          'spellSlots': [2, 0, 0, 0, 0, 0, 0, 0, 0],
+          'preparesSpells': true,
+        };
+      await _pump(tester, plan: plan);
+      await _next(tester);
+      await _writeHp(tester, '6');
+      await _next(tester);
+      await _tapKey(tester, 'levelup-option-subclass-champion');
+      await _next(tester);
+
+      expect(find.byKey(const Key('levelup-review')), findsOneWidget);
+      final section = find.byKey(const Key('levelup-new-features'));
+      await tester.ensureVisible(section);
+      await tester.pumpAndSettle();
+      expect(find.text('Rasgos nuevos'), findsOneWidget);
+      expect(find.byKey(const Key('levelup-new-feature-Martial Archetype')), findsOneWidget);
+      expect(find.byKey(const Key('levelup-new-feature-Keen Edge')), findsOneWidget);
+      expect(find.byKey(const Key('levelup-new-feature-Drill Master')), findsNothing);
+      final note = find.byKey(const Key('levelup-prepare-note'));
+      await tester.ensureVisible(note);
+      await tester.pumpAndSettle();
+      expect(note, findsOneWidget);
+    });
+
+    testWidgets('una elección sin opciones elegibles muestra el aviso del servidor', (
+      tester,
+    ) async {
+      const warning = 'Ninguna opción cumple los requisitos ahora mismo.';
+      final plan = _plan(
+        choices: [
+          _choice('expertise', 'Expertise', 'Expertise', choose: 2, required: 0)
+            ..['warning'] = warning,
+        ],
+      );
+      await _pump(tester, plan: plan);
+      await _next(tester);
+      await _writeHp(tester, '6');
+      await _next(tester);
+
+      expect(find.byKey(const Key('levelup-choice-expertise')), findsOneWidget);
+      expect(find.byKey(const Key('levelup-choice-warning')), findsOneWidget);
+      expect(find.text(warning), findsOneWidget);
+      // Nothing is required, so the review is reachable and "Confirmar" is enabled.
+      await _next(tester);
+      expect(find.byKey(const Key('levelup-review')), findsOneWidget);
+      expect(find.text('Nada (opcional)'), findsOneWidget);
     });
 
     testWidgets('Mejora: reparte 2 puntos con el tope de 20 en vivo', (tester) async {
