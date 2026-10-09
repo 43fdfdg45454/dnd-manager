@@ -6,6 +6,7 @@ import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart'
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
 import 'package:dnd_companion/features/catalog/data/beast_models.dart';
 import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
+import 'package:dnd_companion/features/catalog/ui/beast_page.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:dnd_companion/features/characters/data/models.dart';
 import 'package:dnd_companion/features/characters/domain/change_details.dart';
@@ -264,5 +265,20 @@ void main() {
       (label: 'Nombre', before: 'Ceniza', after: 'Colmillo'),
     ]);
     expect(request.type.label, 'Compañero animal');
+  });
+
+  testWidgets('el selector abre el detalle de una bestia sin elegirla', (tester) async {
+    final characters = _repo();
+    await _pump(tester, characters: characters);
+
+    await _tap(tester, 'companion-choose');
+    await _tap(tester, 'detail-beast-wolf');
+    expect(find.byType(BeastPage), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.byType(BeastPage), findsNothing);
+    expect(find.byKey(const Key('companion-beast-wolf')), findsOneWidget);
+    expect(characters.companionChoices, isEmpty);
   });
 }

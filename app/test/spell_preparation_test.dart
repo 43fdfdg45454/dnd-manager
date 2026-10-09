@@ -1,12 +1,15 @@
 import 'package:dnd_companion/core/realtime/realtime_events.dart';
 import 'package:dnd_companion/core/ui/spell_category.dart';
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
+import 'package:dnd_companion/features/catalog/data/models.dart' show SpellDetail;
+import 'package:dnd_companion/features/catalog/ui/spell_detail_page.dart';
 import 'package:dnd_companion/features/characters/data/models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'helpers/app_pump.dart';
+import 'helpers/catalog_fakes.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/fake_realtime_hub.dart';
 import 'helpers/fakes.dart';
@@ -39,12 +42,14 @@ Future<({FakeCharactersRepository characters, FakeRealtimeHub hub, GoRouter rout
   Map<String, dynamic>? character,
   Map<String, dynamic>? preparation,
   String location = '/campaigns/c1/player',
+  FakeCatalogRepository? catalog,
 }) async {
   final characters = FakeCharactersRepository(characters: [character ?? _cleric(pending: true)]);
   characters.preparations['ch1'] = preparation ?? makePreparationJson();
   final fakes = AppFakes(
     campaigns: FakeCampaignsRepository(campaigns: [makeCampaign(myRole: CampaignRole.player)]),
     characters: characters,
+    catalog: catalog,
   );
   final hub = FakeRealtimeHub();
   final router = await pumpRealApp(tester, location: location, fakes: fakes, realtime: hub);
@@ -324,6 +329,42 @@ void main() {
           matching: find.byKey(const Key('spell-category-Healing')),
         ),
         findsOneWidget,
+      );
+    });
+  });
+
+  group('Fase 26: detalle de los conjuros', () {
+    testWidgets('el botón de una fila abre el detalle sin marcarla', (tester) async {
+      await _pump(
+        tester,
+        preparation: makePreparationJson(max: 2, prepared: const []),
+        catalog: FakeCatalogRepository(
+          spellDetails: const {
+            'bless': SpellDetail(
+              index: 'bless',
+              name: 'Bless',
+              level: 1,
+              description: ['You bless up to three creatures of your choice within range.'],
+            ),
+          },
+        ),
+      );
+      expect(find.text('0 de 2'), findsOneWidget);
+
+      await _tapKey(tester, 'detail-spell-bless');
+      expect(find.byType(SpellDetailPage), findsOneWidget);
+      expect(
+        find.text('You bless up to three creatures of your choice within range.'),
+        findsOneWidget,
+      );
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byType(SpellDetailPage), findsNothing);
+      expect(find.text('0 de 2'), findsOneWidget);
+      expect(
+        tester.widget<CheckboxListTile>(find.byKey(const Key('prepare-spell-bless'))).value,
+        isFalse,
       );
     });
   });

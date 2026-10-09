@@ -2,6 +2,9 @@ import 'package:dnd_companion/core/ui/selection_grid.dart';
 import 'package:dnd_companion/core/router/app_router.dart';
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
 import 'package:dnd_companion/features/catalog/data/models.dart';
+import 'package:dnd_companion/features/catalog/ui/item_detail_page.dart';
+import 'package:dnd_companion/features/catalog/ui/race_detail_page.dart';
+import 'package:dnd_companion/features/catalog/ui/spell_detail_page.dart';
 import 'package:dnd_companion/features/characters/data/character_wizard_controller.dart';
 import 'package:dnd_companion/features/characters/data/models.dart';
 import 'package:dnd_companion/features/characters/ui/wizard/character_wizard_page.dart';
@@ -167,6 +170,8 @@ FakeCatalogRepository _catalog({bool structured = false}) => FakeCatalogReposito
       skillProficiencies: const ['Insight', 'Religion'],
       startingEquipmentText: 'A holy symbol and a prayer book.',
       startingEquipment: structured ? _acolyteEquipment : null,
+      featureName: 'Shelter of the Faithful',
+      featureDescription: const ['You command the respect of those who share your faith.'],
     ),
   ],
   equipmentCategories: const {
@@ -179,6 +184,19 @@ FakeCatalogRepository _catalog({bool structured = false}) => FakeCatalogReposito
         EquipmentCategoryItem(templateId: 'longsword', index: 'longsword', name: 'Longsword'),
       ],
     ),
+  },
+  spellDetails: const {
+    'fire-bolt': SpellDetail(
+      index: 'fire-bolt',
+      name: 'Fire Bolt',
+      level: 0,
+      school: 'Evocation',
+      description: ['You hurl a mote of fire at a creature or object within range.'],
+    ),
+  },
+  itemDetails: const {
+    'dagger': ItemDetail(id: 'dagger', name: 'Dagger', category: 'Weapon', costCp: 200),
+    'longsword': ItemDetail(id: 'longsword', name: 'Longsword', category: 'Weapon', costCp: 1500),
   },
   spellList: [
     makeSpell(index: 'fire-bolt', name: 'Fire Bolt', level: 0),
@@ -1108,6 +1126,118 @@ void main() {
       await _tap(tester, find.text('PNJ (sin jugador)').last);
       final state = setup.container.read(characterWizardControllerProvider(args));
       expect(state.owner, (userId: null));
+    });
+  });
+
+  group('detalle de lo que se elige', () {
+    testWidgets('el selector de trucos abre el detalle y vuelve con la elección intacta', (
+      tester,
+    ) async {
+      await _pump(tester);
+      await _toBackground(tester);
+      await _tap(tester, find.byKey(const Key('skill-arcana')));
+      await _tap(tester, find.byKey(const Key('skill-history')));
+      await _next(tester);
+      await _next(tester);
+      expect(find.byKey(const Key('step-spells')), findsOneWidget);
+
+      await _tap(tester, find.byKey(const Key('wizard-pick-cantrips')));
+      await _tap(tester, find.byKey(const Key('picker-spell-light')));
+      await _tap(tester, find.byKey(const Key('detail-spell-fire-bolt')));
+      expect(find.byType(SpellDetailPage), findsOneWidget);
+      expect(
+        find.text('You hurl a mote of fire at a creature or object within range.'),
+        findsOneWidget,
+      );
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byType(SpellDetailPage), findsNothing);
+      expect(
+        tester.widget<CheckboxListTile>(find.byKey(const Key('picker-spell-light'))).value,
+        isTrue,
+      );
+      // The info button does not select the spell.
+      expect(
+        tester.widget<CheckboxListTile>(find.byKey(const Key('picker-spell-fire-bolt'))).value,
+        isFalse,
+      );
+
+      await _tap(tester, find.byKey(const Key('picker-spell-fire-bolt')));
+      await _tap(tester, find.byKey(const Key('spell-picker-done')));
+      expect(find.text('Trucos 2/3'), findsOneWidget);
+
+      // The chip of a chosen cantrip opens its detail.
+      await _tap(tester, find.byKey(const Key('spell-fire-bolt')));
+      expect(find.byType(SpellDetailPage), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.text('Trucos 2/3'), findsOneWidget);
+    });
+
+    testWidgets('la tarjeta de raza abre su detalle sin elegirla', (tester) async {
+      final setup = await _pump(tester);
+      await _name(tester);
+      await _next(tester);
+
+      await _tap(tester, find.byKey(const Key('detail-race-elf')));
+      expect(find.byType(RaceDetailPage), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('step-race')), findsOneWidget);
+      expect(setup.container.read(characterWizardControllerProvider(_args)).raceIndex, isNull);
+    });
+
+    testWidgets('el trasfondo elegido muestra su rasgo', (tester) async {
+      await _pump(tester);
+      await _toBackground(tester);
+      expect(find.byKey(const Key('wizard-background-feature')), findsNothing);
+
+      await _tap(tester, find.byKey(const Key('wizard-background')));
+      await _tap(tester, find.text('Acolyte').last);
+      final feature = find.byKey(const Key('wizard-background-feature'));
+      expect(feature, findsOneWidget);
+      expect(
+        find.descendant(of: feature, matching: find.text('Shelter of the Faithful')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: feature,
+          matching: find.text('You command the respect of those who share your faith.'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('el equipo abre el detalle de los objetos', (tester) async {
+      await _pump(tester, structured: true);
+      await _toBackground(tester, classIndex: 'fighter');
+      await _tap(tester, find.byKey(const Key('wizard-background')));
+      await _tap(tester, find.text('Acolyte').last);
+      await _tap(tester, find.byKey(const Key('skill-athletics')));
+      await _tap(tester, find.byKey(const Key('skill-perception')));
+      await _next(tester);
+      expect(find.byKey(const Key('step-equipment')), findsOneWidget);
+
+      await _tap(tester, find.byKey(const Key('detail-item-dagger')));
+      expect(find.byType(ItemDetailPage), findsOneWidget);
+      expect(find.text('Dagger'), findsWidgets);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('step-equipment')), findsOneWidget);
+
+      // Items of an option and rows of the category picker too.
+      expect(find.byKey(const Key('detail-item-chain-mail')), findsOneWidget);
+      await _tap(tester, find.byKey(const Key('equipment-option-1-1')));
+      expect(find.byKey(const Key('equipment-category-picker')), findsOneWidget);
+      await _tap(tester, find.byKey(const Key('equipment-category-item-battleaxe')));
+      await _tap(tester, find.byKey(const Key('detail-item-longsword')));
+      expect(find.byType(ItemDetailPage), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('equipment-category-picker')), findsOneWidget);
+      expect(find.text('Elige 2: 1 de 2'), findsOneWidget);
     });
   });
 }

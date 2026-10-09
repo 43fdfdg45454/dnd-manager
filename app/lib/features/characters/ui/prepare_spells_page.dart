@@ -7,6 +7,7 @@ import '../../../core/theme/components.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../../core/ui/spell_category.dart';
 import '../../catalog/domain/catalog_format.dart';
+import '../../catalog/ui/catalog_detail_links.dart';
 import '../data/characters_controller.dart';
 import '../data/models.dart';
 
@@ -356,7 +357,15 @@ class _ClassSectionState extends State<_ClassSection> {
                 ? null
                 : (on) => widget.onToggle(s.index, on ?? false),
             secondary: SpellCategoryIcon(s.category),
-            title: Text(s.name),
+            title: Row(
+              children: [
+                Expanded(child: Text(s.name)),
+                DetailInfoButton(
+                  key: Key('detail-spell-${s.index}'),
+                  onPressed: () => openSpellDetail(context, s.index),
+                ),
+              ],
+            ),
             subtitle: Text(
               [
                 spellLevelLabel(s.level),
