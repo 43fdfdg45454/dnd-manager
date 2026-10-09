@@ -47,6 +47,13 @@ internal static class CatalogJson
         return new SpellDamageDto(firstDice, types.Count == 0 ? null : string.Join(" + ", types), atSlot, atCharacter);
     }
 
+    /// <summary>A <c>{"level": "dice"}</c> map (spell healing), or null when absent or invalid.</summary>
+    public static IReadOnlyDictionary<int, string>? LevelMap(string? json)
+    {
+        var map = json is null ? null : TryDeserialize<SortedDictionary<int, string>>(json);
+        return map is null || map.Count == 0 ? null : map;
+    }
+
     /// <summary>Joins the dice of several damage parts per level ("4d6 + 4d6").</summary>
     private static SortedDictionary<int, string>? Merge(IReadOnlyList<Dictionary<int, string>?> maps)
     {

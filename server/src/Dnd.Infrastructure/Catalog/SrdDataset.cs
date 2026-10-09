@@ -33,7 +33,7 @@ internal static class SrdDataset
     /// Commit and date of the 5e-database snapshot in <c>server/seed/srd</c>, plus the revision of the mapping (bumped
     /// whenever the import derives new data, so that existing instances re-seed). Stored in a 200-character column.
     /// </summary>
-    public const string Version = "5e-database@a6212beb (2026-10-02); mapping 2026-10-09: consumables, modifiers, skill choices, level choices, starting equipment, spell categories, origin choices, resistances, personality";
+    public const string Version = "5e-database@a6212beb (2026-10-02); mapping 2026-10-09: consumables, modifiers, skill choices, level choices, starting equipment, spell categories and healing, origin choices, resistances, personality";
 
     private const string ResourcePrefix = "5e-SRD-";
 
@@ -474,6 +474,7 @@ internal static class SrdDataset
         SubclassIndexes = Indexes(s.Subclasses),
         AttackType = s.AttackType,
         DamageJson = SpellDamageJson(s.Damage),
+        HealJson = SpellHealJson(s.HealAtSlotLevel),
         DcAbility = s.Dc?.DcType?.Index,
         Category = SrdSpellCategories.For(s.Index, HasData(s.HealAtSlotLevel), HasData(s.Damage), s.Dc is not null),
     };
@@ -871,6 +872,18 @@ internal static class SrdDataset
             .ToList();
 
         return mapped.Count == 0 ? null : JsonSerializer.Serialize(mapped, CamelCase);
+    }
+
+    /// <summary>The healing per slot level as <c>{"1":"1d8 + MOD"}</c>, or null when the spell does not heal.</summary>
+    private static string? SpellHealJson(JsonElement? heal)
+    {
+        if (heal is not { ValueKind: JsonValueKind.Object } element)
+        {
+            return null;
+        }
+
+        var map = ToLevelMap(element.Deserialize<Dictionary<string, string>>(JsonOptions));
+        return map is null ? null : JsonSerializer.Serialize(map, CamelCase);
     }
 
     private static SortedDictionary<int, string>? ToLevelMap(Dictionary<string, string>? source)
