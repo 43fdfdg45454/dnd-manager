@@ -108,6 +108,81 @@ public class LevelChoiceTests
     }
 
     [Fact]
+    public void A_feat_with_a_fixed_ability_raises_it_without_a_chosen_ability()
+    {
+        var durable = new OptionDefinition
+        {
+            Index = "pack-durable",
+            SetId = OptionSets.Feats,
+            Name = "Durable",
+            AbilityIncreaseJson = """{"amount":1,"from":["con"]}""",
+        };
+        var character = Fighter(Scores(con: 14));
+        character.RecordChoice(4, "fighter", "asi", new ChoiceSelection
+        {
+            Kind = "AsiOrFeat",
+            Name = "ASI",
+            SetId = OptionSets.Feats,
+            Feat = new ChoiceItem(durable.Index, durable.Name),
+        }, Now);
+
+        var sheet = SheetWith(character, EquippedGear.None, durable);
+
+        Assert.Equal("15 = base:Puntuación base 14, feature:Durable (nivel 4) 1", ItemModifierTests.Text(sheet.Breakdowns["ability.con"]));
+        Assert.Equal(10, sheet.Abilities["str"].Score);
+    }
+
+    [Fact]
+    public void A_feat_that_offers_several_abilities_needs_the_chosen_one()
+    {
+        var athlete = new OptionDefinition
+        {
+            Index = "pack-athlete",
+            SetId = OptionSets.Feats,
+            Name = "Athlete",
+            AbilityIncreaseJson = """{"amount":1,"from":["str","dex"]}""",
+        };
+        var character = Fighter(Scores(str: 15, dex: 13));
+        character.RecordChoice(4, "fighter", "asi", new ChoiceSelection
+        {
+            Kind = "AsiOrFeat",
+            Name = "ASI",
+            SetId = OptionSets.Feats,
+            Feat = new ChoiceItem(athlete.Index, athlete.Name),
+            Ability = "dex",
+        }, Now);
+
+        var sheet = SheetWith(character, EquippedGear.None, athlete);
+
+        Assert.Equal((15, 14), (sheet.Abilities["str"].Score, sheet.Abilities["dex"].Score));
+        Assert.Equal("14 = base:Puntuación base 13, feature:Athlete (nivel 4) 1", ItemModifierTests.Text(sheet.Breakdowns["ability.dex"]));
+    }
+
+    [Fact]
+    public void Race_proficiency_and_spellcasting_prerequisites_are_parsed_and_normalized()
+    {
+        var option = new OptionDefinition
+        {
+            Index = "x",
+            SetId = "s",
+            Name = "X",
+            PrerequisitesJson = """{"races":["Elf","half-elf","elf"],"proficiency":{"armor":["heavy","medium-armor","plate"],"weapon":["martial","longswords"]},"spellcasting":true}""",
+        };
+
+        var prerequisites = option.Prerequisites;
+
+        Assert.Equal(["elf", "half-elf"], prerequisites.Races);
+        Assert.Equal([ProficiencyKeys.HeavyArmor, ProficiencyKeys.MediumArmor], prerequisites.ArmorProficiencies);
+        Assert.Equal([ProficiencyKeys.MartialWeapons, "longswords"], prerequisites.WeaponProficiencies);
+        Assert.True(prerequisites.Spellcasting);
+        Assert.False(prerequisites.IsEmpty);
+        Assert.True(OptionPrerequisites.None.IsEmpty);
+        Assert.True(ProficiencyKeys.HasArmor([ProficiencyKeys.AllArmor], ProficiencyKeys.HeavyArmor));
+        Assert.False(ProficiencyKeys.HasArmor([ProficiencyKeys.AllArmor], ProficiencyKeys.Shields));
+        Assert.False(ProficiencyKeys.HasArmor([ProficiencyKeys.LightArmor], ProficiencyKeys.HeavyArmor));
+    }
+
+    [Fact]
     public void Rolled_hit_points_replace_the_average_of_their_level()
     {
         var character = NewCharacter(Scores(con: 14), [new ClassEntry("fighter", null, 3)]);

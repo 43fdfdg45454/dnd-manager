@@ -16,6 +16,7 @@ internal sealed partial class ContentPackValidator
     private readonly List<(string Path, string SetId)> _setReferences = [];
     private readonly List<(string Path, string? SetId, string Index)> _optionReferences = [];
     private readonly List<(string Path, string Index)> _spellReferences = [];
+    private readonly List<(string Path, string Index)> _raceReferences = [];
     private readonly HashSet<string> _declaredSets = new(StringComparer.Ordinal);
 
     /// <summary>True when <paramref name="value"/> is given and the pack declares format 2; reports an error when it is given without it.</summary>
@@ -129,7 +130,43 @@ internal sealed partial class ContentPackValidator
             }
         }
 
-        return LevelChoiceJson.Serialize(new { minLevel, pactBoon, cantrip, abilities });
+        var races = new List<string>();
+        ForEachText($"{path}.races", prerequisites.Races, (racePath, race) =>
+        {
+            if (Reference(racePath, race) is { } index && !races.Contains(index))
+            {
+                races.Add(index);
+                _raceReferences.Add((racePath, index));
+            }
+        });
+
+        var armor = new List<string>();
+        ForEachText($"{path}.proficiency.armor", prerequisites.Proficiency?.Armor, (armorPath, value) =>
+        {
+            if (ProficiencyKeys.NormalizeArmor(value) is { } key)
+            {
+                if (!armor.Contains(key))
+                {
+                    armor.Add(key);
+                }
+            }
+            else
+            {
+                AddError(armorPath, "Armadura desconocida. Valores admitidos: light, medium, heavy, shields.");
+            }
+        });
+
+        var weapon = new List<string>();
+        ForEachText($"{path}.proficiency.weapon", prerequisites.Proficiency?.Weapon, (weaponPath, value) =>
+        {
+            if (Reference(weaponPath, ProficiencyKeys.NormalizeWeapon(value)) is { } key && !weapon.Contains(key))
+            {
+                weapon.Add(key);
+            }
+        });
+
+        var spellcasting = prerequisites.Spellcasting == true;
+        return LevelChoiceJson.Serialize(new { minLevel, pactBoon, cantrip, abilities, races, proficiency = new { armor, weapon }, spellcasting });
     }
 
     private string ChoiceModifiers(string path, List<PackChoiceModifierJson?>? modifiers)
@@ -502,6 +539,16 @@ internal sealed partial class ContentPackValidator
         foreach (var (path, index) in _spellReferences.Where(r => !spells.Contains(r.Index)))
         {
             AddError(path, $"El conjuro '{index}' no existe en el catálogo ni en el paquete.");
+        }
+
+        var races = (_context.Races ?? new Dictionary<string, string>())
+            .Where(r => IsOtherSource(r.Value))
+            .Select(r => r.Key)
+            .Concat(rows.Races.Select(r => r.Index))
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var (path, index) in _raceReferences.Where(r => !races.Contains(r.Index)))
+        {
+            AddError(path, $"La raza '{index}' no existe en el catálogo ni en el paquete.");
         }
     }
 }

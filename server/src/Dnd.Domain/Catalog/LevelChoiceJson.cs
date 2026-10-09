@@ -13,6 +13,87 @@ namespace Dnd.Domain.Catalog;
 public sealed record OptionPrerequisites(int? MinLevel, string? PactBoon, string? Cantrip, IReadOnlyDictionary<string, int> Abilities)
 {
     public static OptionPrerequisites None { get; } = new(null, null, null, new Dictionary<string, int>());
+
+    /// <summary>Race indexes, one of which the character must be ("elf", "half-elf"); empty = any race.</summary>
+    public IReadOnlyList<string> Races { get; init; } = [];
+
+    /// <summary>Armor proficiencies the character must have, all of them: <see cref="ProficiencyKeys.Armor"/> values.</summary>
+    public IReadOnlyList<string> ArmorProficiencies { get; init; } = [];
+
+    /// <summary>Weapon proficiencies the character must have, all of them: <see cref="ProficiencyKeys.Weapons"/> values or a weapon index.</summary>
+    public IReadOnlyList<string> WeaponProficiencies { get; init; } = [];
+
+    /// <summary>The character must be able to cast at least one spell (a spellcasting class, or a spell from any source).</summary>
+    public bool Spellcasting { get; init; }
+
+    public bool IsEmpty =>
+        MinLevel is null && PactBoon is null && Cantrip is null && Abilities.Count == 0
+        && Races.Count == 0 && ArmorProficiencies.Count == 0 && WeaponProficiencies.Count == 0 && !Spellcasting;
+}
+
+/// <summary>Catalog keys of the armor and weapon proficiencies, as the SRD classes list them.</summary>
+public static class ProficiencyKeys
+{
+    public const string LightArmor = "light-armor";
+    public const string MediumArmor = "medium-armor";
+    public const string HeavyArmor = "heavy-armor";
+    public const string AllArmor = "all-armor";
+    public const string Shields = "shields";
+    public const string SimpleWeapons = "simple-weapons";
+    public const string MartialWeapons = "martial-weapons";
+
+    /// <summary>Armor keys a prerequisite may name ("heavy" and "heavy-armor" both normalize to <see cref="HeavyArmor"/>).</summary>
+    public static IReadOnlyList<string> Armor { get; } = [LightArmor, MediumArmor, HeavyArmor, Shields];
+
+    /// <summary>Weapon group keys ("simple" and "simple-weapons" both normalize to <see cref="SimpleWeapons"/>); any other value is a weapon index.</summary>
+    public static IReadOnlyList<string> Weapons { get; } = [SimpleWeapons, MartialWeapons];
+
+    /// <summary>"heavy" → "heavy-armor", "shield" → "shields"; null when the value is not an armor key.</summary>
+    public static string? NormalizeArmor(string value)
+    {
+        var key = value.Trim().ToLowerInvariant();
+        return key switch
+        {
+            "light" or LightArmor => LightArmor,
+            "medium" or MediumArmor => MediumArmor,
+            "heavy" or HeavyArmor => HeavyArmor,
+            "shield" or Shields => Shields,
+            _ => null,
+        };
+    }
+
+    /// <summary>"simple" → "simple-weapons", "martial" → "martial-weapons"; other values (a weapon index) are kept lowercase.</summary>
+    public static string NormalizeWeapon(string value)
+    {
+        var key = value.Trim().ToLowerInvariant();
+        return key switch
+        {
+            "simple" or SimpleWeapons => SimpleWeapons,
+            "martial" or MartialWeapons => MartialWeapons,
+            _ => key,
+        };
+    }
+
+    /// <summary>True when the proficiency keys the character has (any type) cover <paramref name="armor"/>: "all-armor" covers every armor.</summary>
+    public static bool HasArmor(IEnumerable<string> keys, string armor)
+    {
+        ArgumentNullException.ThrowIfNull(keys);
+        var list = keys.ToList();
+        return list.Contains(armor, StringComparer.Ordinal) || (armor != Shields && list.Contains(AllArmor, StringComparer.Ordinal));
+    }
+
+    /// <summary>Spanish label: "armadura pesada", "escudos", "armas marciales", or the key itself.</summary>
+    public static string Describe(string key) => key switch
+    {
+        LightArmor => "armadura ligera",
+        MediumArmor => "armadura intermedia",
+        HeavyArmor => "armadura pesada",
+        AllArmor => "todas las armaduras",
+        Shields => "escudos",
+        SimpleWeapons => "armas sencillas",
+        MartialWeapons => "armas marciales",
+        _ => key,
+    };
 }
 
 /// <summary>
@@ -171,7 +252,30 @@ public static class LevelChoiceJson
                 }
             }
 
-            return new OptionPrerequisites(Int(Property(root, "minLevel")), Text(Property(root, "pactBoon")), Text(Property(root, "cantrip")), abilities);
+            var armor = new List<string>();
+            var weapons = new List<string>();
+            if (Property(root, "proficiency") is { ValueKind: JsonValueKind.Object } proficiency)
+            {
+                if (Property(proficiency, "armor") is { ValueKind: JsonValueKind.Array } armorList)
+                {
+                    armor.AddRange(Strings(armorList).Select(ProficiencyKeys.NormalizeArmor).OfType<string>().Distinct(StringComparer.Ordinal));
+                }
+
+                if (Property(proficiency, "weapon") is { ValueKind: JsonValueKind.Array } weaponList)
+                {
+                    weapons.AddRange(Strings(weaponList).Select(ProficiencyKeys.NormalizeWeapon).Distinct(StringComparer.Ordinal));
+                }
+            }
+
+            return new OptionPrerequisites(Int(Property(root, "minLevel")), Text(Property(root, "pactBoon")), Text(Property(root, "cantrip")), abilities)
+            {
+                Races = Property(root, "races") is { ValueKind: JsonValueKind.Array } races
+                    ? Strings(races).Select(r => r.ToLowerInvariant()).Distinct(StringComparer.Ordinal).ToList()
+                    : [],
+                ArmorProficiencies = armor,
+                WeaponProficiencies = weapons,
+                Spellcasting = Bool(Property(root, "spellcasting")),
+            };
         }) ?? OptionPrerequisites.None;
 
     public static IReadOnlyList<ChoiceModifier> ParseModifiers(string? json) =>
