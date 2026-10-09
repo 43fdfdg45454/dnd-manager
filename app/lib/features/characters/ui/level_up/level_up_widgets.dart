@@ -6,6 +6,7 @@ import '../../../../core/theme/textures.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/spell_category.dart';
 import '../../../catalog/domain/catalog_format.dart' show spellLevelLabel;
+import '../../../catalog/ui/catalog_detail_links.dart';
 import '../../data/models.dart';
 
 /// Scrollable body of a wizard page with room for the bottom bar.
@@ -188,6 +189,11 @@ class LevelUpOptionCard extends StatelessWidget {
                   Text(
                     spellLevelLabel(option.spellLevel!),
                     style: theme.textTheme.labelSmall?.copyWith(color: tokens.arcane),
+                  ),
+                if (option.spellLevel != null)
+                  DetailInfoButton(
+                    key: Key('detail-spell-${option.index}'),
+                    onPressed: () => openSpellDetail(context, option.index),
                   ),
               ],
             ),

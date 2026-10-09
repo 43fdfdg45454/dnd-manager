@@ -11,6 +11,7 @@ import '../../../../core/theme/typography.dart';
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/data/models.dart' hide Page;
 import '../../../catalog/domain/catalog_format.dart';
+import '../../../catalog/ui/catalog_detail_links.dart';
 import '../../../dice/ui/roll_input_button.dart';
 import '../../../items/ui/item_search_list.dart';
 import '../../data/character_wizard_controller.dart';
@@ -196,6 +197,12 @@ class EquipmentLineTile extends StatelessWidget {
             dense: true,
             contentPadding: const EdgeInsets.only(left: 16),
             title: Text(_qtyName(c), style: theme.textTheme.bodySmall),
+            trailing: c.templateId == null
+                ? null
+                : DetailInfoButton(
+                    key: Key('detail-item-${c.templateId}'),
+                    onPressed: () => openItemDetail(context, c.templateId!),
+                  ),
           ),
       ],
     );
@@ -265,12 +272,28 @@ class _DefaultEquipmentList extends ConsumerWidget {
               ),
             ),
             for (final line in state.startingLinesFrom(origin))
-              EquipmentLineTile(
-                key: Key('equipment-default-${line.templateId}'),
-                name: line.name,
-                quantity: line.qty,
-                contents: contents[line.templateId],
-                trailing: EquipmentOriginBadge(origin),
+              // The info button sits beside the line (not inside it): the
+              // default lines themselves stay without buttons.
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: EquipmentLineTile(
+                      key: Key('equipment-default-${line.templateId}'),
+                      name: line.name,
+                      quantity: line.qty,
+                      contents: contents[line.templateId],
+                      trailing: EquipmentOriginBadge(origin),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: DetailInfoButton(
+                      key: Key('detail-item-${line.templateId}'),
+                      onPressed: () => openItemDetail(context, line.templateId),
+                    ),
+                  ),
+                ],
               ),
             if (goldByOrigin[origin]! > 0)
               ListTile(
@@ -452,7 +475,18 @@ class _OptionCard extends StatelessWidget {
               children: [
                 Text(option.label, style: theme.textTheme.titleSmall),
                 for (final item in option.items)
-                  Text(_qtyName(item), style: theme.textTheme.bodySmall),
+                  if (item.templateId == null)
+                    Text(_qtyName(item), style: theme.textTheme.bodySmall)
+                  else
+                    Row(
+                      children: [
+                        Expanded(child: Text(_qtyName(item), style: theme.textTheme.bodySmall)),
+                        DetailInfoButton(
+                          key: Key('detail-item-${item.templateId}'),
+                          onPressed: () => openItemDetail(context, item.templateId!),
+                        ),
+                      ],
+                    ),
                 for (var k = 0; k < option.categories.length; k++)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
@@ -533,7 +567,15 @@ class _CategoryPickerPage extends ConsumerWidget {
                     CheckboxListTile(
                       key: Key('equipment-category-item-${item.index}'),
                       value: picked.any((e) => e.templateId == item.templateId),
-                      title: Text(item.name),
+                      title: Row(
+                        children: [
+                          Expanded(child: Text(item.name)),
+                          DetailInfoButton(
+                            key: Key('detail-item-${item.templateId}'),
+                            onPressed: () => openItemDetail(context, item.templateId),
+                          ),
+                        ],
+                      ),
                       onChanged: (_) => controller.toggleCategoryItem(pickKey, pick.choose, item),
                     ),
                 ],

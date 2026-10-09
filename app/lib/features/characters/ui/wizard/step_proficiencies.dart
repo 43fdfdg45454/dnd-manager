@@ -7,6 +7,7 @@ import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/domain/catalog_format.dart';
 import '../../data/character_wizard_controller.dart';
 import '../../domain/character_format.dart';
+import '../level_up/level_up_widgets.dart' show ExpandableText;
 import 'step_basics.dart' show WizardLoadError, stepPadding;
 
 const _noBackground = '__none__';
@@ -106,6 +107,20 @@ class BackgroundStep extends ConsumerWidget {
                 child: Text(
                   'Equipo: ${cleanText(state.background!.startingEquipmentText!)}',
                   style: theme.textTheme.bodySmall,
+                ),
+              ),
+            if ((state.background!.featureName ?? '').isNotEmpty ||
+                state.background!.featureDescription.isNotEmpty)
+              Padding(
+                key: const Key('wizard-background-feature'),
+                padding: const EdgeInsets.only(top: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if ((state.background!.featureName ?? '').isNotEmpty)
+                      Text(state.background!.featureName!, style: theme.textTheme.titleSmall),
+                    ExpandableText(state.background!.featureDescription),
+                  ],
                 ),
               ),
           ],
