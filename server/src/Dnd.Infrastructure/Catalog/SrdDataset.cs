@@ -33,7 +33,7 @@ internal static class SrdDataset
     /// Commit and date of the 5e-database snapshot in <c>server/seed/srd</c>, plus the revision of the mapping (bumped
     /// whenever the import derives new data, so that existing instances re-seed). Stored in a 200-character column.
     /// </summary>
-    public const string Version = "5e-database@a6212beb (2026-10-02); mapping 2026-10-09: consumables, modifiers, skill choices, level choices, starting equipment, spell categories and healing, origin choices, resistances, personality";
+    public const string Version = "5e-database@a6212beb (2026-10-02); mapping 2026-10-09b: consumables, modifiers, skill choices, level choices, starting gear, spell categories, healing, origins, resistances, personality, race grants";
 
     private const string ResourcePrefix = "5e-SRD-";
 
@@ -271,6 +271,7 @@ internal static class SrdDataset
         SubraceIndexes = Indexes(r.Subraces),
         ChoicesJson = OriginChoices(r.AbilityBonusOptions, r.LanguageOptions, r.StartingProficiencyOptions, Indexes(r.Traits), traits).ToJson(),
         Resistances = Resistances(Indexes(r.Traits)),
+        GrantsJson = TraitGrants(Indexes(r.Traits), traits),
     };
 
     private static SubraceDefinition MapSubrace(SubraceJson s, IReadOnlyDictionary<string, TraitJson> traits) => new()
@@ -283,6 +284,7 @@ internal static class SrdDataset
         TraitIndexes = Indexes(s.RacialTraits),
         ChoicesJson = OriginChoices(s.AbilityBonusOptions, s.LanguageOptions, s.StartingProficiencyOptions, Indexes(s.RacialTraits), traits).ToJson(),
         Resistances = Resistances(Indexes(s.RacialTraits)),
+        GrantsJson = TraitGrants(Indexes(s.RacialTraits), traits),
     };
 
     // ---- Origin choices (phase 19) -------------------------------------------------------------------
@@ -293,6 +295,48 @@ internal static class SrdDataset
         ["dwarven-resilience"] = "poison",
         ["hellish-resistance"] = "fire",
     };
+
+    /// <summary>
+    /// Fixed proficiencies of the race or subrace from the <c>proficiencies</c> of its traits (the dataset's starting
+    /// proficiencies: dwarven weapons, elf weapon training, Keen Senses...): <c>skill-*</c> become skills, tool kits
+    /// tools and the rest weapons. Null when there are none.
+    /// </summary>
+    private static string? TraitGrants(IEnumerable<string> traitIndexes, IReadOnlyDictionary<string, TraitJson> traits)
+    {
+        var skills = new List<string>();
+        var tools = new List<string>();
+        var weapons = new List<string>();
+        foreach (var reference in traitIndexes.Select(traits.GetValueOrDefault).OfType<TraitJson>().SelectMany(t => t.Proficiencies ?? []))
+        {
+            var index = reference.Index;
+            if (string.IsNullOrEmpty(index))
+            {
+                continue;
+            }
+
+            if (index.StartsWith("skill-", StringComparison.Ordinal))
+            {
+                skills.Add(index["skill-".Length..]);
+            }
+            else if (index.EndsWith("-tools", StringComparison.Ordinal) || index.EndsWith("-supplies", StringComparison.Ordinal) || index.EndsWith("-kit", StringComparison.Ordinal))
+            {
+                tools.Add(index);
+            }
+            else
+            {
+                weapons.Add(index);
+            }
+        }
+
+        return skills.Count + tools.Count + weapons.Count == 0
+            ? null
+            : LevelChoiceJson.Serialize(new
+            {
+                skills = skills.Distinct(StringComparer.Ordinal),
+                weapons = weapons.Distinct(StringComparer.Ordinal),
+                tools = tools.Distinct(StringComparer.Ordinal),
+            });
+    }
 
     private static List<string> Resistances(IEnumerable<string> traitIndexes) =>
         traitIndexes.Select(t => TraitResistances.GetValueOrDefault(t)).OfType<string>().Distinct(StringComparer.Ordinal).ToList();
@@ -1215,6 +1259,9 @@ internal static class SrdDataset
         public List<ReferenceJson>? Subraces { get; set; }
 
         public OptionSetJson? ProficiencyChoices { get; set; }
+
+        /// <summary>Fixed proficiencies the trait gives ("battleaxes", "skill-perception").</summary>
+        public List<ReferenceJson>? Proficiencies { get; set; }
 
         public OptionSetJson? LanguageOptions { get; set; }
 

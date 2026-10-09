@@ -46,6 +46,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<SubraceDefinition> CatalogSubraces => Set<SubraceDefinition>();
 
+    public DbSet<RaceExtensionDefinition> CatalogRaceExtensions => Set<RaceExtensionDefinition>();
+
     public DbSet<TraitDefinition> CatalogTraits => Set<TraitDefinition>();
 
     public DbSet<SpellDefinition> CatalogSpells => Set<SpellDefinition>();

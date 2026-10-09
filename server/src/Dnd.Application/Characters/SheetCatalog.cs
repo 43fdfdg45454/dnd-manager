@@ -18,6 +18,8 @@ public sealed class SheetCatalog
     private readonly Dictionary<string, SubclassDefinition> _subclasses;
     private readonly Dictionary<string, RaceDefinition> _races;
     private readonly Dictionary<string, SubraceDefinition> _subraces;
+    private readonly ILookup<string, RaceExtensionDefinition> _raceExtensions;
+    private readonly Dictionary<string, string> _grantedSpellNames;
     private readonly Dictionary<string, BackgroundDefinition> _backgrounds;
     private readonly Dictionary<string, SpellDefinition> _spells;
     private readonly Dictionary<string, OptionDefinition> _options;
@@ -32,7 +34,9 @@ public sealed class SheetCatalog
         IEnumerable<BackgroundDefinition> backgrounds,
         IEnumerable<SpellDefinition> spells,
         IEnumerable<OptionDefinition> options,
-        IReadOnlyList<SkillInfo> skills)
+        IReadOnlyList<SkillInfo> skills,
+        IEnumerable<RaceExtensionDefinition> raceExtensions,
+        IEnumerable<SpellDefinition> grantedSpells)
     {
         _classes = classes.ToDictionary(c => c.Index, StringComparer.Ordinal);
         _classInfos = _classes.Values.ToDictionary(c => c.Index, c => ClassInfo.From(c, levels), StringComparer.Ordinal);
@@ -43,6 +47,8 @@ public sealed class SheetCatalog
         _spells = spells.ToDictionary(s => s.Index, StringComparer.Ordinal);
         _options = options.ToDictionary(o => o.Index, StringComparer.Ordinal);
         _skills = skills;
+        _raceExtensions = raceExtensions.ToLookup(e => e.RaceIndex, StringComparer.Ordinal);
+        _grantedSpellNames = grantedSpells.GroupBy(s => s.Index, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First().Name, StringComparer.Ordinal);
     }
 
     /// <summary>Loads what the given characters reference (plus the extra indexes, e.g. those of a pending edit).</summary>
@@ -60,8 +66,19 @@ public sealed class SheetCatalog
         var classes = await catalog.ListClassesByIndexAsync(classIndexes, cancellationToken);
         var levels = await catalog.ListClassLevelsByClassAsync(classIndexes, cancellationToken);
         var subclasses = await catalog.ListSubclassesByIndexAsync(Distinct(characters.SelectMany(c => c.Classes).Select(c => c.SubclassIndex)), cancellationToken);
-        var races = await catalog.ListRacesByIndexAsync(Distinct(characters.Select(c => c.RaceIndex)), cancellationToken);
+        var raceIndexes = Distinct(characters.Select(c => c.RaceIndex));
+        var races = await catalog.ListRacesByIndexAsync(raceIndexes, cancellationToken);
         var subraces = await catalog.ListSubracesByIndexAsync(Distinct(characters.Select(c => c.SubraceIndex)), cancellationToken);
+        var raceExtensions = await catalog.ListRaceExtensionsAsync(raceIndexes, cancellationToken);
+
+        // Racial spells cast per long rest name their resource after the spell.
+        var grantedSpellIndexes = Distinct(races.Select(r => r.Grants)
+            .Concat(subraces.Select(s => s.Grants))
+            .Concat(raceExtensions.Select(e => e.Grants))
+            .SelectMany(g => g.Spells)
+            .Where(s => s.UsesPerLongRest is not null)
+            .Select(s => s.Index));
+        var grantedSpells = await catalog.ListSpellsByIndexAsync(grantedSpellIndexes, cancellationToken);
         var backgrounds = await catalog.ListBackgroundsByIndexAsync(Distinct(characters.Select(c => c.BackgroundIndex)), cancellationToken);
         var spells = includeSpells
             ? await catalog.ListSpellsByIndexAsync(Distinct(characters.SelectMany(c => c.Spells).Select(s => s.SpellIndex)), cancellationToken)
@@ -71,7 +88,7 @@ public sealed class SheetCatalog
         // Options picked in level choices (fighting styles, invocations, feats...): their effects enter the sheet.
         var options = await catalog.ListOptionsByIndexAsync(Distinct(characters.SelectMany(ChoiceEffects.OptionIndexes)), cancellationToken);
 
-        return new SheetCatalog(classes, levels, subclasses, races, subraces, backgrounds, spells, options, skills);
+        return new SheetCatalog(classes, levels, subclasses, races, subraces, backgrounds, spells, options, skills, raceExtensions, grantedSpells);
     }
 
     public ClassDefinition? Class(string index) => _classes.GetValueOrDefault(index);
@@ -81,6 +98,13 @@ public sealed class SheetCatalog
     public RaceDefinition? Race(string? index) => index is null ? null : _races.GetValueOrDefault(index);
 
     public SubraceDefinition? Subrace(string? index) => index is null ? null : _subraces.GetValueOrDefault(index);
+
+    /// <summary>Fixed grants of the race with those of the packs that extend it; null when the race is not in the catalog.</summary>
+    public OptionGrants? RaceGrants(string? raceIndex) =>
+        Race(raceIndex) is { } race ? RaceExtensions(race.Index).Aggregate(race.Grants, (grants, extension) => grants.Merge(extension.Grants)) : null;
+
+    /// <summary>What content packs add to the race (traits and grants).</summary>
+    public IReadOnlyList<RaceExtensionDefinition> RaceExtensions(string? raceIndex) => raceIndex is null ? [] : [.. _raceExtensions[raceIndex]];
 
     public BackgroundDefinition? Background(string? index) => index is null ? null : _backgrounds.GetValueOrDefault(index);
 
@@ -100,8 +124,8 @@ public sealed class SheetCatalog
         return new SheetInput(
             character,
             classes,
-            race is null ? null : RaceInfo.From(race),
-            subrace is null ? null : SubraceInfo.From(subrace),
+            race is null ? null : RaceInfo.From(race, RaceExtensions(race.Index)) with { SpellNames = _grantedSpellNames },
+            subrace is null ? null : SubraceInfo.From(subrace) with { SpellNames = _grantedSpellNames },
             _skills,
             gear,
             character.Choices.Count == 0 ? null : ChoiceEffects.Build(character, Option));

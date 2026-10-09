@@ -105,6 +105,45 @@ public sealed record SubraceDto(
 
     /// <summary>Damage types the subrace always resists.</summary>
     public IReadOnlyList<string> Resistances { get; init; } = [];
+
+    /// <summary>Walking speed that replaces the race's, or null.</summary>
+    public int? Speed { get; init; }
+
+    /// <summary>Fixed proficiencies and spells (null when none).</summary>
+    public OriginGrantsDto? Grants { get; init; }
+
+    /// <summary>"srd" or the id of the content pack that added it (also to a race of the SRD).</summary>
+    public string Source { get; init; } = "srd";
+}
+
+/// <summary>A spell a race or subrace grants from a total character level, optionally a number of times per long rest.</summary>
+public sealed record GrantedSpellDto(string Index, int? MinLevel, int? UsesPerLongRest);
+
+/// <summary>Fixed proficiencies and spells of a race or subrace (<c>grants</c> of a content pack, trait proficiencies of the SRD).</summary>
+public sealed record OriginGrantsDto(
+    IReadOnlyList<string> Skills,
+    IReadOnlyList<string> Armor,
+    IReadOnlyList<string> Weapons,
+    IReadOnlyList<string> Tools,
+    IReadOnlyList<string> Languages,
+    IReadOnlyList<string> SavingThrows,
+    IReadOnlyList<string> Cantrips,
+    IReadOnlyList<GrantedSpellDto> Spells,
+    string? SpellcastingAbility)
+{
+    public static OriginGrantsDto? From(OptionGrants grants) =>
+        grants.IsEmpty
+            ? null
+            : new OriginGrantsDto(
+                grants.Skills,
+                grants.Armor,
+                grants.Weapons,
+                grants.Tools,
+                grants.Languages,
+                grants.SavingThrows,
+                grants.Cantrips,
+                grants.Spells.Select(s => new GrantedSpellDto(s.Index, s.MinLevel, s.UsesPerLongRest)).ToList(),
+                grants.SpellcastingAbility);
 }
 
 /// <summary>An option of an origin choice (<see cref="Index"/>: ability, skill, language name, tool or spell index).</summary>
@@ -195,6 +234,9 @@ public sealed record RaceDetailDto(
 
     /// <summary>Damage types the race always resists ("poison" for dwarves).</summary>
     public IReadOnlyList<string> Resistances { get; init; } = [];
+
+    /// <summary>Fixed proficiencies and spells, with those of the packs that extend the race (null when none).</summary>
+    public OriginGrantsDto? Grants { get; init; }
 }
 
 /// <param name="Source">"srd" or the id of the content pack that added it.</param>

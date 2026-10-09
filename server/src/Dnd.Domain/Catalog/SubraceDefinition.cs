@@ -23,6 +23,14 @@ public sealed class SubraceDefinition
     /// <summary>Damage types the race always resists ("poison" for dwarves).</summary>
     public IReadOnlyList<string> Resistances { get; init; } = [];
 
+    /// <summary>Walking speed in feet that replaces the race's (a fast subrace), or null to keep it.</summary>
+    public int? Speed { get; init; }
+
+    /// <summary>Fixed proficiencies and spells of the subrace (<see cref="OptionGrants"/> JSON), or null.</summary>
+    public string? GrantsJson { get; init; }
+
+    public OptionGrants Grants => LevelChoiceJson.ParseGrants(GrantsJson);
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = CatalogSources.Srd;
 }

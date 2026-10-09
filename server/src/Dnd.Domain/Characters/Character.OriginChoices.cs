@@ -58,8 +58,19 @@ public sealed partial class Character
                     case OriginChoiceKeys.ToolKind:
                         RemoveOriginProficiency(ProficiencyType.Tool, item.Index, source);
                         break;
-                    case OriginChoiceKeys.CantripKind:
-                        if (!_choices.Any(c => c.IsOrigin && c.Selection.Kind == OriginChoiceKeys.CantripKind && c.Selection.Selected.Any(s => s.Index == item.Index)))
+                    case OriginChoiceKeys.ArmorKind:
+                        RemoveOriginProficiency(ProficiencyType.Armor, item.Index, source);
+                        break;
+                    case OriginChoiceKeys.WeaponKind:
+                        RemoveOriginProficiency(ProficiencyType.Weapon, item.Index, source);
+                        break;
+                    case OriginChoiceKeys.SavingThrowKind:
+                        RemoveOriginProficiency(ProficiencyType.SavingThrow, item.Index, source);
+                        break;
+                    case OriginChoiceKeys.CantripKind or OriginChoiceKeys.SpellKind:
+                        if (!_choices.Any(c => c.IsOrigin
+                                && c.Selection.Kind is OriginChoiceKeys.CantripKind or OriginChoiceKeys.SpellKind
+                                && c.Selection.Selected.Any(s => s.Index == item.Index)))
                         {
                             RemoveSpell(item.Index, CharacterSpell.OriginClassIndex);
                         }
@@ -122,11 +133,81 @@ public sealed partial class Character
                 case OriginChoiceKeys.ToolKind:
                     AddProficiency(ProficiencyType.Tool, item.Index, source);
                     break;
-                case OriginChoiceKeys.CantripKind:
+                case OriginChoiceKeys.ArmorKind:
+                    AddProficiency(ProficiencyType.Armor, item.Index, source);
+                    break;
+                case OriginChoiceKeys.WeaponKind:
+                    AddProficiency(ProficiencyType.Weapon, item.Index, source);
+                    break;
+                case OriginChoiceKeys.SavingThrowKind:
+                    AddProficiency(ProficiencyType.SavingThrow, item.Index, source);
+                    break;
+                case OriginChoiceKeys.CantripKind or OriginChoiceKeys.SpellKind:
                     AddSpell(item.Index, CharacterSpell.OriginClassIndex, isPrepared: true, alwaysPrepared: true);
                     break;
             }
         }
+    }
+
+    /// <summary>
+    /// Brings the fixed grants of the race and of the subrace (phase 25) in line with the catalog: each kind is an origin
+    /// choice <c>race.grant.&lt;kind&gt;</c> / <c>race.subrace.grant.&lt;kind&gt;</c> whose effects are proficiencies (source
+    /// Race) and always-prepared spells without a class (<see cref="CharacterSpell.OriginClassIndex"/>). Spells with a
+    /// <c>minLevel</c> above the total level are left out until the character reaches it. Grants no longer in the catalog
+    /// are removed (changing the race already drops them, see <see cref="DropStaleOriginChoices"/>). True when something changed.
+    /// </summary>
+    public bool SyncRaceGrants(OptionGrants? race, OptionGrants? subrace, DateTimeOffset now)
+    {
+        var changed = SyncGrants(OriginChoiceKeys.RaceGrantPrefix, RaceIndex is null ? null : race, "raza", now);
+        changed |= SyncGrants(OriginChoiceKeys.SubraceGrantPrefix, SubraceIndex is null ? null : subrace, "subraza", now);
+        return changed;
+    }
+
+    private bool SyncGrants(string prefix, OptionGrants? grants, string origin, DateTimeOffset now)
+    {
+        var level = Math.Max(1, TotalLevel);
+        var desired = new (string Suffix, string Kind, string Name, IEnumerable<string> Items)[]
+        {
+            ("skills", OriginChoiceKeys.SkillKind, "Habilidades", grants?.Skills ?? []),
+            ("armor", OriginChoiceKeys.ArmorKind, "Armaduras", grants?.Armor ?? []),
+            ("weapons", OriginChoiceKeys.WeaponKind, "Armas", grants?.Weapons ?? []),
+            ("tools", OriginChoiceKeys.ToolKind, "Herramientas", grants?.Tools ?? []),
+            ("languages", OriginChoiceKeys.LanguageKind, "Idiomas", grants?.Languages ?? []),
+            ("saving-throws", OriginChoiceKeys.SavingThrowKind, "Salvaciones", grants?.SavingThrows ?? []),
+            ("cantrips", OriginChoiceKeys.CantripKind, "Trucos", grants?.Cantrips ?? []),
+            ("spells", OriginChoiceKeys.SpellKind, "Conjuros", (grants?.Spells ?? []).Where(s => (s.MinLevel ?? 0) <= level).Select(s => s.Index)),
+        };
+
+        var changed = false;
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (suffix, kind, name, items) in desired)
+        {
+            var key = prefix + suffix;
+            keys.Add(key);
+            var indexes = items.Where(i => !string.IsNullOrWhiteSpace(i)).Select(i => i.Trim()).Distinct(StringComparer.Ordinal).ToList();
+            var existing = OriginChoice(key);
+            if (indexes.Count == 0)
+            {
+                changed |= existing is not null && RemoveOriginChoices(k => k == key);
+                continue;
+            }
+
+            if (existing is not null && existing.Selection.Kind == kind && existing.Selection.Selected.Select(s => s.Index).SequenceEqual(indexes, StringComparer.Ordinal))
+            {
+                // Same grant: make sure its effects are there (a full replacement of the proficiencies may have dropped them).
+                ApplyOriginChoiceEffects(existing);
+                continue;
+            }
+
+            RecordOriginChoice(
+                key,
+                new ChoiceSelection { Kind = kind, Name = $"{name} ({origin})", Selected = indexes.Select(i => new ChoiceItem(i, i)).ToList() },
+                now);
+            changed = true;
+        }
+
+        changed |= RemoveOriginChoices(k => k.StartsWith(prefix, StringComparison.Ordinal) && !keys.Contains(k));
+        return changed;
     }
 
     private void RemoveOriginProficiency(ProficiencyType type, string key, ProficiencySource source)

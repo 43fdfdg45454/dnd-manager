@@ -34,6 +34,14 @@ public sealed class RaceDefinition
     /// <summary>Damage types the race always resists ("poison" for dwarves).</summary>
     public IReadOnlyList<string> Resistances { get; init; } = [];
 
+    /// <summary>
+    /// Fixed proficiencies and spells of the race (<see cref="OptionGrants"/> JSON, the <c>grants</c> of a content pack or
+    /// the trait proficiencies of the SRD), or null.
+    /// </summary>
+    public string? GrantsJson { get; init; }
+
+    public OptionGrants Grants => LevelChoiceJson.ParseGrants(GrantsJson);
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = CatalogSources.Srd;
 }

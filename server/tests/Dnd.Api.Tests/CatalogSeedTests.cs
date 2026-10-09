@@ -51,6 +51,7 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
             Assert.Contains("a6212beb", import.DatasetVersion);
             Assert.Contains("skill choices", import.DatasetVersion);
             Assert.Contains("personality", import.DatasetVersion);
+            Assert.Contains("race grants", import.DatasetVersion);
             Assert.Contains("\"spells\":319", import.CountsJson);
         });
     }

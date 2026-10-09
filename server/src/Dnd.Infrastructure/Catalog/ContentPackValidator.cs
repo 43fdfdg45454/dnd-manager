@@ -44,6 +44,8 @@ internal sealed class ContentPackRows
 
     public List<SubraceDefinition> Subraces { get; } = [];
 
+    public List<RaceExtensionDefinition> RaceExtensions { get; } = [];
+
     public List<TraitDefinition> Traits { get; } = [];
 
     public List<SpellDefinition> Spells { get; } = [];
@@ -73,6 +75,7 @@ internal sealed class ContentPackRows
         ["spells"] = Spells.Count,
         ["races"] = Races.Count,
         ["subraces"] = Subraces.Count,
+        ["raceExtensions"] = RaceExtensions.Count,
         ["traits"] = Traits.Count,
         ["backgrounds"] = Backgrounds.Count,
         ["trinkets"] = Trinkets.Count,
@@ -544,6 +547,12 @@ internal sealed partial class ContentPackValidator
 
     private void Race(string path, PackRaceJson race, ContentPackRows rows)
     {
+        if (race.Extends is not null)
+        {
+            RaceExtension(path, race, rows);
+            return;
+        }
+
         var index = Index($"{path}.index", "races", race.Index);
         var name = RequiredText($"{path}.name", race.Name, NameMaxLength);
         var speed = RequiredInt($"{path}.speed", race.Speed, 0, 200);
@@ -563,33 +572,7 @@ internal sealed partial class ContentPackValidator
         }
 
         var traitIndexes = Traits($"{path}.traits", race.Traits, rows, index, subraceIndex: null);
-        var subraceIndexes = new List<string>();
-        ForEach($"{path}.subraces", race.Subraces, (subracePath, subrace) =>
-        {
-            var subraceIndex = Index($"{subracePath}.index", "subraces", subrace.Index);
-            var subraceName = RequiredText($"{subracePath}.name", subrace.Name, NameMaxLength);
-            var description = OptionalText($"{subracePath}.description", subrace.Description, LongTextMaxLength);
-            var bonuses = AbilityBonuses($"{subracePath}.abilityBonuses", subrace.AbilityBonuses);
-            var subraceTraits = Traits($"{subracePath}.traits", subrace.Traits, rows, raceIndex: null, subraceIndex);
-            if (subraceIndex is null || index is null)
-            {
-                return;
-            }
-
-            subraceIndexes.Add(subraceIndex);
-            rows.Subraces.Add(new SubraceDefinition
-            {
-                Index = subraceIndex,
-                RaceIndex = index,
-                Name = subraceName,
-                Description = description,
-                AbilityBonusesJson = bonuses,
-                TraitIndexes = subraceTraits,
-                ChoicesJson = OriginChoices($"{subracePath}.choices", subrace.Choices),
-                Resistances = DamageTypes($"{subracePath}.resistances", subrace.Resistances),
-                Source = _id,
-            });
-        });
+        var subraceIndexes = Subraces(path, race.Subraces, index, rows);
 
         var definition = new RaceDefinition
         {
@@ -606,6 +589,7 @@ internal sealed partial class ContentPackValidator
             SubraceIndexes = subraceIndexes,
             ChoicesJson = OriginChoices($"{path}.choices", race.Choices),
             Resistances = DamageTypes($"{path}.resistances", race.Resistances),
+            GrantsJson = OriginGrants($"{path}.grants", race.Grants),
             Source = _id,
         };
 
@@ -614,6 +598,107 @@ internal sealed partial class ContentPackValidator
             rows.Races.Add(definition);
         }
     }
+
+    /// <summary>
+    /// <c>races[]</c> with <c>extends</c>: subraces, traits and grants added to a race of the SRD or of another pack. Only
+    /// those fields are read; a new race's speed, size, ability bonuses and languages are rejected.
+    /// </summary>
+    private void RaceExtension(string path, PackRaceJson race, ContentPackRows rows)
+    {
+        var raceIndex = race.Extends?.Trim();
+        if (string.IsNullOrEmpty(raceIndex))
+        {
+            AddError($"{path}.extends", "Indica el índice de la raza que amplías.");
+            raceIndex = null;
+        }
+        else if (_context.Races is null || !_context.Races.TryGetValue(raceIndex, out var source))
+        {
+            AddError($"{path}.extends", $"La raza '{raceIndex}' no existe en el catálogo (debe ser del SRD o de otro paquete ya importado).");
+            raceIndex = null;
+        }
+        else if (source == _id)
+        {
+            AddError($"{path}.extends", $"La raza '{raceIndex}' es de este mismo paquete: añade las subrazas en su definición.");
+            raceIndex = null;
+        }
+        else if (rows.RaceExtensions.Any(e => e.RaceIndex == raceIndex))
+        {
+            AddError($"{path}.extends", $"La raza '{raceIndex}' ya se amplía en otra entrada del paquete.");
+            raceIndex = null;
+        }
+
+        foreach (var (field, present) in new[]
+                 {
+                     ("speed", race.Speed is not null),
+                     ("size", race.Size is not null),
+                     ("abilityBonuses", race.AbilityBonuses is not null),
+                     ("languages", race.Languages is not null),
+                 })
+        {
+            if (present)
+            {
+                AddError($"{path}.{field}", "No se admite en una raza con extends (la raza base ya lo define).");
+            }
+        }
+
+        var traitIndexes = Traits($"{path}.traits", race.Traits, rows, raceIndex, subraceIndex: null);
+        Subraces(path, race.Subraces, raceIndex, rows);
+        var grants = OriginGrants($"{path}.grants", race.Grants);
+        if (raceIndex is null)
+        {
+            return;
+        }
+
+        rows.RaceExtensions.Add(new RaceExtensionDefinition
+        {
+            Id = RaceExtensionDefinition.IdFor(_id, raceIndex),
+            RaceIndex = raceIndex,
+            TraitIndexes = traitIndexes,
+            GrantsJson = grants,
+            Source = _id,
+        });
+    }
+
+    /// <summary>The subraces of a race (new or extended) as rows of the pack; their indexes.</summary>
+    private List<string> Subraces(string path, List<PackSubraceJson?>? subraces, string? raceIndex, ContentPackRows rows)
+    {
+        var subraceIndexes = new List<string>();
+        ForEach($"{path}.subraces", subraces, (subracePath, subrace) =>
+        {
+            var subraceIndex = Index($"{subracePath}.index", "subraces", subrace.Index);
+            var subraceName = RequiredText($"{subracePath}.name", subrace.Name, NameMaxLength);
+            var description = OptionalText($"{subracePath}.description", subrace.Description, LongTextMaxLength);
+            var bonuses = AbilityBonuses($"{subracePath}.abilityBonuses", subrace.AbilityBonuses);
+            var subraceTraits = Traits($"{subracePath}.traits", subrace.Traits, rows, raceIndex: null, subraceIndex);
+            var speed = OptionalInt($"{subracePath}.speed", subrace.Speed, 0, 200);
+            var grants = OriginGrants($"{subracePath}.grants", subrace.Grants);
+            if (subraceIndex is null || raceIndex is null)
+            {
+                return;
+            }
+
+            subraceIndexes.Add(subraceIndex);
+            rows.Subraces.Add(new SubraceDefinition
+            {
+                Index = subraceIndex,
+                RaceIndex = raceIndex,
+                Name = subraceName,
+                Description = description,
+                AbilityBonusesJson = bonuses,
+                TraitIndexes = subraceTraits,
+                ChoicesJson = OriginChoices($"{subracePath}.choices", subrace.Choices),
+                Resistances = DamageTypes($"{subracePath}.resistances", subrace.Resistances),
+                Speed = speed,
+                GrantsJson = grants,
+                Source = _id,
+            });
+        });
+        return subraceIndexes;
+    }
+
+    /// <summary>Grants of a race or subrace (format 2); null when absent.</summary>
+    private string? OriginGrants(string path, PackGrantsJson? grants) =>
+        grants is not null && RequireLevelChoicesFormat(path, grants) ? Grants(path, grants, origin: true) : null;
 
     private List<string> Traits(string path, List<PackTraitJson?>? traits, ContentPackRows rows, string? raceIndex, string? subraceIndex)
     {

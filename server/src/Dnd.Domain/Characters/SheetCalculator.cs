@@ -170,6 +170,12 @@ public static class SheetCalculator
         var speedBuilder = input.Race is { } race
             ? new BreakdownBuilder().Add(BreakdownSources.Race, BreakdownLabels.Race, race.Speed)
             : new BreakdownBuilder().Add(BreakdownSources.Base, BreakdownLabels.BaseSpeed, DefaultSpeed);
+        if (input.Race is not null && input.Subrace?.Speed is { } subraceSpeed && subraceSpeed != input.Race.Speed)
+        {
+            // A subrace speed replaces the race's: "Raza 30" + "Wood Elf +5".
+            speedBuilder.Add(BreakdownSources.Subrace, input.Subrace.Name.Length > 0 ? input.Subrace.Name : BreakdownLabels.Subrace, subraceSpeed - input.Race.Speed);
+        }
+
         var speed = Record(
             OverrideFields.Speed,
             WithOverride(Bonuses(speedBuilder, ItemModifierKind.SpeedBonus).Clamp(0, int.MaxValue, BreakdownLabels.Minimum), OverrideFields.Speed));
@@ -210,6 +216,27 @@ public static class SheetCalculator
             })
             .ToList();
 
+        if (RacialSpellcastingAbility(input.Race, input.Subrace) is { } racialAbility)
+        {
+            const string raceIndex = CharacterSpell.OriginClassIndex;
+            var saveDc = Record(
+                $"{OverrideFields.SpellSaveDc}.{raceIndex}",
+                WithOverride(
+                    new BreakdownBuilder()
+                        .Add(BreakdownSources.Base, BreakdownLabels.Base, 8)
+                        .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus)
+                        .Add(BreakdownSources.Ability, BreakdownLabels.Ability(racialAbility), Mod(racialAbility)),
+                    OverrideFields.SpellSaveDc));
+            var attackBonus = Record(
+                $"{OverrideFields.SpellAttackBonus}.{raceIndex}",
+                WithOverride(
+                    new BreakdownBuilder()
+                        .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus)
+                        .Add(BreakdownSources.Ability, BreakdownLabels.Ability(racialAbility), Mod(racialAbility)),
+                    OverrideFields.SpellAttackBonus));
+            spellcasting.Add(new SpellcastingValue(raceIndex, racialAbility, saveDc, attackBonus, null));
+        }
+
         var (spellSlots, casterLevel) = CalculateSpellSlots(classes);
         var choiceResources = choices.Resources
             .Select(r => (r.Resource, ClassLevel: r.ClassIndex is null ? totalLevel : classes.FirstOrDefault(c => c.Level.ClassIndex == r.ClassIndex)?.Level.Level ?? 0))
@@ -219,6 +246,7 @@ public static class SheetCalculator
                 RollOnRest = r.Resource.RollOnRest,
             })
             .ToList();
+        choiceResources.AddRange(RacialSpellResources(input.Race, input.Subrace, level));
 
         var (resistances, breath) = OriginTraits(character, input.Race, input.Subrace);
         BreathWeaponValue? breathWeapon = null;
@@ -271,6 +299,45 @@ public static class SheetCalculator
             Resistances = resistances,
             BreathWeapon = breathWeapon,
         };
+    }
+
+    /// <summary>
+    /// Ability of the "Raza" spellcasting: the <c>spellcastingAbility</c> of the subrace grants, else of the race ones,
+    /// when either grants spells or cantrips. Null otherwise.
+    /// </summary>
+    private static string? RacialSpellcastingAbility(RaceInfo? race, SubraceInfo? subrace)
+    {
+        var grantsSpells = (race?.Grants.HasSpells ?? false) || (subrace?.Grants.HasSpells ?? false);
+        var ability = subrace?.Grants.SpellcastingAbility ?? race?.Grants.SpellcastingAbility;
+        return grantsSpells && ability is not null && Abilities.IsValid(ability) ? ability : null;
+    }
+
+    /// <summary>
+    /// Automatic resources of the racial spells cast a number of times per long rest (<c>usesPerLongRest</c>), named after
+    /// the spell, from the total level the spell is granted at. Key <c>race.&lt;spell&gt;</c>.
+    /// </summary>
+    private static IEnumerable<ResourceTemplate> RacialSpellResources(RaceInfo? race, SubraceInfo? subrace, int level)
+    {
+        var sources = new[] { (Grants: race?.Grants, Names: race?.SpellNames), (Grants: subrace?.Grants, Names: subrace?.SpellNames) };
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (grants, names) in sources)
+        {
+            foreach (var spell in grants?.Spells ?? [])
+            {
+                if (spell.UsesPerLongRest is not { } uses || uses <= 0 || (spell.MinLevel ?? 0) > level || !seen.Add(spell.Index))
+                {
+                    continue;
+                }
+
+                var key = $"{CharacterSpell.OriginClassIndex}.{spell.Index}";
+                var name = names?.GetValueOrDefault(spell.Index) ?? spell.Index;
+                yield return new ResourceTemplate(
+                    key.Length > Character.IndexMaxLength ? key[..Character.IndexMaxLength] : key,
+                    name.Length > CharacterResource.NameMaxLength ? name[..CharacterResource.NameMaxLength] : name,
+                    Math.Min(uses, CharacterResource.MaxUses),
+                    ResourceRecharge.LongRest);
+            }
+        }
     }
 
     /// <summary>

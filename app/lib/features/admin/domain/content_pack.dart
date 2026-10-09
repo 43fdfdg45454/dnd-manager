@@ -43,6 +43,7 @@ const _countLabels = <String, (String, String)>{
   'spells': ('conjuro', 'conjuros'),
   'races': ('raza', 'razas'),
   'subraces': ('subraza', 'subrazas'),
+  'raceExtensions': ('raza ampliada', 'razas ampliadas'),
   'traits': ('rasgo racial', 'rasgos raciales'),
   'backgrounds': ('trasfondo', 'trasfondos'),
   'trinkets': ('baratija', 'baratijas'),

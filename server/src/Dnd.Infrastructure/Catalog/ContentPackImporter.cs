@@ -52,13 +52,19 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
 
         await using (var transaction = await db.Database.BeginTransactionAsync(cancellationToken))
         {
-            await DeleteDefinitionsAsync(id, cancellationToken);
+            // The pack's races are updated in place: other packs may have added subraces to them (races[].extends).
+            var raceIndexes = rows.Races.Select(r => r.Index).ToList();
+            await DeleteDefinitionsAsync(id, raceIndexes, cancellationToken);
+            var existingRaces = (await db.CatalogRaces.AsNoTracking().Where(x => x.Source == id).Select(x => x.Index).ToListAsync(cancellationToken))
+                .ToHashSet(StringComparer.Ordinal);
 
             db.CatalogSubclasses.AddRange(rows.Subclasses);
             db.CatalogSubclassLevels.AddRange(rows.SubclassLevels);
             db.CatalogFeatures.AddRange(rows.Features);
-            db.CatalogRaces.AddRange(rows.Races);
+            db.CatalogRaces.UpdateRange(rows.Races.Where(r => existingRaces.Contains(r.Index)));
+            db.CatalogRaces.AddRange(rows.Races.Where(r => !existingRaces.Contains(r.Index)));
             db.CatalogSubraces.AddRange(rows.Subraces);
+            db.CatalogRaceExtensions.AddRange(rows.RaceExtensions);
             db.CatalogTraits.AddRange(rows.Traits);
             db.CatalogSpells.AddRange(rows.Spells);
             db.CatalogBackgrounds.AddRange(rows.Backgrounds);
@@ -130,7 +136,7 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
 
         await using (var transaction = await db.Database.BeginTransactionAsync(cancellationToken))
         {
-            await DeleteDefinitionsAsync(id, cancellationToken);
+            await DeleteDefinitionsAsync(id, [], cancellationToken);
             var kept = await CatalogItems.DeleteUnusedAsync(db, id, [], cancellationToken);
             await db.CatalogImports.Where(x => x.Ruleset == ruleset).ExecuteDeleteAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
@@ -297,8 +303,12 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
             x => (x, CatalogSources.Srd)));
     }
 
-    /// <summary>Deletes every definition of the pack except item templates (dependents first).</summary>
-    private async Task DeleteDefinitionsAsync(string id, CancellationToken cancellationToken)
+    /// <summary>
+    /// Deletes every definition of the pack except item templates (dependents first) and the races in
+    /// <paramref name="keptRaces"/>, which the import updates in place (deleting a race cascades over the subraces and
+    /// extensions other packs added to it).
+    /// </summary>
+    private async Task DeleteDefinitionsAsync(string id, IReadOnlyCollection<string> keptRaces, CancellationToken cancellationToken)
     {
         await db.CatalogTrinkets.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogRollTables.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
@@ -309,7 +319,8 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
         await db.CatalogSubclassLevels.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogSubclasses.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogSubraces.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogRaces.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.CatalogRaceExtensions.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.CatalogRaces.Where(x => x.Source == id && !keptRaces.Contains(x.Index)).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogTraits.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogSpells.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogBackgrounds.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);

@@ -105,8 +105,15 @@ public sealed record ChoiceModifier(ItemModifierKind Kind, string? Target, int V
 /// <summary>Ability increase of a feat: <see cref="Amount"/> to one ability of <see cref="From"/> (empty = any ability).</summary>
 public sealed record AbilityIncrease(int Amount, IReadOnlyList<string> From);
 
-/// <summary>A spell granted by an option, from <see cref="MinLevel"/> in the class of the choice (null = at once).</summary>
-public sealed record GrantedSpell(string Index, int? MinLevel);
+/// <summary>
+/// A spell granted by an option, from <see cref="MinLevel"/> in the class of the choice (null = at once). Granted by a
+/// race or subrace, <see cref="MinLevel"/> is the total character level.
+/// </summary>
+public sealed record GrantedSpell(string Index, int? MinLevel)
+{
+    /// <summary>Races and subraces: casts per long rest without a slot (an automatic resource named after the spell), or null.</summary>
+    public int? UsesPerLongRest { get; init; }
+}
 
 /// <summary>Proficiencies and spells an option (or a subclass level) grants. Spells are always prepared.</summary>
 public sealed record OptionGrants(
@@ -121,8 +128,45 @@ public sealed record OptionGrants(
 {
     public static OptionGrants None { get; } = new([], [], [], [], [], [], [], []);
 
+    /// <summary>
+    /// Races and subraces: ability ("cha") the granted spells and cantrips are cast with (the "Raza" spellcasting of
+    /// the sheet), or null.
+    /// </summary>
+    public string? SpellcastingAbility { get; init; }
+
     public bool IsEmpty =>
         Skills.Count + Cantrips.Count + Spells.Count + Armor.Count + Weapons.Count + Tools.Count + Languages.Count + SavingThrows.Count == 0;
+
+    /// <summary>Whether it grants spells or cantrips.</summary>
+    public bool HasSpells => Spells.Count + Cantrips.Count > 0;
+
+    /// <summary>
+    /// Both grants together (a race and the packs that extend it): lists without duplicates, the first spell entry of
+    /// an index wins and so does the first spellcasting ability.
+    /// </summary>
+    public OptionGrants Merge(OptionGrants other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+        if (other.IsEmpty && other.SpellcastingAbility is null)
+        {
+            return this;
+        }
+
+        static IReadOnlyList<string> Union(IReadOnlyList<string> a, IReadOnlyList<string> b) => [.. a.Concat(b).Distinct(StringComparer.Ordinal)];
+
+        return new OptionGrants(
+            Union(Skills, other.Skills),
+            Union(Cantrips, other.Cantrips),
+            [.. Spells.Concat(other.Spells).GroupBy(s => s.Index, StringComparer.Ordinal).Select(g => g.First())],
+            Union(Armor, other.Armor),
+            Union(Weapons, other.Weapons),
+            Union(Tools, other.Tools),
+            Union(Languages, other.Languages),
+            Union(SavingThrows, other.SavingThrows))
+        {
+            SpellcastingAbility = SpellcastingAbility ?? other.SpellcastingAbility,
+        };
+    }
 }
 
 /// <summary>
@@ -337,7 +381,7 @@ public static class LevelChoiceJson
                     }
                     else if (entry.ValueKind == JsonValueKind.Object && Text(Property(entry, "index")) is { } index)
                     {
-                        spells.Add(new GrantedSpell(index, Int(Property(entry, "minLevel"))));
+                        spells.Add(new GrantedSpell(index, Int(Property(entry, "minLevel"))) { UsesPerLongRest = Int(Property(entry, "usesPerLongRest")) });
                     }
                 }
             }
@@ -350,7 +394,10 @@ public static class LevelChoiceJson
                 List("weapons"),
                 List("tools"),
                 List("languages"),
-                List("savingThrows"));
+                List("savingThrows"))
+            {
+                SpellcastingAbility = Text(Property(root, "spellcastingAbility")) is { } ability && Abilities.IsValid(ability) ? ability : null,
+            };
         }) ?? OptionGrants.None;
 
     public static OptionResource? ParseResource(string? json) =>
