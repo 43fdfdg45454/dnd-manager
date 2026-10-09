@@ -286,6 +286,58 @@ public sealed record ChoiceFilter(string? SpellList, IReadOnlyList<int> SpellLev
     public const string ListSource = "list";
 
     public static ChoiceFilter None { get; } = new(null, [], false, null, false);
+
+    /// <summary>SRD school indexes in lowercase ("abjuration", "evocation"); empty when any school is allowed.</summary>
+    public IReadOnlyList<string> Schools { get; init; } = [];
+
+    /// <summary>Class levels at which a spell of any school may be chosen despite <see cref="Schools"/>.</summary>
+    public IReadOnlyList<int> SchoolsExceptAt { get; init; } = [];
+
+    /// <summary>Whether a spell of <paramref name="school"/> ("Evocation" or "evocation") is allowed at the class level.</summary>
+    public bool AllowsSchool(string school, int classLevel) =>
+        Schools.Count == 0
+        || SchoolsExceptAt.Contains(classLevel)
+        || Schools.Contains(school.Trim().ToLowerInvariant(), StringComparer.Ordinal);
+
+    /// <summary>Spanish reason for a spell outside <see cref="Schools"/>: "Solo abjuración o evocación salvo en los niveles 3, 8, 14 y 20".</summary>
+    public string SchoolsReason()
+    {
+        var text = $"Solo {JoinSpanish(Schools.Select(SpellSchools.Spanish).ToList(), "o")}";
+        return SchoolsExceptAt.Count switch
+        {
+            0 => text,
+            1 => $"{text} salvo en el nivel {SchoolsExceptAt[0]}",
+            _ => $"{text} salvo en los niveles {JoinSpanish(SchoolsExceptAt.Select(l => l.ToString(System.Globalization.CultureInfo.InvariantCulture)).ToList(), "y")}",
+        };
+    }
+
+    private static string JoinSpanish(IReadOnlyList<string> items, string conjunction) => items.Count switch
+    {
+        0 => string.Empty,
+        1 => items[0],
+        _ => $"{string.Join(", ", items.Take(items.Count - 1))} {conjunction} {items[^1]}",
+    };
+}
+
+/// <summary>The eight schools of magic (SRD indexes, lowercase) and their Spanish names.</summary>
+public static class SpellSchools
+{
+    public static IReadOnlyList<string> All { get; } =
+        ["abjuration", "conjuration", "divination", "enchantment", "evocation", "illusion", "necromancy", "transmutation"];
+
+    /// <summary>"evocation" → "evocación"; unknown values unchanged.</summary>
+    public static string Spanish(string school) => school switch
+    {
+        "abjuration" => "abjuración",
+        "conjuration" => "conjuración",
+        "divination" => "adivinación",
+        "enchantment" => "encantamiento",
+        "evocation" => "evocación",
+        "illusion" => "ilusión",
+        "necromancy" => "nigromancia",
+        "transmutation" => "transmutación",
+        _ => school,
+    };
 }
 
 /// <summary>Values of <see cref="ChoiceModifier.Condition"/>.</summary>
@@ -538,7 +590,15 @@ public static class LevelChoiceJson
                 levels,
                 Bool(Property(root, "maxSpellLevelBySlots")),
                 Text(Property(root, "source")),
-                Bool(Property(root, "cantripsOnly")));
+                Bool(Property(root, "cantripsOnly")))
+            {
+                Schools = Property(root, "schools") is { ValueKind: JsonValueKind.Array } schools
+                    ? Strings(schools).Select(x => x.ToLowerInvariant()).Distinct(StringComparer.Ordinal).ToList()
+                    : [],
+                SchoolsExceptAt = Property(root, "schoolsExceptAt") is { ValueKind: JsonValueKind.Array } except
+                    ? except.EnumerateArray().Select(e => Int(e)).OfType<int>().Where(l => l is >= 1 and <= 20).Distinct().Order().ToList()
+                    : [],
+            };
         }) ?? ChoiceFilter.None;
 
     /// <summary>Serializes a value with the camelCase options used by the catalog JSON columns.</summary>

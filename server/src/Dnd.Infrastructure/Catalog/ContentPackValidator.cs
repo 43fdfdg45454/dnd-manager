@@ -19,6 +19,7 @@ namespace Dnd.Infrastructure.Catalog;
 /// <param name="EquipmentCategories">Indexes of the equipment categories ("martial-weapons").</param>
 /// <param name="PackSubclasses">Subclasses of the packs already imported: index → (class index, pack id).</param>
 /// <param name="Races">Race index → source (the SRD or a pack), for race prerequisites.</param>
+/// <param name="CasterClasses">Classes that cast spells on their own (a subclass <c>spellcasting</c> is only for the others).</param>
 internal sealed record ContentPackContext(
     IReadOnlyDictionary<string, string> Classes,
     IReadOnlyDictionary<string, string> SrdSubclasses,
@@ -29,7 +30,8 @@ internal sealed record ContentPackContext(
     IReadOnlySet<string>? SrdItems = null,
     IReadOnlySet<string>? EquipmentCategories = null,
     IReadOnlyDictionary<string, (string ClassIndex, string Source)>? PackSubclasses = null,
-    IReadOnlyDictionary<string, string>? Races = null);
+    IReadOnlyDictionary<string, string>? Races = null,
+    IReadOnlySet<string>? CasterClasses = null);
 
 /// <summary>Catalog rows of a valid content pack, every one with <c>Source</c> = the pack id.</summary>
 internal sealed class ContentPackRows
@@ -226,9 +228,12 @@ internal sealed partial class ContentPackValidator
             }
 
             packSubclasses[index] = classIndex;
+            var spellcasting = subclass.Spellcasting is not null && RequireLevelChoicesFormat($"{subclassPath}.spellcasting", subclass.Spellcasting)
+                ? SubclassSpellcasting($"{subclassPath}.spellcasting", subclass.Spellcasting, classIndex)
+                : null;
             if (RequireLevelChoicesFormat($"{subclassPath}.levelChoices", subclass.LevelChoices))
             {
-                ForEach($"{subclassPath}.levelChoices", subclass.LevelChoices, (rulePath, rule) => LevelChoice(rulePath, rule, classIndex, index, rows));
+                ForEach($"{subclassPath}.levelChoices", subclass.LevelChoices, (rulePath, rule) => LevelChoice(rulePath, rule, classIndex, index, rows, spellcasting));
             }
 
             rows.Subclasses.Add(new SubclassDefinition
@@ -238,6 +243,7 @@ internal sealed partial class ContentPackValidator
                 Name = name,
                 Flavor = subclassFlavor.Length > 0 ? subclassFlavor : flavor,
                 Description = description,
+                SpellcastingJson = spellcasting?.ToJson(),
                 Source = _id,
             });
 

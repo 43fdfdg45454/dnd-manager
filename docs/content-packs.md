@@ -188,6 +188,7 @@ Notación: `string?` admite `null` o ausencia; **obligatorio** indica que no pue
 | `flavor` | `string?` | ≤ 200. Nombre de la elección ("Martial Archetype"); por defecto, el de la clase. |
 | `description` | `string[]?` | Párrafos. |
 | `levels` | `SubclassLevel[]?` | Rasgos por nivel. |
+| `spellcasting` | `SubclassSpellcasting?` | Con `"formatVersion": 2`: la subclase convierte en lanzadora a una clase que no lanza conjuros (ver [`subclasses[].spellcasting`](#subclassesspellcasting)). |
 
 **`SubclassLevel`**: `level` (`int`, **obligatorio**, 1–20, sin repetir dentro de la subclase) y
 `features` (`Feature[]?`).
@@ -863,15 +864,67 @@ En `classesExtended[].levelChoices` (elecciones de la clase base) y en
 | `name` | `string` | **Obligatorio**, ≤ 200. |
 | `kind` | `string` | **Obligatorio**: `Subclass`, `OptionSet`, `AsiOrFeat`, `Expertise`, `Skill`, `Language`, `Tool`, `CantripsKnown`, `SpellsKnown`, `SpellbookSpells` o `Custom`. |
 | `setId` | `string?` | Conjunto de donde salen las opciones; **obligatorio** en `OptionSet`. Puede ser del SRD, de otro paquete o del propio paquete. |
-| `choose` | `int` | **Obligatorio**, 0–20: cuántas elecciones da este nivel. |
+| `choose` | `int` | **Obligatorio**, 0–20: cuántas elecciones da este nivel. En `SpellsKnown`/`CantripsKnown` de una subclase con `spellcasting` puede omitirse: se toma el aumento de su tabla `spellsKnown`/`cantripsKnown` respecto al nivel anterior. |
 | `from` | `string[]?` | Subconjunto permitido del conjunto (índices de opciones que deben existir en él) o, en `Language`/`Tool`, los valores posibles. Sin `from`, todo el conjunto (o texto libre). |
 | `replaces` | `bool?` | Desde este nivel, en cada nivel de la clase se puede sustituir una elección ya hecha. |
 | `cumulative` | `bool?` | Se suma a lo elegido en niveles anteriores. |
 | `note` | `string?` | ≤ 2000. Aclaración para la interfaz. |
-| `filter` | `Filter?` | Conjuros: `spellList` (clase o `any`), `spellLevels` (`[1, 2]`), `maxSpellLevelBySlots`, `source` (`list`, `spellbook` o `known`), `cantripsOnly`. |
+| `filter` | `Filter?` | Conjuros: `spellList` (clase o `any`), `spellLevels` (`[1, 2]`), `maxSpellLevelBySlots`, `source` (`list`, `spellbook` o `known`), `cantripsOnly`, `schools`, `schoolsExceptAt`. |
 
 `AsiOrFeat` ofrece siempre la mejora de característica y las dotes del conjunto `feats`. Las
 elecciones `Custom` se validan solo por número.
+
+**Filtro por escuela.** `filter.schools` (`["abjuration", "evocation"]`, índices de escuela del SRD en
+minúsculas: `abjuration`, `conjuration`, `divination`, `enchantment`, `evocation`, `illusion`,
+`necromancy`, `transmutation`) limita los conjuros a esas escuelas; `filter.schoolsExceptAt`
+(`[3, 8, 14, 20]`, niveles 1–20 de la clase) son los niveles en que se puede elegir un conjuro de
+cualquier escuela, y solo vale junto con `schools`. El asistente muestra los demás conjuros como no
+elegibles con el motivo ("Solo abjuración o evocación salvo en los niveles 3, 8, 14 y 20"). En un nivel
+de excepción todos los conjuros de la lista son elegibles: el asistente no cuenta cuántos de los
+elegidos son de otra escuela. Errores: `...filter.schools[0]` (escuela desconocida),
+`...filter.schoolsExceptAt[0]` (fuera de 1–20), `...filter.schoolsExceptAt` (sin `schools`).
+
+### `subclasses[].spellcasting`
+
+Una subclase de una clase que **no** lanza conjuros (guerrero, pícaro, bárbaro, monje) puede darle
+lanzamiento de conjuros:
+
+```json
+"spellcasting": {
+  "progression": "third",
+  "ability": "int",
+  "fromLevel": 3,
+  "spellList": "wizard",
+  "cantripsKnown": { "3": 2, "10": 3 },
+  "spellsKnown": { "3": 3, "4": 4, "7": 5, "8": 6 }
+}
+```
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `progression` | `string` | **Obligatorio**: `third` (tercio), `half` (medio) o `full` (completo). |
+| `ability` | `string` | **Obligatorio**: `str`, `dex`, `con`, `int`, `wis` o `cha`. Característica de la CD y del ataque de conjuros. |
+| `fromLevel` | `int?` | 1–20, por defecto 1: nivel de la clase desde el que lanza conjuros. |
+| `spellList` | `string` | **Obligatorio**: clase del catálogo cuya lista de conjuros usa (`wizard`). |
+| `cantripsKnown` | `{nivel: int}?` | Trucos conocidos por nivel de la clase (0–10); vale la entrada más alta no superior al nivel. |
+| `spellsKnown` | `{nivel: int}?` | Conjuros conocidos por nivel de la clase (0–30), igual. |
+
+Con esa subclase, la clase pasa a ser lanzadora para el personaje desde `fromLevel`:
+
+- **Espacios**: en clase única, la tabla de la progresión (tercio: 2 espacios de nivel 1 al 3, 3 al 4,
+  4 al 7; de nivel 2, 2 al 7 y 3 al 10; de nivel 3, 2 al 13 y 3 al 16; de nivel 4, 1 al 19; medio y
+  completo, las tablas del paladín y del mago). En multiclase suma `floor(nivel / 3)` (o `/ 2`, `/ 1`)
+  al nivel de lanzador compartido, como las demás clases.
+- **Hoja**: el bloque de conjuros lista la clase con su CD y su ataque calculados con `ability` (y su
+  desglose) y los máximos de conocidos (`spellsKnownMax`, `cantripsKnownMax` en `sheet.spellcasting`).
+- **Asistente**: las elecciones `SpellsKnown`/`CantripsKnown` de la subclase sin `choose` piden el
+  aumento de la tabla; `spellList` es la lista por defecto de sus filtros y `maxSpellLevelBySlots` usa
+  los espacios de la progresión.
+
+Errores: `...spellcasting` (la clase base ya lanza conjuros), `...spellcasting.progression`,
+`...spellcasting.ability`, `...spellcasting.fromLevel`, `...spellcasting.spellList`,
+`...spellcasting.spellsKnown.3` (clave que no es un nivel 1–20 o valor fuera de rango) y
+`...levelChoices[0].choose` cuando falta y la subclase no tiene la tabla correspondiente.
 
 ### `levels[].grants`
 

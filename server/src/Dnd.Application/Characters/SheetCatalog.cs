@@ -121,7 +121,8 @@ public sealed class SheetCatalog
     public SheetInput InputFor(Character character, EquippedGear gear)
     {
         var classes = character.Classes
-            .Select(c => _classInfos.GetValueOrDefault(c.ClassIndex) ?? new ClassInfo { Index = c.ClassIndex, HitDie = FallbackHitDie })
+            .Select(c => (_classInfos.GetValueOrDefault(c.ClassIndex) ?? new ClassInfo { Index = c.ClassIndex, HitDie = FallbackHitDie })
+                .WithSubclassSpellcasting(Subclass(c.SubclassIndex)?.Spellcasting))
             .ToList();
         var race = Race(character.RaceIndex);
         var subrace = Subrace(character.SubraceIndex);

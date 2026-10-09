@@ -669,6 +669,8 @@ class Spellcasting {
     required this.saveDc,
     required this.attackBonus,
     this.preparedMax,
+    this.spellsKnownMax,
+    this.cantripsKnownMax,
   });
 
   factory Spellcasting.fromJson(Map<String, dynamic> json) => Spellcasting(
@@ -677,6 +679,8 @@ class Spellcasting {
     saveDc: _int(json['saveDc']) ?? 0,
     attackBonus: _int(json['attackBonus']) ?? 0,
     preparedMax: _int(json['preparedMax']),
+    spellsKnownMax: _int(json['spellsKnownMax']),
+    cantripsKnownMax: _int(json['cantripsKnownMax']),
   );
 
   final String classIndex;
@@ -684,6 +688,13 @@ class Spellcasting {
   final int saveDc;
   final int attackBonus;
   final int? preparedMax;
+
+  /// Spells known allowed at the class level (classes that cast through a
+  /// subclass of a content pack); null when the class has no fixed number.
+  final int? spellsKnownMax;
+
+  /// Cantrips known allowed at the class level, like [spellsKnownMax].
+  final int? cantripsKnownMax;
 }
 
 /// One term of a calculated value (`BreakdownPartDto`). [source] is one of
