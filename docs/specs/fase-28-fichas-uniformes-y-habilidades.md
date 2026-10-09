@@ -32,7 +32,8 @@ Sacar de `character_tabs.dart` `_EqualGrid` y `_StatTile` a un fichero público 
   rejilla actual (3 columnas, o `columnsWide` desde 600 px; `childAspectRatio` 1.15, o 1.3 cuando es
   ancha con más de 3 columnas; sin scroll propio). Mismo comportamiento que `_EqualGrid`.
 - `StatTile({required String statKey, required String label, required String value, Breakdown?
-  breakdown, String? totalText, Widget? mark, VoidCallback? onTap, Widget? corner, Key? key})`:
+  breakdown, String? totalText, Widget? mark, VoidCallback? onTap, Widget? corner, Key? tapKey,
+  Key? key})`:
   la ficha actual (`StoneCard` con clave `tile-<statKey>`, etiqueta `labelMedium` centrada a dos
   líneas con elipsis, valor en `titleLarge` numérico dentro de `FittedBox`, y `mark` a la derecha
   del valor, que en la ficha es el `OverrideMark`). `StatValue` sigue abriendo el desglose al tocar
@@ -63,13 +64,11 @@ Sacar de `character_tabs.dart` `_EqualGrid` y `_StatTile` a un fichero público 
   6. `combat-inspiration` "Inspiración", valor "Sí"/"No", sin desglose; `corner` =
      `AppIcon(AppIcons.sparkles, 18)` en `tokens.oldGold` cuando hay inspiración y en
      `boneMuted` cuando no; la ficha entera (`onTap`, solo con `canEdit`) alterna la inspiración
-     con `patchCombat(CombatPatch(inspiration: !c.inspiration))` dentro de `runCombat`. La clave
-     `inspiration` que usa `combat_test.dart` se pone en el `StoneCard` de esta ficha (es decir,
-     `StatTile` acepta la `key` y la aplica al `StoneCard`; aquí se pasa `Key('inspiration')` y
-     `statKey: 'combat-inspiration'` genera… **no**: para no tener dos claves en un widget, el
-     `StoneCard` lleva `Key('tile-combat-inspiration')` y el `InkWell` de `onTap` que lo envuelve
-     lleva `Key('inspiration')`). Tocar `inspiration` en el test debe alternar el valor igual que
-     el chip de antes.
+     con `patchCombat(CombatPatch(inspiration: !c.inspiration))` dentro de `runCombat`. Para que
+     `combat_test.dart` siga tocando `inspiration`, `StatTile` acepta un `Key? tapKey` que aplica
+     a un `KeyedSubtree` que envuelve toda la ficha; aquí `tapKey: Key('inspiration')`. Como el
+     valor "Sí"/"No" no tiene desglose, el toque llega al `onTap` del `StoneCard` y alterna el
+     valor igual que el chip de antes.
 - Quitar `QuickSkillRolls` de la tarjeta (ver sección 2b). La fila de concentración
   (chip + "Perder") se queda debajo de la rejilla tal cual, con `SizedBox(height: 8)` de
   separación.
