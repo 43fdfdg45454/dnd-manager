@@ -156,14 +156,17 @@ class PartyMemberRow extends StatelessWidget {
                   const SizedBox(height: 6),
                   HpBar(member: m),
                   const SizedBox(height: 2),
-                  Row(
+                  // The stats drop to their own line when the row is too narrow
+                  // for both (a phone with the portrait and the checkbox).
+                  Wrap(
+                    spacing: 12,
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Expanded(
-                        child: Text(
-                          hpText,
-                          key: Key('party-hp-${m.id}'),
-                          style: theme.textTheme.labelLarge?.merge(AppTypography.numeric),
-                        ),
+                      Text(
+                        hpText,
+                        key: Key('party-hp-${m.id}'),
+                        style: theme.textTheme.labelLarge?.merge(AppTypography.numeric),
                       ),
                       Text(
                         'CA ${m.armorClass} · Inic. ${formatModifier(m.initiative)} · '
