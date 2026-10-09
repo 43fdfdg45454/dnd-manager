@@ -128,6 +128,9 @@ String overrideFieldLabel(String field) {
   };
 }
 
+/// Spanish name of an ability key ("dex" -> "Destreza").
+String abilityName(String key) => _abilityName(abilityKeyOf(key));
+
 String _abilityName(String key) => switch (key) {
   'str' => 'Fuerza',
   'dex' => 'Destreza',

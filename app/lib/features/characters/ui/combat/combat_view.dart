@@ -7,6 +7,7 @@ import 'attacks_section.dart';
 import 'class_panels.dart';
 import 'resources_section.dart';
 import 'rest_section.dart';
+import 'spells_section.dart';
 import 'vitals_section.dart';
 
 /// The combat screen of a character: one scrolling page with big controls for
@@ -47,6 +48,7 @@ class CombatView extends ConsumerWidget {
           if (c.hitPointsCurrent == 0) DeathSavesCard(character: c, canEdit: canEdit),
           ConditionsCard(character: c, canEdit: canEdit),
           AttacksSection(character: c),
+          SpellsSection(character: c, canEdit: canEdit),
           SpellSlotsSection(character: c, canEdit: canEdit),
           ResourcesSection(character: c, canEdit: canEdit, isDm: isDm),
           ClassPanelsSection(character: c, canEdit: canEdit, isDm: isDm),

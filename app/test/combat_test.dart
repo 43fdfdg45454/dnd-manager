@@ -13,6 +13,7 @@ import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
 import 'package:dnd_companion/features/catalog/data/models.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:dnd_companion/features/characters/data/models.dart';
+import 'package:dnd_companion/features/characters/domain/spell_combat.dart';
 import 'package:dnd_companion/features/characters/ui/character_page.dart';
 import 'package:dnd_companion/features/characters/ui/combat/class_panels.dart';
 import 'package:dnd_companion/features/characters/ui/combat/combat_support.dart' show Pip;
@@ -981,6 +982,186 @@ void main() {
       expect(find.byKey(const Key('all-skills-stealth')), findsOneWidget);
       await _tap(tester, 'all-skills-stealth');
       expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '12');
+    });
+  });
+
+  group('conjuros en combate', () {
+    SpellDetail spell(Map<String, dynamic> json) => SpellDetail.fromJson(json);
+
+    final fireBolt = spell({
+      'index': 'fire-bolt',
+      'name': 'Fire Bolt',
+      'level': 0,
+      'attackType': 'ranged',
+      'damage': {
+        'dice': '1d10',
+        'type': 'Fire',
+        'atCharacterLevel': {'1': '1d10', '5': '2d10', '11': '3d10', '17': '4d10'},
+      },
+    });
+    final fireball = spell({
+      'index': 'fireball',
+      'name': 'Fireball',
+      'level': 3,
+      'dcAbility': 'dex',
+      'damage': {
+        'dice': '8d6',
+        'type': 'Fire',
+        'atSlotLevel': {for (var l = 3; l <= 9; l++) '$l': '${l + 5}d6'},
+      },
+    });
+    final cureWounds = spell({
+      'index': 'cure-wounds',
+      'name': 'Cure Wounds',
+      'level': 1,
+      'healAtSlotLevel': {for (var l = 1; l <= 9; l++) '$l': '${l}d8 + MOD'},
+    });
+    final shield = spell({'index': 'shield', 'name': 'Shield', 'level': 1});
+    final burningHands = spell({
+      'index': 'burning-hands',
+      'name': 'Burning Hands',
+      'level': 1,
+      'dcAbility': 'dex',
+      'damage': {
+        'atSlotLevel': {'1': '3d6', '2': '4d6'},
+      },
+    });
+
+    FakeCharactersRepository caster() {
+      final json = makeCharacterJson(
+        status: 'Active',
+        classes: [
+          {'classIndex': 'wizard', 'className': 'Wizard', 'level': 4},
+          {'classIndex': 'cleric', 'className': 'Cleric', 'level': 1},
+        ],
+        spells: [
+          {'spellIndex': 'fire-bolt', 'classIndex': 'wizard'},
+          {'spellIndex': 'fireball', 'classIndex': 'wizard', 'isPrepared': true},
+          {'spellIndex': 'shield', 'classIndex': 'wizard', 'isPrepared': true},
+          {'spellIndex': 'burning-hands', 'classIndex': 'wizard'},
+          {'spellIndex': 'cure-wounds', 'classIndex': 'cleric', 'alwaysPrepared': true},
+        ],
+        combat: makeCombatJson(
+          spellSlots: [
+            {'level': 1, 'max': 4, 'used': 0},
+            {'level': 3, 'max': 2, 'used': 0},
+            {'level': 4, 'max': 1, 'used': 0},
+          ],
+        ),
+      );
+      (json['sheet'] as Map<String, dynamic>)['spellcasting'] = [
+        {
+          'classIndex': 'wizard',
+          'ability': 'int',
+          'saveDc': 15,
+          'attackBonus': 7,
+          'preparedMax': 6,
+        },
+        {
+          'classIndex': 'cleric',
+          'ability': 'wis',
+          'saveDc': 11,
+          'attackBonus': 3,
+          'preparedMax': 2,
+        },
+      ];
+      return FakeCharactersRepository(characters: [json]);
+    }
+
+    FakeCatalogRepository catalog() => FakeCatalogRepository(
+      spellDetails: {
+        for (final s in [fireBolt, fireball, cureWounds, shield, burningHands]) s.index: s,
+      },
+    );
+
+    test('SpellDetail conserva el escalado de daño y de curación', () {
+      expect(fireBolt.damageAtCharacterLevel[5], '2d10');
+      expect(fireBolt.damageType, 'Fire');
+      expect(fireball.damageAtSlotLevel[9], '14d6');
+      expect(cureWounds.healAtSlotLevel[2], '2d8 + MOD');
+      expect(shield.damageAtSlotLevel, isEmpty);
+    });
+
+    test('escalado por nivel de lanzamiento y de personaje', () {
+      expect(spellDamageExpression(fireBolt, castLevel: 0, characterLevel: 4), '1d10');
+      expect(spellDamageExpression(fireBolt, castLevel: 0, characterLevel: 11), '3d10');
+      expect(spellDamageExpression(fireball, castLevel: 5, characterLevel: 5), '10d6');
+      expect(
+        spellDamageExpression(fireball, castLevel: 3, characterLevel: 5, critical: true),
+        '16d6',
+      );
+      expect(spellHealExpression(cureWounds, castLevel: 3, modifier: 2), '3d8+2');
+      expect(spellHealExpression(cureWounds, castLevel: 1, modifier: -1), '1d8-1');
+      expect(spellHealExpression(cureWounds, castLevel: 1, modifier: 0), '1d8');
+      expect(withModifier('5', 3), '5');
+      expect(isCombatSpell(shield), isFalse);
+      expect(
+        castLevels(3, const [
+          SpellSlot(level: 1, max: 2, used: 0),
+          SpellSlot(level: 4, max: 1, used: 0),
+        ], null),
+        [4],
+      );
+      expect(castLevels(2, const [], const SpellSlot(level: 3, max: 2, used: 0)), [3]);
+      expect(castLevels(2, const [], null), [2]);
+    });
+
+    testWidgets('lista trucos y conjuros preparados con ataque, salvación o curación', (
+      tester,
+    ) async {
+      await _pump(tester, characters: caster(), catalog: catalog());
+      expect(find.byKey(const Key('combat-spells')), findsOneWidget);
+      expect(find.byKey(const Key('combat-spell-fire-bolt')), findsOneWidget);
+      expect(find.byKey(const Key('combat-spell-fireball')), findsOneWidget);
+      expect(find.byKey(const Key('combat-spell-cure-wounds')), findsOneWidget);
+      // Sin tirada ni salvación, o sin preparar en una clase que prepara.
+      expect(find.byKey(const Key('combat-spell-shield')), findsNothing);
+      expect(find.byKey(const Key('combat-spell-burning-hands')), findsNothing);
+
+      String facts(String index) =>
+          tester.widget<Text>(find.byKey(Key('spell-facts-$index'))).data!;
+      expect(facts('fire-bolt'), 'Ataque +7 a distancia · 2d10 fuego');
+      expect(facts('fireball'), 'Salvación de Destreza CD 15 · 8d6 fuego');
+      expect(facts('cure-wounds'), 'Cura 1d8+1');
+    });
+
+    testWidgets('un 20 natural en el ataque marca crítico y duplica los dados', (tester) async {
+      await _pump(tester, characters: caster(), catalog: catalog(), face: 20);
+      await _tap(tester, 'spell-attack-fire-bolt');
+      expect(find.text('1d20+7'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<FilterChip>(find.byKey(const Key('spell-crit-fire-bolt'))).selected,
+        isTrue,
+      );
+      await _tap(tester, 'spell-damage-fire-bolt');
+      expect(find.text('4d10'), findsOneWidget);
+      expect(find.text('Daño: Fire Bolt (crítico)'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '40');
+    });
+
+    testWidgets('el nivel de lanzamiento escala el daño y gasta ese espacio', (tester) async {
+      final repo = caster();
+      await _pump(tester, characters: repo, catalog: catalog(), face: 1);
+      await _tap(tester, 'spell-level-fireball');
+      await _tap(tester, find.text('4').last);
+      await _tap(tester, 'spell-damage-fireball');
+      expect(find.text('9d6'), findsOneWidget);
+      expect(find.text('Daño: Fireball (nivel 4)'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      await _tap(tester, 'spell-spend-fireball');
+      expect(repo.slotSpends, [(level: 4, amount: 1)]);
+    });
+
+    testWidgets('la curación suma el modificador de la característica de su clase', (tester) async {
+      await _pump(tester, characters: caster(), catalog: catalog(), face: 6);
+      await _tap(tester, 'spell-heal-cure-wounds');
+      expect(find.text('Curación: Cure Wounds (nivel 1)'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '7');
+      expect(find.byKey(const Key('spell-crit-cure-wounds')), findsNothing);
     });
   });
 
