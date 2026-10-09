@@ -116,10 +116,19 @@ class CampaignDetailController extends AsyncNotifier<CampaignDetail> {
     state = AsyncData(updated);
   }
 
-  Future<void> addMember(String userId, CampaignRole role) async {
-    await _repository.addMember(id, userId: userId, role: role);
-    await _reloadMembers();
+  Future<CampaignInvitation> invite(String userId, CampaignRole role) async {
+    final invitation = await _repository.invite(id, userId: userId, role: role);
+    ref.invalidate(campaignInvitationsProvider(id));
+    return invitation;
   }
+
+  Future<void> cancelInvitation(String invitationId) async {
+    await _repository.cancelInvitation(id, invitationId);
+    ref.invalidate(campaignInvitationsProvider(id));
+  }
+
+  /// Members changed on the server (someone accepted an invitation, for example).
+  Future<void> refreshMembers() => _reloadMembers();
 
   Future<void> changeRole(String userId, CampaignRole role) async {
     await _repository.changeMemberRole(id, userId, role: role);
@@ -161,3 +170,46 @@ final campaignDetailControllerProvider = AsyncNotifierProvider.autoDispose
       CampaignDetailController.new,
       retry: (retryCount, error) => null,
     );
+
+/// Pending invitations of a campaign, for its DMs.
+final campaignInvitationsProvider = FutureProvider.autoDispose.family<List<CampaignInvitation>, String>(
+  (ref, campaignId) => ref.watch(campaignsRepositoryProvider).invitations(campaignId),
+);
+
+/// Invitations the signed-in user has not answered yet. Accepting one refreshes
+/// the campaign list; the campaign is then opened by the caller.
+class MyInvitationsController extends AsyncNotifier<List<MyInvitation>> {
+  CampaignsRepository get _repository => ref.read(campaignsRepositoryProvider);
+
+  @override
+  Future<List<MyInvitation>> build() async {
+    ref.watch(appSessionEpochProvider);
+    return _repository.myInvitations();
+  }
+
+  Future<void> reload() async {
+    state = await AsyncValue.guard(_repository.myInvitations);
+  }
+
+  Future<Member> accept(MyInvitation invitation) async {
+    final member = await _repository.acceptInvitation(invitation.id);
+    _remove(invitation.id);
+    ref.invalidate(campaignsControllerProvider);
+    return member;
+  }
+
+  Future<void> decline(MyInvitation invitation) async {
+    await _repository.declineInvitation(invitation.id);
+    _remove(invitation.id);
+  }
+
+  void _remove(String id) {
+    final current = state.value;
+    if (current != null) state = AsyncData([for (final i in current) if (i.id != id) i]);
+  }
+}
+
+final myInvitationsControllerProvider = AsyncNotifierProvider<MyInvitationsController, List<MyInvitation>>(
+  MyInvitationsController.new,
+  retry: (retryCount, error) => null,
+);

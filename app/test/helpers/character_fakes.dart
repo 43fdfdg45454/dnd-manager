@@ -298,7 +298,9 @@ Map<String, dynamic> makeChangeRequestJson({
   String requestedByDisplayName = 'Beto',
   String type = 'EditSheet',
   Map<String, dynamic> payload = const {'name': 'Thorin II'},
+  Map<String, dynamic>? before,
   String status = 'Pending',
+  String? comment,
 }) => {
   'id': id,
   'campaignId': campaignId,
@@ -308,7 +310,9 @@ Map<String, dynamic> makeChangeRequestJson({
   'requestedByDisplayName': requestedByDisplayName,
   'type': type,
   'payload': payload,
+  'before': ?before,
   'status': status,
+  'comment': ?comment,
   'createdAt': '2026-10-01T10:00:00Z',
 };
 
@@ -317,14 +321,18 @@ ChangeRequest makeChangeRequest({
   String requestedByUserId = 'p2',
   String type = 'EditSheet',
   Map<String, dynamic> payload = const {'name': 'Thorin II'},
+  Map<String, dynamic>? before,
   String status = 'Pending',
+  String? comment,
 }) => ChangeRequest.fromJson(
   makeChangeRequestJson(
     id: id,
     requestedByUserId: requestedByUserId,
     type: type,
     payload: payload,
+    before: before,
     status: status,
+    comment: comment,
   ),
 );
 
@@ -892,6 +900,12 @@ class FakeCharactersRepository implements CharactersRepository {
       character: await get(id),
       damageDice: smiteDice ?? '${slotLevel + 1}d8',
     );
+  }
+
+  @override
+  Future<ChangeRequest> changeRequest(String id) async {
+    _fail();
+    return requests.firstWhere((r) => r.id == id, orElse: () => throw dioError(404));
   }
 
   @override

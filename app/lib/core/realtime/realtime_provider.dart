@@ -240,6 +240,16 @@ class CampaignRealtime extends Notifier<RealtimeState> {
       case ChangeRequestUpdated():
         // The pending counter of the app bar derives from these lists.
         ref.invalidate(changeRequestsControllerProvider);
+      case ChangeRequestResolved(:final characterId):
+        // The shell tells the requester; the sheet and its pending requests changed.
+        ref.invalidate(changeRequestsControllerProvider);
+        _refreshCharacters(characterId);
+      case InvitationReceived():
+        ref.invalidate(myInvitationsControllerProvider);
+      case MembersUpdated():
+        ref.invalidate(campaignInvitationsProvider(campaignId));
+        ref.invalidate(myInvitationsControllerProvider);
+        ref.read(campaignDetailControllerProvider(campaignId).notifier).refreshMembers();
       case MessageReceived():
         ref.invalidate(messagesControllerProvider(campaignId));
         ref.invalidate(unreadMessagesCountProvider(campaignId));

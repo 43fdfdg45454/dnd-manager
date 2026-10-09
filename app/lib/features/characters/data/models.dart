@@ -1298,6 +1298,7 @@ class ChangeRequest {
     this.requestedByDisplayName = '',
     required this.type,
     this.payload = const {},
+    this.before,
     required this.status,
     this.resolvedByDisplayName,
     this.resolvedAt,
@@ -1314,6 +1315,7 @@ class ChangeRequest {
     requestedByDisplayName: _str(json['requestedByDisplayName']),
     type: ChangeRequestType.fromApi(json['type']),
     payload: _map(json['payload']) ?? const {},
+    before: _map(json['before']),
     status: ChangeRequestStatus.fromApi(json['status']),
     resolvedByDisplayName: _strOrNull(json['resolvedByDisplayName']),
     resolvedAt: _date(json['resolvedAt']),
@@ -1331,6 +1333,11 @@ class ChangeRequest {
 
   /// What would change; for `EditSheet` it has the shape of a [SheetPatch].
   final Map<String, dynamic> payload;
+
+  /// What [payload] changes as it was when the request was made (same shape
+  /// as the payload for sheet edits; `quantity`, `copperPieces` or the catalog
+  /// `template` for inventory requests). Null for old requests.
+  final Map<String, dynamic>? before;
   final ChangeRequestStatus status;
   final String? resolvedByDisplayName;
   final DateTime? resolvedAt;

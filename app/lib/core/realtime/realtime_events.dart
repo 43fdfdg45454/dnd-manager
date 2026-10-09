@@ -47,6 +47,9 @@ sealed class CampaignEvent {
     PartyStashUpdated.type: PartyStashUpdated.new,
     ShopUpdated.type: ShopUpdated.new,
     ChangeRequestUpdated.type: ChangeRequestUpdated.new,
+    ChangeRequestResolved.type: ChangeRequestResolved.new,
+    InvitationReceived.type: InvitationReceived.new,
+    MembersUpdated.type: MembersUpdated.new,
     SessionUpdated.type: SessionUpdated.new,
     RestRequestUpdated.type: RestRequestUpdated.new,
     LevelUpGranted.type: LevelUpGranted.new,
@@ -113,6 +116,34 @@ final class ChangeRequestUpdated extends CampaignEvent {
   });
 
   static const type = 'changeRequest.updated';
+}
+
+/// A DM approved or rejected a request ([entityId]) of the user (sent to the
+/// requester only).
+final class ChangeRequestResolved extends CampaignEvent {
+  const ChangeRequestResolved({
+    required super.campaignId,
+    super.characterId,
+    super.entityId,
+    super.at,
+  });
+
+  static const type = 'changeRequest.resolved';
+}
+
+/// The user was invited to the campaign ([entityId] is the invitation; sent to
+/// that user only).
+final class InvitationReceived extends CampaignEvent {
+  const InvitationReceived({required super.campaignId, super.characterId, super.entityId, super.at});
+
+  static const type = 'invitation.received';
+}
+
+/// Someone accepted or declined an invitation, or one was cancelled.
+final class MembersUpdated extends CampaignEvent {
+  const MembersUpdated({required super.campaignId, super.characterId, super.entityId, super.at});
+
+  static const type = 'members.updated';
 }
 
 /// A game session ([entityId]) was created, edited, answered or removed.

@@ -33,10 +33,18 @@ class MembersSection extends ConsumerWidget {
     if (data == null || !context.mounted) return;
     await runAction(
       context,
-      () => _controllerOf(ref, campaign.id).addMember(data.user.id, data.role),
-      success: '${data.user.displayName} se ha añadido como ${data.role.label}.',
+      () => _controllerOf(ref, campaign.id).invite(data.user.id, data.role),
+      success: 'Invitación enviada a ${data.user.displayName} como ${data.role.label}.',
+      errors: const {409: 'Esa persona ya es miembro o ya tiene una invitación pendiente.'},
     );
   }
+
+  Future<void> _cancelInvitation(BuildContext context, WidgetRef ref, CampaignInvitation invitation) =>
+      runAction(
+        context,
+        () => _controllerOf(ref, campaign.id).cancelInvitation(invitation.id),
+        success: 'Invitación a ${invitation.displayName} cancelada.',
+      );
 
   /// The dialog stays open while the role changes, so an error (such as the
   /// 409 of a player who still owns characters) is shown inline.
@@ -67,6 +75,9 @@ class MembersSection extends ConsumerWidget {
     final auth = ref.watch(authControllerProvider);
     final myUserId = auth is AuthSignedIn ? auth.user.id : '';
     final myRole = campaign.myRole;
+    final invitations = myRole.isAtLeastDm
+        ? ref.watch(campaignInvitationsProvider(campaign.id)).value ?? const <CampaignInvitation>[]
+        : const <CampaignInvitation>[];
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
@@ -81,11 +92,37 @@ class MembersSection extends ConsumerWidget {
                   key: const Key('members-add'),
                   onPressed: !canWrite ? null : () => _add(context, ref),
                   icon: const Icon(Icons.person_add_alt_1),
-                  label: const Text('Añadir'),
+                  label: const Text('Invitar'),
                 ),
               ),
             ),
           ),
+        if (invitations.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text(
+              'Invitaciones pendientes',
+              key: const Key('invitations-title'),
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ),
+          for (final invitation in invitations)
+            ListTile(
+              key: Key('invitation-${invitation.id}'),
+              leading: const Icon(Icons.mail_outline),
+              title: Text(invitation.displayName.isEmpty ? invitation.email : invitation.displayName),
+              subtitle: Text('${invitation.role.label} · invitó ${invitation.invitedByDisplayName}'),
+              trailing: OfflineAware(
+                builder: (context, canWrite) => IconButton(
+                  key: Key('invitation-cancel-${invitation.id}'),
+                  tooltip: 'Cancelar invitación',
+                  icon: const Icon(Icons.close),
+                  onPressed: !canWrite ? null : () => _cancelInvitation(context, ref, invitation),
+                ),
+              ),
+            ),
+          const Divider(),
+        ],
         for (final member in campaign.members)
           _MemberTile(
             member: member,

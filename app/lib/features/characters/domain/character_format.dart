@@ -128,6 +128,12 @@ String overrideFieldLabel(String field) {
   };
 }
 
+/// Modifier of an ability score ((score - 10) / 2, rounded down).
+int abilityModifierOf(int score) => ((score - 10) / 2).floor();
+
+/// "Fuerza", "Destreza"... from a short key ("str"); the key itself if unknown.
+String abilityName(String key) => _abilityName(key.toLowerCase());
+
 String _abilityName(String key) => switch (key) {
   'str' => 'Fuerza',
   'dex' => 'Destreza',

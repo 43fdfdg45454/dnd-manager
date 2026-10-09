@@ -65,12 +65,34 @@ class CampaignsRepository {
   Future<List<Member>> members(String id) async =>
       (await _client.getCached('$_base/$id/members', parse: parseList(Member.fromJson))).data;
 
-  Future<Member> addMember(String id, {required String userId, required CampaignRole role}) async {
+  /// Invites a user; they join when they accept (`202` with the invitation).
+  Future<CampaignInvitation> invite(String id, {required String userId, required CampaignRole role}) async {
     final response = await _client.dio.post<Map<String, dynamic>>(
       '$_base/$id/members',
       data: {'userId': userId, 'role': role.apiValue},
     );
+    return CampaignInvitation.fromJson(response.data!);
+  }
+
+  /// Pending invitations of the campaign (at least DM).
+  Future<List<CampaignInvitation>> invitations(String id) async =>
+      (await _client.getCached('$_base/$id/invitations', parse: parseList(CampaignInvitation.fromJson))).data;
+
+  Future<void> cancelInvitation(String id, String invitationId) async {
+    await _client.dio.delete<void>('$_base/$id/invitations/$invitationId');
+  }
+
+  /// Pending invitations of the signed-in user.
+  Future<List<MyInvitation>> myInvitations() async =>
+      (await _client.getCached('/api/v1/me/invitations', parse: parseList(MyInvitation.fromJson))).data;
+
+  Future<Member> acceptInvitation(String invitationId) async {
+    final response = await _client.dio.post<Map<String, dynamic>>('/api/v1/invitations/$invitationId/accept');
     return Member.fromJson(response.data!);
+  }
+
+  Future<void> declineInvitation(String invitationId) async {
+    await _client.dio.post<void>('/api/v1/invitations/$invitationId/decline');
   }
 
   Future<Member> changeMemberRole(String id, String userId, {required CampaignRole role}) async {

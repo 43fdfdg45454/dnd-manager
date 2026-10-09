@@ -19,6 +19,8 @@ import '../../../core/theme/textures.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../characters/data/characters_controller.dart';
+import '../../characters/data/characters_repository.dart';
+import '../../characters/data/models.dart';
 import '../../session/data/session_controllers.dart';
 import '../data/campaigns_controller.dart';
 import '../data/campaigns_repository.dart';
@@ -143,11 +145,49 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
     }
   }
 
+  /// "El DM aceptó/rechazó …" for the requester, with a shortcut to the sheet.
+  Future<void> _announceResolvedRequest(String? requestId) async {
+    if (requestId == null) return;
+    try {
+      final request = await ref.read(charactersRepositoryProvider).changeRequest(requestId);
+      if (!mounted) return;
+      final verb = switch (request.status) {
+        ChangeRequestStatus.approved => 'aceptó',
+        ChangeRequestStatus.rejected => 'rechazó',
+        _ => null,
+      };
+      if (verb == null) return;
+      final what = request.type == ChangeRequestType.activate
+          ? 'tu personaje ${request.characterName}'
+          : 'tu solicitud (${request.type.label.toLowerCase()}) de ${request.characterName}';
+      final comment = request.comment == null ? '' : ': ${request.comment}';
+      ScaffoldMessenger.maybeOf(context)
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            key: const Key('realtime-notice-request-resolved'),
+            content: Text('El DM $verb $what$comment'),
+            duration: const Duration(seconds: 8),
+            action: SnackBarAction(
+              label: 'Ver',
+              onPressed: () => context.push(AppRoutes.character(request.characterId)),
+            ),
+          ),
+        );
+    } catch (_) {
+      // Offline or no longer visible: the sheet shows the outcome when it loads.
+    }
+  }
+
   /// Banner for players (the DM is the one who caused these events).
   void _onRealtimeEvent(CampaignEvent event) {
     if (!mounted || !event.isFor(campaignId)) return;
     if (event is MembershipRemoved) {
       _onMembershipRemoved();
+      return;
+    }
+    if (event is ChangeRequestResolved) {
+      unawaited(_announceResolvedRequest(event.entityId));
       return;
     }
     final role = ref.read(campaignDetailControllerProvider(campaignId)).value?.myRole;

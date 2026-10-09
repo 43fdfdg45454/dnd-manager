@@ -209,3 +209,62 @@ abstract final class MemberPermissions {
     };
   }
 }
+
+/// Pending invitation of a campaign, as its DMs see it.
+class CampaignInvitation {
+  const CampaignInvitation({
+    required this.id,
+    required this.userId,
+    required this.displayName,
+    required this.email,
+    required this.role,
+    required this.invitedByDisplayName,
+    required this.createdAt,
+  });
+
+  factory CampaignInvitation.fromJson(Map<String, dynamic> json) => CampaignInvitation(
+    id: json['id'] as String,
+    userId: json['userId'] as String,
+    displayName: json['displayName'] as String? ?? '',
+    email: json['email'] as String? ?? '',
+    role: CampaignRole.fromApi(json['role'] as String),
+    invitedByDisplayName: json['invitedByDisplayName'] as String? ?? '',
+    createdAt: DateTime.parse(json['createdAt'] as String),
+  );
+
+  final String id;
+  final String userId;
+  final String displayName;
+  final String email;
+  final CampaignRole role;
+  final String invitedByDisplayName;
+  final DateTime createdAt;
+}
+
+/// Pending invitation of the signed-in user to a campaign.
+class MyInvitation {
+  const MyInvitation({
+    required this.id,
+    required this.campaignId,
+    required this.campaignName,
+    required this.role,
+    required this.invitedByDisplayName,
+    required this.createdAt,
+  });
+
+  factory MyInvitation.fromJson(Map<String, dynamic> json) => MyInvitation(
+    id: json['id'] as String,
+    campaignId: json['campaignId'] as String,
+    campaignName: json['campaignName'] as String? ?? '',
+    role: CampaignRole.fromApi(json['role'] as String),
+    invitedByDisplayName: json['invitedByDisplayName'] as String? ?? '',
+    createdAt: DateTime.parse(json['createdAt'] as String),
+  );
+
+  final String id;
+  final String campaignId;
+  final String campaignName;
+  final CampaignRole role;
+  final String invitedByDisplayName;
+  final DateTime createdAt;
+}

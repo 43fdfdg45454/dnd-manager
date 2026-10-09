@@ -31,6 +31,11 @@ class CampaignsPage extends ConsumerWidget {
     );
   }
 
+  Future<void> _reload(WidgetRef ref) => Future.wait([
+    ref.read(campaignsControllerProvider.notifier).reload(),
+    ref.read(myInvitationsControllerProvider.notifier).reload(),
+  ]);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final campaigns = ref.watch(campaignsControllerProvider);
@@ -63,19 +68,28 @@ class CampaignsPage extends ConsumerWidget {
           ),
         ),
         data: (items) {
-          if (items.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('Aún no tienes campañas', textAlign: TextAlign.center),
+          final invitations = ref.watch(myInvitationsControllerProvider).value ?? const <MyInvitation>[];
+          if (items.isEmpty && invitations.isEmpty) {
+            return RefreshIndicator(
+              onRefresh: () => _reload(ref),
+              child: ListView(
+                children: const [
+                  Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text('Aún no tienes campañas', textAlign: TextAlign.center),
+                  ),
+                ],
               ),
             );
           }
           return RefreshIndicator(
-            onRefresh: ref.read(campaignsControllerProvider.notifier).reload,
+            onRefresh: () => _reload(ref),
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
-              children: [for (final campaign in items) _CampaignCard(campaign: campaign)],
+              children: [
+                for (final invitation in invitations) _InvitationCard(invitation: invitation),
+                for (final campaign in items) _CampaignCard(campaign: campaign),
+              ],
             ),
           );
         },
@@ -113,6 +127,73 @@ class _CampaignCard extends StatelessWidget {
         ),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => context.push(AppRoutes.campaign(campaign.id)),
+      ),
+    );
+  }
+}
+
+/// A pending invitation: accept it (and open the campaign) or decline it.
+class _InvitationCard extends ConsumerWidget {
+  const _InvitationCard({required this.invitation});
+
+  final MyInvitation invitation;
+
+  Future<void> _accept(BuildContext context, WidgetRef ref) async {
+    final router = GoRouter.maybeOf(context);
+    final ok = await runAction(
+      context,
+      () => ref.read(myInvitationsControllerProvider.notifier).accept(invitation),
+      success: 'Te has unido a ${invitation.campaignName}.',
+      errors: const {404: 'La invitación ya no existe.', 409: 'Ya eres miembro de esta campaña.'},
+    );
+    if (ok) router?.push(AppRoutes.campaign(invitation.campaignId));
+  }
+
+  Future<void> _decline(BuildContext context, WidgetRef ref) => runAction(
+    context,
+    () => ref.read(myInvitationsControllerProvider.notifier).decline(invitation),
+    success: 'Invitación rechazada.',
+    errors: const {404: 'La invitación ya no existe.'},
+  );
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    return Card(
+      key: Key('invitation-${invitation.id}'),
+      color: theme.colorScheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Invitación a ${invitation.campaignName}', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              '${invitation.invitedByDisplayName} te invita como ${invitation.role.label}.',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 8),
+            OfflineAware(
+              builder: (context, canWrite) => Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    key: Key('invitation-decline-${invitation.id}'),
+                    onPressed: !canWrite ? null : () => _decline(context, ref),
+                    child: const Text('Rechazar'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    key: Key('invitation-accept-${invitation.id}'),
+                    onPressed: !canWrite ? null : () => _accept(context, ref),
+                    child: const Text('Aceptar'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

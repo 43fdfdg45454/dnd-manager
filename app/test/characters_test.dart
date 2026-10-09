@@ -10,6 +10,7 @@ import 'package:dnd_companion/features/characters/data/characters_repository.dar
 import 'package:dnd_companion/features/characters/data/models.dart';
 import 'package:dnd_companion/features/characters/data/view_mode_controller.dart';
 import 'package:dnd_companion/features/characters/domain/character_format.dart';
+import 'package:dnd_companion/features/characters/domain/change_details.dart';
 import 'package:dnd_companion/features/characters/domain/payload_format.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_test/flutter_test.dart';
@@ -982,6 +983,11 @@ void main() {
               'baseAbilities': {'str': 17, 'dex': 14, 'con': 13, 'int': 10, 'wis': 12, 'cha': 8},
               'copperPieces': 2050,
             },
+            before: {
+              'name': 'Thorin',
+              'baseAbilities': {'str': 15, 'dex': 14, 'con': 13, 'int': 10, 'wis': 12, 'cha': 8},
+              'copperPieces': 50,
+            },
           ),
         ],
       );
@@ -997,9 +1003,15 @@ void main() {
       // Readable diff of the payload.
       await tester.tap(find.byKey(const Key('change-request-tile-cr1')));
       await tester.pumpAndSettle();
-      expect(find.text('Nombre: Thorin II'), findsOneWidget);
-      expect(find.textContaining('Fue 17'), findsOneWidget);
-      expect(find.textContaining('20.5 gp'), findsOneWidget);
+      // Before → after per field, abilities with their modifier.
+      expect(find.byKey(const Key('change-field-table')), findsOneWidget);
+      expect(find.byKey(const Key('change-before-Nombre')), findsOneWidget);
+      expect(find.text('Thorin'), findsWidgets);
+      expect(find.text('Thorin II'), findsOneWidget);
+      expect(find.text('15 (+2)'), findsOneWidget);
+      expect(find.text('17 (+3)'), findsOneWidget);
+      expect(find.text('0.5 gp'), findsOneWidget);
+      expect(find.text('20.5 gp'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('approve-cr1')));
       await tester.pumpAndSettle();
@@ -1164,6 +1176,84 @@ void main() {
       expect(lines[1], (label: 'Aplicar bonos raciales', value: 'Sí'));
       expect(lines[2].value, 'Clase de armadura: 17 (Escudo)');
       expect(lines[3], (label: 'extra', value: 'a: 1'));
+    });
+
+    test('describeChange detalla cada tipo de solicitud con su valor anterior', () {
+      final sheet = describeChange(
+        makeChangeRequest(
+          payload: {'name': 'B', 'copperPieces': 100},
+          before: {'name': 'A', 'copperPieces': 20},
+        ),
+      );
+      expect(sheet, isA<SheetChangeDetail>());
+      expect((sheet as SheetChangeDetail).fields, [
+        (label: 'Nombre', before: 'A', after: 'B'),
+        (label: 'Dinero', before: '0.2 gp', after: '1 gp'),
+      ]);
+
+      final legacy = describeChange(makeChangeRequest(payload: {'name': 'B'}));
+      expect((legacy as SheetChangeDetail).fields.single.before, isNull);
+
+      final item = describeChange(
+        makeChangeRequest(
+          type: 'CustomItem',
+          payload: {
+            'quantity': 2,
+            'overrides': {
+              'name': 'Cinturón de oso',
+              'modifiers': [
+                {'kind': 'AbilitySet', 'target': 'str', 'value': 19},
+              ],
+            },
+          },
+        ),
+      );
+      expect(item, isA<ItemChangeDetail>());
+      expect((item as ItemChangeDetail).name, 'Cinturón de oso');
+      expect(item.quantity, 2);
+      expect(item.custom, isTrue);
+      expect(item.modifiers, ['Fuerza 19']);
+
+      final catalog = describeChange(
+        makeChangeRequest(
+          type: 'AddItem',
+          payload: {'templateId': 't1', 'quantity': 1},
+          before: {
+            'template': {
+              'name': 'Longsword',
+              'category': 'Weapon',
+              'costCp': 1500,
+              'damage': {
+                'dice': '1d8',
+                'type': {'name': 'Slashing'},
+              },
+            },
+          },
+        ),
+      );
+      expect((catalog as ItemChangeDetail).name, 'Longsword');
+      expect(catalog.custom, isFalse);
+      expect(catalog.lines.map((l) => l.label), contains('Daño'));
+      expect(catalog.lines.firstWhere((l) => l.label == 'Daño').value, '1d8 cortante');
+
+      final remove = describeChange(
+        makeChangeRequest(
+          type: 'RemoveItem',
+          payload: {'itemId': 'i1', 'quantity': 2, 'itemName': 'Flecha'},
+          before: {'quantity': 20},
+        ),
+      );
+      expect((remove as RemoveItemDetail).left, 18);
+
+      final money = describeChange(
+        makeChangeRequest(
+          type: 'AdjustMoney',
+          payload: {'deltaCp': -250, 'reason': 'Posada'},
+          before: {'copperPieces': 1000},
+        ),
+      );
+      expect((money as MoneyChangeDetail).afterCp, 750);
+      expect(money.reason, 'Posada');
     });
 
     test('los estados y tipos de solicitud tienen etiqueta en español', () {
