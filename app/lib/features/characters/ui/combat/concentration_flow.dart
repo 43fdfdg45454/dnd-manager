@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../dice/domain/dice_expression.dart';
+import '../../../dice/ui/dice_sheet.dart';
 import '../../data/characters_controller.dart';
 import '../../data/models.dart';
 import '../character_tabs.dart' show titleFromSpellIndex;
@@ -21,7 +23,9 @@ Future<String> concentrationSpellName(WidgetRef ref, String index) async {
 ///
 /// * with a Constitution save to make (`concentrationCheckDc`), asks
 ///   "¿Superaste la salvación de Constitución (CD N)?"; "No" ends the
-///   concentration through the server;
+///   concentration through the server. When the Constitution save bonus is
+///   known ([constitutionSave], or the loaded sheet of the character),
+///   "Tirar salvación" rolls d20 + bonus and answers against the DC;
 /// * when the concentration ended by itself (0 hit points), warns
 ///   "Pierdes la concentración en X".
 ///
@@ -32,6 +36,7 @@ Future<void> resolveDamageOutcome(
   DamageOutcome outcome, {
   required String characterId,
   String? characterName,
+  int? constitutionSave,
 }) async {
   final spellIndex = outcome.concentratingOn;
   if (spellIndex == null || !outcome.affectsConcentration) return;
@@ -45,7 +50,10 @@ Future<void> resolveDamageOutcome(
   }
   final dc = outcome.concentrationCheckDc;
   if (dc == null) return;
-  final passed = await showDialog<bool>(
+  final saveBonus =
+      constitutionSave ??
+      ref.read(characterControllerProvider(characterId)).value?.sheet.savingThrows['con']?.value;
+  final answer = await showDialog<_ConcentrationAnswer>(
     context: context,
     barrierDismissible: false,
     builder: (dialogContext) => AlertDialog(
@@ -56,20 +64,44 @@ Future<void> resolveDamageOutcome(
         'Estás concentrado en $spell.',
       ),
       actions: [
+        if (saveBonus != null)
+          TextButton(
+            key: const Key('concentration-save-roll'),
+            onPressed: () => Navigator.of(dialogContext).pop(_ConcentrationAnswer.roll),
+            child: const Text('Tirar salvación'),
+          ),
         TextButton(
           key: const Key('concentration-save-no'),
-          onPressed: () => Navigator.of(dialogContext).pop(false),
+          onPressed: () => Navigator.of(dialogContext).pop(_ConcentrationAnswer.failed),
           child: const Text('No'),
         ),
         FilledButton(
           key: const Key('concentration-save-yes'),
-          onPressed: () => Navigator.of(dialogContext).pop(true),
+          onPressed: () => Navigator.of(dialogContext).pop(_ConcentrationAnswer.passed),
           child: const Text('Sí'),
         ),
       ],
     ),
   );
-  if (passed != false || !context.mounted) return;
+  if (!context.mounted) return;
+  var passed = answer != _ConcentrationAnswer.failed;
+  if (answer == _ConcentrationAnswer.roll && saveBonus != null) {
+    final result = await rollAndShow(
+      context,
+      d20Expression(saveBonus),
+      label: 'Salvación de Constitución (CD $dc)',
+    );
+    if (result == null || !context.mounted) return;
+    passed = result.total >= dc;
+    if (passed) {
+      showCombatMessage(
+        context,
+        '$who${result.total} contra CD $dc: mantienes la concentración en $spell.',
+      );
+      return;
+    }
+  }
+  if (passed) return;
   // Nothing else may be watching this character (the DM's table lists
   // summaries), so keep its controller alive while the request runs.
   final keepAlive = ref.listenManual(characterControllerProvider(characterId), (_, _) {});
@@ -83,6 +115,8 @@ Future<void> resolveDamageOutcome(
     keepAlive.close();
   }
 }
+
+enum _ConcentrationAnswer { passed, failed, roll }
 
 /// True when starting to concentrate on [newSpellIndex] is fine: the character
 /// is not concentrating, already concentrates on it, or the player confirms

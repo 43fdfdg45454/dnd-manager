@@ -1434,6 +1434,92 @@ void main() {
       expect(repo.damageCalls, hasLength(1));
     });
   });
+
+  group('tipo de tirada (RollKind)', () {
+    testWidgets('un 1 en la iniciativa no es pifia y muestra el d20 natural', (tester) async {
+      await _pump(tester, characters: _repo(), face: 1);
+      await _tap(tester, 'roll-initiative');
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '3');
+      expect(find.text('d20 natural: 1'), findsOneWidget);
+      expect(find.byKey(const Key('dice-fumble')), findsNothing);
+      expect(find.byKey(const Key('dice-critical')), findsNothing);
+    });
+
+    testWidgets('un 1 en un ataque sí es pifia', (tester) async {
+      await _pump(tester, characters: _repo(), face: 1);
+      await _tap(tester, 'attack-roll-0');
+      expect(find.byKey(const Key('dice-fumble')), findsOneWidget);
+      expect(find.text('d20 natural: 1'), findsOneWidget);
+    });
+
+    testWidgets('"Tirar" en las salvaciones de muerte aplica un éxito con 10 o más', (
+      tester,
+    ) async {
+      final down = _repo(hp: 0, temp: 0);
+      await _pump(tester, characters: down, face: 12);
+      await _tap(tester, 'roll-death-save');
+      expect(down.combatPatches.last.deathSaveSuccesses, 1);
+      expect(down.combatPatches.last.deathSaveFailures, 0);
+      expect(down.combatPatches.last.hitPointsCurrent, isNull);
+      expect(find.byKey(const Key('dice-death-save-revive')), findsNothing);
+    });
+
+    testWidgets('un 1 natural en la salvación de muerte son dos fallos', (tester) async {
+      final down = _repo(hp: 0, temp: 0);
+      await _pump(tester, characters: down, face: 1);
+      await _tap(tester, 'roll-death-save');
+      expect(find.byKey(const Key('dice-death-save-double-failure')), findsOneWidget);
+      expect(find.byKey(const Key('dice-fumble')), findsNothing);
+      expect(down.combatPatches.last.deathSaveFailures, 2);
+    });
+
+    testWidgets('un 20 natural en la salvación de muerte recupera 1 PG', (tester) async {
+      final down = _repo(hp: 0, temp: 0);
+      await _pump(tester, characters: down, face: 20);
+      await _tap(tester, 'roll-death-save');
+      expect(find.byKey(const Key('dice-death-save-revive')), findsOneWidget);
+      expect(down.combatPatches.last.hitPointsCurrent, 1);
+      expect(down.combatPatches.last.deathSaveSuccesses, 0);
+      expect(down.combatPatches.last.deathSaveFailures, 0);
+    });
+
+    FakeCharactersRepository concentrating(int dc) => FakeCharactersRepository(
+      characters: [
+        makeCharacterJson(
+          status: 'Active',
+          temporaryHitPoints: 0,
+          combat: makeCombatJson(),
+          concentratingOnSpellIndex: 'bless',
+        ),
+      ],
+    )..nextConcentrationDc = dc;
+
+    testWidgets('"Tirar salvación" de concentración la supera con d20 + CON contra la CD', (
+      tester,
+    ) async {
+      final repo = concentrating(12);
+      await _pump(tester, characters: repo, face: 8);
+      await _tap(tester, 'hp-minus');
+      await _tap(tester, 'concentration-save-roll');
+      // 8 + 4 (salvación de CON) = 12 contra CD 12.
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '12');
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(repo.concentrationCalls, isEmpty);
+      expect(find.text('12 contra CD 12: mantienes la concentración en Bless.'), findsOneWidget);
+    });
+
+    testWidgets('"Tirar salvación" de concentración la pierde por debajo de la CD', (tester) async {
+      final repo = concentrating(12);
+      await _pump(tester, characters: repo, face: 7);
+      await _tap(tester, 'hp-minus');
+      await _tap(tester, 'concentration-save-roll');
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(repo.concentrationCalls, [null]);
+      expect(find.byKey(const Key('concentration-chip')), findsNothing);
+    });
+  });
 }
 
 /// Answers every request with [body], recording the requests.
