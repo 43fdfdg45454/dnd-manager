@@ -112,7 +112,13 @@ public class ForcedDecisionsEndpointsTests(CatalogApiFactory factory)
             choices = new object[] { new { key = "asi", selected = new { feat = "grappler" } } },
         });
         Assert.True(level4.StatusCode == HttpStatusCode.OK, await level4.Content.ReadAsStringAsync());
-        Assert.Empty((await s.Player.GetCharacterAsync(hero.Id)).InvalidChoices);
+        var withFeat = await s.Player.GetCharacterAsync(hero.Id);
+        Assert.Empty(withFeat.InvalidChoices);
+        // The sheet lists the feat with its catalog text, so the player can read what it does.
+        var taken = Assert.Single(withFeat.Feats);
+        Assert.Equal(("grappler", "Grappler", 4, "fighter"), (taken.Index, taken.Name, taken.Level, taken.ClassIndex));
+        Assert.NotEmpty(taken.Description);
+        Assert.Contains("Strength 13", taken.PrerequisitesText);
 
         // The DM lowers Strength: Grappler (Strength 13) is no longer valid.
         var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/sheet", new { baseAbilities = new { str = 10, dex = 14, con = 14, @int = 10, wis = 10, cha = 10 } });

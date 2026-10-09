@@ -1093,6 +1093,7 @@ class CharacterDetail {
     this.invalidChoices = const [],
     this.restRollsPending = false,
     this.choices = const [],
+    this.feats = const [],
     this.raceCatalogMissing = false,
     this.backgroundCatalogMissing = false,
     this.catalogMissing = false,
@@ -1158,6 +1159,7 @@ class CharacterDetail {
       invalidChoices: _objects(json['invalidChoices'], InvalidChoice.fromJson),
       restRollsPending: _bool(json['restRollsPending']),
       choices: _objects(json['choices'], CharacterChoice.fromJson),
+      feats: _objects(json['feats'], CharacterFeat.fromJson),
       raceCatalogMissing: _bool(json['raceCatalogMissing']),
       backgroundCatalogMissing: _bool(json['backgroundCatalogMissing']),
       catalogMissing: _bool(json['catalogMissing']),
@@ -1243,6 +1245,9 @@ class CharacterDetail {
 
   /// Choices made when levelling up (subclass, fighting style, ASI...).
   final List<CharacterChoice> choices;
+
+  /// Feats the character has, with their catalog text (`CharacterFeatDto`).
+  final List<CharacterFeat> feats;
 
   /// The race (or subrace) is gone from the catalog (a deleted content pack).
   final bool raceCatalogMissing;
@@ -1575,6 +1580,44 @@ class CharacterChoice {
   final Map<String, int> asi;
   final ChoiceItem? feat;
   final String? ability;
+}
+
+/// A feat of the character with its catalog text, for the "Rasgos" tab
+/// (`CharacterFeatDto`). [description] is empty when the feat is gone from
+/// the catalog; [ability] is the key it raised, if any.
+class CharacterFeat {
+  const CharacterFeat({
+    required this.index,
+    required this.name,
+    this.description = const [],
+    this.prerequisitesText,
+    this.ability,
+    this.level = 0,
+    this.classIndex,
+  });
+
+  factory CharacterFeat.fromJson(Map<String, dynamic> json) {
+    final index = _str(json['index']);
+    return CharacterFeat(
+      index: index,
+      name: _str(json['name'], index),
+      description: _strings(json['description']),
+      prerequisitesText: _strOrNull(json['prerequisitesText']),
+      ability: _strOrNull(json['ability']),
+      level: _int(json['level']) ?? 0,
+      classIndex: _strOrNull(json['classIndex']),
+    );
+  }
+
+  final String index;
+  final String name;
+  final List<String> description;
+  final String? prerequisitesText;
+  final String? ability;
+
+  /// Level of the class at which it was taken; 0 for origin choices.
+  final int level;
+  final String? classIndex;
 }
 
 /// Kinds of level choices (`LevelChoiceKind`).

@@ -784,6 +784,67 @@ void main() {
   });
 
   group('Hoja · Elecciones', () {
+    testWidgets('Rasgos lista las dotes con su texto, nivel y característica', (tester) async {
+      final characters = FakeCharactersRepository(
+        characters: [
+          _character(pendingLevelUpTo: null)
+            ..['feats'] = [
+              {
+                'index': 'grappler',
+                'name': 'Grappler',
+                'description': ['You have developed the skills necessary to hold your own.'],
+                'prerequisitesText': 'Strength 13 or higher',
+                'ability': null,
+                'level': 4,
+                'classIndex': 'fighter',
+              },
+              {
+                'index': 'pack-feat-athlete',
+                'name': 'Athlete',
+                'description': <Object>[],
+                'ability': 'str',
+                'level': 0,
+                'classIndex': null,
+              },
+            ],
+        ],
+      );
+      await pumpRealApp(
+        tester,
+        location: '/characters/ch1',
+        fakes: AppFakes(characters: characters),
+      );
+      await _tapKey(tester, 'tab-traits');
+
+      final section = find.byKey(const Key('sheet-feats'));
+      await tester.scrollUntilVisible(
+        section,
+        200,
+        scrollable: find.descendant(
+          of: find.byKey(const Key('sheet-tab-list')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: section, matching: find.text('Dotes')), findsOneWidget);
+      expect(find.descendant(of: section, matching: find.text('Grappler')), findsOneWidget);
+      expect(find.descendant(of: section, matching: find.text('Nivel 4')), findsOneWidget);
+      expect(
+        find.descendant(of: section, matching: find.text('Raza o trasfondo · +1 Fue')),
+        findsOneWidget,
+      );
+
+      await _tap(tester, find.text('Grappler'));
+      expect(find.text('Requisito: Strength 13 or higher'), findsOneWidget);
+      expect(
+        find.text('You have developed the skills necessary to hold your own.'),
+        findsOneWidget,
+      );
+
+      await _tap(tester, find.text('Athlete'));
+      expect(find.text('Esta dote ya no está en el catálogo.'), findsOneWidget);
+    });
+
     testWidgets('lista las elecciones por nivel con los nombres elegidos', (tester) async {
       final characters = FakeCharactersRepository(
         characters: [

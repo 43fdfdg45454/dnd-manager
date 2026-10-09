@@ -328,6 +328,12 @@ public sealed class CharacterSheetService(
                 .ThenBy(c => c.Level)
                 .Select(CharacterChoiceDto.From)
                 .ToList(),
+            Feats = character.Choices
+                .Where(c => c.Selection.Feat is not null)
+                .OrderBy(c => c.CreatedAt)
+                .ThenBy(c => c.Level)
+                .Select(c => CharacterFeatDto.From(c, sheetCatalog.Option(c.Selection.Feat!.Index)))
+                .ToList(),
         };
     }
 
