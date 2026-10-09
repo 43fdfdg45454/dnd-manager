@@ -91,6 +91,9 @@ class AppTokens extends ThemeExtension<AppTokens> {
   // moved towards [bone] just enough. Same meaning and hue family, safe for
   // labels and numbers.
 
+  /// Primary action text.
+  Color get emberText => _readable(ember);
+
   /// Healing / success text.
   Color get mossText => _readable(moss);
 

@@ -44,28 +44,40 @@ Widget breakdownSourceIcon(BreakdownPart part, {double size = 20, Color? color})
 /// Modal bottom sheet listing the parts of a [ValueBreakdown] (icon, label and
 /// signed value) and the total.
 ///
-/// [totalText] replaces the plain total, e.g. "30 pies" or "+5".
+/// [totalText] replaces the plain total, e.g. "30 pies" or "+5"; [lines]
+/// explain the value before its parts ("Tabla del conjuro a nivel 3: 8d6").
 Future<void> showBreakdownSheet(
   BuildContext context, {
   required String title,
   required ValueBreakdown breakdown,
   String? totalText,
+  List<String> lines = const [],
 }) {
   return showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (_) => BreakdownSheet(title: title, breakdown: breakdown, totalText: totalText),
+    builder: (_) =>
+        BreakdownSheet(title: title, breakdown: breakdown, totalText: totalText, lines: lines),
   );
 }
 
 /// Content of the breakdown sheet.
 class BreakdownSheet extends StatelessWidget {
-  const BreakdownSheet({super.key, required this.title, required this.breakdown, this.totalText});
+  const BreakdownSheet({
+    super.key,
+    required this.title,
+    required this.breakdown,
+    this.totalText,
+    this.lines = const [],
+  });
 
   final String title;
   final ValueBreakdown breakdown;
   final String? totalText;
+
+  /// Explanations shown before the parts, keyed `breakdown-line-<i>`.
+  final List<String> lines;
 
   /// The first `base` part reads "10", the rest "+3" / "-1".
   static String partText(BreakdownPart part, {required bool first}) =>
@@ -89,7 +101,16 @@ class BreakdownSheet extends StatelessWidget {
             children: [
               Text(title, key: const Key('breakdown-title'), style: theme.textTheme.titleLarge),
               const SizedBox(height: 8),
-              if (breakdown.parts.isEmpty)
+              for (var i = 0; i < lines.length; i++)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Text(
+                    lines[i],
+                    key: Key('breakdown-line-$i'),
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+              if (breakdown.parts.isEmpty && lines.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text('Sin desglose disponible.', style: theme.textTheme.bodyMedium),
@@ -152,6 +173,7 @@ class StatValue extends StatelessWidget {
     this.style,
     this.totalText,
     this.textKey,
+    this.lines = const [],
   });
 
   /// Identifies the value in keys, usually the breakdown key (`ability.dex`).
@@ -171,9 +193,13 @@ class StatValue extends StatelessWidget {
   /// Key of the inner [Text], for callers that look the text up.
   final Key? textKey;
 
+  /// Explanations the sheet shows before the parts (how dice were chosen).
+  /// With lines and no [breakdown] the value still opens the sheet.
+  final List<String> lines;
+
   @override
   Widget build(BuildContext context) {
-    final b = breakdown;
+    final b = breakdown ?? (lines.isEmpty ? null : const ValueBreakdown());
     if (b == null) return Text(text, key: textKey, style: style);
     final marked = b.hasItemOrOverride;
     return Semantics(
@@ -182,8 +208,13 @@ class StatValue extends StatelessWidget {
       child: InkWell(
         key: Key('stat-$statKey'),
         borderRadius: BorderRadius.circular(6),
-        onTap: () =>
-            showBreakdownSheet(context, title: title, breakdown: b, totalText: totalText ?? text),
+        onTap: () => showBreakdownSheet(
+          context,
+          title: title,
+          breakdown: b,
+          totalText: totalText ?? text,
+          lines: lines,
+        ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           child: Row(

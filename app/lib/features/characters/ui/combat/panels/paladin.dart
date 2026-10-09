@@ -5,6 +5,7 @@ import '../../../../../core/motion/flash.dart';
 import '../../../../../core/theme/app_icon.dart';
 import '../../../../../core/theme/components.dart';
 import '../../../../../core/theme/icons.dart';
+import '../../../../../core/ui/action_type.dart';
 import '../../../../dice/ui/dice_sheet.dart';
 import '../../../data/characters_controller.dart';
 import '../../../data/models.dart';
@@ -164,6 +165,8 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
         CombatCard(
           key: const Key('class-panel-paladin'),
           title: 'Imposición de manos',
+          // SRD: "As an action, you can touch a creature and draw power from the pool".
+          actionKind: ActionKind.action,
           trailing: Text(
             '$remaining / $pool',
             key: const Key('loh-remaining'),
@@ -230,6 +233,18 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
             ],
           ),
         ),
+        CombatCard(
+          key: const Key('paladin-divine-sense'),
+          title: 'Sentido divino',
+          // SRD: "As an action, you can open your awareness to detect such forces".
+          actionKind: ActionKind.action,
+          child: Text(
+            'Hasta el final de tu próximo turno conoces la ubicación de celestiales, '
+            'infernales y muertos vivientes a 60 pies que no estén tras cobertura total. '
+            'Usos: 1 + tu modificador de Carisma por descanso largo.',
+            style: theme.textTheme.bodySmall,
+          ),
+        ),
         RadialFlash(
           key: const Key('smite-flash'),
           trigger: _smites == 0 ? null : _smites,
@@ -275,6 +290,9 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
         ),
         CombatCard(
           title: 'Canalizar divinidad',
+          // SRD, Oath of Devotion: Sacred Weapon and Turn the Unholy are both used
+          // "As an action".
+          actionKind: ActionKind.action,
           trailing: Text(
             'Usos: $channelLeft / ${channel.max}',
             key: const Key('channel-uses'),

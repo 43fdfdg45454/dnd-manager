@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/icons.dart';
+import '../../../../../core/ui/action_type.dart';
 import '../../../../dice/ui/dice_sheet.dart';
 
 import '../combat_support.dart';
@@ -55,6 +56,8 @@ class ClericPanel extends ConsumerWidget {
           panel: panel,
           resourceKey: 'channel-divinity',
           title: 'Canalizar divinidad',
+          // SRD, Turn Undead: "As an action, you present your holy symbol".
+          actionKind: ActionKind.action,
           actionKey: 'cleric-channel-divinity',
           buttonLabel: 'Canalizar divinidad',
           icon: AppIcons.sun,
@@ -80,6 +83,8 @@ class ClericPanel extends ConsumerWidget {
         if (level >= 10)
           CombatCard(
             title: 'Intervención divina',
+            // SRD: "Imploring your deity's aid requires you to use your action".
+            actionKind: ActionKind.action,
             trailing: level >= 20
                 ? null
                 : TextButton(

@@ -211,25 +211,7 @@ class _ItemTile extends ConsumerWidget {
           success: 'Notas guardadas.',
         );
       case _ItemAction.detail:
-        await Navigator.of(context).push<void>(
-          MaterialPageRoute(
-            builder: (_) => EffectiveItemPage(
-              effective: item.effective,
-              overrides: item.overrides,
-              isCustom: item.isCustom,
-              extraFacts: [
-                ('Cantidad', '${item.quantity}'),
-                (
-                  'Cargas',
-                  item.charges == null
-                      ? null
-                      : '${item.charges}/${item.chargesMax ?? item.charges}',
-                ),
-                ('Notas', item.notes),
-              ],
-            ),
-          ),
-        );
+        await openInventoryItemDetail(context, item);
       case _ItemAction.sell:
         await showDialog<void>(
           context: context,

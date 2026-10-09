@@ -272,28 +272,23 @@ class _DefaultEquipmentList extends ConsumerWidget {
               ),
             ),
             for (final line in state.startingLinesFrom(origin))
-              // The info button sits beside the line (not inside it): the
-              // default lines themselves stay without buttons.
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: EquipmentLineTile(
-                      key: Key('equipment-default-${line.templateId}'),
-                      name: line.name,
-                      quantity: line.qty,
-                      contents: contents[line.templateId],
-                      trailing: EquipmentOriginBadge(origin),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 14),
-                    child: DetailInfoButton(
+              // Default lines cannot be removed: only the origin and the
+              // detail button sit at their end.
+              EquipmentLineTile(
+                key: Key('equipment-default-${line.templateId}'),
+                name: line.name,
+                quantity: line.qty,
+                contents: contents[line.templateId],
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    EquipmentOriginBadge(origin),
+                    DetailInfoButton(
                       key: Key('detail-item-${line.templateId}'),
                       onPressed: () => openItemDetail(context, line.templateId),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             if (goldByOrigin[origin]! > 0)
               ListTile(
@@ -564,19 +559,24 @@ class _CategoryPickerPage extends ConsumerWidget {
               child: ListView(
                 children: [
                   for (final item in data.items)
-                    CheckboxListTile(
+                    ListTile(
                       key: Key('equipment-category-item-${item.index}'),
-                      value: picked.any((e) => e.templateId == item.templateId),
-                      title: Row(
+                      title: Text(item.name),
+                      onTap: () => controller.toggleCategoryItem(pickKey, pick.choose, item),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Expanded(child: Text(item.name)),
                           DetailInfoButton(
                             key: Key('detail-item-${item.templateId}'),
                             onPressed: () => openItemDetail(context, item.templateId),
                           ),
+                          Checkbox(
+                            value: picked.any((e) => e.templateId == item.templateId),
+                            onChanged: (_) =>
+                                controller.toggleCategoryItem(pickKey, pick.choose, item),
+                          ),
                         ],
                       ),
-                      onChanged: (_) => controller.toggleCategoryItem(pickKey, pick.choose, item),
                     ),
                 ],
               ),

@@ -11,6 +11,7 @@ import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart'
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
 import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
 import 'package:dnd_companion/features/catalog/data/models.dart';
+import 'package:dnd_companion/features/catalog/ui/spell_detail_page.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:dnd_companion/features/characters/data/models.dart';
 import 'package:dnd_companion/features/characters/domain/spell_combat.dart';
@@ -1119,14 +1120,20 @@ void main() {
       expect(find.byKey(const Key('combat-spell-fire-bolt')), findsOneWidget);
       expect(find.byKey(const Key('combat-spell-fireball')), findsOneWidget);
       expect(find.byKey(const Key('combat-spell-cure-wounds')), findsOneWidget);
-      // Sin tirada ni salvación, o sin preparar en una clase que prepara.
-      expect(find.byKey(const Key('combat-spell-shield')), findsNothing);
+      // Fase 27: también los preparados sin números; nunca los no preparados
+      // de una clase que prepara.
+      expect(find.byKey(const Key('combat-spell-shield')), findsOneWidget);
       expect(find.byKey(const Key('combat-spell-burning-hands')), findsNothing);
 
-      String facts(String index) =>
-          tester.widget<Text>(find.byKey(Key('spell-facts-$index'))).data!;
-      expect(facts('fire-bolt'), 'Ataque +7 a distancia · 2d10 fuego');
-      expect(facts('fireball'), 'Salvación de Destreza CD 15 · 8d6 fuego');
+      // The facts are now values with their breakdown: label and value texts.
+      String facts(String index) => tester
+          .widgetList<Text>(
+            find.descendant(of: find.byKey(Key('spell-facts-$index')), matching: find.byType(Text)),
+          )
+          .map((t) => t.data)
+          .join(' ');
+      expect(facts('fire-bolt'), 'Ataque a distancia +7 Daño 2d10 fuego');
+      expect(facts('fireball'), 'Salvación CD 15 (Destreza) Daño 8d6 fuego');
       expect(facts('cure-wounds'), 'Cura 1d8+1');
     });
 
@@ -1167,6 +1174,179 @@ void main() {
       expect(find.text('Curación: Cure Wounds (nivel 1)'), findsOneWidget);
       expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '7');
       expect(find.byKey(const Key('spell-crit-cure-wounds')), findsNothing);
+    });
+
+    group('detalle, tipo de acción y desglose (fase 27)', () {
+      final mageArmor = spell({
+        'index': 'mage-armor',
+        'name': 'Mage Armor',
+        'level': 1,
+        'castingTime': '1 action',
+        'range': 'Touch',
+        'duration': '8 hours',
+        'description': [
+          'You touch a willing creature who is not wearing armor.',
+          'The spell ends if the target dons armor.',
+        ],
+      });
+      final bless = spell({
+        'index': 'bless',
+        'name': 'Bless',
+        'level': 1,
+        'castingTime': '1 action',
+        'concentration': true,
+        'description': ['You bless up to three creatures of your choice within range.'],
+      });
+      final trueStrike = spell({
+        'index': 'true-strike',
+        'name': 'True Strike',
+        'level': 0,
+        'castingTime': '1 action',
+        'concentration': true,
+        'description': ['You point a finger at a target in range.'],
+      });
+
+      FakeCharactersRepository wizard() {
+        final json = makeCharacterJson(
+          status: 'Active',
+          classes: [
+            {'classIndex': 'wizard', 'className': 'Wizard', 'level': 5},
+          ],
+          spells: [
+            {'spellIndex': 'fire-bolt', 'classIndex': 'wizard'},
+            {'spellIndex': 'true-strike', 'classIndex': 'wizard'},
+            {'spellIndex': 'fireball', 'classIndex': 'wizard', 'isPrepared': true},
+            {'spellIndex': 'mage-armor', 'classIndex': 'wizard', 'isPrepared': true},
+            {'spellIndex': 'bless', 'classIndex': 'wizard', 'isPrepared': true},
+          ],
+          combat: makeCombatJson(
+            spellSlots: [
+              {'level': 1, 'max': 4, 'used': 0},
+              {'level': 3, 'max': 2, 'used': 0},
+            ],
+          ),
+        );
+        (json['sheet'] as Map<String, dynamic>)['spellcasting'] = [
+          {
+            'classIndex': 'wizard',
+            'ability': 'int',
+            'saveDc': 15,
+            'attackBonus': 7,
+            'preparedMax': 6,
+          },
+        ];
+        return FakeCharactersRepository(characters: [json]);
+      }
+
+      FakeCatalogRepository wizardCatalog() => FakeCatalogRepository(
+        spellDetails: {
+          for (final s in [fireBolt, fireball, mageArmor, bless, trueStrike]) s.index: s,
+        },
+      );
+
+      testWidgets('un conjuro preparado sin números se muestra con su acción y su texto', (
+        tester,
+      ) async {
+        await _pump(tester, characters: wizard(), catalog: wizardCatalog());
+        final card = find.byKey(const Key('combat-spell-mage-armor'));
+        expect(card, findsOneWidget);
+        expect(
+          find.descendant(of: card, matching: find.byKey(const Key('action-kind-action'))),
+          findsOneWidget,
+        );
+        expect(find.descendant(of: card, matching: find.text('Acción')), findsOneWidget);
+        expect(
+          find.descendant(
+            of: card,
+            matching: find.text('You touch a willing creature who is not wearing armor.'),
+          ),
+          findsOneWidget,
+        );
+        expect(find.textContaining('The spell ends if'), findsNothing);
+        expect(find.byKey(const Key('spell-facts-mage-armor')), findsNothing);
+        expect(find.byKey(const Key('spell-damage-mage-armor')), findsNothing);
+        final cast = find.byKey(const Key('spell-spend-mage-armor'));
+        expect(find.descendant(of: cast, matching: find.text('Lanzar')), findsOneWidget);
+        // A cantrip without concentration has nothing to cast.
+        expect(find.byKey(const Key('spell-spend-fire-bolt')), findsNothing);
+        expect(find.byKey(const Key('spell-concentrate-fire-bolt')), findsNothing);
+      });
+
+      testWidgets('Lanzar un conjuro de concentración gasta el espacio y se concentra', (
+        tester,
+      ) async {
+        final repo = wizard();
+        await _pump(tester, characters: repo, catalog: wizardCatalog());
+        await _tap(tester, 'spell-spend-bless');
+        expect(repo.slotSpends, [(level: 1, amount: 1)]);
+        expect(repo.concentrationCalls, ['bless']);
+        expect((await repo.get('ch1')).concentratingOnSpellIndex, 'bless');
+        expect(find.textContaining('Concentrándote en Bless'), findsOneWidget);
+      });
+
+      testWidgets('un truco de concentración solo se concentra', (tester) async {
+        final repo = wizard();
+        await _pump(tester, characters: repo, catalog: wizardCatalog());
+        expect(find.byKey(const Key('spell-spend-true-strike')), findsNothing);
+        await _tap(tester, 'spell-concentrate-true-strike');
+        expect(repo.slotSpends, isEmpty);
+        expect(repo.concentrationCalls, ['true-strike']);
+      });
+
+      testWidgets('el botón de detalle abre la ficha del conjuro', (tester) async {
+        await _pump(tester, characters: wizard(), catalog: wizardCatalog());
+        await _tap(tester, 'detail-spell-mage-armor');
+        expect(find.byType(SpellDetailPage), findsOneWidget);
+        expect(find.text('The spell ends if the target dons armor.'), findsOneWidget);
+      });
+
+      testWidgets('el desglose del daño explica la tabla y el crítico', (tester) async {
+        await _pump(tester, characters: wizard(), catalog: wizardCatalog());
+        await _tap(tester, 'spell-crit-fireball');
+        await _tap(tester, 'stat-spell.fireball.damage');
+        expect(find.byKey(const Key('breakdown-sheet')), findsOneWidget);
+        expect(
+          tester.widget<Text>(find.byKey(const Key('breakdown-line-0'))).data,
+          'Tabla del conjuro a nivel 3: 8d6',
+        );
+        expect(
+          tester.widget<Text>(find.byKey(const Key('breakdown-line-1'))).data,
+          'Crítico: dados doblados (16d6)',
+        );
+        expect(find.text('Sin modificador de característica'), findsOneWidget);
+        expect(tester.widget<Text>(find.byKey(const Key('breakdown-total'))).data, '16d6 fuego');
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+
+        // Cantrips go by character level.
+        await _tap(tester, 'stat-spell.fire-bolt.damage');
+        expect(
+          tester.widget<Text>(find.byKey(const Key('breakdown-line-0'))).data,
+          'Tabla del conjuro a nivel de personaje 5: 2d10',
+        );
+      });
+
+      testWidgets('la curación desglosa el modificador de la característica', (tester) async {
+        await _pump(tester, characters: caster(), catalog: catalog());
+        await _tap(tester, 'stat-spell.cure-wounds.heal');
+        expect(
+          tester.widget<Text>(find.byKey(const Key('breakdown-line-0'))).data,
+          'Tabla del conjuro a nivel 1: 1d8 + MOD',
+        );
+        expect(find.text('Modificador de Sabiduría'), findsOneWidget);
+        expect(tester.widget<Text>(find.byKey(const Key('breakdown-total'))).data, '1d8+1');
+      });
+
+      testWidgets('el ataque muestra que es una acción', (tester) async {
+        await _pump(tester, characters: _repo());
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('attack-0')),
+            matching: find.byKey(const Key('action-kind-action')),
+          ),
+          findsOneWidget,
+        );
+      });
     });
 
     group('oleada de magia salvaje (fase 25, bloque 7)', () {

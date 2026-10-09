@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/network/api_error.dart';
 import '../../../../../core/theme/icons.dart';
+import '../../../../../core/ui/action_type.dart';
 
 import '../../../../../core/theme/app_icon.dart';
 import '../../../../catalog/data/beast_models.dart';
@@ -112,6 +113,8 @@ class DruidPanel extends ConsumerWidget {
           panel: panel,
           resourceKey: 'wild-shape',
           title: 'Forma salvaje',
+          // SRD: "you can use your action to magically assume the shape of a beast".
+          actionKind: ActionKind.action,
           actionKey: 'druid-wild-shape',
           buttonLabel: 'Adoptar forma salvaje',
           icon: AppIcons.druid,

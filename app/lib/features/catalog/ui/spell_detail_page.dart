@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/ui/action_type.dart';
 import '../../../core/ui/source_chip.dart';
 import '../../../core/ui/spell_category.dart';
 import '../data/catalog_controllers.dart';
@@ -36,8 +37,18 @@ class SpellDetailPage extends ConsumerWidget {
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                 ),
+                if (s.castingTime != null) ActionTypeChip.castingTime(s.castingTime),
               ],
             ),
+            if (ActionKind.fromCastingTime(s.castingTime).note case final note?)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Reacción: $note',
+                  key: const Key('spell-reaction-note'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
             const SizedBox(height: 8),
             FactRow('Tiempo de lanzamiento', s.castingTime),
             FactRow('Alcance', s.range),

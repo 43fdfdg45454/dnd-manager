@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/app_icon.dart';
 import '../../../../../core/theme/icons.dart';
+import '../../../../../core/ui/action_type.dart';
 
 import '../../../data/characters_controller.dart';
 import '../../../data/models.dart';
@@ -321,6 +322,7 @@ class ClassResourceActionCard extends ConsumerWidget {
     this.onUse,
     this.trailing,
     this.extra = const [],
+    this.actionKind,
   });
 
   final ClassPanelContext panel;
@@ -337,6 +339,10 @@ class ClassResourceActionCard extends ConsumerWidget {
   final Widget? trailing;
   final List<Widget> extra;
 
+  /// What using the feature costs on the turn, as the SRD says; null when the
+  /// feature is not an action of its own.
+  final ActionKind? actionKind;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -349,6 +355,7 @@ class ClassResourceActionCard extends ConsumerWidget {
     return CombatCard(
       title: title,
       trailing: trailing,
+      actionKind: actionKind,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -395,13 +402,23 @@ class ClassResourceActionCard extends ConsumerWidget {
   }
 }
 
-/// A read-only reminder of a class feature, keyed for tests.
+/// A read-only reminder of a class feature, keyed for tests; [actionKind]
+/// adds its chip under the title.
 class FeatureReminder extends StatelessWidget {
-  const FeatureReminder({super.key, required this.icon, required this.title, required this.text});
+  const FeatureReminder({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.text,
+    this.actionKind,
+  });
 
   final AppIcons icon;
   final String title;
   final String text;
+
+  /// What using the feature costs on the turn, as the SRD says.
+  final ActionKind? actionKind;
 
   @override
   Widget build(BuildContext context) {
@@ -410,7 +427,18 @@ class FeatureReminder extends StatelessWidget {
       dense: true,
       leading: AppIcon(icon, color: Theme.of(context).colorScheme.primary),
       title: Text(title),
-      subtitle: Text(text),
+      subtitle: actionKind == null
+          ? Text(text)
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: ActionTypeChip(actionKind!, compact: true),
+                ),
+                Text(text),
+              ],
+            ),
     );
   }
 }
