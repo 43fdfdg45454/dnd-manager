@@ -778,7 +778,10 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             return result;
         }
 
-        /// <summary>Spells of the class list (or the filter's) of the allowed levels that the character does not know for the class.</summary>
+        /// <summary>
+        /// Spells of the class list (or the filter's) of the allowed levels that the character does not know for the class.
+        /// The class list includes the expanded spell list of the character's subclass (content packs).
+        /// </summary>
         /// <remarks>
         /// A class that casts through its subclass (content packs) takes the subclass's spell list and the highest slot
         /// level of its progression. Spells outside <see cref="ChoiceFilter.Schools"/> are listed as not eligible, with the
@@ -786,8 +789,14 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         /// </remarks>
         private List<PlannedOption> SpellCandidates(LevelChoiceRule rule, ChoiceFilter filter)
         {
-            var casting = SubclassCasting(definition, subclasses, rule.SubclassIndex ?? character.Classes.FirstOrDefault(c => c.ClassIndex == definition.Index)?.SubclassIndex);
-            var list = filter.SpellList ?? casting?.SpellList ?? definition.Index;
+            var subclassIndex = rule.SubclassIndex ?? character.Classes.FirstOrDefault(c => c.ClassIndex == definition.Index)?.SubclassIndex;
+            var casting = SubclassCasting(definition, subclasses, subclassIndex);
+            var classList = casting?.SpellList ?? definition.Index;
+            var list = filter.SpellList ?? classList;
+            // The subclass's expanded list counts as part of the class's own list (not of another list a filter names).
+            var expanded = list == classList
+                ? subclasses.FirstOrDefault(s => s.Index == subclassIndex)?.ExpandedSpellIndexes ?? new HashSet<string>()
+                : new HashSet<string>();
             var maxSpellLevel = casting is not null ? SheetCalculator.MaxSpellLevel(casting.SlotsAt(newLevel)) : MaxSpellLevel(classLevel);
             IReadOnlyList<int> levels = rule.Kind == LevelChoiceKind.CantripsKnown || filter.CantripsOnly
                 ? [0]
@@ -798,7 +807,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             var schoolsReason = filter.Schools.Count > 0 ? filter.SchoolsReason() : null;
             return spells
                 .Where(s => levels.Contains(s.Level) && !known.Contains(s.Index))
-                .Where(s => list == ChoiceFilter.AnyList || s.ClassIndexes.Contains(list, StringComparer.Ordinal))
+                .Where(s => list == ChoiceFilter.AnyList || s.ClassIndexes.Contains(list, StringComparer.Ordinal) || expanded.Contains(s.Index))
                 .Select(s => filter.AllowsSchool(s.School, newLevel) ? SpellOption(s) : SpellOption(s) with { Eligible = false, Reason = schoolsReason })
                 .OrderBy(o => o.Eligible ? 0 : 1)
                 .ToList();

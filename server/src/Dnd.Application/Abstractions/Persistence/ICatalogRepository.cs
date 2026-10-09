@@ -59,6 +59,9 @@ public interface ICatalogRepository
 
     Task<IReadOnlyList<SubclassDefinition>> ListSubclassesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default);
 
+    /// <summary>Subclasses with an expanded spell list (content packs), ordered by name.</summary>
+    Task<IReadOnlyList<SubclassDefinition>> ListSubclassesWithExpandedSpellsAsync(CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<RaceDefinition>> ListRacesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<SubraceDefinition>> ListSubracesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default);

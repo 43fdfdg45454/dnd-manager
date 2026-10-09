@@ -264,6 +264,7 @@ class _SpellsTab extends ConsumerWidget {
                   ?spell.school,
                   if (spell.concentration) 'Concentración',
                   if (spell.ritual) 'Ritual',
+                  for (final e in spell.expandedBy) e.label,
                 ].join(' · '),
               ),
               trailing: const Icon(Icons.chevron_right),

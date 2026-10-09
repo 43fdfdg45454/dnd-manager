@@ -46,6 +46,16 @@ class SpellDetailPage extends ConsumerWidget {
             if (s.concentration) const FactRow('Concentración', 'Sí'),
             if (s.ritual) const FactRow('Ritual', 'Sí'),
             FactRow('Clases', s.classes.join(', ')),
+            for (final e in s.expandedBy)
+              Padding(
+                key: Key('spell-expanded-${e.subclassIndex}'),
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Text(
+                  '${e.label} (${titleFromIndex(e.classIndex)})',
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
             FactRow('Tipo de ataque', s.attackType),
             FactRow('Salvación', s.dcAbility == null ? null : abilityLabel(s.dcAbility!)),
             FactRow('Daño', s.damage),

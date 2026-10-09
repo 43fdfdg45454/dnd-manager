@@ -7,6 +7,7 @@ public sealed class GetSpellHandler(ICatalogRepository catalog)
     public async Task<SpellDetailDto> HandleAsync(string index, CancellationToken cancellationToken = default)
     {
         var s = await catalog.GetSpellAsync(index, cancellationToken) ?? throw CatalogErrors.SpellNotFound();
+        var expansions = SpellExpansionDto.Lookup(await catalog.ListSubclassesWithExpandedSpellsAsync(cancellationToken));
         return new SpellDetailDto(
             s.Index,
             s.Name,
@@ -28,6 +29,7 @@ public sealed class GetSpellHandler(ICatalogRepository catalog)
             CatalogJson.LevelMap(s.HealJson),
             s.DcAbility,
             s.Source,
-            s.Category.ToString());
+            s.Category.ToString(),
+            expansions[s.Index].ToList());
     }
 }

@@ -151,6 +151,13 @@ internal sealed class CatalogRepository(AppDbContext db) : ICatalogRepository
     public async Task<IReadOnlyList<SubclassDefinition>> ListSubclassesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
         indexes.Count == 0 ? [] : await db.CatalogSubclasses.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<SubclassDefinition>> ListSubclassesWithExpandedSpellsAsync(CancellationToken cancellationToken = default) =>
+        await db.CatalogSubclasses.AsNoTracking()
+            .Where(x => x.ExpandedSpellListJson != null)
+            .OrderBy(x => x.Name)
+            .ThenBy(x => x.Index)
+            .ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyList<RaceDefinition>> ListRacesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
         indexes.Count == 0 ? [] : await db.CatalogRaces.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
 
