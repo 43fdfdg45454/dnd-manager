@@ -283,6 +283,9 @@ internal sealed partial class ContentPackValidator
                     var featureCompanion = feature.Companion is not null && RequireLevelChoicesFormat($"{featurePath}.companion", feature.Companion)
                         ? Companion($"{featurePath}.companion", feature.Companion)
                         : null;
+                    var featureModifiers = feature.Modifiers is not null && RequireLevelChoicesFormat($"{featurePath}.modifiers", feature.Modifiers)
+                        ? ChoiceModifiers($"{featurePath}.modifiers", feature.Modifiers, "Un rasgo")
+                        : null;
                     if (featureIndex is null || number is null)
                     {
                         return;
@@ -299,6 +302,7 @@ internal sealed partial class ContentPackValidator
                         Description = featureDescription,
                         ResourceJson = featureResource,
                         CompanionJson = featureCompanion,
+                        ModifiersJson = featureModifiers is null or "[]" ? null : featureModifiers,
                         Source = _id,
                     });
                 });

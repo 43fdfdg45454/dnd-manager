@@ -476,6 +476,26 @@ void main() {
       expect(tester.widget<Text>(find.byKey(const Key('breakdown-total'))).data, '+2');
     });
 
+    testWidgets('los modificadores de un rasgo de subclase aparecen en el desglose (fase 25)', (
+      tester,
+    ) async {
+      final json = makeCharacterJson(
+        breakdowns: {
+          'speed': makeBreakdownJson([
+            ('base', 'Humano', 30),
+            ('feature', 'Pies ligeros (nivel 3)', 10),
+          ]),
+        },
+      );
+      (json['sheet'] as Map<String, dynamic>)['speed'] = 40;
+      final repository = FakeCharactersRepository(characters: [json]);
+      await _pumpApp(tester, characters: repository, location: '/characters/ch1');
+
+      await _tap(tester, find.byKey(const Key('stat-speed')));
+      expect(find.text('Pies ligeros (nivel 3)'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('breakdown-total'))).data, '40 pies');
+    });
+
     testWidgets('Habilidades muestra valor y competencia', (tester) async {
       final repository = FakeCharactersRepository(characters: [makeCharacterJson()]);
       await _pumpApp(tester, characters: repository, location: '/characters/ch1');

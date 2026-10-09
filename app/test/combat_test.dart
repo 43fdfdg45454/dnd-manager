@@ -18,6 +18,10 @@ import 'package:dnd_companion/features/characters/ui/character_page.dart';
 import 'package:dnd_companion/features/characters/ui/combat/class_panels.dart';
 import 'package:dnd_companion/features/characters/ui/combat/combat_support.dart' show Pip;
 import 'package:dnd_companion/features/characters/ui/combat/panels/critical_damage_roll.dart';
+import 'package:dnd_companion/features/characters/ui/combat/resources_section.dart'
+    show canRestoreResource;
+import 'package:dnd_companion/features/characters/ui/combat/wild_magic_surge.dart'
+    show isWildMagicSurgeKey;
 import 'package:dnd_companion/features/dice/data/dice_controller.dart';
 import 'package:dnd_companion/features/session/data/models.dart' show PartyAdjustment;
 import 'package:dnd_companion/features/session/data/party_repository.dart';
@@ -1163,6 +1167,143 @@ void main() {
       expect(find.text('Curación: Cure Wounds (nivel 1)'), findsOneWidget);
       expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '7');
       expect(find.byKey(const Key('spell-crit-cure-wounds')), findsNothing);
+    });
+
+    group('oleada de magia salvaje (fase 25, bloque 7)', () {
+      const surge = RollTable(
+        key: 'pack-caos-wild-magic-surge',
+        name: 'Oleada de ejemplo',
+        dice: 'd100',
+        classIndex: 'sorcerer',
+        subclassIndex: 'pack-caos',
+        entries: [
+          RollTableEntry(from: 1, to: 50, text: 'Efecto ficticio bajo.'),
+          RollTableEntry(from: 51, to: 100, text: 'Efecto ficticio alto.'),
+        ],
+      );
+
+      FakeCharactersRepository sorcerer({String subclass = 'pack-caos', int tidesUsed = 1}) {
+        final json = makeCharacterJson(
+          status: 'Active',
+          classes: [
+            {
+              'classIndex': 'sorcerer',
+              'className': 'Sorcerer',
+              'subclassIndex': subclass,
+              'level': 3,
+            },
+          ],
+          spells: [
+            {'spellIndex': 'fire-bolt', 'classIndex': 'sorcerer'},
+            {'spellIndex': 'burning-hands', 'classIndex': 'sorcerer'},
+          ],
+          combat: makeCombatJson(
+            spellSlots: [
+              {'level': 1, 'max': 4, 'used': 0},
+            ],
+            resources: [
+              {
+                'id': 'tides',
+                'key': 'pack-caos-tides-of-chaos',
+                'name': 'Mareas de ejemplo',
+                'max': 1,
+                'used': tidesUsed,
+                'recharge': 'LongRest',
+                'isAuto': true,
+              },
+            ],
+          ),
+        );
+        (json['sheet'] as Map<String, dynamic>)['spellcasting'] = [
+          {'classIndex': 'sorcerer', 'ability': 'cha', 'saveDc': 13, 'attackBonus': 5},
+        ];
+        return FakeCharactersRepository(characters: [json]);
+      }
+
+      FakeCatalogRepository surgeCatalog() => FakeCatalogRepository(
+        spellDetails: {
+          for (final s in [fireBolt, burningHands]) s.index: s,
+        },
+        rollTableList: const [surge],
+      );
+
+      testWidgets('gastar un espacio ofrece tirar 1d20 y un 1 abre la tabla', (tester) async {
+        final repo = sorcerer();
+        await _pump(tester, characters: repo, catalog: surgeCatalog(), face: 1);
+        expect(find.byKey(const Key('wild-magic-surge-prompt')), findsNothing);
+
+        await _tap(tester, 'spell-spend-burning-hands');
+        expect(repo.slotSpends, [(level: 1, amount: 1)]);
+        expect(find.text('Oleada de magia salvaje: tira 1d20'), findsOneWidget);
+
+        await _tap(tester, 'wild-magic-surge-d20');
+        expect(find.text('Oleada de magia salvaje'), findsOneWidget);
+        expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '1');
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('roll-table-sheet')), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('roll-table-sheet')),
+            matching: find.text('Oleada de ejemplo'),
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('un d20 distinto de 1 no abre la tabla; "Tirar oleada" sí', (tester) async {
+        await _pump(tester, characters: sorcerer(), catalog: surgeCatalog(), face: 14);
+        await _tap(tester, 'spell-spend-burning-hands');
+
+        await _tap(tester, 'wild-magic-surge-d20');
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('roll-table-sheet')), findsNothing);
+
+        await _tap(tester, 'wild-magic-surge-table');
+        expect(find.byKey(const Key('roll-table-sheet')), findsOneWidget);
+      });
+
+      testWidgets('el jugador recupera Mareas del caos junto al aviso', (tester) async {
+        final repo = sorcerer();
+        await _pump(tester, characters: repo, catalog: surgeCatalog());
+        await _tap(tester, 'spell-spend-burning-hands');
+
+        await _tap(tester, 'wild-magic-surge-tides');
+        expect(repo.resourceRestores, [(id: 'tides', amount: 1)]);
+        expect(
+          tester.widget<TextButton>(find.byKey(const Key('wild-magic-surge-tides'))).onPressed,
+          isNull,
+        );
+
+        await _tap(tester, 'wild-magic-surge-dismiss');
+        expect(find.byKey(const Key('wild-magic-surge-prompt')), findsNothing);
+      });
+
+      testWidgets('sin la tabla de oleada no aparece el aviso', (tester) async {
+        final repo = sorcerer(subclass: 'otra-subclase');
+        await _pump(tester, characters: repo, catalog: surgeCatalog());
+        await _tap(tester, 'spell-spend-burning-hands');
+        expect(repo.slotSpends, [(level: 1, amount: 1)]);
+        expect(find.byKey(const Key('wild-magic-surge-prompt')), findsNothing);
+      });
+
+      test('claves de la oleada y de Mareas del caos', () {
+        expect(isWildMagicSurgeKey('wild-magic-surge'), isTrue);
+        expect(isWildMagicSurgeKey('pack-wild-magic-surge'), isTrue);
+        expect(isWildMagicSurgeKey('pack-surge'), isFalse);
+        CharacterResource auto(String key) => CharacterResource(
+          id: 'x',
+          key: key,
+          name: 'X',
+          max: 1,
+          used: 1,
+          recharge: Recharge.longRest,
+          isAuto: true,
+        );
+        expect(canRestoreResource(auto('pack-tides-of-chaos'), isDm: false), isTrue);
+        expect(canRestoreResource(auto('ki'), isDm: false), isFalse);
+      });
     });
   });
 

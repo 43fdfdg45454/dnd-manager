@@ -24,5 +24,6 @@ internal sealed class FeatureDefinitionConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.Description).HasJsonListConversion();
         builder.Ignore(x => x.Resource);
         builder.Ignore(x => x.Companion);
+        builder.Ignore(x => x.Modifiers);
     }
 }

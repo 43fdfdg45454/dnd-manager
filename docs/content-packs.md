@@ -196,8 +196,9 @@ Notación: `string?` admite `null` o ausencia; **obligatorio** indica que no pue
 
 **`Feature`**: `index` (**obligatorio**, con prefijo), `name` (**obligatorio**, ≤ 200),
 `description` (`string[]?`) y, con `"formatVersion": 2`, `resource` (`Resource?`, ver
-[`levels[].features[].resource`](#levelsfeaturesresource)) y `companion` (`Companion?`, ver
-[`levels[].features[].companion`](#levelsfeaturescompanion)).
+[`levels[].features[].resource`](#levelsfeaturesresource)), `companion` (`Companion?`, ver
+[`levels[].features[].companion`](#levelsfeaturescompanion)) y `modifiers` (`Modifier[]?`, ver
+[`levels[].features[].modifiers`](#levelsfeaturesmodifiers)).
 
 ### `Item`
 
@@ -568,6 +569,18 @@ error indica el rango que falta o la entrada que se solapa.
   }
 ]
 ```
+
+**Oleada de magia salvaje.** Si la subclase de un personaje tiene una tabla cuya `key` es
+`wild-magic-surge` o termina en `-wild-magic-surge` (`reinos-ejemplo-wild-magic-surge`), al gastar un
+espacio de nivel 1 o superior con "Gastar espacio" en la sección "Conjuros" de la pestaña Combate la
+tarjeta del conjuro muestra "Oleada de magia salvaje: tira 1d20" con "Tirar d20" (dado virtual; con un
+1 se abre la tabla para tirar en ella) y "Tirar oleada" (abre la tabla directamente). Si además el
+personaje tiene un recurso automático cuyo `key` termina en `tides-of-chaos` (un `resource` de rasgo,
+p. ej. `reinos-ejemplo-tides-of-chaos`), junto al aviso aparece "Recuperar Mareas del caos", que
+devuelve un uso sin aprobación del DM: es la regla tras una oleada. Por eso
+`POST /api/v1/characters/{id}/resources/{resourceId}/restore` admite a los jugadores, además de los
+puntos de hechicería, los recursos automáticos cuyo `key` termina en `tides-of-chaos` (el resto de
+recursos automáticos sigue dando 403 a quien no es DM).
 
 Si varios paquetes definen la misma `key`, gana el **último importado**. `GET
 /api/v1/catalog/roll-tables` (filtros opcionales `subclass=` y `class=`) devuelve las tablas efectivas
@@ -1067,6 +1080,41 @@ en la clase de la subclase. El origen del recurso es el rasgo con su nivel ("Ven
   ]
 }
 ```
+
+### `levels[].features[].modifiers`
+
+Con `"formatVersion": 2`, cada rasgo de un nivel de subclase puede llevar `modifiers`: hasta 10
+`Modifier` con la misma forma y validación que los de las opciones (`kind`, `target`, `value` y
+`condition` opcional, ver [`Option`](#option)). Se aplican a la hoja mientras el personaje tenga esa
+subclase y su nivel en la clase alcance el del rasgo, y se pierden al cambiar de subclase o bajar de
+nivel. En los desgloses aparecen con el nombre del rasgo y su nivel ("Pies ligeros (nivel 3)"), igual
+que los de las opciones elegidas.
+
+```json
+{
+  "level": 3,
+  "features": [
+    {
+      "index": "reinos-ejemplo-pies-ligeros",
+      "name": "Pies ligeros",
+      "description": ["Texto de ejemplo: te mueves antes que nadie."],
+      "modifiers": [
+        { "kind": "InitiativeBonus", "value": 1 },
+        { "kind": "SpeedBonus", "value": 10 },
+        { "kind": "ArmorClassBonus", "value": 1, "condition": "wearingArmor" }
+      ]
+    }
+  ]
+}
+```
+
+Sirve para los rasgos pasivos que suman números (CA, iniciativa, velocidad, salvaciones,
+habilidades, PG máximos). **Límite conocido:** lo que exige una decisión del jugador en el momento
+(reacciones, ventaja situacional, efectos de un solo uso) sigue en la descripción del rasgo.
+
+Errores con ruta: `...features[0].modifiers` (más de 10, o sin `"formatVersion": 2`),
+`...features[0].modifiers[0].kind`, `...modifiers[0].value`, `...modifiers[0].condition` y
+`...modifiers[0]` (objetivo no válido para el tipo).
 
 ### `levels[].features[].companion`
 
