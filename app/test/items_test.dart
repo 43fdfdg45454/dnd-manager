@@ -185,6 +185,26 @@ void main() {
       expect(parseGoldToCp('abc'), isNull);
     });
 
+    test('canEquip admite objetos sin categoría de equipo que hacen algo', () {
+      const bonus = ItemModifier(kind: 'AbilityBonus', target: 'str', value: 2);
+      expect(canEquip(const EffectiveItem(name: 'Espada', category: 'Weapon')), isTrue);
+      expect(
+        canEquip(const EffectiveItem(name: 'Amuleto', category: 'Other', modifiers: [bonus])),
+        isTrue,
+      );
+      expect(
+        canEquip(
+          const EffectiveItem(name: 'Broche', category: 'AdventuringGear', effects: ['Luz']),
+        ),
+        isTrue,
+      );
+      expect(canEquip(const EffectiveItem(name: 'Cuerda', category: 'AdventuringGear')), isFalse);
+      expect(
+        canEquip(const EffectiveItem(name: 'Elixir', category: 'Consumable', modifiers: [bonus])),
+        isFalse,
+      );
+    });
+
     test('sellPayoutCp aplica el porcentaje de recompra', () {
       expect(sellPayoutCp(unitCp: 1500, quantity: 1, buybackPercent: 50), 750);
       expect(sellPayoutCp(unitCp: 1500, quantity: 3, buybackPercent: 25), 1125);
