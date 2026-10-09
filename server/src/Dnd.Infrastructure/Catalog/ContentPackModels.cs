@@ -94,6 +94,25 @@ internal sealed class PackSubclassJson
 
     /// <summary>Format 2: level choices of the subclass.</summary>
     public List<PackLevelChoiceJson?>? LevelChoices { get; set; }
+
+    /// <summary>Format 2: spellcasting the subclass gives to a base class that does not cast spells.</summary>
+    public PackSubclassSpellcastingJson? Spellcasting { get; set; }
+}
+
+internal sealed class PackSubclassSpellcastingJson
+{
+    /// <summary>"third", "half" or "full".</summary>
+    public string? Progression { get; set; }
+
+    public string? Ability { get; set; }
+
+    public int? FromLevel { get; set; }
+
+    public string? SpellList { get; set; }
+
+    public Dictionary<string, int?>? CantripsKnown { get; set; }
+
+    public Dictionary<string, int?>? SpellsKnown { get; set; }
 }
 
 internal sealed class PackSubclassLevelJson
@@ -660,4 +679,10 @@ internal sealed class PackChoiceFilterJson
     public string? Source { get; set; }
 
     public bool? CantripsOnly { get; set; }
+
+    /// <summary>SRD school indexes ("abjuration", "evocation") the spells must belong to.</summary>
+    public List<string?>? Schools { get; set; }
+
+    /// <summary>Class levels at which a spell of any school may be chosen.</summary>
+    public List<int?>? SchoolsExceptAt { get; set; }
 }

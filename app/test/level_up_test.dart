@@ -665,6 +665,44 @@ void main() {
       expect(find.text('+1 Fue, +1 Des'), findsOneWidget);
     });
 
+    testWidgets('Conjuros con filtro de escuela: muestra el motivo de los no elegibles', (
+      tester,
+    ) async {
+      const reason = 'Solo abjuración o evocación salvo en los niveles 3, 8, 14 y 20';
+      await _pump(
+        tester,
+        plan: _plan(
+          targetLevel: 4,
+          classLevel: 4,
+          choices: [
+            _choice(
+              'conjuros',
+              'Conjuros rúnicos',
+              'SpellsKnown',
+              options: [
+                _option('runas-ejemplo-proyectil', 'Proyectil rúnico', spellLevel: 1),
+                _option(
+                  'runas-ejemplo-encanto',
+                  'Encanto rúnico',
+                  spellLevel: 1,
+                  eligible: false,
+                  reason: reason,
+                ),
+              ],
+            ),
+          ],
+        ),
+        character: _character(pendingLevelUpTo: 4),
+      );
+      await _next(tester);
+      await _writeHp(tester, '5');
+      await _next(tester);
+
+      expect(find.byKey(const Key('levelup-reason-runas-ejemplo-encanto')), findsOneWidget);
+      expect(find.text(reason), findsOneWidget);
+      expect(find.byKey(const Key('levelup-reason-runas-ejemplo-proyectil')), findsNothing);
+    });
+
     testWidgets('Dote: muestra el motivo de las no elegibles y pide la característica', (
       tester,
     ) async {

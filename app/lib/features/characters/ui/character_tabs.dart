@@ -911,7 +911,8 @@ String _racialSpellDetail(CharacterDetail character, CharacterSpell spell, int l
 String spellcastingLabel(String classIndex) =>
     classIndex == raceSpellClassIndex ? 'Raza' : titleFromSpellIndex(classIndex);
 
-/// "Clase: CD 14 · Ataque +6 · Preparados máx. 5", with the DC and the attack
+/// "Clase: CD 14 · Ataque +6 · Preparados máx. 5" (or "Conocidos máx. 3 ·
+/// Trucos máx. 2" for a class that casts through its subclass), with the DC and the attack
 /// bonus tappable to see where they come from.
 class _SpellcastingRow extends StatelessWidget {
   const _SpellcastingRow({required this.character, required this.spellcasting});
@@ -949,6 +950,18 @@ class _SpellcastingRow extends StatelessWidget {
             style: style,
           ),
           if (sc.preparedMax != null) Text(' · Preparados máx. ${sc.preparedMax}', style: style),
+          if (sc.spellsKnownMax != null)
+            Text(
+              ' · Conocidos máx. ${sc.spellsKnownMax}',
+              key: Key('sheet-spells-known-max-${sc.classIndex}'),
+              style: style,
+            ),
+          if (sc.cantripsKnownMax != null)
+            Text(
+              ' · Trucos máx. ${sc.cantripsKnownMax}',
+              key: Key('sheet-cantrips-known-max-${sc.classIndex}'),
+              style: style,
+            ),
         ],
       ),
     );

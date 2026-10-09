@@ -172,7 +172,8 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         var classLevel = classLevels.FirstOrDefault(l => l.Level == newLevel);
         var subclasses = await catalog.ListSubclassesAsync(definition.Index, cancellationToken);
         var answered = character.Choices.Where(c => c.ClassIndex == definition.Index).Select(c => c.Key).ToHashSet(StringComparer.Ordinal);
-        var rules = SelectRules(await catalog.ListLevelChoiceRulesAsync(definition.Index, cancellationToken), entry?.SubclassIndex, newLevel, answered);
+        var allRules = WithKnownSpellCounts(await catalog.ListLevelChoiceRulesAsync(definition.Index, cancellationToken), definition, subclasses);
+        var rules = SelectRules(allRules, entry?.SubclassIndex, newLevel, answered);
         if (entry is null && character.Classes.Count > 0)
         {
             // Multiclassing: the creation wizard only covered the first class, so the level-1 choices of a new
@@ -218,10 +219,40 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             Classes = classes,
             AutomaticFeatures = await AutomaticFeaturesAsync(definition.Index, entry?.SubclassIndex, newLevel, classLevel, rules, subclasses, cancellationToken),
             Choices = choices,
-            Spellcasting = Spellcasting(character, definition, classLevel, newLevel, spells),
+            Spellcasting = Spellcasting(character, definition, classLevel, newLevel, spells)
+                ?? SubclassSpellcasting(character, definition, subclasses.FirstOrDefault(s => s.Index == entry?.SubclassIndex)?.Spellcasting, newLevel, spells),
             Replacements = replacements,
         };
     }
+
+    /// <summary>
+    /// The spellcasting a subclass gives to a class that does not cast on its own (content packs), or null: the class
+    /// casts by itself, or <paramref name="subclass"/> is not a subclass of it with <c>spellcasting</c>.
+    /// </summary>
+    private static SubclassSpellcasting? SubclassCasting(ClassDefinition definition, IReadOnlyList<SubclassDefinition> subclasses, string? subclass) =>
+        definition.SpellcastingAbility is null && definition.SpellcastingLevel == 0 && subclass is not null
+            ? subclasses.FirstOrDefault(s => s.Index == subclass)?.Spellcasting
+            : null;
+
+    /// <summary>
+    /// <see cref="LevelChoiceKind.SpellsKnown"/>/<see cref="LevelChoiceKind.CantripsKnown"/> rules of a subclass with
+    /// <c>spellcasting</c> that give no <c>choose</c> learn the increase of its <c>spellsKnown</c>/<c>cantripsKnown</c>
+    /// table from the previous class level.
+    /// </summary>
+    private static List<LevelChoiceRule> WithKnownSpellCounts(IReadOnlyList<LevelChoiceRule> rules, ClassDefinition definition, IReadOnlyList<SubclassDefinition> subclasses) =>
+        rules.Select(rule =>
+        {
+            if (rule.Choose > 0
+                || rule.Kind is not (LevelChoiceKind.SpellsKnown or LevelChoiceKind.CantripsKnown)
+                || SubclassCasting(definition, subclasses, rule.SubclassIndex) is not { } casting)
+            {
+                return rule;
+            }
+
+            var table = rule.Kind == LevelChoiceKind.SpellsKnown ? casting.SpellsKnown : casting.CantripsKnown;
+            var increase = (Domain.Catalog.SubclassSpellcasting.At(table, rule.Level) ?? 0) - (Domain.Catalog.SubclassSpellcasting.At(table, rule.Level - 1) ?? 0);
+            return increase > 0 ? AtLevel(rule, rule.Level, increase) : rule;
+        }).ToList();
 
     /// <summary>Key of the skill gained when multiclassing into a bard, ranger or rogue.</summary>
     public const string MulticlassSkillKey = "multiclass-skill";
@@ -484,6 +515,35 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             SheetCalculator.PreparedMax(definition.Index, newLevel, 0) is not null && MaxSpellLevel(classLevel) > 0);
     }
 
+    /// <summary>Spellcasting of the plan for a class that casts through its subclass (content packs); null when it does not.</summary>
+    private static LevelUpSpellcastingDto? SubclassSpellcasting(
+        Character character,
+        ClassDefinition definition,
+        SubclassSpellcasting? casting,
+        int newLevel,
+        IReadOnlyList<SpellDefinition> spells)
+    {
+        if (casting is null || definition.SpellcastingAbility is not null || definition.SpellcastingLevel > 0 || newLevel < casting.FromLevel)
+        {
+            return null;
+        }
+
+        var levels = spells.ToDictionary(s => s.Index, s => s.Level, StringComparer.Ordinal);
+        var own = character.Spells.Where(s => s.ClassIndex == definition.Index && !s.AlwaysPrepared).ToList();
+        var slots = casting.SlotsAt(newLevel);
+        return new LevelUpSpellcastingDto(
+            definition.Index,
+            casting.Ability,
+            false,
+            casting.CantripsKnownAt(newLevel),
+            casting.SpellsKnownAt(newLevel),
+            SheetCalculator.MaxSpellLevel(slots),
+            own.Count(s => levels.GetValueOrDefault(s.SpellIndex, -1) == 0),
+            own.Count(s => levels.GetValueOrDefault(s.SpellIndex, -1) > 0),
+            slots,
+            false);
+    }
+
     /// <summary>Highest spell level with slots in the class table at that level (pact slots included); 0 without slots.</summary>
     public static int MaxSpellLevel(ClassLevel? classLevel)
     {
@@ -719,19 +779,28 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         }
 
         /// <summary>Spells of the class list (or the filter's) of the allowed levels that the character does not know for the class.</summary>
+        /// <remarks>
+        /// A class that casts through its subclass (content packs) takes the subclass's spell list and the highest slot
+        /// level of its progression. Spells outside <see cref="ChoiceFilter.Schools"/> are listed as not eligible, with the
+        /// reason, except at the levels of <see cref="ChoiceFilter.SchoolsExceptAt"/>.
+        /// </remarks>
         private List<PlannedOption> SpellCandidates(LevelChoiceRule rule, ChoiceFilter filter)
         {
-            var list = filter.SpellList ?? definition.Index;
+            var casting = SubclassCasting(definition, subclasses, rule.SubclassIndex ?? character.Classes.FirstOrDefault(c => c.ClassIndex == definition.Index)?.SubclassIndex);
+            var list = filter.SpellList ?? casting?.SpellList ?? definition.Index;
+            var maxSpellLevel = casting is not null ? SheetCalculator.MaxSpellLevel(casting.SlotsAt(newLevel)) : MaxSpellLevel(classLevel);
             IReadOnlyList<int> levels = rule.Kind == LevelChoiceKind.CantripsKnown || filter.CantripsOnly
                 ? [0]
                 : filter.SpellLevels.Count > 0
                     ? filter.SpellLevels
-                    : Enumerable.Range(1, Math.Max(0, MaxSpellLevel(classLevel))).ToList();
+                    : Enumerable.Range(1, Math.Max(0, maxSpellLevel)).ToList();
             var known = character.Spells.Where(s => s.ClassIndex == definition.Index).Select(s => s.SpellIndex).ToHashSet(StringComparer.Ordinal);
+            var schoolsReason = filter.Schools.Count > 0 ? filter.SchoolsReason() : null;
             return spells
                 .Where(s => levels.Contains(s.Level) && !known.Contains(s.Index))
                 .Where(s => list == ChoiceFilter.AnyList || s.ClassIndexes.Contains(list, StringComparer.Ordinal))
-                .Select(SpellOption)
+                .Select(s => filter.AllowsSchool(s.School, newLevel) ? SpellOption(s) : SpellOption(s) with { Eligible = false, Reason = schoolsReason })
+                .OrderBy(o => o.Eligible ? 0 : 1)
                 .ToList();
         }
 

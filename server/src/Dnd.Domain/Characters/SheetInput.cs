@@ -44,6 +44,37 @@ public sealed record ClassInfo
     /// <summary>Spell slots (9 entries, spell levels 1-9) by class level.</summary>
     public IReadOnlyDictionary<int, IReadOnlyList<int>> SpellSlotsByLevel { get; init; } = new Dictionary<int, IReadOnlyList<int>>();
 
+    /// <summary>Class level from which the class casts spells (1; a subclass caster starts at its <see cref="SubclassSpellcasting.FromLevel"/>).</summary>
+    public int SpellcastingFromLevel { get; init; } = 1;
+
+    /// <summary>Spellcasting given by the subclass (content packs), or null when the class casts on its own or not at all.</summary>
+    public SubclassSpellcasting? SubclassSpellcasting { get; init; }
+
+    /// <summary>Whether the class casts spells at a class level.</summary>
+    public bool CastsAt(int classLevel) => SpellcastingAbility is not null && classLevel >= SpellcastingFromLevel;
+
+    /// <summary>
+    /// The class with the spellcasting of its subclass (<paramref name="spellcasting"/>) when the class does not cast on
+    /// its own: ability, progression, slots of the progression table and the spells/cantrips known tables. Unchanged
+    /// otherwise.
+    /// </summary>
+    public ClassInfo WithSubclassSpellcasting(SubclassSpellcasting? spellcasting)
+    {
+        if (spellcasting is null || SpellcastingAbility is not null || SpellcastingLevel > 0)
+        {
+            return this;
+        }
+
+        return this with
+        {
+            SpellcastingAbility = spellcasting.Ability,
+            SpellcastingLevel = spellcasting.SpellcastingLevel,
+            SpellcastingFromLevel = spellcasting.FromLevel,
+            SubclassSpellcasting = spellcasting,
+            SpellSlotsByLevel = Enumerable.Range(1, 20).ToDictionary(l => l, spellcasting.SlotsAt),
+        };
+    }
+
     /// <summary>Slots of the class table at a class level; nine zeros when unknown.</summary>
     public IReadOnlyList<int> SlotsByLevel(int level) =>
         SpellSlotsByLevel.TryGetValue(level, out var slots) ? slots : NoSlots;

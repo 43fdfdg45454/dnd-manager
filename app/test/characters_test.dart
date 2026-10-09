@@ -621,6 +621,35 @@ void main() {
       expect(find.text('Carisma'), findsOneWidget);
     });
 
+    testWidgets('Hechizos muestra los conocidos máximos de una clase lanzadora por subclase', (
+      tester,
+    ) async {
+      final repository = FakeCharactersRepository(
+        characters: [
+          makeCharacterJson(
+            spellcasting: [
+              {
+                'classIndex': 'fighter',
+                'ability': 'int',
+                'saveDc': 12,
+                'attackBonus': 4,
+                'spellsKnownMax': 3,
+                'cantripsKnownMax': 2,
+              },
+            ],
+          ),
+        ],
+      );
+      await _pumpApp(tester, characters: repository, location: '/characters/ch1');
+
+      await tester.tap(find.byKey(const Key('tab-spells')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fighter: '), findsOneWidget);
+      expect(find.text(' · Conocidos máx. 3'), findsOneWidget);
+      expect(find.text(' · Trucos máx. 2'), findsOneWidget);
+    });
+
     testWidgets('sin conjuros raciales no hay sección Raza', (tester) async {
       final repository = FakeCharactersRepository(
         characters: [
