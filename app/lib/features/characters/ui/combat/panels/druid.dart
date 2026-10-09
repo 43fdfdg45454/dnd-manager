@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/network/api_error.dart';
 import '../../../../../core/theme/icons.dart';
 
 import '../../../../../core/theme/app_icon.dart';
+import '../../../../catalog/data/beast_models.dart';
+import '../../../../catalog/data/catalog_controllers.dart';
+import '../../../../catalog/ui/beast_page.dart' show BeastTile;
 import '../../../data/models.dart';
 import '../combat_state.dart';
 import '../combat_support.dart';
@@ -12,11 +16,45 @@ import 'panel_support.dart';
 import 'wizard.dart' show ArcaneRecoveryDialog;
 
 /// Highest beast challenge rating for Wild Shape and its limits (SRD).
-({String cr, String limits}) wildShapeLimits(int level) => level >= 8
-    ? (cr: '1', limits: 'Sin limitaciones de movimiento.')
-    : level >= 4
-    ? (cr: '1/2', limits: 'Sin velocidad de vuelo.')
-    : (cr: '1/4', limits: 'Sin velocidad de vuelo ni de nado.');
+({String cr, String limits}) wildShapeLimits(int level, {bool moon = false}) {
+  final rules = wildShapeRules(level, moon: moon);
+  return (cr: rules.crText, limits: rules.limits);
+}
+
+/// Wild Shape by druid level: the highest challenge rating (1/4 at level 2,
+/// 1/2 at 4, 1 at 8) and whether flying (level 8) and swimming (level 4)
+/// beasts are allowed. Circle of the Moon (Combat Wild Shape, Circle Forms):
+/// CR 1 from level 2 and level / 3 from level 6; the movement limits stay.
+({double maxCr, String crText, bool fly, bool swim, String limits}) wildShapeRules(
+  int level, {
+  bool moon = false,
+}) {
+  final base = level >= 8 ? 1.0 : (level >= 4 ? 0.5 : 0.25);
+  final circle = !moon ? 0.0 : (level >= 6 ? (level ~/ 3).toDouble() : 1.0);
+  final maxCr = circle > base ? circle : base;
+  final crText = switch (maxCr) {
+    0.25 => '1/4',
+    0.5 => '1/2',
+    _ => maxCr.toInt().toString(),
+  };
+  return (
+    maxCr: maxCr,
+    crText: crText,
+    fly: level >= 8,
+    swim: level >= 4,
+    limits: level >= 8
+        ? 'Sin limitaciones de movimiento.'
+        : level >= 4
+        ? 'Sin velocidad de vuelo.'
+        : 'Sin velocidad de vuelo ni de nado.',
+  );
+}
+
+/// Whether the druid follows the Circle of the Moon (its subclass index
+/// mentions "moon": it comes from a content pack, the SRD only has Land).
+bool isCircleOfTheMoon(CharacterDetail character) => character.classes.any(
+  (k) => k.classIndex == 'druid' && (k.subclassIndex ?? '').toLowerCase().contains('moon'),
+);
 
 /// Druid: Wild Shape (resource `wild-shape`, from level 2), the beast limits
 /// by level and a local "in Wild Shape" switch.
@@ -30,7 +68,8 @@ class DruidPanel extends ConsumerWidget {
     final theme = Theme.of(context);
     final c = panel.character;
     final level = panel.level;
-    final limits = wildShapeLimits(level);
+    final moon = isCircleOfTheMoon(c);
+    final limits = wildShapeLimits(level, moon: moon);
     final active = ref.watch(wildShapeControllerProvider(c.id));
     final form = ref.read(wildShapeControllerProvider(c.id).notifier);
     // Circle of the Land: the server only sends the data when the druid has it.
@@ -103,6 +142,7 @@ class DruidPanel extends ConsumerWidget {
                   'Archidruida: usos ilimitados de forma salvaje.',
                   style: theme.textTheme.bodySmall,
                 ),
+              WildShapeForms(level: level, moon: moon),
             ],
           ],
         ),
@@ -133,6 +173,53 @@ class DruidPanel extends ConsumerWidget {
               ],
             ),
           ),
+      ],
+    );
+  }
+}
+
+/// "Formas disponibles": the SRD beasts the druid can become at [level]
+/// (challenge rating and movement limits); each one opens its statblock.
+class WildShapeForms extends ConsumerWidget {
+  const WildShapeForms({super.key, required this.level, this.moon = false});
+
+  final int level;
+  final bool moon;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rules = wildShapeRules(level, moon: moon);
+    // Only the forbidden speeds are filtered out.
+    final BeastQuery query = (
+      maxCr: rules.maxCr,
+      fly: rules.fly ? null : false,
+      swim: rules.swim ? null : false,
+    );
+    final beasts = ref.watch(beastsProvider(query));
+    final count = beasts.value?.length;
+    return ExpansionTile(
+      key: const Key('druid-wild-shape-forms'),
+      tilePadding: EdgeInsets.zero,
+      title: Text(count == null ? 'Formas disponibles' : 'Formas disponibles ($count)'),
+      subtitle: Text('Bestias de VD ${rules.crText} o menos'),
+      children: [
+        beasts.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.all(12),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (error, _) => ListTile(
+            title: Text(describeApiError(error)),
+            trailing: IconButton(
+              tooltip: 'Reintentar',
+              icon: const Icon(Icons.refresh),
+              onPressed: () => ref.invalidate(beastsProvider(query)),
+            ),
+          ),
+          data: (list) => list.isEmpty
+              ? const ListTile(title: Text('No hay bestias que cumplan los límites.'))
+              : Column(children: [for (final b in list) BeastTile(beast: b)]),
+        ),
       ],
     );
   }

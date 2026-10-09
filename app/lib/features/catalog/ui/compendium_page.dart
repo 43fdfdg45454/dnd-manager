@@ -10,10 +10,12 @@ import '../../../core/ui/infinite_scroll_list.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../../core/ui/source_chip.dart';
 import '../../../core/ui/spell_category.dart';
+import '../data/beast_models.dart';
 import '../data/catalog_controllers.dart';
 import '../data/catalog_repository.dart';
 import '../data/models.dart';
 import '../domain/catalog_format.dart';
+import 'beast_page.dart';
 import 'condition_sheet.dart';
 import 'detail_widgets.dart';
 import 'roll_table_widgets.dart';
@@ -62,7 +64,7 @@ class _CompendiumPageState extends ConsumerState<CompendiumPage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 6,
+      length: 7,
       child: Scaffold(
         appBar: AppBar(
           title: TextField(
@@ -92,6 +94,7 @@ class _CompendiumPageState extends ConsumerState<CompendiumPage> {
               Tab(key: Key('tab-items'), text: 'Objetos'),
               Tab(key: Key('tab-classes'), text: 'Clases'),
               Tab(key: Key('tab-races'), text: 'Razas'),
+              Tab(key: Key('tab-beasts'), text: 'Bestias'),
               Tab(key: Key('tab-conditions'), text: 'Condiciones'),
               Tab(key: Key('tab-tables'), text: 'Tablas'),
             ],
@@ -107,6 +110,7 @@ class _CompendiumPageState extends ConsumerState<CompendiumPage> {
                   _KeepAlive(child: _ItemsTab()),
                   _KeepAlive(child: _ClassesTab()),
                   _KeepAlive(child: _RacesTab()),
+                  _KeepAlive(child: _BeastsTab()),
                   _KeepAlive(child: _ConditionsTab()),
                   _KeepAlive(child: _TablesTab()),
                 ],
@@ -458,6 +462,24 @@ class _RacesTab extends ConsumerWidget {
         trailing: const Icon(Icons.chevron_right),
         onTap: () => context.push(AppRoutes.race(r.index)),
       ),
+    );
+  }
+}
+
+/// SRD beasts (wild shapes), ordered by challenge rating.
+class _BeastsTab extends ConsumerWidget {
+  const _BeastsTab();
+
+  static const BeastQuery _all = (maxCr: null, fly: null, swim: null);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return _LocalList<BeastSummary>(
+      value: ref.watch(beastsProvider(_all)),
+      onRetry: () => ref.invalidate(beastsProvider(_all)),
+      nameOf: (b) => b.name,
+      emptyText: 'No se encontraron bestias.',
+      itemBuilder: (context, b) => BeastTile(beast: b),
     );
   }
 }
