@@ -1,5 +1,6 @@
 using Dnd.Application.Abstractions;
 using Dnd.Application.Abstractions.Persistence;
+using Dnd.Application.Catalog;
 using Dnd.Infrastructure.Auth;
 using Dnd.Infrastructure.Campaigns;
 using Dnd.Infrastructure.Catalog;
@@ -81,6 +82,7 @@ public static class DependencyInjection
         services.AddSingleton<ISessionLinkTokens, SessionLinkTokens>();
         services.AddScoped<ISessionEmailService, SessionEmailService>();
         services.AddSingleton<ICampaignDefaults, CampaignDefaults>();
+        services.AddSingleton<IBeastCatalog, SrdBeastCatalog>();
 
         return services;
     }

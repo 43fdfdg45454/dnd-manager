@@ -68,6 +68,8 @@ public static class DependencyInjection
         services.AddScoped<GetRaceHandler>();
         services.AddScoped<SearchSpellsHandler>();
         services.AddScoped<GetSpellHandler>();
+        services.AddScoped<SearchBeastsHandler>();
+        services.AddScoped<GetBeastHandler>();
         services.AddScoped<SearchItemsHandler>();
         services.AddScoped<GetItemHandler>();
         services.AddScoped<ListConditionsHandler>();

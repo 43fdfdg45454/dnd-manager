@@ -55,6 +55,18 @@ public static class CatalogEndpoints
             .WithSummary("Detalle de un conjuro.")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        group.MapGet("/beasts", ([AsParameters] SearchBeastsQuery query, SearchBeastsHandler handler) =>
+                TypedResults.Ok(handler.Handle(query)))
+            .WithName("SearchCatalogBeasts")
+            .WithSummary("Bestias del SRD ordenadas por VD y nombre, con filtros maxCr (0.25 = 1/4), fly y swim (true: solo con esa velocidad; false: solo sin ella) y q (nombre).")
+            .ProducesValidationProblem();
+
+        group.MapGet("/beasts/{index}", (string index, GetBeastHandler handler) =>
+                TypedResults.Ok(handler.Handle(index)))
+            .WithName("GetCatalogBeast")
+            .WithSummary("Estadísticas completas de una bestia del SRD: características, CA, PG, velocidades, sentidos, rasgos y acciones con sus tiradas.")
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         group.MapGet("/items", async ([AsParameters] SearchItemsQuery query, SearchItemsHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(query, ct)))
             .WithName("SearchCatalogItems")
