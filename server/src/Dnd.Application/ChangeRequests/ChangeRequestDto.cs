@@ -3,12 +3,13 @@ using Dnd.Application.Abstractions.Persistence;
 
 namespace Dnd.Application.ChangeRequests;
 
-/// <param name="Payload">The requested change as a JSON object (a <c>SheetPatch</c> for EditSheet, <c>{}</c> for Activate).</param>
+/// <param name="Payload">The requested change as a JSON object (a <c>SheetPatch</c> for EditSheet, <c>{}</c> for Activate, <c>{ beastIndex, beastName, name }</c> for Companion).</param>
 /// <param name="Before">
 /// What the payload changes as it was when the request was created: for EditSheet a <c>SheetPatch</c>
 /// with the same fields holding the previous values; for RemoveItem <c>{ quantity }</c>; for
 /// AdjustMoney <c>{ copperPieces }</c>; for AddItem/CustomItem with a catalog item <c>{ template }</c>
-/// (the catalog item). Null when there is nothing to compare or the request predates it.
+/// (the catalog item); for Companion <c>{ beastIndex, beastName, name }</c> like the payload. Null when there is nothing
+/// to compare or the request predates it.
 /// </param>
 public sealed record ChangeRequestDto(
     Guid Id,

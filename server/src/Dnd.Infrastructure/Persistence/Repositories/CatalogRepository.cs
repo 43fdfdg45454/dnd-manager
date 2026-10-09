@@ -177,7 +177,7 @@ internal sealed class CatalogRepository(AppDbContext db) : ICatalogRepository
         subclassIndexes.Count == 0
             ? []
             : await db.CatalogFeatures.AsNoTracking()
-                .Where(x => x.SubclassIndex != null && subclassIndexes.Contains(x.SubclassIndex) && x.ResourceJson != null)
+                .Where(x => x.SubclassIndex != null && subclassIndexes.Contains(x.SubclassIndex) && (x.ResourceJson != null || x.CompanionJson != null))
                 .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<SpellDefinition>> ListAllSpellsAsync(CancellationToken cancellationToken = default) =>

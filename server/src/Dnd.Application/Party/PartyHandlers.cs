@@ -166,6 +166,7 @@ public sealed class GetPartyHandler(PartyLoader loader, ICharacterSheetService s
 public sealed class PartyRestHandler(
     PartyLoader loader,
     ICharacterSheetService sheets,
+    CompanionPlanner companions,
     RestRequestLoader restRequests,
     IDiceRoller dice,
     IUnitOfWork unitOfWork,
@@ -191,6 +192,11 @@ public sealed class PartyRestHandler(
             {
                 character.ShortRest(noHitDice, sheet, dice, now);
             }
+        }
+
+        if (request.Kind == PartyRestKinds.Long)
+        {
+            await companions.RestoreAfterLongRestAsync(targets, now, cancellationToken);
         }
 
         // The forced rest answers any rest the players were asking for.

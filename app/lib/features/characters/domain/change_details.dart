@@ -98,9 +98,24 @@ ChangeDetail describeChange(ChangeRequest request) {
             ? '${payload['reason']}'
             : null,
       );
+    case ChangeRequestType.companion:
+      return SheetChangeDetail(_companionFields(payload, before));
     case ChangeRequestType.activate || ChangeRequestType.other:
       return PlainChangeDetail(describePayload(payload));
   }
+}
+
+/// "Bestia: Wolf → Panther" and "Nombre: Ceniza → Sombra".
+List<FieldChange> _companionFields(Map<String, dynamic> payload, Map<String, dynamic>? before) {
+  String? text(Object? value) => value is String && value.isNotEmpty ? value : null;
+  return [
+    (
+      label: 'Bestia',
+      before: text(before?['beastName']) ?? text(before?['beastIndex']),
+      after: text(payload['beastName']) ?? text(payload['beastIndex']) ?? '—',
+    ),
+    (label: 'Nombre', before: text(before?['name']), after: text(payload['name']) ?? '—'),
+  ];
 }
 
 List<FieldChange> _sheetFields(Map<String, dynamic> payload, Map<String, dynamic>? before) {

@@ -299,7 +299,76 @@ public sealed record CharacterDetailDto
 
     /// <summary>Chosen options (and feats) whose use spends a resource ("2 Ki"), in the order they were chosen.</summary>
     public IReadOnlyList<CharacterOptionCostDto> OptionCosts { get; init; } = [];
+
+    /// <summary>The animal companion with its recalculated statblock; null when the character has none.</summary>
+    public CharacterCompanionDto? Companion { get; init; }
+
+    /// <summary>The companion feature the character has reached (which beasts qualify); null when it has none.</summary>
+    public CompanionFeatureDto? CompanionFeature { get; init; }
+
+    /// <summary>The character has reached a companion feature and has not chosen the beast yet ("Elegir compañero").</summary>
+    public bool CompanionPending { get; init; }
 }
+
+/// <summary>
+/// A subclass feature that grants an animal companion (content packs, <c>features[].companion</c>): the beasts of the
+/// catalog with challenge rating up to <see cref="MaxChallengeRating"/> and one of <see cref="Sizes"/> (empty: any size).
+/// </summary>
+/// <param name="HitPoints">"beast" or "max(beast, N*classLevel)".</param>
+public sealed record CompanionFeatureDto(
+    string FeatureIndex,
+    string FeatureName,
+    string ClassIndex,
+    int ClassLevel,
+    double MaxChallengeRating,
+    string MaxChallengeRatingText,
+    IReadOnlyList<string> Sizes,
+    string HitPoints,
+    bool ProficiencyBonusFromCharacter,
+    bool AttackBonusFromCharacter);
+
+/// <summary>A damage component of a companion attack, with the character's bonus already folded into the dice ("2d4+4").</summary>
+public sealed record CompanionDamageDto(string Dice, string? Type);
+
+/// <summary>
+/// An action of the companion. <see cref="AttackBonus"/> (null without an attack roll) and the flat bonus of the first damage
+/// component come with their breakdowns (<see cref="AttackBreakdown"/>, <see cref="DamageBreakdown"/>).
+/// </summary>
+public sealed record CompanionAttackDto(
+    string Name,
+    string Description,
+    int? AttackBonus,
+    ValueBreakdownDto? AttackBreakdown,
+    IReadOnlyList<CompanionDamageDto> Damage,
+    ValueBreakdownDto? DamageBreakdown,
+    bool IsMultiattack);
+
+/// <summary>
+/// The animal companion of a character: the stored beast, name and current hit points, and the statblock recalculated
+/// with the character's proficiency bonus. <see cref="Breakdowns"/> explains "armorClass", "hitPointsMax", "save.&lt;ability&gt;"
+/// and "skill.&lt;skill&gt;" like the sheet's. <see cref="BeastMissing"/> is true when the beast is no longer in the catalog.
+/// </summary>
+public sealed record CharacterCompanionDto(
+    Guid Id,
+    string BeastIndex,
+    string BeastName,
+    string Name,
+    string Size,
+    string ChallengeRatingText,
+    int HitPointsCurrent,
+    int HitPointsMax,
+    int? HitPointsMaxOverride,
+    int ArmorClass,
+    IReadOnlyDictionary<string, int> Speeds,
+    IReadOnlyDictionary<string, int> Abilities,
+    IReadOnlyDictionary<string, int> SavingThrows,
+    IReadOnlyDictionary<string, int> Skills,
+    IReadOnlyDictionary<string, string> Senses,
+    int PassivePerception,
+    IReadOnlyList<Catalog.BeastTraitDto> Traits,
+    IReadOnlyList<CompanionAttackDto> Attacks,
+    IReadOnlyDictionary<string, ValueBreakdownDto> Breakdowns,
+    bool BeastMissing);
 
 /// <summary>
 /// A feat of the character, for the "Rasgos" tab of the sheet: the catalog description, the literal prerequisite
