@@ -10,8 +10,9 @@ import '../../data/campaigns_controller.dart';
 import '../../domain/campaign_models.dart';
 import 'campaign_section_page.dart';
 
-/// "General" view of a campaign, for every member: the campaign at a glance
-/// and a grid of cards that open each section as a full page.
+/// "Campaña" view of a campaign, for every member: the campaign at a glance
+/// and a grid of cards that open each section as a full page (the characters
+/// have their own tab in the bar).
 class CampaignGeneralPage extends ConsumerWidget {
   const CampaignGeneralPage({super.key, required this.campaignId});
 
@@ -39,10 +40,11 @@ class CampaignGeneralPage extends ConsumerWidget {
               childAspectRatio: 1.25,
               children: [
                 for (final section in CampaignSection.values)
-                  _SectionCard(
-                    section: section,
-                    onTap: () => context.push(AppRoutes.campaignSection(campaign.id, section)),
-                  ),
+                  if (section != CampaignSection.characters)
+                    _SectionCard(
+                      section: section,
+                      onTap: () => context.push(AppRoutes.campaignSection(campaign.id, section)),
+                    ),
               ],
             ),
           ],

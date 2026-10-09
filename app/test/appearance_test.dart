@@ -178,7 +178,7 @@ void main() {
     testWidgets('el menú de usuario abre Personalización', (tester) async {
       final router = await pumpRealApp(tester, location: AppRoutes.home);
 
-      await tester.tap(find.byKey(const Key('home-user-menu')));
+      await tester.tap(find.byKey(const Key('nav-profile')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('home-appearance')), findsOneWidget);
       await tester.tap(find.byKey(const Key('home-appearance')));
@@ -394,7 +394,7 @@ void main() {
 
       final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
       expect(app.themeMode, ThemeMode.dark);
-      final context = tester.element(find.byKey(const Key('home-user-menu')));
+      final context = tester.element(find.byKey(const Key('home-page')));
       expect(Theme.of(context).brightness, Brightness.dark);
       expect(MediaQuery.textScalerOf(context).scale(10), 10);
       expect(MotionScope.reducedOf(context), isFalse);
@@ -408,7 +408,7 @@ void main() {
 
       final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
       expect(app.themeMode, ThemeMode.light);
-      final context = tester.element(find.byKey(const Key('home-user-menu')));
+      final context = tester.element(find.byKey(const Key('home-page')));
       expect(Theme.of(context).brightness, Brightness.light);
       expect(MediaQuery.textScalerOf(context).scale(10), closeTo(12, 0.001));
       expect(MotionScope.reducedOf(context), isTrue);
@@ -442,7 +442,7 @@ void main() {
       );
       expect(AppTypography.numeric.fontFamily, 'AtkinsonHyperlegibleNext');
 
-      final context = tester.element(find.byKey(const Key('home-user-menu')));
+      final context = tester.element(find.byKey(const Key('home-page')));
       expect(context.tokens, same(AppPalette.graphite.dark));
       expect(Theme.of(context).scaffoldBackgroundColor, AppPalette.graphite.dark.obsidian);
       expect(context.appStyle.classColors, isFalse);
@@ -453,14 +453,14 @@ void main() {
       final prefs = await _prefs();
       await pumpApp(tester, prefs);
       final container = ProviderScope.containerOf(
-        tester.element(find.byKey(const Key('home-user-menu'))),
+        tester.element(find.byKey(const Key('home-page'))),
       );
 
       container.read(appearanceProvider.notifier).selectPalette(AppPalette.forest);
       container.read(appearanceProvider.notifier).selectTitleFont(TitleFont.imFellEnglish);
       await tester.pumpAndSettle();
 
-      final context = tester.element(find.byKey(const Key('home-user-menu')));
+      final context = tester.element(find.byKey(const Key('home-page')));
       expect(context.tokens, same(AppPalette.forest.dark));
       expect(Theme.of(context).textTheme.titleLarge!.fontFamily, 'IMFellEnglish');
       // IM Fell English has no bold: titles stay regular.

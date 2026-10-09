@@ -23,6 +23,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'helpers/app_pump.dart';
 import 'helpers/fakes.dart';
 
 const _fingerprint = 'AB:CD:EF:01:23:45:67:89';
@@ -626,8 +627,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Servidor: http://a.example.com'), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('home-user-menu')));
+      await tester.tap(find.byKey(const Key('nav-profile')));
       await tester.pumpAndSettle();
+      await revealProfileItem(tester, find.byKey(const Key('home-server')));
       await tester.tap(find.byKey(const Key('home-server')));
       await tester.pumpAndSettle();
       await tester.enterText(find.byKey(const Key('server-url')), 'http://b.example.com');

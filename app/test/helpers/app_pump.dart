@@ -176,6 +176,20 @@ GoRouter buildTestRouter({required String location, required List<RouteBase> rou
 }
 
 /// Opens a section of the "General" view of a campaign from its card.
+/// Scrolls the "Perfil" list until [finder] is visible (its tiles are built
+/// lazily, so the lower ones do not exist until they are scrolled into view).
+Future<void> revealProfileItem(WidgetTester tester, Finder finder) async {
+  await tester.scrollUntilVisible(
+    finder,
+    200,
+    scrollable: find.descendant(
+      of: find.byKey(const Key('profile-list')),
+      matching: find.byType(Scrollable),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 Future<void> openGeneralSection(WidgetTester tester, String section) async {
   final card = find.byKey(Key('general-$section'));
   await tester.ensureVisible(card);

@@ -19,9 +19,9 @@ import '../../domain/campaign_models.dart';
 import '../members_section.dart';
 import 'campaign_settings_section.dart';
 
-/// Sections of the "General" view of a campaign, in display order. Each one is
+/// Sections of the "Campaña" view of a campaign, in display order. Each one is
 /// a full page at `/campaigns/:id/general/<path>` with the key `general-<path>`
-/// on its card.
+/// on its card, except the characters, which are a branch of the campaign bar.
 enum CampaignSection {
   characters('characters', 'Personajes', AppIcons.hood),
   lore('lore', 'Lore', AppIcons.book),

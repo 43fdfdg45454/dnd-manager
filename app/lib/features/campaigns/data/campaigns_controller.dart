@@ -194,6 +194,8 @@ class MyInvitationsController extends AsyncNotifier<List<MyInvitation>> {
   Future<Member> accept(MyInvitation invitation) async {
     final member = await _repository.acceptInvitation(invitation.id);
     _remove(invitation.id);
+    // So the campaign opens in the view of the role straight away.
+    ref.read(campaignRoleCacheProvider.notifier).remember(invitation.campaignId, invitation.role);
     ref.invalidate(campaignsControllerProvider);
     return member;
   }

@@ -32,13 +32,14 @@ abstract final class CampaignBranches {
   static const general = 0;
   static const dm = 1;
   static const player = 2;
+  static const characters = 3;
 }
 
 enum _MenuAction { settings, documents }
 
 /// Frame of a campaign: app bar (name, real-time status, transactions, change
-/// requests and menu) and a navigation bar with "General" plus "Mesa del DM"
-/// (DM and Owner) or "Mi sesión" (Player).
+/// requests and menu) and a navigation bar with "Mesa del DM" (DM and Owner)
+/// or "Mi sesión" (Player), "Personajes" and "Campaña".
 ///
 /// While mounted it keeps the realtime connection of the campaign open
 /// ([campaignRealtimeProvider]) and tells players when the DM forces a rest or
@@ -330,20 +331,18 @@ class _ModeBar extends ConsumerWidget {
     final modeBranch = isDm ? CampaignBranches.dm : CampaignBranches.player;
     final unread = isDm ? 0 : (ref.watch(unreadMessagesCountProvider(campaignId)).value ?? 0);
     final current = navigationShell.currentIndex;
+    // Destinations in bar order; the role view comes first.
+    final branches = [modeBranch, CampaignBranches.characters, CampaignBranches.general];
+    final selected = branches.indexOf(current);
 
     return NavigationBar(
       key: const Key('campaign-mode-bar'),
-      selectedIndex: current == CampaignBranches.general ? 0 : 1,
+      selectedIndex: selected < 0 ? 0 : selected,
       onDestinationSelected: (index) {
-        final branch = index == 0 ? CampaignBranches.general : modeBranch;
+        final branch = branches[index];
         navigationShell.goBranch(branch, initialLocation: branch == current);
       },
       destinations: [
-        const NavigationDestination(
-          key: Key('nav-general'),
-          icon: AppIcon(AppIcons.compass),
-          label: 'General',
-        ),
         if (isDm)
           const NavigationDestination(
             key: Key('nav-dm'),
@@ -361,6 +360,16 @@ class _ModeBar extends ConsumerWidget {
             ),
             label: 'Mi sesión',
           ),
+        const NavigationDestination(
+          key: Key('nav-characters'),
+          icon: AppIcon(AppIcons.users),
+          label: 'Personajes',
+        ),
+        const NavigationDestination(
+          key: Key('nav-general'),
+          icon: AppIcon(AppIcons.compass),
+          label: 'Campaña',
+        ),
       ],
     );
   }

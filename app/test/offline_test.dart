@@ -20,6 +20,7 @@ import 'package:dnd_companion/core/ui/offline_widgets.dart';
 import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart';
 import 'package:dnd_companion/features/campaigns/ui/campaigns_page.dart';
 import 'package:dnd_companion/features/home/ui/home_page.dart';
+import 'package:dnd_companion/features/home/ui/profile_page.dart';
 import 'package:dnd_companion/features/library/data/library_controllers.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -545,16 +546,14 @@ void main() {
             responseCacheProvider.overrideWithValue(cache),
             fileDiskCacheProvider.overrideWithValue(files),
           ],
-          child: const MaterialApp(home: HomePage()),
+          child: const MaterialApp(home: ProfilePage()),
         ),
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('home-user-menu')));
-      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('home-clear-cache')));
       await tester.pumpAndSettle();
-      expect(find.text('Vaciar caché'), findsOneWidget); // Confirmation title.
+      expect(find.text('Vaciar caché'), findsNWidgets(2)); // Tile and confirmation title.
       await tester.tap(find.byKey(const Key('confirm-action')));
       await tester.pumpAndSettle();
 

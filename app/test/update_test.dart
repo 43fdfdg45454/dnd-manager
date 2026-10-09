@@ -275,14 +275,14 @@ void main() {
 
       expect(opened, [Uri.parse('$testServerUrl/api/v1/app/download/2')]);
       expect(find.byKey(const Key('update-dialog')), findsNothing);
-      expect(find.byKey(const Key('home-user-menu')), findsOneWidget);
+      expect(find.byKey(const Key('app-nav-bar')), findsOneWidget);
     });
 
     testWidgets('no aparece si el build es el mismo', (tester) async {
       await _pumpApp(tester, _baseOverrides(_FakeUpdateRepository(_release(build: 1))));
 
       expect(find.byKey(const Key('update-dialog')), findsNothing);
-      expect(find.byKey(const Key('home-user-menu')), findsOneWidget);
+      expect(find.byKey(const Key('app-nav-bar')), findsOneWidget);
     });
 
     testWidgets('"Más tarde" lo cierra y deja usar la app', (tester) async {
@@ -292,7 +292,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('update-dialog')), findsNothing);
-      expect(find.byKey(const Key('home-user-menu')), findsOneWidget);
+      expect(find.byKey(const Key('app-nav-bar')), findsOneWidget);
     });
 
     testWidgets('isMandatory bloquea la app hasta actualizar', (tester) async {
@@ -302,7 +302,7 @@ void main() {
 
       expect(find.byKey(const Key('update-required')), findsOneWidget);
       expect(find.text('Actualización obligatoria'), findsOneWidget);
-      expect(find.byKey(const Key('home-user-menu')), findsNothing);
+      expect(find.byKey(const Key('app-nav-bar')), findsNothing);
       expect(find.byKey(const Key('update-dialog')), findsNothing);
 
       // The system back button cannot leave the page.
@@ -319,7 +319,7 @@ void main() {
       await tester.tap(find.byKey(const Key('update-required-recheck')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('update-required')), findsNothing);
-      expect(find.byKey(const Key('home-user-menu')), findsOneWidget);
+      expect(find.byKey(const Key('app-nav-bar')), findsOneWidget);
     });
 
     testWidgets('"Buscar actualizaciones" fuerza la comprobación', (tester) async {
@@ -330,7 +330,7 @@ void main() {
       expect(repository.calls, 1);
 
       Future<void> checkFromMenu() async {
-        await tester.tap(find.byKey(const Key('home-user-menu')));
+        await tester.tap(find.byKey(const Key('nav-profile')));
         await tester.pumpAndSettle();
         await tester.tap(find.byKey(const Key('home-check-updates')));
         await tester.pumpAndSettle();

@@ -10,6 +10,7 @@ import '../../features/auth/ui/splash_page.dart';
 import '../../features/campaigns/data/campaigns_controller.dart';
 import '../../features/campaigns/domain/campaign_models.dart';
 import '../../features/campaigns/ui/campaign_shell.dart';
+import '../../features/campaigns/ui/campaign_characters_page.dart';
 import '../../features/campaigns/ui/general/campaign_general_page.dart';
 import '../../features/campaigns/ui/general/campaign_section_page.dart';
 import '../../features/change_requests/ui/change_requests_page.dart';
@@ -26,7 +27,10 @@ import '../../features/catalog/ui/item_detail_page.dart';
 import '../../features/catalog/ui/race_detail_page.dart';
 import '../../features/catalog/ui/spell_detail_page.dart';
 import '../../features/home/ui/attribution_page.dart';
+import '../../features/home/ui/app_shell.dart';
 import '../../features/home/ui/home_page.dart';
+import '../../features/home/ui/profile_page.dart';
+import '../../features/dice/ui/dice_page.dart';
 import '../../features/library/ui/library_page.dart';
 import '../../features/library/ui/pdf_viewer_page.dart';
 import '../../features/lore/ui/lore_editor_page.dart';
@@ -59,6 +63,7 @@ abstract final class AppRoutes {
   static const campaignGeneral = '/campaigns/:id/general';
   static const campaignDm = '/campaigns/:id/dm';
   static const campaignPlayer = '/campaigns/:id/player';
+  static const campaignCharacters = '/campaigns/:id/characters';
   static const campaignChangeRequests = '/campaigns/:id/change-requests';
   static const campaignShop = '/campaigns/:id/shops/:shopId';
   static const campaignTransactions = '/campaigns/:id/transactions';
@@ -81,13 +86,23 @@ abstract final class AppRoutes {
   static const library = '/library';
   static const libraryViewer = '/library/:docId/view';
   static const compendium = '/compendium';
+  static const dice = '/dice';
+  static const profile = '/profile';
   static const spellDetail = '/compendium/spells/:index';
   static const itemDetail = '/compendium/items/:id';
   static const classDetail = '/compendium/classes/:index';
   static const raceDetail = '/compendium/races/:index';
 
-  /// Location of the campaign with the given [id]: its "General" view.
-  static String campaign(String id) => '/campaigns/$id/general';
+  /// Location of the campaign with the given [id]: the router sends it to
+  /// "Mi sesión" or "Mesa del DM" according to the role, or to "Campaña"
+  /// while the role is unknown.
+  static String campaign(String id) => '/campaigns/$id';
+
+  /// "Campaña" view of the campaign (the sections shared by every member).
+  static String campaignGeneralView(String id) => '/campaigns/$id/general';
+
+  /// "Personajes" view of the campaign.
+  static String campaignCharactersView(String id) => '/campaigns/$id/characters';
 
   /// "Mesa del DM" view of the campaign (DM and Owner).
   static String campaignDmView(String id) => '/campaigns/$id/dm';
@@ -95,9 +110,12 @@ abstract final class AppRoutes {
   /// "Mi sesión" view of the campaign (Player).
   static String campaignPlayerView(String id) => '/campaigns/$id/player';
 
-  /// A section of the "General" view, as a full page.
+  /// A section of the "Campaña" view, as a full page. The characters have
+  /// their own branch, so that section is the branch itself.
   static String campaignSection(String id, CampaignSection section) =>
-      '/campaigns/$id/general/${section.path}';
+      section == CampaignSection.characters
+      ? campaignCharactersView(id)
+      : '/campaigns/$id/general/${section.path}';
 
   /// Change requests of the campaign with the given [id].
   static String changeRequests(String id) => '/campaigns/$id/change-requests';
@@ -201,26 +219,34 @@ String? campaignIdOf(String location) {
 }
 
 /// Keeps every user in the campaign views of their [role]: `/campaigns/:id`
-/// goes to the "General" view, the DM view (`/dm`) is only for DM and Owner
-/// and the player view (`/player`) only for Players; the others are sent to
-/// "General". Returns null when [location] is allowed or the role is not
-/// known yet (null), in which case the router asks again once it is.
+/// opens the view of the role ("Mesa del DM" for DM and Owner, "Mi sesión"
+/// for Players) or "Campaña" while the role is not known yet; the DM view
+/// (`/dm`) is only for DM and Owner and the player view (`/player`) only for
+/// Players, the others are sent to their own view. Returns null when
+/// [location] is allowed or the role is not known yet (null), in which case
+/// the router asks again once it is.
 String? campaignModeRedirect(CampaignRole? role, String location) {
   final segments = Uri.parse(location).pathSegments.where((s) => s.isNotEmpty).toList();
   if (segments.length < 2 || segments.first != 'campaigns') return null;
   final id = segments[1];
-  if (segments.length == 2) return AppRoutes.campaign(id);
+  final roleView = switch (role) {
+    null => AppRoutes.campaignGeneralView(id),
+    CampaignRole.player => AppRoutes.campaignPlayerView(id),
+    _ => AppRoutes.campaignDmView(id),
+  };
+  if (segments.length == 2) return roleView;
   if (role == null) return null;
   return switch (segments[2]) {
-    'dm' when !role.isAtLeastDm => AppRoutes.campaign(id),
-    'player' when role != CampaignRole.player => AppRoutes.campaign(id),
+    'dm' when !role.isAtLeastDm => roleView,
+    'player' when role != CampaignRole.player => roleView,
     _ => null,
   };
 }
 
-/// Routes of a campaign: `/campaigns/:id` (redirected to "General") and the
-/// shell with the "General", "Mesa del DM" and "Mi sesión" branches. The
-/// sections of "General" are full pages on [rootNavigatorKey].
+/// Routes of a campaign: `/campaigns/:id` (redirected to the view of the role)
+/// and the shell with the "Campaña", "Mesa del DM", "Mi sesión" and
+/// "Personajes" branches. The sections of "Campaña" are full pages on
+/// [rootNavigatorKey].
 List<RouteBase> campaignShellRoutes(GlobalKey<NavigatorState> rootNavigatorKey) => [
   GoRoute(
     path: AppRoutes.campaignDetail,
@@ -240,14 +266,15 @@ List<RouteBase> campaignShellRoutes(GlobalKey<NavigatorState> rootNavigatorKey) 
                     CampaignGeneralPage(campaignId: state.pathParameters['id']!),
                 routes: [
                   for (final section in CampaignSection.values)
-                    GoRoute(
-                      path: section.path,
-                      parentNavigatorKey: rootNavigatorKey,
-                      builder: (context, state) => CampaignSectionPage(
-                        campaignId: state.pathParameters['id']!,
-                        section: section,
+                    if (section != CampaignSection.characters)
+                      GoRoute(
+                        path: section.path,
+                        parentNavigatorKey: rootNavigatorKey,
+                        builder: (context, state) => CampaignSectionPage(
+                          campaignId: state.pathParameters['id']!,
+                          section: section,
+                        ),
                       ),
-                    ),
                 ],
               ),
             ],
@@ -266,6 +293,15 @@ List<RouteBase> campaignShellRoutes(GlobalKey<NavigatorState> rootNavigatorKey) 
                 path: 'player',
                 builder: (context, state) =>
                     PlayerSessionPage(campaignId: state.pathParameters['id']!),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: 'characters',
+                builder: (context, state) =>
+                    CampaignCharactersPage(campaignId: state.pathParameters['id']!),
               ),
             ],
           ),
@@ -309,7 +345,28 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.forgotPassword,
         builder: (context, state) => const ForgotPasswordPage(),
       ),
-      GoRoute(path: AppRoutes.home, builder: (context, state) => const HomePage()),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) => AppShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [GoRoute(path: AppRoutes.home, builder: (context, state) => const HomePage())],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(path: AppRoutes.compendium, builder: (context, state) => const CompendiumPage()),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [GoRoute(path: AppRoutes.dice, builder: (context, state) => const DicePage())],
+          ),
+          StatefulShellBranch(
+            routes: [GoRoute(path: AppRoutes.library, builder: (context, state) => const LibraryPage())],
+          ),
+          StatefulShellBranch(
+            routes: [GoRoute(path: AppRoutes.profile, builder: (context, state) => const ProfilePage())],
+          ),
+        ],
+      ),
       GoRoute(path: AppRoutes.adminUsers, builder: (context, state) => const AdminUsersPage()),
       GoRoute(path: AppRoutes.adminContent, builder: (context, state) => const AdminContentPage()),
       GoRoute(path: AppRoutes.attributions, builder: (context, state) => const AttributionPage()),
@@ -394,7 +451,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.campaignLibrary,
         builder: (context, state) => LibraryPage(campaignId: state.pathParameters['id']),
       ),
-      GoRoute(path: AppRoutes.library, builder: (context, state) => const LibraryPage()),
       GoRoute(
         path: AppRoutes.libraryViewer,
         builder: (context, state) => PdfViewerPage(documentId: state.pathParameters['docId']!),
@@ -423,7 +479,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.characterRestRollsPath,
         builder: (context, state) => RestRollsPage(characterId: state.pathParameters['id']!),
       ),
-      GoRoute(path: AppRoutes.compendium, builder: (context, state) => const CompendiumPage()),
       GoRoute(
         path: AppRoutes.spellDetail,
         builder: (context, state) => SpellDetailPage(index: state.pathParameters['index']!),

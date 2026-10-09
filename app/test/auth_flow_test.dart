@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'helpers/app_pump.dart';
 import 'helpers/fakes.dart';
 
 Future<void> _pumpApp(
@@ -57,9 +58,10 @@ void main() {
 
     await _fillAndSubmit(tester);
 
-    await tester.tap(find.byKey(const Key('home-user-menu')));
+    await tester.tap(find.byKey(const Key('nav-profile')));
     await tester.pumpAndSettle();
-    expect(find.text('Hola, Usuario Demo'), findsOneWidget);
+    expect(find.byKey(const Key('home-greeting')), findsOneWidget);
+    expect(find.text('Usuario Demo'), findsOneWidget);
     expect(find.text('Entrar'), findsNothing);
     expect(storage.refresh, isNotNull);
   });
@@ -103,9 +105,9 @@ void main() {
     final repository = FakeAuthRepository(storage: storage, meUser: makeUser());
     await _pumpApp(tester, storage: storage, repository: repository);
 
-    await tester.tap(find.byKey(const Key('home-user-menu')));
+    await tester.tap(find.byKey(const Key('nav-profile')));
     await tester.pumpAndSettle();
-    expect(find.text('Hola, Usuario Demo'), findsOneWidget);
+    expect(find.text('Usuario Demo'), findsOneWidget);
   });
 
   testWidgets('cerrar sesión vuelve al login', (tester) async {
@@ -113,8 +115,9 @@ void main() {
     final repository = FakeAuthRepository(storage: storage, meUser: makeUser());
     await _pumpApp(tester, storage: storage, repository: repository);
 
-    await tester.tap(find.byKey(const Key('home-user-menu')));
+    await tester.tap(find.byKey(const Key('nav-profile')));
     await tester.pumpAndSettle();
+    await revealProfileItem(tester, find.byKey(const Key('home-logout')));
     await tester.tap(find.text('Cerrar sesión'));
     await tester.pumpAndSettle();
 

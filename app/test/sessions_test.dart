@@ -10,6 +10,7 @@ import 'package:dnd_companion/core/router/app_router.dart';
 import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart';
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
 import 'package:dnd_companion/features/home/ui/home_page.dart';
+import 'package:dnd_companion/features/home/ui/profile_page.dart';
 import 'package:dnd_companion/features/session/data/messages_repository.dart';
 import 'package:dnd_companion/features/sessions/data/models.dart';
 import 'package:dnd_companion/features/sessions/data/sessions_controllers.dart';
@@ -45,6 +46,7 @@ Future<GoRouter> _pumpApp(
     location: location,
     routes: [
       GoRoute(path: '/', builder: (_, _) => const HomePage()),
+      GoRoute(path: AppRoutes.profile, builder: (_, _) => const ProfilePage()),
       GoRoute(
         path: AppRoutes.campaignSessionNew,
         builder: (_, state) => SessionFormPage(campaignId: state.pathParameters['id']!),
@@ -906,12 +908,10 @@ void main() {
 
     testWidgets('el menú de usuario activa y desactiva los correos', (tester) async {
       final auth = FakeAuthRepository(storage: FakeTokenStorage(), meUser: makeUser());
-      await _pumpApp(tester, location: '/', authRepository: auth);
+      await _pumpApp(tester, location: AppRoutes.profile, authRepository: auth);
 
-      await tester.tap(find.byKey(const Key('home-user-menu')));
-      await tester.pumpAndSettle();
       expect(
-        tester.widget<Switch>(find.byKey(const Key('home-notifications-switch'))).value,
+        tester.widget<SwitchListTile>(find.byKey(const Key('home-notifications'))).value,
         isTrue,
       );
 
@@ -919,20 +919,16 @@ void main() {
       await tester.pumpAndSettle();
       expect(auth.profileUpdates.single, (displayName: null, notificationsEnabled: false));
 
-      await tester.tap(find.byKey(const Key('home-user-menu')));
-      await tester.pumpAndSettle();
       expect(
-        tester.widget<Switch>(find.byKey(const Key('home-notifications-switch'))).value,
+        tester.widget<SwitchListTile>(find.byKey(const Key('home-notifications'))).value,
         isFalse,
       );
     });
 
     testWidgets('el menú de usuario permite editar el nombre', (tester) async {
       final auth = FakeAuthRepository(storage: FakeTokenStorage(), meUser: makeUser());
-      await _pumpApp(tester, location: '/', authRepository: auth);
+      await _pumpApp(tester, location: AppRoutes.profile, authRepository: auth);
 
-      await tester.tap(find.byKey(const Key('home-user-menu')));
-      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('home-edit-name')));
       await tester.pumpAndSettle();
       await tester.enterText(find.byKey(const Key('edit-name-field')), 'Nuevo Nombre');

@@ -136,7 +136,7 @@ void main() {
     testWidgets('las tarjetas sin dueño llevan la insignia PNJ', (tester) async {
       await pumpRealApp(
         tester,
-        location: '/campaigns/c1/general/characters',
+        location: '/campaigns/c1/characters',
         fakes: AppFakes(
           campaigns: FakeCampaignsRepository(campaigns: [makeCampaign()]),
           characters: _characters(),

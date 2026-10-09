@@ -110,9 +110,7 @@ void main() {
           makeCharacterJson(id: 'ch2', name: 'Elara', ownerUserId: null),
         ],
       );
-      await _pumpApp(tester, characters: repository, location: '/campaigns/c1');
-
-      await openGeneralSection(tester, 'characters');
+      await _pumpApp(tester, characters: repository, location: '/campaigns/c1/characters');
 
       expect(find.byKey(const Key('character-ch1')), findsOneWidget);
       expect(find.byKey(const Key('character-ch2')), findsOneWidget);
@@ -132,7 +130,7 @@ void main() {
           makeCharacterJson(id: 'ch2', name: 'Elara', ownerUserId: 'p2', status: 'Active'),
         ],
       );
-      await _pumpApp(tester, characters: repository, location: '/campaigns/c1/general/characters');
+      await _pumpApp(tester, characters: repository, location: '/campaigns/c1/characters');
 
       await tester.tap(find.byKey(const Key('character-ch2')));
       await tester.pumpAndSettle();
@@ -155,7 +153,7 @@ void main() {
       await _pumpApp(
         tester,
         characters: repository,
-        location: '/campaigns/c1/general/characters',
+        location: '/campaigns/c1/characters',
         role: CampaignRole.dm,
       );
 
@@ -170,8 +168,7 @@ void main() {
       tester,
     ) async {
       final repository = FakeCharactersRepository();
-      await _pumpApp(tester, characters: repository, location: '/campaigns/c1');
-      await openGeneralSection(tester, 'characters');
+      await _pumpApp(tester, characters: repository, location: '/campaigns/c1/characters');
       expect(find.text('Aún no hay personajes en esta campaña'), findsOneWidget);
       expect(find.byKey(const Key('characters-more')), findsNothing);
 
@@ -188,10 +185,9 @@ void main() {
       await _pumpApp(
         tester,
         characters: repository,
-        location: '/campaigns/c1',
+        location: '/campaigns/c1/characters',
         role: CampaignRole.dm,
       );
-      await openGeneralSection(tester, 'characters');
 
       await tester.tap(find.byKey(const Key('characters-more')));
       await tester.pumpAndSettle();
