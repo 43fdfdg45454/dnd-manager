@@ -127,7 +127,7 @@ indicado (`Agent` con `model: opus | sonnet | haiku`), dándoles el contrato esc
 
 ## Estado
 
-Fases 0 a 26 implementadas y en `master` (cada una con su contrato en `docs/specs/`). Verificado en
+Fases 0 a 27 implementadas y en `master` (cada una con su contrato en `docs/specs/`). Verificado en
 este entorno: servidor compila sin avisos y pasa sus tests (SQLite en memoria); cliente sin
 incidencias de análisis y con sus tests en verde. CI publica en cada push a `master` la imagen
 `ghcr.io/<owner>/dnd-companion-api:latest` y una release con el APK firmado. **No verificado aquí**
@@ -169,6 +169,7 @@ jugador en dos móviles; cualquier desviación se corrige sobre los contratos de
 | 24 | Lote de correcciones de juego (dados y críticos, conjuros en combate, invitaciones, peticiones detalladas, tienda con catálogo, bestias para druidas, scroll infinito, documentos externos) y nueva navegación | Ver `docs/specs/fase-24-correcciones-y-navegacion.md` |
 | 25 | Paquetes de contenido completos: subrazas sobre razas existentes, recursos en rasgos, lanzadores de tercio, listas ampliadas, coste de opciones, compañero animal, oleada de magia salvaje y modificadores de rasgos | Ver `docs/specs/fase-25-paquetes-completos.md` |
 | 26 | Detalle de lo que se elige: botón de detalle en selectores de conjuros, equipo, raza, clase, subclase y compañero; rasgo del trasfondo en el asistente | Ver `docs/specs/fase-26-detalles-en-elecciones.md` |
+| 27 | Combate explicado: todo conjuro lanzable con detalle, desglose de ataque, CD, daño y curación, "Lanzar" con concentración, tipo de acción con color de paleta en conjuros, ataques y paneles de clase, y botones de detalle alineados | Ver `docs/specs/fase-27-combate-detalle-y-accion.md` |
 
 ## Verificación end-to-end
 
