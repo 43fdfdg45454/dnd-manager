@@ -9,6 +9,7 @@ import '../../../../dice/ui/dice_sheet.dart';
 import '../../../data/characters_controller.dart';
 import '../../../data/models.dart';
 import '../combat_support.dart';
+import 'critical_damage_roll.dart';
 import 'panel_support.dart';
 
 /// One entry of `divineSmite.slotsByLevel`.
@@ -27,6 +28,28 @@ String _smiteDice(Object? raw) {
   if (raw is num) return '${raw.toInt()}d8';
   final text = '$raw'.trim();
   return RegExp(r'^\d+$').hasMatch(text) ? '${text}d8' : text;
+}
+
+/// Most d8 Divine Smite can deal from the slot (2d8 + 1d8 per level above 1st).
+const smiteMaxSlotDice = 5;
+
+/// Most d8 Divine Smite can deal in total, with the die against undead and fiends.
+const smiteMaxDice = 6;
+
+/// Damage of a Divine Smite (PHB): the [base] dice the server gives for the
+/// slot (at most 5d8), plus 1d8 [againstUndead] or fiends (at most 6d8), all
+/// doubled on a [critical] hit. A [base] that is not "Nd8" is kept as it is.
+String smiteDamage(String base, {bool againstUndead = false, bool critical = false}) {
+  final match = RegExp(r'^\s*(\d+)\s*d\s*8\s*$', caseSensitive: false).firstMatch(base);
+  if (match == null) {
+    final extra = againstUndead ? '$base+1d8' : base;
+    return criticalDamage(extra, critical: critical);
+  }
+  var count = int.parse(match.group(1)!);
+  if (count > smiteMaxSlotDice) count = smiteMaxSlotDice;
+  if (againstUndead) count = count + 1 > smiteMaxDice ? smiteMaxDice : count + 1;
+  if (critical) count *= 2;
+  return '${count}d8';
 }
 
 class PaladinPanel extends ConsumerStatefulWidget {
@@ -83,28 +106,17 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
     });
     if (!done || !mounted) return;
     setState(() => _smites++);
-    final damage = dice ?? '';
-    final roll = await showDialog<bool>(
+    final base = dice ?? '';
+    final roll = await showDialog<({String damage, bool critical})>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Castigo divino'),
-        content: Text('Daño radiante adicional: $damage', key: const Key('smite-result')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cerrar'),
-          ),
-          if (damage.isNotEmpty)
-            FilledButton(
-              key: const Key('smite-roll'),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text('Tirar $damage'),
-            ),
-        ],
-      ),
+      builder: (_) => _SmiteDialog(base: base),
     );
-    if (roll == true && mounted) {
-      await rollAndShow(context, damage, label: 'Castigo divino');
+    if (roll != null && mounted) {
+      await rollAndShow(
+        context,
+        roll.damage,
+        label: roll.critical ? 'Castigo divino (crítico)' : 'Castigo divino',
+      );
     }
   }
 
@@ -285,6 +297,70 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// The extra radiant damage of a Divine Smite with the "Crítico" and
+/// "Contra no muerto o infernal" boxes. Pops with what to roll.
+class _SmiteDialog extends StatefulWidget {
+  const _SmiteDialog({required this.base});
+
+  /// Dice the server gives for the spent slot ("3d8").
+  final String base;
+
+  @override
+  State<_SmiteDialog> createState() => _SmiteDialogState();
+}
+
+class _SmiteDialogState extends State<_SmiteDialog> {
+  bool _critical = false;
+  bool _undead = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final damage = widget.base.isEmpty
+        ? ''
+        : smiteDamage(widget.base, againstUndead: _undead, critical: _critical);
+    return AlertDialog(
+      title: const Text('Castigo divino'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Daño radiante adicional: $damage', key: const Key('smite-result')),
+          if (damage.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            CheckboxListTile(
+              key: const Key('smite-critical'),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              value: _critical,
+              title: const Text('Crítico'),
+              subtitle: const Text('Se duplican los dados.'),
+              onChanged: (value) => setState(() => _critical = value ?? false),
+            ),
+            CheckboxListTile(
+              key: const Key('smite-undead'),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              value: _undead,
+              title: const Text('Contra no muerto o infernal'),
+              subtitle: const Text('+1d8, hasta un máximo de 6d8.'),
+              onChanged: (value) => setState(() => _undead = value ?? false),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cerrar')),
+        if (damage.isNotEmpty)
+          FilledButton(
+            key: const Key('smite-roll'),
+            onPressed: () => Navigator.of(context).pop((damage: damage, critical: _critical)),
+            child: Text('Tirar $damage'),
+          ),
       ],
     );
   }

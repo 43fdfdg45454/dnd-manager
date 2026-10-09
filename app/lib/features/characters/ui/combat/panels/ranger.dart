@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_icon.dart';
 import '../../../../../core/theme/icons.dart';
 
-import '../../../../dice/ui/dice_sheet.dart';
 import '../combat_support.dart';
 import '../concentration_flow.dart';
+import 'critical_damage_roll.dart';
 import 'panel_support.dart';
 
 /// Spell index of Hunter's Mark in the SRD catalog.
@@ -47,11 +47,6 @@ class RangerPanel extends ConsumerWidget {
       children: [
         CombatCard(
           title: 'Marca del cazador',
-          trailing: TextButton(
-            key: const Key('ranger-hunters-mark-roll'),
-            onPressed: () => rollAndShow(context, '1d6', label: 'Marca del cazador'),
-            child: const Text('Tirar 1d6'),
-          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -93,6 +88,12 @@ class RangerPanel extends ConsumerWidget {
                 '+1d6 de daño a la criatura marcada y ventaja para rastrearla. Requiere '
                 'concentración; gasta el espacio en "Espacios de conjuro".',
                 style: theme.textTheme.bodySmall,
+              ),
+              const SizedBox(height: 8),
+              const CriticalDamageRoll(
+                expression: '1d6',
+                label: 'Marca del cazador',
+                keyPrefix: 'ranger-hunters-mark',
               ),
             ],
           ),

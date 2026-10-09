@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../core/theme/app_icon.dart';
 import '../../../../../core/theme/icons.dart';
 
-import '../../../../dice/ui/dice_sheet.dart';
 import '../combat_support.dart';
+import 'critical_damage_roll.dart';
 import 'panel_support.dart';
 
 /// Sneak Attack dice (d6) by rogue level: half the level, rounded up.
@@ -42,11 +41,10 @@ class RoguePanel extends ConsumerWidget {
                 style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: 8),
-              FilledButton.tonalIcon(
-                key: const Key('rogue-sneak-attack-roll'),
-                onPressed: () => rollAndShow(context, dice, label: 'Ataque furtivo'),
-                icon: const AppIcon(AppIcons.d20, size: 20),
-                label: Text('Tirar $dice'),
+              CriticalDamageRoll(
+                expression: dice,
+                label: 'Ataque furtivo',
+                keyPrefix: 'rogue-sneak-attack',
               ),
             ],
           ),

@@ -17,6 +17,7 @@ import 'package:dnd_companion/features/characters/data/view_mode_controller.dart
 import 'package:dnd_companion/features/characters/ui/character_page.dart';
 import 'package:dnd_companion/features/characters/ui/combat/class_panels.dart';
 import 'package:dnd_companion/features/characters/ui/combat/combat_support.dart' show Pip;
+import 'package:dnd_companion/features/characters/ui/combat/panels/critical_damage_roll.dart';
 import 'package:dnd_companion/features/dice/data/dice_controller.dart';
 import 'package:dnd_companion/features/session/data/models.dart' show PartyAdjustment;
 import 'package:dnd_companion/features/session/data/party_repository.dart';
@@ -1124,6 +1125,38 @@ void main() {
       await _tap(tester, 'smite-roll');
       expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '15');
       expect(find.text('Castigo divino'), findsWidgets);
+    });
+
+    test('Castigo divino: +1d8 contra no muertos hasta 6d8 y el crítico duplica los dados', () {
+      expect(smiteDamage('2d8'), '2d8');
+      expect(smiteDamage('2d8', againstUndead: true), '3d8');
+      expect(smiteDamage('5d8', againstUndead: true), '6d8');
+      expect(smiteDamage('6d8', againstUndead: true), '6d8');
+      expect(smiteDamage('3d8', critical: true), '6d8');
+      expect(smiteDamage('5d8', againstUndead: true, critical: true), '12d8');
+      expect(criticalDamage('1d6+3', critical: true), '2d6+3');
+      expect(criticalDamage('1d6+3', critical: false), '1d6+3');
+    });
+
+    testWidgets('Castigo divino: las casillas Crítico y no muerto cambian la tirada', (
+      tester,
+    ) async {
+      final repo = _repo(
+        classes: _paladinClasses,
+        combat: makeCombatJson(classPanels: [_paladinPanel()]),
+      );
+      repo.smiteDice = '3d8';
+      await _pump(tester, characters: repo, face: 5);
+      await _tap(tester, 'smite-level-2');
+      await _tap(tester, 'smite-confirm');
+      await _tap(tester, 'smite-undead');
+      expect(find.text('Daño radiante adicional: 4d8'), findsOneWidget);
+      await _tap(tester, 'smite-critical');
+      expect(find.text('Daño radiante adicional: 8d8'), findsOneWidget);
+
+      await _tap(tester, 'smite-roll');
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '40');
+      expect(find.text('Castigo divino (crítico)'), findsOneWidget);
     });
 
     testWidgets('Imposición de manos: "Curarme" usa el deslizador', (tester) async {

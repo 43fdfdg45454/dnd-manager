@@ -275,6 +275,7 @@ void main() {
     await _tap(tester, 'monk-flurry-of-blows');
     expect(repo.resourceSpends, [(id: 'k1', amount: 1)]);
     expect(_text(tester, 'monk-ki-uses'), '4 / 5');
+    expect(find.byKey(const Key('monk-martial-arts-critical')), findsOneWidget);
     await _tap(tester, 'monk-patient-defense');
     await _tap(tester, 'monk-step-of-the-wind');
     expect(repo.resourceSpends, hasLength(3));
@@ -306,6 +307,16 @@ void main() {
     await _tap(tester, 'rogue-sneak-attack-roll');
     expect(find.byKey(const Key('dice-result')), findsOneWidget);
     expect(find.text('Ataque furtivo'), findsWidgets);
+    expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '12');
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+
+    // "Crítico" duplica los dados: 6d6 a 4 = 24.
+    await _tap(tester, 'rogue-sneak-attack-critical');
+    expect(find.text('Tirar 6d6'), findsOneWidget);
+    await _tap(tester, 'rogue-sneak-attack-roll');
+    expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '24');
+    expect(find.text('Ataque furtivo (crítico)'), findsOneWidget);
   });
 
   testWidgets('hechicero: convierte espacio en puntos y puntos en espacio', (tester) async {
@@ -447,6 +458,8 @@ void main() {
     expect(repo.concentrationCalls, ['hunters-mark']);
     expect(find.byKey(const Key('concentration-chip')), findsOneWidget);
     expect(find.text('Marca del cazador (activa)'), findsOneWidget);
+    await _tap(tester, 'ranger-hunters-mark-critical');
+    expect(find.text('Tirar 2d6'), findsOneWidget);
     expect(_enabled(tester, 'ranger-hunters-mark'), isFalse);
   });
 
