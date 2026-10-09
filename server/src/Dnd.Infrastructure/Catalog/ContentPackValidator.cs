@@ -20,6 +20,7 @@ namespace Dnd.Infrastructure.Catalog;
 /// <param name="PackSubclasses">Subclasses of the packs already imported: index → (class index, pack id).</param>
 /// <param name="Races">Race index → source (the SRD or a pack), for race prerequisites.</param>
 /// <param name="CasterClasses">Classes that cast spells on their own (a subclass <c>spellcasting</c> is only for the others).</param>
+/// <param name="SpellLevels">Spell index → level, to check the levels of the expanded spell lists.</param>
 internal sealed record ContentPackContext(
     IReadOnlyDictionary<string, string> Classes,
     IReadOnlyDictionary<string, string> SrdSubclasses,
@@ -31,7 +32,8 @@ internal sealed record ContentPackContext(
     IReadOnlySet<string>? EquipmentCategories = null,
     IReadOnlyDictionary<string, (string ClassIndex, string Source)>? PackSubclasses = null,
     IReadOnlyDictionary<string, string>? Races = null,
-    IReadOnlySet<string>? CasterClasses = null);
+    IReadOnlySet<string>? CasterClasses = null,
+    IReadOnlyDictionary<string, int>? SpellLevels = null);
 
 /// <summary>Catalog rows of a valid content pack, every one with <c>Source</c> = the pack id.</summary>
 internal sealed class ContentPackRows
@@ -192,6 +194,7 @@ internal sealed partial class ContentPackValidator
         Trinkets(pack.Trinkets, rows);
         RollTables(pack.RollTables, rows, packSubclasses);
         CheckLevelChoiceReferences(rows);
+        CheckExpandedSpellReferences(rows);
         CheckStartingEquipmentReferences(rows);
         return rows;
     }
@@ -231,6 +234,9 @@ internal sealed partial class ContentPackValidator
             var spellcasting = subclass.Spellcasting is not null && RequireLevelChoicesFormat($"{subclassPath}.spellcasting", subclass.Spellcasting)
                 ? SubclassSpellcasting($"{subclassPath}.spellcasting", subclass.Spellcasting, classIndex)
                 : null;
+            var expandedSpellList = subclass.ExpandedSpellList is not null && RequireLevelChoicesFormat($"{subclassPath}.expandedSpellList", subclass.ExpandedSpellList)
+                ? ExpandedSpellList($"{subclassPath}.expandedSpellList", subclass.ExpandedSpellList)
+                : null;
             if (RequireLevelChoicesFormat($"{subclassPath}.levelChoices", subclass.LevelChoices))
             {
                 ForEach($"{subclassPath}.levelChoices", subclass.LevelChoices, (rulePath, rule) => LevelChoice(rulePath, rule, classIndex, index, rows, spellcasting));
@@ -244,6 +250,7 @@ internal sealed partial class ContentPackValidator
                 Flavor = subclassFlavor.Length > 0 ? subclassFlavor : flavor,
                 Description = description,
                 SpellcastingJson = spellcasting?.ToJson(),
+                ExpandedSpellListJson = expandedSpellList,
                 Source = _id,
             });
 

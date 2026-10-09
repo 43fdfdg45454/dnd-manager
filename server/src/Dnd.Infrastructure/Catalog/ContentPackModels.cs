@@ -97,6 +97,16 @@ internal sealed class PackSubclassJson
 
     /// <summary>Format 2: spellcasting the subclass gives to a base class that does not cast spells.</summary>
     public PackSubclassSpellcastingJson? Spellcasting { get; set; }
+
+    /// <summary>Format 2: spells added to the class's spell list for the characters with this subclass (not granted).</summary>
+    public List<PackExpandedSpellJson?>? ExpandedSpellList { get; set; }
+}
+
+internal sealed class PackExpandedSpellJson
+{
+    public string? Index { get; set; }
+
+    public int? Level { get; set; }
 }
 
 internal sealed class PackSubclassSpellcastingJson

@@ -189,6 +189,7 @@ Notación: `string?` admite `null` o ausencia; **obligatorio** indica que no pue
 | `description` | `string[]?` | Párrafos. |
 | `levels` | `SubclassLevel[]?` | Rasgos por nivel. |
 | `spellcasting` | `SubclassSpellcasting?` | Con `"formatVersion": 2`: la subclase convierte en lanzadora a una clase que no lanza conjuros (ver [`subclasses[].spellcasting`](#subclassesspellcasting)). |
+| `expandedSpellList` | `ExpandedSpell[]?` | Con `"formatVersion": 2`: conjuros que se añaden a la lista de la clase para los personajes con esta subclase, sin concederlos (ver [`subclasses[].expandedSpellList`](#subclassesexpandedspelllist)). |
 
 **`SubclassLevel`**: `level` (`int`, **obligatorio**, 1–20, sin repetir dentro de la subclase) y
 `features` (`Feature[]?`).
@@ -925,6 +926,40 @@ Errores: `...spellcasting` (la clase base ya lanza conjuros), `...spellcasting.p
 `...spellcasting.ability`, `...spellcasting.fromLevel`, `...spellcasting.spellList`,
 `...spellcasting.spellsKnown.3` (clave que no es un nivel 1–20 o valor fuera de rango) y
 `...levelChoices[0].choose` cuando falta y la subclase no tiene la tabla correspondiente.
+
+### `subclasses[].expandedSpellList`
+
+Una subclase puede **ampliar la lista de conjuros de su clase** (patrones de brujo): los conjuros
+listados cuentan como de la lista de la clase **solo para los personajes con esa subclase**.
+
+```json
+"expandedSpellList": [
+  { "index": "faerie-fire", "level": 1 },
+  { "index": "sleep", "level": 1 }
+]
+```
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `index` | `string` | **Obligatorio**: conjuro del SRD, de otro paquete o de este mismo paquete. Sin repetir dentro de la lista. |
+| `level` | `int` | **Obligatorio**, 0–9: debe coincidir con el nivel del conjuro (0 para trucos). |
+
+- **No se conceden**: a diferencia de `levels[].grants.spells` (conjuros de dominio siempre
+  preparados), el personaje solo puede elegirlos.
+- **Asistente de subida**: aparecen como candidatos de `SpellsKnown`, `SpellbookSpells` y, si son de
+  nivel 0, `CantripsKnown`, cuando la elección usa la lista de la clase (sin `filter.spellList` o con
+  la de la propia clase, o la de `spellcasting.spellList` de la subclase). Se aplican los demás
+  filtros (niveles con espacios, escuelas). Cuenta la subclase que el personaje ya tiene: si la elige
+  en el mismo nivel, la lista ampliada se aplica desde la siguiente subida.
+- **Preparar conjuros**: las clases que preparan de su lista (clérigo, druida, paladín) los ofrecen
+  como candidatos; el mago sigue preparando solo de su libro.
+- **Compendio**: el conjuro lleva `expandedBy` en la lista y el detalle del catálogo
+  (`[{ "subclassIndex", "subclassName", "classIndex", "source" }]`) y la app muestra la etiqueta
+  "Lista ampliada: <nombre de la subclase>".
+
+Errores: `...expandedSpellList[0].index` (falta, índice no válido, el conjuro no existe en el
+catálogo ni en el paquete, o repetido), `...expandedSpellList[0].level` (falta, fuera de 0–9 o
+distinto del nivel del conjuro) y `...expandedSpellList` sin `"formatVersion": 2`.
 
 ### `levels[].grants`
 

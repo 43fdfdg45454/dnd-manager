@@ -659,6 +659,7 @@ class SpellSummary {
     this.classes = const [],
     this.source,
     this.category,
+    this.expandedBy = const [],
   });
 
   factory SpellSummary.fromJson(Map<String, dynamic> json) => SpellSummary(
@@ -672,6 +673,10 @@ class SpellSummary {
     classes: _spellClasses(json),
     source: _strOrNull(json['source']),
     category: _strOrNull(json['category']),
+    expandedBy: [
+      for (final e in json['expandedBy'] is List ? json['expandedBy'] as List : const [])
+        if (e is Map<String, dynamic>) SpellExpansion.fromJson(e),
+    ],
   );
 
   final String index;
@@ -693,6 +698,33 @@ class SpellSummary {
 
   /// Display names of the classes that can cast the spell.
   final List<String> classes;
+
+  /// Subclasses whose expanded spell list (content packs) adds the spell to
+  /// their class's list.
+  final List<SpellExpansion> expandedBy;
+}
+
+/// A subclass whose expanded spell list adds a spell to its class's list for
+/// the characters with that subclass (`expandedBy` of the catalog spells).
+class SpellExpansion {
+  const SpellExpansion({
+    required this.subclassIndex,
+    required this.subclassName,
+    required this.classIndex,
+  });
+
+  factory SpellExpansion.fromJson(Map<String, dynamic> json) => SpellExpansion(
+    subclassIndex: _str(json['subclassIndex']),
+    subclassName: _str(json['subclassName'], _str(json['subclassIndex'])),
+    classIndex: _str(json['classIndex']),
+  );
+
+  final String subclassIndex;
+  final String subclassName;
+  final String classIndex;
+
+  /// "Lista ampliada: Archfey".
+  String get label => 'Lista ampliada: $subclassName';
 }
 
 List<String> _spellClasses(Map<String, dynamic> json) {
@@ -736,6 +768,7 @@ class SpellDetail extends SpellSummary {
     super.classes,
     super.source,
     super.category,
+    super.expandedBy,
     this.range,
     this.components = const [],
     this.material,
@@ -764,6 +797,7 @@ class SpellDetail extends SpellSummary {
       classes: summary.classes,
       source: summary.source,
       category: summary.category,
+      expandedBy: summary.expandedBy,
       range: _strOrNull(json['range']),
       components: _strList(json['components']),
       material: _strOrNull(json['material']),

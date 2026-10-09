@@ -22,5 +22,7 @@ internal sealed class SubclassDefinitionConfiguration : IEntityTypeConfiguration
         builder.Property(x => x.Flavor).HasMaxLength(CatalogColumns.NameMaxLength).IsRequired();
         builder.Property(x => x.Description).HasJsonListConversion();
         builder.Ignore(x => x.Spellcasting);
+        builder.Ignore(x => x.ExpandedSpellList);
+        builder.Ignore(x => x.ExpandedSpellIndexes);
     }
 }
