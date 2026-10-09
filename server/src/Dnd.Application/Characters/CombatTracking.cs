@@ -263,11 +263,19 @@ public sealed class SpellSlotHandler(CharacterTracker tracker, IDateTimeProvider
 /// <summary>
 /// Limited-use resources: spend, restore, add a manual one, delete a manual one. Automatic class
 /// resources (rage, ki, lay on hands...) only come back with rests or by the DM's hand: a player
-/// restoring one gets 403, except sorcery points, which Font of Magic converts from spell slots.
+/// restoring one gets 403, except sorcery points, which Font of Magic converts from spell slots, and Tides of Chaos
+/// (keys ending in <see cref="TidesOfChaosSuffix"/>), which comes back after a wild magic surge.
 /// </summary>
 public sealed class ResourceHandler(CharacterTracker tracker, IUnitOfWork unitOfWork, IDateTimeProvider clock)
 {
     public const string AutoResourceRestoreForbidden = "Este recurso solo se recupera descansando o por decisión del DM.";
+
+    /// <summary>Key suffix of Tides of Chaos resources (subclass feature resources of content packs).</summary>
+    public const string TidesOfChaosSuffix = "tides-of-chaos";
+
+    /// <summary>Automatic resources a player may restore by themselves.</summary>
+    public static bool PlayerMayRestore(string? key) =>
+        key == ClassResourceRules.SorceryPoints || (key is not null && key.EndsWith(TidesOfChaosSuffix, StringComparison.Ordinal));
 
     public async Task<CharacterDetailDto> SpendAsync(Guid currentUserId, Guid characterId, Guid resourceId, AmountRequest? request, CancellationToken cancellationToken = default)
     {
@@ -281,7 +289,7 @@ public sealed class ResourceHandler(CharacterTracker tracker, IUnitOfWork unitOf
         var loaded = await tracker.LoadWithRoleAsync(currentUserId, characterId, cancellationToken);
         var character = loaded.Character;
         var resource = character.Resources.FirstOrDefault(r => r.Id == resourceId);
-        if (resource is { IsAuto: true } && resource.Key != ClassResourceRules.SorceryPoints && !loaded.IsDm)
+        if (resource is { IsAuto: true } && !PlayerMayRestore(resource.Key) && !loaded.IsDm)
         {
             throw AppException.Forbidden(AutoResourceRestoreForbidden);
         }

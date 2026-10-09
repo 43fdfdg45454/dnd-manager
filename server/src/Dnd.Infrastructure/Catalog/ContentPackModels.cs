@@ -148,6 +148,9 @@ internal sealed class PackFeatureJson
 
     /// <summary>Format 2: animal companion chosen from the beast catalog when the feature is reached.</summary>
     public PackCompanionJson? Companion { get; set; }
+
+    /// <summary>Format 2: numeric modifiers on the sheet from the feature's level (same shape as an option's).</summary>
+    public List<PackChoiceModifierJson?>? Modifiers { get; set; }
 }
 
 internal sealed class PackCompanionJson

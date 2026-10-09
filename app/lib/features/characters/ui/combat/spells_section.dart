@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/components.dart';
 import '../../../../core/ui/spell_category.dart';
-import '../../../catalog/data/models.dart' show SpellDetail;
+import '../../../catalog/data/models.dart' show RollTable, SpellDetail;
 import '../../../catalog/domain/catalog_format.dart' show spellLevelLabel;
 import '../../../dice/domain/dice_expression.dart';
 import '../../../dice/ui/dice_sheet.dart';
@@ -14,6 +14,7 @@ import '../../domain/spell_combat.dart';
 import 'combat_support.dart';
 import 'resources_section.dart' show pactSlotsOf, regularSlots;
 import 'skill_rolls.dart' show pickAdvantageMode;
+import 'wild_magic_surge.dart';
 
 /// A castable spell with its catalog detail.
 typedef _CombatSpell = ({CharacterSpell spell, SpellDetail detail});
@@ -51,6 +52,7 @@ class SpellsSection extends ConsumerWidget {
           return byLevel != 0 ? byLevel : a.detail.name.compareTo(b.detail.name);
         });
     if (spells.isEmpty) return const SizedBox.shrink();
+    final surgeTable = wildMagicSurgeTable(ref, c);
 
     return Column(
       key: const Key('combat-spells'),
@@ -64,6 +66,7 @@ class SpellsSection extends ConsumerWidget {
             spell: s.spell,
             detail: s.detail,
             canEdit: canEdit,
+            surgeTable: surgeTable,
           ),
       ],
     );
@@ -77,12 +80,17 @@ class SpellCard extends ConsumerStatefulWidget {
     required this.spell,
     required this.detail,
     required this.canEdit,
+    this.surgeTable,
   });
 
   final CharacterDetail character;
   final CharacterSpell spell;
   final SpellDetail detail;
   final bool canEdit;
+
+  /// Wild Magic Surge table of the character's subclass: spending a slot
+  /// offers to roll for a surge.
+  final RollTable? surgeTable;
 
   @override
   ConsumerState<SpellCard> createState() => _SpellCardState();
@@ -94,6 +102,10 @@ class _SpellCardState extends ConsumerState<SpellCard> {
 
   /// Chosen slot level; null = the lowest one available.
   int? _castLevel;
+
+  /// A slot was just spent with a Wild Magic Surge subclass: the surge prompt
+  /// is shown until closed.
+  bool _surgePending = false;
 
   SpellDetail get _detail => widget.detail;
   String get _index => _detail.index;
@@ -175,13 +187,16 @@ class _SpellCardState extends ConsumerState<SpellCard> {
       showCombatMessage(context, 'No quedan espacios de nivel $level.');
       return;
     }
-    await runCombat(
+    final spent = await runCombat(
       context,
       () => ref
           .read(characterControllerProvider(widget.character.id).notifier)
           .spendSpellSlot(slotLevel),
       success: 'Espacio de nivel $level gastado: ${_detail.name}.',
     );
+    if (spent && mounted && level >= 1 && widget.surgeTable != null) {
+      setState(() => _surgePending = true);
+    }
   }
 
   @override
@@ -290,6 +305,13 @@ class _SpellCardState extends ConsumerState<SpellCard> {
                 ),
             ],
           ),
+          if (_surgePending && widget.surgeTable != null)
+            WildMagicSurgePrompt(
+              character: widget.character,
+              table: widget.surgeTable!,
+              canEdit: widget.canEdit,
+              onDismiss: () => setState(() => _surgePending = false),
+            ),
         ],
       ),
     );

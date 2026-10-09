@@ -130,12 +130,18 @@ public sealed class SheetCatalog
         var race = Race(character.RaceIndex);
         var subrace = Subrace(character.SubraceIndex);
 
-        // Resources of the subclass features reached (content packs) join those of the chosen options.
+        // Resources and modifiers of the subclass features reached (content packs) join those of the chosen options.
         var choices = character.Choices.Count == 0 ? null : ChoiceEffects.Build(character, Option);
         var featureResources = ChoiceEffects.FeatureResources(character, _featureResources);
-        if (featureResources.Count > 0)
+        var featureModifiers = ChoiceEffects.FeatureModifiers(character, _featureResources);
+        if (featureResources.Count > 0 || featureModifiers.Count > 0)
         {
-            choices = (choices ?? ChoiceEffects.None) with { Resources = [.. (choices ?? ChoiceEffects.None).Resources, .. featureResources] };
+            var current = choices ?? ChoiceEffects.None;
+            choices = current with
+            {
+                Resources = [.. current.Resources, .. featureResources],
+                Modifiers = [.. current.Modifiers, .. featureModifiers],
+            };
         }
 
         return new SheetInput(

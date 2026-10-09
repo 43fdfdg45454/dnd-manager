@@ -127,7 +127,7 @@ indicado (`Agent` con `model: opus | sonnet | haiku`), dándoles el contrato esc
 
 ## Estado
 
-Fases 0 a 24 implementadas y en `master`; fase 25 en curso (bloques 1–6; ver `docs/specs/fase-25-paquetes-completos.md`) (cada una con su contrato en `docs/specs/`). Verificado en
+Fases 0 a 25 implementadas y en `master` (cada una con su contrato en `docs/specs/`). Verificado en
 este entorno: servidor compila sin avisos y pasa sus tests (SQLite en memoria); cliente sin
 incidencias de análisis y con sus tests en verde. CI publica en cada push a `master` la imagen
 `ghcr.io/<owner>/dnd-companion-api:latest` y una release con el APK firmado. **No verificado aquí**
@@ -167,7 +167,7 @@ jugador en dos móviles; cualquier desviación se corrige sobre los contratos de
 | 22 | Personalidad del trasfondo y tablas de tirada | Oleada de magia salvaje tirable |
 | 23 | Personalización: paletas, fuentes y opciones de apariencia | Seis paletas con contraste AA verificado por test |
 | 24 | Lote de correcciones de juego (dados y críticos, conjuros en combate, invitaciones, peticiones detalladas, tienda con catálogo, bestias para druidas, scroll infinito, documentos externos) y nueva navegación | Ver `docs/specs/fase-24-correcciones-y-navegacion.md` |
-| 25 | Paquetes de contenido completos: subrazas sobre razas existentes, recursos en rasgos, lanzadores de tercio, listas ampliadas, coste de opciones, compañero animal (en curso) | Ver `docs/specs/fase-25-paquetes-completos.md` |
+| 25 | Paquetes de contenido completos: subrazas sobre razas existentes, recursos en rasgos, lanzadores de tercio, listas ampliadas, coste de opciones, compañero animal, oleada de magia salvaje y modificadores de rasgos | Ver `docs/specs/fase-25-paquetes-completos.md` |
 
 ## Verificación end-to-end
 

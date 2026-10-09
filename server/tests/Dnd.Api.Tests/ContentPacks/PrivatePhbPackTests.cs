@@ -239,6 +239,15 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
             var withCompanion = (await choose.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
             Assert.Equal(("wolf", 12), (withCompanion.Companion!.BeastIndex, withCompanion.Companion.HitPointsMax));
         }
+
+        // From v2.7 the trinket table has its hundred entries.
+        if (Version.Parse(result.Version) >= new Version(2, 7))
+        {
+            Assert.Equal(100, result.Counts["trinkets"]);
+            var trinkets = await GetAsync<List<TrinketDto>>(admin, "/api/v1/catalog/trinkets");
+            Assert.Equal(100, trinkets.Count);
+            Assert.Equal(1, trinkets[0].Roll);
+        }
     }
 
     private static async Task<T> GetAsync<T>(HttpClient client, string url)

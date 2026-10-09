@@ -39,11 +39,19 @@ SpellSlot? pactSlotsOf(CharacterDetail character) {
 /// spell slots into points, so the player may restore them.
 const sorceryPointsKey = 'sorcery-points';
 
+/// Key suffix of Tides of Chaos (feature resource of a content pack): a Wild
+/// Magic Surge gives its use back, so the player may restore it.
+const tidesOfChaosSuffix = 'tides-of-chaos';
+
 /// Whether the acting user may give uses of [resource] back by hand. Automatic
 /// class resources (rage, ki, lay on hands...) only come back with rests or by
-/// the DM (the server answers 403 to anyone else), except sorcery points.
+/// the DM (the server answers 403 to anyone else), except sorcery points and
+/// Tides of Chaos.
 bool canRestoreResource(CharacterResource resource, {required bool isDm}) =>
-    isDm || !resource.isAuto || resource.key == sorceryPointsKey;
+    isDm ||
+    !resource.isAuto ||
+    resource.key == sorceryPointsKey ||
+    (resource.key?.endsWith(tidesOfChaosSuffix) ?? false);
 
 /// Resources to show: the combat summary's, or the sheet's as a fallback.
 List<CharacterResource> resourcesOf(CharacterDetail character) =>

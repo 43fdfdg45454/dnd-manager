@@ -30,6 +30,14 @@ public sealed class FeatureDefinition
 
     public CompanionRule? Companion => CompanionRule.Parse(CompanionJson);
 
+    /// <summary>
+    /// Numeric modifiers the feature applies to the sheet from its level to the characters with its subclass (content
+    /// packs, same JSON as <see cref="OptionDefinition.ModifiersJson"/>); null when it has none.
+    /// </summary>
+    public string? ModifiersJson { get; init; }
+
+    public IReadOnlyList<ChoiceModifier> Modifiers => LevelChoiceJson.ParseModifiers(ModifiersJson);
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = CatalogSources.Srd;
 }
