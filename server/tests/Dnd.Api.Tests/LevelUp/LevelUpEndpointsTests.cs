@@ -75,7 +75,7 @@ public class LevelUpEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(("asi", "AsiOrFeat", 1), (asi.Key, asi.Kind, asi.Required));
         var grappler = Assert.Single(asi.Options, o => o.Index == "grappler");
         Assert.False(grappler.Eligible);
-        Assert.Contains("Fuerza 13", grappler.Reason);
+        Assert.Equal("Requiere Fuerza 13; tienes 12.", grappler.Reason);
 
         var feat = await PostAsync(s.Player, hero.Id, new
         {
