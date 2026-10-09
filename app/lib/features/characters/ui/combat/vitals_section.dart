@@ -21,6 +21,7 @@ import '../../domain/combat_math.dart';
 import '../character_tabs.dart' show OverrideMark, titleFromSpellIndex;
 import 'combat_support.dart';
 import 'concentration_flow.dart';
+import 'skill_rolls.dart';
 
 CharacterController _controller(WidgetRef ref, CharacterDetail character) =>
     ref.read(characterControllerProvider(character.id).notifier);
@@ -485,6 +486,10 @@ class StatsCard extends ConsumerWidget {
                     : null,
               ),
             ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: QuickSkillRolls(character: c),
           ),
           if (concentrating != null)
             Padding(

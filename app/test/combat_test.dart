@@ -948,6 +948,42 @@ void main() {
     });
   });
 
+  group('habilidades en combate', () {
+    testWidgets('las tiradas rápidas usan el valor de la hoja; pulsación larga da ventaja', (
+      tester,
+    ) async {
+      await _pump(tester, characters: _repo(), face: 14);
+      // Solo las habilidades de la lista rápida que tiene la hoja, en su orden.
+      expect(find.text('Sigilo +2'), findsOneWidget);
+      expect(find.text('Atletismo +5'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.byKey(const Key('quick-skill-stealth'))).dx,
+        lessThan(tester.getTopLeft(find.byKey(const Key('quick-skill-athletics'))).dx),
+      );
+
+      await _tap(tester, 'quick-skill-athletics');
+      expect(find.text('1d20+5'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '19');
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.byKey(const Key('quick-skill-stealth')));
+      await tester.pumpAndSettle();
+      await _tap(tester, 'mode-disadvantage');
+      expect(find.text('dis+2'), findsOneWidget);
+    });
+
+    testWidgets('"Todas las habilidades" lista la hoja entera y tira', (tester) async {
+      await _pump(tester, characters: _repo(), face: 10);
+      await _tap(tester, 'all-skills');
+      expect(find.byKey(const Key('all-skills-sheet')), findsOneWidget);
+      expect(find.byKey(const Key('all-skills-athletics')), findsOneWidget);
+      expect(find.byKey(const Key('all-skills-stealth')), findsOneWidget);
+      await _tap(tester, 'all-skills-stealth');
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '12');
+    });
+  });
+
   group('espacios de conjuro', () {
     testWidgets('tocar un nivel gasta un espacio y mantener pulsado lo repone', (tester) async {
       final repo = _repo();
