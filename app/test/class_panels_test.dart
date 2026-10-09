@@ -32,7 +32,7 @@ Future<void> _pump(
   FakeCatalogRepository? catalog,
   int face = 5,
 }) async {
-  SharedPreferences.setMockInitialValues({'character.ch1.view': 'combat'});
+  SharedPreferences.setMockInitialValues({'character.ch1.tab': 'combat'});
   final prefs = await SharedPreferences.getInstance();
   final router = GoRouter(
     initialLocation: '/characters/ch1',

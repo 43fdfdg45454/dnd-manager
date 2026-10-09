@@ -27,9 +27,10 @@ import 'character_avatar.dart';
 import 'character_tabs.dart';
 import 'combat/combat_view.dart';
 
-/// A character: the detailed view (header with actions and the sheet tabs) or
-/// the combat view, chosen with the switch of the header and remembered per
-/// character. A dice button floats over both.
+/// A character: a header with its actions and a tab bar whose first tab is
+/// the combat view (Combate, Resumen, Habilidades, Rasgos, Hechizos,
+/// Inventario, Notas). The last tab shown is remembered per character. A dice
+/// button floats over every tab.
 class CharacterPage extends ConsumerWidget {
   const CharacterPage({super.key, required this.characterId});
 
@@ -70,6 +71,7 @@ class CharacterPage extends ConsumerWidget {
 }
 
 const _tabs = [
+  Tab(key: Key('tab-combat'), text: 'Combate'),
   Tab(key: Key('tab-summary'), text: 'Resumen'),
   Tab(key: Key('tab-skills'), text: 'Habilidades'),
   Tab(key: Key('tab-traits'), text: 'Rasgos'),
@@ -78,10 +80,42 @@ const _tabs = [
   Tab(key: Key('tab-notes'), text: 'Notas'),
 ];
 
-class _CharacterView extends ConsumerWidget {
+class _CharacterView extends ConsumerStatefulWidget {
   const _CharacterView({required this.character});
 
   final CharacterDetail character;
+
+  @override
+  ConsumerState<_CharacterView> createState() => _CharacterViewState();
+}
+
+class _CharacterViewState extends ConsumerState<_CharacterView>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  CharacterDetail get character => widget.character;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = ref.read(characterTabProvider(widget.character.id));
+    _tabController = TabController(length: _tabs.length, initialIndex: initial.index, vsync: this)
+      ..addListener(_rememberTab);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  /// Stores the tab once the change settles (not on every animation tick).
+  void _rememberTab() {
+    if (_tabController.indexIsChanging) return;
+    ref
+        .read(characterTabProvider(character.id).notifier)
+        .select(CharacterTab.values[_tabController.index]);
+  }
 
   CharacterController _controller(WidgetRef ref) =>
       ref.read(characterControllerProvider(character.id).notifier);
@@ -132,7 +166,7 @@ class _CharacterView extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
     final myUserId = auth is AuthSignedIn ? auth.user.id : '';
     final campaign = ref.watch(campaignDetailControllerProvider(character.campaignId));
@@ -142,175 +176,83 @@ class _CharacterView extends ConsumerWidget {
       myRole: campaign.value?.myRole,
     );
 
-    final combat = ref.watch(characterViewModeProvider(character.id)) == CharacterViewMode.combat;
-    final switcher = _ViewSwitch(
-      combat: combat,
-      onChanged: (next) => ref.read(characterViewModeProvider(character.id).notifier).select(next),
-    );
-
-    return DefaultTabController(
-      length: _tabs.length,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Personaje'),
-          actions: [
-            if (permissions.canDelete || permissions.isDm)
-              PopupMenuButton<String>(
-                key: const Key('character-menu'),
-                onSelected: (value) =>
-                    value == 'owner' ? _changeOwner(context, ref) : _delete(context, ref),
-                itemBuilder: (_) => [
-                  if (permissions.isDm)
-                    const PopupMenuItem(
-                      key: Key('character-menu-owner'),
-                      value: 'owner',
-                      child: Text('Cambiar jugador'),
-                    ),
-                  if (permissions.canDelete)
-                    const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
-                ],
-              ),
-          ],
-          bottom: combat
-              ? null
-              : const TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: _tabs),
-        ),
-        floatingActionButton: FloatingActionButton(
-          key: const Key('dice-fab'),
-          tooltip: 'Dados',
-          onPressed: () => showDiceSheet(context),
-          child: const Icon(Icons.casino_outlined),
-        ),
-        body: OfflineBannerLayout(
-          scopes: [staleTree(CharactersRepository.characterPath(character.id))],
-          child: combat
-              ? CombatView(
-                  character: character,
-                  canEdit: permissions.canEdit,
-                  isDm: permissions.isDm,
-                  header: _CombatHeader(character: character, switcher: switcher),
-                )
-              : NestedScrollView(
-                  headerSliverBuilder: (context, _) => [
-                    SliverToBoxAdapter(
-                      child: _Header(
-                        character: character,
-                        permissions: permissions,
-                        switcher: switcher,
-                        onSubmit: () => runAction(
-                          context,
-                          () async {
-                            await _controller(ref).submit();
-                          },
-                          success: 'Enviado al DM para aprobación',
-                          describe: describeCharacterError,
-                        ),
-                        onActivate: () => runAction(
-                          context,
-                          () => _controller(ref).activate(),
-                          success: 'Personaje activado.',
-                          describe: describeCharacterError,
-                        ),
-                      ),
-                    ),
-                  ],
-                  body: TabBarView(
-                    children: [
-                      SummaryTab(character: character),
-                      SkillsTab(character: character),
-                      TraitsTab(character: character),
-                      SpellsTab(character: character),
-                      InventoryTab(character: character),
-                      NotesTab(character: character),
-                    ],
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Personaje'),
+        actions: [
+          if (permissions.canDelete || permissions.isDm)
+            PopupMenuButton<String>(
+              key: const Key('character-menu'),
+              onSelected: (value) =>
+                  value == 'owner' ? _changeOwner(context, ref) : _delete(context, ref),
+              itemBuilder: (_) => [
+                if (permissions.isDm)
+                  const PopupMenuItem(
+                    key: Key('character-menu-owner'),
+                    value: 'owner',
+                    child: Text('Cambiar jugador'),
                   ),
-                ),
+                if (permissions.canDelete)
+                  const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+              ],
+            ),
+        ],
+        bottom: TabBar(
+          key: const Key('character-tabs'),
+          controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          tabs: _tabs,
         ),
       ),
-    );
-  }
-}
-
-/// The Detallado / Combate switch.
-class _ViewSwitch extends StatelessWidget {
-  const _ViewSwitch({required this.combat, required this.onChanged});
-
-  final bool combat;
-  final ValueChanged<CharacterViewMode> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return SegmentedButton<CharacterViewMode>(
-      key: const Key('view-mode'),
-      showSelectedIcon: false,
-      segments: const [
-        ButtonSegment(value: CharacterViewMode.detailed, label: Text('Detallado')),
-        ButtonSegment(value: CharacterViewMode.combat, label: Text('Combate')),
-      ],
-      selected: {combat ? CharacterViewMode.combat : CharacterViewMode.detailed},
-      onSelectionChanged: (selection) => onChanged(selection.first),
-    );
-  }
-}
-
-/// Compact header of the combat view: name, class summary and the view switch.
-class _CombatHeader extends StatelessWidget {
-  const _CombatHeader({required this.character, required this.switcher});
-
-  final CharacterDetail character;
-  final Widget switcher;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = character;
-    return ClassAccent(
-      classIndex: mainClassIndex(c),
-      child: Builder(builder: (context) => _buildHeader(context)),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    final theme = Theme.of(context);
-    final c = character;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CharacterAvatar(character: c, radius: 24),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      c.name,
-                      key: const Key('character-title'),
-                      style: theme.textTheme.headlineSmall,
-                    ),
-                    if (c.classes.isNotEmpty)
-                      _ClassLine(
-                        character: c,
-                        child: Text(
-                          '${classesLabel(c.classes)} · Nivel ${c.totalLevel}',
-                          key: const Key('character-subtitle'),
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                      ),
-                  ],
+      floatingActionButton: FloatingActionButton(
+        key: const Key('dice-fab'),
+        tooltip: 'Dados',
+        onPressed: () => showDiceSheet(context),
+        child: const Icon(Icons.casino_outlined),
+      ),
+      body: OfflineBannerLayout(
+        scopes: [staleTree(CharactersRepository.characterPath(character.id))],
+        child: NestedScrollView(
+          headerSliverBuilder: (context, _) => [
+            SliverToBoxAdapter(
+              child: _Header(
+                character: character,
+                permissions: permissions,
+                onSubmit: () => runAction(
+                  context,
+                  () async {
+                    await _controller(ref).submit();
+                  },
+                  success: 'Enviado al DM para aprobación',
+                  describe: describeCharacterError,
+                ),
+                onActivate: () => runAction(
+                  context,
+                  () => _controller(ref).activate(),
+                  success: 'Personaje activado.',
+                  describe: describeCharacterError,
                 ),
               ),
+            ),
+          ],
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              CombatView(
+                character: character,
+                canEdit: permissions.canEdit,
+                isDm: permissions.isDm,
+              ),
+              SummaryTab(character: character),
+              SkillsTab(character: character),
+              TraitsTab(character: character),
+              SpellsTab(character: character),
+              InventoryTab(character: character),
+              NotesTab(character: character),
             ],
           ),
-          if (c.missingContent.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            CatalogMissingBadge(character: c),
-          ],
-          const SizedBox(height: 8),
-          switcher,
-        ],
+        ),
       ),
     );
   }
@@ -346,14 +288,12 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.character,
     required this.permissions,
-    required this.switcher,
     required this.onSubmit,
     required this.onActivate,
   });
 
   final CharacterDetail character;
   final CharacterPermissions permissions;
-  final Widget switcher;
   final VoidCallback onSubmit;
   final VoidCallback onActivate;
 
@@ -468,8 +408,6 @@ class _Header extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 12),
-          switcher,
         ],
       ),
     );

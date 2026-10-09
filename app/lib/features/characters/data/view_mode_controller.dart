@@ -2,36 +2,43 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/storage/local_preferences.dart';
 
-/// The two views of a character page.
-enum CharacterViewMode { detailed, combat }
+/// The tabs of a character page, in their order on the tab bar.
+enum CharacterTab { combat, summary, skills, traits, spells, inventory, notes }
 
-/// Preference key of the view chosen for a character.
-String characterViewKey(String characterId) => 'character.$characterId.view';
+/// Preference key of the tab last shown for a character.
+String characterTabKey(String characterId) => 'character.$characterId.tab';
 
-/// View of one character, remembered per character in `shared_preferences`.
-/// Defaults to [CharacterViewMode.detailed] when nothing is stored or there is
-/// no storage (then the choice lasts for the session only).
-class CharacterViewModeController extends Notifier<CharacterViewMode> {
-  CharacterViewModeController(this.characterId);
+/// Key of the old Detallado / Combate switch: read once so that a character
+/// left in combat still opens on the Combate tab.
+String legacyCharacterViewKey(String characterId) => 'character.$characterId.view';
+
+/// Tab of one character, remembered per character in `shared_preferences`.
+/// Defaults to [CharacterTab.summary] when nothing is stored or there is no
+/// storage (then the choice lasts for the session only).
+class CharacterTabController extends Notifier<CharacterTab> {
+  CharacterTabController(this.characterId);
 
   final String characterId;
 
   @override
-  CharacterViewMode build() {
-    final stored = ref.read(localPreferencesProvider)?.getString(characterViewKey(characterId));
-    return stored == 'combat' ? CharacterViewMode.combat : CharacterViewMode.detailed;
+  CharacterTab build() {
+    final prefs = ref.read(localPreferencesProvider);
+    final stored = prefs?.getString(characterTabKey(characterId));
+    for (final tab in CharacterTab.values) {
+      if (tab.name == stored) return tab;
+    }
+    return prefs?.getString(legacyCharacterViewKey(characterId)) == 'combat'
+        ? CharacterTab.combat
+        : CharacterTab.summary;
   }
 
-  void select(CharacterViewMode mode) {
-    state = mode;
-    ref
-        .read(localPreferencesProvider)
-        ?.setString(characterViewKey(characterId), mode.name)
-        .ignore();
+  void select(CharacterTab tab) {
+    if (tab == state) return;
+    state = tab;
+    ref.read(localPreferencesProvider)?.setString(characterTabKey(characterId), tab.name).ignore();
   }
 }
 
-final characterViewModeProvider =
-    NotifierProvider.family<CharacterViewModeController, CharacterViewMode, String>(
-      CharacterViewModeController.new,
-    );
+final characterTabProvider = NotifierProvider.family<CharacterTabController, CharacterTab, String>(
+  CharacterTabController.new,
+);

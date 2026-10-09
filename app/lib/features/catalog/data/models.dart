@@ -712,6 +712,18 @@ String? damageText(Object? value) {
   return _strOrNull(value);
 }
 
+/// `{"3": "8d6"}` (JSON keys are strings) as `{3: "8d6"}`; empty when absent.
+Map<int, String> _levelMap(Object? value) {
+  if (value is! Map) return const {};
+  final map = <int, String>{};
+  for (final e in value.entries) {
+    final level = int.tryParse('${e.key}');
+    final dice = '${e.value}'.trim();
+    if (level != null && dice.isNotEmpty) map[level] = dice;
+  }
+  return map;
+}
+
 class SpellDetail extends SpellSummary {
   const SpellDetail({
     required super.index,
@@ -732,6 +744,10 @@ class SpellDetail extends SpellSummary {
     this.higherLevel = const [],
     this.attackType,
     this.damage,
+    this.damageType,
+    this.damageAtSlotLevel = const {},
+    this.damageAtCharacterLevel = const {},
+    this.healAtSlotLevel = const {},
     this.dcAbility,
   });
 
@@ -756,6 +772,10 @@ class SpellDetail extends SpellSummary {
       higherLevel: _strList(json['higherLevel']),
       attackType: _strOrNull(json['attackType']),
       damage: damageText(json['damage']),
+      damageType: json['damage'] is Map ? _strOrNull(_nameOf(json['damage']['type'])) : null,
+      damageAtSlotLevel: _levelMap(_map(json['damage'])?['atSlotLevel']),
+      damageAtCharacterLevel: _levelMap(_map(json['damage'])?['atCharacterLevel']),
+      healAtSlotLevel: _levelMap(json['healAtSlotLevel']),
       dcAbility: _strOrNull(_nameOf(json['dcAbility'])),
     );
   }
@@ -770,6 +790,20 @@ class SpellDetail extends SpellSummary {
   final List<String> higherLevel;
   final String? attackType;
   final String? damage;
+
+  /// Damage type(s) as sent ("Fire", "Acid + Fire"); null without damage.
+  final String? damageType;
+
+  /// Damage dice by slot level (`damage.atSlotLevel`), e.g. `{3: "8d6", 4: "9d6"}`.
+  final Map<int, String> damageAtSlotLevel;
+
+  /// Damage dice of a cantrip by character level (`damage.atCharacterLevel`).
+  final Map<int, String> damageAtCharacterLevel;
+
+  /// Healing by slot level (`healAtSlotLevel`); `MOD` stands for the
+  /// spellcasting ability modifier ("1d8 + MOD").
+  final Map<int, String> healAtSlotLevel;
+
   final String? dcAbility;
 }
 

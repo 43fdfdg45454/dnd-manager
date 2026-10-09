@@ -8,7 +8,6 @@ import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
 import 'package:dnd_companion/features/catalog/data/models.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:dnd_companion/features/characters/data/models.dart';
-import 'package:dnd_companion/features/characters/data/view_mode_controller.dart';
 import 'package:dnd_companion/features/characters/domain/character_format.dart';
 import 'package:dnd_companion/features/characters/domain/change_details.dart';
 import 'package:dnd_companion/features/characters/domain/payload_format.dart';
@@ -631,16 +630,17 @@ void main() {
       expect(CharacterDetail.fromJson(makeCharacterJson()).missingContent, isEmpty);
     });
 
-    testWidgets('el conmutador Detallado / Combate está habilitado', (tester) async {
+    testWidgets('Combate es la primera pestaña, sin conmutador de vista', (tester) async {
       final repository = FakeCharactersRepository(characters: [makeCharacterJson()]);
       await _pumpApp(tester, characters: repository, location: '/characters/ch1');
 
-      expect(find.text('Detallado'), findsOneWidget);
-      expect(find.text('Combate'), findsWidgets);
-      final segmented = tester.widget<SegmentedButton<CharacterViewMode>>(
-        find.byKey(const Key('view-mode')),
+      expect(find.text('Detallado'), findsNothing);
+      expect(find.byKey(const Key('view-mode')), findsNothing);
+      expect(find.byKey(const Key('tab-combat')), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.byKey(const Key('tab-combat'))).dx,
+        lessThan(tester.getTopLeft(find.byKey(const Key('tab-summary'))).dx),
       );
-      expect(segmented.segments.every((s) => s.enabled), isTrue);
       expect(find.byKey(const Key('dice-fab')), findsOneWidget);
     });
 

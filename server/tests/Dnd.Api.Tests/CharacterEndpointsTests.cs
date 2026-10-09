@@ -717,6 +717,40 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(HttpStatusCode.NotFound, (await s.Player.Client.PostAsync($"{CharacterUrl(character.Id)}/resources/{wand.Id}/spend", null)).StatusCode);
     }
 
+    [Fact]
+    public async Task Only_a_dm_restores_an_auto_class_resource()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var character = await CreateAsync(s.Player, s.CampaignId, new { name = "Monje" });
+        var monk = await PatchSheetAsync(s.Player, character.Id, new { classes = new[] { new { classIndex = "monk", level = 4 } } });
+        var ki = Assert.Single(monk.Resources, r => r.Key == "ki");
+        Assert.True(ki.IsAuto);
+        await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/resources/{ki.Id}/spend", new { amount = 2 });
+
+        var forbidden = await s.Player.Client.PostAsJsonAsync($"{CharacterUrl(character.Id)}/resources/{ki.Id}/restore", new { amount = 1 });
+        var restored = await PostAsync(s.Dm, $"{CharacterUrl(character.Id)}/resources/{ki.Id}/restore", new { amount = 1 });
+        var byOwner = await PostAsync(s.Owner, $"{CharacterUrl(character.Id)}/resources/{ki.Id}/restore", new { amount = 1 });
+
+        Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
+        Assert.Equal(1, Assert.Single(restored.Resources, r => r.Id == ki.Id).Used);
+        Assert.Equal(0, Assert.Single(byOwner.Resources, r => r.Id == ki.Id).Used);
+    }
+
+    [Fact]
+    public async Task A_player_restores_sorcery_points_with_font_of_magic()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var character = await CreateAsync(s.Player, s.CampaignId, new { name = "Hechicera" });
+        var sorcerer = await PatchSheetAsync(s.Player, character.Id, new { classes = new[] { new { classIndex = "sorcerer", level = 3 } } });
+        var points = Assert.Single(sorcerer.Resources, r => r.Key == "sorcery-points");
+        Assert.True(points.IsAuto);
+        await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/resources/{points.Id}/spend", new { amount = 3 });
+
+        var restored = await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/resources/{points.Id}/restore", new { amount = 2 });
+
+        Assert.Equal(1, Assert.Single(restored.Resources, r => r.Id == points.Id).Used);
+    }
+
     // ---- Deletion --------------------------------------------------------------------------------
 
     [Fact]

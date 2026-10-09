@@ -33,6 +33,16 @@ SpellSlot? pactSlotsOf(CharacterDetail character) {
   return null;
 }
 
+/// Key of the sorcerer's sorcery points: automatic, but Font of Magic turns
+/// spell slots into points, so the player may restore them.
+const sorceryPointsKey = 'sorcery-points';
+
+/// Whether the acting user may give uses of [resource] back by hand. Automatic
+/// class resources (rage, ki, lay on hands...) only come back with rests or by
+/// the DM (the server answers 403 to anyone else), except sorcery points.
+bool canRestoreResource(CharacterResource resource, {required bool isDm}) =>
+    isDm || !resource.isAuto || resource.key == sorceryPointsKey;
+
 /// Resources to show: the combat summary's, or the sheet's as a fallback.
 List<CharacterResource> resourcesOf(CharacterDetail character) =>
     character.combat.resources.isNotEmpty ? character.combat.resources : character.resources;
@@ -125,10 +135,18 @@ class SpellSlotsSection extends ConsumerWidget {
 
 /// Class and item resources: dots up to 10 uses, a pool bar beyond that.
 class ResourcesSection extends ConsumerWidget {
-  const ResourcesSection({super.key, required this.character, required this.canEdit});
+  const ResourcesSection({
+    super.key,
+    required this.character,
+    required this.canEdit,
+    this.isDm = false,
+  });
 
   final CharacterDetail character;
   final bool canEdit;
+
+  /// A DM or the Owner: may also restore automatic class resources.
+  final bool isDm;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -145,6 +163,7 @@ class ResourcesSection extends ConsumerWidget {
             character: character,
             resource: resource,
             canEdit: canEdit,
+            isDm: isDm,
           ),
         if (once.isNotEmpty)
           CombatCard(
@@ -180,11 +199,15 @@ class ResourceTile extends ConsumerWidget {
     required this.character,
     required this.resource,
     required this.canEdit,
+    this.isDm = false,
   });
 
   final CharacterDetail character;
   final CharacterResource resource;
   final bool canEdit;
+  final bool isDm;
+
+  bool get _canRestore => canEdit && canRestoreResource(resource, isDm: isDm);
 
   Future<void> _spend(BuildContext context, WidgetRef ref, [int amount = 1]) async {
     if (resource.used + amount > resource.max) {
@@ -213,12 +236,12 @@ class ResourceTile extends ConsumerWidget {
       title: resource.name,
       label: 'Puntos restantes',
       initial: remaining,
-      max: resource.max,
+      max: _canRestore ? resource.max : remaining,
     );
     if (value == null || value == remaining || !context.mounted) return;
     if (value < remaining) {
       await _spend(context, ref, remaining - value);
-    } else {
+    } else if (_canRestore) {
       await _restore(context, ref, value - remaining);
     }
   }
@@ -264,7 +287,7 @@ class ResourceTile extends ConsumerWidget {
               IconButton.filledTonal(
                 key: Key('resource-${r.id}-plus'),
                 tooltip: 'Recuperar 1',
-                onPressed: canEdit ? () => _restore(context, ref) : null,
+                onPressed: _canRestore ? () => _restore(context, ref) : null,
                 icon: const Icon(Icons.add),
               ),
             ],
@@ -275,7 +298,7 @@ class ResourceTile extends ConsumerWidget {
             filled: remaining,
             semanticLabel: '${r.name}: $remaining de ${r.max}',
             onTap: canEdit ? () => _spend(context, ref) : null,
-            onLongPress: canEdit ? () => _restore(context, ref) : null,
+            onLongPress: _canRestore ? () => _restore(context, ref) : null,
           );
     return CombatCard(
       title: r.name,

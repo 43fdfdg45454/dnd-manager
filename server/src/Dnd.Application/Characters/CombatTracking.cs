@@ -164,11 +164,15 @@ public sealed class CharacterTracker(
     ICampaignNotifier notifier,
     IDateTimeProvider clock)
 {
-    public async Task<Character> LoadAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken)
+    public async Task<Character> LoadAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken) =>
+        (await LoadWithRoleAsync(currentUserId, characterId, cancellationToken)).Character;
+
+    /// <summary>Like <see cref="LoadAsync"/>, keeping the actor's campaign role.</summary>
+    public async Task<LoadedCharacter> LoadWithRoleAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken)
     {
         var loaded = await loader.LoadAsync(characterId, currentUserId, cancellationToken);
         loaded.Character.EnsureCanTrack(currentUserId, loaded.IsDm);
-        return loaded.Character;
+        return loaded;
     }
 
     public Task<CharacterSheet> SheetAsync(Character character, CancellationToken cancellationToken) =>
@@ -256,9 +260,15 @@ public sealed class SpellSlotHandler(CharacterTracker tracker, IDateTimeProvider
     }
 }
 
-/// <summary>Limited-use resources: spend, restore, add a manual one, delete a manual one.</summary>
+/// <summary>
+/// Limited-use resources: spend, restore, add a manual one, delete a manual one. Automatic class
+/// resources (rage, ki, lay on hands...) only come back with rests or by the DM's hand: a player
+/// restoring one gets 403, except sorcery points, which Font of Magic converts from spell slots.
+/// </summary>
 public sealed class ResourceHandler(CharacterTracker tracker, IUnitOfWork unitOfWork, IDateTimeProvider clock)
 {
+    public const string AutoResourceRestoreForbidden = "Este recurso solo se recupera descansando o por decisión del DM.";
+
     public async Task<CharacterDetailDto> SpendAsync(Guid currentUserId, Guid characterId, Guid resourceId, AmountRequest? request, CancellationToken cancellationToken = default)
     {
         var character = await tracker.LoadAsync(currentUserId, characterId, cancellationToken);
@@ -268,7 +278,14 @@ public sealed class ResourceHandler(CharacterTracker tracker, IUnitOfWork unitOf
 
     public async Task<CharacterDetailDto> RestoreAsync(Guid currentUserId, Guid characterId, Guid resourceId, AmountRequest? request, CancellationToken cancellationToken = default)
     {
-        var character = await tracker.LoadAsync(currentUserId, characterId, cancellationToken);
+        var loaded = await tracker.LoadWithRoleAsync(currentUserId, characterId, cancellationToken);
+        var character = loaded.Character;
+        var resource = character.Resources.FirstOrDefault(r => r.Id == resourceId);
+        if (resource is { IsAuto: true } && resource.Key != ClassResourceRules.SorceryPoints && !loaded.IsDm)
+        {
+            throw AppException.Forbidden(AutoResourceRestoreForbidden);
+        }
+
         character.RestoreResource(resourceId, request?.Amount ?? 1, clock.UtcNow);
         return await tracker.SaveAsync(character, cancellationToken);
     }

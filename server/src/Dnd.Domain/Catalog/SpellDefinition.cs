@@ -43,6 +43,12 @@ public sealed class SpellDefinition
     /// </summary>
     public string? DamageJson { get; init; }
 
+    /// <summary>
+    /// JSON object with the healing per slot level: <c>{"1":"1d8 + MOD","2":"2d8 + MOD"}</c>, where
+    /// <c>MOD</c> stands for the spellcasting ability modifier.
+    /// </summary>
+    public string? HealJson { get; init; }
+
     /// <summary>Ability index of the saving throw ("dex", "wis", ...).</summary>
     public string? DcAbility { get; init; }
 
