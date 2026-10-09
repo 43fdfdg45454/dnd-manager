@@ -187,6 +187,38 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
             var phantasmal = await GetAsync<SpellDetailDto>(admin, $"/api/v1/catalog/spells/{PackId}-phantasmal-force");
             Assert.Equal(2, phantasmal.ExpandedBy.Count);
         }
+
+        // From v2.5 the elemental disciplines carry their ki cost and the Knowledge domain asks for expertise at level 1.
+        if (Version.Parse(result.Version) >= new Version(2, 5))
+        {
+            var monk = await s.Player.CreateCharacterAsync(s.CampaignId, "Monja");
+            var monkPatch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(monk.Id)}/sheet", new
+            {
+                classes = new[] { new { classIndex = "monk", subclassIndex = $"{PackId}-way-of-the-four-elements", level = 2 } },
+                baseAbilities = new { str = 10, dex = 16, con = 14, @int = 10, wis = 14, cha = 8 },
+                applyRacialBonuses = false,
+            });
+            Assert.Equal(HttpStatusCode.OK, monkPatch.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(monk.Id)}/activate", null)).StatusCode);
+            await GrantAsync(s, monk.Id);
+            var disciplines = Assert.Single((await PlanAsync(s.Player, monk.Id)).Choices, c => c.Key == "disciplinas");
+            var thunders = disciplines.Options.Single(o => o.Index == $"{PackId}-ed-fist-of-four-thunders");
+            Assert.Equal(("ki", 2), (thunders.Cost!.Resource, thunders.Cost.Amount));
+
+            var sage2 = await s.Player.CreateCharacterAsync(s.CampaignId, "Sabia");
+            var sagePatch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(sage2.Id)}/sheet", new
+            {
+                classes = new[] { new { classIndex = "cleric", level = 1 } },
+                baseAbilities = new { str = 10, dex = 12, con = 14, @int = 14, wis = 16, cha = 10 },
+                applyRacialBonuses = false,
+            });
+            Assert.Equal(HttpStatusCode.OK, sagePatch.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(sage2.Id)}/activate", null)).StatusCode);
+            await GrantAsync(s, sage2.Id);
+            var sagePlan = await PlanAsync(s.Player, sage2.Id);
+            var knowledgeExpertise = Assert.Single(sagePlan.Choices, c => c.Key == "pericia-del-conocimiento");
+            Assert.Equal($"{PackId}-knowledge-domain", knowledgeExpertise.SubclassIndex);
+        }
     }
 
     private static async Task<T> GetAsync<T>(HttpClient client, string url)
