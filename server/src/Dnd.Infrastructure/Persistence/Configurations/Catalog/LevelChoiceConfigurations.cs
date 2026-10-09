@@ -41,6 +41,7 @@ internal sealed class OptionDefinitionConfiguration : IEntityTypeConfiguration<O
         builder.Ignore(x => x.AbilityIncrease);
         builder.Ignore(x => x.Grants);
         builder.Ignore(x => x.Resource);
+        builder.Ignore(x => x.Cost);
     }
 }
 
@@ -59,6 +60,7 @@ internal sealed class LevelChoiceRuleConfiguration : IEntityTypeConfiguration<Le
         builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(x => x.SetId).HasMaxLength(CatalogColumns.IndexMaxLength);
         builder.Property(x => x.Note).HasMaxLength(LevelChoiceRule.NoteMaxLength).IsRequired();
+        builder.Property(x => x.After).HasMaxLength(LevelChoiceRule.KeyMaxLength);
         builder.Property(x => x.Source).HasMaxLength(CatalogSources.MaxLength).IsRequired();
         builder.HasIndex(x => x.Source);
 

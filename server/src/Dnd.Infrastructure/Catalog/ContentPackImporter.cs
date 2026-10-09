@@ -231,6 +231,17 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
         var races = await db.CatalogRaces.AsNoTracking()
             .Select(x => new { x.Index, x.Source })
             .ToDictionaryAsync(x => x.Index, x => x.Source, StringComparer.Ordinal, cancellationToken);
+        var resourceRows = await db.CatalogOptions.AsNoTracking()
+            .Where(x => x.ResourceJson != null)
+            .Select(x => new { x.ResourceJson, x.Source })
+            .ToListAsync(cancellationToken);
+        resourceRows.AddRange(await db.CatalogFeatures.AsNoTracking()
+            .Where(x => x.ResourceJson != null)
+            .Select(x => new { x.ResourceJson, x.Source })
+            .ToListAsync(cancellationToken));
+        var ruleRows = await db.CatalogLevelChoiceRules.AsNoTracking()
+            .Select(x => new { x.ClassIndex, x.Level, x.Key, x.SetId, x.Source })
+            .ToListAsync(cancellationToken);
         return new ContentPackContext(
             classes,
             subclasses,
@@ -243,7 +254,13 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
             packSubclasses,
             races,
             casterClasses.ToHashSet(StringComparer.Ordinal),
-            spellRows.ToDictionary(x => x.Index, x => x.Level, StringComparer.Ordinal));
+            spellRows.ToDictionary(x => x.Index, x => x.Level, StringComparer.Ordinal),
+            resourceRows.Select(x => (Key: LevelChoiceJson.ParseResource(x.ResourceJson)?.Key, x.Source))
+                .Where(x => x.Key is not null)
+                .Select(x => (x.Key!, x.Source))
+                .ToList(),
+            ruleRows.Where(x => x.SetId != null).Select(x => (x.SetId!, x.ClassIndex, x.Source)).ToList(),
+            ruleRows.Select(x => (x.ClassIndex, x.Level, x.Key, x.Source)).ToList());
     }
 
     /// <summary>Reports the indexes of the pack already used by another source (the SRD or another pack).</summary>

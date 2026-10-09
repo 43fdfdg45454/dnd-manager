@@ -88,6 +88,7 @@ internal sealed partial class ContentPackValidator
             AbilityIncreaseJson = AbilityIncreaseOf($"{path}.abilityIncrease", option.AbilityIncrease),
             GrantsJson = option.Grants is null ? null : Grants($"{path}.grants", option.Grants),
             ResourceJson = Resource($"{path}.resource", option.Resource),
+            CostJson = Cost($"{path}.cost", option.Cost, setId),
             Source = _id,
         };
 
@@ -719,9 +720,25 @@ internal sealed partial class ContentPackValidator
             : RequiredInt($"{path}.choose", rule.Choose, 0, 20);
         var filter = Filter($"{path}.filter", rule.Filter);
         var note = OptionalText($"{path}.note", rule.Note, LevelChoiceRule.NoteMaxLength);
+        string? after = null;
+        if (rule.After is not null)
+        {
+            after = rule.After.Trim();
+            if (after.Length == 0 || after.Length > LevelChoiceRule.KeyMaxLength || !IndexPattern().IsMatch(after))
+            {
+                AddError($"{path}.after", "Debe ser la key de otra elección del mismo nivel (minúsculas, números y guiones).");
+                after = null;
+            }
+        }
+
         if (level is null || key.Length == 0 || kind is null || choose is null)
         {
             return;
+        }
+
+        if (after is not null)
+        {
+            _afterReferences.Add(($"{path}.after", classIndex, subclassIndex, level.Value, key, after));
         }
 
         var id = LevelChoiceRule.IdFor(classIndex, subclassIndex, level.Value, key);
@@ -746,6 +763,7 @@ internal sealed partial class ContentPackValidator
             Replaces = rule.Replaces ?? false,
             Cumulative = rule.Cumulative ?? false,
             Note = note,
+            After = after,
             Source = _id,
         });
     }

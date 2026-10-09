@@ -231,10 +231,14 @@ public sealed class CharacterSheetService(
         var autoTemplates = AutoResourceTemplates(character, sheet)
             .GroupBy(t => t.Key, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.MaxBy(t => t.Max)!, StringComparer.Ordinal);
+        var optionCosts = OptionCosts.ForCharacter(character, sheetCatalog.Option);
         var resources = character.Resources
             .OrderBy(r => r.IsAuto ? 0 : 1)
             .ThenBy(r => r.Name, StringComparer.Ordinal)
-            .Select(r => CharacterResourceDto.From(r, r.IsAuto && r.Key is { } key ? autoTemplates.GetValueOrDefault(key) : null))
+            .Select(r => CharacterResourceDto.From(r, r.IsAuto && r.Key is { } key ? autoTemplates.GetValueOrDefault(key) : null) with
+            {
+                Options = r.Key is null ? [] : optionCosts.Where(c => c.Resource == r.Key).ToList(),
+            })
             .ToList();
         var classes = character.OrderedClasses
             .Select(c => new CharacterClassDto(
@@ -348,6 +352,7 @@ public sealed class CharacterSheetService(
                 .ThenBy(c => c.Level)
                 .Select(c => CharacterFeatDto.From(c, sheetCatalog.Option(c.Selection.Feat!.Index)))
                 .ToList(),
+            OptionCosts = optionCosts,
         };
     }
 
