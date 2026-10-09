@@ -278,6 +278,29 @@ void main() {
       expect(find.text('CA 17 · Inic. +2 · Perc. 11'), findsNWidgets(2));
     });
 
+    testWidgets('los botones de acción miden lo mismo en ancho y en móvil', (tester) async {
+      await pumpRealApp(
+        tester,
+        location: '/campaigns/c1/dm',
+        fakes: _fakes(party: _party()),
+      );
+      const keys = ['dm-short-rest', 'dm-long-rest', 'party-grant-level', 'dm-message', 'dm-dice'];
+      Set<Size> sizes() => {for (final k in keys) tester.getSize(find.byKey(Key(k)))};
+
+      // Wide (800 px): one row of five equal boxes.
+      expect(sizes().length, 1);
+      expect({for (final k in keys) tester.getTopLeft(find.byKey(Key(k))).dy}.length, 1);
+
+      // Phone width: two columns, still the same box for every button.
+      tester.view.physicalSize = const Size(400, 2000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpAndSettle();
+      expect(sizes().length, 1);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('el descanso largo llama a party/rest para todos', (tester) async {
       final party = _party();
       await pumpRealApp(

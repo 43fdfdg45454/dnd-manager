@@ -205,47 +205,46 @@ class _ActionBar extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        _ActionGrid(
+          key: const Key('dm-action-grid'),
           children: [
             OfflineAware(
-              builder: (context, canWrite) => FilledButton.tonalIcon(
+              builder: (context, canWrite) => _ActionButton(
                 key: const Key('dm-short-rest'),
                 onPressed: canWrite ? onShortRest : null,
-                icon: const AppIcon(AppIcons.campfire, size: 20),
-                label: Text('Descanso corto$suffix'),
+                icon: AppIcons.campfire,
+                label: 'Descanso corto$suffix',
               ),
             ),
             OfflineAware(
-              builder: (context, canWrite) => FilledButton.tonalIcon(
+              builder: (context, canWrite) => _ActionButton(
                 key: const Key('dm-long-rest'),
                 onPressed: canWrite ? onLongRest : null,
-                icon: const AppIcon(AppIcons.moon, size: 20),
-                label: Text('Descanso largo$suffix'),
+                icon: AppIcons.moon,
+                label: 'Descanso largo$suffix',
               ),
             ),
             OfflineAware(
-              builder: (context, canWrite) => FilledButton.tonalIcon(
+              builder: (context, canWrite) => _ActionButton(
                 key: const Key('party-grant-level'),
                 onPressed: canWrite ? onGrantLevel : null,
-                icon: const AppIcon(AppIcons.levelUp, size: 20),
-                label: Text('Conceder nivel$suffix'),
+                icon: AppIcons.levelUp,
+                label: 'Conceder nivel$suffix',
               ),
             ),
             OfflineAware(
-              builder: (context, canWrite) => FilledButton.tonalIcon(
+              builder: (context, canWrite) => _ActionButton(
                 key: const Key('dm-message'),
                 onPressed: canWrite ? onMessage : null,
-                icon: const AppIcon(AppIcons.envelope, size: 20),
-                label: const Text('Mensaje secreto'),
+                icon: AppIcons.envelope,
+                label: 'Mensaje secreto',
               ),
             ),
-            FilledButton.tonalIcon(
+            _ActionButton(
               key: const Key('dm-dice'),
               onPressed: () => showDiceSheet(context),
-              icon: const AppIcon(AppIcons.d20, size: 20),
-              label: const Text('Dados'),
+              icon: AppIcons.d20,
+              label: 'Dados',
             ),
           ],
         ),
@@ -261,6 +260,61 @@ class _ActionBar extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Equal boxes for the table's actions: two columns on a phone, one row of
+/// [children].length from 600 px wide. Every box has the same width and
+/// height whatever its label, so the row reads as one toolbar.
+class _ActionGrid extends StatelessWidget {
+  const _ActionGrid({super.key, required this.children});
+
+  final List<Widget> children;
+
+  static const _spacing = 8.0;
+  static const _height = 44.0;
+  static const _wideBreakpoint = 600.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= _wideBreakpoint ? children.length : 2;
+        final width = (constraints.maxWidth - _spacing * (columns - 1)) / columns;
+        return Wrap(
+          spacing: _spacing,
+          runSpacing: _spacing,
+          children: [
+            for (final child in children) SizedBox(width: width, height: _height, child: child),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// A tonal button of the [_ActionGrid]; the label shrinks instead of
+/// overflowing when the box is narrow.
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    super.key,
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+  });
+
+  final VoidCallback? onPressed;
+  final AppIcons icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton.tonalIcon(
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12)),
+      icon: AppIcon(icon, size: 20),
+      label: FittedBox(fit: BoxFit.scaleDown, child: Text(label, maxLines: 1)),
     );
   }
 }
