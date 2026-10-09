@@ -41,4 +41,20 @@ public interface ICampaignRepository
     void Remove(Campaign campaign);
 
     void AddOwnershipTransfer(OwnershipTransfer transfer);
+
+    /// <summary>Tracked invitation, or null.</summary>
+    Task<CampaignInvitation?> GetInvitationAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Pending invitation of the user to the campaign, or null (read-only).</summary>
+    Task<CampaignInvitation?> FindInvitationAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>Pending invitations of a campaign, oldest first.</summary>
+    Task<IReadOnlyList<CampaignInvitationDto>> ListInvitationsForCampaignAsync(Guid campaignId, CancellationToken cancellationToken = default);
+
+    /// <summary>Pending invitations of a user, newest first.</summary>
+    Task<IReadOnlyList<MyInvitationDto>> ListInvitationsForUserAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    void AddInvitation(CampaignInvitation invitation);
+
+    void RemoveInvitation(CampaignInvitation invitation);
 }

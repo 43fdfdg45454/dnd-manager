@@ -16,6 +16,7 @@ namespace Dnd.Application.Characters;
 /// <param name="ClassLevel">Level of <see cref="ClassIndex"/> after the level-up (1 for a new class).</param>
 /// <param name="HitDie">Die to roll for the hit points (the player writes the result, 1..die).</param>
 /// <param name="ConModifier">Constitution modifier added to the roll (minimum 1 hit point per level).</param>
+/// <param name="NewFeatures">Class and subclass features gained at the new level, for the review step (subclass features carry their subclass).</param>
 public sealed record LevelUpPlanDto(
     Guid CharacterId,
     int CurrentLevel,
@@ -27,7 +28,11 @@ public sealed record LevelUpPlanDto(
     IReadOnlyList<LevelUpClassDto> Classes,
     IReadOnlyList<LevelUpFeatureDto> AutomaticFeatures,
     IReadOnlyList<LevelUpChoiceDto> Choices,
-    LevelUpSpellcastingDto? Spellcasting);
+    LevelUpSpellcastingDto? Spellcasting,
+    IReadOnlyList<LevelUpNewFeatureDto> NewFeatures);
+
+/// <summary>A feature gained at the new level, flattened for the review step. <see cref="SubclassIndex"/> is set for subclass features.</summary>
+public sealed record LevelUpNewFeatureDto(string Name, IReadOnlyList<string> Description, string? SubclassIndex);
 
 /// <summary>A class the character could gain a level in.</summary>
 /// <param name="Allowed">False when a new class does not meet the multiclassing prerequisites (see <see cref="Reason"/>).</param>
@@ -53,6 +58,8 @@ public sealed record LevelUpFeatureInfoDto(string Index, string Name, IReadOnlyL
 /// not enough options are eligible). With <see cref="Replaces"/>, up to one of <see cref="Known"/> may be swapped:
 /// it goes in <c>replaced</c> and one more pick is sent. <see cref="SubclassIndex"/>: the choice only applies with
 /// that subclass (it is chosen at this same level). <see cref="FreeText"/>: no list, any text (languages, tools...).
+/// <see cref="Warning"/> (Spanish) explains why fewer picks than <see cref="Choose"/> are required: not enough
+/// eligible options now (none at all, or fewer than the level grants).
 /// </summary>
 /// <param name="Kind">A <c>LevelChoiceKind</c> name (Subclass, OptionSet, AsiOrFeat, Expertise, Skill, Language, Tool, CantripsKnown, SpellsKnown, SpellbookSpells, Custom).</param>
 public sealed record LevelUpChoiceDto(
@@ -68,7 +75,8 @@ public sealed record LevelUpChoiceDto(
     string? SetId,
     bool FreeText,
     IReadOnlyList<LevelUpOptionDto> Options,
-    IReadOnlyList<ChoiceItemDto> Known);
+    IReadOnlyList<ChoiceItemDto> Known,
+    string? Warning = null);
 
 /// <summary>
 /// An option of a choice. Not <see cref="Eligible"/> when its prerequisites are not met (<see cref="Reason"/>).
@@ -108,6 +116,7 @@ public sealed record AbilityIncreaseDto(int Amount, IReadOnlyList<string> From);
 /// <param name="CurrentCantrips">Cantrips the character has for the class now.</param>
 /// <param name="CurrentSpells">Spells (level 1+) the character has for the class now (the spellbook for wizards).</param>
 /// <param name="SpellSlots">Slots of the class table at the new level (9 entries).</param>
+/// <param name="PreparesSpells">True for classes that prepare spells from their list or spellbook (cleric, druid, paladin, wizard) once they have slots: "Preparar conjuros" opens after the level-up.</param>
 public sealed record LevelUpSpellcastingDto(
     string ClassIndex,
     string? Ability,
@@ -117,7 +126,8 @@ public sealed record LevelUpSpellcastingDto(
     int MaxSpellLevel,
     int CurrentCantrips,
     int CurrentSpells,
-    IReadOnlyList<int> SpellSlots);
+    IReadOnlyList<int> SpellSlots,
+    bool PreparesSpells = false);
 
 /// <summary>Body of <c>POST /characters/{id}/level-up</c>.</summary>
 /// <param name="ClassIndex">Class that gains the level (a new one to multiclass); null = the main class.</param>

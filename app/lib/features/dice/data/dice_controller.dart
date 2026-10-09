@@ -23,18 +23,26 @@ class DiceHistoryEntry {
     this.label,
     this.critical = false,
     this.fumble = false,
+    this.kind = RollKind.check,
+    this.natural,
   });
 
-  factory DiceHistoryEntry.fromResult(DiceResult result, {String? label, DateTime? at}) =>
-      DiceHistoryEntry(
-        expression: result.expression.toString(),
-        total: result.total,
-        detail: result.breakdown,
-        at: at ?? DateTime.now(),
-        label: label,
-        critical: result.isCritical,
-        fumble: result.isFumble,
-      );
+  factory DiceHistoryEntry.fromResult(
+    DiceResult result, {
+    String? label,
+    DateTime? at,
+    RollKind kind = RollKind.check,
+  }) => DiceHistoryEntry(
+    expression: result.expression.toString(),
+    total: result.total,
+    detail: result.breakdown,
+    at: at ?? DateTime.now(),
+    label: label,
+    critical: result.isCritical,
+    fumble: result.isFumble,
+    kind: kind,
+    natural: result.d20Value,
+  );
 
   /// Returns null for a malformed entry so a corrupt history never breaks the app.
   static DiceHistoryEntry? tryFromJson(Object? raw) {
@@ -51,7 +59,18 @@ class DiceHistoryEntry {
       label: label is String && label.isNotEmpty ? label : null,
       critical: raw['critical'] == true,
       fumble: raw['fumble'] == true,
+      kind: RollKind.fromStorage(raw['kind']) ?? _legacyKind(label),
+      natural: raw['natural'] is num ? (raw['natural'] as num).toInt() : null,
     );
+  }
+
+  /// Entries saved before the kind was stored: attack rolls were labelled
+  /// "Ataque: …" and death saves "Salvación de muerte"; anything else is a check.
+  static RollKind _legacyKind(Object? label) {
+    if (label is! String) return RollKind.check;
+    if (label.startsWith('Ataque')) return RollKind.attack;
+    if (label.startsWith('Salvación de muerte')) return RollKind.deathSave;
+    return RollKind.check;
   }
 
   final String expression;
@@ -63,8 +82,22 @@ class DiceHistoryEntry {
 
   /// What was rolled ("Ataque: Espada larga"), if the roll came from the sheet.
   final String? label;
+
+  /// Natural 20 / natural 1 on the only d20 of the roll, whatever the kind.
   final bool critical;
   final bool fumble;
+
+  /// What the roll was for; decides whether [critical] and [fumble] matter.
+  final RollKind kind;
+
+  /// The kept face of the only d20 of the roll, if there was one.
+  final int? natural;
+
+  /// A natural 20 that means something for this kind of roll.
+  bool get showsCritical => critical && kind.hasNaturalEffects;
+
+  /// A natural 1 that means something for this kind of roll.
+  bool get showsFumble => fumble && kind.hasNaturalEffects;
 
   Map<String, dynamic> toJson() => {
     'expression': expression,
@@ -74,6 +107,8 @@ class DiceHistoryEntry {
     'label': ?label,
     if (critical) 'critical': true,
     if (fumble) 'fumble': true,
+    'kind': kind.name,
+    'natural': ?natural,
   };
 }
 
@@ -125,10 +160,10 @@ class DiceController extends Notifier<DiceState> {
   }
 
   /// Adds a roll at the top of the history.
-  void record(DiceResult result, {String? label}) {
+  void record(DiceResult result, {String? label, RollKind kind = RollKind.check}) {
     state = DiceState(
       history: [
-        DiceHistoryEntry.fromResult(result, label: label),
+        DiceHistoryEntry.fromResult(result, label: label, kind: kind),
         ...state.history,
       ].take(diceHistoryLimit).toList(),
       favorites: state.favorites,

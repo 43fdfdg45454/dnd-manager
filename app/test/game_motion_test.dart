@@ -113,10 +113,11 @@ void main() {
     testWidgets('las páginas de la campaña llevan grano y las tarjetas de General, glifos', (
       tester,
     ) async {
-      await pumpRealApp(tester, location: '/campaigns/c1');
+      await pumpRealApp(tester, location: '/campaigns/c1/general');
 
       expect(find.byType(GrainBackground), findsOneWidget);
       for (final section in CampaignSection.values) {
+        if (section == CampaignSection.characters) continue;
         final card = find.byKey(Key('general-${section.path}'));
         expect(card, findsOneWidget, reason: section.path);
         final icon = find.descendant(of: card, matching: find.byType(AppIcon));

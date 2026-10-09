@@ -11,6 +11,7 @@ import '../../../../core/theme/typography.dart';
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/data/models.dart' hide Page;
 import '../../../catalog/domain/catalog_format.dart';
+import '../../../dice/ui/roll_input_button.dart';
 import '../../../items/ui/item_search_list.dart';
 import '../../data/character_wizard_controller.dart';
 import '../../domain/character_format.dart';
@@ -213,9 +214,8 @@ class _DefaultEquipmentList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(characterWizardControllerProvider(args));
     final theme = Theme.of(context);
-    final tokens = context.tokens;
-    final lines = state.startingLines;
     final copper = state.startingCopper;
+    final hasLines = state.startingLines.isNotEmpty;
 
     // Pack contents by template, to let packs expand.
     final contents = <String, List<StartingItem>>{};
@@ -234,17 +234,11 @@ class _DefaultEquipmentList extends ConsumerWidget {
       }
     }
 
-    final badge = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        border: Border.all(color: tokens.oldGold.withValues(alpha: 0.6)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        'Por defecto',
-        style: theme.textTheme.labelSmall?.copyWith(color: tokens.oldGold),
-      ),
-    );
+    // Gold by origin: the background's fixed purse and the class's rolled wealth.
+    final goldByOrigin = {
+      EquipmentOrigin.characterClass: state.rolledCopper,
+      EquipmentOrigin.background: state.backgroundCopper,
+    };
 
     return Column(
       key: const Key('equipment-included'),
@@ -255,28 +249,63 @@ class _DefaultEquipmentList extends ConsumerWidget {
           'Lo que te dan tu clase y tu trasfondo con las elecciones de arriba.',
           style: theme.textTheme.bodySmall,
         ),
-        if (lines.isEmpty && copper <= 0)
+        if (!hasLines && copper <= 0)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
             child: Text('Completa las elecciones para ver tu equipo.'),
           ),
-        for (final line in lines)
-          EquipmentLineTile(
-            key: Key('equipment-default-${line.templateId}'),
-            name: line.name,
-            quantity: line.qty,
-            contents: contents[line.templateId],
-            trailing: badge,
-          ),
-        if (copper > 0)
-          ListTile(
-            key: const Key('equipment-default-gold'),
-            contentPadding: EdgeInsets.zero,
-            title: Text('${copperToGoldText(copper)} po'),
-            subtitle: const Text('Oro inicial'),
-            trailing: badge,
-          ),
+        for (final origin in EquipmentOrigin.values)
+          if (state.startingLinesFrom(origin).isNotEmpty || goldByOrigin[origin]! > 0) ...[
+            Padding(
+              key: Key('equipment-origin-${origin.name}'),
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                origin == EquipmentOrigin.characterClass ? 'De la clase' : 'Del trasfondo',
+                style: theme.textTheme.titleSmall,
+              ),
+            ),
+            for (final line in state.startingLinesFrom(origin))
+              EquipmentLineTile(
+                key: Key('equipment-default-${line.templateId}'),
+                name: line.name,
+                quantity: line.qty,
+                contents: contents[line.templateId],
+                trailing: EquipmentOriginBadge(origin),
+              ),
+            if (goldByOrigin[origin]! > 0)
+              ListTile(
+                key: Key('equipment-default-gold-${origin.name}'),
+                contentPadding: EdgeInsets.zero,
+                title: Text('${copperToGoldText(goldByOrigin[origin]!)} po'),
+                subtitle: const Text('Oro inicial'),
+                trailing: EquipmentOriginBadge(origin),
+              ),
+          ],
       ],
+    );
+  }
+}
+
+/// Small outlined label with the origin of a starting line or choice
+/// ("Clase", "Trasfondo").
+class EquipmentOriginBadge extends StatelessWidget {
+  const EquipmentOriginBadge(this.origin, {super.key});
+
+  final EquipmentOrigin origin;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        border: Border.all(color: tokens.oldGold.withValues(alpha: 0.6)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        origin.label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: tokens.oldGold),
+      ),
     );
   }
 }
@@ -320,48 +349,63 @@ class _ChoiceList extends ConsumerWidget {
             style: AppTypography.numeric.copyWith(color: tokens.boneMuted),
           ),
         ),
-        for (final i in active)
-          Column(
-            key: Key('equipment-choice-$i'),
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        for (final origin in EquipmentOrigin.values)
+          for (final (n, i)
+              in active.where((i) => state.equipmentChoiceOrigin(i) == origin).indexed) ...[
+            if (n == 0)
               Padding(
-                padding: const EdgeInsets.only(top: 12, bottom: 2),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(choices[i].description, style: theme.textTheme.titleSmall),
-                    ),
-                    if (state.isChoiceComplete(i)) Icon(Icons.check, size: 18, color: tokens.moss),
-                  ],
+                key: Key('equipment-choices-origin-${origin.name}'),
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  origin == EquipmentOrigin.characterClass ? 'De la clase' : 'Del trasfondo',
+                  style: theme.textTheme.titleMedium,
                 ),
               ),
-              for (var j = 0; j < choices[i].options.length; j++)
-                _OptionCard(
-                  key: Key('equipment-option-$i-$j'),
-                  keyPrefix: '$i-$j',
-                  option: choices[i].options[j],
-                  selected: state.equipmentOptions[i]?.contains(j) ?? false,
-                  picks: [
-                    for (var k = 0; k < choices[i].options[j].categories.length; k++)
-                      state.categoryPicks[categoryPickKey(i, j, k)] ?? const [],
-                  ],
-                  onTap: () {
-                    controller.selectEquipmentOption(i, j);
-                    final option = choices[i].options[j];
-                    final current = ref.read(characterWizardControllerProvider(args));
-                    for (var k = 0; k < option.categories.length; k++) {
-                      final done = current.categoryPicks[categoryPickKey(i, j, k)]?.length ?? 0;
-                      if (done != option.categories[k].choose) {
-                        openPicker(i, j, k, option.categories[k]);
-                        break;
-                      }
-                    }
-                  },
-                  onPick: (k) => openPicker(i, j, k, choices[i].options[j].categories[k]),
+            Column(
+              key: Key('equipment-choice-$i'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 12, bottom: 2),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(choices[i].description, style: theme.textTheme.titleSmall),
+                      ),
+                      if (state.isChoiceComplete(i))
+                        Icon(Icons.check, size: 18, color: tokens.moss),
+                      const SizedBox(width: 8),
+                      EquipmentOriginBadge(origin),
+                    ],
+                  ),
                 ),
-            ],
-          ),
+                for (var j = 0; j < choices[i].options.length; j++)
+                  _OptionCard(
+                    key: Key('equipment-option-$i-$j'),
+                    keyPrefix: '$i-$j',
+                    option: choices[i].options[j],
+                    selected: state.equipmentOptions[i]?.contains(j) ?? false,
+                    picks: [
+                      for (var k = 0; k < choices[i].options[j].categories.length; k++)
+                        state.categoryPicks[categoryPickKey(i, j, k)] ?? const [],
+                    ],
+                    onTap: () {
+                      controller.selectEquipmentOption(i, j);
+                      final option = choices[i].options[j];
+                      final current = ref.read(characterWizardControllerProvider(args));
+                      for (var k = 0; k < option.categories.length; k++) {
+                        final done = current.categoryPicks[categoryPickKey(i, j, k)]?.length ?? 0;
+                        if (done != option.categories[k].choose) {
+                          openPicker(i, j, k, option.categories[k]);
+                          break;
+                        }
+                      }
+                    },
+                    onPick: (k) => openPicker(i, j, k, choices[i].options[j].categories[k]),
+                  ),
+              ],
+            ),
+          ],
       ],
     );
   }
@@ -534,6 +578,7 @@ class _GoldSection extends ConsumerWidget {
             children: [
               _GoldRollField(
                 initial: roll,
+                dice: gold.dice,
                 label: 'Tira ${gold.dice} y escribe el resultado',
                 helper: range == null ? null : 'Entre ${range.min} y ${range.max}',
                 error: outOfRange ? 'La tirada va de ${range.min} a ${range.max}' : null,
@@ -575,6 +620,7 @@ class _GoldSection extends ConsumerWidget {
 class _GoldRollField extends StatefulWidget {
   const _GoldRollField({
     required this.initial,
+    required this.dice,
     required this.label,
     required this.onChanged,
     this.helper,
@@ -582,6 +628,9 @@ class _GoldRollField extends StatefulWidget {
   });
 
   final int? initial;
+
+  /// Dice of the starting wealth ("5d4"), rolled by the "Tirar" button.
+  final String dice;
   final String label;
   final String? helper;
   final String? error;
@@ -610,6 +659,15 @@ class _GoldRollFieldState extends State<_GoldRollField> {
       labelText: widget.label,
       helperText: widget.helper,
       errorText: widget.error,
+      suffixIcon: RollInputButton(
+        key: const Key('equipment-gold-roll-dice'),
+        expression: widget.dice,
+        label: 'Oro inicial',
+        onRolled: (total, _) {
+          _controller.text = '$total';
+          widget.onChanged(total);
+        },
+      ),
     ),
     onChanged: (value) => widget.onChanged(int.tryParse(value)),
   );
@@ -678,6 +736,15 @@ class _TrinketSectionState extends ConsumerState<_TrinketSection> {
             labelText: 'Tira 1d100 y escribe el resultado',
             helperText: 'Entre $trinketRollMin y $trinketRollMax',
             errorText: state.trinketError,
+            suffixIcon: RollInputButton(
+              key: const Key('trinket-roll-dice'),
+              expression: '1d100',
+              label: 'Baratija',
+              onRolled: (total, _) {
+                _roll.text = '$total';
+                controller.setTrinketRoll(total);
+              },
+            ),
           ),
           onChanged: (value) => controller.setTrinketRoll(int.tryParse(value)),
         ),

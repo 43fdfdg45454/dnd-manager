@@ -73,12 +73,21 @@ public static class TestUsers
         return (await response.Content.ReadFromJsonAsync<CampaignDto>())!;
     }
 
-    /// <summary>Adds <paramref name="user"/> to the campaign through the API as <paramref name="actor"/>.</summary>
+    /// <summary>Invites <paramref name="user"/> to the campaign as <paramref name="actor"/>; the user accepts, so they end up as a member.</summary>
     public static async Task<MemberDto> AddMemberAsync(this SignedInUser actor, Guid campaignId, SignedInUser user, string role)
     {
-        var response = await actor.Client.PostAsJsonAsync($"/api/v1/campaigns/{campaignId}/members", new { userId = user.Id, role });
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var invitation = await actor.InviteAsync(campaignId, user, role);
+        var response = await user.Client.PostAsync($"/api/v1/invitations/{invitation.Id}/accept", null);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         return (await response.Content.ReadFromJsonAsync<MemberDto>())!;
+    }
+
+    /// <summary>Invites <paramref name="user"/> to the campaign through the API as <paramref name="actor"/>.</summary>
+    public static async Task<CampaignInvitationDto> InviteAsync(this SignedInUser actor, Guid campaignId, SignedInUser user, string role)
+    {
+        var response = await actor.Client.PostAsJsonAsync($"/api/v1/campaigns/{campaignId}/members", new { userId = user.Id, role });
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        return (await response.Content.ReadFromJsonAsync<CampaignInvitationDto>())!;
     }
 
     /// <summary>New campaign with an Owner, a DM, a Player and an authenticated outsider.</summary>

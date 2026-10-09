@@ -7,6 +7,7 @@ import 'attacks_section.dart';
 import 'class_panels.dart';
 import 'resources_section.dart';
 import 'rest_section.dart';
+import 'spells_section.dart';
 import 'vitals_section.dart';
 
 /// The combat screen of a character: one scrolling page with big controls for
@@ -16,8 +17,8 @@ import 'vitals_section.dart';
 ///
 /// [canEdit] false (a player looking at someone else's character) disables
 /// every control that writes. [isDm] (a DM or the Owner) rests the character
-/// directly; anyone else asks the DM for the rest. [header] goes on top (name
-/// and view switch). At 0 hit points a dark vignette closes in on the edges.
+/// directly; anyone else asks the DM for the rest. [header], when given, goes
+/// on top. At 0 hit points a dark vignette closes in on the edges.
 class CombatView extends ConsumerWidget {
   const CombatView({
     super.key,
@@ -47,9 +48,10 @@ class CombatView extends ConsumerWidget {
           if (c.hitPointsCurrent == 0) DeathSavesCard(character: c, canEdit: canEdit),
           ConditionsCard(character: c, canEdit: canEdit),
           AttacksSection(character: c),
+          SpellsSection(character: c, canEdit: canEdit),
           SpellSlotsSection(character: c, canEdit: canEdit),
-          ResourcesSection(character: c, canEdit: canEdit),
-          ClassPanelsSection(character: c, canEdit: canEdit),
+          ResourcesSection(character: c, canEdit: canEdit, isDm: isDm),
+          ClassPanelsSection(character: c, canEdit: canEdit, isDm: isDm),
           ConsumablesSection(character: c, canEdit: canEdit),
           RestSection(character: c, canEdit: canEdit, isDm: isDm),
         ],

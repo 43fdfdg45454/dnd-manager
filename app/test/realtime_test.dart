@@ -312,6 +312,34 @@ void main() {
       expect(characters.reads.length, greaterThan(reads));
     });
 
+    testWidgets('changeRequest.resolved avisa al solicitante y lleva a la hoja', (tester) async {
+      final (:hub, :characters, stash: _, :router) = await _pump(tester);
+      characters.requests.add(
+        makeChangeRequest(
+          id: 'cr9',
+          requestedByUserId: 'u1',
+          status: 'Rejected',
+          type: 'EditSheet',
+          comment: 'Demasiado',
+        ),
+      );
+
+      hub.emitJson({
+        'type': 'changeRequest.resolved',
+        'campaignId': 'c1',
+        'characterId': 'ch1',
+        'entityId': 'cr9',
+      });
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('realtime-notice-request-resolved')), findsOneWidget);
+      expect(find.text('El DM rechazó tu solicitud (edición de hoja) de Thorin: Demasiado'), findsOneWidget);
+
+      await tester.tap(find.text('Ver'));
+      await tester.pumpAndSettle();
+      expect(router.state.uri.path, '/characters/ch1');
+    });
+
     testWidgets('el DM no recibe avisos de sus propias acciones', (tester) async {
       final (:hub, characters: _, stash: _, router: _) = await _pump(
         tester,

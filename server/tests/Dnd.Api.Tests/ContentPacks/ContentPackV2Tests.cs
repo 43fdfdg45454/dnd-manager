@@ -117,6 +117,117 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
         Assert.Contains(v1, e => e.StartsWith("optionSets:", StringComparison.Ordinal) && e.Contains("formatVersion", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task Race_proficiency_and_spellcasting_prerequisites_explain_what_the_character_lacks()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        var pack = new
+        {
+            formatVersion = 2,
+            id = "requisitos-ejemplo",
+            name = "Requisitos de Ejemplo",
+            version = "1.0.0",
+            optionSets = new object[]
+            {
+                new
+                {
+                    setId = "feats",
+                    options = new object[]
+                    {
+                        new { index = "requisitos-ejemplo-elfica", name = "Gracia élfica", description = new[] { "Texto de ejemplo." }, prerequisites = new { races = new[] { "elf", "half-elf" } } },
+                        new { index = "requisitos-ejemplo-acorazada", name = "Coraza firme", description = new[] { "Texto de ejemplo." }, prerequisites = new { proficiency = new { armor = new[] { "heavy" } } } },
+                        new { index = "requisitos-ejemplo-arcana", name = "Chispa arcana", description = new[] { "Texto de ejemplo." }, prerequisites = new { spellcasting = true } },
+                        new { index = "requisitos-ejemplo-esgrima", name = "Esgrima", description = new[] { "Texto de ejemplo." }, prerequisites = new { proficiency = new { weapon = new[] { "martial" } } }, abilityIncrease = new { amount = 1, from = new[] { "str", "dex" } } },
+                    },
+                },
+            },
+        };
+        var result = await ImportAsync(admin, JsonSerializer.Serialize(pack));
+        Assert.Equal(4, result.Counts["options"]);
+
+        var s = await factory.CreateCampaignScenarioAsync();
+        var hero = await ActiveFighterAsync(s, level: 3);
+        var proficiencies = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/sheet", new
+        {
+            classes = new[] { new { classIndex = "fighter", subclassIndex = "champion", level = 3 } },
+            proficiencies = new[] { new { type = "Armor", key = "all-armor", expertise = false }, new { type = "Weapon", key = "martial-weapons", expertise = false } },
+        });
+        Assert.Equal(HttpStatusCode.OK, proficiencies.StatusCode);
+        var asi = Assert.Single((await PlanAsync(s.Player, hero.Id)).Choices, c => c.Kind == "AsiOrFeat");
+
+        var elvish = Assert.Single(asi.Options, o => o.Index == "requisitos-ejemplo-elfica");
+        Assert.False(elvish.Eligible);
+        Assert.Equal("Requiere ser Elf o Half-Elf; no tienes raza.", elvish.Reason);
+        Assert.Equal("Ser Elf o Half-Elf", elvish.PrerequisitesText);
+        // A fighter has "all-armor", which covers heavy armor.
+        var armored = Assert.Single(asi.Options, o => o.Index == "requisitos-ejemplo-acorazada");
+        Assert.True(armored.Eligible);
+        Assert.Equal("Competencia con armadura pesada", armored.PrerequisitesText);
+        var arcane = Assert.Single(asi.Options, o => o.Index == "requisitos-ejemplo-arcana");
+        Assert.False(arcane.Eligible);
+        Assert.Equal("Requiere poder lanzar al menos un conjuro; no lanzas conjuros.", arcane.Reason);
+        Assert.Equal("Poder lanzar al menos un conjuro", arcane.PrerequisitesText);
+        var fencing = Assert.Single(asi.Options, o => o.Index == "requisitos-ejemplo-esgrima");
+        Assert.True(fencing.Eligible);
+        Assert.Equal(["str", "dex"], fencing.AbilityIncrease!.From);
+
+        // A half-elf that knows a cantrip meets the race and the spellcasting prerequisites.
+        var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/sheet", new
+        {
+            raceIndex = "half-elf",
+            spells = new[] { new { spellIndex = "light", classIndex = "fighter", isPrepared = true } },
+        });
+        Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
+        var again = Assert.Single((await PlanAsync(s.Player, hero.Id)).Choices, c => c.Kind == "AsiOrFeat");
+        Assert.True(again.Options.Single(o => o.Index == "requisitos-ejemplo-elfica").Eligible);
+        Assert.True(again.Options.Single(o => o.Index == "requisitos-ejemplo-arcana").Eligible);
+
+        // A feat with several abilities to choose from raises the chosen one, naming the feat in the breakdown.
+        var missingAbility = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/level-up", new
+        {
+            hitPointsRolled = 6,
+            choices = new object[] { new { key = "asi", selected = new { feat = "requisitos-ejemplo-esgrima" } } },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, missingAbility.StatusCode);
+        var after = await ApplyAsync(s.Player, hero.Id, new
+        {
+            hitPointsRolled = 6,
+            choices = new object[] { new { key = "asi", selected = new { feat = "requisitos-ejemplo-esgrima", ability = "dex" } } },
+        });
+        Assert.Equal((16, 12 + 1), (after.Sheet.Abilities["str"].Score, after.Sheet.Abilities["dex"].Score));
+        Assert.Contains(after.Sheet.Breakdowns["ability.dex"].Parts, p => p is { Source: "feature", Label: "Esgrima (nivel 4)", Value: 1 });
+        Assert.DoesNotContain(after.Sheet.Breakdowns["ability.str"].Parts, p => p.Source == "feature");
+    }
+
+    [Fact]
+    public async Task Unknown_races_and_armor_in_prerequisites_are_reported()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        var pack = new
+        {
+            formatVersion = 2,
+            id = "requisitos-malos",
+            name = "Requisitos malos",
+            version = "1",
+            optionSets = new object[]
+            {
+                new
+                {
+                    setId = "feats",
+                    options = new object[]
+                    {
+                        new { index = "requisitos-malos-x", name = "X", prerequisites = new { races = new[] { "nadie" }, proficiency = new { armor = new[] { "plate" } } } },
+                    },
+                },
+            },
+        };
+
+        var errors = await ImportErrorsAsync(admin, JsonSerializer.Serialize(pack));
+
+        Assert.Contains(errors, e => e.StartsWith("optionSets[0].options[0].prerequisites.races[0]:", StringComparison.Ordinal));
+        Assert.Contains(errors, e => e.StartsWith("optionSets[0].options[0].prerequisites.proficiency.armor[0]:", StringComparison.Ordinal));
+    }
+
     // ---- Helpers ---------------------------------------------------------------------------------------
 
     private static string Example() =>

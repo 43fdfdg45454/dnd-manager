@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/cache/cached_result.dart';
 import '../../../core/network/api_client.dart';
+import 'beast_models.dart';
 import 'models.dart';
 
 /// Catalog endpoints under `/api/v1/catalog`.
@@ -93,6 +94,25 @@ class CatalogRepository {
 
   Future<ItemDetail> itemDetail(String id) =>
       _one('items/${Uri.encodeComponent(id)}', ItemDetail.fromJson);
+
+  /// SRD beasts ordered by challenge rating: [fly]/[swim] false leave out the
+  /// beasts with that speed (wild shape limits), true keep only those.
+  Future<List<BeastSummary>> beasts({double? maxCr, bool? fly, bool? swim, String? search}) async {
+    final text = search?.trim();
+    final result = await _client.getCached(
+      '$_base/beasts',
+      query: {
+        'maxCr': ?maxCr,
+        'fly': ?fly,
+        'swim': ?swim,
+        if (text != null && text.isNotEmpty) 'q': text,
+      },
+      parse: parseList(BeastSummary.fromJson),
+    );
+    return result.data;
+  }
+
+  Future<Beast> beast(String index) => _one('beasts/${Uri.encodeComponent(index)}', Beast.fromJson);
 
   Future<List<Condition>> conditions() => _list('conditions', Condition.fromJson);
 

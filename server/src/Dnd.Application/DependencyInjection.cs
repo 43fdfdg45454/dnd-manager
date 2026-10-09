@@ -54,7 +54,12 @@ public static class DependencyInjection
         services.AddScoped<UpdateCampaignHandler>();
         services.AddScoped<DeleteCampaignHandler>();
         services.AddScoped<ListMembersHandler>();
-        services.AddScoped<AddMemberHandler>();
+        services.AddScoped<InviteMemberHandler>();
+        services.AddScoped<ListCampaignInvitationsHandler>();
+        services.AddScoped<ListMyInvitationsHandler>();
+        services.AddScoped<AcceptInvitationHandler>();
+        services.AddScoped<DeclineInvitationHandler>();
+        services.AddScoped<CancelInvitationHandler>();
         services.AddScoped<ChangeMemberRoleHandler>();
         services.AddScoped<RemoveMemberHandler>();
         services.AddScoped<LeaveCampaignHandler>();
@@ -68,6 +73,8 @@ public static class DependencyInjection
         services.AddScoped<GetRaceHandler>();
         services.AddScoped<SearchSpellsHandler>();
         services.AddScoped<GetSpellHandler>();
+        services.AddScoped<SearchBeastsHandler>();
+        services.AddScoped<GetBeastHandler>();
         services.AddScoped<SearchItemsHandler>();
         services.AddScoped<GetItemHandler>();
         services.AddScoped<ListConditionsHandler>();
@@ -153,6 +160,7 @@ public static class DependencyInjection
         services.AddScoped<UpdateShopHandler>();
         services.AddScoped<DeleteShopHandler>();
         services.AddScoped<AddShopItemHandler>();
+        services.AddScoped<AddShopItemsBulkHandler>();
         services.AddScoped<UpdateShopItemHandler>();
         services.AddScoped<DeleteShopItemHandler>();
         services.AddScoped<BuyHandler>();

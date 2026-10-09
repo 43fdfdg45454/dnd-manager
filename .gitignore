@@ -35,3 +35,4 @@ app/web/
 .vscode/
 *.swp
 .DS_Store
+.claude/worktrees/

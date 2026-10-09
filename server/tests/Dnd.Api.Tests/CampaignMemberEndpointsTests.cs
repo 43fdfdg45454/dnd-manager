@@ -37,14 +37,14 @@ public class CampaignMemberEndpointsTests(ApiFactory factory) : IClassFixture<Ap
     }
 
     [Theory]
-    [InlineData(Owner, "Player", HttpStatusCode.Created)]
-    [InlineData(Owner, "DM", HttpStatusCode.Created)]
-    [InlineData(Dm, "Player", HttpStatusCode.Created)]
+    [InlineData(Owner, "Player", HttpStatusCode.Accepted)]
+    [InlineData(Owner, "DM", HttpStatusCode.Accepted)]
+    [InlineData(Dm, "Player", HttpStatusCode.Accepted)]
     [InlineData(Dm, "DM", HttpStatusCode.Forbidden)]
     [InlineData(Player, "Player", HttpStatusCode.Forbidden)]
     [InlineData(Player, "DM", HttpStatusCode.Forbidden)]
     [InlineData(Outsider, "Player", HttpStatusCode.NotFound)]
-    public async Task Add_member_by_role(string actor, string role, HttpStatusCode expected)
+    public async Task Invite_member_by_role(string actor, string role, HttpStatusCode expected)
     {
         var scenario = await factory.CreateCampaignScenarioAsync();
         var newcomer = await factory.CreateSignedInUserAsync("Newcomer");
@@ -52,13 +52,24 @@ public class CampaignMemberEndpointsTests(ApiFactory factory) : IClassFixture<Ap
         var response = await scenario.As(actor).Client.PostAsJsonAsync($"{scenario.Url}/members", new { userId = newcomer.Id, role });
 
         Assert.Equal(expected, response.StatusCode);
-        if (expected == HttpStatusCode.Created)
+        if (expected == HttpStatusCode.Accepted)
         {
-            var member = (await response.Content.ReadFromJsonAsync<MemberDto>())!;
-            Assert.Equal((newcomer.Id, "Newcomer", newcomer.Email, role), (member.UserId, member.DisplayName, member.Email, member.Role));
+            var invitation = (await response.Content.ReadFromJsonAsync<CampaignInvitationDto>())!;
+            Assert.Equal((newcomer.Id, "Newcomer", newcomer.Email, role), (invitation.UserId, invitation.DisplayName, invitation.Email, invitation.Role));
+
+            // Invited, not yet a member: the campaign stays hidden until they accept.
+            Assert.Equal(HttpStatusCode.NotFound, (await newcomer.Client.GetAsync(scenario.Url)).StatusCode);
+            var mine = (await newcomer.Client.GetFromJsonAsync<List<MyInvitationDto>>("/api/v1/me/invitations"))!;
+            Assert.Equal([invitation.Id], mine.Select(i => i.Id));
+
+            var accept = await newcomer.Client.PostAsync($"/api/v1/invitations/{invitation.Id}/accept", null);
+            Assert.Equal(HttpStatusCode.OK, accept.StatusCode);
+            var member = (await accept.Content.ReadFromJsonAsync<MemberDto>())!;
+            Assert.Equal((newcomer.Id, role), (member.UserId, member.Role));
 
             var campaign = (await newcomer.Client.GetFromJsonAsync<CampaignDto>(scenario.Url))!;
             Assert.Equal(role, campaign.MyRole);
+            Assert.Empty((await newcomer.Client.GetFromJsonAsync<List<MyInvitationDto>>("/api/v1/me/invitations"))!);
         }
         else
         {
@@ -398,6 +409,38 @@ public class CampaignMemberEndpointsTests(ApiFactory factory) : IClassFixture<Ap
         var asPlayer = await scenario.Player.Client.PostAsJsonAsync($"{scenario.Url}/members", new { userId = newcomer.Id, role = "Player" });
 
         Assert.Equal(HttpStatusCode.Forbidden, asDm.StatusCode);
-        Assert.Equal(HttpStatusCode.Created, asPlayer.StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, asPlayer.StatusCode);
+    }
+
+    [Fact]
+    public async Task Invitations_can_be_declined_cancelled_and_are_not_duplicated()
+    {
+        var scenario = await factory.CreateCampaignScenarioAsync();
+        var newcomer = await factory.CreateSignedInUserAsync("Newcomer");
+
+        var invitation = await scenario.Owner.InviteAsync(scenario.CampaignId, newcomer, "Player");
+        var again = await scenario.Owner.Client.PostAsJsonAsync($"{scenario.Url}/members", new { userId = newcomer.Id, role = "Player" });
+        Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
+
+        // DMs see the pending invitations; players do not.
+        var pending = (await scenario.Dm.Client.GetFromJsonAsync<List<CampaignInvitationDto>>($"{scenario.Url}/invitations"))!;
+        Assert.Equal([invitation.Id], pending.Select(i => i.Id));
+        Assert.Equal("Owner User", pending[0].InvitedByDisplayName);
+        Assert.Equal(HttpStatusCode.Forbidden, (await scenario.Player.Client.GetAsync($"{scenario.Url}/invitations")).StatusCode);
+
+        // Only the invited user can act on it.
+        Assert.Equal(HttpStatusCode.NotFound, (await scenario.Player.Client.PostAsync($"/api/v1/invitations/{invitation.Id}/accept", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await scenario.Player.Client.PostAsync($"/api/v1/invitations/{invitation.Id}/decline", null)).StatusCode);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await newcomer.Client.PostAsync($"/api/v1/invitations/{invitation.Id}/decline", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await newcomer.Client.PostAsync($"/api/v1/invitations/{invitation.Id}/accept", null)).StatusCode);
+        Assert.Empty((await scenario.Dm.Client.GetFromJsonAsync<List<CampaignInvitationDto>>($"{scenario.Url}/invitations"))!);
+
+        // A DM cancels a new invitation; the user no longer sees it.
+        var second = await scenario.Dm.InviteAsync(scenario.CampaignId, newcomer, "Player");
+        Assert.Equal(HttpStatusCode.Forbidden, (await scenario.Player.Client.DeleteAsync($"{scenario.Url}/invitations/{second.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await scenario.Dm.Client.DeleteAsync($"{scenario.Url}/invitations/{second.Id}")).StatusCode);
+        Assert.Empty((await newcomer.Client.GetFromJsonAsync<List<MyInvitationDto>>("/api/v1/me/invitations"))!);
+        Assert.Equal(HttpStatusCode.NotFound, (await newcomer.Client.GetAsync(scenario.Url)).StatusCode);
     }
 }

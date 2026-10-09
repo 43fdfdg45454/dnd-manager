@@ -98,4 +98,51 @@ internal sealed class CampaignRepository(AppDbContext db) : ICampaignRepository
     public void Remove(Campaign campaign) => db.Campaigns.Remove(campaign);
 
     public void AddOwnershipTransfer(OwnershipTransfer transfer) => db.OwnershipTransfers.Add(transfer);
+
+    public Task<CampaignInvitation?> GetInvitationAsync(Guid id, CancellationToken cancellationToken = default) =>
+        db.CampaignInvitations.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+    public Task<CampaignInvitation?> FindInvitationAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default) =>
+        db.CampaignInvitations.AsNoTracking().FirstOrDefaultAsync(x => x.CampaignId == campaignId && x.UserId == userId, cancellationToken);
+
+    public async Task<IReadOnlyList<CampaignInvitationDto>> ListInvitationsForCampaignAsync(Guid campaignId, CancellationToken cancellationToken = default)
+    {
+        var rows = await (
+                from invitation in db.CampaignInvitations
+                where invitation.CampaignId == campaignId
+                join user in db.Users on invitation.UserId equals user.Id
+                join inviter in db.Users on invitation.InvitedByUserId equals inviter.Id
+                select new { invitation.Id, UserId = user.Id, user.DisplayName, user.Email, invitation.Role, Inviter = inviter.DisplayName, invitation.CreatedAt })
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        // Sorted in memory: SQLite cannot order by DateTimeOffset.
+        return rows
+            .OrderBy(r => r.CreatedAt)
+            .ThenBy(r => r.Id)
+            .Select(r => new CampaignInvitationDto(r.Id, r.UserId, r.DisplayName, r.Email, r.Role.ToString(), r.Inviter, r.CreatedAt))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<MyInvitationDto>> ListInvitationsForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var rows = await (
+                from invitation in db.CampaignInvitations
+                where invitation.UserId == userId
+                join campaign in db.Campaigns on invitation.CampaignId equals campaign.Id
+                join inviter in db.Users on invitation.InvitedByUserId equals inviter.Id
+                select new { invitation.Id, invitation.CampaignId, campaign.Name, invitation.Role, Inviter = inviter.DisplayName, invitation.CreatedAt })
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .OrderByDescending(r => r.CreatedAt)
+            .ThenBy(r => r.Id)
+            .Select(r => new MyInvitationDto(r.Id, r.CampaignId, r.Name, r.Role.ToString(), r.Inviter, r.CreatedAt))
+            .ToList();
+    }
+
+    public void AddInvitation(CampaignInvitation invitation) => db.CampaignInvitations.Add(invitation);
+
+    public void RemoveInvitation(CampaignInvitation invitation) => db.CampaignInvitations.Remove(invitation);
 }

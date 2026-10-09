@@ -13,10 +13,11 @@ import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
 import 'package:dnd_companion/features/catalog/data/models.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:dnd_companion/features/characters/data/models.dart';
-import 'package:dnd_companion/features/characters/data/view_mode_controller.dart';
+import 'package:dnd_companion/features/characters/domain/spell_combat.dart';
 import 'package:dnd_companion/features/characters/ui/character_page.dart';
 import 'package:dnd_companion/features/characters/ui/combat/class_panels.dart';
 import 'package:dnd_companion/features/characters/ui/combat/combat_support.dart' show Pip;
+import 'package:dnd_companion/features/characters/ui/combat/panels/critical_damage_roll.dart';
 import 'package:dnd_companion/features/dice/data/dice_controller.dart';
 import 'package:dnd_companion/features/session/data/models.dart' show PartyAdjustment;
 import 'package:dnd_companion/features/session/data/party_repository.dart';
@@ -48,7 +49,7 @@ Future<void> _pump(
   String location = '/characters/ch1',
 }) async {
   if (prefs == null) {
-    SharedPreferences.setMockInitialValues({if (startInCombat) 'character.ch1.view': 'combat'});
+    SharedPreferences.setMockInitialValues({if (startInCombat) 'character.ch1.tab': 'combat'});
     prefs = await SharedPreferences.getInstance();
   }
   final router = GoRouter(
@@ -419,39 +420,45 @@ void main() {
     });
   });
 
-  group('conmutador Detallado / Combate', () {
-    testWidgets('empieza en Detallado, cambia a Combate y lo recuerda por personaje', (
+  group('pestaña Combate', () {
+    testWidgets('Combate es la primera pestaña y la última elegida se recuerda por personaje', (
       tester,
     ) async {
       final repo = _repo();
-      SharedPreferences.setMockInitialValues({'character.otro.view': 'combat'});
+      SharedPreferences.setMockInitialValues({'character.otro.tab': 'combat'});
       final prefs = await SharedPreferences.getInstance();
       await _pump(tester, characters: repo, prefs: prefs);
-      // Solo cuenta la clave del propio personaje.
-      expect(find.byKey(const Key('tab-summary')), findsOneWidget);
+      // Solo cuenta la clave del propio personaje: abre en Resumen.
+      final tabs = tester.widget<TabBar>(find.byKey(const Key('character-tabs')));
+      expect((tabs.tabs.first as Tab).text, 'Combate');
+      expect(tabs.tabs, hasLength(7));
       expect(find.byKey(const Key('combat-view')), findsNothing);
-      final segmented = tester.widget<SegmentedButton<CharacterViewMode>>(
-        find.byKey(const Key('view-mode')),
-      );
-      expect(segmented.segments.every((s) => s.enabled), isTrue);
+      expect(find.byKey(const Key('view-mode')), findsNothing);
 
-      Finder segment(String label) =>
-          find.descendant(of: find.byKey(const Key('view-mode')), matching: find.text(label));
-      await tester.tap(segment('Combate'));
-      await tester.pumpAndSettle();
+      await _tap(tester, 'tab-combat');
       expect(find.byKey(const Key('combat-view')), findsOneWidget);
-      expect(find.byKey(const Key('tab-summary')), findsNothing);
-      expect(prefs.getString('character.ch1.view'), 'combat');
+      // La cabecera con sus acciones y las pestañas siguen a la vista.
+      expect(find.byKey(const Key('character-status')), findsOneWidget);
+      expect(find.byKey(const Key('tab-summary')), findsOneWidget);
+      expect(prefs.getString('character.ch1.tab'), 'combat');
 
       // Una pantalla nueva con las mismas preferencias abre directamente en Combate.
       await tester.pumpWidget(const SizedBox());
       await _pump(tester, characters: repo, prefs: prefs);
       expect(find.byKey(const Key('combat-view')), findsOneWidget);
 
-      await tester.tap(segment('Detallado'));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('tab-summary')), findsOneWidget);
-      expect(prefs.getString('character.ch1.view'), 'detailed');
+      await _tap(tester, 'tab-spells');
+      expect(find.byKey(const Key('combat-view')), findsNothing);
+      expect(prefs.getString('character.ch1.tab'), 'spells');
+    });
+
+    testWidgets('un personaje que quedó en el antiguo modo Combate abre en esa pestaña', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({'character.ch1.view': 'combat'});
+      final prefs = await SharedPreferences.getInstance();
+      await _pump(tester, characters: _repo(), prefs: prefs);
+      expect(find.byKey(const Key('combat-view')), findsOneWidget);
     });
   });
 
@@ -943,6 +950,222 @@ void main() {
     });
   });
 
+  group('habilidades en combate', () {
+    testWidgets('las tiradas rápidas usan el valor de la hoja; pulsación larga da ventaja', (
+      tester,
+    ) async {
+      await _pump(tester, characters: _repo(), face: 14);
+      // Solo las habilidades de la lista rápida que tiene la hoja, en su orden.
+      expect(find.text('Sigilo +2'), findsOneWidget);
+      expect(find.text('Atletismo +5'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.byKey(const Key('quick-skill-stealth'))).dx,
+        lessThan(tester.getTopLeft(find.byKey(const Key('quick-skill-athletics'))).dx),
+      );
+
+      await _tap(tester, 'quick-skill-athletics');
+      expect(find.text('1d20+5'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '19');
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.byKey(const Key('quick-skill-stealth')));
+      await tester.pumpAndSettle();
+      await _tap(tester, 'mode-disadvantage');
+      expect(find.text('dis+2'), findsOneWidget);
+    });
+
+    testWidgets('"Todas las habilidades" lista la hoja entera y tira', (tester) async {
+      await _pump(tester, characters: _repo(), face: 10);
+      await _tap(tester, 'all-skills');
+      expect(find.byKey(const Key('all-skills-sheet')), findsOneWidget);
+      expect(find.byKey(const Key('all-skills-athletics')), findsOneWidget);
+      expect(find.byKey(const Key('all-skills-stealth')), findsOneWidget);
+      await _tap(tester, 'all-skills-stealth');
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '12');
+    });
+  });
+
+  group('conjuros en combate', () {
+    SpellDetail spell(Map<String, dynamic> json) => SpellDetail.fromJson(json);
+
+    final fireBolt = spell({
+      'index': 'fire-bolt',
+      'name': 'Fire Bolt',
+      'level': 0,
+      'attackType': 'ranged',
+      'damage': {
+        'dice': '1d10',
+        'type': 'Fire',
+        'atCharacterLevel': {'1': '1d10', '5': '2d10', '11': '3d10', '17': '4d10'},
+      },
+    });
+    final fireball = spell({
+      'index': 'fireball',
+      'name': 'Fireball',
+      'level': 3,
+      'dcAbility': 'dex',
+      'damage': {
+        'dice': '8d6',
+        'type': 'Fire',
+        'atSlotLevel': {for (var l = 3; l <= 9; l++) '$l': '${l + 5}d6'},
+      },
+    });
+    final cureWounds = spell({
+      'index': 'cure-wounds',
+      'name': 'Cure Wounds',
+      'level': 1,
+      'healAtSlotLevel': {for (var l = 1; l <= 9; l++) '$l': '${l}d8 + MOD'},
+    });
+    final shield = spell({'index': 'shield', 'name': 'Shield', 'level': 1});
+    final burningHands = spell({
+      'index': 'burning-hands',
+      'name': 'Burning Hands',
+      'level': 1,
+      'dcAbility': 'dex',
+      'damage': {
+        'atSlotLevel': {'1': '3d6', '2': '4d6'},
+      },
+    });
+
+    FakeCharactersRepository caster() {
+      final json = makeCharacterJson(
+        status: 'Active',
+        classes: [
+          {'classIndex': 'wizard', 'className': 'Wizard', 'level': 4},
+          {'classIndex': 'cleric', 'className': 'Cleric', 'level': 1},
+        ],
+        spells: [
+          {'spellIndex': 'fire-bolt', 'classIndex': 'wizard'},
+          {'spellIndex': 'fireball', 'classIndex': 'wizard', 'isPrepared': true},
+          {'spellIndex': 'shield', 'classIndex': 'wizard', 'isPrepared': true},
+          {'spellIndex': 'burning-hands', 'classIndex': 'wizard'},
+          {'spellIndex': 'cure-wounds', 'classIndex': 'cleric', 'alwaysPrepared': true},
+        ],
+        combat: makeCombatJson(
+          spellSlots: [
+            {'level': 1, 'max': 4, 'used': 0},
+            {'level': 3, 'max': 2, 'used': 0},
+            {'level': 4, 'max': 1, 'used': 0},
+          ],
+        ),
+      );
+      (json['sheet'] as Map<String, dynamic>)['spellcasting'] = [
+        {
+          'classIndex': 'wizard',
+          'ability': 'int',
+          'saveDc': 15,
+          'attackBonus': 7,
+          'preparedMax': 6,
+        },
+        {
+          'classIndex': 'cleric',
+          'ability': 'wis',
+          'saveDc': 11,
+          'attackBonus': 3,
+          'preparedMax': 2,
+        },
+      ];
+      return FakeCharactersRepository(characters: [json]);
+    }
+
+    FakeCatalogRepository catalog() => FakeCatalogRepository(
+      spellDetails: {
+        for (final s in [fireBolt, fireball, cureWounds, shield, burningHands]) s.index: s,
+      },
+    );
+
+    test('SpellDetail conserva el escalado de daño y de curación', () {
+      expect(fireBolt.damageAtCharacterLevel[5], '2d10');
+      expect(fireBolt.damageType, 'Fire');
+      expect(fireball.damageAtSlotLevel[9], '14d6');
+      expect(cureWounds.healAtSlotLevel[2], '2d8 + MOD');
+      expect(shield.damageAtSlotLevel, isEmpty);
+    });
+
+    test('escalado por nivel de lanzamiento y de personaje', () {
+      expect(spellDamageExpression(fireBolt, castLevel: 0, characterLevel: 4), '1d10');
+      expect(spellDamageExpression(fireBolt, castLevel: 0, characterLevel: 11), '3d10');
+      expect(spellDamageExpression(fireball, castLevel: 5, characterLevel: 5), '10d6');
+      expect(
+        spellDamageExpression(fireball, castLevel: 3, characterLevel: 5, critical: true),
+        '16d6',
+      );
+      expect(spellHealExpression(cureWounds, castLevel: 3, modifier: 2), '3d8+2');
+      expect(spellHealExpression(cureWounds, castLevel: 1, modifier: -1), '1d8-1');
+      expect(spellHealExpression(cureWounds, castLevel: 1, modifier: 0), '1d8');
+      expect(withModifier('5', 3), '5');
+      expect(isCombatSpell(shield), isFalse);
+      expect(
+        castLevels(3, const [
+          SpellSlot(level: 1, max: 2, used: 0),
+          SpellSlot(level: 4, max: 1, used: 0),
+        ], null),
+        [4],
+      );
+      expect(castLevels(2, const [], const SpellSlot(level: 3, max: 2, used: 0)), [3]);
+      expect(castLevels(2, const [], null), [2]);
+    });
+
+    testWidgets('lista trucos y conjuros preparados con ataque, salvación o curación', (
+      tester,
+    ) async {
+      await _pump(tester, characters: caster(), catalog: catalog());
+      expect(find.byKey(const Key('combat-spells')), findsOneWidget);
+      expect(find.byKey(const Key('combat-spell-fire-bolt')), findsOneWidget);
+      expect(find.byKey(const Key('combat-spell-fireball')), findsOneWidget);
+      expect(find.byKey(const Key('combat-spell-cure-wounds')), findsOneWidget);
+      // Sin tirada ni salvación, o sin preparar en una clase que prepara.
+      expect(find.byKey(const Key('combat-spell-shield')), findsNothing);
+      expect(find.byKey(const Key('combat-spell-burning-hands')), findsNothing);
+
+      String facts(String index) =>
+          tester.widget<Text>(find.byKey(Key('spell-facts-$index'))).data!;
+      expect(facts('fire-bolt'), 'Ataque +7 a distancia · 2d10 fuego');
+      expect(facts('fireball'), 'Salvación de Destreza CD 15 · 8d6 fuego');
+      expect(facts('cure-wounds'), 'Cura 1d8+1');
+    });
+
+    testWidgets('un 20 natural en el ataque marca crítico y duplica los dados', (tester) async {
+      await _pump(tester, characters: caster(), catalog: catalog(), face: 20);
+      await _tap(tester, 'spell-attack-fire-bolt');
+      expect(find.text('1d20+7'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<FilterChip>(find.byKey(const Key('spell-crit-fire-bolt'))).selected,
+        isTrue,
+      );
+      await _tap(tester, 'spell-damage-fire-bolt');
+      expect(find.text('4d10'), findsOneWidget);
+      expect(find.text('Daño: Fire Bolt (crítico)'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '40');
+    });
+
+    testWidgets('el nivel de lanzamiento escala el daño y gasta ese espacio', (tester) async {
+      final repo = caster();
+      await _pump(tester, characters: repo, catalog: catalog(), face: 1);
+      await _tap(tester, 'spell-level-fireball');
+      await _tap(tester, find.text('4').last);
+      await _tap(tester, 'spell-damage-fireball');
+      expect(find.text('9d6'), findsOneWidget);
+      expect(find.text('Daño: Fireball (nivel 4)'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      await _tap(tester, 'spell-spend-fireball');
+      expect(repo.slotSpends, [(level: 4, amount: 1)]);
+    });
+
+    testWidgets('la curación suma el modificador de la característica de su clase', (tester) async {
+      await _pump(tester, characters: caster(), catalog: catalog(), face: 6);
+      await _tap(tester, 'spell-heal-cure-wounds');
+      expect(find.text('Curación: Cure Wounds (nivel 1)'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '7');
+      expect(find.byKey(const Key('spell-crit-cure-wounds')), findsNothing);
+    });
+  });
+
   group('espacios de conjuro', () {
     testWidgets('tocar un nivel gasta un espacio y mantener pulsado lo repone', (tester) async {
       final repo = _repo();
@@ -1021,6 +1244,75 @@ void main() {
       await tester.enterText(find.byKey(const Key('number-field')), '10');
       await _tap(tester, 'number-confirm');
       expect(repo.resourceSpends.last, (id: 'r2', amount: 10));
+    });
+
+    testWidgets('el jugador no recupera a mano recursos automáticos; el DM sí', (tester) async {
+      final resources = [
+        {
+          'id': 'r1',
+          'key': 'ki',
+          'name': 'Ki',
+          'max': 4,
+          'used': 2,
+          'recharge': 'ShortRest',
+          'isAuto': true,
+        },
+        {
+          'id': 'r2',
+          'key': 'lay-on-hands',
+          'name': 'Lay on Hands',
+          'max': 25,
+          'used': 5,
+          'recharge': 'LongRest',
+          'isAuto': true,
+        },
+        {
+          'id': 'r3',
+          'key': 'sorcery-points',
+          'name': 'Sorcery Points',
+          'max': 4,
+          'used': 2,
+          'recharge': 'LongRest',
+          'isAuto': true,
+        },
+        {'id': 'r4', 'name': 'Varita', 'max': 7, 'used': 3, 'recharge': 'Dawn'},
+      ];
+      final repo = _repo(combat: makeCombatJson(resources: resources));
+      await _pump(tester, characters: repo);
+
+      await tester.longPress(find.byKey(const Key('resource-r1-pips')));
+      await tester.pumpAndSettle();
+      final plus = tester.widget<IconButton>(find.byKey(const Key('resource-r2-plus')));
+      expect(plus.onPressed, isNull);
+      expect(repo.resourceRestores, isEmpty);
+      // Los puntos de hechicería y los recursos manuales sí se recuperan.
+      await tester.longPress(find.byKey(const Key('resource-r3-pips')));
+      await tester.pumpAndSettle();
+      await tester.longPress(find.byKey(const Key('resource-r4-pips')));
+      await tester.pumpAndSettle();
+      expect(repo.resourceRestores, [(id: 'r3', amount: 1), (id: 'r4', amount: 1)]);
+    });
+
+    testWidgets('el DM recupera recursos automáticos', (tester) async {
+      final repo = _repo(
+        combat: makeCombatJson(
+          resources: [
+            {
+              'id': 'r1',
+              'key': 'ki',
+              'name': 'Ki',
+              'max': 4,
+              'used': 2,
+              'recharge': 'ShortRest',
+              'isAuto': true,
+            },
+          ],
+        ),
+      );
+      await _pump(tester, characters: repo, role: CampaignRole.dm);
+      await tester.longPress(find.byKey(const Key('resource-r1-pips')));
+      await tester.pumpAndSettle();
+      expect(repo.resourceRestores, [(id: 'r1', amount: 1)]);
     });
 
     testWidgets('"Usar" gasta el consumible del inventario', (tester) async {
@@ -1124,6 +1416,38 @@ void main() {
       await _tap(tester, 'smite-roll');
       expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '15');
       expect(find.text('Castigo divino'), findsWidgets);
+    });
+
+    test('Castigo divino: +1d8 contra no muertos hasta 6d8 y el crítico duplica los dados', () {
+      expect(smiteDamage('2d8'), '2d8');
+      expect(smiteDamage('2d8', againstUndead: true), '3d8');
+      expect(smiteDamage('5d8', againstUndead: true), '6d8');
+      expect(smiteDamage('6d8', againstUndead: true), '6d8');
+      expect(smiteDamage('3d8', critical: true), '6d8');
+      expect(smiteDamage('5d8', againstUndead: true, critical: true), '12d8');
+      expect(criticalDamage('1d6+3', critical: true), '2d6+3');
+      expect(criticalDamage('1d6+3', critical: false), '1d6+3');
+    });
+
+    testWidgets('Castigo divino: las casillas Crítico y no muerto cambian la tirada', (
+      tester,
+    ) async {
+      final repo = _repo(
+        classes: _paladinClasses,
+        combat: makeCombatJson(classPanels: [_paladinPanel()]),
+      );
+      repo.smiteDice = '3d8';
+      await _pump(tester, characters: repo, face: 5);
+      await _tap(tester, 'smite-level-2');
+      await _tap(tester, 'smite-confirm');
+      await _tap(tester, 'smite-undead');
+      expect(find.text('Daño radiante adicional: 4d8'), findsOneWidget);
+      await _tap(tester, 'smite-critical');
+      expect(find.text('Daño radiante adicional: 8d8'), findsOneWidget);
+
+      await _tap(tester, 'smite-roll');
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '40');
+      expect(find.text('Castigo divino (crítico)'), findsOneWidget);
     });
 
     testWidgets('Imposición de manos: "Curarme" usa el deslizador', (tester) async {
@@ -1432,6 +1756,92 @@ void main() {
       await _pump(tester, characters: repo, role: CampaignRole.dm);
       await _tap(tester, 'hp-minus');
       expect(repo.damageCalls, hasLength(1));
+    });
+  });
+
+  group('tipo de tirada (RollKind)', () {
+    testWidgets('un 1 en la iniciativa no es pifia y muestra el d20 natural', (tester) async {
+      await _pump(tester, characters: _repo(), face: 1);
+      await _tap(tester, 'roll-initiative');
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '3');
+      expect(find.text('d20 natural: 1'), findsOneWidget);
+      expect(find.byKey(const Key('dice-fumble')), findsNothing);
+      expect(find.byKey(const Key('dice-critical')), findsNothing);
+    });
+
+    testWidgets('un 1 en un ataque sí es pifia', (tester) async {
+      await _pump(tester, characters: _repo(), face: 1);
+      await _tap(tester, 'attack-roll-0');
+      expect(find.byKey(const Key('dice-fumble')), findsOneWidget);
+      expect(find.text('d20 natural: 1'), findsOneWidget);
+    });
+
+    testWidgets('"Tirar" en las salvaciones de muerte aplica un éxito con 10 o más', (
+      tester,
+    ) async {
+      final down = _repo(hp: 0, temp: 0);
+      await _pump(tester, characters: down, face: 12);
+      await _tap(tester, 'roll-death-save');
+      expect(down.combatPatches.last.deathSaveSuccesses, 1);
+      expect(down.combatPatches.last.deathSaveFailures, 0);
+      expect(down.combatPatches.last.hitPointsCurrent, isNull);
+      expect(find.byKey(const Key('dice-death-save-revive')), findsNothing);
+    });
+
+    testWidgets('un 1 natural en la salvación de muerte son dos fallos', (tester) async {
+      final down = _repo(hp: 0, temp: 0);
+      await _pump(tester, characters: down, face: 1);
+      await _tap(tester, 'roll-death-save');
+      expect(find.byKey(const Key('dice-death-save-double-failure')), findsOneWidget);
+      expect(find.byKey(const Key('dice-fumble')), findsNothing);
+      expect(down.combatPatches.last.deathSaveFailures, 2);
+    });
+
+    testWidgets('un 20 natural en la salvación de muerte recupera 1 PG', (tester) async {
+      final down = _repo(hp: 0, temp: 0);
+      await _pump(tester, characters: down, face: 20);
+      await _tap(tester, 'roll-death-save');
+      expect(find.byKey(const Key('dice-death-save-revive')), findsOneWidget);
+      expect(down.combatPatches.last.hitPointsCurrent, 1);
+      expect(down.combatPatches.last.deathSaveSuccesses, 0);
+      expect(down.combatPatches.last.deathSaveFailures, 0);
+    });
+
+    FakeCharactersRepository concentrating(int dc) => FakeCharactersRepository(
+      characters: [
+        makeCharacterJson(
+          status: 'Active',
+          temporaryHitPoints: 0,
+          combat: makeCombatJson(),
+          concentratingOnSpellIndex: 'bless',
+        ),
+      ],
+    )..nextConcentrationDc = dc;
+
+    testWidgets('"Tirar salvación" de concentración la supera con d20 + CON contra la CD', (
+      tester,
+    ) async {
+      final repo = concentrating(12);
+      await _pump(tester, characters: repo, face: 8);
+      await _tap(tester, 'hp-minus');
+      await _tap(tester, 'concentration-save-roll');
+      // 8 + 4 (salvación de CON) = 12 contra CD 12.
+      expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '12');
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(repo.concentrationCalls, isEmpty);
+      expect(find.text('12 contra CD 12: mantienes la concentración en Bless.'), findsOneWidget);
+    });
+
+    testWidgets('"Tirar salvación" de concentración la pierde por debajo de la CD', (tester) async {
+      final repo = concentrating(12);
+      await _pump(tester, characters: repo, face: 7);
+      await _tap(tester, 'hp-minus');
+      await _tap(tester, 'concentration-save-roll');
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(repo.concentrationCalls, [null]);
+      expect(find.byKey(const Key('concentration-chip')), findsNothing);
     });
   });
 }

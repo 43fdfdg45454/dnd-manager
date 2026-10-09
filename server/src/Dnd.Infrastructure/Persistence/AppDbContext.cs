@@ -30,6 +30,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<OwnershipTransfer> OwnershipTransfers => Set<OwnershipTransfer>();
 
+    public DbSet<CampaignInvitation> CampaignInvitations => Set<CampaignInvitation>();
+
     public DbSet<ClassDefinition> CatalogClasses => Set<ClassDefinition>();
 
     public DbSet<ClassLevel> CatalogClassLevels => Set<ClassLevel>();

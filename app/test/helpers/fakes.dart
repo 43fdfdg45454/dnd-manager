@@ -410,20 +410,69 @@ class FakeCampaignsRepository implements CampaignsRepository {
     return _byId(id).members;
   }
 
+  /// Pending invitations per campaign id; [myInvitations] are the current user's.
+  final Map<String, List<CampaignInvitation>> invitationsByCampaign = {};
+  final List<MyInvitation> pendingInvitations = [];
+
   @override
-  Future<Member> addMember(String id, {required String userId, required CampaignRole role}) async {
+  Future<CampaignInvitation> invite(String id, {required String userId, required CampaignRole role}) async {
     _fail();
     final campaign = _byId(id);
     if (campaign.members.any((m) => m.userId == userId)) throw dioError(409);
+    final list = invitationsByCampaign.putIfAbsent(id, () => []);
+    if (list.any((i) => i.userId == userId)) throw dioError(409);
     final user = directory.firstWhere((u) => u.id == userId);
-    final member = makeMember(
+    final invitation = CampaignInvitation(
+      id: 'inv-${user.id}',
       userId: user.id,
       displayName: user.displayName,
       email: user.email,
       role: role,
+      invitedByDisplayName: 'Yo',
+      createdAt: DateTime(2026, 1, 1),
     );
-    campaigns[_index(id)] = campaign.copyWith(members: [...campaign.members, member]);
+    list.add(invitation);
+    return invitation;
+  }
+
+  @override
+  Future<List<CampaignInvitation>> invitations(String id) async {
+    _fail();
+    return [...?invitationsByCampaign[id]];
+  }
+
+  @override
+  Future<void> cancelInvitation(String id, String invitationId) async {
+    _fail();
+    invitationsByCampaign[id]?.removeWhere((i) => i.id == invitationId);
+  }
+
+  @override
+  Future<List<MyInvitation>> myInvitations() async {
+    _fail();
+    return [...pendingInvitations];
+  }
+
+  @override
+  Future<Member> acceptInvitation(String invitationId) async {
+    _fail();
+    final index = pendingInvitations.indexWhere((i) => i.id == invitationId);
+    if (index < 0) throw dioError(404);
+    final invitation = pendingInvitations.removeAt(index);
+    final member = makeMember(userId: currentUserId, role: invitation.role);
+    final campaignIndex = _index(invitation.campaignId);
+    if (campaignIndex >= 0) {
+      final campaign = campaigns[campaignIndex];
+      campaigns[campaignIndex] = campaign.copyWith(members: [...campaign.members, member]);
+    }
     return member;
+  }
+
+  @override
+  Future<void> declineInvitation(String invitationId) async {
+    _fail();
+    if (!pendingInvitations.any((i) => i.id == invitationId)) throw dioError(404);
+    pendingInvitations.removeWhere((i) => i.id == invitationId);
   }
 
   @override

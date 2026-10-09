@@ -48,7 +48,8 @@ String? describeSelection(LevelUpState state, LevelUpChoice choice) {
   ].join(' · ');
 }
 
-/// Last page: a summary per page with "Editar" to go back to it, and any
+/// Last page: a summary per page with "Editar" to go back to it, the features
+/// gained at the new level, a note for classes that prepare spells and any
 /// error of the submission. "Confirmar" lives in the bottom bar.
 class LevelUpReviewStep extends ConsumerWidget {
   const LevelUpReviewStep({super.key, required this.characterId});
@@ -62,6 +63,7 @@ class LevelUpReviewStep extends ConsumerWidget {
     final plan = state.plan;
     if (plan == null) return const SizedBox.shrink();
     final steps = state.steps;
+    final theme = Theme.of(context);
     final selectedClass = plan.selectedClass;
     final className = classThemes[plan.classIndex]?.labelEs ?? selectedClass?.name ?? '';
 
@@ -105,6 +107,26 @@ class LevelUpReviewStep extends ConsumerWidget {
             describeSelection(state, choice) ?? (choice.required == 0 ? 'Nada (opcional)' : null),
             error: state.validateChoice(choice),
           ),
+        _NewFeatures(features: plan.newFeaturesFor(state.subclassIndex)),
+        if (plan.spellcasting?.preparesSpells ?? false)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Row(
+              key: const Key('levelup-prepare-note'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.auto_stories, size: 18, color: context.tokens.arcane),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Al confirmar se abre "Preparar conjuros" para revisar los conjuros '
+                    'preparados con tu nuevo nivel.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+          ),
         if (state.submitError != null)
           Padding(
             padding: const EdgeInsets.only(top: 12),
@@ -112,6 +134,46 @@ class LevelUpReviewStep extends ConsumerWidget {
               state.submitError!,
               key: const Key('levelup-submit-error'),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// "Rasgos nuevos": the class and subclass features of the new level, each
+/// with its description collapsed.
+class _NewFeatures extends StatelessWidget {
+  const _NewFeatures({required this.features});
+
+  final List<LevelUpNewFeature> features;
+
+  @override
+  Widget build(BuildContext context) {
+    if (features.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Column(
+      key: const Key('levelup-new-features'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 16, bottom: 4),
+          child: Text('Rasgos nuevos', style: theme.textTheme.titleMedium),
+        ),
+        for (final feature in features)
+          RuneCard(
+            key: Key('levelup-new-feature-${feature.name}'),
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(feature.name, style: theme.textTheme.labelLarge),
+                if (feature.description.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  ExpandableText(feature.description),
+                ],
+              ],
             ),
           ),
       ],

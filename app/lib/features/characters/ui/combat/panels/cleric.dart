@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/icons.dart';
+import '../../../../dice/ui/dice_sheet.dart';
 
 import '../combat_support.dart';
 import 'panel_support.dart';
@@ -18,6 +19,19 @@ String? destroyUndeadCr(int level) => level >= 17
     : level >= 5
     ? '1/2'
     : null;
+
+/// Rolls Divine Intervention (1d100) and says whether the deity answers: it
+/// does on [level] or less.
+Future<void> rollDivineIntervention(BuildContext context, int level) async {
+  final result = await rollAndShow(context, '1d100', label: 'Intervención divina');
+  if (result == null || !context.mounted) return;
+  showCombatMessage(
+    context,
+    result.total <= level
+        ? '${result.total}: tu deidad interviene. No podrás pedirlo de nuevo en 7 días.'
+        : '${result.total}: tu deidad no interviene. Puedes volver a pedirlo tras un descanso largo.',
+  );
+}
 
 /// Cleric: Channel Divinity (resource `channel-divinity`, from level 2), Turn
 /// and Destroy Undead and Divine Intervention.
@@ -66,6 +80,13 @@ class ClericPanel extends ConsumerWidget {
         if (level >= 10)
           CombatCard(
             title: 'Intervención divina',
+            trailing: level >= 20
+                ? null
+                : TextButton(
+                    key: const Key('cleric-divine-intervention-roll'),
+                    onPressed: () => rollDivineIntervention(context, level),
+                    child: const Text('Tirar 1d100'),
+                  ),
             child: Text(
               level >= 20
                   ? 'Tu deidad interviene sin necesidad de tirada. Una vez cada 7 días.'

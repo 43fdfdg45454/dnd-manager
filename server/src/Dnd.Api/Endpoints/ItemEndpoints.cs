@@ -20,7 +20,7 @@ public static class ItemEndpoints
         group.MapGet("", async (Guid campaignId, [AsParameters] SearchCampaignItemsQuery query, ClaimsPrincipal user, SearchCampaignItemsHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), campaignId, query, ct)))
             .WithName("SearchCampaignItems")
-            .WithSummary("Objetos usables en la campaña (SRD y homebrew) paginados, con búsqueda, categoría, rareza y origen (source=all|srd|homebrew).")
+            .WithSummary("Objetos usables en la campaña (SRD y homebrew) paginados, con búsqueda, categorías (separadas por comas), subcategoría (prefijo), índices, rareza y origen (source=all|srd|homebrew).")
             .ProducesValidationProblem();
 
         group.MapGet("/{templateId:guid}", async (Guid campaignId, Guid templateId, ClaimsPrincipal user, GetCampaignItemHandler handler, CancellationToken ct) =>

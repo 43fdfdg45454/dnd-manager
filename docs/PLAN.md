@@ -127,12 +127,13 @@ indicado (`Agent` con `model: opus | sonnet | haiku`), dándoles el contrato esc
 
 ## Estado
 
-Fases 0 a 16 implementadas y en `master`. Verificado en este entorno: servidor compila sin avisos
-y pasa 799 tests (SQLite en memoria); cliente sin incidencias de análisis y 648 tests. CI publica
-en cada push a `master` la imagen `ghcr.io/<owner>/dnd-companion-api:latest` y una release con el
-APK firmado. **No verificado aquí** (sin PostgreSQL ni Android SDK): migraciones contra PostgreSQL
-real, aspecto de las fuentes variables y los SVG en dispositivo, SignalR a través del reverse
-proxy, envío SMTP real. Primeros pasos recomendados: `docker compose pull && up -d`, abrir
+Fases 0 a 24 implementadas y en `master` (cada una con su contrato en `docs/specs/`). Verificado en
+este entorno: servidor compila sin avisos y pasa sus tests (SQLite en memoria); cliente sin
+incidencias de análisis y con sus tests en verde. CI publica en cada push a `master` la imagen
+`ghcr.io/<owner>/dnd-companion-api:latest` y una release con el APK firmado. **No verificado aquí**
+(sin PostgreSQL ni Android SDK): migraciones contra PostgreSQL real, aspecto de las fuentes variables
+y los SVG en dispositivo, SignalR a través del reverse proxy, envío SMTP real, apertura de documentos
+con aplicaciones externas. Primeros pasos recomendados: `docker compose pull && up -d`, abrir
 `/admin` para crear el administrador, instalar el APK y hacer una partida de prueba con un DM y un
 jugador en dos móviles; cualquier desviación se corrige sobre los contratos de `docs/specs/`.
 
@@ -158,6 +159,14 @@ jugador en dos móviles; cualquier desviación se corrige sobre los contratos de
 | 14 | Asistente paso a paso de creación de personaje | Mago nivel 1 completo desde el móvil |
 | 15 | Paquetes de contenido privados (importador + pantalla admin) | Subclase del paquete elegible en un guerrero |
 | 16 | Descansos pedidos y aprobados, nivel concedido por el DM, asistente de subida con todas las elecciones del PHB, conexión clara y diagnóstico, hub endurecido, piel oscura con iconos propios y animaciones | Jugador pide descanso → DM aprueba → PG en vivo; subir de nivel exige completar las elecciones |
+| 17 | Equipo inicial estructurado (kits de clase y trasfondo, elecciones, oro inicial) | El equipo elegido aparece en el inventario al activar |
+| 18 | Preparación de conjuros obligatoria y categorías de conjuro | Un clérigo no entra en juego sin preparar |
+| 19 | Elecciones forzadas que faltaban (tirada de características, raza y trasfondo, concentración, sintonización, tiradas al descansar) | Semielfo pide +1 a dos y dos habilidades |
+| 20 | El DM no tiene personajes propios, solo PNJ que puede ceder | Ceder un PNJ a un jugador lo convierte en su personaje |
+| 21 | Baratija inicial y límite de idiomas | d100 de baratija en el asistente |
+| 22 | Personalidad del trasfondo y tablas de tirada | Oleada de magia salvaje tirable |
+| 23 | Personalización: paletas, fuentes y opciones de apariencia | Seis paletas con contraste AA verificado por test |
+| 24 | Lote de correcciones de juego (dados y críticos, conjuros en combate, invitaciones, peticiones detalladas, tienda con catálogo, bestias para druidas, scroll infinito, documentos externos) y nueva navegación | Ver `docs/specs/fase-24-correcciones-y-navegacion.md` |
 
 ## Verificación end-to-end
 

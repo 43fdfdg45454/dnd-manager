@@ -69,6 +69,57 @@ public class ShopEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(HttpStatusCode.NotFound, (await s.Dm.Client.GetAsync(ItemTestHelpers.ShopUrl(shop.Id))).StatusCode);
     }
 
+    // ---- Bulk add --------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task Bulk_add_uses_the_list_price_unless_a_price_is_given()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var shop = await s.Dm.CreateShopAsync(s.CampaignId, "Armería");
+        var longsword = await s.Dm.SrdItemIdAsync("Longsword");
+        var shield = await s.Dm.SrdItemIdAsync("Shield");
+        var homebrew = await s.Dm.CreateHomebrewAsync(s.CampaignId, new { name = "Daga rúnica", category = "Weapon" });
+
+        var response = await s.Dm.Client.PostAsJsonAsync($"{ItemTestHelpers.ShopUrl(shop.Id)}/items/bulk", new
+        {
+            items = new object[]
+            {
+                new { templateId = longsword },
+                new { templateId = shield, priceCp = 900, stock = 3 },
+                new { templateId = homebrew.Id },
+            },
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var detail = (await response.Content.ReadFromJsonAsync<ShopDto>())!;
+        Assert.Equal(
+            [("Longsword", 1500, (int?)null), ("Shield", 900, 3), ("Daga rúnica", 0, null)],
+            detail.Items.Select(i => (i.Effective.Name, i.PriceCp, i.Stock)));
+        Assert.All(detail.Items, i => Assert.NotNull(i.TemplateId));
+    }
+
+    [Fact]
+    public async Task Bulk_add_is_all_or_nothing_and_only_for_dms()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var shop = await s.Dm.CreateShopAsync(s.CampaignId);
+        var other = await factory.CreateCampaignScenarioAsync();
+        var foreign = await other.Dm.CreateHomebrewAsync(other.CampaignId, new { name = "Ajeno", category = "Weapon" });
+        var longsword = await s.Dm.SrdItemIdAsync("Longsword");
+        var url = $"{ItemTestHelpers.ShopUrl(shop.Id)}/items/bulk";
+
+        var unknown = await s.Dm.Client.PostAsJsonAsync(url, new { items = new[] { new { templateId = longsword }, new { templateId = foreign.Id } } });
+        var empty = await s.Dm.Client.PostAsJsonAsync(url, new { items = Array.Empty<object>() });
+        var badPrice = await s.Dm.Client.PostAsJsonAsync(url, new { items = new[] { new { templateId = longsword, priceCp = -1 } } });
+        var asPlayer = await s.Player.Client.PostAsJsonAsync(url, new { items = new[] { new { templateId = longsword } } });
+
+        Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, empty.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, badPrice.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, asPlayer.StatusCode);
+        Assert.Empty((await s.Dm.Client.GetFromJsonAsync<ShopDto>(ItemTestHelpers.ShopUrl(shop.Id)))!.Items);
+    }
+
     // ---- Purchases -------------------------------------------------------------------------------
 
     [Fact]

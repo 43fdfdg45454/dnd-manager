@@ -65,28 +65,36 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
 
 void main() {
   group('campaignModeRedirect', () {
-    test('la campaña sin modo abre la vista General', () {
+    test('la campaña sin rol conocido abre la vista Campaña', () {
       expect(campaignModeRedirect(null, '/campaigns/c1'), '/campaigns/c1/general');
-      expect(campaignModeRedirect(CampaignRole.player, '/campaigns/c1/'), '/campaigns/c1/general');
-      expect(AppRoutes.campaign('c1'), '/campaigns/c1/general');
+      expect(AppRoutes.campaign('c1'), '/campaigns/c1');
+      expect(AppRoutes.campaignGeneralView('c1'), '/campaigns/c1/general');
+      expect(AppRoutes.campaignCharactersView('c1'), '/campaigns/c1/characters');
+      expect(
+        AppRoutes.campaignSection('c1', CampaignSection.characters),
+        '/campaigns/c1/characters',
+      );
+    });
+
+    test('la campaña abre en la vista del rol', () {
+      expect(campaignModeRedirect(CampaignRole.player, '/campaigns/c1/'), '/campaigns/c1/player');
+      expect(campaignModeRedirect(CampaignRole.dm, '/campaigns/c1'), '/campaigns/c1/dm');
+      expect(campaignModeRedirect(CampaignRole.owner, '/campaigns/c1'), '/campaigns/c1/dm');
     });
 
     test('un jugador no entra en la Mesa del DM', () {
       expect(
         campaignModeRedirect(CampaignRole.player, '/campaigns/c1/dm'),
-        '/campaigns/c1/general',
+        '/campaigns/c1/player',
       );
       expect(campaignModeRedirect(CampaignRole.player, '/campaigns/c1/player'), isNull);
     });
 
     test('DM y dueño no entran en Mi sesión', () {
-      expect(
-        campaignModeRedirect(CampaignRole.dm, '/campaigns/c1/player'),
-        '/campaigns/c1/general',
-      );
+      expect(campaignModeRedirect(CampaignRole.dm, '/campaigns/c1/player'), '/campaigns/c1/dm');
       expect(
         campaignModeRedirect(CampaignRole.owner, '/campaigns/c1/player'),
-        '/campaigns/c1/general',
+        '/campaigns/c1/dm',
       );
       expect(campaignModeRedirect(CampaignRole.dm, '/campaigns/c1/dm'), isNull);
       expect(campaignModeRedirect(CampaignRole.owner, '/campaigns/c1/dm'), isNull);
@@ -94,6 +102,8 @@ void main() {
 
     test('sin rol conocido o fuera de los modos no redirige', () {
       expect(campaignModeRedirect(null, '/campaigns/c1/dm'), isNull);
+      expect(campaignModeRedirect(CampaignRole.player, '/campaigns/c1/general'), isNull);
+      expect(campaignModeRedirect(CampaignRole.player, '/campaigns/c1/characters'), isNull);
       expect(campaignModeRedirect(CampaignRole.player, '/campaigns/c1/general/lore'), isNull);
       expect(campaignModeRedirect(CampaignRole.player, '/campaigns/c1/lore/l1'), isNull);
       expect(campaignModeRedirect(CampaignRole.player, '/characters/ch1'), isNull);
@@ -110,8 +120,9 @@ void main() {
         fakes: _fakes(role: CampaignRole.player),
       );
 
-      expect(locationOf(router), '/campaigns/c1/general');
+      expect(locationOf(router), '/campaigns/c1/player');
       expect(find.byKey(const Key('nav-general')), findsOneWidget);
+      expect(find.byKey(const Key('nav-characters')), findsOneWidget);
       expect(find.byKey(const Key('nav-player')), findsOneWidget);
       expect(find.byKey(const Key('nav-dm')), findsNothing);
       expect(find.byKey(const Key('dm-session')), findsNothing);
@@ -124,41 +135,56 @@ void main() {
         fakes: _fakes(role: CampaignRole.dm),
       );
 
-      expect(locationOf(router), '/campaigns/c1/general');
+      expect(locationOf(router), '/campaigns/c1/dm');
       expect(find.byKey(const Key('nav-dm')), findsOneWidget);
       expect(find.byKey(const Key('nav-player')), findsNothing);
-
-      await _tap(tester, find.byKey(const Key('nav-dm')));
-      expect(locationOf(router), '/campaigns/c1/dm');
       expect(find.byKey(const Key('dm-session')), findsOneWidget);
     });
 
     testWidgets('la barra muestra el nombre, el hueco de tiempo real y las secciones', (
       tester,
     ) async {
-      await pumpRealApp(tester, location: '/campaigns/c1', fakes: _fakes());
+      await pumpRealApp(tester, location: '/campaigns/c1/general', fakes: _fakes());
 
       expect(find.byKey(const Key('campaign-title')), findsOneWidget);
       expect(find.byKey(const Key('realtime-status')), findsOneWidget);
       for (final section in CampaignSection.values) {
+        if (section == CampaignSection.characters) continue;
         expect(find.byKey(Key('general-${section.path}')), findsOneWidget);
       }
+      expect(find.byKey(const Key('general-characters')), findsNothing);
     });
 
-    testWidgets('desde el inicio se abre la campaña y se cambia de modo', (tester) async {
+    testWidgets('desde el inicio se abre la campaña en la vista del rol y se cambia de pestaña', (
+      tester,
+    ) async {
       final router = await pumpRealApp(tester, location: '/', fakes: _fakes());
 
+      expect(find.byKey(const Key('app-nav-bar')), findsOneWidget);
       await _tap(tester, find.text('La Mina Perdida'));
+      expect(locationOf(router), '/campaigns/c1/dm');
+      expect(find.byKey(const Key('dm-session')), findsOneWidget);
+      // The campaign is full screen: the app bar stays behind.
+      expect(find.byKey(const Key('app-nav-bar')), findsNothing);
+
+      await _tap(tester, find.byKey(const Key('nav-characters')));
+      expect(locationOf(router), '/campaigns/c1/characters');
+      expect(find.byKey(const Key('campaign-characters')), findsOneWidget);
+
+      await _tap(tester, find.byKey(const Key('nav-general')));
       expect(locationOf(router), '/campaigns/c1/general');
+      expect(find.byKey(const Key('campaign-general')), findsOneWidget);
 
       await _tap(tester, find.byKey(const Key('nav-dm')));
       expect(find.byKey(const Key('dm-session')), findsOneWidget);
-      await _tap(tester, find.byKey(const Key('nav-general')));
-      expect(find.byKey(const Key('campaign-general')), findsOneWidget);
     });
 
-    testWidgets('una tarjeta de General abre su sección como página completa', (tester) async {
-      final router = await pumpRealApp(tester, location: '/campaigns/c1', fakes: _fakes());
+    testWidgets('una tarjeta de Campaña abre su sección como página completa', (tester) async {
+      final router = await pumpRealApp(
+        tester,
+        location: '/campaigns/c1/general',
+        fakes: _fakes(),
+      );
 
       await openGeneralSection(tester, 'members');
       expect(locationOf(router), '/campaigns/c1/general/members');
@@ -168,6 +194,21 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('campaign-general')), findsOneWidget);
+    });
+
+    testWidgets('la barra de la app cambia de pestaña y conserva la de campañas', (tester) async {
+      final router = await pumpRealApp(tester, location: '/', fakes: _fakes());
+
+      await _tap(tester, find.byKey(const Key('nav-compendium')));
+      expect(locationOf(router), AppRoutes.compendium);
+      await _tap(tester, find.byKey(const Key('nav-dice')));
+      expect(locationOf(router), AppRoutes.dice);
+      await _tap(tester, find.byKey(const Key('nav-profile')));
+      expect(locationOf(router), AppRoutes.profile);
+      expect(find.byKey(const Key('profile-list')), findsOneWidget);
+      await _tap(tester, find.byKey(const Key('nav-campaigns')));
+      expect(locationOf(router), AppRoutes.home);
+      expect(find.text('La Mina Perdida'), findsOneWidget);
     });
   });
 

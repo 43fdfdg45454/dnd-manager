@@ -19,6 +19,7 @@ import '../../dice/ui/dice_sheet.dart';
 import '../data/characters_controller.dart';
 import '../data/models.dart';
 import '../domain/character_format.dart';
+import '../domain/class_theme.dart';
 import 'level_up/character_choices_section.dart';
 
 /// Icon with the note of an override, shown on long press. Renders nothing for
@@ -61,6 +62,7 @@ class _TabList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
+      key: const Key('sheet-tab-list'),
       padding: EdgeInsets.fromLTRB(16, 8, 16, 88 + MediaQuery.paddingOf(context).bottom),
       children: children,
     );
@@ -614,6 +616,58 @@ class TraitsTab extends ConsumerWidget {
         if (c.choices.isNotEmpty) CharacterChoicesSection(character: c),
         for (final cls in c.classes) _ClassFeatures(characterClass: cls),
         if (c.raceIndex != null) _RaceTraits(raceIndex: c.raceIndex!, subraceIndex: c.subraceIndex),
+        _FeatsSection(character: c),
+      ],
+    );
+  }
+}
+
+/// "Dotes": every feat the character took, with the catalog text, where it was
+/// taken and the ability it raised, next to the class and race features.
+class _FeatsSection extends StatelessWidget {
+  const _FeatsSection({required this.character});
+
+  final CharacterDetail character;
+
+  String _subtitle(CharacterFeat feat) {
+    final where = feat.level == 0
+        ? 'Raza o trasfondo'
+        : character.classes.length > 1
+        ? '${_className(feat.classIndex)} · nivel ${feat.level}'
+        : 'Nivel ${feat.level}';
+    final ability = feat.ability == null ? '' : ' · +1 ${abilityAbbreviation(feat.ability!)}';
+    return '$where$ability';
+  }
+
+  String _className(String? classIndex) =>
+      classThemes[classIndex]?.labelEs ??
+      character.classes
+          .where((c) => c.classIndex == classIndex)
+          .map((c) => c.className)
+          .firstOrNull ??
+      classIndex ??
+      '';
+
+  @override
+  Widget build(BuildContext context) {
+    final feats = character.feats;
+    return Column(
+      key: const Key('sheet-feats'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionTitle('Dotes'),
+        if (feats.isEmpty) const Text('Sin dotes.'),
+        for (final feat in feats)
+          ExpandableEntry(
+            key: Key('sheet-feat-${feat.index}'),
+            title: feat.name,
+            subtitle: _subtitle(feat),
+            description: [
+              if (feat.prerequisitesText != null) 'Requisito: ${feat.prerequisitesText}',
+              ...feat.description,
+            ],
+            emptyText: 'Esta dote ya no está en el catálogo.',
+          ),
       ],
     );
   }

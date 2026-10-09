@@ -78,8 +78,15 @@ public sealed record EffectiveItem
     /// </summary>
     public bool IsStackable => IsConsumable || Category == ItemCategory.AdventuringGear;
 
-    /// <summary>Weapons, armor, shields and magic items (rings, cloaks and gauntlets are worn) can be equipped.</summary>
-    public bool IsEquippable => Category is ItemCategory.Weapon or ItemCategory.Armor or ItemCategory.Shield or ItemCategory.MagicItem;
+    /// <summary>
+    /// Weapons, armor, shields and magic items (rings, cloaks and gauntlets are worn) can be equipped, and so
+    /// can any other non-consumable item that does something when worn: structured modifiers, free-text
+    /// effects, an armor class, a damage die or attunement (custom items without an equipment category).
+    /// </summary>
+    public bool IsEquippable =>
+        Category is ItemCategory.Weapon or ItemCategory.Armor or ItemCategory.Shield or ItemCategory.MagicItem
+        || (!IsConsumable
+            && (Modifiers.Count > 0 || Effects.Count > 0 || ArmorClassBase is not null || DamageDice is not null || RequiresAttunement));
 
     /// <summary>Whether the modifiers of the item apply to the character that has <paramref name="item"/>: equipped and, when required, attuned.</summary>
     public bool IsActiveFor(CharacterItem item)

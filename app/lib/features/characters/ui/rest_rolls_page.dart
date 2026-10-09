@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/network/api_error.dart';
 import 'combat/combat_support.dart' show CombatCard;
 import '../../../core/ui/offline_widgets.dart';
+import '../../dice/ui/roll_input_button.dart';
 import '../data/characters_controller.dart';
 import '../data/models.dart';
 import 'combat/resources_section.dart' show resourcesOf;
@@ -18,7 +19,8 @@ List<CharacterResource> pendingRollResources(CharacterDetail character) => [
 
 /// "Tira tus dados" (`/characters/:id/rest-rolls`): one field per die of each
 /// resource that asks for a roll after the rest (Portent: two d20 after a long
-/// rest), each 1..die. The player cannot leave it while a roll is pending.
+/// rest), each 1..die, typed or rolled with the virtual dice. The player
+/// cannot leave it while a roll is pending.
 class RestRollsPage extends ConsumerStatefulWidget {
   const RestRollsPage({super.key, required this.characterId});
 
@@ -31,7 +33,22 @@ class RestRollsPage extends ConsumerStatefulWidget {
 class _RestRollsPageState extends ConsumerState<RestRollsPage> {
   /// Typed texts by `<resourceId>-<index>`.
   final Map<String, String> _texts = {};
+
+  /// Field controllers by the same key, so a virtual roll can fill them.
+  final Map<String, TextEditingController> _fields = {};
   bool _busy = false;
+
+  TextEditingController _field(String key) =>
+      _fields.putIfAbsent(key, () => TextEditingController(text: _texts[key] ?? ''));
+
+  @override
+  void dispose() {
+    for (final f in _fields.values) {
+      f.dispose();
+    }
+    super.dispose();
+  }
+
   String? _error;
 
   CharacterController get _controller =>
@@ -101,7 +118,7 @@ class _RestRollsPageState extends ConsumerState<RestRollsPage> {
                       children: [
                         const LevelUpHeading(
                           'Tiradas del descanso',
-                          subtitle: 'Tira los dados en la mesa y escribe cada resultado.',
+                          subtitle: 'Tira los dados en la mesa y escribe cada resultado, o usa el dado virtual.',
                         ),
                         if (pending.isEmpty)
                           Text('No hay tiradas pendientes.', style: theme.textTheme.bodyMedium),
@@ -123,6 +140,7 @@ class _RestRollsPageState extends ConsumerState<RestRollsPage> {
                                     padding: const EdgeInsets.only(top: 8),
                                     child: TextField(
                                       key: Key('rest-roll-${r.id}-$i'),
+                                      controller: _field('${r.id}-$i'),
                                       keyboardType: TextInputType.number,
                                       decoration: InputDecoration(
                                         labelText: 'Tirada ${i + 1} (1 a ${r.rollOnRest!.sides})',
@@ -133,6 +151,15 @@ class _RestRollsPageState extends ConsumerState<RestRollsPage> {
                                                 _value(r.id, i, r.rollOnRest!.sides) == null
                                             ? 'Escribe un número de 1 a ${r.rollOnRest!.sides}'
                                             : null,
+                                        suffixIcon: RollInputButton(
+                                          key: Key('rest-roll-${r.id}-$i-dice'),
+                                          expression: '1d${r.rollOnRest!.sides}',
+                                          label: '${r.name}: tirada ${i + 1}',
+                                          onRolled: (total, _) => setState(() {
+                                            _texts['${r.id}-$i'] = '$total';
+                                            _field('${r.id}-$i').text = '$total';
+                                          }),
+                                        ),
                                       ),
                                       onChanged: (text) =>
                                           setState(() => _texts['${r.id}-$i'] = text),

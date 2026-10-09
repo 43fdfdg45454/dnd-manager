@@ -1093,6 +1093,7 @@ class CharacterDetail {
     this.invalidChoices = const [],
     this.restRollsPending = false,
     this.choices = const [],
+    this.feats = const [],
     this.raceCatalogMissing = false,
     this.backgroundCatalogMissing = false,
     this.catalogMissing = false,
@@ -1158,6 +1159,7 @@ class CharacterDetail {
       invalidChoices: _objects(json['invalidChoices'], InvalidChoice.fromJson),
       restRollsPending: _bool(json['restRollsPending']),
       choices: _objects(json['choices'], CharacterChoice.fromJson),
+      feats: _objects(json['feats'], CharacterFeat.fromJson),
       raceCatalogMissing: _bool(json['raceCatalogMissing']),
       backgroundCatalogMissing: _bool(json['backgroundCatalogMissing']),
       catalogMissing: _bool(json['catalogMissing']),
@@ -1244,6 +1246,9 @@ class CharacterDetail {
   /// Choices made when levelling up (subclass, fighting style, ASI...).
   final List<CharacterChoice> choices;
 
+  /// Feats the character has, with their catalog text (`CharacterFeatDto`).
+  final List<CharacterFeat> feats;
+
   /// The race (or subrace) is gone from the catalog (a deleted content pack).
   final bool raceCatalogMissing;
 
@@ -1298,6 +1303,7 @@ class ChangeRequest {
     this.requestedByDisplayName = '',
     required this.type,
     this.payload = const {},
+    this.before,
     required this.status,
     this.resolvedByDisplayName,
     this.resolvedAt,
@@ -1314,6 +1320,7 @@ class ChangeRequest {
     requestedByDisplayName: _str(json['requestedByDisplayName']),
     type: ChangeRequestType.fromApi(json['type']),
     payload: _map(json['payload']) ?? const {},
+    before: _map(json['before']),
     status: ChangeRequestStatus.fromApi(json['status']),
     resolvedByDisplayName: _strOrNull(json['resolvedByDisplayName']),
     resolvedAt: _date(json['resolvedAt']),
@@ -1331,6 +1338,11 @@ class ChangeRequest {
 
   /// What would change; for `EditSheet` it has the shape of a [SheetPatch].
   final Map<String, dynamic> payload;
+
+  /// What [payload] changes as it was when the request was made (same shape
+  /// as the payload for sheet edits; `quantity`, `copperPieces` or the catalog
+  /// `template` for inventory requests). Null for old requests.
+  final Map<String, dynamic>? before;
   final ChangeRequestStatus status;
   final String? resolvedByDisplayName;
   final DateTime? resolvedAt;
@@ -1568,6 +1580,44 @@ class CharacterChoice {
   final Map<String, int> asi;
   final ChoiceItem? feat;
   final String? ability;
+}
+
+/// A feat of the character with its catalog text, for the "Rasgos" tab
+/// (`CharacterFeatDto`). [description] is empty when the feat is gone from
+/// the catalog; [ability] is the key it raised, if any.
+class CharacterFeat {
+  const CharacterFeat({
+    required this.index,
+    required this.name,
+    this.description = const [],
+    this.prerequisitesText,
+    this.ability,
+    this.level = 0,
+    this.classIndex,
+  });
+
+  factory CharacterFeat.fromJson(Map<String, dynamic> json) {
+    final index = _str(json['index']);
+    return CharacterFeat(
+      index: index,
+      name: _str(json['name'], index),
+      description: _strings(json['description']),
+      prerequisitesText: _strOrNull(json['prerequisitesText']),
+      ability: _strOrNull(json['ability']),
+      level: _int(json['level']) ?? 0,
+      classIndex: _strOrNull(json['classIndex']),
+    );
+  }
+
+  final String index;
+  final String name;
+  final List<String> description;
+  final String? prerequisitesText;
+  final String? ability;
+
+  /// Level of the class at which it was taken; 0 for origin choices.
+  final int level;
+  final String? classIndex;
 }
 
 /// Kinds of level choices (`LevelChoiceKind`).
@@ -1812,6 +1862,7 @@ class LevelUpChoice {
     this.freeText = false,
     this.options = const [],
     this.known = const [],
+    this.warning,
   });
 
   factory LevelUpChoice.fromJson(Map<String, dynamic> json) => LevelUpChoice(
@@ -1828,6 +1879,7 @@ class LevelUpChoice {
     freeText: _bool(json['freeText']),
     options: _objects(json['options'], LevelUpOption.fromJson),
     known: _objects(json['known'], ChoiceItem.fromJson),
+    warning: _strOrNull(json['warning']),
   );
 
   final String key;
@@ -1849,6 +1901,9 @@ class LevelUpChoice {
 
   /// Earlier picks that may be replaced.
   final List<ChoiceItem> known;
+
+  /// Why fewer picks than [choose] are required: not enough eligible options.
+  final String? warning;
 
   /// The choice only offers replacements ([choose] 0).
   bool get replacementOnly => choose == 0;
@@ -1876,6 +1931,7 @@ class LevelUpSpellcasting {
     this.currentCantrips = 0,
     this.currentSpells = 0,
     this.spellSlots = const [],
+    this.preparesSpells = false,
   });
 
   factory LevelUpSpellcasting.fromJson(Map<String, dynamic> json) => LevelUpSpellcasting(
@@ -1888,6 +1944,7 @@ class LevelUpSpellcasting {
     currentCantrips: _int(json['currentCantrips']) ?? 0,
     currentSpells: _int(json['currentSpells']) ?? 0,
     spellSlots: [for (final s in (json['spellSlots'] as List? ?? const [])) _int(s) ?? 0],
+    preparesSpells: _bool(json['preparesSpells']),
   );
 
   final String classIndex;
@@ -1899,6 +1956,26 @@ class LevelUpSpellcasting {
   final int currentCantrips;
   final int currentSpells;
   final List<int> spellSlots;
+
+  /// The class prepares spells (cleric, druid, paladin, wizard) and already
+  /// has slots: "Preparar conjuros" opens after the level-up.
+  final bool preparesSpells;
+}
+
+/// A feature gained at the new level, for the review step
+/// (`LevelUpNewFeatureDto`). [subclassIndex] is set for subclass features.
+class LevelUpNewFeature {
+  const LevelUpNewFeature({required this.name, this.description = const [], this.subclassIndex});
+
+  factory LevelUpNewFeature.fromJson(Map<String, dynamic> json) => LevelUpNewFeature(
+    name: _str(json['name']),
+    description: _strings(json['description']),
+    subclassIndex: _strOrNull(json['subclassIndex']),
+  );
+
+  final String name;
+  final List<String> description;
+  final String? subclassIndex;
 }
 
 /// What gaining the next level in [classIndex] means (`LevelUpPlanDto`).
@@ -1915,6 +1992,7 @@ class LevelUpPlan {
     this.automaticFeatures = const [],
     this.choices = const [],
     this.spellcasting,
+    this.newFeatures = const [],
   });
 
   factory LevelUpPlan.fromJson(Map<String, dynamic> json) {
@@ -1932,6 +2010,7 @@ class LevelUpPlan {
       automaticFeatures: _objects(json['automaticFeatures'], LevelUpFeature.fromJson),
       choices: _objects(json['choices'], LevelUpChoice.fromJson),
       spellcasting: spellcasting == null ? null : LevelUpSpellcasting.fromJson(spellcasting),
+      newFeatures: _objects(json['newFeatures'], LevelUpNewFeature.fromJson),
     );
   }
 
@@ -1948,6 +2027,15 @@ class LevelUpPlan {
   final List<LevelUpFeature> automaticFeatures;
   final List<LevelUpChoice> choices;
   final LevelUpSpellcasting? spellcasting;
+
+  /// Class and subclass features gained at the new level.
+  final List<LevelUpNewFeature> newFeatures;
+
+  /// The features of the class and of [subclassIndex] (null: only the class).
+  List<LevelUpNewFeature> newFeaturesFor(String? subclassIndex) => [
+    for (final f in newFeatures)
+      if (f.subclassIndex == null || f.subclassIndex == subclassIndex) f,
+  ];
 
   /// The entry of [classIndex] in [classes], or null.
   LevelUpClassOption? get selectedClass {

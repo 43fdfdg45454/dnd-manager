@@ -287,9 +287,54 @@ void main() {
       await tester.tap(find.byKey(const Key('search-result-u7')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Carla'), findsOneWidget);
-      expect(repository.campaigns.single.members.map((m) => m.userId), contains('u7'));
-      expect(find.text('Carla se ha añadido como Jugador.'), findsOneWidget);
+      // Invited, not added: the member list is unchanged and the invitation is pending.
+      expect(repository.campaigns.single.members.map((m) => m.userId), isNot(contains('u7')));
+      expect(repository.invitationsByCampaign['c1']!.single.userId, 'u7');
+      expect(find.text('Invitación enviada a Carla como Jugador.'), findsOneWidget);
+      expect(find.byKey(const Key('invitations-title')), findsOneWidget);
+      expect(find.byKey(const Key('invitation-inv-u7')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('invitation-cancel-inv-u7')));
+      await tester.pumpAndSettle();
+      expect(repository.invitationsByCampaign['c1'], isEmpty);
+      expect(find.byKey(const Key('invitation-inv-u7')), findsNothing);
+    });
+
+    testWidgets('las invitaciones recibidas se aceptan o rechazan desde Campañas', (tester) async {
+      final repository = FakeCampaignsRepository(campaigns: [makeCampaign()]);
+      repository.pendingInvitations.addAll([
+        MyInvitation(
+          id: 'inv-a',
+          campaignId: 'c9',
+          campaignName: 'La tumba',
+          role: CampaignRole.player,
+          invitedByDisplayName: 'Diego',
+          createdAt: DateTime(2026, 1, 1),
+        ),
+        MyInvitation(
+          id: 'inv-b',
+          campaignId: 'c8',
+          campaignName: 'Dragones',
+          role: CampaignRole.dm,
+          invitedByDisplayName: 'Ana',
+          createdAt: DateTime(2026, 1, 2),
+        ),
+      ]);
+      await _pumpList(tester, repository);
+
+      expect(find.text('Invitación a La tumba'), findsOneWidget);
+      expect(find.text('Diego te invita como Jugador.'), findsOneWidget);
+      expect(find.text('Ana te invita como DM.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('invitation-decline-inv-b')));
+      await tester.pumpAndSettle();
+      expect(repository.pendingInvitations.map((i) => i.id), ['inv-a']);
+      expect(find.text('Invitación a Dragones'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('invitation-accept-inv-a')));
+      await tester.pumpAndSettle();
+      expect(repository.pendingInvitations, isEmpty);
+      expect(find.text('Invitación a La tumba'), findsNothing);
     });
 
     testWidgets('el buscador no ofrece a quien ya es miembro', (tester) async {
@@ -323,10 +368,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('search-result-u8')));
       await tester.pumpAndSettle();
-      expect(
-        owner.campaigns.single.members.firstWhere((m) => m.userId == 'u8').role,
-        CampaignRole.dm,
-      );
+      expect(owner.invitationsByCampaign['c1']!.single.role, CampaignRole.dm);
     });
 
     testWidgets('un DM no puede elegir el rol DM al añadir', (tester) async {

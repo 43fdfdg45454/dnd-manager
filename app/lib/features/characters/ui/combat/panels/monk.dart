@@ -5,7 +5,7 @@ import '../../../../../core/theme/app_icon.dart';
 import '../../../../../core/theme/icons.dart';
 
 import '../../../../dice/domain/dice_expression.dart' show bonusSuffix;
-import '../../../../dice/ui/dice_sheet.dart';
+import 'critical_damage_roll.dart';
 import '../combat_support.dart';
 import 'panel_support.dart';
 
@@ -114,15 +114,15 @@ class MonkPanel extends ConsumerWidget {
         ),
         CombatCard(
           title: 'Artes marciales',
-          trailing: TextButton(
-            key: const Key('monk-martial-arts-roll'),
-            onPressed: () =>
-                rollAndShow(context, '1$die${bonusSuffix(attackMod)}', label: 'Artes marciales'),
-            child: const Text('Tirar'),
-          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              CriticalDamageRoll(
+                expression: '1$die${bonusSuffix(attackMod)}',
+                label: 'Artes marciales',
+                keyPrefix: 'monk-martial-arts',
+              ),
+              const SizedBox(height: 4),
               PanelFact(
                 key: const Key('monk-martial-arts'),
                 label: 'Dado de artes marciales',

@@ -234,6 +234,10 @@ class ShopController extends AsyncNotifier<Shop> {
     await reload();
   }
 
+  Future<void> addItemsBulk(List<BulkShopItem> items) async {
+    state = AsyncData(await _repository.addItemsBulk(shopId, items));
+  }
+
   Future<void> updateItem(String shopItemId, ShopItemPatch patch) async {
     await _repository.updateItem(shopId, shopItemId, patch);
     await reload();

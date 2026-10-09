@@ -5,15 +5,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/cache/stale_data.dart';
-import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/ui/infinite_scroll_list.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../../core/ui/source_chip.dart';
 import '../../../core/ui/spell_category.dart';
+import '../data/beast_models.dart';
 import '../data/catalog_controllers.dart';
 import '../data/catalog_repository.dart';
 import '../data/models.dart';
 import '../domain/catalog_format.dart';
+import 'beast_page.dart';
 import 'condition_sheet.dart';
 import 'detail_widgets.dart';
 import 'roll_table_widgets.dart';
@@ -62,7 +64,7 @@ class _CompendiumPageState extends ConsumerState<CompendiumPage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 6,
+      length: 7,
       child: Scaffold(
         appBar: AppBar(
           title: TextField(
@@ -92,6 +94,7 @@ class _CompendiumPageState extends ConsumerState<CompendiumPage> {
               Tab(key: Key('tab-items'), text: 'Objetos'),
               Tab(key: Key('tab-classes'), text: 'Clases'),
               Tab(key: Key('tab-races'), text: 'Razas'),
+              Tab(key: Key('tab-beasts'), text: 'Bestias'),
               Tab(key: Key('tab-conditions'), text: 'Condiciones'),
               Tab(key: Key('tab-tables'), text: 'Tablas'),
             ],
@@ -107,6 +110,7 @@ class _CompendiumPageState extends ConsumerState<CompendiumPage> {
                   _KeepAlive(child: _ItemsTab()),
                   _KeepAlive(child: _ClassesTab()),
                   _KeepAlive(child: _RacesTab()),
+                  _KeepAlive(child: _BeastsTab()),
                   _KeepAlive(child: _ConditionsTab()),
                   _KeepAlive(child: _TablesTab()),
                 ],
@@ -325,7 +329,7 @@ class _ItemsTab extends ConsumerWidget {
 
 /// Infinite-scroll list over a paged [AsyncValue]. Keeps the previous results
 /// visible while a new search or filter loads.
-class _PagedList<T> extends StatefulWidget {
+class _PagedList<T> extends StatelessWidget {
   const _PagedList({
     required this.listKey,
     required this.value,
@@ -343,83 +347,26 @@ class _PagedList<T> extends StatefulWidget {
   final String emptyText;
 
   @override
-  State<_PagedList<T>> createState() => _PagedListState<T>();
-}
-
-class _PagedListState<T> extends State<_PagedList<T>> {
-  static const _prefetchDistance = 400.0;
-
-  final _scroll = ScrollController();
-  bool _loadingMore = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _scroll.addListener(_onScroll);
-  }
-
-  @override
-  void dispose() {
-    _scroll.dispose();
-    super.dispose();
-  }
-
-  void _onScroll() {
-    if (_scroll.position.extentAfter < _prefetchDistance) _loadMore();
-  }
-
-  Future<void> _loadMore() async {
-    if (_loadingMore) return;
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => _loadingMore = true);
-    try {
-      await widget.loadMore();
-    } catch (error) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(describeApiError(error))));
-    } finally {
-      if (mounted) setState(() => _loadingMore = false);
-    }
-  }
-
-  /// A short first page may not fill the viewport, so nothing could scroll.
-  void _fillViewport(Page<T> page) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scroll.hasClients || _loadingMore || !page.hasMore) return;
-      if (widget.value.isLoading) return;
-      if (_scroll.position.maxScrollExtent <= 0) _loadMore();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return widget.value.when(
+    return value.when(
       skipLoadingOnReload: true,
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => CatalogErrorView(error: error, onRetry: widget.onRetry),
+      error: (error, _) => CatalogErrorView(error: error, onRetry: onRetry),
       data: (page) {
         if (page.items.isEmpty) {
-          return Center(child: Text(widget.emptyText));
+          return Center(child: Text(emptyText));
         }
-        _fillViewport(page);
         return Column(
           children: [
-            if (widget.value.isLoading) const LinearProgressIndicator(),
+            if (value.isLoading) const LinearProgressIndicator(),
             Expanded(
-              child: ListView.builder(
-                key: widget.listKey,
-                controller: _scroll,
-                itemCount: page.items.length + (_loadingMore ? 1 : 0),
-                itemBuilder: (context, i) {
-                  if (i >= page.items.length) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  return widget.itemBuilder(context, page.items[i]);
-                },
+              child: InfiniteScrollList(
+                listKey: listKey,
+                itemCount: page.items.length,
+                // No new pages while a new search or filter replaces the list.
+                hasMore: page.hasMore && !value.isLoading,
+                onLoadMore: loadMore,
+                itemBuilder: (context, i) => itemBuilder(context, page.items[i]),
               ),
             ),
           ],
@@ -515,6 +462,24 @@ class _RacesTab extends ConsumerWidget {
         trailing: const Icon(Icons.chevron_right),
         onTap: () => context.push(AppRoutes.race(r.index)),
       ),
+    );
+  }
+}
+
+/// SRD beasts (wild shapes), ordered by challenge rating.
+class _BeastsTab extends ConsumerWidget {
+  const _BeastsTab();
+
+  static const BeastQuery _all = (maxCr: null, fly: null, swim: null);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return _LocalList<BeastSummary>(
+      value: ref.watch(beastsProvider(_all)),
+      onRetry: () => ref.invalidate(beastsProvider(_all)),
+      nameOf: (b) => b.name,
+      emptyText: 'No se encontraron bestias.',
+      itemBuilder: (context, b) => BeastTile(beast: b),
     );
   }
 }

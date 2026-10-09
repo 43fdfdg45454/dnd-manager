@@ -44,7 +44,8 @@ public sealed class UpdateSheetHandler(
             currentUserId,
             ChangeRequestType.EditSheet,
             SheetPatchJson.Serialize(patch),
-            clock.UtcNow);
+            clock.UtcNow,
+            SheetPatchJson.Serialize(SheetPatchSnapshot.Before(character, patch)));
         changeRequests.Add(request);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await notifier.ChangeRequestUpdatedAsync(character.CampaignId, character.Id, request.Id, clock.UtcNow, cancellationToken);

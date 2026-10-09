@@ -247,6 +247,7 @@ public sealed record SpellDetailDto(
     IReadOnlyList<string> SubclassIndexes,
     string? AttackType,
     SpellDamageDto? Damage,
+    IReadOnlyDictionary<int, string>? HealAtSlotLevel,
     string? DcAbility,
     string Source,
     string Category);

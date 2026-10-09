@@ -504,6 +504,22 @@ internal sealed class PackPrerequisitesJson
     public string? Cantrip { get; set; }
 
     public Dictionary<string, int?>? Abilities { get; set; }
+
+    /// <summary>Race indexes, one of which the character must be.</summary>
+    public List<string?>? Races { get; set; }
+
+    public PackProficiencyPrerequisiteJson? Proficiency { get; set; }
+
+    /// <summary>The character must be able to cast at least one spell.</summary>
+    public bool? Spellcasting { get; set; }
+}
+
+/// <summary>Proficiencies required, all of them: armor keys ("light", "medium", "heavy", "shields") and weapon keys ("simple", "martial" or a weapon index).</summary>
+internal sealed class PackProficiencyPrerequisiteJson
+{
+    public List<string?>? Armor { get; set; }
+
+    public List<string?>? Weapon { get; set; }
 }
 
 internal sealed class PackChoiceModifierJson

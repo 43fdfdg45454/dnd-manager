@@ -231,6 +231,18 @@ public class CatalogEndpointsTests(CatalogApiFactory factory)
     }
 
     [Fact]
+    public async Task Spell_detail_exposes_healing_per_slot_level()
+    {
+        var cureWounds = await GetAsync<SpellDetailDto>($"{Base}/spells/cure-wounds");
+        var fireball = await GetAsync<SpellDetailDto>($"{Base}/spells/fireball");
+
+        Assert.NotNull(cureWounds.HealAtSlotLevel);
+        Assert.Equal("1d8 + MOD", cureWounds.HealAtSlotLevel[1]);
+        Assert.Equal("9d8 + MOD", cureWounds.HealAtSlotLevel[9]);
+        Assert.Null(fireball.HealAtSlotLevel);
+    }
+
+    [Fact]
     public async Task Item_search_is_case_insensitive()
     {
         var page = await GetAsync<PagedResult<ItemSummaryDto>>($"{Base}/items?search=SWORD&pageSize=200");

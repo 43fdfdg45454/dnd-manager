@@ -8,17 +8,25 @@ import '../../../data/characters_controller.dart';
 import '../../../data/models.dart';
 import '../../../domain/class_theme.dart';
 import '../combat_support.dart';
-import '../resources_section.dart' show resourcesOf;
+import '../resources_section.dart' show canRestoreResource, resourcesOf;
 
 /// What a class panel needs to render.
 class ClassPanelContext {
-  const ClassPanelContext({required this.character, required this.panel, required this.canEdit});
+  const ClassPanelContext({
+    required this.character,
+    required this.panel,
+    required this.canEdit,
+    this.isDm = false,
+  });
 
   final CharacterDetail character;
 
   /// The server's panel data, or an empty one built from the class level.
   final ClassPanel panel;
   final bool canEdit;
+
+  /// A DM or the Owner: may also restore automatic class resources.
+  final bool isDm;
 
   String get classIndex => panel.classIndex;
   int get level => panel.level;
@@ -200,7 +208,7 @@ class ClassResourceUses extends ConsumerWidget {
     VoidCallback? spend = canEdit && tapToSpend
         ? () => spendClassResource(context, ref, panel.character, r)
         : null;
-    VoidCallback? restore = canEdit
+    VoidCallback? restore = canEdit && canRestoreResource(r, isDm: panel.isDm)
         ? () => restoreClassResource(context, ref, panel.character, r)
         : null;
 

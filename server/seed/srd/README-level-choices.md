@@ -22,7 +22,7 @@ cada instancia.
 | `name` | `string` | Nombre corto en inglés del SRD ("Defense", "Colossus Slayer"). |
 | `description` | `string[]` | Párrafos del texto SRD en inglés. |
 | `prerequisitesText` | `string?` | Prerrequisito literal del SRD ("Prerequisite: 5th level, Pact of the Blade feature"). |
-| `prerequisites` | `object?` | Versión estructurada: `minLevel` (nivel de la clase), `pactBoon` (índice del don), `cantrip` (índice del truco), `abilities` (`{ "str": 13 }`). |
+| `prerequisites` | `object?` | Versión estructurada: `minLevel` (nivel de la clase), `pactBoon` (índice del don), `cantrip` (índice del truco), `abilities` (`{ "str": 13 }`), `races` (índices de raza, basta una), `proficiency` (`{ "armor": ["heavy"], "weapon": ["martial"] }`, todas) y `spellcasting` (`true`: lanzar al menos un conjuro). Ver `docs/content-packs.md`. Si falta `prerequisitesText`, el asistente genera uno en español a partir de estos campos. |
 | `modifiers` | `Modifier[]` | Solo efectos numéricos; `[]` si la opción es solo texto. |
 | `abilityIncrease` | `object?` | Aumento de característica: `{ "amount": 1, "from": ["str", "dex"] }` (`from` vacío = cualquiera). Ninguna opción SRD lo usa; previsto para dotes de paquetes. |
 | `grants` | `object?` | `{ "skills": ["deception"], "cantrips": ["..."], "spells": [{ "index": "hold-person", "minLevel": 3 }] }`. `minLevel` (opcional) es el nivel de clase a partir del cual se concede. El servidor admite además `armor`, `weapons`, `tools`, `languages` y `savingThrows`. |
@@ -71,7 +71,14 @@ del paladín (`fighting-style-defense`, `-dueling`, `-great-weapon-fighting`, `-
 
 - `CantripsKnown` y `SpellsKnown` son **incrementos** respecto al nivel anterior, derivados de
   `5e-SRD-Levels.json`. Las elecciones del nivel 1 (habilidades, equipo, trucos y conjuros
-  iniciales) son de la creación y no están aquí.
+  iniciales) son de la creación y no están aquí. Al **multiclasear** a una clase lanzadora, el
+  planificador (`LevelUpPlanner`) genera él mismo las elecciones de nivel 1 de esa clase a partir
+  de la tabla: `cantrips` (trucos conocidos), `spells-known` (conjuros conocidos) o `spellbook`
+  (los seis conjuros iniciales del mago).
+- Las elecciones de una subclase que se eligió tarde (o que se fijó al crear el personaje sin
+  responderlas, como el linaje dracónico del hechicero de nivel 1) se **recuperan** en la siguiente
+  subida de nivel. `LevelUpWalkthroughTests` recorre las doce clases del 1 al 20 y comprueba que
+  cada nivel pide lo que concede el SRD.
 - Bardo 10, 14 y 18: el +2 de conjuros conocidos son los Secretos mágicos (`magical-secrets`,
   cualquier lista); no hay otra regla de conjuros conocidos en esos niveles.
 - `Custom`: `circle-land` (druida Tierra, conjunto `druid-lands`, se pide en el nivel 2),

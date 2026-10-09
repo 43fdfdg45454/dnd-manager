@@ -3,6 +3,28 @@ import 'dart:math';
 /// Advantage state of a d20 roll.
 enum AdvantageMode { normal, advantage, disadvantage }
 
+/// What a roll is for, which decides what a natural 20 or 1 means (PHB ch. 7).
+///
+/// Only attack rolls have critical hits and fumbles, and only death saving
+/// throws turn a 20 into 1 hit point and a 1 into two failures. Checks
+/// (initiative, abilities, skills, saving throws) and damage have neither.
+enum RollKind {
+  attack,
+  deathSave,
+  check;
+
+  /// The kind stored as [value]; null when it is missing or unknown.
+  static RollKind? fromStorage(Object? value) {
+    for (final kind in values) {
+      if (kind.name == value) return kind;
+    }
+    return null;
+  }
+
+  /// True when a natural 20 or 1 has a meaning for this kind of roll.
+  bool get hasNaturalEffects => this != check;
+}
+
 const _maxDicePerPiece = 100;
 const _maxSides = 1000;
 const _maxPieces = 20;

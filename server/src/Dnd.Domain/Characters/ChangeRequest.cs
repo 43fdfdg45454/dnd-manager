@@ -26,6 +26,13 @@ public sealed class ChangeRequest : EntityBase
 
     public string PayloadJson { get; private set; } = "{}";
 
+    /// <summary>
+    /// Snapshot, taken when the request was created, of what the payload changes (same shape as the
+    /// payload for sheet edits; quantity, money or the base item for inventory requests). Null for old
+    /// requests and for requests with nothing to compare.
+    /// </summary>
+    public string? BeforeJson { get; private set; }
+
     public ChangeRequestStatus Status { get; private set; }
 
     public Guid? ResolvedByUserId { get; private set; }
@@ -43,7 +50,8 @@ public sealed class ChangeRequest : EntityBase
         Guid requestedByUserId,
         ChangeRequestType type,
         string? payloadJson,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        string? beforeJson = null)
     {
         if (!Enum.IsDefined(type))
         {
@@ -57,6 +65,7 @@ public sealed class ChangeRequest : EntityBase
             RequestedByUserId = requestedByUserId,
             Type = type,
             PayloadJson = string.IsNullOrWhiteSpace(payloadJson) ? "{}" : payloadJson,
+            BeforeJson = string.IsNullOrWhiteSpace(beforeJson) ? null : beforeJson,
             Status = ChangeRequestStatus.Pending,
             CreatedAt = now,
         };

@@ -1,5 +1,6 @@
 using Dnd.Application.ChangeRequests;
 using Dnd.Application.Items;
+using Dnd.Domain.Catalog;
 using Dnd.Domain.Characters;
 
 namespace Dnd.Application.Characters;
@@ -270,6 +271,37 @@ public sealed record CharacterDetailDto
 
     /// <summary>Level choices made when gaining levels (subclass, fighting style, ASI, feats, spells...), oldest first.</summary>
     public IReadOnlyList<CharacterChoiceDto> Choices { get; init; } = [];
+
+    /// <summary>Feats the character has (level-ups and origin choices) with their catalog text, oldest first.</summary>
+    public IReadOnlyList<CharacterFeatDto> Feats { get; init; } = [];
+}
+
+/// <summary>
+/// A feat of the character, for the "Rasgos" tab of the sheet: the catalog description, the literal prerequisite
+/// and the <see cref="Ability"/> it raised. <see cref="Description"/> is empty when the feat is gone from the catalog.
+/// </summary>
+/// <param name="Level">Level of the class at which it was taken; 0 for origin choices (variant human, packs).</param>
+public sealed record CharacterFeatDto(
+    string Index,
+    string Name,
+    IReadOnlyList<string> Description,
+    string? PrerequisitesText,
+    string? Ability,
+    int Level,
+    string? ClassIndex)
+{
+    public static CharacterFeatDto From(CharacterChoice choice, OptionDefinition? definition)
+    {
+        var feat = choice.Selection.Feat!;
+        return new CharacterFeatDto(
+            feat.Index,
+            definition?.Name ?? feat.Name,
+            definition?.Description ?? [],
+            definition?.PrerequisitesText,
+            choice.Selection.Ability,
+            choice.Level,
+            choice.ClassIndex);
+    }
 }
 
 /// <summary>Something picked in a level choice, with its name.</summary>

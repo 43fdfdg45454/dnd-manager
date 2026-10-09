@@ -8,7 +8,11 @@ import '../domain/dice_expression.dart';
 const _quickDice = [4, 6, 8, 10, 12, 20, 100];
 
 /// Rolls [expression], records it in the history and shows the outcome in a
-/// bottom sheet (short animation, critical and fumble highlighted).
+/// bottom sheet (short animation and the natural d20).
+///
+/// [kind] decides what a natural 20 or 1 means: critical and fumble only for
+/// [RollKind.attack], "regain 1 hit point" and "two failures" for
+/// [RollKind.deathSave], nothing for a [RollKind.check].
 ///
 /// An invalid expression shows its Spanish error in a SnackBar and returns null.
 /// [onResult] is called as soon as the dice are thrown, before the sheet closes,
@@ -18,6 +22,7 @@ Future<DiceResult?> rollAndShow(
   BuildContext context,
   String expression, {
   String? label,
+  RollKind kind = RollKind.check,
   void Function(DiceResult result)? onResult,
 }) async {
   final container = ProviderScope.containerOf(context);
@@ -30,7 +35,7 @@ Future<DiceResult?> rollAndShow(
       ..showSnackBar(SnackBar(content: Text(error.message)));
     return null;
   }
-  container.read(diceControllerProvider.notifier).record(result, label: label);
+  container.read(diceControllerProvider.notifier).record(result, label: label, kind: kind);
   onResult?.call(result);
   if (!context.mounted) return result;
   await showModalBottomSheet<void>(
@@ -40,7 +45,7 @@ Future<DiceResult?> rollAndShow(
     builder: (_) => SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: DiceResultView(result: result, label: label),
+        child: DiceResultView(result: result, label: label, kind: kind),
       ),
     ),
   );
@@ -57,23 +62,33 @@ Future<void> showDiceSheet(BuildContext context) => showModalBottomSheet<void>(
 );
 
 /// Total and per-die breakdown of a roll. The total counts up with a short
-/// animation; criticals are highlighted in green and fumbles in red.
+/// animation and the natural d20 is shown next to it, so a 6 made of 1 + 5 is
+/// not mistaken for a good roll.
+///
+/// What a natural 20 or 1 means depends on [kind]: attack rolls highlight a
+/// critical in green and a fumble in red; death saves show "¡Recuperas 1 PG!"
+/// and "Dos fallos"; checks show neither.
 class DiceResultView extends StatelessWidget {
-  const DiceResultView({super.key, required this.result, this.label});
+  const DiceResultView({super.key, required this.result, this.label, this.kind = RollKind.check});
 
   final DiceResult result;
   final String? label;
+  final RollKind kind;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final tokens = context.tokens;
-    final color = result.isCritical
+    final natural = result.d20Value;
+    final high = kind.hasNaturalEffects && result.isCritical;
+    final low = kind.hasNaturalEffects && result.isFumble;
+    final color = high
         ? tokens.mossText
-        : result.isFumble
+        : low
         ? scheme.error
         : scheme.onSurface;
+    final highBackground = Color.alphaBlend(tokens.moss.withValues(alpha: 0.3), tokens.stone);
     return Column(
       key: const Key('dice-result'),
       mainAxisSize: MainAxisSize.min,
@@ -101,18 +116,38 @@ class DiceResultView extends StatelessWidget {
             );
           },
         ),
-        if (result.isCritical)
+        if (natural != null)
+          Text(
+            'd20 natural: $natural',
+            key: const Key('dice-natural'),
+            style: theme.textTheme.titleSmall,
+          ),
+        if (high && kind == RollKind.attack)
           Chip(
             key: const Key('dice-critical'),
             avatar: const Icon(Icons.auto_awesome, size: 18),
             label: const Text('¡Crítico!'),
-            backgroundColor: Color.alphaBlend(tokens.moss.withValues(alpha: 0.3), tokens.stone),
+            backgroundColor: highBackground,
           ),
-        if (result.isFumble)
+        if (low && kind == RollKind.attack)
           Chip(
             key: const Key('dice-fumble'),
             avatar: const Icon(Icons.warning_amber, size: 18),
             label: const Text('¡Pifia!'),
+            backgroundColor: scheme.errorContainer,
+          ),
+        if (high && kind == RollKind.deathSave)
+          Chip(
+            key: const Key('dice-death-save-revive'),
+            avatar: const Icon(Icons.favorite, size: 18),
+            label: const Text('¡Recuperas 1 PG!'),
+            backgroundColor: highBackground,
+          ),
+        if (low && kind == RollKind.deathSave)
+          Chip(
+            key: const Key('dice-death-save-double-failure'),
+            avatar: const Icon(Icons.warning_amber, size: 18),
+            label: const Text('Dos fallos'),
             backgroundColor: scheme.errorContainer,
           ),
         const SizedBox(height: 8),
@@ -130,7 +165,11 @@ class DiceResultView extends StatelessWidget {
 /// The dice tray: quick dice build an expression, which is rolled with the
 /// chosen advantage mode. Below it, favorites and the last 100 rolls.
 class DiceSheet extends ConsumerStatefulWidget {
-  const DiceSheet({super.key});
+  const DiceSheet({super.key, this.embedded = false});
+
+  /// True when shown as the body of a page (the "Dados" tab) instead of a
+  /// bottom sheet: a plain list without the draggable frame or the title.
+  final bool embedded;
 
   @override
   ConsumerState<DiceSheet> createState() => _DiceSheetState();
@@ -140,6 +179,7 @@ class _DiceSheetState extends ConsumerState<DiceSheet> {
   final _controller = TextEditingController();
   AdvantageMode _mode = AdvantageMode.normal;
   DiceResult? _last;
+  RollKind _lastKind = RollKind.check;
   String? _error;
 
   @override
@@ -167,7 +207,7 @@ class _DiceSheetState extends ConsumerState<DiceSheet> {
     });
   }
 
-  void _roll(String text, {String? label}) {
+  void _roll(String text, {String? label, RollKind kind = RollKind.check}) {
     if (text.trim().isEmpty) {
       setState(() => _error = 'Escribe una expresión de dados, por ejemplo 1d20+5.');
       return;
@@ -175,9 +215,10 @@ class _DiceSheetState extends ConsumerState<DiceSheet> {
     try {
       final expression = DiceExpression.parse(text).withAdvantage(_mode);
       final result = expression.roll(ref.read(diceRandomProvider));
-      ref.read(diceControllerProvider.notifier).record(result, label: label);
+      ref.read(diceControllerProvider.notifier).record(result, label: label, kind: kind);
       setState(() {
         _last = result;
+        _lastKind = kind;
         _error = null;
       });
     } on FormatException catch (error) {
@@ -190,6 +231,12 @@ class _DiceSheetState extends ConsumerState<DiceSheet> {
     final theme = Theme.of(context);
     final state = ref.watch(diceControllerProvider);
     final controller = ref.read(diceControllerProvider.notifier);
+    if (widget.embedded) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        children: _content(context, theme, state, controller),
+      );
+    }
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: DraggableScrollableSheet(
@@ -203,139 +250,152 @@ class _DiceSheetState extends ConsumerState<DiceSheet> {
           children: [
             Text('Dados', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final sides in _quickDice)
-                  FilledButton.tonal(
-                    key: Key('die-d$sides'),
-                    onPressed: () => _addDie(sides),
-                    child: Text('d$sides'),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              key: const Key('dice-expression'),
-              controller: _controller,
-              autocorrect: false,
-              textInputAction: TextInputAction.done,
-              decoration: InputDecoration(
-                labelText: 'Expresión',
-                hintText: '2d6+3, 4d6kh3, adv+5…',
-                errorText: _error,
-                suffixIcon: IconButton(
-                  tooltip: 'Borrar',
-                  icon: const Icon(Icons.backspace_outlined),
-                  onPressed: () => setState(() {
-                    _controller.clear();
-                    _error = null;
-                  }),
-                ),
-              ),
-              onSubmitted: _roll,
-            ),
-            const SizedBox(height: 8),
-            SegmentedButton<AdvantageMode>(
-              key: const Key('dice-advantage'),
-              showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(value: AdvantageMode.normal, label: Text('Normal')),
-                ButtonSegment(value: AdvantageMode.advantage, label: Text('Ventaja')),
-                ButtonSegment(value: AdvantageMode.disadvantage, label: Text('Desventaja')),
-              ],
-              selected: {_mode},
-              onSelectionChanged: (s) => setState(() => _mode = s.first),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                'Ventaja y desventaja se aplican al primer 1d20 de la expresión.',
-                style: theme.textTheme.bodySmall,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton.icon(
-                    key: const Key('dice-roll'),
-                    onPressed: () => _roll(_controller.text),
-                    icon: const Icon(Icons.casino_outlined),
-                    label: const Text('Tirar'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton.outlined(
-                  key: const Key('dice-favorite-add'),
-                  tooltip: 'Guardar como favorita',
-                  onPressed: () {
-                    final parsed = DiceExpression.tryParse(_controller.text);
-                    if (parsed == null) {
-                      setState(() => _error = 'Escribe una expresión válida para guardarla.');
-                      return;
-                    }
-                    if (!state.favorites.contains(parsed.toString())) {
-                      controller.toggleFavorite(parsed.toString());
-                    }
-                  },
-                  icon: const Icon(Icons.star_outline),
-                ),
-              ],
-            ),
-            if (_last != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: DiceResultView(result: _last!),
-              ),
-            if (state.favorites.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Text('Favoritas', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: [
-                  for (final favorite in state.favorites)
-                    InputChip(
-                      key: Key('favorite-$favorite'),
-                      label: Text(favorite),
-                      onPressed: () => _roll(favorite),
-                      onDeleted: () => controller.toggleFavorite(favorite),
-                      deleteButtonTooltipMessage: 'Quitar de favoritas',
-                    ),
-                ],
-              ),
-            ],
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(child: Text('Historial', style: theme.textTheme.titleMedium)),
-                if (state.history.isNotEmpty)
-                  TextButton(
-                    key: const Key('dice-clear-history'),
-                    onPressed: controller.clearHistory,
-                    child: const Text('Vaciar'),
-                  ),
-              ],
-            ),
-            if (state.history.isEmpty)
-              const Text('Aún no has tirado ningún dado.')
-            else
-              for (var i = 0; i < state.history.length; i++)
-                _HistoryTile(
-                  key: Key('history-$i'),
-                  entry: state.history[i],
-                  favorite: state.favorites.contains(state.history[i].expression),
-                  onRoll: () => _roll(state.history[i].expression, label: state.history[i].label),
-                  onFavorite: () => controller.toggleFavorite(state.history[i].expression),
-                ),
+            ..._content(context, theme, state, controller),
           ],
         ),
       ),
     );
   }
+
+  List<Widget> _content(
+    BuildContext context,
+    ThemeData theme,
+    DiceState state,
+    DiceController controller,
+  ) => [
+    Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final sides in _quickDice)
+          FilledButton.tonal(
+            key: Key('die-d$sides'),
+            onPressed: () => _addDie(sides),
+            child: Text('d$sides'),
+          ),
+      ],
+    ),
+    const SizedBox(height: 12),
+    TextField(
+      key: const Key('dice-expression'),
+      controller: _controller,
+      autocorrect: false,
+      textInputAction: TextInputAction.done,
+      decoration: InputDecoration(
+        labelText: 'Expresión',
+        hintText: '2d6+3, 4d6kh3, adv+5…',
+        errorText: _error,
+        suffixIcon: IconButton(
+          tooltip: 'Borrar',
+          icon: const Icon(Icons.backspace_outlined),
+          onPressed: () => setState(() {
+            _controller.clear();
+            _error = null;
+          }),
+        ),
+      ),
+      onSubmitted: _roll,
+    ),
+    const SizedBox(height: 8),
+    SegmentedButton<AdvantageMode>(
+      key: const Key('dice-advantage'),
+      showSelectedIcon: false,
+      segments: const [
+        ButtonSegment(value: AdvantageMode.normal, label: Text('Normal')),
+        ButtonSegment(value: AdvantageMode.advantage, label: Text('Ventaja')),
+        ButtonSegment(value: AdvantageMode.disadvantage, label: Text('Desventaja')),
+      ],
+      selected: {_mode},
+      onSelectionChanged: (s) => setState(() => _mode = s.first),
+    ),
+    Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Text(
+        'Ventaja y desventaja se aplican al primer 1d20 de la expresión.',
+        style: theme.textTheme.bodySmall,
+      ),
+    ),
+    const SizedBox(height: 12),
+    Row(
+      children: [
+        Expanded(
+          child: FilledButton.icon(
+            key: const Key('dice-roll'),
+            onPressed: () => _roll(_controller.text),
+            icon: const Icon(Icons.casino_outlined),
+            label: const Text('Tirar'),
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton.outlined(
+          key: const Key('dice-favorite-add'),
+          tooltip: 'Guardar como favorita',
+          onPressed: () {
+            final parsed = DiceExpression.tryParse(_controller.text);
+            if (parsed == null) {
+              setState(() => _error = 'Escribe una expresión válida para guardarla.');
+              return;
+            }
+            if (!state.favorites.contains(parsed.toString())) {
+              controller.toggleFavorite(parsed.toString());
+            }
+          },
+          icon: const Icon(Icons.star_outline),
+        ),
+      ],
+    ),
+    if (_last != null)
+      Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: DiceResultView(result: _last!, kind: _lastKind),
+      ),
+    if (state.favorites.isNotEmpty) ...[
+      const SizedBox(height: 16),
+      Text('Favoritas', style: theme.textTheme.titleMedium),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        children: [
+          for (final favorite in state.favorites)
+            InputChip(
+              key: Key('favorite-$favorite'),
+              label: Text(favorite),
+              onPressed: () => _roll(favorite),
+              onDeleted: () => controller.toggleFavorite(favorite),
+              deleteButtonTooltipMessage: 'Quitar de favoritas',
+            ),
+        ],
+      ),
+    ],
+    const SizedBox(height: 16),
+    Row(
+      children: [
+        Expanded(child: Text('Historial', style: theme.textTheme.titleMedium)),
+        if (state.history.isNotEmpty)
+          TextButton(
+            key: const Key('dice-clear-history'),
+            onPressed: controller.clearHistory,
+            child: const Text('Vaciar'),
+          ),
+      ],
+    ),
+    if (state.history.isEmpty)
+      const Text('Aún no has tirado ningún dado.')
+    else
+      for (var i = 0; i < state.history.length; i++)
+        _HistoryTile(
+          key: Key('history-$i'),
+          entry: state.history[i],
+          favorite: state.favorites.contains(state.history[i].expression),
+          onRoll: () => _roll(
+            state.history[i].expression,
+            label: state.history[i].label,
+            kind: state.history[i].kind,
+          ),
+          onFavorite: () => controller.toggleFavorite(state.history[i].expression),
+        ),
+  ];
 }
 
 class _HistoryTile extends StatelessWidget {
@@ -365,16 +425,18 @@ class _HistoryTile extends StatelessWidget {
           '${entry.total}',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: entry.critical
+            color: entry.showsCritical
                 ? context.tokens.mossText
-                : entry.fumble
+                : entry.showsFumble
                 ? scheme.error
                 : null,
           ),
         ),
       ),
       title: Text(entry.label == null ? entry.expression : '${entry.label} · ${entry.expression}'),
-      subtitle: Text(entry.detail),
+      subtitle: Text(
+        entry.natural == null ? entry.detail : '${entry.detail} · d20 natural: ${entry.natural}',
+      ),
       trailing: IconButton(
         tooltip: favorite ? 'Quitar de favoritas' : 'Guardar como favorita',
         icon: Icon(favorite ? Icons.star : Icons.star_outline),

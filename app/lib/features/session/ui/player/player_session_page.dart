@@ -24,6 +24,7 @@ import '../../../characters/ui/combat/attacks_section.dart';
 import '../../../characters/ui/combat/class_panels.dart';
 import '../../../characters/ui/combat/resources_section.dart';
 import '../../../characters/ui/combat/rest_section.dart';
+import '../../../characters/ui/combat/spells_section.dart';
 import '../../../characters/ui/combat/vitals_section.dart';
 import '../../../items/data/items_controllers.dart';
 import '../../../items/ui/inventory_tab.dart';
@@ -335,6 +336,7 @@ class _CombatSubview extends StatelessWidget {
         if (c.hitPointsCurrent == 0) DeathSavesCard(character: c, canEdit: true),
         ConditionsCard(character: c, canEdit: true),
         AttacksSection(character: c),
+        SpellsSection(character: c, canEdit: true),
         SpellSlotsSection(character: c, canEdit: true),
         ResourcesSection(character: c, canEdit: true),
         ClassPanelsSection(character: c, canEdit: true),

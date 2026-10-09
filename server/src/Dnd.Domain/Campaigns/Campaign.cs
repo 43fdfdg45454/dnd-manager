@@ -185,6 +185,47 @@ public sealed class Campaign : EntityBase
         return member;
     }
 
+    /// <summary>
+    /// Invites a user with the same rules as <see cref="AddMember"/>: at least DM invites players;
+    /// only the owner invites DMs. The user joins when they accept the invitation.
+    /// </summary>
+    public CampaignInvitation Invite(Guid actorUserId, Guid userId, CampaignRole role, DateTimeOffset now)
+    {
+        var actor = RequireActor(actorUserId, CampaignRole.DM, "Solo el propietario o un DM pueden invitar a la campaña.");
+        EnsureAssignable(role);
+
+        if (role == CampaignRole.DM && actor.Role != CampaignRole.Owner)
+        {
+            throw DomainException.Forbidden("Solo el propietario puede invitar DMs.");
+        }
+
+        if (FindMember(userId) is not null)
+        {
+            throw DomainException.Conflict("El usuario ya es miembro de la campaña.");
+        }
+
+        return CampaignInvitation.Create(Id, userId, role, actorUserId, now);
+    }
+
+    /// <summary>Turns an invitation of this campaign into a membership with the invited role.</summary>
+    public CampaignMember AcceptInvitation(CampaignInvitation invitation, DateTimeOffset now)
+    {
+        if (invitation.CampaignId != Id)
+        {
+            throw DomainException.RuleViolation("La invitación no es de esta campaña.");
+        }
+
+        if (FindMember(invitation.UserId) is not null)
+        {
+            throw DomainException.Conflict("Ya eres miembro de la campaña.");
+        }
+
+        var member = CampaignMember.Create(Id, invitation.UserId, invitation.Role, now);
+        _members.Add(member);
+        UpdatedAt = now;
+        return member;
+    }
+
     /// <summary>Switches a member between DM and Player. Owner only; the owner's role cannot change here.</summary>
     public CampaignMember ChangeRole(Guid actorUserId, Guid userId, CampaignRole role)
     {

@@ -3,11 +3,14 @@ import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:dnd_companion/features/characters/data/level_up_controller.dart';
 import 'package:dnd_companion/features/characters/data/models.dart';
+import 'package:dnd_companion/features/characters/ui/level_up/hit_points_step.dart';
+import 'package:dnd_companion/features/dice/data/dice_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'dice_test.dart' show SequenceRandom;
 import 'helpers/app_pump.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
@@ -216,6 +219,7 @@ Future<({FakeCharactersRepository characters, GoRouter router})> _pump(
   required Map<String, dynamic> plan,
   Map<String, dynamic>? character,
   String location = '/characters/ch1/level-up',
+  int face = 6,
 }) async {
   final characters = FakeCharactersRepository(characters: [character ?? _character()]);
   characters.levelUpPlans[''] = plan;
@@ -223,7 +227,12 @@ Future<({FakeCharactersRepository characters, GoRouter router})> _pump(
     campaigns: FakeCampaignsRepository(campaigns: [makeCampaign(myRole: CampaignRole.player)]),
     characters: characters,
   );
-  final router = await pumpRealApp(tester, location: location, fakes: fakes);
+  final router = await pumpRealApp(
+    tester,
+    location: location,
+    fakes: fakes,
+    overrides: [diceRandomProvider.overrideWithValue(SequenceRandom.always(face))],
+  );
   return (characters: characters, router: router);
 }
 
@@ -261,6 +270,32 @@ void main() {
       final sturdy = choice.option('sturdy')!;
       expect(sturdy.abilityIncrease!.needsPick, isTrue);
       expect(sturdy.effectsPreview.single.text, 'PG máx 28 → 32');
+      expect(plan.newFeatures, isEmpty);
+      expect(choice.warning, isNull);
+    });
+
+    test('LevelUpPlan lee newFeatures, warning y preparesSpells', () {
+      final plan = LevelUpPlan.fromJson(
+        _plan(
+            choices: [
+              _choice('expertise', 'Expertise', 'Expertise', choose: 2, required: 0)
+                ..['warning'] = 'Aviso.',
+            ],
+          )
+          ..['newFeatures'] = [
+            {
+              'name': 'Base',
+              'description': <String>['x'],
+              'subclassIndex': null,
+            },
+            {'name': 'Sub', 'description': <String>[], 'subclassIndex': 'champion'},
+          ]
+          ..['spellcasting'] = {'classIndex': 'fighter', 'preparesSpells': true},
+      );
+      expect(plan.choices.single.warning, 'Aviso.');
+      expect(plan.newFeaturesFor(null).map((f) => f.name), ['Base']);
+      expect(plan.newFeaturesFor('champion').map((f) => f.name), ['Base', 'Sub']);
+      expect(plan.spellcasting!.preparesSpells, isTrue);
     });
 
     test('CharacterDetail lee choices[] con selección, mejora y dote', () {
@@ -462,6 +497,27 @@ void main() {
       expect(find.byKey(const Key('levelup-choice-subclass')), findsOneWidget);
     });
 
+    test('el valor fijo de PG es la mitad del dado más uno', () {
+      expect([6, 8, 10, 12].map(fixedHitPoints), [4, 5, 6, 7]);
+    });
+
+    testWidgets('PG: "Tirar" usa el dado virtual y "Usar el valor fijo" rellena el campo', (
+      tester,
+    ) async {
+      await _pump(tester, plan: _archetypePlan(), face: 9);
+      await _next(tester);
+      await _tapKey(tester, 'levelup-hp-roll');
+      expect(find.text('9'), findsWidgets);
+      expect(find.text('+ Con 2 = +11 PG'), findsOneWidget);
+
+      await _tapKey(tester, 'levelup-hp-fixed');
+      expect(find.text('Usar el valor fijo (6)'), findsOneWidget);
+      expect(find.text('+ Con 2 = +8 PG'), findsOneWidget);
+      expect(find.byKey(const Key('levelup-hp-fixed-hint')), findsOneWidget);
+      await _next(tester);
+      expect(find.byKey(const Key('levelup-choice-subclass')), findsOneWidget);
+    });
+
     testWidgets('la elección de subclase añade las suyas y exige el número exacto', (tester) async {
       await _pump(tester, plan: _archetypePlan());
       await _next(tester);
@@ -499,6 +555,84 @@ void main() {
       expect(find.text('Feint, Parry, Rally'), findsOneWidget);
       final confirm = tester.widget<ButtonStyleButton>(find.byKey(const Key('levelup-confirm')));
       expect(confirm.onPressed, isNotNull);
+    });
+
+    testWidgets('el resumen lista los rasgos nuevos de la subclase elegida y avisa de preparar', (
+      tester,
+    ) async {
+      final plan = _archetypePlan()
+        ..['newFeatures'] = [
+          {
+            'name': 'Martial Archetype',
+            'description': <String>['Archetype description.'],
+            'subclassIndex': null,
+          },
+          {
+            'name': 'Keen Edge',
+            'description': <String>['Keen Edge description.'],
+            'subclassIndex': 'champion',
+          },
+          {
+            'name': 'Drill Master',
+            'description': <String>['Drill Master description.'],
+            'subclassIndex': 'tactician',
+          },
+        ]
+        ..['spellcasting'] = {
+          'classIndex': 'fighter',
+          'ability': 'int',
+          'isPactCaster': false,
+          'cantripsKnown': null,
+          'spellsKnown': null,
+          'maxSpellLevel': 1,
+          'currentCantrips': 0,
+          'currentSpells': 0,
+          'spellSlots': [2, 0, 0, 0, 0, 0, 0, 0, 0],
+          'preparesSpells': true,
+        };
+      await _pump(tester, plan: plan);
+      await _next(tester);
+      await _writeHp(tester, '6');
+      await _next(tester);
+      await _tapKey(tester, 'levelup-option-subclass-champion');
+      await _next(tester);
+
+      expect(find.byKey(const Key('levelup-review')), findsOneWidget);
+      final section = find.byKey(const Key('levelup-new-features'));
+      await tester.ensureVisible(section);
+      await tester.pumpAndSettle();
+      expect(find.text('Rasgos nuevos'), findsOneWidget);
+      expect(find.byKey(const Key('levelup-new-feature-Martial Archetype')), findsOneWidget);
+      expect(find.byKey(const Key('levelup-new-feature-Keen Edge')), findsOneWidget);
+      expect(find.byKey(const Key('levelup-new-feature-Drill Master')), findsNothing);
+      final note = find.byKey(const Key('levelup-prepare-note'));
+      await tester.ensureVisible(note);
+      await tester.pumpAndSettle();
+      expect(note, findsOneWidget);
+    });
+
+    testWidgets('una elección sin opciones elegibles muestra el aviso del servidor', (
+      tester,
+    ) async {
+      const warning = 'Ninguna opción cumple los requisitos ahora mismo.';
+      final plan = _plan(
+        choices: [
+          _choice('expertise', 'Expertise', 'Expertise', choose: 2, required: 0)
+            ..['warning'] = warning,
+        ],
+      );
+      await _pump(tester, plan: plan);
+      await _next(tester);
+      await _writeHp(tester, '6');
+      await _next(tester);
+
+      expect(find.byKey(const Key('levelup-choice-expertise')), findsOneWidget);
+      expect(find.byKey(const Key('levelup-choice-warning')), findsOneWidget);
+      expect(find.text(warning), findsOneWidget);
+      // Nothing is required, so the review is reachable and "Confirmar" is enabled.
+      await _next(tester);
+      expect(find.byKey(const Key('levelup-review')), findsOneWidget);
+      expect(find.text('Nada (opcional)'), findsOneWidget);
     });
 
     testWidgets('Mejora: reparte 2 puntos con el tope de 20 en vivo', (tester) async {
@@ -650,6 +784,67 @@ void main() {
   });
 
   group('Hoja · Elecciones', () {
+    testWidgets('Rasgos lista las dotes con su texto, nivel y característica', (tester) async {
+      final characters = FakeCharactersRepository(
+        characters: [
+          _character(pendingLevelUpTo: null)
+            ..['feats'] = [
+              {
+                'index': 'grappler',
+                'name': 'Grappler',
+                'description': ['You have developed the skills necessary to hold your own.'],
+                'prerequisitesText': 'Strength 13 or higher',
+                'ability': null,
+                'level': 4,
+                'classIndex': 'fighter',
+              },
+              {
+                'index': 'pack-feat-athlete',
+                'name': 'Athlete',
+                'description': <Object>[],
+                'ability': 'str',
+                'level': 0,
+                'classIndex': null,
+              },
+            ],
+        ],
+      );
+      await pumpRealApp(
+        tester,
+        location: '/characters/ch1',
+        fakes: AppFakes(characters: characters),
+      );
+      await _tapKey(tester, 'tab-traits');
+
+      final section = find.byKey(const Key('sheet-feats'));
+      await tester.scrollUntilVisible(
+        section,
+        200,
+        scrollable: find.descendant(
+          of: find.byKey(const Key('sheet-tab-list')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: section, matching: find.text('Dotes')), findsOneWidget);
+      expect(find.descendant(of: section, matching: find.text('Grappler')), findsOneWidget);
+      expect(find.descendant(of: section, matching: find.text('Nivel 4')), findsOneWidget);
+      expect(
+        find.descendant(of: section, matching: find.text('Raza o trasfondo · +1 Fue')),
+        findsOneWidget,
+      );
+
+      await _tap(tester, find.text('Grappler'));
+      expect(find.text('Requisito: Strength 13 or higher'), findsOneWidget);
+      expect(
+        find.text('You have developed the skills necessary to hold your own.'),
+        findsOneWidget,
+      );
+
+      await _tap(tester, find.text('Athlete'));
+      expect(find.text('Esta dote ya no está en el catálogo.'), findsOneWidget);
+    });
+
     testWidgets('lista las elecciones por nivel con los nombres elegidos', (tester) async {
       final characters = FakeCharactersRepository(
         characters: [
