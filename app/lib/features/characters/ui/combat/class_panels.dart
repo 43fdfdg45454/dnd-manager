@@ -74,10 +74,16 @@ List<ClassPanel> classPanelsOf(CharacterDetail character) {
 /// The panels of the character's classes, each with the registered builder
 /// and the accent of its class.
 class ClassPanelsSection extends StatelessWidget {
-  const ClassPanelsSection({super.key, required this.character, required this.canEdit});
+  const ClassPanelsSection({
+    super.key,
+    required this.character,
+    required this.canEdit,
+    this.isDm = false,
+  });
 
   final CharacterDetail character;
   final bool canEdit;
+  final bool isDm;
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +94,7 @@ class ClassPanelsSection extends StatelessWidget {
           child: Builder(
             builder: (context) => (classPanelBuilders[panel.classIndex] ?? buildGenericPanel)(
               context,
-              ClassPanelContext(character: character, panel: panel, canEdit: canEdit),
+              ClassPanelContext(character: character, panel: panel, canEdit: canEdit, isDm: isDm),
             ),
           ),
         ),

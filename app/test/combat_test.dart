@@ -1023,6 +1023,75 @@ void main() {
       expect(repo.resourceSpends.last, (id: 'r2', amount: 10));
     });
 
+    testWidgets('el jugador no recupera a mano recursos automáticos; el DM sí', (tester) async {
+      final resources = [
+        {
+          'id': 'r1',
+          'key': 'ki',
+          'name': 'Ki',
+          'max': 4,
+          'used': 2,
+          'recharge': 'ShortRest',
+          'isAuto': true,
+        },
+        {
+          'id': 'r2',
+          'key': 'lay-on-hands',
+          'name': 'Lay on Hands',
+          'max': 25,
+          'used': 5,
+          'recharge': 'LongRest',
+          'isAuto': true,
+        },
+        {
+          'id': 'r3',
+          'key': 'sorcery-points',
+          'name': 'Sorcery Points',
+          'max': 4,
+          'used': 2,
+          'recharge': 'LongRest',
+          'isAuto': true,
+        },
+        {'id': 'r4', 'name': 'Varita', 'max': 7, 'used': 3, 'recharge': 'Dawn'},
+      ];
+      final repo = _repo(combat: makeCombatJson(resources: resources));
+      await _pump(tester, characters: repo);
+
+      await tester.longPress(find.byKey(const Key('resource-r1-pips')));
+      await tester.pumpAndSettle();
+      final plus = tester.widget<IconButton>(find.byKey(const Key('resource-r2-plus')));
+      expect(plus.onPressed, isNull);
+      expect(repo.resourceRestores, isEmpty);
+      // Los puntos de hechicería y los recursos manuales sí se recuperan.
+      await tester.longPress(find.byKey(const Key('resource-r3-pips')));
+      await tester.pumpAndSettle();
+      await tester.longPress(find.byKey(const Key('resource-r4-pips')));
+      await tester.pumpAndSettle();
+      expect(repo.resourceRestores, [(id: 'r3', amount: 1), (id: 'r4', amount: 1)]);
+    });
+
+    testWidgets('el DM recupera recursos automáticos', (tester) async {
+      final repo = _repo(
+        combat: makeCombatJson(
+          resources: [
+            {
+              'id': 'r1',
+              'key': 'ki',
+              'name': 'Ki',
+              'max': 4,
+              'used': 2,
+              'recharge': 'ShortRest',
+              'isAuto': true,
+            },
+          ],
+        ),
+      );
+      await _pump(tester, characters: repo, role: CampaignRole.dm);
+      await tester.longPress(find.byKey(const Key('resource-r1-pips')));
+      await tester.pumpAndSettle();
+      expect(repo.resourceRestores, [(id: 'r1', amount: 1)]);
+    });
+
     testWidgets('"Usar" gasta el consumible del inventario', (tester) async {
       final inventory = FakeInventoryRepository(
         items: {
