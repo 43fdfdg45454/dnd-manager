@@ -50,13 +50,19 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
             Assert.Contains(detail.Subclasses, s => s.Source == PackId && s.Index.StartsWith($"{PackId}-", StringComparison.Ordinal));
         }
 
-        // A PHB subrace with its ability bonus, a PHB race with its own speed, a background with personality tables and a spell.
-        var elf = await GetAsync<RaceDetailDto>(admin, $"/api/v1/catalog/races/{PackId}-elf");
+        // PHB subraces sit on the SRD races: the drow with its bonus, weapons and racial spells by level, the wood elf with its own speed.
+        Assert.Equal(4, result.Counts["raceExtensions"]);
+        var elf = await GetAsync<RaceDetailDto>(admin, "/api/v1/catalog/races/elf");
         var drow = Assert.Single(elf.Subraces, s => s.Index == $"{PackId}-dark-elf");
         Assert.Contains(drow.AbilityBonuses, b => b is { Ability: "cha", Bonus: 1 });
         Assert.Contains(drow.Traits, t => t.Name == "Sunlight Sensitivity");
-        var woodElf = await GetAsync<RaceDetailDto>(admin, $"/api/v1/catalog/races/{PackId}-wood-elf");
+        Assert.NotNull(drow.Grants);
+        Assert.Contains("hand-crossbows", drow.Grants!.Weapons);
+        Assert.Contains(drow.Grants.Spells, sp => sp is { Index: "darkness", MinLevel: 5 });
+        var woodElf = Assert.Single(elf.Subraces, s => s.Index == $"{PackId}-wood-elf");
         Assert.Equal(35, woodElf.Speed);
+        var dwarf = await GetAsync<RaceDetailDto>(admin, "/api/v1/catalog/races/dwarf");
+        Assert.Contains(dwarf.Subraces, s => s.Index == $"{PackId}-mountain-dwarf");
         var variantHuman = await GetAsync<RaceDetailDto>(admin, $"/api/v1/catalog/races/{PackId}-variant-human");
         Assert.NotNull(variantHuman.Choices?.Feats);
 
