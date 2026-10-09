@@ -215,9 +215,10 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
         var options = await db.CatalogOptions.AsNoTracking()
             .Select(x => new { x.Index, x.SetId, x.Source })
             .ToDictionaryAsync(x => x.Index, x => (x.SetId, x.Source), StringComparer.Ordinal, cancellationToken);
-        var spells = await db.CatalogSpells.AsNoTracking()
-            .Select(x => new { x.Index, x.Source })
-            .ToDictionaryAsync(x => x.Index, x => x.Source, StringComparer.Ordinal, cancellationToken);
+        var spellRows = await db.CatalogSpells.AsNoTracking()
+            .Select(x => new { x.Index, x.Source, x.Level })
+            .ToListAsync(cancellationToken);
+        var spells = spellRows.ToDictionary(x => x.Index, x => x.Source, StringComparer.Ordinal);
         var srdItems = await db.ItemTemplates.AsNoTracking()
             .Where(x => x.CampaignId == null && x.Source == CatalogSources.Srd && x.Index != null)
             .Select(x => x.Index!)
@@ -241,7 +242,8 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
             categories.ToHashSet(StringComparer.Ordinal),
             packSubclasses,
             races,
-            casterClasses.ToHashSet(StringComparer.Ordinal));
+            casterClasses.ToHashSet(StringComparer.Ordinal),
+            spellRows.ToDictionary(x => x.Index, x => x.Level, StringComparer.Ordinal));
     }
 
     /// <summary>Reports the indexes of the pack already used by another source (the SRD or another pack).</summary>

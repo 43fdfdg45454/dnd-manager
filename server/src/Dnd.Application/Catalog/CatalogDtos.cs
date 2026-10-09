@@ -254,10 +254,24 @@ public sealed record SpellSummaryDto(
     bool Ritual,
     IReadOnlyList<string> ClassIndexes,
     string Source,
-    string Category)
+    string Category,
+    IReadOnlyList<SpellExpansionDto> ExpandedBy)
 {
-    public static SpellSummaryDto From(SpellDefinition s) => new(
-        s.Index, s.Name, s.Level, s.School, s.CastingTime, s.Range, s.Components, s.Duration, s.Concentration, s.Ritual, s.ClassIndexes, s.Source, s.Category.ToString());
+    public static SpellSummaryDto From(SpellDefinition s, IReadOnlyList<SpellExpansionDto>? expandedBy = null) => new(
+        s.Index, s.Name, s.Level, s.School, s.CastingTime, s.Range, s.Components, s.Duration, s.Concentration, s.Ritual, s.ClassIndexes, s.Source, s.Category.ToString(), expandedBy ?? []);
+}
+
+/// <summary>
+/// A subclass whose expanded spell list (content packs) adds a spell to its class's list for the characters with
+/// it. The app labels the spell "Lista ampliada: <see cref="SubclassName"/>".
+/// </summary>
+public sealed record SpellExpansionDto(string SubclassIndex, string SubclassName, string ClassIndex, string Source)
+{
+    /// <summary>Spell index → the subclasses that expand their class's list with it.</summary>
+    public static ILookup<string, SpellExpansionDto> Lookup(IEnumerable<SubclassDefinition> subclasses) =>
+        subclasses
+            .SelectMany(sc => sc.ExpandedSpellList.Select(e => (e.Index, Dto: new SpellExpansionDto(sc.Index, sc.Name, sc.ClassIndex, sc.Source))))
+            .ToLookup(x => x.Index, x => x.Dto, StringComparer.Ordinal);
 }
 
 /// <summary>
@@ -292,7 +306,8 @@ public sealed record SpellDetailDto(
     IReadOnlyDictionary<int, string>? HealAtSlotLevel,
     string? DcAbility,
     string Source,
-    string Category);
+    string Category,
+    IReadOnlyList<SpellExpansionDto> ExpandedBy);
 
 /// <summary>Origin of an item template as shown by the API.</summary>
 public static class ItemSources

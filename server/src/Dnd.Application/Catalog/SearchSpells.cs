@@ -45,6 +45,7 @@ public sealed class SearchSpellsHandler(ICatalogRepository catalog)
             query.Concentration);
 
         var (items, total) = await catalog.SearchSpellsAsync(filter, (page - 1) * pageSize, pageSize, cancellationToken);
-        return new PagedResult<SpellSummaryDto>(items.Select(SpellSummaryDto.From).ToList(), total, page, pageSize);
+        var expansions = SpellExpansionDto.Lookup(await catalog.ListSubclassesWithExpandedSpellsAsync(cancellationToken));
+        return new PagedResult<SpellSummaryDto>(items.Select(s => SpellSummaryDto.From(s, expansions[s.Index].ToList())).ToList(), total, page, pageSize);
     }
 }

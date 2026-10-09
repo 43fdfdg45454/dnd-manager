@@ -143,8 +143,8 @@ public sealed record PreparationPlan(CharacterSheet Sheet, IReadOnlyDictionary<s
 /// <summary>
 /// Applies the PHB rules of spell preparation (cleric, druid, paladin and wizard; subclasses with their own
 /// preparation are not modelled): maximum = ability modifier + class level (paladin: half the level), minimum 1;
-/// candidates = the class spell list (wizard: only the spellbook) of the levels with slots in the class's own table;
-/// cantrips are not prepared and always-prepared spells (domain, oath, circle) do not count.
+/// candidates = the class spell list plus the expanded list of the character's subclass (wizard: only the spellbook)
+/// of the levels with slots in the class's own table; cantrips are not prepared and always-prepared spells (domain, oath, circle) do not count.
 /// </summary>
 public sealed class SpellPreparationPlanner(ICatalogRepository catalog, ICharacterSheetService sheets)
 {
@@ -166,6 +166,8 @@ public sealed class SpellPreparationPlanner(ICatalogRepository catalog, ICharact
         var spells = (await catalog.ListAllSpellsAsync(cancellationToken)).ToDictionary(s => s.Index, StringComparer.Ordinal);
         var classNames = (await catalog.ListClassesByIndexAsync(preparing.Select(p => p.ClassIndex).ToList(), cancellationToken))
             .ToDictionary(c => c.Index, c => c.Name, StringComparer.Ordinal);
+        var subclassIndexes = character.Classes.Select(c => c.SubclassIndex).OfType<string>().ToList();
+        var subclasses = await catalog.ListSubclassesByIndexAsync(subclassIndexes, cancellationToken);
 
         var classes = preparing
             .Select(casting =>
@@ -173,11 +175,13 @@ public sealed class SpellPreparationPlanner(ICatalogRepository catalog, ICharact
                 var classIndex = casting.ClassIndex;
                 var own = character.Spells.Where(s => s.ClassIndex == classIndex).ToList();
                 var always = own.Where(s => s.AlwaysPrepared).Select(s => s.SpellIndex).ToHashSet(StringComparer.Ordinal);
+                var subclassIndex = character.Classes.FirstOrDefault(c => c.ClassIndex == classIndex)?.SubclassIndex;
+                var expanded = subclasses.FirstOrDefault(s => s.Index == subclassIndex)?.ExpandedSpellIndexes ?? new HashSet<string>();
                 bool Leveled(string index, int max) => spells.GetValueOrDefault(index) is { Level: >= 1 } s && s.Level <= max;
 
                 var candidates = UsesSpellbook(classIndex)
                     ? own.Where(s => !s.AlwaysPrepared && Leveled(s.SpellIndex, casting.MaxSpellLevel)).Select(s => spells[s.SpellIndex])
-                    : spells.Values.Where(s => s.ClassIndexes.Contains(classIndex) && s.Level >= 1 && s.Level <= casting.MaxSpellLevel && !always.Contains(s.Index));
+                    : spells.Values.Where(s => (s.ClassIndexes.Contains(classIndex) || expanded.Contains(s.Index)) && s.Level >= 1 && s.Level <= casting.MaxSpellLevel && !always.Contains(s.Index));
 
                 return new PreparationClass(
                     casting,

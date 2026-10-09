@@ -247,6 +247,56 @@ void main() {
       expect(find.text('Reinos de Ejemplo'), findsOneWidget);
     });
 
+    testWidgets('un hechizo de una lista ampliada muestra la etiqueta en el detalle y la lista', (
+      tester,
+    ) async {
+      const expansion = SpellExpansion(
+        subclassIndex: 'pactos-ejemplo-hada',
+        subclassName: 'Dama del Bosque de Ejemplo',
+        classIndex: 'warlock',
+      );
+      final repository = FakeCatalogRepository(
+        spellDetails: {
+          'faerie-fire': const SpellDetail(
+            index: 'faerie-fire',
+            name: 'Faerie Fire',
+            level: 1,
+            school: 'Evocation',
+            classes: ['Druid'],
+            expandedBy: [expansion],
+          ),
+        },
+      );
+      await tester.pumpWidget(
+        _scope(repository, const MaterialApp(home: SpellDetailPage(index: 'faerie-fire'))),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('spell-expanded-pactos-ejemplo-hada')), findsOneWidget);
+      expect(find.text('Lista ampliada: Dama del Bosque de Ejemplo (Warlock)'), findsOneWidget);
+
+      final parsed = SpellSummary.fromJson({
+        'index': 'faerie-fire',
+        'level': 1,
+        'school': 'Evocation',
+        'expandedBy': [
+          {
+            'subclassIndex': 'pactos-ejemplo-hada',
+            'subclassName': 'Dama del Bosque de Ejemplo',
+            'classIndex': 'warlock',
+          },
+        ],
+      });
+      expect(parsed.expandedBy.single.label, 'Lista ampliada: Dama del Bosque de Ejemplo');
+      expect(SpellSummary.fromJson({'index': 'a', 'level': 1}).expandedBy, isEmpty);
+
+      await _pumpCompendium(tester, _repository(spells: [parsed]));
+      expect(
+        find.text('Nivel 1 · Evocation · Lista ampliada: Dama del Bosque de Ejemplo'),
+        findsOneWidget,
+      );
+    });
+
     test('SpellSummary, ItemSummary y Subclass leen source', () {
       expect(SpellSummary.fromJson({'index': 'a', 'level': 1, 'source': 'p'}).source, 'p');
       expect(SpellDetail.fromJson({'index': 'a', 'level': 1, 'source': 'p'}).source, 'p');
