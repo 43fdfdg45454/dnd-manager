@@ -145,6 +145,17 @@ typedef WizardEquipment = ({String templateId, String name, int qty});
 /// How the character gets its starting equipment.
 enum EquipmentMode { kit, gold }
 
+/// Where a line or a choice of the starting equipment comes from.
+enum EquipmentOrigin {
+  characterClass('Clase'),
+  background('Trasfondo');
+
+  const EquipmentOrigin(this.label);
+
+  /// Spanish name shown next to the line ("Clase", "Trasfondo").
+  final String label;
+}
+
 /// Range of the trinket roll (1d100).
 const trinketRollMin = 1;
 const trinketRollMax = 100;
@@ -635,6 +646,11 @@ class WizardState {
     ...?backgroundEquipment?.choices,
   ];
 
+  /// Whether choice [choice] (an index in [allEquipmentChoices]) belongs to the
+  /// class or to the background.
+  EquipmentOrigin equipmentChoiceOrigin(int choice) =>
+      choice < _classChoiceCount ? EquipmentOrigin.characterClass : EquipmentOrigin.background;
+
   /// True when the background equipment is part of the character.
   bool get usesBackgroundEquipment => equipmentMode == EquipmentMode.kit || keepBackgroundEquipment;
 
@@ -700,12 +716,21 @@ class WizardState {
 
   /// Copper the new character starts with: fixed money of the background plus
   /// the rolled wealth.
-  int get startingCopper =>
-      (usesBackgroundEquipment ? backgroundEquipment?.fixedGoldCp ?? 0 : 0) + rolledCopper;
+  int get startingCopper => backgroundCopper + rolledCopper;
+
+  /// Fixed money of the background, when its equipment is kept.
+  int get backgroundCopper => usesBackgroundEquipment ? backgroundEquipment?.fixedGoldCp ?? 0 : 0;
 
   /// Item lines of the starting kit (fixed items plus chosen options and
   /// category items), merged by template; items without a template are skipped.
-  List<WizardEquipment> get startingLines {
+  List<WizardEquipment> get startingLines => _startingLines(null);
+
+  /// The lines of [startingLines] that come from [origin] (class or
+  /// background), merged by template within that origin.
+  List<WizardEquipment> startingLinesFrom(EquipmentOrigin origin) => _startingLines(origin);
+
+  List<WizardEquipment> _startingLines(EquipmentOrigin? only) {
+    bool from(EquipmentOrigin origin) => only == null || only == origin;
     final lines = <String, WizardEquipment>{};
     void add(String? templateId, String name, int qty) {
       if (templateId == null || qty <= 0) return;
@@ -713,18 +738,19 @@ class WizardState {
       lines[templateId] = (templateId: templateId, name: name, qty: (old?.qty ?? 0) + qty);
     }
 
-    if (equipmentMode == EquipmentMode.kit) {
+    if (equipmentMode == EquipmentMode.kit && from(EquipmentOrigin.characterClass)) {
       for (final i in classEquipment?.fixed ?? const <StartingItem>[]) {
         add(i.templateId, i.name, i.quantity);
       }
     }
-    if (usesBackgroundEquipment) {
+    if (usesBackgroundEquipment && from(EquipmentOrigin.background)) {
       for (final i in backgroundEquipment?.fixed ?? const <StartingItem>[]) {
         add(i.templateId, i.name, i.quantity);
       }
     }
     final all = allEquipmentChoices;
     for (final c in activeChoiceIndexes) {
+      if (!from(equipmentChoiceOrigin(c))) continue;
       for (final o in [...?equipmentOptions[c]]..sort()) {
         if (o >= all[c].options.length) continue;
         final option = all[c].options[o];
