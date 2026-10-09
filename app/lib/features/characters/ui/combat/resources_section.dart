@@ -99,7 +99,15 @@ class SpellSlotsSection extends ConsumerWidget {
     Widget row(String key, String label, int level, SpellSlot slot) => Row(
       key: Key(key),
       children: [
-        SizedBox(width: 92, child: Text(label, style: theme.textTheme.bodyLarge)),
+        SizedBox(
+          width: 112,
+          child: Text(
+            label,
+            style: theme.textTheme.bodyLarge,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
         Expanded(
           child: PipRow(
             key: Key('$key-pips'),

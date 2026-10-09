@@ -4,11 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/motion/shake.dart';
 import '../../../../core/theme/app_icon.dart';
-import '../../../../core/theme/components.dart';
 import '../../../../core/theme/icons.dart';
 import '../../../../core/theme/textures.dart';
 import '../../../../core/theme/tokens.dart';
-import '../../../../core/ui/stat_value.dart';
+import '../../../../core/ui/stat_tiles.dart';
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/data/models.dart' show Condition;
 import '../../../dice/domain/dice_expression.dart';
@@ -21,7 +20,6 @@ import '../../domain/combat_math.dart';
 import '../character_tabs.dart' show OverrideMark, titleFromSpellIndex;
 import 'combat_support.dart';
 import 'concentration_flow.dart';
-import 'skill_rolls.dart';
 
 CharacterController _controller(WidgetRef ref, CharacterDetail character) =>
     ref.read(characterControllerProvider(character.id).notifier);
@@ -402,7 +400,6 @@ class StatsCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final c = character;
     final sheet = c.sheet;
     final concentrating = c.concentratingOnSpellIndex;
@@ -411,85 +408,90 @@ class StatsCard extends ConsumerWidget {
         : ref.watch(spellInfoProvider(spellInfoKey([concentrating]))).value?[concentrating]?.name ??
               titleFromSpellIndex(concentrating);
 
-    Widget tile(
-      String key,
-      String label,
-      String value, {
-      Widget? action,
-      required String breakdownKey,
-      String? totalText,
-    }) => StoneCard(
-      key: Key('combat-$key'),
-      margin: EdgeInsets.zero,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(label, style: theme.textTheme.labelMedium),
-          StatValue(
-            statKey: breakdownKey,
-            title: label,
-            text: value,
-            totalText: totalText,
-            breakdown: sheet.breakdown(breakdownKey),
-            style: numericStyle(theme.textTheme.headlineSmall),
-          ),
-          ?action,
-        ],
-      ),
-    );
-
+    final tokens = context.tokens;
     return CombatCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          StatTileGrid(
+            key: const Key('combat-stats-grid'),
+            columnsWide: 6,
             children: [
-              tile('ac', 'CA', '${sheet.armorClass}', breakdownKey: 'armorClass'),
-              tile(
-                'initiative',
-                'Iniciativa',
-                formatModifier(sheet.initiative),
+              StatTile(
+                statKey: 'ac',
+                key: const Key('combat-ac'),
+                breakdownKey: 'armorClass',
+                label: 'CA',
+                value: '${sheet.armorClass}',
+                breakdown: sheet.breakdown('armorClass'),
+              ),
+              StatTile(
+                statKey: 'initiative',
+                key: const Key('combat-initiative'),
                 breakdownKey: 'initiative',
-                action: TextButton(
+                label: 'Iniciativa',
+                value: formatModifier(sheet.initiative),
+                breakdown: sheet.breakdown('initiative'),
+                corner: IconButton(
                   key: const Key('roll-initiative'),
+                  tooltip: 'Tirar iniciativa',
+                  visualDensity: VisualDensity.compact,
+                  iconSize: 20,
+                  icon: const AppIcon(AppIcons.d20, size: 20),
                   onPressed: () =>
                       rollAndShow(context, d20Expression(sheet.initiative), label: 'Iniciativa'),
-                  child: const Text('Tirar'),
                 ),
               ),
-              tile('speed', 'Velocidad', '${sheet.speed} pies', breakdownKey: 'speed'),
-              tile(
-                'perception',
-                'Percepción pasiva',
-                '${sheet.passivePerception}',
+              StatTile(
+                statKey: 'speed',
+                key: const Key('combat-speed'),
+                breakdownKey: 'speed',
+                label: 'Velocidad',
+                value: '${sheet.speed} pies',
+                totalText: '${sheet.speed} pies',
+                breakdown: sheet.breakdown('speed'),
+              ),
+              StatTile(
+                statKey: 'perception',
+                key: const Key('combat-perception'),
                 breakdownKey: 'passivePerception',
+                label: 'Percepción pasiva',
+                value: '${sheet.passivePerception}',
+                breakdown: sheet.breakdown('passivePerception'),
               ),
-              tile(
-                'proficiency',
-                'Competencia',
-                formatModifier(sheet.proficiencyBonus),
+              StatTile(
+                statKey: 'proficiency',
+                key: const Key('combat-proficiency'),
                 breakdownKey: 'proficiencyBonus',
+                label: 'Competencia',
+                value: formatModifier(sheet.proficiencyBonus),
+                breakdown: sheet.breakdown('proficiencyBonus'),
               ),
-              FilterChip(
-                key: const Key('inspiration'),
-                avatar: const AppIcon(AppIcons.sparkles, size: 18),
-                label: const Text('Inspiración'),
-                selected: c.inspiration,
-                onSelected: canEdit
-                    ? (value) => runCombat(
+              StatTile(
+                statKey: 'inspiration',
+                key: const Key('combat-inspiration'),
+                tapKey: const Key('inspiration'),
+                label: 'Inspiración',
+                value: c.inspiration ? 'Sí' : 'No',
+                corner: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: AppIcon(
+                    AppIcons.sparkles,
+                    size: 18,
+                    color: c.inspiration ? tokens.oldGold : tokens.boneMuted,
+                  ),
+                ),
+                onTap: canEdit
+                    ? () => runCombat(
                         context,
-                        () => _controller(ref, c).patchCombat(CombatPatch(inspiration: value)),
+                        () => _controller(
+                          ref,
+                          c,
+                        ).patchCombat(CombatPatch(inspiration: !c.inspiration)),
                       )
                     : null,
               ),
             ],
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: QuickSkillRolls(character: c),
           ),
           if (concentrating != null)
             Padding(
