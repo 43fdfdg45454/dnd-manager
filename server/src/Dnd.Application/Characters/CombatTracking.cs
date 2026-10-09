@@ -326,6 +326,7 @@ public sealed class RestHandler(
     RestRequestLoader restRequests,
     ICampaignNotifier notifier,
     IDiceRoller dice,
+    CompanionPlanner companions,
     IDateTimeProvider clock)
 {
     public async Task<CharacterDetailDto> ShortRestAsync(Guid currentUserId, Guid characterId, ShortRestRequest? request, CancellationToken cancellationToken = default)
@@ -345,6 +346,7 @@ public sealed class RestHandler(
         var sheet = await tracker.SheetAsync(character, cancellationToken);
         var now = clock.UtcNow;
         character.LongRest(sheet, now);
+        await companions.RestoreAfterLongRestAsync([character], now, cancellationToken);
         return await SaveAsync(currentUserId, character, now, cancellationToken);
     }
 

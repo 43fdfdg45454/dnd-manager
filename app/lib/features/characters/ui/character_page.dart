@@ -244,7 +244,11 @@ class _CharacterViewState extends ConsumerState<_CharacterView>
                 canEdit: permissions.canEdit,
                 isDm: permissions.isDm,
               ),
-              SummaryTab(character: character),
+              SummaryTab(
+                character: character,
+                canEdit: permissions.canEdit,
+                isDm: permissions.isDm,
+              ),
               SkillsTab(character: character),
               TraitsTab(character: character),
               SpellsTab(character: character),

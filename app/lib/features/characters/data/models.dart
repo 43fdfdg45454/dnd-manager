@@ -2,6 +2,10 @@
 // missing fields fall back to neutral values so a slightly different server
 // shape does not break the sheet.
 
+import 'companion_models.dart';
+
+export 'companion_models.dart';
+
 /// Ability keys in display order.
 const abilityKeys = <String>['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
@@ -144,7 +148,8 @@ enum ChangeRequestType {
   removeItem('RemoveItem', 'Quitar objeto'),
   customItem('CustomItem', 'Objeto personalizado'),
   adjustMoney('AdjustMoney', 'Ajuste de dinero'),
-  other('Other', 'Otro');
+  other('Other', 'Otro'),
+  companion('Companion', 'Compañero animal');
 
   const ChangeRequestType(this.apiValue, this.label);
 
@@ -1181,6 +1186,9 @@ class CharacterDetail {
     this.choices = const [],
     this.feats = const [],
     this.optionCosts = const [],
+    this.companion,
+    this.companionFeature,
+    this.companionPending = false,
     this.raceCatalogMissing = false,
     this.backgroundCatalogMissing = false,
     this.catalogMissing = false,
@@ -1248,6 +1256,13 @@ class CharacterDetail {
       choices: _objects(json['choices'], CharacterChoice.fromJson),
       feats: _objects(json['feats'], CharacterFeat.fromJson),
       optionCosts: _objects(json['optionCosts'], CharacterOptionCost.fromJson),
+      companion: _map(json['companion']) == null
+          ? null
+          : CharacterCompanion.fromJson(_map(json['companion'])!),
+      companionFeature: _map(json['companionFeature']) == null
+          ? null
+          : CompanionFeature.fromJson(_map(json['companionFeature'])!),
+      companionPending: _bool(json['companionPending']),
       raceCatalogMissing: _bool(json['raceCatalogMissing']),
       backgroundCatalogMissing: _bool(json['backgroundCatalogMissing']),
       catalogMissing: _bool(json['catalogMissing']),
@@ -1339,6 +1354,15 @@ class CharacterDetail {
 
   /// Chosen options whose use spends a resource ("2 Ki").
   final List<CharacterOptionCost> optionCosts;
+
+  /// The animal companion, or null (phase 25, block 6).
+  final CharacterCompanion? companion;
+
+  /// The companion feature the character has reached, or null.
+  final CompanionFeature? companionFeature;
+
+  /// The companion feature is reached and no beast is chosen yet.
+  final bool companionPending;
 
   /// Cost of the chosen option [index], or null.
   CharacterOptionCost? optionCost(String index) {

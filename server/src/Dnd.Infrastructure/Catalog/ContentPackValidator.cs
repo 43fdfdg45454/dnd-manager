@@ -280,6 +280,9 @@ internal sealed partial class ContentPackValidator
                     var featureResource = feature.Resource is not null && RequireLevelChoicesFormat($"{featurePath}.resource", feature.Resource)
                         ? Resource($"{featurePath}.resource", feature.Resource)
                         : null;
+                    var featureCompanion = feature.Companion is not null && RequireLevelChoicesFormat($"{featurePath}.companion", feature.Companion)
+                        ? Companion($"{featurePath}.companion", feature.Companion)
+                        : null;
                     if (featureIndex is null || number is null)
                     {
                         return;
@@ -295,6 +298,7 @@ internal sealed partial class ContentPackValidator
                         Level = number.Value,
                         Description = featureDescription,
                         ResourceJson = featureResource,
+                        CompanionJson = featureCompanion,
                         Source = _id,
                     });
                 });

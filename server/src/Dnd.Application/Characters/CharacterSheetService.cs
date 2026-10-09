@@ -60,6 +60,8 @@ public sealed class CharacterSheetService(
     IChangeRequestRepository changeRequests,
     IRestRequestRepository restRequests,
     IItemTemplateRepository itemTemplates,
+    ICharacterCompanionRepository companions,
+    CompanionPlanner companionPlanner,
     IDateTimeProvider clock) : ICharacterSheetService
 {
     public async Task<CharacterSheet> CalculateAsync(Character character, CancellationToken cancellationToken = default)
@@ -269,6 +271,8 @@ public sealed class CharacterSheetService(
         var raceMissing = (character.RaceIndex is not null && sheetCatalog.Race(character.RaceIndex) is null)
             || (character.SubraceIndex is not null && sheetCatalog.Subrace(character.SubraceIndex) is null);
         var backgroundMissing = character.BackgroundIndex is not null && sheetCatalog.Background(character.BackgroundIndex) is null;
+        var companionGrant = sheetCatalog.Companion(character);
+        var companion = await companions.GetByCharacterAsync(character.Id, cancellationToken);
 
         return new CharacterDetailDto
         {
@@ -353,6 +357,9 @@ public sealed class CharacterSheetService(
                 .Select(c => CharacterFeatDto.From(c, sheetCatalog.Option(c.Selection.Feat!.Index)))
                 .ToList(),
             OptionCosts = optionCosts,
+            Companion = companion is null ? null : companionPlanner.BuildDto(companion, companionGrant, sheet.ProficiencyBonus),
+            CompanionFeature = companionGrant is null ? null : CompanionPlanner.FeatureDto(companionGrant),
+            CompanionPending = companionGrant is not null && companion is null,
         };
     }
 

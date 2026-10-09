@@ -104,6 +104,9 @@ public static class DependencyInjection
         services.AddScoped<SetCharacterOwnerHandler>();
         services.AddScoped<GetCharacterHandler>();
         services.AddScoped<UpdateSheetHandler>();
+        services.AddScoped<CompanionPlanner>();
+        services.AddScoped<SetCompanionHandler>();
+        services.AddScoped<CompanionTrackingHandler>();
         services.AddScoped<SubmitCharacterHandler>();
         services.AddScoped<ActivateCharacterHandler>();
         services.AddScoped<DeleteCharacterHandler>();

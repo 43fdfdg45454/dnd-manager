@@ -158,6 +158,41 @@ class CharactersRepository {
         ),
       );
 
+  // -- Animal companion (phase 25, block 6) ----------------------------------
+
+  /// `PUT /characters/{id}/companion`: chooses or renames the companion.
+  /// [Saved] when applied; [PendingApproval] when a player changes the beast.
+  Future<SheetSaveResult> setCompanion(
+    String id, {
+    required String beastIndex,
+    required String name,
+  }) async {
+    final response = await _client.dio.put<Map<String, dynamic>>(
+      '$_api/characters/$id/companion',
+      data: {'beastIndex': beastIndex, 'name': name},
+    );
+    if (response.statusCode == 202) {
+      return PendingApproval(ChangeRequest.fromJson(response.data!));
+    }
+    return Saved(CharacterDetail.fromJson(response.data!));
+  }
+
+  /// `POST /characters/{id}/companion/hp`: [delta] (negative for damage) or
+  /// [current], without approval.
+  Future<CharacterDetail> trackCompanionHp(String id, {int? delta, int? current}) async =>
+      CharacterDetail.fromJson(
+        await _json(
+          'POST',
+          '$_api/characters/$id/companion/hp',
+          data: {'delta': ?delta, 'current': ?current},
+        ),
+      );
+
+  /// `DELETE /characters/{id}/companion` (DM only).
+  Future<void> deleteCompanion(String id) async {
+    await _client.dio.delete<void>('$_api/characters/$id/companion');
+  }
+
   Future<CharacterDetail> patchCombat(String id, CombatPatch patch) async =>
       CharacterDetail.fromJson(
         await _json('PATCH', '$_api/characters/$id/combat', data: patch.toJson()),

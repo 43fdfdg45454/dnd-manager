@@ -5,6 +5,7 @@ import '../../../../core/motion/vignette.dart';
 import '../../data/models.dart';
 import 'attacks_section.dart';
 import 'class_panels.dart';
+import 'companion_section.dart';
 import 'resources_section.dart';
 import 'rest_section.dart';
 import 'spells_section.dart';
@@ -52,6 +53,7 @@ class CombatView extends ConsumerWidget {
           SpellSlotsSection(character: c, canEdit: canEdit),
           ResourcesSection(character: c, canEdit: canEdit, isDm: isDm),
           ClassPanelsSection(character: c, canEdit: canEdit, isDm: isDm),
+          CompanionSection(character: c, canEdit: canEdit, isDm: isDm),
           ConsumablesSection(character: c, canEdit: canEdit),
           RestSection(character: c, canEdit: canEdit, isDm: isDm),
         ],

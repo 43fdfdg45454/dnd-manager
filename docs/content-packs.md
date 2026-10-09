@@ -196,7 +196,8 @@ Notación: `string?` admite `null` o ausencia; **obligatorio** indica que no pue
 
 **`Feature`**: `index` (**obligatorio**, con prefijo), `name` (**obligatorio**, ≤ 200),
 `description` (`string[]?`) y, con `"formatVersion": 2`, `resource` (`Resource?`, ver
-[`levels[].features[].resource`](#levelsfeaturesresource)).
+[`levels[].features[].resource`](#levelsfeaturesresource)) y `companion` (`Companion?`, ver
+[`levels[].features[].companion`](#levelsfeaturescompanion)).
 
 ### `Item`
 
@@ -1066,3 +1067,58 @@ en la clase de la subclase. El origen del recurso es el rasgo con su nivel ("Ven
   ]
 }
 ```
+
+### `levels[].features[].companion`
+
+Un rasgo de subclase puede conceder un **compañero animal**: al alcanzar ese nivel de la clase con esa
+subclase, la hoja pide elegir una bestia del catálogo de bestias (las del SRD, pestaña "Bestias" del
+compendio) que cumpla el filtro, y la guarda con su nombre y sus PG actuales.
+
+```json
+{
+  "index": "compas-ejemplo-vinculo",
+  "name": "Vínculo de ejemplo",
+  "description": ["Texto de ejemplo: una bestia te acompaña."],
+  "companion": {
+    "beastFilter": { "maxChallengeRating": 0.25, "sizes": ["Medium", "Small"] },
+    "hitPoints": "max(beast, 4*classLevel)",
+    "proficiencyBonusFromCharacter": true,
+    "attackBonusFromCharacter": true
+  }
+}
+```
+
+| Campo | Tipo | Descripción |
+| --- | --- | --- |
+| `beastFilter.maxChallengeRating` | `number` | **Obligatorio**. VD máximo de la bestia, entre 0 y 30 (`0.25` para 1/4). |
+| `beastFilter.sizes` | `string[]?` | Tamaños permitidos: `Tiny`, `Small`, `Medium`, `Large`, `Huge`, `Gargantuan`. Vacío o ausente: cualquiera. |
+| `hitPoints` | `string?` | `"beast"` (los PG de la bestia, por defecto) o `"max(beast, N*classLevel)"` con N entre 1 y 20: el mayor entre los PG de la bestia y N × el nivel en la clase del rasgo. |
+| `proficiencyBonusFromCharacter` | `bool?` | Suma el bonificador de competencia del personaje a la CA y a las salvaciones y habilidades en que la bestia ya es competente. |
+| `attackBonusFromCharacter` | `bool?` | Suma el bonificador de competencia del personaje a las tiradas de ataque y al daño (una vez por ataque, en el primer dado de daño). |
+
+Errores con ruta: `...companion.beastFilter`, `...companion.beastFilter.maxChallengeRating`,
+`...companion.beastFilter.sizes[0]`, `...companion.hitPoints`; sin `"formatVersion": 2`,
+`...companion`.
+
+En la API:
+
+- El detalle del personaje lleva `companionFeature` (el rasgo alcanzado: `featureIndex`, `featureName`,
+  `classIndex`, `classLevel`, `maxChallengeRating`, `maxChallengeRatingText`, `sizes`, `hitPoints`,
+  `proficiencyBonusFromCharacter`, `attackBonusFromCharacter`), `companionPending` (rasgo alcanzado y
+  sin compañero) y `companion`: `beastIndex`, `beastName`, `name`, `hitPointsCurrent`,
+  `hitPointsMax`, `armorClass`, `savingThrows`, `skills`, `attacks[]` (`attackBonus`,
+  `attackBreakdown`, `damage[]` con el bonificador ya sumado al primer dado, `damageBreakdown`) y
+  `breakdowns` (`armorClass`, `hitPointsMax`, `save.<característica>`, `skill.<habilidad>`).
+- `PUT /api/v1/characters/{id}/companion` (`{ "beastIndex": "wolf", "name": "Ceniza" }`): el dueño o un
+  DM. El primer compañero y los cambios de nombre se aplican directamente; si un jugador cambia la
+  bestia de un personaje activo se crea una solicitud `Companion` (202, con `before`) que el DM
+  aprueba; el DM/Owner la cambia directamente. Una bestia fuera del filtro da 400 en `beastIndex`; sin
+  el rasgo, 409.
+- `POST /api/v1/characters/{id}/companion/hp` (`{ "delta": -5 }` o `{ "current": 7 }`): auto-seguimiento
+  sin aprobación, entre 0 y el máximo. Un descanso largo lo devuelve al máximo.
+- `DELETE /api/v1/characters/{id}/companion`: solo DM/Owner.
+- Cada cambio emite `character.updated` por el hub de la campaña.
+
+La pestaña Combate (y la hoja) ofrece "Elegir compañero" con las bestias que cumplen el filtro y
+muestra el bloque del compañero con CA, PG (con controles de daño y curación), salvaciones,
+habilidades y ataques con botones de tirada; cada valor abre su desglose.

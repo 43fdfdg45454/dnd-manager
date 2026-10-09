@@ -251,3 +251,21 @@ internal sealed class RestRequestConfiguration : IEntityTypeConfiguration<RestRe
         builder.HasIndex(x => x.ResolvedByUserId);
     }
 }
+
+internal sealed class CharacterCompanionConfiguration : IEntityTypeConfiguration<CharacterCompanion>
+{
+    public void Configure(EntityTypeBuilder<CharacterCompanion> builder)
+    {
+        builder.ToTable("CharacterCompanions");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).ValueGeneratedNever();
+        builder.Property(x => x.BeastIndex).HasMaxLength(CharacterCompanion.BeastIndexMaxLength).IsRequired();
+        builder.Property(x => x.Name).HasMaxLength(CharacterCompanion.NameMaxLength).IsRequired();
+        builder.Property(x => x.CreatedAt).IsRequired();
+        builder.Property(x => x.UpdatedAt).IsRequired();
+
+        // At most one companion per character.
+        builder.HasOne<Character>().WithMany().HasForeignKey(x => x.CharacterId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(x => x.CharacterId).IsUnique();
+    }
+}

@@ -9,4 +9,7 @@ public enum ChangeRequestType
     CustomItem,
     AdjustMoney,
     Other,
+
+    /// <summary>A player changes the beast of the animal companion (payload <c>{ beastIndex, name }</c>).</summary>
+    Companion,
 }

@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<ICharacterRepository, CharacterRepository>();
         services.AddScoped<IChangeRequestRepository, ChangeRequestRepository>();
         services.AddScoped<IRestRequestRepository, RestRequestRepository>();
+        services.AddScoped<ICharacterCompanionRepository, CharacterCompanionRepository>();
         services.AddScoped<IItemTemplateRepository, ItemTemplateRepository>();
         services.AddScoped<IShopRepository, ShopRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
