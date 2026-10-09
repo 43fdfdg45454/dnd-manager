@@ -761,6 +761,7 @@ si se elige, también el "Juramento"; al subir a nivel 4, la dote aparece junto 
 | `abilityIncrease` | `AbilityIncrease?` | Dotes: `{ "amount": 1-2, "from": ["str", "dex"] }`. `from` vacío = cualquier característica; con una sola, se aplica sin preguntar; con varias, el jugador elige una al tomar la dote. El tope de 20 se respeta y el desglose de la característica nombra la dote ("Atleta (nivel 4)"). |
 | `grants` | `Grants?` | Competencias y conjuros que concede. |
 | `resource` | `Resource?` | Recurso de usos limitados que aparece como recurso automático del personaje. |
+| `cost` | `Cost?` | Lo que cuesta **usar** la opción: `{ "resource": "ki", "amount": 2 }` (ver abajo). |
 
 **`Prerequisites`** (todas las condiciones dadas deben cumplirse):
 
@@ -853,6 +854,39 @@ guardan en el recurso (`rolls`). `dice`: `d4`, `d6`, `d8`, `d10`, `d12`, `d20` o
 Los errores llevan la ruta exacta: `...resource.max`, `...resource.max.formula`, `...resource.max.min`,
 `...resource.max.byLevel.3`, `...resource.dice`, `...resource.diceByLevel.10`.
 
+**`Cost`**: usos de un recurso del personaje que se gastan **cada vez** que se usa la opción (técnicas
+que cuestan ki, metamagia que cuesta puntos de hechicería...).
+
+```json
+"cost": { "resource": "ki", "amount": 2 }
+```
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `resource` | `string` | **Obligatorio**. Key de un recurso de clase del SRD (`rage`, `bardic-inspiration`, `channel-divinity`, `wild-shape`, `second-wind`, `action-surge`, `indomitable`, `ki`, `lay-on-hands`, `sorcery-points`, `arcane-recovery`, `natural-recovery`) o el `key` de un `resource` de una opción o de un rasgo de subclase (del paquete o del catálogo). |
+| `amount` | `int` | **Obligatorio**, 1–20. |
+
+Validación al importar: si el conjunto de la opción lo usan elecciones de clases concretas (del paquete o
+del catálogo), un recurso de clase del SRD debe ser de una de esas clases ("`rage` es de barbarian") y el
+recurso de un rasgo de subclase, de una subclase de esas clases. Los recursos de las opciones del
+paquete valen siempre. Si el conjunto no está ligado a una clase (`feats`, o un conjunto que aún no usa
+ninguna elección), basta con que el key exista: un recurso de clase del SRD o un `resource` del paquete
+o del catálogo. Errores: `...cost.resource` (falta, no es un índice válido, no existe o es de otra
+clase) y `...cost.amount` (falta o fuera de 1–20).
+
+En la app:
+
+- **Asistente de subida**: la tarjeta de la opción muestra "Coste: 2 Ki" (`cost` en las opciones del
+  plan: `{ resource, resourceName, amount, label }`; el nombre es el del recurso del personaje, el del
+  SRD o el del `resource` que lo declara).
+- **Hoja**: `optionCosts` de la ficha lista las opciones elegidas con coste
+  (`[{ index, name, resource, resourceName, amount, label }]`) y la sección "Elecciones" las muestra
+  como "Golpe sereno (2 Ki)".
+- **Combate**: cada recurso lleva `options` (las opciones elegidas que lo gastan); la pestaña Combate
+  las lista bajo el recurso con su coste y un botón **Usar** que gasta `amount` usos con
+  `POST /api/v1/characters/{id}/resources/{resourceId}/spend` (`{ "amount": 2 }`), sin aprobación,
+  como cualquier uso de recurso. El botón se desactiva si no quedan usos suficientes.
+
 ### `levelChoices`
 
 En `classesExtended[].levelChoices` (elecciones de la clase base) y en
@@ -871,9 +905,43 @@ En `classesExtended[].levelChoices` (elecciones de la clase base) y en
 | `cumulative` | `bool?` | Se suma a lo elegido en niveles anteriores. |
 | `note` | `string?` | ≤ 2000. Aclaración para la interfaz. |
 | `filter` | `Filter?` | Conjuros: `spellList` (clase o `any`), `spellLevels` (`[1, 2]`), `maxSpellLevelBySlots`, `source` (`list`, `spellbook` o `known`), `cantripsOnly`, `schools`, `schoolsExceptAt`. |
+| `after` | `string?` | Key de otra elección de la misma clase y nivel (del paquete, de la clase base o de la misma subclase, o del catálogo) que se resuelve **antes** que esta. Ver "Orden de las elecciones". |
 
 `AsiOrFeat` ofrece siempre la mejora de característica y las dotes del conjunto `feats`. Las
-elecciones `Custom` se validan solo por número.
+elecciones `Custom` se validan solo por número. En `Expertise`, `from` limita las habilidades que se
+pueden elegir (`["arcana", "nature"]`).
+
+**Orden de las elecciones.** El asistente presenta y el servidor resuelve las elecciones de un nivel en
+orden de dependencia: las que pueden dar competencias en habilidades (`Skill`, `Subclass`, `OptionSet`,
+`Custom` y `AsiOrFeat`, porque sus opciones pueden traer `grants.skills`) van antes que `Expertise`, y
+cada elección con `after` va detrás de la que nombra. Así, la pericia ofrece también las habilidades
+ganadas en ese mismo nivel:
+
+- las elegidas en una elección `Skill` del nivel;
+- las de `levels[].grants.skills` de la subclase (la que ya tiene el personaje, o la que elige en ese
+  nivel: un dominio de clérigo de nivel 1 que concede dos habilidades y pide pericia en ellas, que el
+  personaje creado sin subclase recibe al elegirla en la siguiente subida);
+- las de `grants.skills` de las opciones y dotes elegidas en el nivel.
+
+En el plan (`GET .../level-up`) esas habilidades llevan `requires: { "choiceKey", "index" }`: la opción
+solo vale si se elige `index` en la elección `choiceKey` del mismo nivel, y la app la oculta hasta
+entonces. Al aplicar, el servidor recalcula las opciones con todas las respuestas juntas y aplica las
+competencias antes que la pericia; una pericia en una habilidad que no se eligió da 400.
+
+`after` sirve para fijar el orden cuando no es el implícito (un idioma después de una habilidad, una
+pericia antes de otra elección...). Errores en `...levelChoices[0].after`: key no válida, la propia
+elección, ninguna elección con esa key en la misma clase y nivel, o un ciclo entre elecciones del paquete.
+
+```json
+"levelChoices": [
+  { "level": 3, "key": "idioma-erudito", "name": "Idioma", "kind": "Language", "choose": 1, "after": "habilidad-erudito" },
+  { "level": 3, "key": "pericia-erudito", "name": "Pericia", "kind": "Expertise", "choose": 1 },
+  { "level": 3, "key": "habilidad-erudito", "name": "Habilidad", "kind": "Skill", "choose": 1, "from": ["arcana", "history"] }
+]
+```
+
+El asistente las muestra en el orden habilidad → idioma → pericia, y la pericia ofrece la habilidad
+elegida en el primer paso.
 
 **Filtro por escuela.** `filter.schools` (`["abjuration", "evocation"]`, índices de escuela del SRD en
 minúsculas: `abjuration`, `conjuration`, `divination`, `enchantment`, `evocation`, `illusion`,

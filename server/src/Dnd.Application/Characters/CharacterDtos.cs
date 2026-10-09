@@ -56,6 +56,9 @@ public sealed record CharacterResourceDto(Guid Id, string? Key, string Name, int
 
     public ValueBreakdownDto? Breakdown { get; init; }
 
+    /// <summary>Chosen options that spend this resource (by its key), each with its amount: the "Usar" buttons of the Combat tab.</summary>
+    public IReadOnlyList<CharacterOptionCostDto> Options { get; init; } = [];
+
     /// <param name="template">Current template of an automatic resource (its die, origin and breakdown), if any.</param>
     public static CharacterResourceDto From(CharacterResource r, ResourceTemplate? template = null) => new(r.Id, r.Key, r.Name, r.Max, r.Used, r.Recharge.ToString(), r.IsAuto)
     {
@@ -293,6 +296,9 @@ public sealed record CharacterDetailDto
 
     /// <summary>Feats the character has (level-ups and origin choices) with their catalog text, oldest first.</summary>
     public IReadOnlyList<CharacterFeatDto> Feats { get; init; } = [];
+
+    /// <summary>Chosen options (and feats) whose use spends a resource ("2 Ki"), in the order they were chosen.</summary>
+    public IReadOnlyList<CharacterOptionCostDto> OptionCosts { get; init; } = [];
 }
 
 /// <summary>

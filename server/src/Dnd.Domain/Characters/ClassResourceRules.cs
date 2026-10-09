@@ -140,6 +140,34 @@ public static class ClassResourceRules
             .ToList();
     }
 
+    /// <summary>Classes of the SRD with automatic resources.</summary>
+    public static IReadOnlyList<string> ClassesWithResources { get; } =
+        ["barbarian", "bard", "cleric", "druid", "fighter", "monk", "paladin", "sorcerer", "wizard"];
+
+    /// <summary>
+    /// Every resource key a class can give at any level (its subclass ones included), with its name: what an option
+    /// cost may spend (<c>"ki"</c> → "Ki"). Empty for classes without resources.
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> KeysFor(string classIndex)
+    {
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var template in For(classIndex, AbilityRules.MaxLevel, new Dictionary<string, int>()))
+        {
+            result[template.Key] = template.Name;
+        }
+
+        if (classIndex == "druid")
+        {
+            result[NaturalRecovery] = "Natural Recovery";
+        }
+
+        return result;
+    }
+
+    /// <summary>Name of a class resource key of any class ("sorcery-points" → "Sorcery Points"), or null.</summary>
+    public static string? NameOf(string key) =>
+        ClassesWithResources.Select(c => KeysFor(c).GetValueOrDefault(key)).FirstOrDefault(n => n is not null);
+
     /// <summary>Resources granted by a subclass (Circle of the Land: Natural Recovery from druid level 2).</summary>
     public static IReadOnlyList<ResourceTemplate> ForSubclass(CharacterClassLevel entry)
     {

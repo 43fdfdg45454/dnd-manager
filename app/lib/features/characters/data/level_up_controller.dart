@@ -262,9 +262,31 @@ class LevelUpState {
 
   // -- Validation --------------------------------------------------------------
 
-  /// Picks needed for [choice] with the current replacement.
-  int neededPicks(LevelUpChoice choice) =>
-      choice.required + (selectionOf(choice.key).replaced == null ? 0 : 1);
+  /// Whether [option] applies with the current answers: options that depend
+  /// on another pick of this level-up (`requires`) only when it is picked.
+  bool isAvailable(LevelUpOption option) {
+    final requires = option.requires;
+    if (requires == null) return true;
+    final selection = selectionOf(requires.choiceKey);
+    return selection.selected.contains(requires.index) || selection.feat == requires.index;
+  }
+
+  /// Options of [choice] that apply with the current answers.
+  List<LevelUpOption> availableOptions(LevelUpChoice choice) => [
+    for (final o in choice.options)
+      if (isAvailable(o)) o,
+  ];
+
+  /// Picks needed for [choice] with the current replacement. When options
+  /// depend on other picks, no more than the eligible ones that apply.
+  int neededPicks(LevelUpChoice choice) {
+    var needed = choice.required;
+    if (choice.options.any((o) => o.requires != null)) {
+      final available = choice.options.where((o) => o.eligible && isAvailable(o)).length;
+      if (available < needed) needed = available;
+    }
+    return needed + (selectionOf(choice.key).replaced == null ? 0 : 1);
+  }
 
   /// Error of [choice], in Spanish, or null when its answer is complete.
   String? validateChoice(LevelUpChoice choice) {
@@ -285,6 +307,9 @@ class LevelUpState {
         final option = choice.option(index);
         if (option != null && !option.eligible) {
           return '${option.name}: ${option.reason ?? 'no cumples los requisitos'}';
+        }
+        if (option != null && !isAvailable(option)) {
+          return '${option.name}: depende de otra elección de este nivel';
         }
       }
     }
@@ -515,7 +540,7 @@ class LevelUpController extends Notifier<LevelUpState> {
     _update(choice.key, (s) {
       final selected = [...s.selected];
       if (selected.remove(index)) return s.copyWith(selected: selected);
-      if (option != null && !option.eligible) return s;
+      if (option != null && (!option.eligible || !state.isAvailable(option))) return s;
       final needed = state.neededPicks(choice);
       if (selected.length < needed) return s.copyWith(selected: [...selected, index]);
       if (needed == 1) return s.copyWith(selected: [index]);
@@ -523,6 +548,27 @@ class LevelUpController extends Notifier<LevelUpState> {
     });
     // A new subclass changes which choices apply: drop the answers of the others.
     if (choice.kind == LevelChoiceKind.subclass) _dropHiddenSelections();
+    _dropUnavailablePicks();
+  }
+
+  /// Unpicks options whose required pick of this level-up was undone (an
+  /// expertise in a skill that is no longer picked).
+  void _dropUnavailablePicks() {
+    final plan = state.plan;
+    if (plan == null) return;
+    var selections = state.selections;
+    for (final choice in plan.choices) {
+      final selection = selections[choice.key];
+      if (selection == null || !choice.options.any((o) => o.requires != null)) continue;
+      final kept = [
+        for (final index in selection.selected)
+          if (choice.option(index) == null || state.isAvailable(choice.option(index)!)) index,
+      ];
+      if (kept.length != selection.selected.length) {
+        selections = {...selections, choice.key: selection.copyWith(selected: kept)};
+        state = state.copyWith(selections: selections);
+      }
+    }
   }
 
   void _dropHiddenSelections() {
@@ -586,6 +632,7 @@ class LevelUpController extends Notifier<LevelUpState> {
         mode: ImprovementMode.feat,
       ),
     );
+    _dropUnavailablePicks();
   }
 
   void setFeatAbility(LevelUpChoice choice, String ability) =>

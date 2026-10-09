@@ -266,7 +266,13 @@ public class LevelUpEndpointsTests(CatalogApiFactory factory)
 
         var plan = await PlanAsync(s.Player, hero.Id, "rogue");
         var expertise = Assert.Single(plan.Choices, c => c.Key == "expertise");
-        Assert.Equal(["athletics", "perception"], expertise.Options.Select(o => o.Index).Order());
+        Assert.Equal(["athletics", "perception"], expertise.Options.Where(o => o.Requires is null).Select(o => o.Index).Order());
+
+        // The skill gained by multiclassing is resolved first: the expertise also offers it, if it is picked.
+        var keys = plan.Choices.Select(c => c.Key).ToList();
+        Assert.True(keys.IndexOf("multiclass-skill") < keys.IndexOf("expertise"));
+        var stealth = expertise.Options.Single(o => o.Index == "stealth");
+        Assert.Equal(("multiclass-skill", "stealth"), (stealth.Requires!.ChoiceKey, stealth.Requires.Index));
 
         // Multiclassing into a rogue asks for one skill of the rogue list (PHB), without the ones the character has.
         var skill = Assert.Single(plan.Choices, c => c.Key == "multiclass-skill");
@@ -366,7 +372,11 @@ public class LevelUpEndpointsTests(CatalogApiFactory factory)
         var plan = await PlanAsync(s.Player, bard.Id);
 
         var expertise = Assert.Single(plan.Choices, c => c.Key == "expertise");
-        Assert.Equal(["perception", "persuasion", "stealth"], expertise.Options.Select(o => o.Index).Order());
+        Assert.Equal(["perception", "persuasion", "stealth"], expertise.Options.Where(o => o.Requires is null).Select(o => o.Index).Order());
+
+        // Skills of the College of Lore bonus proficiencies (same level) are offered once picked.
+        Assert.All(expertise.Options.Where(o => o.Requires is not null), o => Assert.Equal(("bonus-proficiencies", o.Index), (o.Requires!.ChoiceKey, o.Requires.Index)));
+        Assert.Contains(expertise.Options, o => o.Index == "arcana" && o.Requires is not null);
         var bonus = Assert.Single(plan.Choices, c => c.Key == "bonus-proficiencies");
         Assert.Equal(("lore", 3), (bonus.SubclassIndex, bonus.Required));
         Assert.DoesNotContain(bonus.Options, o => o.Index == "stealth");
@@ -380,7 +390,7 @@ public class LevelUpEndpointsTests(CatalogApiFactory factory)
             {
                 new { key = "subclass", selected = new[] { "lore" } },
                 new { key = "bonus-proficiencies", selected = new[] { "arcana", "history", "insight" } },
-                new { key = "expertise", selected = new[] { "stealth", "perception" } },
+                new { key = "expertise", selected = new[] { "stealth", "arcana" } },
                 new { key = "spells-known", selected = new[] { spells.Options[0].Index } },
             },
         });
@@ -391,6 +401,9 @@ public class LevelUpEndpointsTests(CatalogApiFactory factory)
         Assert.Contains(after.Sheet.Breakdowns["skill.stealth"].Parts, p => p.Source == "expertise");
         Assert.False(after.Sheet.Skills.Single(k => k.Index == "persuasion").Expertise);
         Assert.True(after.Sheet.Skills.Single(k => k.Index == "arcana").Proficient);
+
+        // Arcana, picked as a bonus proficiency of the same level, took the expertise.
+        Assert.True(after.Sheet.Skills.Single(k => k.Index == "arcana").Expertise);
         Assert.Equal("lore", after.Classes.Single().SubclassIndex);
     }
 

@@ -26,7 +26,11 @@ Map<String, dynamic> _option(
   List<Map<String, dynamic>> effects = const [],
   Map<String, dynamic>? abilityIncrease,
   int? spellLevel,
+  Map<String, dynamic>? cost,
+  Map<String, dynamic>? requires,
 }) => {
+  'cost': cost,
+  'requires': requires,
   'index': index,
   'name': name,
   'description': ['$name description.'],
@@ -1065,6 +1069,171 @@ void main() {
           'selected': ['defense'],
         },
       ]);
+    });
+  });
+
+  group('Fase 25: coste de opciones y pericia del mismo nivel', () {
+    test('LevelUpOption y CharacterResource leen coste, requisito y opciones', () {
+      final option = LevelUpOption.fromJson(
+        _option(
+          'golpe-sereno',
+          'Golpe sereno',
+          cost: {'resource': 'ki', 'resourceName': 'Ki', 'amount': 2},
+          requires: {'choiceKey': 'habilidad', 'index': 'arcana'},
+        ),
+      );
+      expect(option.cost?.label, '2 Ki');
+      expect(option.requires, (choiceKey: 'habilidad', index: 'arcana'));
+      expect(LevelUpOption.fromJson(_option('x', 'X')).cost, isNull);
+
+      final resource = CharacterResource.fromJson({
+        'id': 'r1',
+        'key': 'ki',
+        'name': 'Ki',
+        'max': 2,
+        'used': 0,
+        'recharge': 'ShortRest',
+        'options': [
+          {
+            'index': 'golpe-sereno',
+            'name': 'Golpe sereno',
+            'resource': 'ki',
+            'resourceName': 'Ki',
+            'amount': 2,
+          },
+        ],
+      });
+      expect(resource.options.single.label, '2 Ki');
+    });
+
+    testWidgets('la tarjeta de la opción muestra su coste', (tester) async {
+      await _pump(
+        tester,
+        plan: _plan(
+          choices: [
+            _choice(
+              'tecnica',
+              'Técnica',
+              'OptionSet',
+              options: [
+                _option(
+                  'golpe-sereno',
+                  'Golpe sereno',
+                  cost: {'resource': 'ki', 'resourceName': 'Ki', 'amount': 2},
+                ),
+                _option('respiro', 'Respiro'),
+              ],
+            ),
+          ],
+        ),
+      );
+      await _next(tester);
+      await _writeHp(tester, '6');
+      await _next(tester);
+
+      expect(find.byKey(const Key('levelup-cost-golpe-sereno')), findsOneWidget);
+      expect(find.text('Coste: 2 Ki'), findsOneWidget);
+      expect(find.byKey(const Key('levelup-cost-respiro')), findsNothing);
+    });
+
+    testWidgets('la pericia ofrece la habilidad recién elegida en el mismo nivel', (tester) async {
+      final (:characters, router: _) = await _pump(
+        tester,
+        plan: _plan(
+          choices: [
+            _choice(
+              'habilidad',
+              'Habilidad',
+              'Skill',
+              options: [_option('arcana', 'Arcana'), _option('history', 'History')],
+            ),
+            _choice(
+              'pericia',
+              'Pericia',
+              'Expertise',
+              options: [
+                _option('athletics', 'Athletics'),
+                _option(
+                  'arcana',
+                  'Arcana',
+                  requires: {'choiceKey': 'habilidad', 'index': 'arcana'},
+                ),
+                _option(
+                  'history',
+                  'History',
+                  requires: {'choiceKey': 'habilidad', 'index': 'history'},
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      await _next(tester);
+      await _writeHp(tester, '6');
+      await _next(tester);
+      await _tapKey(tester, 'levelup-option-habilidad-arcana');
+      await _next(tester);
+
+      expect(find.byKey(const Key('levelup-option-pericia-athletics')), findsOneWidget);
+      expect(find.byKey(const Key('levelup-option-pericia-arcana')), findsOneWidget);
+      expect(find.byKey(const Key('levelup-option-pericia-history')), findsNothing);
+      await _tapKey(tester, 'levelup-option-pericia-arcana');
+      await _next(tester);
+      await _tapKey(tester, 'levelup-confirm');
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+
+      expect(characters.levelUpBodies.single['choices'], [
+        {
+          'key': 'habilidad',
+          'selected': ['arcana'],
+        },
+        {
+          'key': 'pericia',
+          'selected': ['arcana'],
+        },
+      ]);
+    });
+
+    testWidgets('las elecciones de la hoja muestran el coste de la opción', (tester) async {
+      final character =
+          _character(
+              pendingLevelUpTo: null,
+              choices: [
+                {
+                  'level': 2,
+                  'classIndex': 'fighter',
+                  'key': 'tecnica',
+                  'name': 'Técnica',
+                  'kind': 'OptionSet',
+                  'selected': [
+                    {'index': 'golpe-sereno', 'name': 'Golpe sereno'},
+                  ],
+                  'replaced': <Object>[],
+                },
+              ],
+            )
+            ..['optionCosts'] = [
+              {
+                'index': 'golpe-sereno',
+                'name': 'Golpe sereno',
+                'resource': 'ki',
+                'resourceName': 'Ki',
+                'amount': 2,
+              },
+            ];
+      await pumpRealApp(
+        tester,
+        location: '/characters/ch1',
+        fakes: AppFakes(characters: FakeCharactersRepository(characters: [character])),
+      );
+      await _tapKey(tester, 'tab-traits');
+
+      final section = find.byKey(const Key('sheet-choices'));
+      expect(
+        find.descendant(of: section, matching: find.text('Golpe sereno (2 Ki)')),
+        findsOneWidget,
+      );
     });
   });
 }
