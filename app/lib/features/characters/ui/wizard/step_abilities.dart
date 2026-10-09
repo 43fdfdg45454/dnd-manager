@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../catalog/domain/catalog_format.dart';
+import '../../../dice/ui/roll_input_button.dart';
 import '../../data/character_wizard_controller.dart';
 import '../../data/models.dart';
 import '../../domain/character_format.dart';
@@ -48,7 +49,8 @@ class AbilitiesStep extends ConsumerWidget {
           ),
         if (state.method == AbilityMethod.rolled) ...[
           Text(
-            'Tira 4d6 seis veces, descarta el dado menor de cada tirada y escribe los totales.',
+            'Tira 4d6 seis veces, descarta el dado menor de cada tirada y escribe los totales, '
+            'o usa el dado virtual.',
             key: const Key('roll-help'),
             style: theme.textTheme.bodyMedium,
           ),
@@ -228,34 +230,95 @@ class _ValuePicker extends StatelessWidget {
 }
 
 /// Six numeric fields for the typed 4d6 totals with inline range validation.
-class _RollInputs extends StatelessWidget {
+/// Each one can be rolled with the virtual dice (4d6kh3), and "Tirar las seis"
+/// rolls them all at once.
+class _RollInputs extends ConsumerStatefulWidget {
   const _RollInputs({required this.state, required this.onChanged});
 
   final WizardState state;
   final void Function(int index, String text) onChanged;
 
   @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: 8,
-    runSpacing: 8,
+  ConsumerState<_RollInputs> createState() => _RollInputsState();
+}
+
+class _RollInputsState extends ConsumerState<_RollInputs> {
+  late final List<TextEditingController> _fields = [
+    for (var i = 0; i < 6; i++) TextEditingController(text: widget.state.rollInputs[i]),
+  ];
+
+  @override
+  void didUpdateWidget(_RollInputs oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A virtual roll changes the state from outside the field.
+    for (var i = 0; i < 6; i++) {
+      final text = widget.state.rollInputs[i];
+      if (_fields[i].text != text) _fields[i].text = text;
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final f in _fields) {
+      f.dispose();
+    }
+    super.dispose();
+  }
+
+  void _rollAll() {
+    for (var i = 0; i < 6; i++) {
+      final result = rollVirtualDice(ref, '4d6kh3', label: 'Característica: tirada ${i + 1}');
+      if (result != null) widget.onChanged(i, '${result.total}');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      for (var i = 0; i < 6; i++)
-        SizedBox(
-          width: 88,
-          child: TextFormField(
-            key: Key('roll-score-$i'),
-            initialValue: state.rollInputs[i],
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              labelText: 'Tirada ${i + 1}',
-              errorText: state.rollInputs[i].isEmpty || parseRollScore(state.rollInputs[i]) != null
-                  ? null
-                  : '$rollMin a $rollMax',
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (var i = 0; i < 6; i++)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 88,
+                  child: TextField(
+                    key: Key('roll-score-$i'),
+                    controller: _fields[i],
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: InputDecoration(
+                      labelText: 'Tirada ${i + 1}',
+                      errorText:
+                          widget.state.rollInputs[i].isEmpty ||
+                              parseRollScore(widget.state.rollInputs[i]) != null
+                          ? null
+                          : '$rollMin a $rollMax',
+                    ),
+                    onChanged: (t) => widget.onChanged(i, t),
+                  ),
+                ),
+                RollInputButton(
+                  key: Key('roll-score-dice-$i'),
+                  expression: '4d6kh3',
+                  label: 'Característica: tirada ${i + 1}',
+                  onRolled: (total, _) => widget.onChanged(i, '$total'),
+                ),
+              ],
             ),
-            onChanged: (t) => onChanged(i, t),
-          ),
-        ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      OutlinedButton.icon(
+        key: const Key('roll-all-scores'),
+        onPressed: _rollAll,
+        icon: const Icon(Icons.casino_outlined),
+        label: const Text('Tirar las seis'),
+      ),
     ],
   );
 }

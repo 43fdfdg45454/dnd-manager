@@ -6,6 +6,7 @@ import '../../../../core/theme/app_icon.dart';
 import '../../../../core/theme/icons.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/theme/typography.dart';
+import '../../../dice/ui/roll_input_button.dart';
 import '../../data/level_up_controller.dart';
 import 'level_up_widgets.dart';
 
@@ -18,8 +19,13 @@ String hitPointsPreview({required int? rolled, required int conModifier}) {
   return '$con = +$total PG';
 }
 
+/// The fixed hit points the PHB offers instead of rolling: half the die plus
+/// one (4, 5, 6 and 7 for d6, d8, d10 and d12).
+int fixedHitPoints(int die) => die ~/ 2 + 1;
+
 /// Page 2: the player rolls the hit die at the table and writes the result
-/// (1..die); the preview adds the Constitution modifier.
+/// (1..die), rolls it with the virtual dice or takes the fixed value; the
+/// preview adds the Constitution modifier.
 class LevelUpHitPointsStep extends ConsumerStatefulWidget {
   const LevelUpHitPointsStep({super.key, required this.characterId});
 
@@ -38,6 +44,12 @@ class _LevelUpHitPointsStepState extends ConsumerState<LevelUpHitPointsStep> {
   void dispose() {
     _text.dispose();
     super.dispose();
+  }
+
+  void _fill(int value) {
+    _text.text = '$value';
+    ref.read(levelUpControllerProvider(widget.characterId).notifier).setHitPoints('$value');
+    setState(() {});
   }
 
   @override
@@ -73,28 +85,56 @@ class _LevelUpHitPointsStepState extends ConsumerState<LevelUpHitPointsStep> {
           ),
         ),
         const SizedBox(height: 16),
-        Center(
-          child: SizedBox(
-            width: 160,
-            child: TextField(
-              key: const Key('levelup-hp-field'),
-              controller: _text,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(2),
-              ],
-              style: theme.textTheme.displaySmall?.merge(AppTypography.numeric),
-              decoration: InputDecoration(
-                hintText: '1-$die',
-                errorText: outOfRange ? 'Entre 1 y $die' : null,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(width: 48),
+            SizedBox(
+              width: 160,
+              child: TextField(
+                key: const Key('levelup-hp-field'),
+                controller: _text,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(2),
+                ],
+                style: theme.textTheme.displaySmall?.merge(AppTypography.numeric),
+                decoration: InputDecoration(
+                  hintText: '1-$die',
+                  errorText: outOfRange ? 'Entre 1 y $die' : null,
+                ),
+                onChanged: (value) {
+                  controller.setHitPoints(value);
+                  setState(() {});
+                },
               ),
-              onChanged: (value) {
-                controller.setHitPoints(value);
-                setState(() {});
-              },
             ),
+            RollInputButton(
+              key: const Key('levelup-hp-roll'),
+              expression: '1d$die',
+              label: state.plan == null
+                  ? 'Puntos de golpe'
+                  : 'Puntos de golpe (nivel ${state.plan!.targetLevel})',
+              onRolled: (total, _) => _fill(total),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Center(
+          child: OutlinedButton(
+            key: const Key('levelup-hp-fixed'),
+            onPressed: () => _fill(fixedHitPoints(die)),
+            child: Text('Usar el valor fijo (${fixedHitPoints(die)})'),
+          ),
+        ),
+        Center(
+          child: Text(
+            'El Manual del jugador permite tomar el valor fijo (mitad del dado + 1) en lugar de tirar.',
+            key: const Key('levelup-hp-fixed-hint'),
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(color: tokens.boneMuted),
           ),
         ),
         const SizedBox(height: 16),
