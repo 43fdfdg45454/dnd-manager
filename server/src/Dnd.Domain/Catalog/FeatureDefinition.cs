@@ -22,6 +22,14 @@ public sealed class FeatureDefinition
 
     public OptionResource? Resource => LevelChoiceJson.ParseResource(ResourceJson);
 
+    /// <summary>
+    /// Animal companion the feature grants from its level to the characters with its subclass (content packs,
+    /// <see cref="CompanionRule.ToJson"/>); null when it grants none.
+    /// </summary>
+    public string? CompanionJson { get; init; }
+
+    public CompanionRule? Companion => CompanionRule.Parse(CompanionJson);
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = CatalogSources.Srd;
 }

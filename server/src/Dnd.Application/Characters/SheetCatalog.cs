@@ -117,6 +117,9 @@ public sealed class SheetCatalog
 
     public OptionDefinition? Option(string index) => _options.GetValueOrDefault(index);
 
+    /// <summary>The companion feature the character has reached (content packs), or null.</summary>
+    public CompanionGrant? Companion(Character character) => CompanionGrants.Find(character, _featureResources);
+
     /// <summary>Input of <see cref="SheetCalculator.Calculate"/> for a character covered by this catalog.</summary>
     public SheetInput InputFor(Character character, EquippedGear gear)
     {

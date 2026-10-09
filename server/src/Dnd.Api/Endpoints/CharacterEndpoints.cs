@@ -119,7 +119,33 @@ public static class CharacterEndpoints
             .WithSummary("Aplica daño ({ amount }) sin aprobación: primero los PG temporales. Devuelve { character, outcome }; si estaba concentrado, outcome.concentrationCheckDc = max(10, daño/2) o, a 0 PG, concentrationEnded: true.")
             .ProducesValidationProblem();
 
-        group.MapPost("/concentration", async (Guid id, ConcentrationRequest request, ClaimsPrincipal user, SetConcentrationHandler handler, CancellationToken ct) =>
+        group.MapPut("/companion", async Task<Results<Ok<CharacterDetailDto>, Accepted<ChangeRequestDto>>> (
+                Guid id, SetCompanionRequest request, ClaimsPrincipal user, SetCompanionHandler handler, CancellationToken ct) =>
+            {
+                var result = await handler.HandleAsync(user.GetUserId(), id, request, ct);
+                return result.ChangeRequest is { } changeRequest
+                    ? TypedResults.Accepted($"/api/v1/change-requests/{changeRequest.Id}", changeRequest)
+                    : TypedResults.Ok(result.Character!);
+            })
+            .WithName("SetCharacterCompanion")
+            .WithSummary("Elige o renombra el compañero animal ({ beastIndex, name }) entre las bestias que permite el rasgo alcanzado. 200 si se aplica (el primero, un cambio de nombre, o un DM); 202 con la solicitud creada si un jugador cambia la bestia.")
+            .ProducesValidationProblem();
+
+        group.MapPost("/companion/hp", async (Guid id, CompanionHpRequest request, ClaimsPrincipal user, CompanionTrackingHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.TrackHitPointsAsync(user.GetUserId(), id, request, ct)))
+            .WithName("TrackCompanionHitPoints")
+            .WithSummary("PG del compañero sin aprobación: { delta } (negativo para daño) o { current }, entre 0 y el máximo.")
+            .ProducesValidationProblem();
+
+        group.MapDelete("/companion", async (Guid id, ClaimsPrincipal user, CompanionTrackingHandler handler, CancellationToken ct) =>
+            {
+                await handler.DeleteAsync(user.GetUserId(), id, ct);
+                return TypedResults.NoContent();
+            })
+            .WithName("DeleteCharacterCompanion")
+            .WithSummary("Quita el compañero animal. Solo un DM.");
+
+        group.MapPost("/concentration",async (Guid id, ConcentrationRequest request, ClaimsPrincipal user, SetConcentrationHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, request, ct)))
             .WithName("SetCharacterConcentration")
             .WithSummary("Empieza a concentrarse en un conjuro, o deja de hacerlo con spellIndex null.")

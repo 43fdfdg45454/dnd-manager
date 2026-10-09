@@ -127,7 +127,7 @@ indicado (`Agent` con `model: opus | sonnet | haiku`), dándoles el contrato esc
 
 ## Estado
 
-Fases 0 a 24 implementadas y en `master`; fase 25 en curso (bloques 1–5; ver `docs/specs/fase-25-paquetes-completos.md`) (cada una con su contrato en `docs/specs/`). Verificado en
+Fases 0 a 24 implementadas y en `master`; fase 25 en curso (bloques 1–6; ver `docs/specs/fase-25-paquetes-completos.md`) (cada una con su contrato en `docs/specs/`). Verificado en
 este entorno: servidor compila sin avisos y pasa sus tests (SQLite en memoria); cliente sin
 incidencias de análisis y con sus tests en verde. CI publica en cada push a `master` la imagen
 `ghcr.io/<owner>/dnd-companion-api:latest` y una release con el APK firmado. **No verificado aquí**

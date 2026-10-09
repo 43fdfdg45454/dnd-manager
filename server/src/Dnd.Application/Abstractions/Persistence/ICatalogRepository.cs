@@ -72,7 +72,7 @@ public interface ICatalogRepository
 
     Task<IReadOnlyList<FeatureDefinition>> ListFeaturesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default);
 
-    /// <summary>Features of the given subclasses that grant a limited-use resource (content packs).</summary>
+    /// <summary>Features of the given subclasses that grant a limited-use resource or an animal companion (content packs).</summary>
     Task<IReadOnlyList<FeatureDefinition>> ListSubclassFeatureResourcesAsync(IReadOnlyCollection<string> subclassIndexes, CancellationToken cancellationToken = default);
 
     // Level choices (phase 16c).

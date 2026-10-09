@@ -205,37 +205,14 @@ class _ActionCard extends StatelessWidget {
             Text(action.description, style: theme.textTheme.bodySmall),
             if (bonus != null || damage != null || save != null) ...[
               const SizedBox(height: 6),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  if (bonus != null)
-                    ActionChip(
-                      key: Key('beast-attack-$position'),
-                      avatar: const Icon(Icons.casino_outlined, size: 18),
-                      label: Text('Ataque ${_signed(bonus)}'),
-                      onPressed: () => rollAndShow(
-                        context,
-                        '1d20${_signed(bonus)}',
-                        label: '${action.name}: ataque',
-                        kind: RollKind.attack,
-                      ),
-                    ),
-                  if (damage != null)
-                    ActionChip(
-                      key: Key('beast-damage-$position'),
-                      avatar: const Icon(Icons.casino_outlined, size: 18),
-                      label: Text('Daño $damage'),
-                      onPressed: () => rollAndShow(
-                        context,
-                        damage,
-                        label: [
-                          '${action.name}: daño',
-                          ...action.damage.map((d) => d.type).whereType<String>(),
-                        ].join(' · '),
-                      ),
-                    ),
+              BeastRollChips(
+                name: action.name,
+                attackBonus: bonus,
+                damage: damage,
+                damageTypes: action.damage.map((d) => d.type).whereType<String>().toList(),
+                keyPrefix: 'beast',
+                position: position,
+                extra: [
                   if (save != null)
                     Chip(
                       key: Key('beast-save-$position'),
@@ -247,6 +224,68 @@ class _ActionCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Attack and damage roll chips of a beast action ("Ataque +4", "Daño 2d4+2"),
+/// shared by the beast statblock and the animal companion of the Combat tab.
+/// Keys are `<keyPrefix>-attack-<position>` and `<keyPrefix>-damage-<position>`.
+class BeastRollChips extends StatelessWidget {
+  const BeastRollChips({
+    super.key,
+    required this.name,
+    required this.attackBonus,
+    required this.damage,
+    this.damageTypes = const [],
+    required this.keyPrefix,
+    required this.position,
+    this.extra = const [],
+  });
+
+  final String name;
+  final int? attackBonus;
+
+  /// Damage expression ("2d4+2"), or null.
+  final String? damage;
+  final List<String> damageTypes;
+  final String keyPrefix;
+  final int position;
+
+  /// More chips after the rolls (a saving throw...).
+  final List<Widget> extra;
+
+  @override
+  Widget build(BuildContext context) {
+    final bonus = attackBonus;
+    final dice = damage;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (bonus != null)
+          ActionChip(
+            key: Key('$keyPrefix-attack-$position'),
+            avatar: const Icon(Icons.casino_outlined, size: 18),
+            label: Text('Ataque ${_signed(bonus)}'),
+            onPressed: () => rollAndShow(
+              context,
+              '1d20${_signed(bonus)}',
+              label: '$name: ataque',
+              kind: RollKind.attack,
+            ),
+          ),
+        if (dice != null)
+          ActionChip(
+            key: Key('$keyPrefix-damage-$position'),
+            avatar: const Icon(Icons.casino_outlined, size: 18),
+            label: Text('Daño $dice'),
+            onPressed: () =>
+                rollAndShow(context, dice, label: ['$name: daño', ...damageTypes].join(' · ')),
+          ),
+        ...extra,
+      ],
     );
   }
 }

@@ -100,6 +100,7 @@ public sealed class ApproveChangeRequestHandler(
     OriginChoicesPlanner originChoices,
     IValidator<SheetPatch> patchValidator,
     InventoryOperations inventory,
+    CompanionPlanner companions,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
     IDateTimeProvider clock)
@@ -139,6 +140,9 @@ public sealed class ApproveChangeRequestHandler(
 
                 // Removing an equipped item can lower the sheet (item modifiers): cap the current hit points.
                 await sheets.RecalculateAsync(character, cancellationToken);
+                break;
+            case ChangeRequestType.Companion:
+                await companions.ApplyApprovedAsync(character, request.PayloadJson, now, cancellationToken);
                 break;
             default:
                 throw AppException.Conflict("Este tipo de solicitud todavía no está soportado.");

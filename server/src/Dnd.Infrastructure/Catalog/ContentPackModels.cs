@@ -145,6 +145,30 @@ internal sealed class PackFeatureJson
 
     /// <summary>Format 2: limited-use resource gained with the feature (same shape as an option's).</summary>
     public PackResourceJson? Resource { get; set; }
+
+    /// <summary>Format 2: animal companion chosen from the beast catalog when the feature is reached.</summary>
+    public PackCompanionJson? Companion { get; set; }
+}
+
+internal sealed class PackCompanionJson
+{
+    public PackBeastFilterJson? BeastFilter { get; set; }
+
+    /// <summary>"beast" or "max(beast, N*classLevel)".</summary>
+    public string? HitPoints { get; set; }
+
+    public bool? ProficiencyBonusFromCharacter { get; set; }
+
+    public bool? AttackBonusFromCharacter { get; set; }
+}
+
+internal sealed class PackBeastFilterJson
+{
+    /// <summary>Highest challenge rating (0.25 for 1/4).</summary>
+    public double? MaxChallengeRating { get; set; }
+
+    /// <summary>Allowed sizes ("Medium", "Small"); absent or empty: any.</summary>
+    public List<string?>? Sizes { get; set; }
 }
 
 internal sealed class PackItemJson

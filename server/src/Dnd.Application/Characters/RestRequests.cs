@@ -294,6 +294,7 @@ public sealed class ApproveRestRequestHandler(
     IDiceRoller dice,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
+    CompanionPlanner companions,
     IDateTimeProvider clock)
 {
     public async Task<RestRequestDto> HandleAsync(Guid currentUserId, Guid requestId, ResolveRestRequestRequest? body, CancellationToken cancellationToken = default)
@@ -319,6 +320,7 @@ public sealed class ApproveRestRequestHandler(
         else
         {
             character.LongRest(sheet, now);
+            await companions.RestoreAfterLongRestAsync([character], now, cancellationToken);
         }
 
         request.Approve(currentUserId, body?.Comment, now);

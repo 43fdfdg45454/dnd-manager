@@ -654,6 +654,57 @@ class FakeCharactersRepository implements CharactersRepository {
     json['combat'] = combat;
   }
 
+  // Animal companion (phase 25, block 6).
+
+  final List<({String beastIndex, String name})> companionChoices = [];
+  final List<({int? delta, int? current})> companionHpCalls = [];
+  final List<String> companionDeletes = [];
+
+  @override
+  Future<SheetSaveResult> setCompanion(
+    String id, {
+    required String beastIndex,
+    required String name,
+  }) async {
+    _fail();
+    companionChoices.add((beastIndex: beastIndex, name: name));
+    final json = _json(id);
+    final existing = json['companion'] as Map<String, dynamic>?;
+    if (existing != null && existing['beastIndex'] != beastIndex && !isDm) {
+      final request = makeChangeRequest(
+        id: 'cr${requests.length + 1}',
+        requestedByUserId: currentUserId,
+        type: 'Companion',
+        payload: {'beastIndex': beastIndex, 'name': name},
+      );
+      requests.add(request);
+      return PendingApproval(request);
+    }
+    json['companion'] = makeCompanionJson(beastIndex: beastIndex, name: name);
+    json['companionPending'] = false;
+    return Saved(await get(id));
+  }
+
+  @override
+  Future<CharacterDetail> trackCompanionHp(String id, {int? delta, int? current}) async {
+    _fail();
+    companionHpCalls.add((delta: delta, current: current));
+    final companion = _json(id)['companion'] as Map<String, dynamic>;
+    final max = companion['hitPointsMax'] as int;
+    companion['hitPointsCurrent'] =
+        current ?? ((companion['hitPointsCurrent'] as int) + delta!).clamp(0, max);
+    return get(id);
+  }
+
+  @override
+  Future<void> deleteCompanion(String id) async {
+    _fail();
+    companionDeletes.add(id);
+    _json(id)
+      ..remove('companion')
+      ..['companionPending'] = true;
+  }
+
   @override
   Future<CharacterDetail> patchCombat(String id, CombatPatch patch) async {
     _fail();
@@ -974,3 +1025,101 @@ class FakeCharactersRepository implements CharactersRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
+
+/// A companion feature like the server sends it (`CompanionFeatureDto`):
+/// beasts of CR 1/4 or less, Medium or Small.
+Map<String, dynamic> makeCompanionFeatureJson({
+  double maxChallengeRating = 0.25,
+  String maxChallengeRatingText = '1/4',
+  List<String> sizes = const ['Small', 'Medium'],
+}) => {
+  'featureIndex': 'compas-ejemplo-vinculo',
+  'featureName': 'Vínculo de ejemplo',
+  'classIndex': 'ranger',
+  'classLevel': 3,
+  'maxChallengeRating': maxChallengeRating,
+  'maxChallengeRatingText': maxChallengeRatingText,
+  'sizes': sizes,
+  'hitPoints': 'max(beast, 4*classLevel)',
+  'proficiencyBonusFromCharacter': true,
+  'attackBonusFromCharacter': true,
+};
+
+/// A wolf-like companion with the character's +2 added (`CharacterCompanionDto`).
+Map<String, dynamic> makeCompanionJson({
+  String beastIndex = 'wolf',
+  String beastName = 'Wolf',
+  String name = 'Ceniza',
+  int hitPointsCurrent = 12,
+}) => {
+  'id': 'cp1',
+  'beastIndex': beastIndex,
+  'beastName': beastName,
+  'name': name,
+  'size': 'Medium',
+  'challengeRatingText': '1/4',
+  'hitPointsCurrent': hitPointsCurrent,
+  'hitPointsMax': 12,
+  'armorClass': 15,
+  'speeds': {'walk': 40},
+  'abilities': {'str': 12, 'dex': 15, 'con': 12, 'int': 3, 'wis': 12, 'cha': 6},
+  'savingThrows': <String, int>{},
+  'skills': {'perception': 5, 'stealth': 6},
+  'senses': <String, String>{},
+  'passivePerception': 15,
+  'attacks': [
+    {
+      'name': 'Multiattack',
+      'description': 'Two bites.',
+      'damage': <Object>[],
+      'isMultiattack': true,
+    },
+    {
+      'name': 'Bite',
+      'description': 'Melee Weapon Attack.',
+      'attackBonus': 6,
+      'attackBreakdown': {
+        'total': 6,
+        'parts': [
+          {'source': 'base', 'label': 'Ataque de la bestia', 'value': 4},
+          {'source': 'proficiency', 'label': 'Competencia del personaje', 'value': 2},
+        ],
+      },
+      'damage': [
+        {'dice': '2d4+4', 'type': 'Piercing'},
+      ],
+      'damageBreakdown': {
+        'total': 4,
+        'parts': [
+          {'source': 'base', 'label': 'Daño de la bestia', 'value': 2},
+          {'source': 'proficiency', 'label': 'Competencia del personaje', 'value': 2},
+        ],
+      },
+      'isMultiattack': false,
+    },
+  ],
+  'breakdowns': {
+    'armorClass': {
+      'total': 15,
+      'parts': [
+        {'source': 'base', 'label': 'CA de la bestia', 'value': 13},
+        {'source': 'proficiency', 'label': 'Competencia del personaje', 'value': 2},
+      ],
+    },
+    'hitPointsMax': {
+      'total': 12,
+      'parts': [
+        {'source': 'base', 'label': 'PG de la bestia', 'value': 11},
+        {'source': 'class', 'label': '4 × Nivel de explorador (3)', 'value': 1},
+      ],
+    },
+    'skill.perception': {
+      'total': 5,
+      'parts': [
+        {'source': 'base', 'label': 'Bonificador de la bestia', 'value': 3},
+        {'source': 'proficiency', 'label': 'Competencia del personaje', 'value': 2},
+      ],
+    },
+  },
+  'beastMissing': false,
+};

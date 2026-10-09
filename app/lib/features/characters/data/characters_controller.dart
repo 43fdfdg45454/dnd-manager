@@ -123,6 +123,29 @@ class CharacterController extends AsyncNotifier<CharacterDetail> {
     return result.outcome;
   }
 
+  /// Chooses or renames the animal companion: [Saved] when applied,
+  /// [PendingApproval] when the DM has to approve a change of beast.
+  Future<SheetSaveResult> setCompanion({required String beastIndex, required String name}) async {
+    final result = await _repository.setCompanion(id, beastIndex: beastIndex, name: name);
+    switch (result) {
+      case Saved(:final detail):
+        _apply(detail);
+      case PendingApproval():
+        await reload();
+    }
+    return result;
+  }
+
+  /// Moves the companion's hit points by [delta] or sets them to [current].
+  Future<void> trackCompanionHp({int? delta, int? current}) async =>
+      _apply(await _repository.trackCompanionHp(id, delta: delta, current: current));
+
+  /// DM only: removes the companion.
+  Future<void> deleteCompanion() async {
+    await _repository.deleteCompanion(id);
+    await reload();
+  }
+
   /// Writes the dice rolled after a rest for the resource [resourceId].
   Future<void> saveResourceRolls(String resourceId, List<int> values) async =>
       _apply(await _repository.saveResourceRolls(id, resourceId, values));

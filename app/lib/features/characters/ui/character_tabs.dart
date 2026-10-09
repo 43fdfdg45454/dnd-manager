@@ -20,6 +20,7 @@ import '../data/characters_controller.dart';
 import '../data/models.dart';
 import '../domain/character_format.dart';
 import '../domain/class_theme.dart';
+import 'combat/companion_section.dart';
 import 'level_up/character_choices_section.dart';
 
 /// Icon with the note of an override, shown on long press. Renders nothing for
@@ -74,9 +75,13 @@ class _TabList extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class SummaryTab extends StatelessWidget {
-  const SummaryTab({super.key, required this.character});
+  const SummaryTab({super.key, required this.character, this.canEdit = false, this.isDm = false});
 
   final CharacterDetail character;
+
+  /// The viewer may write (owner or DM): enables "Elegir compañero".
+  final bool canEdit;
+  final bool isDm;
 
   @override
   Widget build(BuildContext context) {
@@ -172,6 +177,10 @@ class SummaryTab extends StatelessWidget {
             ),
           ],
         ),
+        if (c.companion != null || c.companionFeature != null) ...[
+          const SectionTitle('Compañero animal'),
+          CompanionSection(character: c, canEdit: canEdit, isDm: isDm),
+        ],
         const SectionTitle('Salvaciones'),
         for (final key in abilityKeys) _SavingThrowRow(character: c, abilityKey: key),
         if (sheet.resistances.isNotEmpty) ...[
