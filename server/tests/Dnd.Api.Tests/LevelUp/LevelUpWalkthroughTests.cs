@@ -251,8 +251,8 @@ public class LevelUpWalkthroughTests(CatalogApiFactory factory)
     public async Task A_choice_without_eligible_options_stays_in_the_plan_with_a_warning()
     {
         var s = await factory.CreateCampaignScenarioAsync();
-        // A bard without skill proficiencies has nothing to take expertise in.
-        var hero = await CreateAsync(s, "bard", level: 2, skills: []);
+        // A rogue without skill proficiencies (nor thieves' tools) has nothing to take expertise in at level 6.
+        var hero = await CreateAsync(s, "rogue", level: 5, skills: []);
         await GrantAsync(s, hero.Id);
 
         var plan = await PlanAsync(s.Player, hero.Id);

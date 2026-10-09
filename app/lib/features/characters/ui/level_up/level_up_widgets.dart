@@ -191,6 +191,20 @@ class LevelUpOptionCard extends StatelessWidget {
                   ),
               ],
             ),
+            if (option.cost != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.bolt, size: 14, color: tokens.arcane),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Coste: ${option.cost!.label}',
+                    key: Key('levelup-cost-${option.index}'),
+                    style: theme.textTheme.bodySmall?.copyWith(color: tokens.arcane),
+                  ),
+                ],
+              ),
+            ],
             if (option.prerequisitesText != null) ...[
               const SizedBox(height: 4),
               Text(

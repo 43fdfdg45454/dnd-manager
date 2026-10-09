@@ -48,7 +48,11 @@ public sealed class ApplyLevelUpHandler(
         var pending = answers.Values
             .SelectMany(a => a.Feat is null ? a.Selected : [.. a.Selected, a.Feat])
             .ToHashSet(StringComparer.Ordinal);
-        var plan = await planner.BuildAsync(character, request.ClassIndex, pending, cancellationToken);
+        var pendingChoices = answers.Values.ToDictionary(
+            a => a.Key,
+            a => (IReadOnlyList<string>)(a.Feat is null ? a.Selected : [.. a.Selected, a.Feat]),
+            StringComparer.Ordinal);
+        var plan = await planner.BuildAsync(character, request.ClassIndex, pending, cancellationToken, pendingChoices);
 
         if (!plan.SelectedClass.Allowed)
         {
@@ -93,14 +97,22 @@ public sealed class ApplyLevelUpHandler(
             character.RaiseHitPointsMaxOverride(Math.Max(1, request.HitPointsRolled + plan.ConModifier));
         }
 
+        // Expertise goes last: it doubles skills picked or granted (subclass, options) in this same level-up.
         var replacedOptions = new List<string>();
         foreach (var (choice, selection) in resolved)
         {
             character.RecordChoice(entry.Level, classIndex, choice.Rule.Key, selection, now);
-            ApplyEffects(character, classIndex, choice, selection, replacedOptions, now);
+            if (choice.Rule.Kind != LevelChoiceKind.Expertise)
+            {
+                ApplyEffects(character, classIndex, choice, selection, replacedOptions, now);
+            }
         }
 
         await ChoiceGrants.ApplyAsync(catalog, character, replacedOptions, cancellationToken);
+        foreach (var (choice, selection) in resolved.Where(r => r.Choice.Rule.Kind == LevelChoiceKind.Expertise))
+        {
+            ApplyEffects(character, classIndex, choice, selection, replacedOptions, now);
+        }
 
         var sheet = await sheets.RecalculateAsync(character, cancellationToken);
         character.GainHitPoints(sheet.HitPointsMax - oldMax, sheet.HitPointsMax, now);

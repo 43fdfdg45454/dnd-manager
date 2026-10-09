@@ -123,7 +123,7 @@ class _LevelUpChoiceStepState extends ConsumerState<LevelUpChoiceStep> {
     LevelUpSelection selection,
     LevelUpController controller,
   ) {
-    if (choice.options.isEmpty) {
+    if (state.availableOptions(choice).isEmpty) {
       return [
         Text(
           choice.replacementOnly
@@ -139,7 +139,7 @@ class _LevelUpChoiceStepState extends ConsumerState<LevelUpChoiceStep> {
         : const <int>[];
     final query = _query.trim().toLowerCase();
     final visible = [
-      for (final o in choice.options)
+      for (final o in state.availableOptions(choice))
         if ((query.isEmpty || o.name.toLowerCase().contains(query)) &&
             (_level == null || o.spellLevel == _level))
           o,

@@ -86,6 +86,13 @@ public sealed class LevelChoiceRule
     /// <summary>Clarification for the UI (Spanish).</summary>
     public string Note { get; init; } = string.Empty;
 
+    /// <summary>
+    /// Key of another choice of the same level that must be resolved before this one (content packs). Without it,
+    /// skills (<see cref="LevelChoiceKind.Skill"/>, the subclass and options that grant skills) go before
+    /// <see cref="LevelChoiceKind.Expertise"/>.
+    /// </summary>
+    public string? After { get; init; }
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = CatalogSources.Srd;
 
@@ -142,6 +149,9 @@ public sealed class OptionDefinition
     /// <summary><c>{"key":"dreadful-word","name":"Dreadful Word","max":1,"recharge":"LongRest"}</c>.</summary>
     public string? ResourceJson { get; init; }
 
+    /// <summary><c>{"resource":"ki","amount":2}</c>: uses of a resource spent each time the option is used; null when free.</summary>
+    public string? CostJson { get; init; }
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = CatalogSources.Srd;
 
@@ -154,6 +164,8 @@ public sealed class OptionDefinition
     public OptionGrants Grants => LevelChoiceJson.ParseGrants(GrantsJson);
 
     public OptionResource? Resource => LevelChoiceJson.ParseResource(ResourceJson);
+
+    public OptionCost? Cost => LevelChoiceJson.ParseCost(CostJson);
 }
 
 /// <summary>Well-known option sets.</summary>

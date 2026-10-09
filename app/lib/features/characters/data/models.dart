@@ -373,6 +373,7 @@ class CharacterResource {
     this.dice,
     this.source,
     this.breakdown,
+    this.options = const [],
   });
 
   factory CharacterResource.fromJson(Map<String, dynamic> json) {
@@ -391,8 +392,13 @@ class CharacterResource {
       dice: _strOrNull(json['dice']),
       source: _strOrNull(json['source']),
       breakdown: ValueBreakdown.maybeFromJson(json['breakdown']),
+      options: _objects(json['options'], CharacterOptionCost.fromJson),
     );
   }
+
+  /// Chosen options that spend this resource ("Golpe sereno", 2): the
+  /// "Usar" buttons of the Combat tab.
+  final List<CharacterOptionCost> options;
 
   /// Die rolled with each use ("d8": tactics dice, Bardic Inspiration), or null.
   final String? dice;
@@ -419,6 +425,60 @@ class CharacterResource {
   final int used;
   final Recharge recharge;
   final bool isAuto;
+}
+
+/// What using an option costs (`OptionCostDto`): [amount] uses of the
+/// resource [resource] (its key), named [resourceName].
+class OptionCost {
+  const OptionCost({required this.resource, required this.resourceName, required this.amount});
+
+  factory OptionCost.fromJson(Map<String, dynamic> json) {
+    final resource = _str(json['resource']);
+    return OptionCost(
+      resource: resource,
+      resourceName: _str(json['resourceName'], resource),
+      amount: _int(json['amount']) ?? 1,
+    );
+  }
+
+  final String resource;
+  final String resourceName;
+  final int amount;
+
+  /// "2 Ki".
+  String get label => '$amount $resourceName';
+}
+
+/// A chosen option with a cost (`CharacterOptionCostDto`).
+class CharacterOptionCost {
+  const CharacterOptionCost({
+    required this.index,
+    required this.name,
+    required this.resource,
+    required this.resourceName,
+    required this.amount,
+  });
+
+  factory CharacterOptionCost.fromJson(Map<String, dynamic> json) {
+    final index = _str(json['index']);
+    final resource = _str(json['resource']);
+    return CharacterOptionCost(
+      index: index,
+      name: _str(json['name'], index),
+      resource: resource,
+      resourceName: _str(json['resourceName'], resource),
+      amount: _int(json['amount']) ?? 1,
+    );
+  }
+
+  final String index;
+  final String name;
+  final String resource;
+  final String resourceName;
+  final int amount;
+
+  /// "2 Ki".
+  String get label => '$amount $resourceName';
 }
 
 /// Dice a resource asks the player to roll after a rest (`RollOnRestDto`):
@@ -1120,6 +1180,7 @@ class CharacterDetail {
     this.restRollsPending = false,
     this.choices = const [],
     this.feats = const [],
+    this.optionCosts = const [],
     this.raceCatalogMissing = false,
     this.backgroundCatalogMissing = false,
     this.catalogMissing = false,
@@ -1186,6 +1247,7 @@ class CharacterDetail {
       restRollsPending: _bool(json['restRollsPending']),
       choices: _objects(json['choices'], CharacterChoice.fromJson),
       feats: _objects(json['feats'], CharacterFeat.fromJson),
+      optionCosts: _objects(json['optionCosts'], CharacterOptionCost.fromJson),
       raceCatalogMissing: _bool(json['raceCatalogMissing']),
       backgroundCatalogMissing: _bool(json['backgroundCatalogMissing']),
       catalogMissing: _bool(json['catalogMissing']),
@@ -1274,6 +1336,17 @@ class CharacterDetail {
 
   /// Feats the character has, with their catalog text (`CharacterFeatDto`).
   final List<CharacterFeat> feats;
+
+  /// Chosen options whose use spends a resource ("2 Ki").
+  final List<CharacterOptionCost> optionCosts;
+
+  /// Cost of the chosen option [index], or null.
+  CharacterOptionCost? optionCost(String index) {
+    for (final cost in optionCosts) {
+      if (cost.index == index) return cost;
+    }
+    return null;
+  }
 
   /// The race (or subrace) is gone from the catalog (a deleted content pack).
   final bool raceCatalogMissing;
@@ -1824,11 +1897,15 @@ class LevelUpOption {
     this.effectsPreview = const [],
     this.abilityIncrease,
     this.damageType,
+    this.cost,
+    this.requires,
   });
 
   factory LevelUpOption.fromJson(Map<String, dynamic> json) {
     final index = _str(json['index']);
     final increase = _map(json['abilityIncrease']);
+    final cost = _map(json['cost']);
+    final requires = _map(json['requires']);
     return LevelUpOption(
       index: index,
       name: _str(json['name'], index),
@@ -1841,6 +1918,10 @@ class LevelUpOption {
       effectsPreview: _objects(json['effectsPreview'], EffectPreview.fromJson),
       abilityIncrease: increase == null ? null : AbilityIncrease.fromJson(increase),
       damageType: _strOrNull(json['damageType']),
+      cost: cost == null ? null : OptionCost.fromJson(cost),
+      requires: requires == null
+          ? null
+          : (choiceKey: _str(requires['choiceKey']), index: _str(requires['index'])),
     );
   }
 
@@ -1848,6 +1929,13 @@ class LevelUpOption {
   final String name;
   final List<String> description;
   final String? prerequisitesText;
+
+  /// What using the option costs ("2 Ki"), or null.
+  final OptionCost? cost;
+
+  /// The option only applies when [index] is picked in the choice
+  /// [choiceKey] of the same level-up (expertise in a skill gained now).
+  final ({String choiceKey, String index})? requires;
 
   /// Damage type resisted by a draconic ancestry option ("fire").
   final String? damageType;

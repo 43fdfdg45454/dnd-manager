@@ -539,6 +539,17 @@ internal sealed class PackOptionJson
     public PackGrantsJson? Grants { get; set; }
 
     public PackResourceJson? Resource { get; set; }
+
+    /// <summary>Uses of a resource spent each time the option is used.</summary>
+    public PackOptionCostJson? Cost { get; set; }
+}
+
+internal sealed class PackOptionCostJson
+{
+    /// <summary>Key of a class resource ("ki") or of a pack resource.</summary>
+    public string? Resource { get; set; }
+
+    public int? Amount { get; set; }
 }
 
 internal sealed class PackPrerequisitesJson
@@ -676,6 +687,9 @@ internal sealed class PackLevelChoiceJson
     public string? Note { get; set; }
 
     public PackChoiceFilterJson? Filter { get; set; }
+
+    /// <summary>Key of another choice of the same level that is resolved before this one.</summary>
+    public string? After { get; set; }
 }
 
 internal sealed class PackChoiceFilterJson

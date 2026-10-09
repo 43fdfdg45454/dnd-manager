@@ -318,6 +318,29 @@ class ResourceTile extends ConsumerWidget {
           );
     final dice = r.dice;
     final details = <Widget>[
+      for (final option in r.options)
+        Padding(
+          key: Key('resource-${r.id}-option-${option.index}'),
+          padding: const EdgeInsets.only(top: 6),
+          child: Row(
+            children: [
+              Expanded(child: Text(option.name, style: theme.textTheme.bodyMedium)),
+              Text(
+                option.label,
+                key: Key('resource-${r.id}-option-${option.index}-cost'),
+                style: theme.textTheme.bodySmall,
+              ),
+              const SizedBox(width: 8),
+              FilledButton.tonal(
+                key: Key('resource-${r.id}-use-${option.index}'),
+                onPressed: canEdit && remaining >= option.amount
+                    ? () => _spend(context, ref, option.amount)
+                    : null,
+                child: const Text('Usar'),
+              ),
+            ],
+          ),
+        ),
       if (dice != null)
         Padding(
           padding: const EdgeInsets.only(top: 8),

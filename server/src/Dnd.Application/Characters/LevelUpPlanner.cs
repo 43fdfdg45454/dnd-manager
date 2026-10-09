@@ -21,6 +21,12 @@ public sealed record PlannedOption(
 {
     /// <summary>Damage type of a trait option (draconic ancestry), or null.</summary>
     public string? DamageType { get; init; }
+
+    /// <summary>What using the option costs, or null.</summary>
+    public OptionCostDto? Cost { get; init; }
+
+    /// <summary>Pick of the same level-up the option depends on (a skill gained at this level), or null.</summary>
+    public OptionRequirementDto? Requires { get; init; }
 }
 
 /// <summary>A choice of the plan: the rule, how many picks are required, the options and the replaceable picks.</summary>
@@ -59,7 +65,11 @@ public sealed record PlannedChoice(LevelChoiceRule Rule, int Required, bool Free
                 o.SpellLevel,
                 o.Preview,
                 o.Definition?.AbilityIncrease is { } increase ? new AbilityIncreaseDto(increase.Amount, increase.From) : null,
-                o.SpellCategory))
+                o.SpellCategory)
+            {
+                Cost = o.Cost,
+                Requires = o.Requires,
+            })
             .ToList(),
         Known.Select(ChoiceItemDto.From).ToList(),
         Warning);
@@ -141,11 +151,17 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         return trimmed;
     }
 
+    /// <param name="pendingChoices">
+    /// The answers of the same request by choice key (picks, or the feat of an ability improvement), when applying: an
+    /// expertise then offers the skills picked or granted at this level. Without them (the plan shown to the player),
+    /// those skills are offered with <see cref="PlannedOption.Requires"/>.
+    /// </param>
     public async Task<LevelUpPlan> BuildAsync(
         Character character,
         string? classIndex,
         IReadOnlySet<string> pendingPicks,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? pendingChoices = null)
     {
         ArgumentNullException.ThrowIfNull(character);
         ArgumentNullException.ThrowIfNull(pendingPicks);
@@ -185,6 +201,9 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             }
         }
 
+        // Skills (picked, or granted by the subclass or an option) are resolved before the expertise of the same level.
+        rules = LevelChoiceOrder.Sort(rules);
+
         var setIds = rules.Select(r => r.Kind == LevelChoiceKind.AsiOrFeat ? OptionSets.Feats : r.SetId).OfType<string>().ToHashSet(StringComparer.Ordinal);
         if (setIds.Count > 0)
         {
@@ -204,7 +223,22 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             ? (await catalog.ListRacesAsync(cancellationToken)).ToDictionary(r => r.Index, r => r.Name, StringComparer.Ordinal)
             : new Dictionary<string, string>(StringComparer.Ordinal);
 
-        var context = new PlanContext(character, sheet, definition, newLevel, pendingPicks, options, spells, skills, subclasses, classLevel, races);
+        // Subclass levels whose skill grants an expertise of this level may double (the current subclass, or every
+        // subclass when it is chosen now).
+        var expertiseSubclasses = !rules.Any(r => r.Kind == LevelChoiceKind.Expertise) ? []
+            : entry?.SubclassIndex is { } currentSubclass ? [currentSubclass]
+            : rules.Any(r => r.Kind == LevelChoiceKind.Subclass) ? subclasses.Select(s => s.Index).ToList()
+            : new List<string>();
+        var subclassLevels = expertiseSubclasses.Count > 0
+            ? await catalog.ListSubclassLevelsAsync(expertiseSubclasses, cancellationToken)
+            : [];
+
+        var context = new PlanContext(character, sheet, definition, newLevel, pendingPicks, options, spells, skills, subclasses, classLevel, races)
+        {
+            PendingChoices = pendingChoices,
+            SubclassLevels = subclassLevels,
+            CurrentSubclass = entry?.SubclassIndex,
+        };
         var choices = rules.Select(context.Plan).ToList();
         var replacements = await invalidChoices.PlanAsync(character, sheet, cancellationToken);
         choices.AddRange(replacements.Select(r => r.Choice));
@@ -459,6 +493,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         Replaces = rule.Replaces,
         Cumulative = rule.Cumulative,
         Note = rule.Note,
+        After = rule.After,
         Source = rule.Source,
     };
 
@@ -580,8 +615,24 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         private readonly IReadOnlyList<ActivePick> _active = character.ActivePicks();
         private readonly Dictionary<string, OptionDefinition> _options = options.ToDictionary(o => o.Index, StringComparer.Ordinal);
         private readonly Dictionary<string, SpellDefinition> _spells = spells.ToDictionary(s => s.Index, StringComparer.Ordinal);
+        private readonly List<PlannedChoice> _planned = [];
+
+        /// <summary>Answers of the request by choice key (applying), or null (the plan shown to the player).</summary>
+        public IReadOnlyDictionary<string, IReadOnlyList<string>>? PendingChoices { get; init; }
+
+        /// <summary>Subclass levels whose skill grants count for the expertise of this level.</summary>
+        public IReadOnlyList<SubclassLevel> SubclassLevels { get; init; } = [];
+
+        public string? CurrentSubclass { get; init; }
 
         public PlannedChoice Plan(LevelChoiceRule rule)
+        {
+            var planned = PlanRule(rule);
+            _planned.Add(planned);
+            return planned;
+        }
+
+        private PlannedChoice PlanRule(LevelChoiceRule rule)
         {
             var filter = rule.Filter;
             var freeText = false;
@@ -612,7 +663,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                         .ToList();
                     break;
                 case LevelChoiceKind.Expertise:
-                    list = ExpertiseOptions();
+                    list = ExpertiseOptions(rule);
                     break;
                 case LevelChoiceKind.Skill:
                     list = skills
@@ -649,7 +700,10 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                 .Select(o =>
                 {
                     var reason = WhyNot(o);
-                    return new PlannedOption(o.Index, o.Name, o.Description, o.PrerequisitesText ?? PrerequisitesText(o.Prerequisites), reason is null, reason, null, o, Preview(o));
+                    return new PlannedOption(o.Index, o.Name, o.Description, o.PrerequisitesText ?? PrerequisitesText(o.Prerequisites), reason is null, reason, null, o, Preview(o))
+                    {
+                        Cost = OptionCosts.Of(o, character, options),
+                    };
                 })
                 .ToList();
         }
@@ -760,22 +814,98 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
 
         private bool HasPick(string index) => _active.Any(p => p.Item.Index == index) || pendingPicks.Contains(index);
 
-        private List<PlannedOption> ExpertiseOptions()
+        /// <summary>
+        /// Skills the character is proficient with (without expertise), plus those gained at this level before the
+        /// expertise: picked in a skill choice, or granted by the subclass or an option chosen now. Without the answers
+        /// of the request, the ones that depend on a pick carry <see cref="PlannedOption.Requires"/>. <c>from</c>
+        /// limits the skills offered.
+        /// </summary>
+        private List<PlannedOption> ExpertiseOptions(LevelChoiceRule rule)
         {
             var names = skills.ToDictionary(s => s.Index, s => s.Name, StringComparer.Ordinal);
             var result = character.Proficiencies
                 .Where(p => p.Type == ProficiencyType.Skill && !p.Expertise)
-                .Select(p => p.Key.StartsWith("skill-", StringComparison.Ordinal) ? p.Key["skill-".Length..] : p.Key)
+                .Select(p => SkillKey(p.Key))
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(k => k, StringComparer.Ordinal)
                 .Select(k => Simple(k, names.GetValueOrDefault(k, k), []))
                 .ToList();
+            foreach (var (skill, requires) in SameLevelSkills())
+            {
+                if (character.FindProficiency(ProficiencyType.Skill, skill) is not null)
+                {
+                    continue;
+                }
+
+                var existing = result.FindIndex(o => o.Index == skill);
+                if (existing < 0)
+                {
+                    result.Add(Simple(skill, names.GetValueOrDefault(skill, skill), []) with { Requires = requires });
+                }
+                else if (requires is null && result[existing].Requires is not null)
+                {
+                    result[existing] = result[existing] with { Requires = null };
+                }
+            }
+
             if (definition.Index == "rogue" && character.FindProficiency(ProficiencyType.Tool, ThievesTools) is { Expertise: false })
             {
                 result.Add(Simple(ThievesTools, "Thieves' Tools", []));
             }
 
-            return result;
+            return rule.From is { } from ? result.Where(o => from.Contains(o.Index, StringComparer.Ordinal)).ToList() : result;
+        }
+
+        private static string SkillKey(string key) => key.StartsWith("skill-", StringComparison.Ordinal) ? key["skill-".Length..] : key;
+
+        /// <summary>
+        /// Skills gained at this level by the choices planned so far and by the subclass, each with the pick it depends
+        /// on (null when it is certain: granted by the current subclass, or picked in the request being applied).
+        /// </summary>
+        private IEnumerable<(string Skill, OptionRequirementDto? Requires)> SameLevelSkills()
+        {
+            // Without the answers every candidate is offered with its condition; with them only what was picked.
+            IEnumerable<(string Skill, OptionRequirementDto? Requires)> Picked(string key, string index, IEnumerable<string> gained)
+            {
+                if (PendingChoices is null)
+                {
+                    return gained.Select(s => (SkillKey(s), (OptionRequirementDto?)new OptionRequirementDto(key, index)));
+                }
+
+                return PendingChoices.TryGetValue(key, out var picks) && picks.Contains(index, StringComparer.Ordinal)
+                    ? gained.Select(s => (SkillKey(s), (OptionRequirementDto?)null))
+                    : [];
+            }
+
+            IEnumerable<string> SubclassSkills(string subclass) => SubclassLevels
+                .Where(l => l.SubclassIndex == subclass && l.Level <= newLevel)
+                .SelectMany(l => l.Grants.Skills);
+
+            if (CurrentSubclass is { } current)
+            {
+                foreach (var skill in SubclassSkills(current))
+                {
+                    yield return (SkillKey(skill), null);
+                }
+            }
+
+            foreach (var choice in _planned)
+            {
+                var key = choice.Rule.Key;
+                IEnumerable<(string, OptionRequirementDto?)> gained = choice.Rule.Kind switch
+                {
+                    LevelChoiceKind.Subclass => choice.Options.SelectMany(o => Picked(key, o.Index, SubclassSkills(o.Index))),
+                    LevelChoiceKind.Skill => choice.Options.Where(o => o.Eligible).SelectMany(o => Picked(key, o.Index, [o.Index])),
+                    LevelChoiceKind.OptionSet or LevelChoiceKind.Custom or LevelChoiceKind.AsiOrFeat => choice.Options
+                        .Where(o => o.Eligible && o.Definition?.Grants.Skills is { Count: > 0 })
+                        .SelectMany(o => Picked(key, o.Index, o.Definition!.Grants.Skills)),
+                    _ => [],
+                };
+                foreach (var item in gained)
+                {
+                    yield return item;
+                }
+            }
         }
 
         /// <summary>

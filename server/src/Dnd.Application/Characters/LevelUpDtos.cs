@@ -97,6 +97,15 @@ public sealed record LevelUpOptionDto(
 {
     /// <summary>Damage type resisted with a trait option (origin choices: draconic ancestry), or null.</summary>
     public string? DamageType { get; init; }
+
+    /// <summary>What using the option costs ("2 Ki"), or null when it is free.</summary>
+    public OptionCostDto? Cost { get; init; }
+
+    /// <summary>
+    /// The option is only available when another pick of the same level-up is made (expertise in a skill gained at
+    /// this level); null when it is always available. The app hides it until that pick is selected.
+    /// </summary>
+    public OptionRequirementDto? Requires { get; init; }
 }
 
 /// <summary>

@@ -272,6 +272,16 @@ public sealed record OptionResource(string Key, string Name, string Max, Resourc
     }
 }
 
+/// <summary>
+/// What using an option costs: <see cref="Amount"/> uses of the character resource <see cref="Resource"/> (a class
+/// resource such as <c>ki</c> or <c>sorcery-points</c>, or the key of a content pack resource).
+/// </summary>
+public sealed record OptionCost(string Resource, int Amount)
+{
+    public const int MinAmount = 1;
+    public const int MaxAmount = 20;
+}
+
 /// <summary>Narrows the candidate spells of a spell choice.</summary>
 /// <param name="SpellList">Class whose spell list is used ("wizard"), "any" for every list, or null for the class of the choice.</param>
 /// <param name="SpellLevels">Exact spell levels allowed (overrides <paramref name="MaxSpellLevelBySlots"/>); empty when not given.</param>
@@ -573,6 +583,15 @@ public static class LevelChoiceJson
                 DieByLevel = diceByLevel is { Count: > 0 } ? diceByLevel : null,
             };
         });
+
+    /// <summary><c>{"resource":"ki","amount":2}</c>; null when missing or invalid.</summary>
+    public static OptionCost? ParseCost(string? json) =>
+        Parse<OptionCost>(json, root =>
+            root.ValueKind == JsonValueKind.Object
+            && Text(Property(root, "resource")) is { } resource
+            && Int(Property(root, "amount")) is { } amount and >= OptionCost.MinAmount and <= OptionCost.MaxAmount
+                ? new OptionCost(resource, amount)
+                : null);
 
     public static ChoiceFilter ParseFilter(string? json) =>
         Parse(json, root =>

@@ -1246,6 +1246,57 @@ void main() {
       expect(repo.resourceSpends.last, (id: 'r2', amount: 10));
     });
 
+    testWidgets('las opciones con coste salen junto a su recurso con "Usar"', (tester) async {
+      final repo = _repo(
+        combat: makeCombatJson(
+          resources: [
+            {
+              'id': 'r1',
+              'key': 'ki',
+              'name': 'Ki',
+              'max': 4,
+              'used': 1,
+              'recharge': 'ShortRest',
+              'isAuto': true,
+              'options': [
+                {
+                  'index': 'golpe-sereno',
+                  'name': 'Golpe sereno',
+                  'resource': 'ki',
+                  'resourceName': 'Ki',
+                  'amount': 2,
+                },
+                {
+                  'index': 'rafaga-ejemplo',
+                  'name': 'Ráfaga de ejemplo',
+                  'resource': 'ki',
+                  'resourceName': 'Ki',
+                  'amount': 4,
+                },
+              ],
+            },
+          ],
+        ),
+      );
+      await _pump(tester, characters: repo);
+      expect(find.byKey(const Key('resource-r1-option-golpe-sereno')), findsOneWidget);
+      expect(find.text('Golpe sereno'), findsOneWidget);
+      expect(find.text('2 Ki'), findsOneWidget);
+
+      // 3 uses left: 4 are not enough.
+      final tooDear = tester.widget<ButtonStyleButton>(
+        find.byKey(const Key('resource-r1-use-rafaga-ejemplo')),
+      );
+      expect(tooDear.onPressed, isNull);
+
+      await _tap(tester, 'resource-r1-use-golpe-sereno');
+      expect(repo.resourceSpends, [(id: 'r1', amount: 2)]);
+      final now = tester.widget<ButtonStyleButton>(
+        find.byKey(const Key('resource-r1-use-golpe-sereno')),
+      );
+      expect(now.onPressed, isNull);
+    });
+
     testWidgets('el jugador no recupera a mano recursos automáticos; el DM sí', (tester) async {
       final resources = [
         {

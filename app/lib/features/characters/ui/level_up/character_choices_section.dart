@@ -6,13 +6,21 @@ import '../../domain/character_format.dart' show abilityAbbreviation;
 import '../../domain/class_theme.dart';
 
 /// What a level choice picked, in Spanish: "Defensa", "+1 Fue, +1 Des",
-/// "Grappler (+1 Fue)", "Mage Hand (sustituye a Light)".
-String describeCharacterChoice(CharacterChoice choice) {
+/// "Grappler (+1 Fue)", "Mage Hand (sustituye a Light)", "Golpe sereno
+/// (2 Ki)" for options with a cost ([costOf]).
+String describeCharacterChoice(
+  CharacterChoice choice, {
+  CharacterOptionCost? Function(String index)? costOf,
+}) {
+  String withCost(String index, String name) {
+    final cost = costOf?.call(index);
+    return cost == null ? name : '$name (${cost.label})';
+  }
+
   if (choice.feat != null) {
     final ability = choice.ability;
-    return ability == null
-        ? choice.feat!.name
-        : '${choice.feat!.name} (+1 ${abilityAbbreviation(ability)})';
+    final name = withCost(choice.feat!.index, choice.feat!.name);
+    return ability == null ? name : '$name (+1 ${abilityAbbreviation(ability)})';
   }
   if (choice.asi.isNotEmpty) {
     return [
@@ -20,7 +28,7 @@ String describeCharacterChoice(CharacterChoice choice) {
         if ((choice.asi[key] ?? 0) > 0) '+${choice.asi[key]} ${abilityAbbreviation(key)}',
     ].join(', ');
   }
-  final names = choice.selected.map((s) => s.name).join(', ');
+  final names = choice.selected.map((s) => withCost(s.index, s.name)).join(', ');
   final replaced = choice.replaced.map((r) => r.name).join(', ');
   if (replaced.isEmpty) return names.isEmpty ? '—' : names;
   return names.isEmpty ? 'Sustituye a $replaced' : '$names (sustituye a $replaced)';
@@ -76,7 +84,7 @@ class CharacterChoicesSection extends StatelessWidget {
               dense: true,
               contentPadding: EdgeInsets.zero,
               title: Text(choice.name),
-              subtitle: Text(describeCharacterChoice(choice)),
+              subtitle: Text(describeCharacterChoice(choice, costOf: character.optionCost)),
             ),
         ],
       ],

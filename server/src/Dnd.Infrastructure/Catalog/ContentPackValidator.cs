@@ -21,6 +21,9 @@ namespace Dnd.Infrastructure.Catalog;
 /// <param name="Races">Race index → source (the SRD or a pack), for race prerequisites.</param>
 /// <param name="CasterClasses">Classes that cast spells on their own (a subclass <c>spellcasting</c> is only for the others).</param>
 /// <param name="SpellLevels">Spell index → level, to check the levels of the expanded spell lists.</param>
+/// <param name="ResourceKeys">Keys of the resources of the catalog options and features, with their source (option costs).</param>
+/// <param name="SetClasses">Option sets used by the level choices of the catalog: set id, class and source (option costs).</param>
+/// <param name="LevelChoiceKeys">Level choices of the catalog: class, level, key and source (<c>after</c>).</param>
 internal sealed record ContentPackContext(
     IReadOnlyDictionary<string, string> Classes,
     IReadOnlyDictionary<string, string> SrdSubclasses,
@@ -33,7 +36,10 @@ internal sealed record ContentPackContext(
     IReadOnlyDictionary<string, (string ClassIndex, string Source)>? PackSubclasses = null,
     IReadOnlyDictionary<string, string>? Races = null,
     IReadOnlySet<string>? CasterClasses = null,
-    IReadOnlyDictionary<string, int>? SpellLevels = null);
+    IReadOnlyDictionary<string, int>? SpellLevels = null,
+    IReadOnlyList<(string Key, string Source)>? ResourceKeys = null,
+    IReadOnlyList<(string SetId, string ClassIndex, string Source)>? SetClasses = null,
+    IReadOnlyList<(string ClassIndex, int Level, string Key, string Source)>? LevelChoiceKeys = null);
 
 /// <summary>Catalog rows of a valid content pack, every one with <c>Source</c> = the pack id.</summary>
 internal sealed class ContentPackRows
@@ -194,6 +200,8 @@ internal sealed partial class ContentPackValidator
         Trinkets(pack.Trinkets, rows);
         RollTables(pack.RollTables, rows, packSubclasses);
         CheckLevelChoiceReferences(rows);
+        CheckCostReferences(rows);
+        CheckAfterReferences(rows);
         CheckExpandedSpellReferences(rows);
         CheckStartingEquipmentReferences(rows);
         return rows;
