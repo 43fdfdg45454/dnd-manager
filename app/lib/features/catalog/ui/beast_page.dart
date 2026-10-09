@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../characters/domain/character_format.dart' show skillLabel;
+import '../../dice/domain/dice_expression.dart';
 import '../../dice/ui/dice_sheet.dart';
 import '../data/beast_models.dart';
 import '../data/catalog_controllers.dart';
@@ -218,6 +219,7 @@ class _ActionCard extends StatelessWidget {
                         context,
                         '1d20${_signed(bonus)}',
                         label: '${action.name}: ataque',
+                        kind: RollKind.attack,
                       ),
                     ),
                   if (damage != null)
