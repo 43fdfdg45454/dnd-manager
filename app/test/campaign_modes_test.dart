@@ -83,19 +83,13 @@ void main() {
     });
 
     test('un jugador no entra en la Mesa del DM', () {
-      expect(
-        campaignModeRedirect(CampaignRole.player, '/campaigns/c1/dm'),
-        '/campaigns/c1/player',
-      );
+      expect(campaignModeRedirect(CampaignRole.player, '/campaigns/c1/dm'), '/campaigns/c1/player');
       expect(campaignModeRedirect(CampaignRole.player, '/campaigns/c1/player'), isNull);
     });
 
     test('DM y dueño no entran en Mi sesión', () {
       expect(campaignModeRedirect(CampaignRole.dm, '/campaigns/c1/player'), '/campaigns/c1/dm');
-      expect(
-        campaignModeRedirect(CampaignRole.owner, '/campaigns/c1/player'),
-        '/campaigns/c1/dm',
-      );
+      expect(campaignModeRedirect(CampaignRole.owner, '/campaigns/c1/player'), '/campaigns/c1/dm');
       expect(campaignModeRedirect(CampaignRole.dm, '/campaigns/c1/dm'), isNull);
       expect(campaignModeRedirect(CampaignRole.owner, '/campaigns/c1/dm'), isNull);
     });
@@ -180,11 +174,7 @@ void main() {
     });
 
     testWidgets('una tarjeta de Campaña abre su sección como página completa', (tester) async {
-      final router = await pumpRealApp(
-        tester,
-        location: '/campaigns/c1/general',
-        fakes: _fakes(),
-      );
+      final router = await pumpRealApp(tester, location: '/campaigns/c1/general', fakes: _fakes());
 
       await openGeneralSection(tester, 'members');
       expect(locationOf(router), '/campaigns/c1/general/members');
@@ -195,6 +185,62 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('campaign-general')), findsOneWidget);
     });
+
+    testWidgets('Atrás vuelve a Campañas desde otra pestaña en vez de cerrar la app', (
+      tester,
+    ) async {
+      final router = await pumpRealApp(tester, location: '/', fakes: _fakes());
+
+      await _tap(tester, find.byKey(const Key('nav-compendium')));
+      expect(locationOf(router), AppRoutes.compendium);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(locationOf(router), AppRoutes.home);
+      expect(find.text('La Mina Perdida'), findsOneWidget);
+    });
+
+    testWidgets('en la campaña, Atrás vuelve a la vista del rol y después a Campañas', (
+      tester,
+    ) async {
+      final router = await pumpRealApp(tester, location: '/', fakes: _fakes());
+      await _tap(tester, find.text('La Mina Perdida'));
+      expect(locationOf(router), '/campaigns/c1/dm');
+
+      await _tap(tester, find.byKey(const Key('nav-general')));
+      expect(locationOf(router), '/campaigns/c1/general');
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(locationOf(router), '/campaigns/c1/dm');
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(locationOf(router), AppRoutes.home);
+      expect(find.byKey(const Key('app-nav-bar')), findsOneWidget);
+    });
+
+    testWidgets(
+      'toda vista de la campaña tiene el botón a Campañas, también abierta directamente',
+      (tester) async {
+        final router = await pumpRealApp(
+          tester,
+          location: '/campaigns/c1/general',
+          fakes: _fakes(role: CampaignRole.player),
+        );
+        expect(find.byKey(const Key('campaign-home')), findsOneWidget);
+        expect(find.byType(BackButton), findsNothing);
+
+        // Back from the role tab with nothing to pop goes to Campañas, not out of the app.
+        await _tap(tester, find.byKey(const Key('nav-player')));
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expect(locationOf(router), AppRoutes.home);
+
+        await _tap(tester, find.text('La Mina Perdida'));
+        await _tap(tester, find.byKey(const Key('nav-characters')));
+        await _tap(tester, find.byKey(const Key('campaign-home')));
+        expect(locationOf(router), AppRoutes.home);
+      },
+    );
 
     testWidgets('la barra de la app cambia de pestaña y conserva la de campañas', (tester) async {
       final router = await pumpRealApp(tester, location: '/', fakes: _fakes());

@@ -41,6 +41,12 @@ enum _MenuAction { settings, documents }
 /// requests and menu) and a navigation bar with "Mesa del DM" (DM and Owner)
 /// or "Mi sesión" (Player), "Personajes" and "Campaña".
 ///
+/// The app bar always offers the way back to Campañas, whatever the tab and
+/// however the campaign was opened. The system back button first returns to
+/// the tab of the role, then leaves the campaign (to the screen that opened it,
+/// or to Campañas when the campaign was the first screen), never closing the
+/// app.
+///
 /// While mounted it keeps the realtime connection of the campaign open
 /// ([campaignRealtimeProvider]) and tells players when the DM forces a rest or
 /// sends them a secret message.
@@ -231,6 +237,31 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
       );
   }
 
+  /// Branch of the role: "Mesa del DM", "Mi sesión" or "Campaña" while unknown.
+  int _roleBranch(CampaignRole? role) => switch (role) {
+    null => CampaignBranches.general,
+    CampaignRole.player => CampaignBranches.player,
+    _ => CampaignBranches.dm,
+  };
+
+  /// Leaves the campaign for the Campañas tab.
+  void _goHome() => GoRouter.of(context).go(AppRoutes.home);
+
+  /// System back: the tab of the role first, then out of the campaign.
+  void _onBack(CampaignRole? role) {
+    final roleBranch = _roleBranch(role);
+    if (navigationShell.currentIndex != roleBranch) {
+      navigationShell.goBranch(roleBranch);
+      return;
+    }
+    final navigator = Navigator.of(context, rootNavigator: true);
+    if (navigator.canPop()) {
+      navigator.pop();
+    } else {
+      _goHome();
+    }
+  }
+
   void _onMenu(BuildContext context, _MenuAction action) => switch (action) {
     _MenuAction.settings => context.push(
       AppRoutes.campaignSection(campaignId, CampaignSection.settings),
@@ -244,76 +275,89 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
     final campaign = detail.value;
     final role = campaign?.myRole;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(campaign?.name ?? 'Campaña', key: const Key('campaign-title')),
-        actions: [
-          RealtimeStatusIcon(campaignId: campaignId),
-          if (campaign != null) ...[
-            IconButton(
-              key: const Key('transactions-button'),
-              tooltip: 'Transacciones',
-              onPressed: () => context.push(AppRoutes.transactions(campaignId)),
-              icon: const AppIcon(AppIcons.coins),
-            ),
-            ChangeRequestsButton(campaign: campaign),
-          ],
-          PopupMenuButton<_MenuAction>(
-            key: const Key('campaign-menu'),
-            onSelected: (action) => _onMenu(context, action),
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                key: Key('campaign-menu-settings'),
-                value: _MenuAction.settings,
-                child: Text('Ajustes de la campaña'),
-              ),
-              PopupMenuItem(
-                key: Key('campaign-menu-documents'),
-                value: _MenuAction.documents,
-                child: Text('Documentos recomendados'),
-              ),
-            ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _onBack(role);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leading: IconButton(
+            key: const Key('campaign-home'),
+            tooltip: 'Campañas',
+            onPressed: _goHome,
+            icon: const AppIcon(AppIcons.castle),
           ),
-        ],
-      ),
-      body: GrainBackground(
-        child: Column(
-          children: [
-            ConnectionBanner(campaignId: campaignId),
-            Expanded(
-              child: OfflineBannerLayout(
-                scopes: [staleTree(CampaignsRepository.campaignPath(campaignId))],
-                child: detail.when(
-                  skipLoadingOnReload: true,
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (error, _) => Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(describeCampaignError(error), textAlign: TextAlign.center),
-                          const SizedBox(height: 12),
-                          FilledButton.icon(
-                            onPressed: () =>
-                                ref.invalidate(campaignDetailControllerProvider(campaignId)),
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Reintentar'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  data: (_) => navigationShell,
-                ),
+          title: Text(campaign?.name ?? 'Campaña', key: const Key('campaign-title')),
+          actions: [
+            RealtimeStatusIcon(campaignId: campaignId),
+            if (campaign != null) ...[
+              IconButton(
+                key: const Key('transactions-button'),
+                tooltip: 'Transacciones',
+                onPressed: () => context.push(AppRoutes.transactions(campaignId)),
+                icon: const AppIcon(AppIcons.coins),
               ),
+              ChangeRequestsButton(campaign: campaign),
+            ],
+            PopupMenuButton<_MenuAction>(
+              key: const Key('campaign-menu'),
+              onSelected: (action) => _onMenu(context, action),
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  key: Key('campaign-menu-settings'),
+                  value: _MenuAction.settings,
+                  child: Text('Ajustes de la campaña'),
+                ),
+                PopupMenuItem(
+                  key: Key('campaign-menu-documents'),
+                  value: _MenuAction.documents,
+                  child: Text('Documentos recomendados'),
+                ),
+              ],
             ),
           ],
         ),
+        body: GrainBackground(
+          child: Column(
+            children: [
+              ConnectionBanner(campaignId: campaignId),
+              Expanded(
+                child: OfflineBannerLayout(
+                  scopes: [staleTree(CampaignsRepository.campaignPath(campaignId))],
+                  child: detail.when(
+                    skipLoadingOnReload: true,
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (error, _) => Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(describeCampaignError(error), textAlign: TextAlign.center),
+                            const SizedBox(height: 12),
+                            FilledButton.icon(
+                              onPressed: () =>
+                                  ref.invalidate(campaignDetailControllerProvider(campaignId)),
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Reintentar'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    data: (_) => navigationShell,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: role == null
+            ? null
+            : _ModeBar(campaignId: campaignId, role: role, navigationShell: navigationShell),
       ),
-      bottomNavigationBar: role == null
-          ? null
-          : _ModeBar(campaignId: campaignId, role: role, navigationShell: navigationShell),
     );
   }
 }
