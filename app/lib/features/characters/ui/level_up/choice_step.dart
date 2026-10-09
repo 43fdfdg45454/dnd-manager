@@ -53,6 +53,7 @@ class _LevelUpChoiceStepState extends ConsumerState<LevelUpChoiceStep> {
               : choice.replacementOnly
               ? 'Puedes sustituir una elección anterior (opcional).'
               : null,
+          warning: choice.warning,
           trailing: isImprovement
               ? null
               : Padding(

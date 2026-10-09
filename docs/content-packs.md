@@ -698,14 +698,27 @@ si se elige, también el "Juramento"; al subir a nivel 4, la dote aparece junto 
 | `prerequisitesText` | `string?` | ≤ 2000. Texto literal del prerrequisito. |
 | `prerequisites` | `Prerequisites?` | Versión que la app comprueba (ver abajo). |
 | `modifiers` | `Modifier[]?` | ≤ 10 efectos numéricos: los de los objetos más `condition`. |
-| `abilityIncrease` | `AbilityIncrease?` | Dotes: `{ "amount": 1-2, "from": ["str", "dex"] }`. `from` vacío = cualquier característica; con una sola, se aplica sin preguntar. El tope de 20 se respeta. |
+| `abilityIncrease` | `AbilityIncrease?` | Dotes: `{ "amount": 1-2, "from": ["str", "dex"] }`. `from` vacío = cualquier característica; con una sola, se aplica sin preguntar; con varias, el jugador elige una al tomar la dote. El tope de 20 se respeta y el desglose de la característica nombra la dote ("Atleta (nivel 4)"). |
 | `grants` | `Grants?` | Competencias y conjuros que concede. |
 | `resource` | `Resource?` | Recurso de usos limitados que aparece como recurso automático del personaje. |
 
-**`Prerequisites`** (todas las condiciones dadas deben cumplirse): `minLevel` (1–20, nivel en la
-clase de la elección), `pactBoon` (índice del don del pacto elegido, p. ej. `pact-of-the-blade`),
-`cantrip` (índice de un truco que el personaje conozca), `abilities` (`{ "str": 13 }`, 1–30). Las
-opciones sin cumplir aparecen en el asistente como no elegibles, con el motivo.
+**`Prerequisites`** (todas las condiciones dadas deben cumplirse):
+
+| Campo | Significado |
+| --- | --- |
+| `minLevel` | 1–20, nivel en la clase de la elección. |
+| `pactBoon` | Índice del don del pacto elegido (`pact-of-the-blade`). |
+| `cantrip` | Índice de un truco que el personaje conozca. |
+| `abilities` | Puntuaciones mínimas: `{ "str": 13 }` (1–30). Varias características = todas. |
+| `races` | Índices de raza (del SRD o de un paquete); basta con ser **una** de ellas: `["elf", "half-elf"]`. |
+| `proficiency` | `{ "armor": ["heavy"], "weapon": ["martial"] }`. Competencias que el personaje debe tener, **todas**. Armadura: `light`, `medium`, `heavy` o `shields` (`all-armor` del guerrero y el paladín cubre las tres armaduras, no los escudos). Arma: `simple`, `martial` o el índice de un arma (`longswords`). |
+| `spellcasting` | `true`: poder lanzar al menos un conjuro (una clase lanzadora con espacios o un conjuro de cualquier origen, trucos raciales incluidos). |
+
+Las opciones sin cumplir aparecen en el asistente como no elegibles, con el motivo, que dice qué
+falta y qué tiene el personaje ("Requiere Fuerza 13; tienes 10", "Requiere ser Elf o Half-Elf; eres
+Human", "Requiere competencia con armadura pesada; no la tienes"). Si la opción no trae
+`prerequisitesText`, el asistente muestra uno generado a partir de estos campos ("Fuerza 13,
+competencia con armadura pesada").
 
 **`Modifier`**: `kind`, `target` y `value` como en los objetos, más `condition` opcional:
 

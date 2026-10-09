@@ -28,6 +28,15 @@ public sealed record PlannedChoice(LevelChoiceRule Rule, int Required, bool Free
 {
     public PlannedOption? Option(string index) => Options.FirstOrDefault(o => o.Index == index);
 
+    /// <summary>
+    /// Why fewer picks than the rule gives are required (Spanish), or null: no eligible option at all, or fewer
+    /// than <see cref="LevelChoiceRule.Choose"/>. The choice stays in the plan so the player sees what was skipped.
+    /// </summary>
+    public string? Warning =>
+        Rule.Choose <= 0 || Required >= Rule.Choose ? null
+        : Required == 0 ? "Ninguna opción cumple los requisitos ahora mismo, así que esta elección no se pide en este nivel."
+        : $"Solo {Required} de las {Rule.Choose} opciones que da este nivel cumplen los requisitos ahora mismo.";
+
     public LevelUpChoiceDto ToDto() => new(
         Rule.Key,
         Rule.Name,
@@ -52,7 +61,8 @@ public sealed record PlannedChoice(LevelChoiceRule Rule, int Required, bool Free
                 o.Definition?.AbilityIncrease is { } increase ? new AbilityIncreaseDto(increase.Amount, increase.From) : null,
                 o.SpellCategory))
             .ToList(),
-        Known.Select(ChoiceItemDto.From).ToList());
+        Known.Select(ChoiceItemDto.From).ToList(),
+        Warning);
 }
 
 /// <summary>The level-up of a character in one class, as computed by <see cref="LevelUpPlanner"/>.</summary>
@@ -98,7 +108,8 @@ public sealed class LevelUpPlan
         Classes,
         AutomaticFeatures,
         Choices.Select(c => c.ToDto()).ToList(),
-        Spellcasting);
+        Spellcasting,
+        AutomaticFeatures.Select(f => new LevelUpNewFeatureDto(f.Feature.Name, f.Feature.Description, f.SubclassIndex)).ToList());
 }
 
 /// <summary>
@@ -160,10 +171,17 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         var classLevels = await catalog.ListClassLevelsAsync(definition.Index, cancellationToken);
         var classLevel = classLevels.FirstOrDefault(l => l.Level == newLevel);
         var subclasses = await catalog.ListSubclassesAsync(definition.Index, cancellationToken);
-        var rules = SelectRules(await catalog.ListLevelChoiceRulesAsync(definition.Index, cancellationToken), entry?.SubclassIndex, newLevel);
-        if (entry is null && character.Classes.Count > 0 && MulticlassSkillRule(definition) is { } multiclassSkill)
+        var answered = character.Choices.Where(c => c.ClassIndex == definition.Index).Select(c => c.Key).ToHashSet(StringComparer.Ordinal);
+        var rules = SelectRules(await catalog.ListLevelChoiceRulesAsync(definition.Index, cancellationToken), entry?.SubclassIndex, newLevel, answered);
+        if (entry is null && character.Classes.Count > 0)
         {
-            rules.Insert(0, multiclassSkill);
+            // Multiclassing: the creation wizard only covered the first class, so the level-1 choices of a new
+            // caster class (its cantrips, spells known or spellbook) are asked here.
+            rules.InsertRange(0, NewClassSpellRules(definition, classLevel));
+            if (MulticlassSkillRule(definition) is { } multiclassSkill)
+            {
+                rules.Insert(0, multiclassSkill);
+            }
         }
 
         var setIds = rules.Select(r => r.Kind == LevelChoiceKind.AsiOrFeat ? OptionSets.Feats : r.SetId).OfType<string>().ToHashSet(StringComparer.Ordinal);
@@ -181,8 +199,11 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         var skills = rules.Any(r => r.Kind is LevelChoiceKind.Skill or LevelChoiceKind.Expertise)
             ? await catalog.ListSkillsAsync(cancellationToken)
             : [];
+        var races = options.Any(o => o.Prerequisites.Races.Count > 0)
+            ? (await catalog.ListRacesAsync(cancellationToken)).ToDictionary(r => r.Index, r => r.Name, StringComparer.Ordinal)
+            : new Dictionary<string, string>(StringComparer.Ordinal);
 
-        var context = new PlanContext(character, sheet, definition, newLevel, pendingPicks, options, spells, skills, subclasses, classLevel);
+        var context = new PlanContext(character, sheet, definition, newLevel, pendingPicks, options, spells, skills, subclasses, classLevel, races);
         var choices = rules.Select(context.Plan).ToList();
         var replacements = await invalidChoices.PlanAsync(character, sheet, cancellationToken);
         choices.AddRange(replacements.Select(r => r.Choice));
@@ -242,6 +263,74 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         };
     }
 
+    public const string CantripsKey = "cantrips";
+    public const string SpellsKnownKey = "spells-known";
+    public const string SpellbookKey = "spellbook";
+
+    /// <summary>Spells a wizard starts its spellbook with (SRD: six 1st-level spells).</summary>
+    public const int StartingSpellbookSpells = 6;
+
+    /// <summary>
+    /// Level-1 spell choices of a class taken by multiclassing, from its class table: the cantrips known, the
+    /// spells known (bard, sorcerer, warlock...) or, for the wizard, the six spells of the spellbook. Classes that
+    /// prepare from their list (cleric, druid) only pick cantrips; half casters without level-1 spells pick nothing.
+    /// </summary>
+    private static List<LevelChoiceRule> NewClassSpellRules(ClassDefinition definition, ClassLevel? level1)
+    {
+        var result = new List<LevelChoiceRule>();
+        if (definition.SpellcastingAbility is null || level1 is null)
+        {
+            return result;
+        }
+
+        LevelChoiceRule Rule(string key, string name, LevelChoiceKind kind, int choose, string note, string filter) => new()
+        {
+            Id = LevelChoiceRule.IdFor(definition.Index, null, 1, key),
+            ClassIndex = definition.Index,
+            Level = 1,
+            Key = key,
+            Name = name,
+            Kind = kind,
+            Choose = choose,
+            Note = note,
+            FilterJson = filter,
+        };
+
+        if (level1.CantripsKnown is > 0 and var cantrips)
+        {
+            result.Add(Rule(
+                CantripsKey,
+                "Cantrips",
+                LevelChoiceKind.CantripsKnown,
+                cantrips,
+                $"Al entrar en {BreakdownLabels.Class(definition.Index)} como multiclase conoces sus trucos de nivel 1.",
+                $$"""{"spellList":"{{definition.Index}}","cantripsOnly":true}"""));
+        }
+
+        if (definition.Index == "wizard")
+        {
+            result.Add(Rule(
+                SpellbookKey,
+                "Spellbook",
+                LevelChoiceKind.SpellbookSpells,
+                StartingSpellbookSpells,
+                "Tu libro de conjuros empieza con seis conjuros de nivel 1 de la lista del mago.",
+                """{"spellList":"wizard","maxSpellLevelBySlots":true}"""));
+        }
+        else if (level1.SpellsKnown is > 0 and var spells && MaxSpellLevel(level1) > 0)
+        {
+            result.Add(Rule(
+                SpellsKnownKey,
+                "Spells Known",
+                LevelChoiceKind.SpellsKnown,
+                spells,
+                $"Al entrar en {BreakdownLabels.Class(definition.Index)} como multiclase conoces sus conjuros de nivel 1.",
+                $$"""{"spellList":"{{definition.Index}}","maxSpellLevelBySlots":true}"""));
+        }
+
+        return result;
+    }
+
     /// <summary>
     /// The current classes (always allowed) and every other catalog class, allowed when the multiclassing
     /// prerequisites of the new class and of all current ones are met. The main class goes first.
@@ -277,10 +366,14 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
     /// <summary>
     /// Rules at the new level for the base class and the current subclass. When the class has no subclass yet and
     /// its subclass level has been reached, the subclass is asked now (late characters included) together with the
-    /// rules of every subclass at this level (each flagged with its subclass). Rules that allow replacements from an
-    /// earlier level and have no rule at this level appear with <c>choose</c> 0 (only replacements).
+    /// rules of every subclass at this level (each flagged with its subclass). Subclass choices of earlier levels
+    /// that were never answered are caught up now: when the subclass is taken late, those of every subclass
+    /// from the subclass level on; with a subclass already set (a draconic sorcerer created at level 1), those
+    /// of that subclass without a recorded choice of their key (<paramref name="answered"/>). Rules that allow
+    /// replacements from an earlier level and have no rule at this level appear with <c>choose</c> 0 (only
+    /// replacements).
     /// </summary>
-    private static List<LevelChoiceRule> SelectRules(IReadOnlyList<LevelChoiceRule> all, string? subclass, int newLevel)
+    private static List<LevelChoiceRule> SelectRules(IReadOnlyList<LevelChoiceRule> all, string? subclass, int newLevel, IReadOnlySet<string> answered)
     {
         var subclassRule = all.Where(r => r.Kind == LevelChoiceKind.Subclass && r.SubclassIndex is null).OrderBy(r => r.Level).FirstOrDefault();
         var choosingSubclass = subclass is null && subclassRule is not null && subclassRule.Level <= newLevel;
@@ -297,6 +390,18 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             && (r.SubclassIndex is null || r.SubclassIndex == subclass || (choosingSubclass && r.SubclassIndex is not null)))
             .OrderBy(r => r.SubclassIndex is null ? 0 : 1)
             .ThenBy(r => r.Kind == LevelChoiceKind.AsiOrFeat ? 0 : 1));
+
+        var missed = all.Where(r =>
+            r.SubclassIndex is not null
+            && r.Kind != LevelChoiceKind.Subclass
+            && r.Level < newLevel
+            && (choosingSubclass ? r.Level >= subclassRule!.Level : r.SubclassIndex == subclass && !answered.Contains(r.Key)));
+        var caughtUp = missed
+            .GroupBy(r => (r.SubclassIndex, r.Key))
+            .Where(g => result.All(r => r.SubclassIndex != g.Key.SubclassIndex || r.Key != g.Key.Key))
+            .Select(g => g.OrderBy(r => r.Level).ToList())
+            .Select(group => AtLevel(group[0], newLevel, group.Sum(r => r.Choose)));
+        result.AddRange(caughtUp);
 
         var replaceable = all
             .Where(r => r.Replaces && r.Level < newLevel && (r.SubclassIndex is null || r.SubclassIndex == subclass))
@@ -375,7 +480,8 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             MaxSpellLevel(classLevel),
             own.Count(s => levels.GetValueOrDefault(s.SpellIndex, -1) == 0),
             own.Count(s => levels.GetValueOrDefault(s.SpellIndex, -1) > 0),
-            classLevel.SpellSlots);
+            classLevel.SpellSlots,
+            SheetCalculator.PreparedMax(definition.Index, newLevel, 0) is not null && MaxSpellLevel(classLevel) > 0);
     }
 
     /// <summary>Highest spell level with slots in the class table at that level (pact slots included); 0 without slots.</summary>
@@ -408,7 +514,8 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         IReadOnlyList<SpellDefinition> spells,
         IReadOnlyList<SkillDefinition> skills,
         IReadOnlyList<SubclassDefinition> subclasses,
-        ClassLevel? classLevel)
+        ClassLevel? classLevel,
+        IReadOnlyDictionary<string, string> races)
     {
         private readonly IReadOnlyList<ActivePick> _active = character.ActivePicks();
         private readonly Dictionary<string, OptionDefinition> _options = options.ToDictionary(o => o.Index, StringComparer.Ordinal);
@@ -482,38 +589,110 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                 .Select(o =>
                 {
                     var reason = WhyNot(o);
-                    return new PlannedOption(o.Index, o.Name, o.Description, o.PrerequisitesText, reason is null, reason, null, o, Preview(o));
+                    return new PlannedOption(o.Index, o.Name, o.Description, o.PrerequisitesText ?? PrerequisitesText(o.Prerequisites), reason is null, reason, null, o, Preview(o));
                 })
                 .ToList();
         }
 
+        /// <summary>Spanish prerequisites text derived from the structured ones ("Fuerza 13, competencia con armadura pesada"), or null when there are none.</summary>
+        private string? PrerequisitesText(OptionPrerequisites prerequisites)
+        {
+            if (prerequisites.IsEmpty)
+            {
+                return null;
+            }
+
+            var parts = new List<string>();
+            if (prerequisites.MinLevel is { } minLevel)
+            {
+                parts.Add($"nivel {minLevel} de {BreakdownLabels.Class(definition.Index)}");
+            }
+
+            if (prerequisites.PactBoon is { } pactBoon)
+            {
+                parts.Add(_options.GetValueOrDefault(pactBoon)?.Name ?? pactBoon);
+            }
+
+            if (prerequisites.Cantrip is { } cantrip)
+            {
+                parts.Add($"el truco {_spells.GetValueOrDefault(cantrip)?.Name ?? cantrip}");
+            }
+
+            parts.AddRange(prerequisites.Abilities.Where(a => Abilities.IsValid(a.Key)).Select(a => $"{BreakdownLabels.Ability(a.Key)} {a.Value}"));
+            if (prerequisites.Races.Count > 0)
+            {
+                parts.Add($"ser {string.Join(" o ", prerequisites.Races.Select(RaceName))}");
+            }
+
+            parts.AddRange(prerequisites.ArmorProficiencies.Select(a => $"competencia con {ProficiencyKeys.Describe(a)}"));
+            parts.AddRange(prerequisites.WeaponProficiencies.Select(w => $"competencia con {ProficiencyKeys.Describe(w)}"));
+            if (prerequisites.Spellcasting)
+            {
+                parts.Add("poder lanzar al menos un conjuro");
+            }
+
+            var text = string.Join(", ", parts);
+            return text.Length == 0 ? null : char.ToUpperInvariant(text[0]) + text[1..];
+        }
+
+        private string RaceName(string index) => races.GetValueOrDefault(index, index);
+
+        /// <summary>Why the option cannot be taken now, naming what is required and what the character has; null when it can.</summary>
         private string? WhyNot(OptionDefinition option)
         {
             var prerequisites = option.Prerequisites;
             var reasons = new List<string>();
             if (prerequisites.MinLevel is { } minLevel && newLevel < minLevel)
             {
-                reasons.Add($"Requiere nivel {minLevel} de {definition.Name}.");
+                reasons.Add($"Requiere nivel {minLevel} de {BreakdownLabels.Class(definition.Index)}; subes al {newLevel}.");
             }
 
             if (prerequisites.PactBoon is { } pactBoon && !HasPick(pactBoon))
             {
-                reasons.Add($"Requiere {_options.GetValueOrDefault(pactBoon)?.Name ?? pactBoon}.");
+                var current = _active.FirstOrDefault(p => p.SetId == OptionSets.PactBoons)?.Item.Name
+                    ?? pendingPicks.Select(p => _options.GetValueOrDefault(p)).FirstOrDefault(o => o?.SetId == OptionSets.PactBoons)?.Name;
+                reasons.Add(current is null
+                    ? $"Requiere {_options.GetValueOrDefault(pactBoon)?.Name ?? pactBoon}; aún no tienes don del pacto."
+                    : $"Requiere {_options.GetValueOrDefault(pactBoon)?.Name ?? pactBoon}; tienes {current}.");
             }
 
             if (prerequisites.Cantrip is { } cantrip
                 && !character.Spells.Any(s => s.SpellIndex == cantrip)
                 && !pendingPicks.Contains(cantrip))
             {
-                reasons.Add($"Requiere el truco {_spells.GetValueOrDefault(cantrip)?.Name ?? cantrip}.");
+                reasons.Add($"Requiere el truco {_spells.GetValueOrDefault(cantrip)?.Name ?? cantrip}; no lo conoces.");
             }
 
             foreach (var (ability, minimum) in prerequisites.Abilities)
             {
                 if (Abilities.IsValid(ability) && sheet.Abilities[ability].Score < minimum)
                 {
-                    reasons.Add($"Requiere {BreakdownLabels.Ability(ability)} {minimum}.");
+                    reasons.Add($"Requiere {BreakdownLabels.Ability(ability)} {minimum}; tienes {sheet.Abilities[ability].Score}.");
                 }
+            }
+
+            if (prerequisites.Races.Count > 0 && (character.RaceIndex is null || !prerequisites.Races.Contains(character.RaceIndex, StringComparer.Ordinal)))
+            {
+                var required = string.Join(" o ", prerequisites.Races.Select(RaceName));
+                reasons.Add(character.RaceIndex is null
+                    ? $"Requiere ser {required}; no tienes raza."
+                    : $"Requiere ser {required}; eres {RaceName(character.RaceIndex)}.");
+            }
+
+            var armorKeys = character.Proficiencies.Where(p => p.Type == ProficiencyType.Armor).Select(p => p.Key).ToList();
+            foreach (var armor in prerequisites.ArmorProficiencies.Where(a => !ProficiencyKeys.HasArmor(armorKeys, a)))
+            {
+                reasons.Add($"Requiere competencia con {ProficiencyKeys.Describe(armor)}; no la tienes.");
+            }
+
+            foreach (var weapon in prerequisites.WeaponProficiencies.Where(w => character.FindProficiency(ProficiencyType.Weapon, w) is null))
+            {
+                reasons.Add($"Requiere competencia con {ProficiencyKeys.Describe(weapon)}; no la tienes.");
+            }
+
+            if (prerequisites.Spellcasting && character.Spells.Count == 0 && !sheet.Spellcasting.Any(c => c.MaxSpellLevel > 0))
+            {
+                reasons.Add("Requiere poder lanzar al menos un conjuro; no lanzas conjuros.");
             }
 
             return reasons.Count == 0 ? null : string.Join(" ", reasons);

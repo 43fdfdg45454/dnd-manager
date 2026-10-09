@@ -18,6 +18,7 @@ namespace Dnd.Infrastructure.Catalog;
 /// <param name="SrdItems">Indexes of the SRD item templates (starting equipment references).</param>
 /// <param name="EquipmentCategories">Indexes of the equipment categories ("martial-weapons").</param>
 /// <param name="PackSubclasses">Subclasses of the packs already imported: index → (class index, pack id).</param>
+/// <param name="Races">Race index → source (the SRD or a pack), for race prerequisites.</param>
 internal sealed record ContentPackContext(
     IReadOnlyDictionary<string, string> Classes,
     IReadOnlyDictionary<string, string> SrdSubclasses,
@@ -27,7 +28,8 @@ internal sealed record ContentPackContext(
     IReadOnlyDictionary<string, string>? Spells = null,
     IReadOnlySet<string>? SrdItems = null,
     IReadOnlySet<string>? EquipmentCategories = null,
-    IReadOnlyDictionary<string, (string ClassIndex, string Source)>? PackSubclasses = null);
+    IReadOnlyDictionary<string, (string ClassIndex, string Source)>? PackSubclasses = null,
+    IReadOnlyDictionary<string, string>? Races = null);
 
 /// <summary>Catalog rows of a valid content pack, every one with <c>Source</c> = the pack id.</summary>
 internal sealed class ContentPackRows

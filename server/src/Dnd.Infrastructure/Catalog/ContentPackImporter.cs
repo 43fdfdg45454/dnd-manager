@@ -217,6 +217,9 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
             .Select(x => x.Index!)
             .ToListAsync(cancellationToken);
         var categories = await db.CatalogEquipmentCategories.AsNoTracking().Select(x => x.Index).ToListAsync(cancellationToken);
+        var races = await db.CatalogRaces.AsNoTracking()
+            .Select(x => new { x.Index, x.Source })
+            .ToDictionaryAsync(x => x.Index, x => x.Source, StringComparer.Ordinal, cancellationToken);
         return new ContentPackContext(
             classes,
             subclasses,
@@ -226,7 +229,8 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
             spells,
             srdItems.ToHashSet(StringComparer.Ordinal),
             categories.ToHashSet(StringComparer.Ordinal),
-            packSubclasses);
+            packSubclasses,
+            races);
     }
 
     /// <summary>Reports the indexes of the pack already used by another source (the SRD or another pack).</summary>
