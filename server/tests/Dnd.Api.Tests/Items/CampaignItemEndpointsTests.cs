@@ -183,6 +183,28 @@ public class CampaignItemEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(HttpStatusCode.NotFound, (await s.Owner.Client.GetAsync(ItemTestHelpers.ShopUrl(shop.Id))).StatusCode);
     }
 
+    [Fact]
+    public async Task Search_filters_by_several_categories_subcategory_prefix_and_indexes()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+
+        var armor = await SearchAsync(s.Player, s.CampaignId, "category=Armor,Shield&pageSize=200");
+        var simple = await SearchAsync(s.Player, s.CampaignId, "category=Weapon&subcategory=simple&pageSize=200");
+        var potions = await SearchAsync(s.Player, s.CampaignId, "subcategory=Potion&search=healing&pageSize=200");
+        var byIndex = await SearchAsync(s.Player, s.CampaignId, "indexes=longsword, shield ,unknown-item");
+        var badCategory = await s.Player.Client.GetAsync($"{ItemTestHelpers.ItemsUrl(s.CampaignId)}?category=Armor,Nope");
+
+        Assert.Contains(armor.Items, i => i.Name == "Chain Mail");
+        Assert.Contains(armor.Items, i => i.Category == "Shield");
+        Assert.All(armor.Items, i => Assert.Contains(i.Category, new[] { "Armor", "Shield" }));
+        Assert.Equal(14, simple.Total);
+        Assert.All(simple.Items, i => Assert.StartsWith("Simple", i.Subcategory));
+        Assert.NotEmpty(potions.Items);
+        Assert.All(potions.Items, i => Assert.Equal("Potion", i.Subcategory));
+        Assert.Equal(["longsword", "shield"], byIndex.Items.Select(i => i.Index).Order());
+        Assert.Equal(HttpStatusCode.BadRequest, badCategory.StatusCode);
+    }
+
     private static async Task<PagedResult<ItemSummaryDto>> SearchAsync(SignedInUser actor, Guid campaignId, string query)
     {
         var response = await actor.Client.GetAsync($"{ItemTestHelpers.ItemsUrl(campaignId)}?{query}");

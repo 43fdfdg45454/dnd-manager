@@ -71,6 +71,12 @@ public static class ShopEndpoints
             .WithSummary("Añade un objeto a la tienda (plantilla y/o overrides, precio en pc, stock opcional). Requiere al menos DM.")
             .ProducesValidationProblem();
 
+        group.MapPost("/items/bulk", async (Guid id, AddShopItemsBulkRequest request, ClaimsPrincipal user, AddShopItemsBulkHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, request, ct)))
+            .WithName("AddShopItemsBulk")
+            .WithSummary("Añade varios objetos del catálogo de una vez (todo o nada); sin precio usa el precio de lista. Devuelve la tienda. Requiere al menos DM.")
+            .ProducesValidationProblem();
+
         group.MapPatch("/items/{shopItemId:guid}", async (Guid id, Guid shopItemId, UpdateShopItemRequest request, ClaimsPrincipal user, UpdateShopItemHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, shopItemId, request, ct)))
             .WithName("UpdateShopItem")

@@ -4,6 +4,7 @@ using Dnd.Application.Catalog;
 using Dnd.Application.Common;
 using Dnd.Domain.Campaigns;
 using Dnd.Domain.Catalog;
+using Dnd.Domain.Items;
 using FluentValidation;
 
 namespace Dnd.Application.Items;
@@ -18,8 +19,28 @@ public static class ItemErrors
         AppException.Validation("templateId", "El objeto no existe en el catálogo de la campaña.");
 }
 
+/// <param name="Category">One category or several separated by commas ("Armor,Shield").</param>
 /// <param name="Source">"all" (default), "srd" or "homebrew".</param>
-public sealed record SearchCampaignItemsQuery(string? Search, string? Category, string? Rarity, string? Source, int? Page, int? PageSize);
+/// <param name="Subcategory">Case-insensitive prefix of the subcategory ("Simple", "Martial", "Potion").</param>
+/// <param name="Indexes">Comma-separated dataset indexes of catalog items ("longsword,shield").</param>
+public sealed record SearchCampaignItemsQuery(
+    string? Search,
+    string? Category,
+    string? Rarity,
+    string? Source,
+    int? Page,
+    int? PageSize,
+    string? Subcategory,
+    string? Indexes)
+{
+    /// <summary>Most indexes accepted in one query.</summary>
+    public const int MaxIndexes = 200;
+
+    internal static IReadOnlyList<string> SplitList(string? value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? []
+            : value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+}
 
 public sealed class SearchCampaignItemsQueryValidator : AbstractValidator<SearchCampaignItemsQuery>
 {
@@ -27,7 +48,7 @@ public sealed class SearchCampaignItemsQueryValidator : AbstractValidator<Search
     {
         RuleFor(x => x.Search).MaximumLength(CatalogQueryDefaults.SearchMaxLength).WithMessage("La búsqueda es demasiado larga.");
         RuleFor(x => x.Category)
-            .Must(c => CatalogQueryDefaults.TryParseEnum<ItemCategory>(c, out _))
+            .Must(c => SearchCampaignItemsQuery.SplitList(c).All(part => CatalogQueryDefaults.TryParseEnum<ItemCategory>(part, out _)))
             .When(x => !string.IsNullOrWhiteSpace(x.Category))
             .WithMessage($"La categoría debe ser una de: {string.Join(", ", Enum.GetNames<ItemCategory>())}.");
         RuleFor(x => x.Rarity)
@@ -38,6 +59,10 @@ public sealed class SearchCampaignItemsQueryValidator : AbstractValidator<Search
         RuleFor(x => x.PageSize)
             .InclusiveBetween(1, CatalogQueryDefaults.MaxPageSize)
             .WithMessage($"El tamaño de página debe estar entre 1 y {CatalogQueryDefaults.MaxPageSize}.");
+        RuleFor(x => x.Subcategory).MaximumLength(ItemLimits.SubcategoryMaxLength).WithMessage("La subcategoría es demasiado larga.");
+        RuleFor(x => x.Indexes)
+            .Must(i => SearchCampaignItemsQuery.SplitList(i).Count <= SearchCampaignItemsQuery.MaxIndexes)
+            .WithMessage($"Indica como máximo {SearchCampaignItemsQuery.MaxIndexes} índices.");
         RuleFor(x => x.Source)
             .Must(s => CatalogQueryDefaults.TryParseEnum<ItemSource>(s, out _))
             .When(x => !string.IsNullOrWhiteSpace(x.Source))
@@ -54,10 +79,21 @@ public sealed class SearchCampaignItemsHandler(ICampaignAccess access, IItemTemp
 
         var page = query.Page ?? 1;
         var pageSize = query.PageSize ?? CatalogQueryDefaults.DefaultPageSize;
+        var categories = SearchCampaignItemsQuery.SplitList(query.Category)
+            .Select(c => CatalogQueryDefaults.TryParseEnum<ItemCategory>(c, out var parsedCategory) ? parsedCategory : (ItemCategory?)null)
+            .OfType<ItemCategory>()
+            .Distinct()
+            .ToList();
+        var indexes = SearchCampaignItemsQuery.SplitList(query.Indexes).Select(i => i.ToLowerInvariant()).Distinct().ToList();
         var filter = new ItemFilter(
             CatalogQueryDefaults.NormalizeSearch(query.Search),
-            CatalogQueryDefaults.TryParseEnum<ItemCategory>(query.Category, out var category) ? category : null,
-            CatalogQueryDefaults.TryParseEnum<ItemRarity>(query.Rarity, out var rarity) ? rarity : null);
+            null,
+            CatalogQueryDefaults.TryParseEnum<ItemRarity>(query.Rarity, out var rarity) ? rarity : null)
+        {
+            Categories = categories.Count == 0 ? null : categories,
+            SubcategoryPrefix = CatalogQueryDefaults.NormalizeSearch(query.Subcategory),
+            Indexes = indexes.Count == 0 ? null : indexes,
+        };
         var source = CatalogQueryDefaults.TryParseEnum<ItemSource>(query.Source, out var parsed) ? parsed : ItemSource.All;
 
         var (items, total) = await templates.SearchAsync(campaignId, filter, source, (page - 1) * pageSize, pageSize, cancellationToken);

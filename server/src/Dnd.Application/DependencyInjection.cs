@@ -153,6 +153,7 @@ public static class DependencyInjection
         services.AddScoped<UpdateShopHandler>();
         services.AddScoped<DeleteShopHandler>();
         services.AddScoped<AddShopItemHandler>();
+        services.AddScoped<AddShopItemsBulkHandler>();
         services.AddScoped<UpdateShopItemHandler>();
         services.AddScoped<DeleteShopItemHandler>();
         services.AddScoped<BuyHandler>();
