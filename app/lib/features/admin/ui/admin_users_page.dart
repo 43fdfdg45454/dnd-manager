@@ -9,6 +9,7 @@ import '../../../core/auth/auth_state.dart';
 import '../../../core/auth/user_dto.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/ui/infinite_scroll_list.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../data/admin_users_controller.dart';
 import 'create_user_dialog.dart';
@@ -180,24 +181,20 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
                 if (page.items.isEmpty) {
                   return const Center(child: Text('No se encontraron usuarios.'));
                 }
-                return ListView(
+                return InfiniteScrollList(
+                  listKey: const Key('admin-users-list'),
                   padding: const EdgeInsets.only(bottom: 88),
-                  children: [
-                    for (final user in page.items)
-                      _UserTile(
-                        user: user,
-                        isSelf: user.id == currentUserId,
-                        onAction: (action) => _onAction(action, user),
-                      ),
-                    if (page.hasMore)
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: OutlinedButton(
-                          onPressed: () => _run(_controller.loadMore),
-                          child: const Text('Cargar más'),
-                        ),
-                      ),
-                  ],
+                  itemCount: page.items.length,
+                  hasMore: page.hasMore,
+                  onLoadMore: _controller.loadMore,
+                  itemBuilder: (context, i) {
+                    final user = page.items[i];
+                    return _UserTile(
+                      user: user,
+                      isSelf: user.id == currentUserId,
+                      onAction: (action) => _onAction(action, user),
+                    );
+                  },
                 );
               },
             ),

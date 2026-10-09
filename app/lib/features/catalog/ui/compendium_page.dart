@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/cache/stale_data.dart';
-import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/ui/infinite_scroll_list.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../../core/ui/source_chip.dart';
 import '../../../core/ui/spell_category.dart';
@@ -325,7 +325,7 @@ class _ItemsTab extends ConsumerWidget {
 
 /// Infinite-scroll list over a paged [AsyncValue]. Keeps the previous results
 /// visible while a new search or filter loads.
-class _PagedList<T> extends StatefulWidget {
+class _PagedList<T> extends StatelessWidget {
   const _PagedList({
     required this.listKey,
     required this.value,
@@ -343,83 +343,26 @@ class _PagedList<T> extends StatefulWidget {
   final String emptyText;
 
   @override
-  State<_PagedList<T>> createState() => _PagedListState<T>();
-}
-
-class _PagedListState<T> extends State<_PagedList<T>> {
-  static const _prefetchDistance = 400.0;
-
-  final _scroll = ScrollController();
-  bool _loadingMore = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _scroll.addListener(_onScroll);
-  }
-
-  @override
-  void dispose() {
-    _scroll.dispose();
-    super.dispose();
-  }
-
-  void _onScroll() {
-    if (_scroll.position.extentAfter < _prefetchDistance) _loadMore();
-  }
-
-  Future<void> _loadMore() async {
-    if (_loadingMore) return;
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => _loadingMore = true);
-    try {
-      await widget.loadMore();
-    } catch (error) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(describeApiError(error))));
-    } finally {
-      if (mounted) setState(() => _loadingMore = false);
-    }
-  }
-
-  /// A short first page may not fill the viewport, so nothing could scroll.
-  void _fillViewport(Page<T> page) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scroll.hasClients || _loadingMore || !page.hasMore) return;
-      if (widget.value.isLoading) return;
-      if (_scroll.position.maxScrollExtent <= 0) _loadMore();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return widget.value.when(
+    return value.when(
       skipLoadingOnReload: true,
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => CatalogErrorView(error: error, onRetry: widget.onRetry),
+      error: (error, _) => CatalogErrorView(error: error, onRetry: onRetry),
       data: (page) {
         if (page.items.isEmpty) {
-          return Center(child: Text(widget.emptyText));
+          return Center(child: Text(emptyText));
         }
-        _fillViewport(page);
         return Column(
           children: [
-            if (widget.value.isLoading) const LinearProgressIndicator(),
+            if (value.isLoading) const LinearProgressIndicator(),
             Expanded(
-              child: ListView.builder(
-                key: widget.listKey,
-                controller: _scroll,
-                itemCount: page.items.length + (_loadingMore ? 1 : 0),
-                itemBuilder: (context, i) {
-                  if (i >= page.items.length) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  return widget.itemBuilder(context, page.items[i]);
-                },
+              child: InfiniteScrollList(
+                listKey: listKey,
+                itemCount: page.items.length,
+                // No new pages while a new search or filter replaces the list.
+                hasMore: page.hasMore && !value.isLoading,
+                onLoadMore: loadMore,
+                itemBuilder: (context, i) => itemBuilder(context, page.items[i]),
               ),
             ),
           ],
