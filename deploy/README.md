@@ -206,21 +206,11 @@ La API aplica las **migraciones automáticamente** al arrancar; `docker compose 
 resultado y `docker compose ps` debe volver a indicar `healthy`. Si el paquete de GHCR es privado,
 haz `docker login ghcr.io` antes con un token de acceso personal con permiso `read:packages`.
 
-## Migración desde dnd-companion
+## Nombre anterior
 
-El proyecto pasó a llamarse OpenTRPG. La imagen `ghcr.io/<propietario>/dnd-companion-api` ya no se
-publica; no hay nombre doble. Para migrar una instalación existente:
-
-1. En `deploy/.env`, cambia `API_IMAGE` a `ghcr.io/<propietario>/opentrpg-api:latest` (o una versión
-   fija `:X.Y.Z`).
-2. `git pull`, `docker compose pull && docker compose up -d`.
-3. El nombre del proyecto de Compose pasa de `dnd-companion` a `opentrpg`, y con él los volúmenes
-   (`opentrpg_pgdata`, `opentrpg_files`). Para conservar los datos sin copiarlos, arranca con el
-   nombre antiguo: `docker compose -p dnd-companion up -d` (y `export FILES_VOLUME=dnd-companion_files`
-   para `backup.sh`). Si prefieres el nombre nuevo, haz antes `./backup.sh` y restaura en los volúmenes nuevos.
-
-El propietario renombrará el repositorio a OpenTRPG en GitHub; el nombre antiguo redirige, así que
-los remotos existentes siguen funcionando.
+El proyecto se llamaba antes `dnd-companion`. La imagen antigua ya no se publica y el proyecto de
+Compose (y con él los volúmenes) se llama `opentrpg`; una instalación con el nombre antiguo se vuelve
+a crear desde cero.
 
 ## Logs y salud
 

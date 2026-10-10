@@ -92,7 +92,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "OpenTRPG API",
         Version = "v1",
-        Description = "API del companion para campañas de D&D 5e.",
+        Description = "API de OpenTRPG, companion para campañas de rol de mesa.",
     });
 
     // Optional<T> request fields are plain (nullable) values on the wire.
