@@ -342,7 +342,7 @@ public sealed class CharacterSheetService(
                 .Select(c => CharacterFeatDto.From(c, sheetCatalog.Option(c.Selection.Feat!.Index)))
                 .ToList(),
             OptionCosts = optionCosts,
-            Companion = companion is null ? null : companionPlanner.BuildDto(companion, companionGrant, sheet.ProficiencyBonus),
+            Companion = companion is null ? null : await companionPlanner.BuildDtoAsync(companion, companionGrant, sheet.ProficiencyBonus, cancellationToken),
             CompanionFeature = companionGrant is null ? null : CompanionPlanner.FeatureDto(companionGrant),
             CompanionPending = companionGrant is not null && companion is null,
         };

@@ -52,4 +52,10 @@ public sealed record ItemTemplateData
 
     /// <summary>Structured effects on the sheet while the item is active (see <see cref="ItemModifier"/>).</summary>
     public IReadOnlyList<ItemModifier> Modifiers { get; init; } = [];
+
+    /// <summary>
+    /// Extra rules data owned by the game system as a JSON object (e.g. D&amp;D 5e firearms: reload and misfire), or
+    /// null. The core stores it as it is.
+    /// </summary>
+    public string? SystemDataJson { get; init; }
 }

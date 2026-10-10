@@ -33,7 +33,17 @@ public sealed class SpellDefinition
 
     public IReadOnlyList<string> HigherLevel { get; init; } = [];
 
-    public IReadOnlyList<string> ClassIndexes { get; init; } = [];
+    private IReadOnlyList<string> _classIndexes = [];
+
+    public IReadOnlyList<string> ClassIndexes { get => _classIndexes; init => _classIndexes = value; }
+
+    /// <summary>A copy of the spell whose class lists are <paramref name="classIndexes"/> (spell lists of pack classes).</summary>
+    public SpellDefinition WithClassIndexes(IReadOnlyList<string> classIndexes)
+    {
+        var copy = (SpellDefinition)MemberwiseClone();
+        copy._classIndexes = classIndexes;
+        return copy;
+    }
 
     public IReadOnlyList<string> SubclassIndexes { get; init; } = [];
 

@@ -65,6 +65,8 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
                 ["skills"] = await InsertAsync(catalog.Skills, cancellationToken),
                 ["backgrounds"] = await InsertAsync(catalog.Backgrounds, cancellationToken),
                 ["equipmentCategories"] = await InsertAsync(catalog.EquipmentCategories, cancellationToken),
+                ["creatures"] = await InsertAsync(SrdBeasts.Load().Select(b => SrdBeastCatalog.ToRow(b, Dnd5eCatalogSources.Srd)).ToList(), cancellationToken),
+                ["referenceEntries"] = await InsertAsync(catalog.ReferenceEntries, cancellationToken),
                 ["optionSets"] = await InsertAsync(levelChoices.Sets, cancellationToken),
                 ["options"] = await InsertAsync(levelChoices.Options, cancellationToken),
                 ["levelChoiceRules"] = await InsertAsync(levelChoices.Rules, cancellationToken),
@@ -100,8 +102,8 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
     }
 
     /// <summary>
-    /// Deletes the SRD definitions (dependents first). Classes are upserted and item templates are
-    /// upserted instead; the class levels, conditions and skills only exist in the SRD.
+    /// Deletes the SRD definitions (dependents first). Classes and item templates are upserted instead; skills only
+    /// exist in the SRD.
     /// </summary>
     private async Task DeleteDefinitionsAsync(CancellationToken cancellationToken)
     {
@@ -109,11 +111,13 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
         await db.Set<FeatureDefinition>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.Set<SubclassLevel>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.Set<SubclassDefinition>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
-        await db.Set<ClassLevel>().ExecuteDeleteAsync(cancellationToken);
+        await db.Set<ClassLevel>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.Set<SubraceDefinition>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.Set<TraitDefinition>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.Set<SpellDefinition>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
-        await db.Set<ConditionDefinition>().ExecuteDeleteAsync(cancellationToken);
+        await db.Set<ConditionDefinition>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<CreatureDefinition>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<ReferenceEntry>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.Set<SkillDefinition>().ExecuteDeleteAsync(cancellationToken);
         await db.Set<BackgroundDefinition>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.Set<EquipmentCategory>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
@@ -142,14 +146,16 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
     }
 
     /// <summary>
-    /// Updates the existing classes in place, inserts the new ones and deletes those no longer in the
-    /// dataset. Deleting a class would cascade over the subclasses and features of content packs.
+    /// Updates the existing SRD classes in place, inserts the new ones and deletes those no longer in the dataset (the
+    /// classes of content packs are left alone). Deleting a class would cascade over the subclasses and features of
+    /// content packs.
     /// </summary>
     private async Task<int> UpsertClassesAsync(IReadOnlyList<ClassDefinition> classes, CancellationToken cancellationToken)
     {
+        const string srd = Dnd5eCatalogSources.Srd;
         var indexes = classes.Select(c => c.Index).ToList();
-        await db.Set<ClassDefinition>().Where(x => !indexes.Contains(x.Index)).ExecuteDeleteAsync(cancellationToken);
-        var existing = (await db.Set<ClassDefinition>().AsNoTracking().Select(x => x.Index).ToListAsync(cancellationToken)).ToHashSet(StringComparer.Ordinal);
+        await db.Set<ClassDefinition>().Where(x => x.Source == srd && !indexes.Contains(x.Index)).ExecuteDeleteAsync(cancellationToken);
+        var existing = (await db.Set<ClassDefinition>().AsNoTracking().Where(x => x.Source == srd).Select(x => x.Index).ToListAsync(cancellationToken)).ToHashSet(StringComparer.Ordinal);
 
         db.Set<ClassDefinition>().UpdateRange(classes.Where(c => existing.Contains(c.Index)));
         db.Set<ClassDefinition>().AddRange(classes.Where(c => !existing.Contains(c.Index)));

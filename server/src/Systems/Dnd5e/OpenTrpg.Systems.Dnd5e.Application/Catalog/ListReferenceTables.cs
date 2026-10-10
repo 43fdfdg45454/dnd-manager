@@ -1,3 +1,4 @@
+using OpenTrpg.Core.Application.Common;
 using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Application;
 using OpenTrpg.Systems.Dnd5e.Application;
@@ -29,5 +30,43 @@ public sealed class ListBackgroundsHandler(ICatalogRepository catalog)
             .ToList();
         var resolve = await StartingEquipmentResolver.PrepareAsync(catalog, backgrounds.Select(b => b.Equipment), cancellationToken);
         return backgrounds.Select(b => BackgroundDto.From(b.Definition, resolve(b.Equipment))).ToList();
+    }
+}
+
+/// <summary>Rules documents of the content packs in scope, ordered by title, with an optional search and category.</summary>
+public sealed class ListRulesHandler(ICatalogRepository catalog)
+{
+    public async Task<IReadOnlyList<RuleSummaryDto>> HandleAsync(string? q, string? category, CancellationToken cancellationToken = default)
+    {
+        var search = CatalogQueryDefaults.NormalizeSearch(q);
+        var wanted = string.IsNullOrWhiteSpace(category) ? null : category.Trim();
+        return (await catalog.ListRulesAsync(cancellationToken))
+            .Where(r => wanted is null || string.Equals(r.Category, wanted, StringComparison.OrdinalIgnoreCase))
+            .Where(r => search is null
+                || r.Title.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || r.Tags.Any(t => t.Contains(search, StringComparison.OrdinalIgnoreCase))
+                || r.Body.Any(p => p.Contains(search, StringComparison.OrdinalIgnoreCase)))
+            .Select(RuleSummaryDto.From)
+            .ToList();
+    }
+}
+
+/// <summary>A rules document by index (404 when unknown).</summary>
+public sealed class GetRuleHandler(ICatalogRepository catalog)
+{
+    public async Task<RuleDto> HandleAsync(string index, CancellationToken cancellationToken = default) =>
+        await catalog.GetRuleAsync(index.Trim().ToLowerInvariant(), cancellationToken) is { } rule
+            ? RuleDto.From(rule)
+            : throw CatalogErrors.RuleNotFound();
+}
+
+/// <summary>The entries of a vocabulary in scope (SRD and packs), ordered by name; 404 for an unknown kind.</summary>
+public sealed class ListReferenceEntriesHandler(ICatalogRepository catalog)
+{
+    public async Task<IReadOnlyList<ReferenceEntryDto>> HandleAsync(string kind, CancellationToken cancellationToken = default)
+    {
+        var known = Domain.Catalog.ReferenceEntry.Kinds.FirstOrDefault(k => string.Equals(k, kind, StringComparison.OrdinalIgnoreCase))
+            ?? throw CatalogErrors.ReferenceKindNotFound();
+        return (await catalog.ListReferenceEntriesAsync(known, cancellationToken)).Select(ReferenceEntryDto.From).ToList();
     }
 }

@@ -9,4 +9,7 @@ public sealed class ConditionDefinition
     public required string Name { get; init; }
 
     public IReadOnlyList<string> Description { get; init; } = [];
+
+    /// <summary>"srd" or the id of the content pack that defines the condition.</summary>
+    public string Source { get; init; } = Dnd5eCatalogSources.Srd;
 }

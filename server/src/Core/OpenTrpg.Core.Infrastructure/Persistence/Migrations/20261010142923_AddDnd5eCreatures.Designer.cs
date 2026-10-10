@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OpenTrpg.Core.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using OpenTrpg.Core.Infrastructure.Persistence;
 namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261010142923_AddDnd5eCreatures")]
+    partial class AddDnd5eCreatures
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -331,9 +334,6 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
-
-                    b.Property<string>("SystemDataJson")
-                        .HasColumnType("text");
 
                     b.Property<string>("VersatileDice")
                         .HasMaxLength(32)
@@ -1500,10 +1500,6 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<int>("HitDie")
                         .HasColumnType("integer");
 
@@ -1512,9 +1508,6 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
 
                     b.Property<bool>("IsSpellcaster")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("MulticlassJson")
-                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1525,9 +1518,6 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("ResourcesJson")
-                        .HasColumnType("text");
-
                     b.Property<string>("SavingThrows")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1536,20 +1526,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("character varying(60)");
-
-                    b.Property<string>("SpellListJson")
-                        .HasColumnType("text");
-
                     b.Property<string>("SpellcastingAbility")
                         .HasMaxLength(8)
                         .HasColumnType("character varying(8)");
-
-                    b.Property<string>("SpellcastingJson")
-                        .HasColumnType("text");
 
                     b.Property<int>("SpellcastingLevel")
                         .HasColumnType("integer");
@@ -1566,14 +1545,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int>("SubclassLevel")
-                        .HasColumnType("integer");
-
                     b.HasKey("Index");
 
                     b.HasIndex("Name");
-
-                    b.HasIndex("Source");
 
                     b.ToTable("CatalogClasses", (string)null);
                 });
@@ -1609,11 +1583,6 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                     b.Property<int>("ProfBonus")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("character varying(60)");
-
                     b.Property<string>("SpellSlots")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1622,8 +1591,6 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Index");
-
-                    b.HasIndex("Source");
 
                     b.HasIndex("ClassIndex", "Level")
                         .IsUnique();
@@ -1646,16 +1613,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("character varying(60)");
-
                     b.HasKey("Index");
 
                     b.HasIndex("Name");
-
-                    b.HasIndex("Source");
 
                     b.ToTable("CatalogConditions", (string)null);
                 });
@@ -2053,37 +2013,6 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                     b.ToTable("CatalogRaceExtensions", (string)null);
                 });
 
-            modelBuilder.Entity("OpenTrpg.Systems.Dnd5e.Domain.Catalog.ReferenceEntry", b =>
-                {
-                    b.Property<string>("Kind")
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)");
-
-                    b.Property<string>("Index")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("DescriptionJson")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("character varying(60)");
-
-                    b.HasKey("Kind", "Index");
-
-                    b.HasIndex("Source");
-
-                    b.ToTable("Dnd5eReferenceEntries", (string)null);
-                });
-
             modelBuilder.Entity("OpenTrpg.Systems.Dnd5e.Domain.Catalog.RollTable", b =>
                 {
                     b.Property<string>("Source")
@@ -2121,44 +2050,6 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                     b.HasIndex("SubclassIndex");
 
                     b.ToTable("CatalogRollTables", (string)null);
-                });
-
-            modelBuilder.Entity("OpenTrpg.Systems.Dnd5e.Domain.Catalog.RuleDefinition", b =>
-                {
-                    b.Property<string>("Index")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Body")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("character varying(60)");
-
-                    b.Property<string>("Tags")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.HasKey("Index");
-
-                    b.HasIndex("Source");
-
-                    b.HasIndex("Title");
-
-                    b.ToTable("Dnd5eRules", (string)null);
                 });
 
             modelBuilder.Entity("OpenTrpg.Systems.Dnd5e.Domain.Catalog.SkillDefinition", b =>

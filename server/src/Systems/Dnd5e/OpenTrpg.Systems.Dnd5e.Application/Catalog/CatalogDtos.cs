@@ -334,7 +334,28 @@ public sealed record SpellDetailDto(
 
 public sealed record ConditionDto(string Index, string Name, IReadOnlyList<string> Description)
 {
-    public static ConditionDto From(ConditionDefinition c) => new(c.Index, c.Name, c.Description);
+    /// <summary>"srd" or the content pack of the condition.</summary>
+    public string Source { get; init; } = Dnd5eCatalogSources.Srd;
+
+    public static ConditionDto From(ConditionDefinition c) => new(c.Index, c.Name, c.Description) { Source = c.Source };
+}
+
+/// <summary>A rules document of a content pack in the list (no body).</summary>
+public sealed record RuleSummaryDto(string Index, string Title, string Category, IReadOnlyList<string> Tags, string Source)
+{
+    public static RuleSummaryDto From(RuleDefinition r) => new(r.Index, r.Title, r.Category, r.Tags, r.Source);
+}
+
+/// <summary>A rules document of a content pack: paragraphs in light Markdown, no mechanical effect.</summary>
+public sealed record RuleDto(string Index, string Title, string Category, IReadOnlyList<string> Body, IReadOnlyList<string> Tags, string Source)
+{
+    public static RuleDto From(RuleDefinition r) => new(r.Index, r.Title, r.Category, r.Body, r.Tags, r.Source);
+}
+
+/// <summary>An entry of a vocabulary (language, weapon property, equipment category, damage type, magic school or tool).</summary>
+public sealed record ReferenceEntryDto(string Kind, string Index, string Name, IReadOnlyList<string> Description, string Source)
+{
+    public static ReferenceEntryDto From(ReferenceEntry e) => new(e.Kind, e.Index, e.Name, CatalogJson.StringList(e.DescriptionJson), e.Source);
 }
 
 public sealed record SkillDto(string Index, string Name, string AbilityIndex, IReadOnlyList<string> Description)

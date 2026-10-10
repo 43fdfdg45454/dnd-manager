@@ -14,6 +14,10 @@ public static class CatalogErrors
 
     public static AppException BeastNotFound() => AppException.NotFound("Bestia no encontrada.");
 
+    public static AppException RuleNotFound() => AppException.NotFound("Regla no encontrada.");
+
+    public static AppException ReferenceKindNotFound() => AppException.NotFound("Vocabulario desconocido.");
+
     public static AppException ItemNotFound() => AppException.NotFound("Objeto no encontrado.");
 
     public static AppException FeatureNotFound() => AppException.NotFound("Rasgo no encontrado.");

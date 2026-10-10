@@ -24,7 +24,11 @@ internal sealed record SrdCatalog(
     IReadOnlyList<ConditionDefinition> Conditions,
     IReadOnlyList<SkillDefinition> Skills,
     IReadOnlyList<BackgroundDefinition> Backgrounds,
-    IReadOnlyList<EquipmentCategory> EquipmentCategories);
+    IReadOnlyList<EquipmentCategory> EquipmentCategories)
+{
+    /// <summary>The SRD vocabularies (languages, weapon properties, equipment categories, damage types, magic schools, tools).</summary>
+    public IReadOnlyList<ReferenceEntry> ReferenceEntries { get; init; } = [];
+}
 
 /// <summary>
 /// Reads the SRD 5.1 JSON files of the 5e-database project (embedded in this assembly from
@@ -37,7 +41,7 @@ internal static class SrdDataset
     /// Commit and date of the 5e-database snapshot in <c>server/src/Systems/Dnd5e/seed/srd</c>, plus the revision of the mapping (bumped
     /// whenever the import derives new data, so that existing instances re-seed). Stored in a 200-character column.
     /// </summary>
-    public const string Version = "5e-database@a6212beb (2026-10-02); mapping 2026-10-09b: consumables, modifiers, skill choices, level choices, starting gear, spell categories, healing, origins, resistances, personality, race grants";
+    public const string Version = "5e-database@a6212beb (2026-10-02); mapping 2026-10-10: consumables, modifiers, skill choices, level choices, starting gear, spell categories, healing, origins, resistances, personality, race grants, creatures, vocabularies";
 
     /// <summary>
     /// Short form of <see cref="Version"/> stored as the version of the base <c>ContentPack</c> (40 characters at most):
@@ -125,7 +129,41 @@ internal static class SrdDataset
             Read<ConditionJson>("Conditions").Select(MapCondition).ToList(),
             Read<SkillJson>("Skills").Select(MapSkill).ToList(),
             Read<BackgroundJson>("Backgrounds").Select(b => MapBackground(b, contents)).ToList(),
-            Read<EquipmentCategoryJson>("Equipment-Categories").Select(MapEquipmentCategory).ToList());
+            Read<EquipmentCategoryJson>("Equipment-Categories").Select(MapEquipmentCategory).ToList())
+        {
+            ReferenceEntries = LoadReferenceEntries(),
+        };
+    }
+
+    /// <summary>The SRD vocabularies as reference entries (the dataset files of each kind; tools from the "tools" category).</summary>
+    private static List<ReferenceEntry> LoadReferenceEntries()
+    {
+        static ReferenceEntry Entry(string kind, string index, string? name, IEnumerable<string>? description) => new()
+        {
+            Kind = kind,
+            Index = index,
+            Name = name ?? index,
+            DescriptionJson = JsonSerializer.Serialize((description ?? []).Where(d => !string.IsNullOrWhiteSpace(d)).ToList()),
+            Source = Dnd5eCatalogSources.Srd,
+        };
+
+        var categories = Read<EquipmentCategoryJson>("Equipment-Categories");
+        return
+        [
+            .. Read<LanguageJson>("Languages").Select(l => Entry(
+                ReferenceEntry.Languages,
+                l.Index,
+                l.Name,
+                [string.Join("; ", new[] { l.Type, l.Script is null ? null : $"Script: {l.Script}", l.TypicalSpeakers is { Count: > 0 } speakers ? $"Typical speakers: {string.Join(", ", speakers)}" : null }.OfType<string>())])),
+            .. Read<DescribedJson>("Weapon-Properties").Select(p => Entry(ReferenceEntry.WeaponProperties, p.Index, p.Name, p.Desc)),
+            .. categories.Select(c => Entry(ReferenceEntry.EquipmentCategories, c.Index, c.Name, null)),
+            .. Read<DescribedJson>("Damage-Types").Select(d => Entry(ReferenceEntry.DamageTypes, d.Index, d.Name, d.Desc)),
+            .. Read<DescribedJson>("Magic-Schools").Select(m => Entry(ReferenceEntry.MagicSchools, m.Index, m.Name, m.Desc)),
+            .. categories.Where(c => c.Index == "tools").SelectMany(c => c.Equipment ?? [])
+                .Where(t => t.Index is not null)
+                .DistinctBy(t => t.Index)
+                .Select(t => Entry(ReferenceEntry.Tools, t.Index!, t.Name, null)),
+        ];
     }
 
     /// <summary>Converts a dataset cost to copper pieces (cp=1, sp=10, ep=50, gp=100, pp=1000).</summary>
@@ -1435,6 +1473,28 @@ internal static class SrdDataset
         public ReferenceJson? EquipmentCategory { get; set; }
 
         public ReferenceJson? Rarity { get; set; }
+
+        public List<string>? Desc { get; set; }
+    }
+
+    private sealed class LanguageJson
+    {
+        public string Index { get; set; } = string.Empty;
+
+        public string? Name { get; set; }
+
+        public string? Type { get; set; }
+
+        public string? Script { get; set; }
+
+        public List<string>? TypicalSpeakers { get; set; }
+    }
+
+    private sealed class DescribedJson
+    {
+        public string Index { get; set; } = string.Empty;
+
+        public string? Name { get; set; }
 
         public List<string>? Desc { get; set; }
     }

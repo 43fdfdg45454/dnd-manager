@@ -77,7 +77,7 @@ public sealed class SheetCatalog
         var levels = await catalog.ListClassLevelsByClassAsync(classIndexes, cancellationToken);
         var subclassIndexes = Distinct(characters.SelectMany(c => c.Classes).Select(c => c.SubclassIndex));
         var subclasses = await catalog.ListSubclassesByIndexAsync(subclassIndexes, cancellationToken);
-        var featureResources = await catalog.ListSubclassFeatureResourcesAsync(subclassIndexes, cancellationToken);
+        var featureResources = await catalog.ListFeatureEffectsAsync(classIndexes, subclassIndexes, cancellationToken);
         var raceIndexes = Distinct(characters.Select(c => c.RaceIndex));
         var races = await catalog.ListRacesByIndexAsync(raceIndexes, cancellationToken);
         var subraces = await catalog.ListSubracesByIndexAsync(Distinct(characters.Select(c => c.SubraceIndex)), cancellationToken);
@@ -139,7 +139,9 @@ public sealed class SheetCatalog
 
         // Resources and modifiers of the subclass features reached (content packs) join those of the chosen options.
         var choices = character.Choices.Count == 0 ? null : ChoiceEffects.Build(character, Option);
-        var featureResources = ChoiceEffects.FeatureResources(character, _featureResources);
+        var featureResources = ChoiceEffects.ClassResources(character, Class)
+            .Concat(ChoiceEffects.FeatureResources(character, _featureResources))
+            .ToList();
         var featureModifiers = ChoiceEffects.FeatureModifiers(character, _featureResources);
         if (featureResources.Count > 0 || featureModifiers.Count > 0)
         {
