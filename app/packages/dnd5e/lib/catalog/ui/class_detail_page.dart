@@ -28,6 +28,12 @@ class ClassDetailPage extends ConsumerWidget {
           children: [
             Align(alignment: Alignment.centerLeft, child: SourceChip(c.source)),
             if (c.description.isNotEmpty) ...[Paragraphs(c.description), const SizedBox(height: 8)],
+            if (c.auxiliary) ...[
+              FactRow('Tipo', 'Nivel auxiliar (se toma una sola vez, después del nivel 1)'),
+              FactRow('Requisitos', c.prerequisitesText),
+              if (c.countsAsCasterLevel)
+                const FactRow('Lanzamiento', 'Cuenta como un nivel más de tu clase lanzadora'),
+            ],
             FactRow('Dado de golpe', c.hitDie == null ? null : 'd${c.hitDie}'),
             FactRow('Salvaciones', c.savingThrows.map(abilityLabel).join(', ')),
             FactRow(

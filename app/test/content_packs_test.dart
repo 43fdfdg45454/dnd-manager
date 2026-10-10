@@ -745,6 +745,63 @@ void main() {
     });
   });
 
+  group('niveles auxiliares', () {
+    const veil = ClassSummary(
+      index: 'reinos-ejemplo-velo',
+      name: 'Velo de ejemplo',
+      hitDie: 6,
+      source: _packId,
+      auxiliary: true,
+    );
+
+    testWidgets('no se ofrecen al crear y su ficha explica los requisitos', (tester) async {
+      final catalog = FakeCatalogRepository(
+        classList: const [_fighter, veil],
+        raceList: const [_human],
+        raceDetails: const {
+          'human': RaceDetail(index: 'human', name: 'Human', speed: 30, languages: ['Common']),
+        },
+        classDetails: {
+          veil.index: const ClassDetail(
+            index: 'reinos-ejemplo-velo',
+            name: 'Velo de ejemplo',
+            hitDie: 6,
+            source: _packId,
+            auxiliary: true,
+            prerequisitesText: 'Nivel de personaje 3.',
+            countsAsCasterLevel: true,
+            levels: [ClassLevel(level: 1)],
+          ),
+        },
+        sourceList: _sources,
+      );
+      final router = await pumpRealApp(
+        tester,
+        location: '/campaigns/c1/characters/new',
+        fakes: AppFakes(catalog: catalog),
+      );
+      await tester.enterText(find.byKey(const Key('wizard-name')), 'Merlina');
+      await tester.pumpAndSettle();
+      await _tapKey(tester, 'wizard-next');
+      await _tapKey(tester, 'race-human');
+      await _tapKey(tester, 'wizard-next');
+      expect(find.byKey(const Key('class-fighter')), findsOneWidget);
+      expect(find.byKey(Key('class-${veil.index}')), findsNothing);
+
+      router.go('/compendium/classes/${veil.index}');
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Tipo: Nivel auxiliar (se toma una sola vez, después del nivel 1)'),
+        findsOneWidget,
+      );
+      expect(find.text('Requisitos: Nivel de personaje 3.'), findsOneWidget);
+      expect(
+        find.text('Lanzamiento: Cuenta como un nivel más de tu clase lanzadora'),
+        findsOneWidget,
+      );
+    });
+  });
+
   group('lanzamiento sin espacios', () {
     testWidgets('la clase muestra su coste en PG y el conjuro para quién es ritual', (
       tester,

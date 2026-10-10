@@ -1530,6 +1530,8 @@ class LevelUpClassOption {
     this.isNew = false,
     this.currentLevel = 0,
     this.subclassIndex,
+    this.auxiliary = false,
+    this.prerequisitesText,
   });
 
   factory LevelUpClassOption.fromJson(Map<String, dynamic> json) {
@@ -1543,11 +1545,21 @@ class LevelUpClassOption {
       isNew: _bool(json['isNew']),
       currentLevel: _int(json['currentLevel']) ?? 0,
       subclassIndex: _strOrNull(json['subclassIndex']),
+      auxiliary: _bool(json['auxiliary']),
+      prerequisitesText: _strOrNull(json['prerequisitesText']),
     );
   }
 
   final String classIndex;
   final String name;
+
+  /// An auxiliary level of a content pack: a single level, taken once and
+  /// offered apart ("Nivel auxiliar").
+  final bool auxiliary;
+
+  /// The literal prerequisites of an auxiliary level (narrative ones
+  /// included), or null.
+  final String? prerequisitesText;
 
   /// False when a new class does not meet the multiclassing prerequisites ([reason]).
   final bool allowed;

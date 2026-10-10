@@ -150,6 +150,7 @@ class ClassSummary {
     this.isSpellcaster = false,
     this.spellcastingAbility,
     this.source,
+    this.auxiliary = false,
   });
 
   factory ClassSummary.fromJson(Map<String, dynamic> json) => ClassSummary(
@@ -159,6 +160,7 @@ class ClassSummary {
     isSpellcaster: _bool(json['isSpellcaster']) || json['spellcastingAbility'] != null,
     spellcastingAbility: _strOrNull(json['spellcastingAbility']),
     source: _strOrNull(json['source']),
+    auxiliary: _bool(json['auxiliary']),
   );
 
   final String index;
@@ -166,6 +168,10 @@ class ClassSummary {
   final int? hitDie;
   final bool isSpellcaster;
   final String? spellcastingAbility;
+
+  /// An auxiliary level of a content pack: taken once after level 1, never a
+  /// starting class.
+  final bool auxiliary;
 
   /// "srd" or the id of the content pack that added it; null when not sent.
   final String? source;
@@ -472,6 +478,9 @@ class ClassDetail extends ClassSummary {
     this.levels = const [],
     this.subclasses = const [],
     this.features = const [],
+    super.auxiliary,
+    this.prerequisitesText,
+    this.countsAsCasterLevel = false,
   });
 
   factory ClassDetail.fromJson(Map<String, dynamic> json) {
@@ -513,8 +522,17 @@ class ClassDetail extends ClassSummary {
       levels: levels,
       subclasses: _objects(json['subclasses'], Subclass.fromJson),
       features: features,
+      auxiliary: summary.auxiliary,
+      prerequisitesText: _strOrNull(json['prerequisitesText']),
+      countsAsCasterLevel: _bool(json['countsAsCasterLevel']),
     );
   }
+
+  /// Prerequisites of an auxiliary level as text.
+  final String? prerequisitesText;
+
+  /// An auxiliary level that adds one level to the caster class for slots.
+  final bool countsAsCasterLevel;
 
   final int spellcastingLevel;
 

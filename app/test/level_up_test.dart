@@ -453,6 +453,37 @@ void main() {
   });
 
   group('Asistente de subida de nivel', () {
+    testWidgets('los niveles auxiliares salen aparte con sus requisitos', (tester) async {
+      final plan = _plan();
+      (plan['classes'] as List).add({
+        'classIndex': 'ejemplo-velo',
+        'name': 'Velo de ejemplo',
+        'allowed': true,
+        'reason': null,
+        'hitDie': 6,
+        'isNew': true,
+        'currentLevel': 0,
+        'subclassIndex': null,
+        'auxiliary': true,
+        'prerequisitesText': 'Haber jurado ante un santuario de ejemplo.',
+      });
+      final (:characters, router: _) = await _pump(tester, plan: plan);
+
+      expect(find.byKey(const Key('levelup-auxiliary')), findsOneWidget);
+      expect(find.text('Nivel auxiliar · d6'), findsOneWidget);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('levelup-class-prerequisites-ejemplo-velo'))).data,
+        'Requisitos: Haber jurado ante un santuario de ejemplo.',
+      );
+      // Below the regular classes.
+      expect(
+        tester.getTopLeft(find.byKey(const Key('levelup-class-ejemplo-velo'))).dy,
+        greaterThan(tester.getTopLeft(find.byKey(const Key('levelup-class-wizard'))).dy),
+      );
+      await _tapKey(tester, 'levelup-class-ejemplo-velo');
+      expect(characters.levelUpPlanRequests, [null, 'ejemplo-velo']);
+    });
+
     testWidgets('carga el plan con la clase preseleccionada y los rasgos automáticos', (
       tester,
     ) async {

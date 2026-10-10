@@ -66,11 +66,30 @@ class LevelUpClassStep extends ConsumerWidget {
               : 'Ganas un nivel de ${selectedName ?? plan.classIndex}.',
         ),
         for (final option in plan.classes)
-          _ClassCard(
-            option: option,
-            selected: option.classIndex == selectedIndex,
-            onTap: () => controller.selectClass(option.classIndex),
+          if (!option.auxiliary)
+            _ClassCard(
+              option: option,
+              selected: option.classIndex == selectedIndex,
+              onTap: () => controller.selectClass(option.classIndex),
+            ),
+        if (plan.classes.any((c) => c.auxiliary)) ...[
+          const SectionHeader(
+            'Nivel auxiliar',
+            key: Key('levelup-auxiliary'),
+            padding: EdgeInsets.only(top: 12, bottom: 4),
           ),
+          Text(
+            'Un nivel único que se toma una sola vez y cuenta para tu nivel de personaje.',
+            style: theme.textTheme.bodySmall,
+          ),
+          for (final option in plan.classes)
+            if (option.auxiliary)
+              _ClassCard(
+                option: option,
+                selected: option.classIndex == selectedIndex,
+                onTap: () => controller.selectClass(option.classIndex),
+              ),
+        ],
         if (state.loadError != null && plan.classIndex != selectedIndex)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -135,7 +154,9 @@ class _ClassCard extends StatelessWidget {
     final classTheme = classThemeOf(option.classIndex);
     final accent = classAccentOf(context, option.classIndex);
     final name = classThemes[option.classIndex]?.labelEs ?? option.name;
-    final levels = option.isNew
+    final levels = option.auxiliary
+        ? 'Nivel auxiliar'
+        : option.isNew
         ? 'Nueva clase · nivel 1'
         : 'Nivel ${option.currentLevel} → ${option.currentLevel + 1}';
     return Opacity(
@@ -157,6 +178,12 @@ class _ClassCard extends StatelessWidget {
                 children: [
                   Text(name, style: theme.textTheme.titleMedium),
                   Text('$levels · d${option.hitDie}', style: theme.textTheme.bodySmall),
+                  if (option.prerequisitesText case final prerequisites?)
+                    Text(
+                      'Requisitos: $prerequisites',
+                      key: Key('levelup-class-prerequisites-${option.classIndex}'),
+                      style: theme.textTheme.bodySmall,
+                    ),
                   if (!option.allowed && option.reason != null)
                     Text(
                       option.reason!,
