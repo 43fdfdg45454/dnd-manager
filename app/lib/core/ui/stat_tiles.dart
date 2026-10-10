@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../features/characters/data/models.dart' show ValueBreakdown;
+import 'breakdown.dart';
 import '../theme/components.dart';
 import '../theme/typography.dart';
 import 'stat_value.dart';

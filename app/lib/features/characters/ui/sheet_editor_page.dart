@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_error.dart';
 import '../../../core/ui/offline_widgets.dart';
-import '../../../core/ui/spell_category.dart';
+import '../../../systems/dnd5e/ui/spell_category.dart';
 import '../../catalog/data/catalog_controllers.dart';
 import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models.dart' show ClassSummary, titleFromIndex;
@@ -20,6 +20,7 @@ import 'character_tabs.dart' show titleFromSpellIndex;
 import 'height_weight_fields.dart';
 import 'point_buy_dialog.dart';
 import 'spell_picker_page.dart';
+import '../../../systems/dnd5e/characters/dnd5e_characters_controller.dart';
 
 /// Semi-automatic sheet editor. Only the fields the user changed are sent, so a
 /// change request shows exactly what the player wants to change.
@@ -447,7 +448,7 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
     setState(() => _saving = true);
     try {
       final result = await ref
-          .read(characterControllerProvider(_initial.id).notifier)
+          .read(dnd5eCharacterControllerProvider(_initial.id).notifier)
           .saveSheet(patch);
       messenger
         ..hideCurrentSnackBar()

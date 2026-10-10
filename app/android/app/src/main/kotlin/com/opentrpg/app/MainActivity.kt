@@ -1,4 +1,4 @@
-package com.dndcompanion.dnd_companion
+package com.opentrpg.app
 
 import android.util.Base64
 import io.flutter.embedding.android.FlutterActivity

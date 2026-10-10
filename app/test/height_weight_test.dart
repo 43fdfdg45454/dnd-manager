@@ -1,9 +1,9 @@
-import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/catalog/data/models.dart';
-import 'package:dnd_companion/features/characters/data/character_wizard_controller.dart';
-import 'package:dnd_companion/features/characters/domain/height_weight.dart';
-import 'package:dnd_companion/features/characters/ui/wizard/character_wizard_page.dart';
-import 'package:dnd_companion/features/dice/data/dice_controller.dart';
+import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg/features/catalog/data/models.dart';
+import 'package:opentrpg/features/characters/data/character_wizard_controller.dart';
+import 'package:opentrpg/features/characters/domain/height_weight.dart';
+import 'package:opentrpg/features/characters/ui/wizard/character_wizard_page.dart';
+import 'package:opentrpg/features/dice/data/dice_controller.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

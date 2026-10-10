@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:dnd_companion/core/realtime/realtime_events.dart';
-import 'package:dnd_companion/core/realtime/realtime_hub.dart';
-import 'package:dnd_companion/core/realtime/realtime_provider.dart';
+import 'package:opentrpg/core/realtime/realtime_events.dart';
+import 'package:opentrpg/core/realtime/realtime_hub.dart';
+import 'package:opentrpg/core/realtime/realtime_provider.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 
 /// In-memory [RealtimeHub]: records the calls and lets the test [emit] events

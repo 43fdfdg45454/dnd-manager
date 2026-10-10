@@ -1,8 +1,8 @@
-import 'package:dnd_companion/core/ui/selection_grid.dart';
-import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/catalog/data/models.dart';
-import 'package:dnd_companion/features/catalog/ui/roll_table_widgets.dart';
-import 'package:dnd_companion/features/characters/data/character_wizard_controller.dart';
+import 'package:opentrpg/core/ui/selection_grid.dart';
+import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg/features/catalog/data/models.dart';
+import 'package:opentrpg/features/catalog/ui/roll_table_widgets.dart';
+import 'package:opentrpg/features/characters/data/character_wizard_controller.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_test/flutter_test.dart';
 

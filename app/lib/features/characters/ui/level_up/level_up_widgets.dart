@@ -4,7 +4,7 @@ import '../../../../core/theme/app_icon.dart';
 import '../../../../core/theme/icons.dart';
 import '../../../../core/theme/textures.dart';
 import '../../../../core/theme/tokens.dart';
-import '../../../../core/ui/spell_category.dart';
+import '../../../../systems/dnd5e/ui/spell_category.dart';
 import '../../../catalog/domain/catalog_format.dart' show spellLevelLabel;
 import '../../../catalog/ui/catalog_detail_links.dart';
 import '../../data/models.dart';

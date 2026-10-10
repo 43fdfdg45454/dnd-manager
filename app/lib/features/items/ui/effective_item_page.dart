@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../catalog/data/models.dart' show ItemArmor, ItemDamage, ItemModifier;
 import '../../catalog/domain/catalog_format.dart';
 import '../../catalog/ui/detail_widgets.dart';
 import '../data/models.dart';
+import '../../../systems/dnd5e/items/dnd5e_item.dart';
 
 /// Icon flagging a field (or the whole item) as different from its template.
 class OverrideBadge extends StatelessWidget {

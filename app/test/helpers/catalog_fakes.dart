@@ -1,6 +1,6 @@
-import 'package:dnd_companion/features/catalog/data/beast_models.dart';
-import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
-import 'package:dnd_companion/features/catalog/data/models.dart';
+import 'package:opentrpg/features/catalog/data/beast_models.dart';
+import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
+import 'package:opentrpg/features/catalog/data/models.dart';
 
 import 'fakes.dart';
 

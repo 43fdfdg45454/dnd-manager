@@ -7,6 +7,7 @@ import 'campaign_items_repository.dart';
 import 'inventory_repository.dart';
 import 'models.dart';
 import 'shops_repository.dart';
+import '../../../systems/dnd5e/items/dnd5e_item.dart';
 
 const itemsPageSize = 30;
 

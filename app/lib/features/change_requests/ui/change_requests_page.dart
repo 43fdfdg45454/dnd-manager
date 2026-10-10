@@ -15,7 +15,6 @@ import '../../campaigns/ui/feedback.dart';
 import '../../characters/data/characters_controller.dart';
 import '../../characters/data/models.dart';
 import '../../characters/domain/change_details.dart';
-import '../../characters/domain/payload_format.dart';
 import '../../items/domain/items_format.dart';
 
 const _filters = <(String, ChangeRequestStatus?)>[
@@ -393,6 +392,7 @@ class ChangeDetailView extends StatelessWidget {
             : 'Esta solicitud no incluye cambios detallados.',
       ),
       PlainChangeDetail(:final lines) => _lines(theme, lines),
+      _ => const Text('Esta solicitud no incluye cambios detallados.'),
     };
   }
 

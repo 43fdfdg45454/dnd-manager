@@ -4,13 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_error.dart';
 import '../../../core/theme/components.dart';
-import '../../../core/ui/action_type.dart';
+import '../../../systems/dnd5e/ui/action_type.dart';
 import '../../../core/ui/offline_widgets.dart';
-import '../../../core/ui/spell_category.dart';
+import '../../../systems/dnd5e/ui/spell_category.dart';
 import '../../catalog/domain/catalog_format.dart';
 import '../../catalog/ui/catalog_detail_links.dart';
 import '../data/characters_controller.dart';
 import '../data/models.dart';
+import '../../../systems/dnd5e/characters/dnd5e_characters_controller.dart';
 
 /// "Prepara tus conjuros" (`/characters/:id/prepare-spells`): per class that
 /// prepares, choose up to the maximum of the class list (the spellbook for
@@ -30,8 +31,8 @@ class _PrepareSpellsPageState extends ConsumerState<PrepareSpellsPage> {
   bool _busy = false;
   String? _error;
 
-  CharacterController get _controller =>
-      ref.read(characterControllerProvider(widget.characterId).notifier);
+  Dnd5eCharacterController get _controller =>
+      ref.read(dnd5eCharacterControllerProvider(widget.characterId).notifier);
 
   void _init(SpellPreparation prep) {
     _selected ??= {

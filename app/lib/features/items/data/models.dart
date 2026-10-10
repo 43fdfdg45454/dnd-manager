@@ -1,5 +1,4 @@
-import '../../catalog/data/models.dart' show ItemArmor, ItemDamage, ItemModifier;
-import '../../characters/data/models.dart' show ChangeRequest;
+import '../../../core/characters/models.dart' show ChangeRequest;
 
 // Hand-written models for the items, inventory and shops API (phase 5).
 // Parsers are tolerant: missing fields fall back to neutral values. Enums travel
@@ -37,8 +36,6 @@ bool _bool(Object? value, [bool fallback = false]) {
   return fallback;
 }
 
-bool? _boolOrNull(Object? value) => value == null ? null : _bool(value);
-
 DateTime? _date(Object? value) => value is String ? DateTime.tryParse(value) : null;
 
 List<String> _strList(Object? value) => value is List
@@ -63,31 +60,22 @@ List<T> _objects<T>(Object? value, T Function(Map<String, dynamic>) parse) {
 // ---------------------------------------------------------------------------
 
 /// Item fields that replace the ones of the template. Only the defined (non
-/// null) fields are sent and received.
+/// null) fields are sent and received. The core knows the fields every game
+/// system shares; the fields of the game system (D&D 5e: damage, armor,
+/// properties, rarity, attunement, modifiers...) travel in [system] with
+/// their wire names, and the module reads them from there.
 class ItemOverrides {
   const ItemOverrides({
     this.name,
     this.description,
     this.category,
-    this.damageDice,
-    this.damageType,
-    this.versatileDice,
-    this.properties,
-    this.rangeNormal,
-    this.rangeLong,
-    this.armorClassBase,
-    this.addDexModifier,
-    this.maxDexBonus,
-    this.strengthMinimum,
-    this.stealthDisadvantage,
     this.weightLb,
-    this.rarity,
-    this.requiresAttunement,
-    this.attackBonus,
-    this.damageBonus,
     this.effects,
-    this.modifiers,
+    this.system = const {},
   });
+
+  /// JSON keys of the core fields.
+  static const coreFields = {'name', 'description', 'category', 'weightLb', 'effects'};
 
   factory ItemOverrides.fromJson(Object? raw) {
     final json = _map(raw) ?? const {};
@@ -95,75 +83,35 @@ class ItemOverrides {
       name: _strOrNull(json['name']),
       description: _strListOrNull(json['description']),
       category: _strOrNull(json['category']),
-      damageDice: _strOrNull(json['damageDice']),
-      damageType: _strOrNull(json['damageType']),
-      versatileDice: _strOrNull(json['versatileDice']),
-      properties: _strListOrNull(json['properties']),
-      rangeNormal: _int(json['rangeNormal']),
-      rangeLong: _int(json['rangeLong']),
-      armorClassBase: _int(json['armorClassBase']),
-      addDexModifier: _boolOrNull(json['addDexModifier']),
-      maxDexBonus: _int(json['maxDexBonus']),
-      strengthMinimum: _int(json['strengthMinimum']),
-      stealthDisadvantage: _boolOrNull(json['stealthDisadvantage']),
       weightLb: _double(json['weightLb']),
-      rarity: _strOrNull(json['rarity']),
-      requiresAttunement: _boolOrNull(json['requiresAttunement']),
-      attackBonus: _int(json['attackBonus']),
-      damageBonus: _int(json['damageBonus']),
       effects: _strListOrNull(json['effects']),
-      modifiers: json['modifiers'] is List ? ItemModifier.listFromJson(json['modifiers']) : null,
+      system: {
+        for (final e in json.entries)
+          if (!coreFields.contains(e.key) && e.value != null) e.key: e.value,
+      },
     );
   }
 
   final String? name;
   final List<String>? description;
   final String? category;
-  final String? damageDice;
-  final String? damageType;
-  final String? versatileDice;
-  final List<String>? properties;
-  final int? rangeNormal;
-  final int? rangeLong;
-  final int? armorClassBase;
-  final bool? addDexModifier;
-  final int? maxDexBonus;
-  final int? strengthMinimum;
-  final bool? stealthDisadvantage;
   final double? weightLb;
-  final String? rarity;
-  final bool? requiresAttunement;
-  final int? attackBonus;
-  final int? damageBonus;
   final List<String>? effects;
 
-  /// Null keeps the template's modifiers; an empty list removes them all.
-  final List<ItemModifier>? modifiers;
+  /// The defined fields of the game system, as JSON (`damageDice`,
+  /// `modifiers`...). A defined empty `modifiers` list means "remove the
+  /// template's modifiers".
+  final Map<String, dynamic> system;
 
-  /// Only the defined fields. A defined empty `modifiers` list is kept: it
-  /// means "remove the template's modifiers".
+  /// Only the defined fields.
   Map<String, dynamic> toJson() => {
     'name': ?name,
     'description': ?description,
     'category': ?category,
-    'damageDice': ?damageDice,
-    'damageType': ?damageType,
-    'versatileDice': ?versatileDice,
-    'properties': ?properties,
-    'rangeNormal': ?rangeNormal,
-    'rangeLong': ?rangeLong,
-    'armorClassBase': ?armorClassBase,
-    'addDexModifier': ?addDexModifier,
-    'maxDexBonus': ?maxDexBonus,
-    'strengthMinimum': ?strengthMinimum,
-    'stealthDisadvantage': ?stealthDisadvantage,
     'weightLb': ?weightLb,
-    'rarity': ?rarity,
-    'requiresAttunement': ?requiresAttunement,
-    'attackBonus': ?attackBonus,
-    'damageBonus': ?damageBonus,
     'effects': ?effects,
-    if (modifiers != null) 'modifiers': [for (final m in modifiers!) m.toJson()],
+    for (final e in system.entries)
+      if (e.value != null) e.key: e.value,
   };
 
   bool get isEmpty => toJson().isEmpty;
@@ -173,67 +121,31 @@ class ItemOverrides {
 }
 
 /// The item as the character sees it: template plus overrides, already
-/// resolved by the server (`EffectiveItemDto`).
+/// resolved by the server (`EffectiveItemDto`). The fields of the game system
+/// stay in [raw] (D&D 5e reads them with `Dnd5eItem.of`).
 class EffectiveItem {
   const EffectiveItem({
     required this.name,
     this.category = '',
     this.subcategory,
-    this.rarity,
-    this.requiresAttunement = false,
     this.weightLb,
     this.costCp,
-    this.damage,
-    this.properties = const [],
-    this.rangeNormal,
-    this.rangeLong,
-    this.armor,
-    this.attackBonus = 0,
-    this.damageBonus = 0,
     this.effects = const [],
     this.description = const [],
-    this.modifiers = const [],
+    this.raw = const {},
   });
 
   factory EffectiveItem.fromJson(Object? raw) {
     final json = _map(raw) ?? const {};
-    final damageJson = _map(json['damage']);
-    final dice = _strOrNull(damageJson?['dice']);
-    final armorJson = _map(json['armor']);
-    final base = _int(armorJson?['base']);
-    final rangeJson = _map(json['range']);
     return EffectiveItem(
       name: _str(json['name']),
       category: _str(json['category']),
       subcategory: _strOrNull(json['subcategory']),
-      rarity: _strOrNull(json['rarity']),
-      requiresAttunement: _bool(json['requiresAttunement']),
       weightLb: _double(json['weightLb']),
       costCp: _int(json['costCp']),
-      damage: dice == null
-          ? null
-          : ItemDamage(
-              dice: dice,
-              type: _strOrNull(damageJson?['type']),
-              versatileDice: _strOrNull(damageJson?['versatile'] ?? damageJson?['versatileDice']),
-            ),
-      properties: _strList(json['properties']),
-      rangeNormal: _int(rangeJson?['normal']),
-      rangeLong: _int(rangeJson?['long']),
-      armor: base == null
-          ? null
-          : ItemArmor(
-              baseAc: base,
-              addDexModifier: _boolOrNull(armorJson?['addDex']),
-              maxDexBonus: _int(armorJson?['maxDex']),
-              strengthMinimum: _int(armorJson?['strengthMinimum']),
-              stealthDisadvantage: _bool(armorJson?['stealthDisadvantage']),
-            ),
-      attackBonus: _int(json['attackBonus']) ?? 0,
-      damageBonus: _int(json['damageBonus']) ?? 0,
       effects: _strList(json['effects']),
       description: _strList(json['description']),
-      modifiers: ItemModifier.listFromJson(json['modifiers']),
+      raw: json,
     );
   }
 
@@ -242,24 +154,15 @@ class EffectiveItem {
   /// Category as the API spells it ("Weapon", "AdventuringGear", ...).
   final String category;
   final String? subcategory;
-  final String? rarity;
-  final bool requiresAttunement;
   final double? weightLb;
 
   /// Not part of the contract: kept when the server happens to send it.
   final int? costCp;
-  final ItemDamage? damage;
-  final List<String> properties;
-  final int? rangeNormal;
-  final int? rangeLong;
-  final ItemArmor? armor;
-  final int attackBonus;
-  final int damageBonus;
   final List<String> effects;
   final List<String> description;
 
-  /// Structured modifiers (the legacy attack/damage bonuses are already in).
-  final List<ItemModifier> modifiers;
+  /// The JSON as it arrived, with the fields of the game system.
+  final Map<String, dynamic> raw;
 
   bool get isConsumable => category.toLowerCase() == 'consumable';
 }
@@ -380,9 +283,6 @@ class Inventory {
   final int attunedCount;
 }
 
-/// Maximum number of attuned items (SRD rule).
-const maxAttunedItems = 3;
-
 /// Body of `PATCH /characters/{id}/inventory/{itemId}`; only present fields are sent.
 class InventoryPatch {
   const InventoryPatch({
@@ -427,86 +327,6 @@ class InventoryPending extends InventoryWriteResult {
   const InventoryPending(this.changeRequest);
 
   final ChangeRequest changeRequest;
-}
-
-// ---------------------------------------------------------------------------
-// Templates (homebrew)
-// ---------------------------------------------------------------------------
-
-/// Body to create or edit an item template (`ItemTemplateInput`). Null fields
-/// are not sent.
-class ItemTemplateInput {
-  const ItemTemplateInput({
-    required this.name,
-    required this.category,
-    this.subcategory,
-    this.rarity,
-    this.requiresAttunement = false,
-    this.costCp,
-    this.weightLb,
-    this.damageDice,
-    this.damageType,
-    this.versatileDice,
-    this.properties = const [],
-    this.rangeNormal,
-    this.rangeLong,
-    this.armorClassBase,
-    this.addDexModifier,
-    this.maxDexBonus,
-    this.strengthMinimum,
-    this.stealthDisadvantage = false,
-    this.description = const [],
-    this.effects = const [],
-    this.modifiers = const [],
-  });
-
-  final String name;
-  final String category;
-  final String? subcategory;
-  final String? rarity;
-  final bool requiresAttunement;
-  final int? costCp;
-  final double? weightLb;
-  final String? damageDice;
-  final String? damageType;
-  final String? versatileDice;
-  final List<String> properties;
-  final int? rangeNormal;
-  final int? rangeLong;
-  final int? armorClassBase;
-  final bool? addDexModifier;
-  final int? maxDexBonus;
-  final int? strengthMinimum;
-  final bool stealthDisadvantage;
-  final List<String> description;
-  final List<String> effects;
-
-  /// Always sent: an empty list removes the modifiers of an edited template.
-  final List<ItemModifier> modifiers;
-
-  Map<String, dynamic> toJson() => {
-    'name': name,
-    'category': category,
-    'subcategory': ?subcategory,
-    'rarity': ?rarity,
-    'requiresAttunement': requiresAttunement,
-    'costCp': ?costCp,
-    'weightLb': ?weightLb,
-    'damageDice': ?damageDice,
-    'damageType': ?damageType,
-    'versatileDice': ?versatileDice,
-    'properties': properties,
-    'rangeNormal': ?rangeNormal,
-    'rangeLong': ?rangeLong,
-    'armorClassBase': ?armorClassBase,
-    'addDexModifier': ?addDexModifier,
-    'maxDexBonus': ?maxDexBonus,
-    'strengthMinimum': ?strengthMinimum,
-    'stealthDisadvantage': stealthDisadvantage,
-    'description': description,
-    'effects': effects,
-    'modifiers': [for (final m in modifiers) m.toJson()],
-  };
 }
 
 // ---------------------------------------------------------------------------

@@ -1,8 +1,8 @@
-import 'package:dnd_companion/features/campaigns/data/campaigns_controller.dart';
-import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart';
-import 'package:dnd_companion/features/sessions/data/models.dart';
-import 'package:dnd_companion/features/sessions/data/sessions_controllers.dart';
-import 'package:dnd_companion/features/sessions/ui/next_session_card.dart';
+import 'package:opentrpg/features/campaigns/data/campaigns_controller.dart';
+import 'package:opentrpg/features/campaigns/data/campaigns_repository.dart';
+import 'package:opentrpg/features/sessions/data/models.dart';
+import 'package:opentrpg/features/sessions/data/sessions_controllers.dart';
+import 'package:opentrpg/features/sessions/ui/next_session_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

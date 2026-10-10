@@ -2,7 +2,7 @@
 // grants it (`CompanionFeatureDto`) and the companion with its recalculated
 // statblock (`CharacterCompanionDto`).
 
-import 'models.dart' show ValueBreakdown;
+import '../../../core/ui/breakdown.dart' show ValueBreakdown;
 
 Map<String, dynamic> _map(Object? value) =>
     value is Map ? Map<String, dynamic>.from(value) : const {};

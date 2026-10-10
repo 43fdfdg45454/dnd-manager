@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/storage/local_preferences.dart';
+import '../../../core/systems/game_system_ui.dart';
+import '../../../core/systems/system_registry.dart';
 import '../domain/dice_expression.dart';
 
 /// How many rolls the local history keeps.
@@ -27,19 +29,22 @@ class DiceHistoryEntry {
     this.natural,
   });
 
+  /// [rollClass] is what the game system says the roll means
+  /// (`GameSystemUi.classifyRoll`): a critical or a fumble.
   factory DiceHistoryEntry.fromResult(
     DiceResult result, {
     String? label,
     DateTime? at,
     RollKind kind = RollKind.check,
+    RollClass rollClass = RollClass.normal,
   }) => DiceHistoryEntry(
     expression: result.expression.toString(),
     total: result.total,
     detail: result.breakdown,
     at: at ?? DateTime.now(),
     label: label,
-    critical: result.isCritical,
-    fumble: result.isFumble,
+    critical: rollClass == RollClass.critical,
+    fumble: rollClass == RollClass.fumble,
     kind: kind,
     natural: result.d20Value,
   );
@@ -163,7 +168,12 @@ class DiceController extends Notifier<DiceState> {
   void record(DiceResult result, {String? label, RollKind kind = RollKind.check}) {
     state = DiceState(
       history: [
-        DiceHistoryEntry.fromResult(result, label: label, kind: kind),
+        DiceHistoryEntry.fromResult(
+          result,
+          label: label,
+          kind: kind,
+          rollClass: ref.read(defaultGameSystemUiProvider).classifyRoll(result),
+        ),
         ...state.history,
       ].take(diceHistoryLimit).toList(),
       favorites: state.favorites,

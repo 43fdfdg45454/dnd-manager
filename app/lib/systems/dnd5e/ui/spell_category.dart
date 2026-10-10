@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_icon.dart';
-import '../theme/icons.dart';
-import '../theme/tokens.dart';
+import '../../../core/theme/app_icon.dart';
+import '../../../core/theme/icons.dart';
+import '../../../core/theme/tokens.dart';
 
 /// What a spell is mainly for (`SpellCategory` of the server).
 enum SpellCategory {

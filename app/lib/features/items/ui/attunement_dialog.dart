@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/network/api_error.dart';
 import '../../campaigns/ui/feedback.dart';
 import '../data/models.dart';
+import '../../../systems/dnd5e/items/dnd5e_item.dart';
 
 /// Code the server sends (409) when the character is already attuned to three
 /// items.

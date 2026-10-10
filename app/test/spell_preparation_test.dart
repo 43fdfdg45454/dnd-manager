@@ -1,9 +1,9 @@
-import 'package:dnd_companion/core/realtime/realtime_events.dart';
-import 'package:dnd_companion/core/ui/spell_category.dart';
-import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/catalog/data/models.dart' show SpellDetail;
-import 'package:dnd_companion/features/catalog/ui/spell_detail_page.dart';
-import 'package:dnd_companion/features/characters/data/models.dart';
+import 'package:opentrpg/core/realtime/realtime_events.dart';
+import 'package:opentrpg/systems/dnd5e/ui/spell_category.dart';
+import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg/features/catalog/data/models.dart' show SpellDetail;
+import 'package:opentrpg/features/catalog/ui/spell_detail_page.dart';
+import 'package:opentrpg/features/characters/data/models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';

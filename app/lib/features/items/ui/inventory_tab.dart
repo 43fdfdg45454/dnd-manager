@@ -15,6 +15,7 @@ import 'effective_item_page.dart';
 import 'item_feedback.dart';
 import 'quantity_dialog.dart';
 import 'sell_dialog.dart';
+import '../../../systems/dnd5e/items/dnd5e_item.dart';
 
 /// "Inventario" tab of a character: money, weight, attunement and the items
 /// grouped as equipped, backpack and consumables.

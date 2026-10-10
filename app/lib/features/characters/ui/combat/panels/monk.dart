@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/app_icon.dart';
 import '../../../../../core/theme/icons.dart';
-import '../../../../../core/ui/action_type.dart';
+import '../../../../../systems/dnd5e/ui/action_type.dart';
 
 import '../../../../dice/domain/dice_expression.dart' show bonusSuffix;
 import 'critical_damage_roll.dart';
 import '../combat_support.dart';
 import 'panel_support.dart';
+import '../../../../../systems/dnd5e/characters/models.dart';
 
 /// Martial Arts die by monk level (SRD): d4, d6 at 5, d8 at 11, d10 at 17.
 String martialArtsDie(int level) => level >= 17

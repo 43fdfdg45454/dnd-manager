@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_error.dart';
-import '../../../core/ui/action_type.dart';
+import '../../../systems/dnd5e/ui/action_type.dart';
 import '../../../core/ui/infinite_scroll_list.dart';
-import '../../../core/ui/spell_category.dart';
+import '../../../systems/dnd5e/ui/spell_category.dart';
 import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models.dart' show SpellSummary;
 import '../../catalog/domain/catalog_format.dart';

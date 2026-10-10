@@ -1,13 +1,13 @@
-import 'package:dnd_companion/app.dart';
-import 'package:dnd_companion/core/auth/auth_controller.dart';
-import 'package:dnd_companion/core/auth/auth_state.dart';
-import 'package:dnd_companion/core/motion/motion_settings.dart';
-import 'package:dnd_companion/core/router/app_router.dart';
-import 'package:dnd_companion/core/storage/local_preferences.dart';
-import 'package:dnd_companion/core/theme/app_theme.dart';
-import 'package:dnd_companion/features/characters/domain/class_theme.dart';
-import 'package:dnd_companion/features/settings/data/appearance_controller.dart';
-import 'package:dnd_companion/features/settings/ui/appearance_page.dart';
+import 'package:opentrpg/app.dart';
+import 'package:opentrpg/core/auth/auth_controller.dart';
+import 'package:opentrpg/core/auth/auth_state.dart';
+import 'package:opentrpg/core/motion/motion_settings.dart';
+import 'package:opentrpg/core/router/app_router.dart';
+import 'package:opentrpg/core/storage/local_preferences.dart';
+import 'package:opentrpg/core/theme/app_theme.dart';
+import 'package:opentrpg/features/characters/domain/class_theme.dart';
+import 'package:opentrpg/features/settings/data/appearance_controller.dart';
+import 'package:opentrpg/features/settings/ui/appearance_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -383,7 +383,7 @@ void main() {
             fakeServerInfoOverride,
             sessionsOverride(FakeSessionsRepository()),
           ],
-          child: const DndCompanionApp(),
+          child: const OpenTrpgApp(),
         ),
       );
       await tester.pumpAndSettle();

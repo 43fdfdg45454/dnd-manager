@@ -4,6 +4,8 @@ import 'beast_models.dart';
 import 'catalog_repository.dart';
 import 'models.dart';
 
+export '../../../core/catalog/catalog_sources.dart';
+
 const catalogPageSize = 50;
 
 /// Never retry silently: errors are shown with a retry button.
@@ -174,14 +176,6 @@ final beastDetailProvider = FutureProvider.autoDispose.family<Beast, String>(
 
 final conditionsProvider = FutureProvider.autoDispose<List<Condition>>(
   (ref) => ref.watch(catalogRepositoryProvider).conditions(),
-  retry: _noRetry,
-);
-
-/// Sources of the catalog (SRD and content packs), to name the pack a piece of
-/// content comes from. Kept alive: it is tiny and every chip reads it. Errors
-/// (offline without cache) leave the chips showing nothing rather than failing.
-final catalogSourcesProvider = FutureProvider<List<CatalogSource>>(
-  (ref) => ref.watch(catalogRepositoryProvider).sources(),
   retry: _noRetry,
 );
 

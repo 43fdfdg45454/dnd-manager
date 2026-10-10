@@ -14,7 +14,6 @@ import '../../../catalog/ui/catalog_detail_links.dart' show DetailInfoButton;
 import '../../../catalog/ui/condition_sheet.dart';
 import '../../../dice/domain/dice_expression.dart';
 import '../../../dice/ui/dice_sheet.dart';
-import '../../data/characters_controller.dart';
 import '../../data/models.dart';
 import '../../domain/character_format.dart';
 import '../../domain/class_theme.dart';
@@ -22,9 +21,10 @@ import '../../domain/combat_math.dart';
 import '../character_tabs.dart' show OverrideMark, titleFromSpellIndex;
 import 'combat_support.dart';
 import 'concentration_flow.dart';
+import '../../../../systems/dnd5e/characters/dnd5e_characters_controller.dart';
 
-CharacterController _controller(WidgetRef ref, CharacterDetail character) =>
-    ref.read(characterControllerProvider(character.id).notifier);
+Dnd5eCharacterController _controller(WidgetRef ref, CharacterDetail character) =>
+    ref.read(dnd5eCharacterControllerProvider(character.id).notifier);
 
 // ---------------------------------------------------------------------------
 // Hit points

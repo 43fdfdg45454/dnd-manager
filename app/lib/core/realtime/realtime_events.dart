@@ -14,7 +14,8 @@ sealed class CampaignEvent {
   const CampaignEvent({required this.campaignId, this.characterId, this.entityId, this.at});
 
   /// Parses `{ type, campaignId, characterId, entityId, at }` (keys matched
-  /// ignoring case). An unrecognised `type` gives an [Unknown] event.
+  /// ignoring case). A `type` the core does not know gives an
+  /// [UnknownCampaignEvent].
   factory CampaignEvent.fromJson(Map<Object?, Object?> json) {
     final fields = {for (final e in json.entries) '${e.key}'.toLowerCase(): e.value};
     String? text(String key) => switch (fields[key.toLowerCase()]) {
@@ -29,12 +30,13 @@ sealed class CampaignEvent {
     final at = rawAt == null ? null : DateTime.tryParse(rawAt);
     final make = _byType[type];
     if (make == null) {
-      return Unknown(
+      return UnknownCampaignEvent(
         rawType: type,
         campaignId: campaignId,
         characterId: characterId,
         entityId: entityId,
         at: at,
+        data: Map.unmodifiable(json),
       );
     }
     return make(campaignId: campaignId, characterId: characterId, entityId: entityId, at: at);
@@ -43,7 +45,6 @@ sealed class CampaignEvent {
   static const Map<String, _EventFactory> _byType = {
     MessageReceived.type: MessageReceived.new,
     CharacterUpdated.type: CharacterUpdated.new,
-    PartyRest.type: PartyRest.new,
     PartyStashUpdated.type: PartyStashUpdated.new,
     ShopUpdated.type: ShopUpdated.new,
     ChangeRequestUpdated.type: ChangeRequestUpdated.new,
@@ -52,7 +53,6 @@ sealed class CampaignEvent {
     MembersUpdated.type: MembersUpdated.new,
     SessionUpdated.type: SessionUpdated.new,
     RestRequestUpdated.type: RestRequestUpdated.new,
-    LevelUpGranted.type: LevelUpGranted.new,
     MembershipRemoved.type: MembershipRemoved.new,
   };
 
@@ -83,13 +83,6 @@ final class CharacterUpdated extends CampaignEvent {
   const CharacterUpdated({required super.campaignId, super.characterId, super.entityId, super.at});
 
   static const type = 'character.updated';
-}
-
-/// The DM forced a rest on the party (the kind of rest is not sent).
-final class PartyRest extends CampaignEvent {
-  const PartyRest({required super.campaignId, super.characterId, super.entityId, super.at});
-
-  static const type = 'party.rest';
 }
 
 /// The common gold or the items of the party stash changed.
@@ -134,7 +127,12 @@ final class ChangeRequestResolved extends CampaignEvent {
 /// The user was invited to the campaign ([entityId] is the invitation; sent to
 /// that user only).
 final class InvitationReceived extends CampaignEvent {
-  const InvitationReceived({required super.campaignId, super.characterId, super.entityId, super.at});
+  const InvitationReceived({
+    required super.campaignId,
+    super.characterId,
+    super.entityId,
+    super.at,
+  });
 
   static const type = 'invitation.received';
 }
@@ -166,14 +164,6 @@ final class RestRequestUpdated extends CampaignEvent {
   static const type = 'restRequest.updated';
 }
 
-/// A DM granted the next level to [characterId] (sent to the campaign and to
-/// the owner of the character).
-final class LevelUpGranted extends CampaignEvent {
-  const LevelUpGranted({required super.campaignId, super.characterId, super.entityId, super.at});
-
-  static const type = 'levelUp.granted';
-}
-
 /// The user was removed from the campaign or left it (sent to that user only).
 final class MembershipRemoved extends CampaignEvent {
   const MembershipRemoved({required super.campaignId, super.characterId, super.entityId, super.at});
@@ -181,16 +171,25 @@ final class MembershipRemoved extends CampaignEvent {
   static const type = 'membership.removed';
 }
 
-/// An event type this version of the app does not know (ignored).
-final class Unknown extends CampaignEvent {
-  const Unknown({
+/// An event type the core does not know: the events of a game system (D&D
+/// 5e: `party.rest`, `levelUp.granted`) or of a newer server. The realtime
+/// link hands it to the game system of the campaign
+/// (`GameSystemUi.onRealtimeEvent`), which may rebuild its own event from it;
+/// a system event can also extend this class directly. Ignored when nobody
+/// knows it.
+class UnknownCampaignEvent extends CampaignEvent {
+  const UnknownCampaignEvent({
     required this.rawType,
     required super.campaignId,
     super.characterId,
     super.entityId,
     super.at,
+    this.data = const {},
   });
 
   /// The `type` received.
   final String rawType;
+
+  /// The whole event as received (keys as sent).
+  final Map<Object?, Object?> data;
 }

@@ -35,17 +35,6 @@ int sellPayoutCp({required int unitCp, required int quantity, required int buyba
 String formatPlainNumber(double value) =>
     value == value.roundToDouble() ? value.toInt().toString() : value.toString();
 
-/// Rarities as the API spells them, with their Spanish label.
-const itemRarities = <String, String>{
-  'Common': 'Común',
-  'Uncommon': 'Poco común',
-  'Rare': 'Rara',
-  'VeryRare': 'Muy rara',
-  'Legendary': 'Legendaria',
-  'Artifact': 'Artefacto',
-  'Varies': 'Variable',
-};
-
 /// Splits a multi-line text field into trimmed, non-empty entries.
 List<String> splitLines(String text) => [
   for (final line in text.split('\n'))
@@ -57,22 +46,6 @@ List<String> splitCommas(String text) => [
   for (final part in text.split(','))
     if (part.trim().isNotEmpty) part.trim(),
 ];
-
-/// Whether the equip action makes sense for [item] (the server has the last
-/// word and answers 400 otherwise): weapons, armor, shields and magic items,
-/// plus any other non-consumable item that does something while worn
-/// (modifiers, effects, armor, damage or attunement), such as custom items
-/// without an equipment category.
-bool canEquip(EffectiveItem item) {
-  const equippable = {'weapon', 'armor', 'shield', 'magicitem'};
-  if (equippable.contains(item.category.toLowerCase())) return true;
-  if (item.isConsumable) return false;
-  return item.modifiers.isNotEmpty ||
-      item.effects.isNotEmpty ||
-      item.armor != null ||
-      item.damage != null ||
-      item.requiresAttunement;
-}
 
 /// Whether the item can be spent: consumables and anything with charges.
 bool canUse(CharacterItem item) => item.effective.isConsumable || item.charges != null;

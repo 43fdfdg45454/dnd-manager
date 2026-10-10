@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/auth/auth_controller.dart';
 import '../../../../core/auth/auth_state.dart';
-import '../../../../core/motion/pulse.dart';
 import '../../../../core/motion/vignette.dart';
 import '../../../../core/network/api_error.dart';
 import '../../../../core/router/app_router.dart';
@@ -31,6 +30,8 @@ import '../../../items/data/items_controllers.dart';
 import '../stash_card.dart';
 import 'combat_items_section.dart';
 import 'messages_inbox.dart';
+import '../../../../systems/dnd5e/dnd5e_routes.dart';
+import '../../../../systems/dnd5e/session/level_up_card.dart';
 
 /// The two halves of "Mi sesión", the same main views as the character page.
 enum PlayerSubview {
@@ -175,7 +176,7 @@ class _NoCharacter extends ConsumerWidget {
   final List<CharacterSummary> drafts;
 
   /// Opens the guided creation wizard.
-  void _create(BuildContext context) => context.push(AppRoutes.characterNew(campaign.id));
+  void _create(BuildContext context) => context.push(Dnd5eRoutes.characterWizard(campaign.id));
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -256,13 +257,13 @@ class _CharacterSessionState extends ConsumerState<_CharacterSession> {
     if (_forcing) return;
     final String? route;
     if (character.pendingLevelUpTo != null) {
-      route = AppRoutes.characterLevelUp(character.id);
+      route = Dnd5eRoutes.levelUp(character.id);
     } else if (character.invalidChoices.isNotEmpty) {
-      route = AppRoutes.characterInvalidChoices(character.id);
+      route = Dnd5eRoutes.invalidChoices(character.id);
     } else if (character.spellPreparationPending) {
-      route = AppRoutes.characterPrepareSpells(character.id);
+      route = Dnd5eRoutes.prepareSpells(character.id);
     } else if (character.restRollsPending) {
-      route = AppRoutes.characterRestRolls(character.id);
+      route = Dnd5eRoutes.restRolls(character.id);
     } else {
       route = null;
     }
@@ -330,7 +331,7 @@ class _CombatSubview extends StatelessWidget {
       padding: _listPadding(context),
       children: [
         _PlayerHeader(character: c),
-        if (c.pendingLevelUpTo != null) _LevelUpCard(character: c),
+        if (c.pendingLevelUpTo != null) LevelUpCard(character: c),
         HpCard(key: const ValueKey('player-hp-card'), character: c, canEdit: true),
         StatsCard(character: c, canEdit: true),
         if (c.hitPointsCurrent == 0) DeathSavesCard(character: c, canEdit: true),
@@ -342,49 +343,6 @@ class _CombatSubview extends StatelessWidget {
         ClassPanelsSection(character: c, canEdit: true),
         CombatItemsSection(character: c, canEdit: true),
       ],
-    );
-  }
-}
-
-/// "¡Puedes subir a nivel N!": a DM granted the next level, with the level-up
-/// glyph beating softly ([PulseSeal]). Its button opens the level-up wizard.
-class _LevelUpCard extends StatelessWidget {
-  const _LevelUpCard({required this.character});
-
-  final CharacterDetail character;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final level = character.pendingLevelUpTo;
-    return ParchmentCard(
-      key: const Key('level-up-card'),
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          PulseSeal(
-            key: const Key('level-up-seal'),
-            child: AppIcon(AppIcons.levelUp, size: 32, color: context.tokens.gold),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('¡Puedes subir a nivel $level!', style: theme.textTheme.titleMedium),
-                Text('El DM te ha concedido un nivel.', style: theme.textTheme.bodySmall),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          FilledButton(
-            key: const Key('level-up-open'),
-            onPressed: () => context.push(AppRoutes.characterLevelUp(character.id)),
-            child: const Text('Subir de nivel'),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -481,7 +439,7 @@ class _DetailSubview extends ConsumerWidget {
               key: const Key('player-session'),
               padding: _listPadding(context),
               children: [
-                if (c.pendingLevelUpTo != null) _LevelUpCard(character: c),
+                if (c.pendingLevelUpTo != null) LevelUpCard(character: c),
                 RestSection(character: c, canEdit: true),
                 _OpenShopsCard(campaignId: campaign.id),
                 PartyStashCard(campaign: campaign, takerCharacterId: c.id),

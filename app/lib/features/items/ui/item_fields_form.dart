@@ -7,6 +7,7 @@ import '../../characters/data/models.dart' show abilityKeys;
 import '../../characters/domain/character_format.dart' show copperToGoldText, skillLabel;
 import '../domain/item_form_data.dart';
 import '../domain/items_format.dart';
+import '../../../systems/dnd5e/items/dnd5e_item.dart';
 
 /// Form with every item field. It is used for homebrew templates
 /// ([templateMode]) and for the overrides of an inventory or shop item.

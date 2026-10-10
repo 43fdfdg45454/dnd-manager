@@ -5,6 +5,7 @@ import '../../../core/network/api_error.dart';
 import '../../catalog/domain/catalog_format.dart' show abilityLabel;
 import 'characters_controller.dart';
 import 'characters_repository.dart';
+import '../../../systems/dnd5e/characters/dnd5e_characters_repository.dart';
 import 'models.dart';
 
 /// Highest score an Ability Score Improvement (or a feat) can reach.
@@ -455,6 +456,8 @@ class LevelUpController extends Notifier<LevelUpState> {
 
   CharactersRepository get _repository => ref.read(charactersRepositoryProvider);
 
+  Dnd5eCharactersRepository get _dnd5e => ref.read(dnd5eCharactersRepositoryProvider);
+
   @override
   LevelUpState build() {
     Future.microtask(() => _loadPlan(null));
@@ -475,7 +478,7 @@ class LevelUpController extends Notifier<LevelUpState> {
     final request = ++_request;
     state = state.copyWith(loading: true, loadError: null);
     try {
-      final plan = await _repository.levelUpPlan(characterId, classIndex: classIndex);
+      final plan = await _dnd5e.levelUpPlan(characterId, classIndex: classIndex);
       if (!ref.mounted || request != _request) return;
       state = state.copyWith(
         plan: plan,
@@ -646,7 +649,7 @@ class LevelUpController extends Notifier<LevelUpState> {
     if (!state.canConfirm) return false;
     state = state.copyWith(submitting: true, submitError: null);
     try {
-      final detail = await _repository.applyLevelUp(characterId, state.request);
+      final detail = await _dnd5e.applyLevelUp(characterId, state.request);
       if (!ref.mounted) return true;
       state = state.copyWith(submitting: false, completed: detail);
       ref.invalidate(characterControllerProvider(characterId));

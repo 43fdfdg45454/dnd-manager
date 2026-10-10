@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:dnd_companion/core/network/connectivity.dart';
-import 'package:dnd_companion/core/realtime/connection_diagnostics.dart';
+import 'package:opentrpg/core/network/connectivity.dart';
+import 'package:opentrpg/core/realtime/connection_diagnostics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

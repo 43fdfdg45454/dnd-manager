@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/app_icon.dart';
 import '../../../../../core/theme/icons.dart';
-import '../../../../../core/ui/action_type.dart';
+import '../../../../../systems/dnd5e/ui/action_type.dart';
 
-import '../../../data/characters_controller.dart';
 import '../../../data/models.dart';
 import '../../../domain/class_theme.dart';
 import '../combat_support.dart';
 import '../resources_section.dart' show canRestoreResource, resourcesOf;
+import '../../../../../systems/dnd5e/characters/dnd5e_characters_controller.dart';
 
 /// What a class panel needs to render.
 class ClassPanelContext {
@@ -51,8 +51,8 @@ Map<String, dynamic> panelMap(Object? value) =>
 List<String> panelStrings(Object? value) =>
     value is List ? [for (final e in value) '$e'] : const [];
 
-CharacterController panelController(WidgetRef ref, CharacterDetail character) =>
-    ref.read(characterControllerProvider(character.id).notifier);
+Dnd5eCharacterController panelController(WidgetRef ref, CharacterDetail character) =>
+    ref.read(dnd5eCharacterControllerProvider(character.id).notifier);
 
 /// Finds a resource by [key] or, when given, by a name fragment
 /// (case-insensitive). Null when the character does not have it.

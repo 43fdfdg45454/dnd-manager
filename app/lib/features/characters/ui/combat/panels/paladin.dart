@@ -5,7 +5,7 @@ import '../../../../../core/motion/flash.dart';
 import '../../../../../core/theme/app_icon.dart';
 import '../../../../../core/theme/components.dart';
 import '../../../../../core/theme/icons.dart';
-import '../../../../../core/ui/action_type.dart';
+import '../../../../../systems/dnd5e/ui/action_type.dart';
 import '../../../../dice/ui/dice_sheet.dart';
 import '../../../data/characters_controller.dart';
 import '../../../data/models.dart';

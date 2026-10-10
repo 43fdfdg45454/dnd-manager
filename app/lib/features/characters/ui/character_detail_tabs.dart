@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../items/ui/inventory_tab.dart';
 import '../data/models.dart';
 import '../data/view_mode_controller.dart';
+import '../../../systems/dnd5e/characters/character_tab.dart';
 import '../domain/character_format.dart';
 import 'character_tabs.dart';
 
@@ -55,10 +56,11 @@ class _CharacterDetailTabsState extends ConsumerState<CharacterDetailTabs>
   void initState() {
     super.initState();
     final onSession = _hasSession && ref.read(playerSessionTabProvider(_id));
-    final tab = ref.read(characterTabProvider(_id));
+    final stored = ref.read(characterTabProvider(_id));
+    final tab = CharacterTab.detailTabs.indexWhere((t) => t.name == stored);
     _controller = TabController(
       length: _sheetTabs.length + _offset,
-      initialIndex: onSession ? 0 : _offset + CharacterTab.detailTabs.indexOf(tab),
+      initialIndex: onSession ? 0 : _offset + (tab < 0 ? 0 : tab),
       vsync: this,
     )..addListener(_remember);
   }
@@ -75,7 +77,7 @@ class _CharacterDetailTabsState extends ConsumerState<CharacterDetailTabs>
     final index = _controller.index;
     if (_hasSession) ref.read(playerSessionTabProvider(_id).notifier).select(index == 0);
     if (index < _offset) return;
-    ref.read(characterTabProvider(_id).notifier).select(CharacterTab.detailTabs[index - _offset]);
+    ref.read(characterTabProvider(_id).notifier).select(CharacterTab.detailTabs[index - _offset].name);
   }
 
   @override
