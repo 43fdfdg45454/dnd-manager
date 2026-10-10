@@ -25,15 +25,15 @@ public class SubclassFeatureResourcePackTests(FeatureResourcePackApiFactory fact
 
     private static object Pack(object tacticsResource, object wardResource) => new
     {
-        formatVersion = 2,
+        formatVersion = 3,
         id = "tacticos-ejemplo",
         name = "Tácticos de Ejemplo",
         version = "1.0.0",
-        classesExtended = new[]
+        classes = new[]
         {
             new
             {
-                classIndex = "fighter",
+                extends = "fighter",
                 subclasses = new[]
                 {
                     new
@@ -163,19 +163,6 @@ public class SubclassFeatureResourcePackTests(FeatureResourcePackApiFactory fact
         {
             Assert.Contains(path, body);
         }
-    }
-
-    [Fact]
-    public async Task Feature_resources_require_format_2()
-    {
-        var admin = await factory.CreateAdminClientAsync();
-        var pack = JsonSerializer.SerializeToNode(Pack(Tactics, Ward))!;
-        pack["formatVersion"] = 1;
-
-        var response = await admin.PostAsync(PacksUrl, new StringContent(pack.ToJsonString(), Encoding.UTF8, "application/json"));
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains("features[0].resource", await response.Content.ReadAsStringAsync());
     }
 
     private static StringContent Json(object pack) => new(JsonSerializer.Serialize(pack), Encoding.UTF8, "application/json");

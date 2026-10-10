@@ -139,6 +139,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         var admin = await factory.CreateAdminClientAsync();
         await ImportAsync(admin, Example(id));
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync(id);
         var created = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/characters", new { name = "Vigía", ownerUserId = (Guid?)null });
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         var characterId = (await created.Content.ReadFromJsonAsync<CharacterDetailDto>())!.Id;
@@ -196,10 +197,11 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         var admin = await factory.CreateAdminClientAsync();
         var invalid = """
             {
+              "formatVersion": 3,
               "id": "reinos-erroneos",
               "name": "Reinos Erróneos",
               "version": "1.0.0",
-              "classesExtended": [ { "classIndex": "artificer", "subclasses": [] } ],
+              "classes": [ { "extends": "artificer", "subclasses": [] } ],
               "items": [
                 { "index": "reinos-erroneos-anillo", "name": "Anillo", "category": "Ring", "modifiers": [ { "kind": "Bogus", "value": 1 } ] }
               ],
@@ -214,7 +216,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var errors = await ReadErrorsAsync(response);
-        Assert.Contains(errors, e => e.StartsWith("classesExtended[0].classIndex: La clase 'artificer' no existe", StringComparison.Ordinal));
+        Assert.Contains(errors, e => e.StartsWith("classes[0].extends: La clase 'artificer' no existe", StringComparison.Ordinal));
         Assert.Contains(errors, e => e.StartsWith("items[0].category: Categoría desconocida", StringComparison.Ordinal));
         Assert.Contains(errors, e => e.StartsWith("items[0].modifiers[0].kind: Tipo de modificador desconocido", StringComparison.Ordinal));
         Assert.Contains(errors, e => e.StartsWith("spells[0].index: Debe empezar por \"reinos-erroneos-\"", StringComparison.Ordinal));
@@ -228,12 +230,12 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         Assert.DoesNotContain(await GetAsync<List<ContentPackDto>>(admin, PacksUrl), p => p.Id == "reinos-erroneos");
 
         // Unknown properties (typos) are reported with their path.
-        var typo = """{ "id": "reinos-erratas", "name": "Erratas", "version": "1", "items": [ { "index": "reinos-erratas-x", "name": "X", "category": "Other", "damgeDice": "1d4" } ] }""";
+        var typo = """{ "formatVersion": 3, "id": "reinos-erratas", "name": "Erratas", "version": "1", "items": [ { "index": "reinos-erratas-x", "name": "X", "category": "Other", "damgeDice": "1d4" } ] }""";
         var typoErrors = await ReadErrorsAsync(await admin.PostAsync(PacksUrl, new StringContent(typo, Encoding.UTF8, "application/json")));
         Assert.Equal(["items[0].damgeDice: Propiedad desconocida (revisa el nombre)."], typoErrors);
 
         // Indexes already used by another source (here the SRD) are rejected.
-        var collision = """{ "id": "potion", "name": "Pociones", "version": "1", "items": [ { "index": "potion-of-healing", "name": "Copia", "category": "Consumable" } ] }""";
+        var collision = """{ "formatVersion": 3, "id": "potion", "name": "Pociones", "version": "1", "items": [ { "index": "potion-of-healing", "name": "Copia", "category": "Consumable" } ] }""";
         var collisionErrors = await ReadErrorsAsync(await admin.PostAsync(PacksUrl, new StringContent(collision, Encoding.UTF8, "application/json")));
         Assert.Equal(["items[0].index: El índice 'potion-of-healing' ya existe en otra fuente (srd)."], collisionErrors);
 
@@ -308,7 +310,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         var admin = await factory.CreateAdminClientAsync();
         const string pack = """
             {
-              "id": "reinos-categorias", "name": "Categorías", "version": "1",
+              "formatVersion": 3, "id": "reinos-categorias", "name": "Categorías", "version": "1",
               "spells": [
                 { "index": "reinos-categorias-lobo", "name": "Lobo de bruma", "level": 2, "school": "conjuration", "castingTime": "1 action", "range": "30 feet", "duration": "1 hour", "classes": ["druid"], "category": "summoning" },
                 { "index": "reinos-categorias-red", "name": "Red de raíces", "level": 1, "school": "conjuration", "castingTime": "1 action", "range": "60 feet", "duration": "1 minute", "classes": ["druid"], "dcAbility": "str" },

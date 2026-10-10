@@ -26,6 +26,7 @@ public class RollTablePackTests(RollTablePackApiFactory factory) : IClassFixture
         var admin = await factory.CreateAdminClientAsync();
         var pack = new
         {
+            formatVersion = 3,
             id = "tablas-trasfondo",
             name = "Tablas de trasfondo",
             version = "1",
@@ -64,6 +65,7 @@ public class RollTablePackTests(RollTablePackApiFactory factory) : IClassFixture
         var admin = await factory.CreateAdminClientAsync();
         var pack = new
         {
+            formatVersion = 3,
             id = "tablas-malas",
             name = "Tablas malas",
             version = "1",
@@ -111,12 +113,13 @@ public class RollTablePackTests(RollTablePackApiFactory factory) : IClassFixture
 
         var first = new
         {
+            formatVersion = 3,
             id = "oleada-uno",
             name = "Oleada uno",
             version = "1",
-            classesExtended = new[]
+            classes = new[]
             {
-                new { classIndex = "sorcerer", subclasses = new[] { new { index = "oleada-uno-salvaje", name = "Magia de ejemplo" } } },
+                new { extends = "sorcerer", subclasses = new[] { new { index = "oleada-uno-salvaje", name = "Magia de ejemplo" } } },
             },
             rollTables = new object[]
             {
@@ -152,6 +155,7 @@ public class RollTablePackTests(RollTablePackApiFactory factory) : IClassFixture
         // Another pack redefines the same key for the subclass of the first pack.
         var second = new
         {
+            formatVersion = 3,
             id = "oleada-dos",
             name = "Oleada dos",
             version = "1",
@@ -176,6 +180,7 @@ public class RollTablePackTests(RollTablePackApiFactory factory) : IClassFixture
         var admin = await factory.CreateAdminClientAsync();
         var pack = new
         {
+            formatVersion = 3,
             id = "oleada-mala",
             name = "Oleada mala",
             version = "1",

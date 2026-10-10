@@ -1816,7 +1816,9 @@
         "speeds": {
           "walk": 40,
           "climb": 40
-        }
+        },
+        "type": "beast",
+        "source": "srd"
       },
       {
         "index": "wolf",
@@ -1828,7 +1830,9 @@
         "hitPoints": 11,
         "speeds": {
           "walk": 40
-        }
+        },
+        "type": "beast",
+        "source": "srd"
       },
       {
         "index": "dire-wolf",
@@ -1840,7 +1844,9 @@
         "hitPoints": 37,
         "speeds": {
           "walk": 50
-        }
+        },
+        "type": "beast",
+        "source": "srd"
       }
     ]
   },
@@ -1915,7 +1921,13 @@
           "isMultiattack": false
         }
       ],
-      "description": null
+      "description": null,
+      "type": "beast",
+      "subtype": null,
+      "reactions": [],
+      "legendaryActions": [],
+      "source": "srd",
+      "isBeast": true
     }
   },
   {
@@ -1975,7 +1987,8 @@
       "createdAt": "<time>",
       "effects": [],
       "source": "srd",
-      "modifiers": []
+      "modifiers": [],
+      "systemData": null
     }
   },
   {
@@ -2037,7 +2050,8 @@
         "description": [
           "- A blinded creature can't see and automatically fails any ability check that requires sight.",
           "- Attack rolls against the creature have advantage, and the creature's attack rolls have disadvantage."
-        ]
+        ],
+        "source": "srd"
       },
       {
         "index": "charmed",
@@ -2045,14 +2059,16 @@
         "description": [
           "- A charmed creature can't attack the charmer or target the charmer with harmful abilities or magical effects.",
           "- The charmer has advantage on any ability check to interact socially with the creature."
-        ]
+        ],
+        "source": "srd"
       },
       {
         "index": "deafened",
         "name": "Deafened",
         "description": [
           "- A deafened creature can't hear and automatically fails any ability check that requires hearing."
-        ]
+        ],
+        "source": "srd"
       },
       {
         "index": "exhaustion",
@@ -2069,7 +2085,8 @@
           "A creature suffers the effect of its current level of exhaustion as well as all lower levels. For example, a creature suffering level 2 exhaustion has its speed halved and has disadvantage on ability checks.",
           "An effect that removes exhaustion reduces its level as specified in the effect's description, with all exhaustion effects ending if a creature's exhaustion level is reduced below 1.",
           "Finishing a long rest reduces a creature's exhaustion level by 1, provided that the creature has also ingested some food and drink."
-        ]
+        ],
+        "source": "srd"
       },
       {
         "index": "frightened",
@@ -2077,7 +2094,8 @@
         "description": [
           "- A frightened creature has disadvantage on ability checks and attack rolls while the source of its fear is within line of sight.",
           "- The creature can't willingly move closer to the source of its fear."
-        ]
+        ],
+        "source": "srd"
       },
       {
         "index": "grappled",
@@ -2086,14 +2104,16 @@
           "- A grappled creature's speed becomes 0, and it can't benefit from any bonus to its speed.",
           "- The condition ends if the grappler is incapacitated (see the condition).",
           "- The condition also ends if an effect removes the grappled creature from the reach of the grappler or grappling effect, such as when a creature is hurled away by the thunderwave spell."
-        ]
+        ],
+        "source": "srd"
       },
       {
         "index": "incapacitated",
         "name": "Incapacitated",
         "description": [
           "- An incapacitated creature can't take actions or reactions."
-        ]
+        ],
+        "source": "srd"
       },
       {
         "index": "invisible",
@@ -2101,7 +2121,8 @@
         "description": [
           "- An invisible creature is impossible to see without the aid of magic or a special sense. For the purpose of hiding, the creature is heavily obscured. The creature's location can be detected by any noise it makes or any tracks it leaves.",
           "- Attack rolls against the creature have disadvantage, and the creature's attack rolls have advantage."
-        ]
+        ],
+        "source": "srd"
       },
       {
         "index": "paralyzed",
@@ -2111,7 +2132,8 @@
           "- The creature automatically fails Strength and Dexterity saving throws.",
           "- Attack rolls against the creature have advantage.",
           "- Any attack that hits the creature is a critical hit if the attacker is within 5 feet of the creature."
-        ]
+        ],
+        "source": "srd"
       },
       {
         "index": "petrified",
@@ -2123,14 +2145,16 @@
           "- The creature automatically fails Strength and Dexterity saving throws.",
           "- The creature has resistance to all damage.",
           "- The creature is immune to poison and disease, although a poison or disease already in its system is suspended, not neutralized."
-        ]
+        ],
+        "source": "srd"
       },
       {
         "index": "poisoned",
         "name": "Poisoned",
         "description": [
           "- A poisoned creature has disadvantage on attack rolls and ability checks."
-        ]
+        ],
+        "source": "srd"
       },
       {
         "index": "prone",
@@ -2139,7 +2163,8 @@
           "- A prone creature's only movement option is to crawl, unless it stands up and thereby ends the condition.",
           "- The creature has disadvantage on attack rolls.",
           "- An attack roll against the creature has advantage if the attacker is within 5 feet of the creature. Otherwise, the attack roll has disadvantage."
-        ]
+        ],
+        "source": "srd"
       },
       {
         "index": "restrained",
@@ -2148,7 +2173,8 @@
           "- A restrained creature's speed becomes 0, and it can't benefit from any bonus to its speed.",
           "- Attack rolls against the creature have advantage, and the creature's attack rolls have disadvantage.",
           "- The creature has disadvantage on Dexterity saving throws."
-        ]
+        ],
+        "source": "srd"
       },
       {
         "index": "stunned",
@@ -2157,7 +2183,8 @@
           "- A stunned creature is incapacitated (see the condition), can't move, and can speak only falteringly.",
           "- The creature automatically fails Strength and Dexterity saving throws.",
           "- Attack rolls against the creature have advantage."
-        ]
+        ],
+        "source": "srd"
       },
       {
         "index": "unconscious",
@@ -2168,7 +2195,8 @@
           "- The creature automatically fails Strength and Dexterity saving throws.",
           "- Attack rolls against the creature have advantage.",
           "- Any attack that hits the creature is a critical hit if the attacker is within 5 feet of the creature."
-        ]
+        ],
+        "source": "srd"
       }
     ]
   },
@@ -2511,7 +2539,9 @@
       {
         "id": "srd",
         "name": "SRD 5.1",
-        "version": null
+        "version": null,
+        "isBase": true,
+        "enabled": null
       }
     ]
   },
@@ -2526,6 +2556,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión",
       "status": "Draft",
+      "copperPieces": 0,
+      "notes": "",
+      "backstory": "",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": null,
       "raceName": null,
       "subraceIndex": null,
@@ -2552,21 +2596,8 @@
       "conditions": [],
       "concentratingOnSpellIndex": null,
       "inspiration": false,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "",
-      "backstory": "",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [],
       "proficiencies": [],
       "spells": [],
@@ -3183,7 +3214,6 @@
         "resistances": [],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -3262,6 +3292,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión",
       "status": "Draft",
+      "copperPieces": 0,
+      "notes": "Notas de prueba",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -3288,21 +3332,8 @@
       "conditions": [],
       "concentratingOnSpellIndex": null,
       "inspiration": false,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas de prueba",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -4116,7 +4147,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -5065,6 +5095,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión",
       "status": "Draft",
+      "copperPieces": 0,
+      "notes": "Notas de prueba",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -5091,21 +5135,8 @@
       "conditions": [],
       "concentratingOnSpellIndex": null,
       "inspiration": false,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas de prueba",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -5926,7 +5957,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -6077,6 +6107,7 @@
         "ownerDisplayName": "Player User",
         "name": "Regresión",
         "status": "Draft",
+        "portraitUrl": null,
         "raceName": "Dwarf",
         "classes": [
           {
@@ -6088,8 +6119,7 @@
         ],
         "level": 1,
         "hitPointsCurrent": 9,
-        "hitPointsMax": 9,
-        "portraitUrl": null
+        "hitPointsMax": 9
       }
     ]
   },
@@ -6105,6 +6135,7 @@
         "ownerDisplayName": "Player User",
         "name": "Regresión",
         "status": "Draft",
+        "portraitUrl": null,
         "raceName": "Dwarf",
         "classes": [
           {
@@ -6116,8 +6147,7 @@
         ],
         "level": 1,
         "hitPointsCurrent": 9,
-        "hitPointsMax": 9,
-        "portraitUrl": null
+        "hitPointsMax": 9
       }
     ]
   },
@@ -6222,6 +6252,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas de prueba",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -6248,21 +6292,8 @@
       "conditions": [],
       "concentratingOnSpellIndex": null,
       "inspiration": false,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas de prueba",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -7083,7 +7114,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -7343,14 +7373,14 @@
       "requestedByDisplayName": "Player User",
       "type": "EditSheet",
       "payload": {
-        "name": "Regresión II",
         "overrides": [
           {
             "field": "speed",
             "value": 30,
             "note": "Botas"
           }
-        ]
+        ],
+        "name": "Regresión II"
       },
       "status": "Pending",
       "resolvedByUserId": null,
@@ -7359,8 +7389,8 @@
       "comment": null,
       "createdAt": "<time>",
       "before": {
-        "name": "Regresión",
-        "overrides": []
+        "overrides": [],
+        "name": "Regresión"
       }
     }
   },
@@ -7377,14 +7407,14 @@
       "requestedByDisplayName": "Player User",
       "type": "EditSheet",
       "payload": {
-        "name": "Regresión II",
         "overrides": [
           {
             "field": "speed",
             "value": 30,
             "note": "Botas"
           }
-        ]
+        ],
+        "name": "Regresión II"
       },
       "status": "Approved",
       "resolvedByUserId": "<dm>",
@@ -7393,8 +7423,8 @@
       "comment": null,
       "createdAt": "<time>",
       "before": {
-        "name": "Regresión",
-        "overrides": []
+        "overrides": [],
+        "name": "Regresión"
       }
     }
   },
@@ -7409,6 +7439,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -7435,21 +7479,8 @@
       "conditions": [],
       "concentratingOnSpellIndex": null,
       "inspiration": false,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -8283,7 +8314,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -8433,6 +8463,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -8464,21 +8508,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -9312,7 +9343,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -9462,6 +9492,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -9493,21 +9537,8 @@
       ],
       "concentratingOnSpellIndex": "shield",
       "inspiration": true,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -10341,7 +10372,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -10492,6 +10522,20 @@
         "ownerDisplayName": "Player User",
         "name": "Regresión II",
         "status": "Active",
+        "copperPieces": 0,
+        "notes": "Notas del DM",
+        "backstory": "Historia",
+        "personalityTraits": "",
+        "ideals": "",
+        "bonds": "",
+        "flaws": "",
+        "heightInches": 52,
+        "weightPounds": 150,
+        "portraitFileId": null,
+        "portraitUrl": null,
+        "createdAt": "<time>",
+        "updatedAt": "<time>",
+        "pendingChangeRequests": [],
         "raceIndex": "dwarf",
         "raceName": "Dwarf",
         "subraceIndex": "hill-dwarf",
@@ -10523,21 +10567,8 @@
         ],
         "concentratingOnSpellIndex": "shield",
         "inspiration": true,
-        "copperPieces": 0,
         "hitDiceUsed": {},
-        "notes": "Notas del DM",
-        "backstory": "Historia",
-        "personalityTraits": "",
-        "ideals": "",
-        "bonds": "",
-        "flaws": "",
         "backgroundDetail": "",
-        "heightInches": 52,
-        "weightPounds": 150,
-        "portraitFileId": null,
-        "portraitUrl": null,
-        "createdAt": "<time>",
-        "updatedAt": "<time>",
         "classes": [
           {
             "classIndex": "wizard",
@@ -11371,7 +11402,6 @@
           ],
           "breathWeapon": null
         },
-        "pendingChangeRequests": [],
         "inventory": {
           "items": [],
           "copperPieces": 0,
@@ -11530,6 +11560,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -11561,21 +11605,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -12409,7 +12440,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -12559,6 +12589,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -12590,21 +12634,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -13438,7 +13469,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -13588,6 +13618,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -13619,21 +13663,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -14467,7 +14498,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -14617,6 +14647,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -14648,21 +14692,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -15496,7 +15527,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -15646,6 +15676,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -15677,21 +15721,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -16525,7 +16556,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -16718,6 +16748,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -16749,21 +16793,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -17613,7 +17644,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -17779,6 +17809,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -17810,21 +17854,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -18674,7 +18705,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -18868,6 +18898,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -18899,23 +18943,10 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 0,
       "hitDiceUsed": {
         "wizard": 1
       },
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -19749,7 +19780,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -19899,6 +19929,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -19930,21 +19974,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -20778,7 +20809,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -21052,6 +21082,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -21083,21 +21127,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -21931,7 +21962,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -22081,6 +22111,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -22112,21 +22156,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -22960,7 +22991,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -23110,6 +23140,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -23141,21 +23185,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -23989,7 +24020,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -25881,6 +25911,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -25912,21 +25956,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -26782,7 +26813,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -26976,6 +27006,20 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -27007,21 +27051,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -27877,7 +27908,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -28722,14 +28752,14 @@
         "requestedByDisplayName": "Player User",
         "type": "EditSheet",
         "payload": {
-          "name": "Regresión II",
           "overrides": [
             {
               "field": "speed",
               "value": 30,
               "note": "Botas"
             }
-          ]
+          ],
+          "name": "Regresión II"
         },
         "status": "Approved",
         "resolvedByUserId": "<dm>",
@@ -28738,8 +28768,8 @@
         "comment": null,
         "createdAt": "<time>",
         "before": {
-          "name": "Regresión",
-          "overrides": []
+          "overrides": [],
+          "name": "Regresión"
         }
       },
       {
@@ -28816,6 +28846,43 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 4900,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [
+        {
+          "id": "<id61>",
+          "campaignId": "<campaign>",
+          "characterId": "<character>",
+          "characterName": "Regresión II",
+          "requestedByUserId": "<player>",
+          "requestedByDisplayName": "Player User",
+          "type": "RemoveItem",
+          "payload": {
+            "itemId": "<id58>",
+            "itemName": "Longsword"
+          },
+          "status": "Pending",
+          "resolvedByUserId": null,
+          "resolvedByDisplayName": null,
+          "resolvedAt": null,
+          "comment": null,
+          "createdAt": "<time>",
+          "before": {
+            "quantity": 1
+          }
+        }
+      ],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -28847,21 +28914,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 4900,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -29717,30 +29771,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [
-        {
-          "id": "<id61>",
-          "campaignId": "<campaign>",
-          "characterId": "<character>",
-          "characterName": "Regresión II",
-          "requestedByUserId": "<player>",
-          "requestedByDisplayName": "Player User",
-          "type": "RemoveItem",
-          "payload": {
-            "itemId": "<id58>",
-            "itemName": "Longsword"
-          },
-          "status": "Pending",
-          "resolvedByUserId": null,
-          "resolvedByDisplayName": null,
-          "resolvedAt": null,
-          "comment": null,
-          "createdAt": "<time>",
-          "before": {
-            "quantity": 1
-          }
-        }
-      ],
       "inventory": {
         "items": [
           {
@@ -30054,15 +30084,15 @@
       "requestedByUserId": "<player>",
       "requestedByDisplayName": "Player User",
       "kind": "Short",
-      "hitDice": {
-        "wizard": 1
-      },
       "status": "Pending",
       "requestedAt": "<time>",
       "resolvedByUserId": null,
       "resolvedByDisplayName": null,
       "resolvedAt": null,
-      "comment": null
+      "comment": null,
+      "hitDice": {
+        "wizard": 1
+      }
     }
   },
   {
@@ -30078,15 +30108,15 @@
         "requestedByUserId": "<player>",
         "requestedByDisplayName": "Player User",
         "kind": "Short",
-        "hitDice": {
-          "wizard": 1
-        },
         "status": "Pending",
         "requestedAt": "<time>",
         "resolvedByUserId": null,
         "resolvedByDisplayName": null,
         "resolvedAt": null,
-        "comment": null
+        "comment": null,
+        "hitDice": {
+          "wizard": 1
+        }
       }
     ]
   },
@@ -30102,15 +30132,15 @@
       "requestedByUserId": "<player>",
       "requestedByDisplayName": "Player User",
       "kind": "Short",
-      "hitDice": {
-        "wizard": 1
-      },
       "status": "Pending",
       "requestedAt": "<time>",
       "resolvedByUserId": null,
       "resolvedByDisplayName": null,
       "resolvedAt": null,
-      "comment": null
+      "comment": null,
+      "hitDice": {
+        "wizard": 1
+      }
     }
   },
   {
@@ -30125,15 +30155,15 @@
       "requestedByUserId": "<player>",
       "requestedByDisplayName": "Player User",
       "kind": "Short",
-      "hitDice": {
-        "wizard": 1
-      },
       "status": "Approved",
       "requestedAt": "<time>",
       "resolvedByUserId": "<dm>",
       "resolvedByDisplayName": "Dm User",
       "resolvedAt": "<time>",
-      "comment": "Vale"
+      "comment": "Vale",
+      "hitDice": {
+        "wizard": 1
+      }
     }
   },
   {
@@ -30148,13 +30178,13 @@
       "requestedByUserId": "<player>",
       "requestedByDisplayName": "Player User",
       "kind": "Long",
-      "hitDice": {},
       "status": "Pending",
       "requestedAt": "<time>",
       "resolvedByUserId": null,
       "resolvedByDisplayName": null,
       "resolvedAt": null,
-      "comment": null
+      "comment": null,
+      "hitDice": {}
     }
   },
   {
@@ -30169,13 +30199,13 @@
       "requestedByUserId": "<player>",
       "requestedByDisplayName": "Player User",
       "kind": "Long",
-      "hitDice": {},
       "status": "Rejected",
       "requestedAt": "<time>",
       "resolvedByUserId": "<dm>",
       "resolvedByDisplayName": "Dm User",
       "resolvedAt": "<time>",
-      "comment": "Aún no"
+      "comment": "Aún no",
+      "hitDice": {}
     }
   },
   {
@@ -30190,13 +30220,13 @@
       "requestedByUserId": "<player>",
       "requestedByDisplayName": "Player User",
       "kind": "Long",
-      "hitDice": {},
       "status": "Pending",
       "requestedAt": "<time>",
       "resolvedByUserId": null,
       "resolvedByDisplayName": null,
       "resolvedAt": null,
-      "comment": null
+      "comment": null,
+      "hitDice": {}
     }
   },
   {
@@ -30217,13 +30247,13 @@
       "requestedByUserId": "<player>",
       "requestedByDisplayName": "Player User",
       "kind": "Long",
-      "hitDice": {},
       "status": "Pending",
       "requestedAt": "<time>",
       "resolvedByUserId": null,
       "resolvedByDisplayName": null,
       "resolvedAt": null,
-      "comment": null
+      "comment": null,
+      "hitDice": {}
     }
   },
   {
@@ -30238,13 +30268,13 @@
       "requestedByUserId": "<player>",
       "requestedByDisplayName": "Player User",
       "kind": "Long",
-      "hitDice": {},
       "status": "Approved",
       "requestedAt": "<time>",
       "resolvedByUserId": "<dm>",
       "resolvedByDisplayName": "Dm User",
       "resolvedAt": "<time>",
-      "comment": null
+      "comment": null,
+      "hitDice": {}
     }
   },
   {
@@ -30258,6 +30288,43 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 4900,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [
+        {
+          "id": "<id61>",
+          "campaignId": "<campaign>",
+          "characterId": "<character>",
+          "characterName": "Regresión II",
+          "requestedByUserId": "<player>",
+          "requestedByDisplayName": "Player User",
+          "type": "RemoveItem",
+          "payload": {
+            "itemId": "<id58>",
+            "itemName": "Longsword"
+          },
+          "status": "Pending",
+          "resolvedByUserId": null,
+          "resolvedByDisplayName": null,
+          "resolvedAt": null,
+          "comment": null,
+          "createdAt": "<time>",
+          "before": {
+            "quantity": 1
+          }
+        }
+      ],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -30289,21 +30356,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 4900,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -31159,30 +31213,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [
-        {
-          "id": "<id61>",
-          "campaignId": "<campaign>",
-          "characterId": "<character>",
-          "characterName": "Regresión II",
-          "requestedByUserId": "<player>",
-          "requestedByDisplayName": "Player User",
-          "type": "RemoveItem",
-          "payload": {
-            "itemId": "<id58>",
-            "itemName": "Longsword"
-          },
-          "status": "Pending",
-          "resolvedByUserId": null,
-          "resolvedByDisplayName": null,
-          "resolvedAt": null,
-          "comment": null,
-          "createdAt": "<time>",
-          "before": {
-            "quantity": 1
-          }
-        }
-      ],
       "inventory": {
         "items": [
           {
@@ -31525,7 +31555,8 @@
           "target": null,
           "value": 1
         }
-      ]
+      ],
+      "systemData": null
     }
   },
   {
@@ -32181,7 +32212,8 @@
           "target": null,
           "value": 1
         }
-      ]
+      ],
+      "systemData": null
     }
   },
   {
@@ -32225,7 +32257,8 @@
           "target": null,
           "value": 1
         }
-      ]
+      ],
+      "systemData": null
     }
   },
   {
@@ -32269,7 +32302,8 @@
           "target": null,
           "value": 1
         }
-      ]
+      ],
+      "systemData": null
     }
   },
   {
@@ -32787,6 +32821,43 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 3100,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [
+        {
+          "id": "<id61>",
+          "campaignId": "<campaign>",
+          "characterId": "<character>",
+          "characterName": "Regresión II",
+          "requestedByUserId": "<player>",
+          "requestedByDisplayName": "Player User",
+          "type": "RemoveItem",
+          "payload": {
+            "itemId": "<id58>",
+            "itemName": "Longsword"
+          },
+          "status": "Pending",
+          "resolvedByUserId": null,
+          "resolvedByDisplayName": null,
+          "resolvedAt": null,
+          "comment": null,
+          "createdAt": "<time>",
+          "before": {
+            "quantity": 1
+          }
+        }
+      ],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -32818,21 +32889,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 3100,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -33688,30 +33746,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [
-        {
-          "id": "<id61>",
-          "campaignId": "<campaign>",
-          "characterId": "<character>",
-          "characterName": "Regresión II",
-          "requestedByUserId": "<player>",
-          "requestedByDisplayName": "Player User",
-          "type": "RemoveItem",
-          "payload": {
-            "itemId": "<id58>",
-            "itemName": "Longsword"
-          },
-          "status": "Pending",
-          "resolvedByUserId": null,
-          "resolvedByDisplayName": null,
-          "resolvedAt": null,
-          "comment": null,
-          "createdAt": "<time>",
-          "before": {
-            "quantity": 1
-          }
-        }
-      ],
       "inventory": {
         "items": [
           {
@@ -34775,6 +34809,43 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 4100,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [
+        {
+          "id": "<id61>",
+          "campaignId": "<campaign>",
+          "characterId": "<character>",
+          "characterName": "Regresión II",
+          "requestedByUserId": "<player>",
+          "requestedByDisplayName": "Player User",
+          "type": "RemoveItem",
+          "payload": {
+            "itemId": "<id58>",
+            "itemName": "Longsword"
+          },
+          "status": "Pending",
+          "resolvedByUserId": null,
+          "resolvedByDisplayName": null,
+          "resolvedAt": null,
+          "comment": null,
+          "createdAt": "<time>",
+          "before": {
+            "quantity": 1
+          }
+        }
+      ],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -34806,21 +34877,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 4100,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -35676,30 +35734,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [
-        {
-          "id": "<id61>",
-          "campaignId": "<campaign>",
-          "characterId": "<character>",
-          "characterName": "Regresión II",
-          "requestedByUserId": "<player>",
-          "requestedByDisplayName": "Player User",
-          "type": "RemoveItem",
-          "payload": {
-            "itemId": "<id58>",
-            "itemName": "Longsword"
-          },
-          "status": "Pending",
-          "resolvedByUserId": null,
-          "resolvedByDisplayName": null,
-          "resolvedAt": null,
-          "comment": null,
-          "createdAt": "<time>",
-          "before": {
-            "quantity": 1
-          }
-        }
-      ],
       "inventory": {
         "items": [
           {
@@ -36095,6 +36129,43 @@
       "ownerDisplayName": null,
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 4100,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [
+        {
+          "id": "<id61>",
+          "campaignId": "<campaign>",
+          "characterId": "<character>",
+          "characterName": "Regresión II",
+          "requestedByUserId": "<player>",
+          "requestedByDisplayName": "Player User",
+          "type": "RemoveItem",
+          "payload": {
+            "itemId": "<id58>",
+            "itemName": "Longsword"
+          },
+          "status": "Pending",
+          "resolvedByUserId": null,
+          "resolvedByDisplayName": null,
+          "resolvedAt": null,
+          "comment": null,
+          "createdAt": "<time>",
+          "before": {
+            "quantity": 1
+          }
+        }
+      ],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -36126,21 +36197,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 4100,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -36996,30 +37054,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [
-        {
-          "id": "<id61>",
-          "campaignId": "<campaign>",
-          "characterId": "<character>",
-          "characterName": "Regresión II",
-          "requestedByUserId": "<player>",
-          "requestedByDisplayName": "Player User",
-          "type": "RemoveItem",
-          "payload": {
-            "itemId": "<id58>",
-            "itemName": "Longsword"
-          },
-          "status": "Pending",
-          "resolvedByUserId": null,
-          "resolvedByDisplayName": null,
-          "resolvedAt": null,
-          "comment": null,
-          "createdAt": "<time>",
-          "before": {
-            "quantity": 1
-          }
-        }
-      ],
       "inventory": {
         "items": [
           {
@@ -37415,6 +37449,43 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 4100,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [
+        {
+          "id": "<id61>",
+          "campaignId": "<campaign>",
+          "characterId": "<character>",
+          "characterName": "Regresión II",
+          "requestedByUserId": "<player>",
+          "requestedByDisplayName": "Player User",
+          "type": "RemoveItem",
+          "payload": {
+            "itemId": "<id58>",
+            "itemName": "Longsword"
+          },
+          "status": "Pending",
+          "resolvedByUserId": null,
+          "resolvedByDisplayName": null,
+          "resolvedAt": null,
+          "comment": null,
+          "createdAt": "<time>",
+          "before": {
+            "quantity": 1
+          }
+        }
+      ],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -37446,21 +37517,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 4100,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -38316,30 +38374,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [
-        {
-          "id": "<id61>",
-          "campaignId": "<campaign>",
-          "characterId": "<character>",
-          "characterName": "Regresión II",
-          "requestedByUserId": "<player>",
-          "requestedByDisplayName": "Player User",
-          "type": "RemoveItem",
-          "payload": {
-            "itemId": "<id58>",
-            "itemName": "Longsword"
-          },
-          "status": "Pending",
-          "resolvedByUserId": null,
-          "resolvedByDisplayName": null,
-          "resolvedAt": null,
-          "comment": null,
-          "createdAt": "<time>",
-          "before": {
-            "quantity": 1
-          }
-        }
-      ],
       "inventory": {
         "items": [
           {
@@ -38736,6 +38770,7 @@
         "ownerDisplayName": "Player User",
         "name": "Regresión II",
         "status": "Active",
+        "portraitUrl": null,
         "raceName": "Dwarf",
         "classes": [
           {
@@ -38747,8 +38782,7 @@
         ],
         "level": 2,
         "hitPointsCurrent": 16,
-        "hitPointsMax": 16,
-        "portraitUrl": null
+        "hitPointsMax": 16
       }
     ]
   },
@@ -38763,6 +38797,43 @@
       "ownerDisplayName": "Player User",
       "name": "Regresión II",
       "status": "Active",
+      "copperPieces": 4100,
+      "notes": "Notas del DM",
+      "backstory": "Historia",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": 52,
+      "weightPounds": 150,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [
+        {
+          "id": "<id61>",
+          "campaignId": "<campaign>",
+          "characterId": "<character>",
+          "characterName": "Regresión II",
+          "requestedByUserId": "<player>",
+          "requestedByDisplayName": "Player User",
+          "type": "RemoveItem",
+          "payload": {
+            "itemId": "<id58>",
+            "itemName": "Longsword"
+          },
+          "status": "Pending",
+          "resolvedByUserId": null,
+          "resolvedByDisplayName": null,
+          "resolvedAt": null,
+          "comment": null,
+          "createdAt": "<time>",
+          "before": {
+            "quantity": 1
+          }
+        }
+      ],
       "raceIndex": "dwarf",
       "raceName": "Dwarf",
       "subraceIndex": "hill-dwarf",
@@ -38794,21 +38865,8 @@
       ],
       "concentratingOnSpellIndex": null,
       "inspiration": true,
-      "copperPieces": 4100,
       "hitDiceUsed": {},
-      "notes": "Notas del DM",
-      "backstory": "Historia",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": 52,
-      "weightPounds": 150,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [
         {
           "classIndex": "wizard",
@@ -39664,30 +39722,6 @@
         ],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [
-        {
-          "id": "<id61>",
-          "campaignId": "<campaign>",
-          "characterId": "<character>",
-          "characterName": "Regresión II",
-          "requestedByUserId": "<player>",
-          "requestedByDisplayName": "Player User",
-          "type": "RemoveItem",
-          "payload": {
-            "itemId": "<id58>",
-            "itemName": "Longsword"
-          },
-          "status": "Pending",
-          "resolvedByUserId": null,
-          "resolvedByDisplayName": null,
-          "resolvedAt": null,
-          "comment": null,
-          "createdAt": "<time>",
-          "before": {
-            "quantity": 1
-          }
-        }
-      ],
       "inventory": {
         "items": [
           {
@@ -40083,6 +40117,20 @@
       "ownerDisplayName": null,
       "name": "PNJ",
       "status": "Draft",
+      "copperPieces": 0,
+      "notes": "",
+      "backstory": "",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": null,
+      "weightPounds": null,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": null,
       "raceName": null,
       "subraceIndex": null,
@@ -40109,21 +40157,8 @@
       "conditions": [],
       "concentratingOnSpellIndex": null,
       "inspiration": false,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "",
-      "backstory": "",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": null,
-      "weightPounds": null,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [],
       "proficiencies": [],
       "spells": [],
@@ -40740,7 +40775,6 @@
         "resistances": [],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -40819,6 +40853,20 @@
       "ownerDisplayName": null,
       "name": "PNJ",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "",
+      "backstory": "",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": null,
+      "weightPounds": null,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": null,
       "raceName": null,
       "subraceIndex": null,
@@ -40845,21 +40893,8 @@
       "conditions": [],
       "concentratingOnSpellIndex": null,
       "inspiration": false,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "",
-      "backstory": "",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": null,
-      "weightPounds": null,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [],
       "proficiencies": [],
       "spells": [],
@@ -41476,7 +41511,6 @@
         "resistances": [],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,
@@ -41555,6 +41589,20 @@
       "ownerDisplayName": null,
       "name": "PNJ",
       "status": "Active",
+      "copperPieces": 0,
+      "notes": "",
+      "backstory": "",
+      "personalityTraits": "",
+      "ideals": "",
+      "bonds": "",
+      "flaws": "",
+      "heightInches": null,
+      "weightPounds": null,
+      "portraitFileId": null,
+      "portraitUrl": null,
+      "createdAt": "<time>",
+      "updatedAt": "<time>",
+      "pendingChangeRequests": [],
       "raceIndex": null,
       "raceName": null,
       "subraceIndex": null,
@@ -41581,21 +41629,8 @@
       "conditions": [],
       "concentratingOnSpellIndex": null,
       "inspiration": false,
-      "copperPieces": 0,
       "hitDiceUsed": {},
-      "notes": "",
-      "backstory": "",
-      "personalityTraits": "",
-      "ideals": "",
-      "bonds": "",
-      "flaws": "",
       "backgroundDetail": "",
-      "heightInches": null,
-      "weightPounds": null,
-      "portraitFileId": null,
-      "portraitUrl": null,
-      "createdAt": "<time>",
-      "updatedAt": "<time>",
       "classes": [],
       "proficiencies": [],
       "spells": [],
@@ -42212,7 +42247,6 @@
         "resistances": [],
         "breathWeapon": null
       },
-      "pendingChangeRequests": [],
       "inventory": {
         "items": [],
         "copperPieces": 0,

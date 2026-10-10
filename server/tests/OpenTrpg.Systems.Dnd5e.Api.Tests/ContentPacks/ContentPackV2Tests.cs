@@ -78,7 +78,7 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
         var admin = await factory.CreateAdminClientAsync();
         var pack = new
         {
-            formatVersion = 2,
+            formatVersion = 3,
             id = "malo-ejemplo",
             name = "Malo",
             version = "1",
@@ -94,11 +94,11 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
                     },
                 },
             },
-            classesExtended = new object[]
+            classes = new object[]
             {
                 new
                 {
-                    classIndex = "fighter",
+                    extends = "fighter",
                     levelChoices = new object[]
                     {
                         new { level = 3, key = "algo", name = "Algo", kind = "OptionSet", setId = "malo-ejemplo-no-existe", choose = 1 },
@@ -112,11 +112,14 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
 
         Assert.Contains(errors, e => e.StartsWith("optionSets[0].options[0].index:", StringComparison.Ordinal));
         Assert.Contains(errors, e => e.StartsWith("optionSets[0].options[1].modifiers[0].condition:", StringComparison.Ordinal));
-        Assert.Contains(errors, e => e.StartsWith("classesExtended[0].levelChoices[0].setId:", StringComparison.Ordinal));
-        Assert.Contains(errors, e => e.StartsWith("classesExtended[0].levelChoices[1]:", StringComparison.Ordinal) && e.Contains("srd", StringComparison.Ordinal));
+        Assert.Contains(errors, e => e.StartsWith("classes[0].levelChoices[0].setId:", StringComparison.Ordinal));
+        Assert.Contains(errors, e => e.StartsWith("classes[0].levelChoices[1]:", StringComparison.Ordinal) && e.Contains("srd", StringComparison.Ordinal));
 
         var v1 = await ImportErrorsAsync(admin, JsonSerializer.Serialize(new { id = "viejo-ejemplo", name = "Viejo", version = "1", optionSets = Array.Empty<object>() }));
-        Assert.Contains(v1, e => e.StartsWith("optionSets:", StringComparison.Ordinal) && e.Contains("formatVersion", StringComparison.Ordinal));
+        Assert.Contains(v1, e => e.StartsWith("formatVersion:", StringComparison.Ordinal));
+
+        var v2 = await ImportErrorsAsync(admin, JsonSerializer.Serialize(new { formatVersion = 2, id = "viejo-ejemplo", name = "Viejo", version = "1" }));
+        Assert.Contains(v2, e => e.StartsWith("formatVersion:", StringComparison.Ordinal) && e.Contains("3", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -125,7 +128,7 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
         var admin = await factory.CreateAdminClientAsync();
         var pack = new
         {
-            formatVersion = 2,
+            formatVersion = 3,
             id = "requisitos-ejemplo",
             name = "Requisitos de Ejemplo",
             version = "1.0.0",
@@ -207,7 +210,7 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
         var admin = await factory.CreateAdminClientAsync();
         var pack = new
         {
-            formatVersion = 2,
+            formatVersion = 3,
             id = "requisitos-malos",
             name = "Requisitos malos",
             version = "1",

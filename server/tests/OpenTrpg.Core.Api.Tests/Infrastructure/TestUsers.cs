@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using OpenTrpg.Core.Application.Abstractions;
 using OpenTrpg.Core.Application.Campaigns;
+using OpenTrpg.Core.Application.ContentPacks;
 using OpenTrpg.Core.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -104,5 +105,21 @@ public static class TestUsers
         await owner.AddMemberAsync(campaign.Id, player, CampaignScenario.PlayerRole);
 
         return new CampaignScenario(campaign.Id, owner, dm, player, outsider);
+    }
+
+    /// <summary>
+    /// Activates <paramref name="packIds"/> in the campaign as its DM, keeping the packs already active
+    /// (imported packs start inactive in every campaign). Without ids, activates every imported pack.
+    /// </summary>
+    public static async Task EnablePacksAsync(this CampaignScenario scenario, params string[] packIds)
+    {
+        var current = await scenario.Dm.Client.GetFromJsonAsync<List<CampaignContentPackDto>>($"{scenario.Url}/content-packs");
+        var enabled = current!
+            .Where(p => !p.IsBase && (p.Enabled || packIds.Length == 0))
+            .Select(p => p.Id)
+            .Union(packIds)
+            .ToArray();
+        var response = await scenario.Dm.Client.PutAsJsonAsync($"{scenario.Url}/content-packs", new { packIds = enabled });
+        Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
     }
 }

@@ -33,7 +33,7 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
 
     private static readonly object Pack = new
     {
-        formatVersion = 2,
+        formatVersion = 3,
         id = PackId,
         name = "Pueblos de ejemplo",
         version = "1.0.0",
@@ -205,7 +205,7 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
         var admin = await factory.CreateAdminClientAsync();
         var invalid = new
         {
-            formatVersion = 2,
+            formatVersion = 3,
             id = "folk-erroneo",
             name = "Pueblos erróneos",
             version = "1.0.0",
@@ -250,7 +250,7 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
         // Outside races, the racial fields are rejected.
         var option = new
         {
-            formatVersion = 2,
+            formatVersion = 3,
             id = "folk-opcion",
             name = "Opción",
             version = "1.0.0",
