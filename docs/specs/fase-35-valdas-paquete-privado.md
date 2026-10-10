@@ -88,10 +88,24 @@ formato y en el módulo 5e (servidor y app). La 35A las confirma o descarta y a�
 
 ### 35B — Cambios de formato y módulo
 
-1. Para cada hueco aceptado de la 35A: campo en `ContentPackModels`, validación, importador,
-   persistencia, cálculo de hoja o asistente, DTO y app, con tests con datos **ficticios** en
-   `ContentPackV3Tests` y en `app/test`. `docs/content-packs.md` documenta cada campo nuevo.
-2. Si la 35A no encuentra huecos, la 35B no existe.
+Resultado de la 35A (2026-10-10, inventario privado `valdas-inventario.md`): el libro trae 5 razas
+(9 subrazas), 10 clases nuevas y 13 niveles auxiliares, 152 subclases (72 para clases del SRD),
+unas 285 opciones en 21 conjuntos, 58 dotes (16 iniciales), unos 127 objetos mundanos y 82
+mágicos más 26 injertos, 137 conjuros, 30 criaturas y unas 45 reglas. **Ningún paquete aparte
+dependiente del PHB** hace falta. El formato v3 y el módulo tienen **42 huecos** (14 solo
+servidor, 28 servidor y app); 17 bloquean crear o subir de nivel. Se cierran en tres entregas,
+cada una con su PR, siempre con datos ficticios en el repositorio y documentando cada campo nuevo
+en `docs/content-packs.md`:
+
+| Entrega | Huecos (ids del inventario) | Contenido |
+|---|---|---|
+| **35B1 Creación y subida de nivel** | H01–H16, H20 | Lanzamiento alimentado por puntos de golpe (sin espacios: nivel máximo y usos por tabla, coste por nivel de conjuro, preparados por fórmula, sin sumar al multiclase); lanzador solo de rituales con grimorio; lanzamiento `pact`/`table` en subclases; subclase lanzadora sobre clase que solo tiene trucos; prerrequisitos de multiclase con `anyOf` y competencias de multiclase por nivel; categorías `exotic` de armas y armaduras y competencias de armas de fuego y bombas; `Prerequisites` ampliados (subclase, opción, `anyOf`, rasgo de clase `spellcasting`/`pactMagic`, nivel de personaje, característica de lanzamiento mínima, tamaño); prerrequisitos de subclase; `AsiOrFeat` con `alsoFrom` (conjunto de opciones); `grants.options`; `choices` dentro de dotes y opciones (incluidos `SavingThrow` y `Weapon`); `choices.feats` con `setId` y dotes `creationOnly`; `subraces[].replacesGrants`; **niveles auxiliares** (`auxiliary: true`, solo desde el nivel 2, una vez cada uno, prerrequisitos, cuentan para espacios según `countsAs`); **dotes iniciales** (`starter: true` + ajuste de campaña `allowedStarterFeats`, elección opcional en la creación); opciones que añaden conocidos por nivel; `from` de un `OptionSet` con opciones de otros conjuntos |
+| **35B2 Hoja** | H21–H29, H30b, H31c, H32, H33, H40 | Modificadores con fórmula; CA por fórmula; resistencias e inmunidades en `grants`; rango de crítico; CD de clase y bonos de CD/ataque de conjuro; bonos a pasivas; máximo de característica; tamaño; umbral de fallos de salvación de muerte; recuperación de DG en descanso largo; quitar competencias; velocidades de nado/trepar/vuelo; armas naturales; reglas de armas (sin modificador al daño en armas de fuego, requisitos de característica, segundo perfil, sintonización por clase, era) |
+| **35B3 Recursos, compañeros y objetos** | H30, H31, H31b, H34–H39, H41 | Recursos con fórmula y tabla, ampliados por subclase, recarga al tirar iniciativa o por dado, recursos en rasgos de raza, conjuros concedidos con usos en dotes y opciones; **compañeros** múltiples, no bestia, de lista cerrada, con PG por fórmula, bonos por BC y presupuesto de CR; **mejora por instancia** de objeto (operación del jugador ligada a su rasgo) y `reference.armorProperties`; injertos con espacio corporal; etiquetas de conjuro con filtros y listas ampliadas (incluido etiquetar conjuros del SRD desde un paquete); dotes repetibles; override de la característica de lanzamiento |
+
+La única regla variante con interruptor por campaña es la de dotes iniciales, porque el libro la
+define como opción del DM con una lista que él elige; el resto de reglas variantes sigue siendo
+texto. Lo que una entrega descubra que falta se añade a la siguiente, no se recorta.
 
 ### 35C — Construcción del paquete
 
