@@ -1231,6 +1231,8 @@ si se elige, también el "Juramento"; al subir a nivel 4, la dote aparece junto 
 | `grants` | `Grants?` | Competencias y conjuros que concede. |
 | `resource` | `Resource?` | Recurso de usos limitados que aparece como recurso automático del personaje. |
 | `cost` | `Cost?` | Lo que cuesta **usar** la opción: `{ "resource": "ki", "amount": 2 }` (ver abajo). |
+| `choices` | `LevelChoice[]?` | Elecciones que se hacen **al tomar** la opción (sin `level` ni `after`; ver abajo). También en `feats[]`. |
+| `levelChoices` | `LevelChoice[]?` | Elecciones que la opción añade a la clase de la elección en niveles **posteriores** (con `level`, nivel de esa clase). |
 
 **`Prerequisites`** (todas las condiciones dadas deben cumplirse):
 
@@ -1269,6 +1271,37 @@ competencia con armadura pesada").
 
 En las dotes de origen (`choices.feats` de raza, subraza o trasfondo) solo cuentan `abilities`,
 `races` y `sizes`: el resto depende de clases que el personaje aún no tiene.
+
+**`choices` y `levelChoices` de una opción o dote.** Usan el formato de [`levelChoices`](#levelchoices)
+con los tipos `OptionSet`, `Skill`, `Expertise`, `Tool`, `Language`, `CantripsKnown`, `SpellsKnown`,
+`Custom` y dos más, solo aquí:
+
+| `kind` | Ofrece | Al aplicar |
+| --- | --- | --- |
+| `SavingThrow` | Las seis características (o las de `from`); no elegibles las que ya tienen competencia. | Competencia en esa salvación. |
+| `Weapon` | Armas del catálogo de la campaña: `from` (índices) o `filter.weaponCategories` (`simple`, `martial`, `exotic`) y `filter.firearms` (`true` solo armas de fuego, `false` ninguna). | Competencia con esa arma (por índice). |
+
+En el plan de subida, cada elección de `choices` aparece con la key `<índice de la opción>/<key>` y
+`requires: { "choiceKey", "index" }`: solo se pide (y solo es obligatoria) si se elige esa opción en
+esa elección, también como dote de una `AsiOrFeat` (`{"feat": "<índice>"}`). Las de `levelChoices`
+aparecen al llegar a su `level` de la clase si el personaje tiene la opción, con la misma forma de key.
+El índice de la opción, la barra y la key no pueden superar 100 caracteres.
+
+```json
+{
+  "index": "mipaquete-senal-de-coro",
+  "name": "Señal de coro",
+  "choices": [
+    {"key": "tactica", "name": "Táctica", "kind": "OptionSet", "setId": "mipaquete-tacticas", "choose": 1},
+    {"key": "arma", "name": "Arma exótica", "kind": "Weapon", "choose": 1, "filter": {"weaponCategories": ["exotic"], "firearms": false}}
+  ],
+  "levelChoices": [
+    {"level": 5, "key": "coro-5", "name": "Voz del coro", "kind": "SpellsKnown", "choose": 1}
+  ]
+}
+```
+
+Las elecciones de una dote de origen (raza, subraza o trasfondo) no se piden en la creación.
 
 **`Modifier`**: `kind`, `target` y `value` como en los objetos, más `condition` opcional:
 

@@ -23,6 +23,7 @@ internal static class CreationPack
         ["version"] = "1.0.0",
         ["classes"] = new JsonArray(Herald(), Keeper()),
         ["optionSets"] = new JsonArray(Signals(), Tactics()),
+        ["feats"] = Feats(),
         ["items"] = Items(),
     };
 
@@ -164,8 +165,44 @@ internal static class CreationPack
             Option("veterano", "Veterano del faro", new JsonObject { ["characterLevel"] = 5 }),
             Option("foco-firme", "Foco firme", new JsonObject { ["spellcastingAbilityMin"] = 15 }),
             Option("farolillo", "Farolillo", new JsonObject { ["sizes"] = new JsonArray("small") }),
-            Option("del-heraldo", "Eco del heraldo", new JsonObject { ["classes"] = new JsonArray(I("heraldo")) })),
+            Option("del-heraldo", "Eco del heraldo", new JsonObject { ["classes"] = new JsonArray(I("heraldo")) }),
+            Choir()),
     };
+
+    /// <summary>
+    /// H12/H16: "Señal de coro" asks for a tactic and a skill when taken, and for another skill at class level 5.
+    /// </summary>
+    private static JsonObject Choir()
+    {
+        var option = Option("senal-coro", "Señal de coro", null);
+        option["choices"] = new JsonArray(
+            new JsonObject { ["key"] = "tactica", ["name"] = "Táctica del coro", ["kind"] = "OptionSet", ["setId"] = I("tacticas"), ["choose"] = 1 },
+            new JsonObject { ["key"] = "habilidad", ["name"] = "Habilidad del coro", ["kind"] = "Skill", ["choose"] = 1, ["from"] = new JsonArray("arcana", "stealth") });
+        option["levelChoices"] = new JsonArray(
+            new JsonObject { ["level"] = 5, ["key"] = "coro-5", ["name"] = "Voz del coro", ["kind"] = "Skill", ["choose"] = 1, ["from"] = new JsonArray("religion", "nature") });
+        return option;
+    }
+
+    /// <summary>H12: a feat that asks for a saving throw and an exotic melee weapon.</summary>
+    private static JsonArray Feats() =>
+    [
+        new JsonObject
+        {
+            ["index"] = I("vigia-del-eco"),
+            ["name"] = "Vigía del eco",
+            ["description"] = new JsonArray("Dote ficticia."),
+            ["choices"] = new JsonArray(
+                new JsonObject { ["key"] = "salvacion", ["name"] = "Salvación", ["kind"] = "SavingThrow", ["choose"] = 1 },
+                new JsonObject
+                {
+                    ["key"] = "arma",
+                    ["name"] = "Arma exótica",
+                    ["kind"] = "Weapon",
+                    ["choose"] = 1,
+                    ["filter"] = new JsonObject { ["weaponCategories"] = new JsonArray("exotic"), ["firearms"] = false },
+                }),
+        },
+    ];
 
     private static JsonObject Option(string index, string name, JsonObject? prerequisites, JsonObject? grants = null)
     {

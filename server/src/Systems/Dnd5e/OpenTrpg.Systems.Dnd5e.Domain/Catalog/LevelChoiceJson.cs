@@ -419,6 +419,12 @@ public sealed record ChoiceFilter(string? SpellList, IReadOnlyList<int> SpellLev
     /// <summary>Class levels at which a spell of any school may be chosen despite <see cref="Schools"/>.</summary>
     public IReadOnlyList<int> SchoolsExceptAt { get; init; } = [];
 
+    /// <summary>Weapon choices: categories ("simple", "martial", "exotic") the weapons must have; empty = any.</summary>
+    public IReadOnlyList<string> WeaponCategories { get; init; } = [];
+
+    /// <summary>Weapon choices: true = only firearms, false = no firearms, null = any.</summary>
+    public bool? Firearms { get; init; }
+
     /// <summary>Whether a spell of <paramref name="school"/> ("Evocation" or "evocation") is allowed at the class level.</summary>
     public bool AllowsSchool(string school, int classLevel) =>
         Schools.Count == 0
@@ -769,6 +775,10 @@ public static class LevelChoiceJson
                 SchoolsExceptAt = Property(root, "schoolsExceptAt") is { ValueKind: JsonValueKind.Array } except
                     ? except.EnumerateArray().Select(e => Int(e)).OfType<int>().Where(l => l is >= 1 and <= 20).Distinct().Order().ToList()
                     : [],
+                WeaponCategories = Property(root, "weaponCategories") is { ValueKind: JsonValueKind.Array } categories
+                    ? Strings(categories).Select(x => x.ToLowerInvariant()).Distinct(StringComparer.Ordinal).ToList()
+                    : [],
+                Firearms = Property(root, "firearms") is { ValueKind: JsonValueKind.True or JsonValueKind.False } firearms ? firearms.GetBoolean() : null,
             };
         }) ?? ChoiceFilter.None;
 

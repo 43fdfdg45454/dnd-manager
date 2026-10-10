@@ -320,6 +320,101 @@ public class ContentPackCreationTests(ContentPackCreationApiFactory factory) : I
         Assert.True(errors.Any(e => e.StartsWith("optionSets[0].options[0].grants.options[0]:", StringComparison.Ordinal)), all);
     }
 
+    // ---- H12/H16: choices inside options and feats, and choices options add at later levels --------------
+
+    [Fact]
+    public async Task Options_and_feats_ask_for_their_own_choices_and_options_add_choices_at_later_levels()
+    {
+        var s = await ScenarioAsync();
+        var keeper = I("guardian");
+        var choir = I("senal-coro");
+        var hero = await DraftAsync(s, keeper, 1, new { str = 14, dex = 12, con = 14, @int = 10, wis = 14, cha = 8 });
+
+        // Level 2: the choir signal asks for a tactic and a skill, only when it is picked.
+        await GrantAsync(s, hero.Id);
+        var plan = await PlanAsync(s.Player, hero.Id, keeper);
+        var tactic = plan.Choices.Single(c => c.Key == $"{choir}/tactica");
+        Assert.Equal(("senales", choir), (tactic.Requires!.ChoiceKey, tactic.Requires.Index));
+        Assert.Contains(tactic.Options, o => o.Index == I("tactica-niebla"));
+        var skill = plan.Choices.Single(c => c.Key == $"{choir}/habilidad");
+        Assert.Equal([ "arcana", "stealth" ], skill.Options.Select(o => o.Index).Order(StringComparer.Ordinal).ToArray());
+
+        // Picking the choir signal without answering its choices is refused.
+        var other = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/level-up", new
+        {
+            classIndex = keeper,
+            hitPointsRolled = 6,
+            choices = new object[] { new { key = "senales", selected = new[] { choir } } },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, other.StatusCode);
+
+        hero = await ApplyAsync(s.Player, hero.Id, new
+        {
+            classIndex = keeper,
+            hitPointsRolled = 6,
+            choices = new object[]
+            {
+                new { key = "senales", selected = new[] { choir } },
+                new { key = $"{choir}/tactica", selected = new[] { I("tactica-oculta") } },
+                new { key = $"{choir}/habilidad", selected = new[] { "stealth" } },
+            },
+        });
+        Assert.Contains(hero.Proficiencies, p => p.Type == "Skill" && p.Key.EndsWith("stealth", StringComparison.Ordinal));
+        Assert.Contains(hero.Choices, c => c.Key == $"{choir}/tactica" && c.Selected.Single().Index == I("tactica-oculta"));
+
+        // Level 3 (order) and 4: the feat of the improvement asks for a saving throw and an exotic weapon.
+        await GrantAsync(s, hero.Id);
+        var third = await PlanAsync(s.Player, hero.Id, keeper);
+        hero = await ApplyAsync(s.Player, hero.Id, new { classIndex = keeper, hitPointsRolled = 6, choices = new[] { new { key = third.Choices.Single(c => c.Kind == "Subclass").Key, selected = new[] { I("orden-llama") } } } });
+        await GrantAsync(s, hero.Id);
+        var fourth = await PlanAsync(s.Player, hero.Id, keeper);
+        var weapon = fourth.Choices.Single(c => c.Key == $"{I("vigia-del-eco")}/arma");
+        Assert.Equal("Weapon", weapon.Kind);
+        Assert.Equal([I("guadana-doble")], weapon.Options.Select(o => o.Index).ToArray());
+        var save = fourth.Choices.Single(c => c.Key == $"{I("vigia-del-eco")}/salvacion");
+        Assert.Equal(6, save.Options.Count);
+        hero = await ApplyAsync(s.Player, hero.Id, new
+        {
+            classIndex = keeper,
+            hitPointsRolled = 6,
+            choices = new object[]
+            {
+                new { key = "asi", selected = new { feat = I("vigia-del-eco") } },
+                new { key = $"{I("vigia-del-eco")}/salvacion", selected = new[] { "wis" } },
+                new { key = $"{I("vigia-del-eco")}/arma", selected = new[] { I("guadana-doble") } },
+            },
+        });
+        Assert.Contains(hero.Proficiencies, p => p.Type == "SavingThrow" && p.Key == "wis");
+        Assert.Contains(hero.Proficiencies, p => p.Type == "Weapon" && p.Key == I("guadana-doble"));
+
+        // Level 5: the choir signal adds its own choice.
+        await GrantAsync(s, hero.Id);
+        var fifth = await PlanAsync(s.Player, hero.Id, keeper);
+        var voice = fifth.Choices.Single(c => c.Key == $"{choir}/coro-5");
+        Assert.Null(voice.Requires);
+        Assert.Equal(1, voice.Required);
+    }
+
+    [Fact]
+    public async Task Option_choices_reject_levels_unknown_kinds_and_long_keys()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        var pack = Renamed(Build(), "vacio-malo-h12");
+        var choir = pack["optionSets"]![0]!["options"]!.AsArray().Last()!;
+        choir["choices"]![0]!["level"] = 3;
+        choir["choices"]![1]!["kind"] = "Subclass";
+        choir["levelChoices"]![0]!["key"] = new string('k', 90);
+        pack["classes"]![0]!["levelChoices"]![0]!["kind"] = "Weapon";
+
+        var errors = await ImportErrorsAsync(admin, pack);
+        var all = string.Join("\n", errors);
+
+        Assert.True(errors.Any(e => e.StartsWith("optionSets[0].options[9].choices[0].level:", StringComparison.Ordinal)), all);
+        Assert.True(errors.Any(e => e.StartsWith("optionSets[0].options[9].choices[1].kind:", StringComparison.Ordinal)), all);
+        Assert.True(errors.Any(e => e.StartsWith("optionSets[0].options[9].levelChoices[0].key:", StringComparison.Ordinal)), all);
+        Assert.True(errors.Any(e => e.StartsWith("classes[0].levelChoices[0].kind:", StringComparison.Ordinal)), all);
+    }
+
     // ---- Helpers ---------------------------------------------------------------------------------------
 
     /// <summary>Imports the pack once per database.</summary>

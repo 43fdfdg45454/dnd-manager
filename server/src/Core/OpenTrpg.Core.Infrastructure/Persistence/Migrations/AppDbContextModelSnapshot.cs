@@ -1880,6 +1880,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
 
+                    b.Property<string>("ChoicesJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("CostJson")
                         .HasColumnType("text");
 
@@ -1888,6 +1891,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("GrantsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LevelChoicesJson")
                         .HasColumnType("text");
 
                     b.Property<string>("ModifiersJson")

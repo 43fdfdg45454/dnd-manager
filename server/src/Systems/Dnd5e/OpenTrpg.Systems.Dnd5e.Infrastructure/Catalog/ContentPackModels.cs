@@ -324,6 +324,9 @@ internal sealed class PackFeatJson
 
     /// <summary>Free label of the feat ("starter"...).</summary>
     public string? Category { get; set; }
+
+    /// <summary>Choices made when the feat is taken (no level).</summary>
+    public List<PackLevelChoiceJson?>? Choices { get; set; }
 }
 
 internal sealed class PackCreatureJson
@@ -1106,6 +1109,12 @@ internal sealed class PackOptionJson
 
     /// <summary>Uses of a resource spent each time the option is used.</summary>
     public PackOptionCostJson? Cost { get; set; }
+
+    /// <summary>Choices made when the option is taken (no level).</summary>
+    public List<PackLevelChoiceJson?>? Choices { get; set; }
+
+    /// <summary>Choices the option adds at later levels of the class of the pick (with level).</summary>
+    public List<PackLevelChoiceJson?>? LevelChoices { get; set; }
 }
 
 internal sealed class PackOptionCostJson
@@ -1301,6 +1310,12 @@ internal sealed class PackChoiceFilterJson
 
     /// <summary>Class levels at which a spell of any school may be chosen.</summary>
     public List<int?>? SchoolsExceptAt { get; set; }
+
+    /// <summary>Weapon choices: "simple", "martial", "exotic".</summary>
+    public List<string?>? WeaponCategories { get; set; }
+
+    /// <summary>Weapon choices: true = only firearms, false = no firearms.</summary>
+    public bool? Firearms { get; set; }
 }
 
 // ---- Converters ------------------------------------------------------------------------------------

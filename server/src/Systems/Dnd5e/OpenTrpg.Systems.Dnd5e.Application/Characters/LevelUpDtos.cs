@@ -84,6 +84,12 @@ public sealed record LevelUpChoiceDto(
 {
     /// <summary>Other option sets whose options are offered too (an ability improvement that also offers class options).</summary>
     public IReadOnlyList<string> AlsoFrom { get; init; } = [];
+
+    /// <summary>
+    /// Choice of an option or feat (<c>options[].choices</c>): it is only asked, and only required, when <c>index</c> is
+    /// picked in the choice <c>choiceKey</c> (also as the feat of an ability improvement). Null for the class choices.
+    /// </summary>
+    public OptionRequirementDto? Requires { get; init; }
 }
 
 /// <summary>

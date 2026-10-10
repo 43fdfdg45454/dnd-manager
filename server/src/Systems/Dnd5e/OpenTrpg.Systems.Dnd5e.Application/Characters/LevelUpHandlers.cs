@@ -269,6 +269,15 @@ public sealed class ApplyLevelUpHandler(
                 continue;
             }
 
+            // A choice of an option only applies when that option is picked in this same level-up (an answer left over
+            // from another pick is ignored).
+            if (choice.Requires is { } requires
+                && !(answers.TryGetValue(requires.ChoiceKey, out var parent) && (parent.Selected.Contains(requires.Index, StringComparer.Ordinal) || parent.Feat == requires.Index)))
+            {
+                used.Add(rule.Key);
+                continue;
+            }
+
             if (!answers.TryGetValue(rule.Key, out var answer))
             {
                 if (choice.Required > 0)
@@ -458,6 +467,20 @@ public sealed class ApplyLevelUpHandler(
                 foreach (var item in selection.Selected)
                 {
                     character.AddProficiency(ProficiencyType.Skill, item.Index, ProficiencySource.Class);
+                }
+
+                break;
+            case LevelChoiceKind.SavingThrow:
+                foreach (var item in selection.Selected)
+                {
+                    character.AddProficiency(ProficiencyType.SavingThrow, item.Index, ProficiencySource.Class);
+                }
+
+                break;
+            case LevelChoiceKind.Weapon:
+                foreach (var item in selection.Selected)
+                {
+                    character.AddProficiency(ProficiencyType.Weapon, item.Index, ProficiencySource.Class);
                 }
 
                 break;

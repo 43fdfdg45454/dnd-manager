@@ -1,3 +1,4 @@
+using OpenTrpg.Core.Application.Items;
 using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Application.Common;
 using OpenTrpg.Core.Domain.Catalog;
@@ -39,6 +40,12 @@ public sealed record PlannedOption(
 /// <summary>A choice of the plan: the rule, how many picks are required, the options and the replaceable picks.</summary>
 public sealed record PlannedChoice(LevelChoiceRule Rule, int Required, bool FreeText, IReadOnlyList<PlannedOption> Options, IReadOnlyList<ChoiceItem> Known)
 {
+    /// <summary>
+    /// Choice of an option (<c>options[].choices</c>): it only applies, and is only required, when <c>Index</c> is picked
+    /// in the choice <c>ChoiceKey</c> of the same level-up. Null for the choices of the class.
+    /// </summary>
+    public OptionRequirementDto? Requires { get; init; }
+
     public PlannedOption? Option(string index) => Options.FirstOrDefault(o => o.Index == index);
 
     /// <summary>
@@ -83,6 +90,7 @@ public sealed record PlannedChoice(LevelChoiceRule Rule, int Required, bool Free
         Warning)
     {
         AlsoFrom = Rule.AlsoFrom,
+        Requires = Requires,
     };
 }
 
@@ -147,6 +155,9 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
     private const string FightingStylePrefix = "fighting-style-";
     private const string ThievesTools = "thieves-tools";
 
+    /// <summary>Most catalog weapons a weapon choice lists.</summary>
+    private const int MaxWeaponOptions = 1000;
+
     /// <summary>"fighter-fighting-style-defense" → "fighting-style-defense"; other indexes unchanged.</summary>
     public static string NormalizeIndex(string index)
     {
@@ -203,6 +214,16 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         var answered = character.Choices.Where(c => c.ClassIndex == definition.Index).Select(c => c.Key).ToHashSet(StringComparer.Ordinal);
         var allRules = WithKnownSpellCounts(await catalog.ListLevelChoiceRulesAsync(definition.Index, cancellationToken), definition, subclasses);
         var rules = SelectRules(allRules, entry?.SubclassIndex, newLevel, answered);
+
+        // Choices that the options of this class the character has add at this level (options[].levelChoices).
+        var classPicks = character.ActivePicks().Where(p => p.ClassIndex == definition.Index && p.SetId is not null).Select(p => p.Item.Index).Distinct(StringComparer.Ordinal).ToList();
+        if (classPicks.Count > 0)
+        {
+            foreach (var picked in await catalog.ListOptionsByIndexAsync(classPicks, cancellationToken))
+            {
+                rules.AddRange(picked.LevelChoices.Where(r => r.Level == newLevel).Select(r => r.ToRule(picked.Index, definition.Index, null, newLevel)));
+            }
+        }
         if (entry is null && character.Classes.Count > 0)
         {
             // Multiclassing: the creation wizard only covered the first class, so the level-1 choices of a new
@@ -240,17 +261,34 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             options.AddRange(await catalog.ListOptionsByIndexAsync(named, cancellationToken));
         }
 
+        // Choices made when an option is taken (options[].choices) may draw from other sets.
+        var optionChoices = options.SelectMany(o => o.Choices).ToList();
+        var subSets = optionChoices.Select(c => c.SetId).OfType<string>()
+            .Concat(optionChoices.SelectMany(c => LevelChoiceJson.ParseStringList(c.AlsoFromJson) ?? []))
+            .Where(id => !setIds.Contains(id))
+            .ToHashSet(StringComparer.Ordinal);
+        if (subSets.Count > 0)
+        {
+            var known = options.Select(o => o.Index).ToHashSet(StringComparer.Ordinal);
+            options.AddRange((await catalog.ListOptionsBySetAsync(subSets, cancellationToken)).Where(o => !known.Contains(o.Index)));
+        }
+
+        var choiceKinds = rules.Select(r => r.Kind).Concat(optionChoices.Select(c => c.Kind)).ToHashSet();
+
         var prerequisites = options.Select(o => o.Prerequisites)
             .Concat(rules.Any(r => r.Kind == LevelChoiceKind.Subclass) ? subclasses.Select(s => s.Prerequisites) : [])
             .Where(p => !p.IsEmpty)
             .ToList();
-        var needsSpells = rules.Any(r => r.Kind is LevelChoiceKind.CantripsKnown or LevelChoiceKind.SpellsKnown or LevelChoiceKind.SpellbookSpells or LevelChoiceKind.Custom)
+        var needsSpells = choiceKinds.Any(k => k is LevelChoiceKind.CantripsKnown or LevelChoiceKind.SpellsKnown or LevelChoiceKind.SpellbookSpells or LevelChoiceKind.Custom)
             || prerequisites.Any(p => p.ReferencedSpells.Any());
         var spells = needsSpells
             ? await catalog.ListAllSpellsAsync(cancellationToken)
             : await catalog.ListSpellsByIndexAsync(character.Spells.Select(s => s.SpellIndex).Distinct(StringComparer.Ordinal).ToList(), cancellationToken);
-        var skills = rules.Any(r => r.Kind is LevelChoiceKind.Skill or LevelChoiceKind.Expertise)
+        var skills = choiceKinds.Any(k => k is LevelChoiceKind.Skill or LevelChoiceKind.Expertise)
             ? await catalog.ListSkillsAsync(cancellationToken)
+            : [];
+        var weapons = choiceKinds.Contains(LevelChoiceKind.Weapon)
+            ? (await catalog.SearchSrdItemsAsync(new ItemFilter(null, ItemCategory.Weapon, null), 0, MaxWeaponOptions, cancellationToken)).Items
             : [];
         var races = prerequisites.Any(p => p.ReferencedRaces.Any())
             ? (await catalog.ListRacesAsync(cancellationToken)).ToDictionary(r => r.Index, r => r.Name, StringComparer.Ordinal)
@@ -277,9 +315,24 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             CurrentSubclass = entry?.SubclassIndex,
             Names = names,
             Size = size,
+            Weapons = weapons,
             IsPactClass = c => allClasses.FirstOrDefault(d => d.Index == c)?.IsPactCaster ?? c == "warlock",
         };
         var choices = rules.Select(context.Plan).ToList();
+
+        // Choices of the options offered (options[].choices): they apply when the option is picked.
+        foreach (var parent in choices.Where(c => c.Rule.Kind is LevelChoiceKind.OptionSet or LevelChoiceKind.AsiOrFeat or LevelChoiceKind.Custom).ToList())
+        {
+            foreach (var option in parent.Options.Where(o => o.Definition is { ChoicesJson: not null }))
+            {
+                foreach (var sub in option.Definition!.Choices)
+                {
+                    var rule = sub.ToRule(option.Index, definition.Index, parent.Rule.SubclassIndex, newLevel);
+                    choices.Add(context.Plan(rule) with { Requires = new OptionRequirementDto(parent.Rule.Key, option.Index) });
+                }
+            }
+        }
+
         var replacements = await invalidChoices.PlanAsync(character, sheet, cancellationToken);
         choices.AddRange(replacements.Select(r => r.Choice));
 
@@ -701,6 +754,9 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
 
         public Func<string, bool> IsPactClass { get; init; } = _ => false;
 
+        /// <summary>Catalog weapons, for the weapon choices.</summary>
+        public IReadOnlyList<ItemTemplate> Weapons { get; init; } = [];
+
         /// <summary>Answers of the request by choice key (applying), or null (the plan shown to the player).</summary>
         public IReadOnlyDictionary<string, IReadOnlyList<string>>? PendingChoices { get; init; }
 
@@ -749,6 +805,20 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                 case LevelChoiceKind.Expertise:
                     list = ExpertiseOptions(rule);
                     break;
+                case LevelChoiceKind.SavingThrow:
+                    list = Abilities.All
+                        .Where(a => rule.From is null || rule.From.Contains(a, StringComparer.Ordinal))
+                        .Select(a =>
+                        {
+                            var has = character.FindProficiency(ProficiencyType.SavingThrow, a) is not null
+                                || (sheet.SavingThrows.TryGetValue(a, out var save) && save.Proficient && !save.Overridden);
+                            return new PlannedOption(a, BreakdownLabels.Ability(a), [], null, !has, has ? "Ya tienes esta competencia." : null, null, null, []);
+                        })
+                        .ToList();
+                    break;
+                case LevelChoiceKind.Weapon:
+                    list = WeaponOptions(rule, filter);
+                    break;
                 case LevelChoiceKind.Skill:
                     list = skills
                         .Where(s => character.FindProficiency(ProficiencyType.Skill, s.Index) is null)
@@ -792,6 +862,27 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                     {
                         Cost = OptionCosts.Of(o, character, options),
                     };
+                })
+                .ToList();
+        }
+
+        /// <summary>
+        /// Catalog weapons of a weapon choice (<c>from</c>, or the categories and firearms of the filter); not eligible
+        /// when the character is already proficient with them (by index or by group).
+        /// </summary>
+        private List<PlannedOption> WeaponOptions(LevelChoiceRule rule, ChoiceFilter filter)
+        {
+            var keys = character.Proficiencies.Where(p => p.Type == ProficiencyType.Weapon).Select(p => p.Key).ToHashSet(StringComparer.Ordinal);
+            return Weapons
+                .Where(w => w.Index is not null)
+                .Where(w => rule.From is null || rule.From.Contains(w.Index!, StringComparer.Ordinal))
+                .Where(w => filter.WeaponCategories.Count == 0
+                    || filter.WeaponCategories.Any(c => (w.Subcategory ?? string.Empty).StartsWith(c, StringComparison.OrdinalIgnoreCase)))
+                .Where(w => filter.Firearms is null || w.Properties.Contains(ProficiencyKeys.FirearmProperty, StringComparer.OrdinalIgnoreCase) == filter.Firearms)
+                .Select(w =>
+                {
+                    var has = keys.Contains(w.Index!) || ProficiencyKeys.WeaponGroups(w.Subcategory, w.Properties).Any(keys.Contains);
+                    return new PlannedOption(w.Index!, w.Name, [w.Subcategory ?? string.Empty], null, !has, has ? "Ya tienes competencia con esta arma." : null, null, null, []);
                 })
                 .ToList();
         }

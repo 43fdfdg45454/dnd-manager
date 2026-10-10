@@ -96,6 +96,8 @@ internal sealed partial class ContentPackValidator
             GrantsJson = option.Grants is null ? null : Grants($"{path}.grants", option.Grants),
             ResourceJson = Resource($"{path}.resource", option.Resource),
             CostJson = Cost($"{path}.cost", option.Cost, setId),
+            ChoicesJson = OptionChoices($"{path}.choices", option.Choices, index, atLevels: false),
+            LevelChoicesJson = OptionChoices($"{path}.levelChoices", option.LevelChoices, index, atLevels: true),
             Category = category,
             Source = _id,
         };
@@ -777,9 +779,21 @@ internal sealed partial class ContentPackValidator
         return valid ? result : null;
     }
 
-    private void LevelChoice(string path, PackLevelChoiceJson rule, string classIndex, string? subclassIndex, ContentPackRows rows, SubclassSpellcasting? spellcasting = null)
+    /// <summary>A level choice after validation (null fields: invalid).</summary>
+    private sealed record ParsedLevelChoice(int? Level, string Key, string Name, LevelChoiceKind? Kind, string? SetId, int? Choose, string? FromJson, string? Filter, string Note, string? After, string? AlsoFromJson, bool Replaces, bool Cumulative);
+
+    private ParsedLevelChoice ParseLevelChoice(string path, PackLevelChoiceJson rule, bool levelRequired, SubclassSpellcasting? spellcasting = null, IReadOnlyCollection<LevelChoiceKind>? allowedKinds = null)
     {
-        var level = RequiredInt($"{path}.level", rule.Level, 1, 20);
+        int? level = null;
+        if (levelRequired)
+        {
+            level = RequiredInt($"{path}.level", rule.Level, 1, 20);
+        }
+        else if (rule.Level is not null)
+        {
+            AddError($"{path}.level", "Las elecciones de una opción se hacen al tomarla: sin level (usa levelChoices para niveles posteriores).");
+        }
+
         var key = RequiredText($"{path}.key", rule.Key, LevelChoiceRule.KeyMaxLength);
         if (key.Length > 0 && !IndexPattern().IsMatch(key))
         {
@@ -793,13 +807,20 @@ internal sealed partial class ContentPackValidator
         {
             AddError($"{path}.kind", "Campo obligatorio.");
         }
-        else if (EnumNames.TryParse<LevelChoiceKind>(rule.Kind.Trim(), out var parsed))
+        else if (EnumNames.TryParse<LevelChoiceKind>(rule.Kind.Trim(), out var parsed)
+                 && (parsed is not (LevelChoiceKind.SavingThrow or LevelChoiceKind.Weapon) || allowedKinds is not null))
         {
             kind = parsed;
+            if (allowedKinds is not null && !allowedKinds.Contains(parsed))
+            {
+                AddError($"{path}.kind", $"Aquí se admiten: {string.Join(", ", allowedKinds)}.");
+                kind = null;
+            }
         }
         else
         {
-            AddError($"{path}.kind", $"Tipo de elección desconocido. Valores admitidos: {string.Join(", ", Enum.GetNames<LevelChoiceKind>())}.");
+            var names = Enum.GetNames<LevelChoiceKind>().Where(n => allowedKinds is not null || n is not (nameof(LevelChoiceKind.SavingThrow) or nameof(LevelChoiceKind.Weapon)));
+            AddError($"{path}.kind", $"Tipo de elección desconocido. Valores admitidos: {string.Join(", ", names)}.");
         }
 
         var setId = NullableText($"{path}.setId", rule.SetId, IndexMaxLength);
@@ -817,10 +838,15 @@ internal sealed partial class ContentPackValidator
         ForEachText($"{path}.from", rule.From, (fromPath, value) =>
         {
             from.Add(value);
+
             // Any option of the catalog or the pack may be named: a set can reuse options of other sets.
             if (setId is not null && kind is LevelChoiceKind.OptionSet or LevelChoiceKind.Custom)
             {
                 _optionReferences.Add((fromPath, null, value));
+            }
+            else if (kind == LevelChoiceKind.SavingThrow && !Abilities.IsValid(value.ToLowerInvariant()))
+            {
+                AddError(fromPath, "Característica desconocida (str, dex, con, int, wis o cha).");
             }
         });
 
@@ -868,17 +894,37 @@ internal sealed partial class ContentPackValidator
             }
         }
 
-        if (level is null || key.Length == 0 || kind is null || choose is null)
+        return new ParsedLevelChoice(
+            level,
+            key,
+            name,
+            kind,
+            kind == LevelChoiceKind.AsiOrFeat ? null : setId,
+            choose,
+            rule.From is null ? null : LevelChoiceJson.Serialize(from),
+            filter,
+            note,
+            after,
+            alsoFrom.Count == 0 ? null : LevelChoiceJson.Serialize(alsoFrom),
+            rule.Replaces ?? false,
+            rule.Cumulative ?? false);
+    }
+
+    private void LevelChoice(string path, PackLevelChoiceJson rule, string classIndex, string? subclassIndex, ContentPackRows rows, SubclassSpellcasting? spellcasting = null)
+    {
+        var parsed = ParseLevelChoice(path, rule, levelRequired: true, spellcasting);
+        if (parsed is not { Level: { } level, Kind: { } kind, Choose: { } choose } || parsed.Key.Length == 0)
         {
             return;
         }
 
-        if (after is not null)
+        var key = parsed.Key;
+        if (parsed.After is { } after)
         {
-            _afterReferences.Add(($"{path}.after", classIndex, subclassIndex, level.Value, key, after));
+            _afterReferences.Add(($"{path}.after", classIndex, subclassIndex, level, key, after));
         }
 
-        var id = LevelChoiceRule.IdFor(classIndex, subclassIndex, level.Value, key);
+        var id = LevelChoiceRule.IdFor(classIndex, subclassIndex, level, key);
         if (!Record("levelChoiceRules", id, path))
         {
             return;
@@ -889,21 +935,72 @@ internal sealed partial class ContentPackValidator
             Id = id,
             ClassIndex = classIndex,
             SubclassIndex = subclassIndex,
-            Level = level.Value,
+            Level = level,
             Key = key,
-            Name = name,
-            Kind = kind.Value,
-            SetId = kind == LevelChoiceKind.AsiOrFeat ? null : setId,
-            Choose = choose.Value,
-            FromJson = rule.From is null ? null : LevelChoiceJson.Serialize(from),
-            FilterJson = filter,
-            Replaces = rule.Replaces ?? false,
-            Cumulative = rule.Cumulative ?? false,
-            Note = note,
-            After = after,
-            AlsoFromJson = alsoFrom.Count == 0 ? null : LevelChoiceJson.Serialize(alsoFrom),
+            Name = parsed.Name,
+            Kind = kind,
+            SetId = parsed.SetId,
+            Choose = choose,
+            FromJson = parsed.FromJson,
+            FilterJson = parsed.Filter,
+            Replaces = parsed.Replaces,
+            Cumulative = parsed.Cumulative,
+            Note = parsed.Note,
+            After = parsed.After,
+            AlsoFromJson = parsed.AlsoFromJson,
             Source = _id,
         });
+    }
+
+    /// <summary>Kinds of the choices an option carries.</summary>
+    private static readonly LevelChoiceKind[] OptionChoiceKinds =
+    [
+        LevelChoiceKind.OptionSet, LevelChoiceKind.Skill, LevelChoiceKind.Expertise, LevelChoiceKind.Tool, LevelChoiceKind.Language,
+        LevelChoiceKind.CantripsKnown, LevelChoiceKind.SpellsKnown, LevelChoiceKind.SavingThrow, LevelChoiceKind.Weapon, LevelChoiceKind.Custom,
+    ];
+
+    /// <summary>
+    /// <c>choices</c> (made when the option is taken) or <c>levelChoices</c> (at later class levels) of an option or a
+    /// feat, as the JSON of <see cref="OptionChoiceRule"/>; null when there are none.
+    /// </summary>
+    private string? OptionChoices(string path, List<PackLevelChoiceJson?>? rules, string? optionIndex, bool atLevels)
+    {
+        if (rules is null)
+        {
+            return null;
+        }
+
+        var result = new List<OptionChoiceRule>();
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        ForEach(path, rules, (rulePath, rule) =>
+        {
+            if (rule.After is not null)
+            {
+                AddError($"{rulePath}.after", "No se admite en las elecciones de una opción.");
+            }
+
+            var parsed = ParseLevelChoice(rulePath, rule, levelRequired: atLevels, allowedKinds: OptionChoiceKinds);
+            if (parsed is not { Kind: { } kind, Choose: { } choose } || parsed.Key.Length == 0)
+            {
+                return;
+            }
+
+            if (!keys.Add(atLevels ? $"{parsed.Key}@{parsed.Level}" : parsed.Key))
+            {
+                AddError($"{rulePath}.key", "Key repetida en la opción.");
+                return;
+            }
+
+            if (optionIndex is not null && OptionChoiceRule.KeyFor(optionIndex, parsed.Key).Length > Dnd5eCharacter.IndexMaxLength)
+            {
+                AddError($"{rulePath}.key", $"El índice de la opción y la key juntos superan {Dnd5eCharacter.IndexMaxLength} caracteres.");
+                return;
+            }
+
+            result.Add(new OptionChoiceRule(parsed.Level, parsed.Key, parsed.Name, kind, parsed.SetId, choose, parsed.FromJson, parsed.Filter, parsed.Note, parsed.Replaces, parsed.Cumulative, parsed.AlsoFromJson));
+        });
+
+        return result.Count == 0 ? null : OptionChoiceRule.Serialize(result);
     }
 
     private string? Filter(string path, PackChoiceFilterJson? filter)
@@ -962,6 +1059,20 @@ internal sealed partial class ContentPackValidator
             AddError($"{path}.schoolsExceptAt", "Solo tiene sentido junto con schools.");
         }
 
+        var weaponCategories = new List<string>();
+        ForEachText($"{path}.weaponCategories", filter.WeaponCategories, (categoryPath, value) =>
+        {
+            var category = value.ToLowerInvariant();
+            if (!WeaponCategories.Contains(category))
+            {
+                AddError(categoryPath, $"Valores admitidos: {string.Join(", ", WeaponCategories)}.");
+            }
+            else if (!weaponCategories.Contains(category))
+            {
+                weaponCategories.Add(category);
+            }
+        });
+
         return LevelChoiceJson.Serialize(new
         {
             spellList,
@@ -971,6 +1082,8 @@ internal sealed partial class ContentPackValidator
             cantripsOnly = filter.CantripsOnly ?? false,
             schools = schools.Count > 0 ? schools : null,
             schoolsExceptAt = exceptAt.Count > 0 ? exceptAt.Order().ToList() : null,
+            weaponCategories = weaponCategories.Count > 0 ? weaponCategories : null,
+            firearms = filter.Firearms,
         });
     }
 

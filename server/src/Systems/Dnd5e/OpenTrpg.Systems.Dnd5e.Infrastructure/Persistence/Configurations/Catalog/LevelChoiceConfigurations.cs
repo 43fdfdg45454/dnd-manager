@@ -49,6 +49,8 @@ internal sealed class OptionDefinitionConfiguration : IEntityTypeConfiguration<O
         builder.Ignore(x => x.Grants);
         builder.Ignore(x => x.Resource);
         builder.Ignore(x => x.Cost);
+        builder.Ignore(x => x.Choices);
+        builder.Ignore(x => x.LevelChoices);
     }
 }
 

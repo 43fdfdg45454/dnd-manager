@@ -743,6 +743,7 @@ internal sealed partial class ContentPackValidator
                 AbilityIncrease = feat.AbilityIncrease,
                 Grants = feat.Grants,
                 Resource = feat.Resource,
+                Choices = feat.Choices,
             }, OptionSets.Feats, rows, NullableText($"{path}.category", feat.Category, OptionDefinition.CategoryMaxLength)));
         rows.Feats = rows.Options.Count(o => o.SetId == OptionSets.Feats);
     }
