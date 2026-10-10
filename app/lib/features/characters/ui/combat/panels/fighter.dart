@@ -79,6 +79,7 @@ class FighterPanel extends ConsumerWidget {
           panel: panel,
           resourceKey: 'second-wind',
           title: 'Segundo aliento',
+          featureIndex: 'second-wind',
           // SRD: "On your turn, you can use a bonus action to regain hit points".
           actionKind: ActionKind.bonusAction,
           actionKey: 'fighter-second-wind',
@@ -91,6 +92,7 @@ class FighterPanel extends ConsumerWidget {
           panel: panel,
           resourceKey: 'action-surge',
           title: 'Oleada de acción',
+          featureIndex: 'action-surge-1-use',
           actionKey: 'fighter-action-surge',
           buttonLabel: 'Oleada de acción',
           icon: AppIcons.bolt,
@@ -102,6 +104,7 @@ class FighterPanel extends ConsumerWidget {
           panel: panel,
           resourceKey: 'indomitable',
           title: 'Indomable',
+          featureIndex: 'indomitable-1-use',
           actionKey: 'fighter-indomitable',
           buttonLabel: 'Repetir salvación',
           icon: AppIcons.d20,

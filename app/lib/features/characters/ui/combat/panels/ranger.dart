@@ -47,6 +47,7 @@ class RangerPanel extends ConsumerWidget {
       panel: panel,
       children: [
         CombatCard(
+          // No featureIndex: Hunter's Mark is a spell; the SRD has no feature entry for it.
           title: 'Marca del cazador',
           // SRD, Hunter's Mark: "Casting Time: 1 bonus action".
           actionKind: level >= 2 ? ActionKind.bonusAction : null,
@@ -102,6 +103,7 @@ class RangerPanel extends ConsumerWidget {
           ),
         ),
         CombatCard(
+          // No featureIndex: it groups several features (no SRD entry of its own).
           title: 'Rasgos de explorador',
           child: Column(
             children: [
@@ -109,6 +111,7 @@ class RangerPanel extends ConsumerWidget {
                 key: const Key('ranger-favored-enemy'),
                 icon: AppIcons.eye,
                 title: 'Enemigo predilecto ($enemies)',
+                featureIndex: 'favored-enemy-1-type',
                 text:
                     'Ventaja en pruebas de Sabiduría (Supervivencia) para rastrearlos y de '
                     'Inteligencia para recordar información sobre ellos.',
@@ -117,6 +120,7 @@ class RangerPanel extends ConsumerWidget {
                 key: const Key('ranger-natural-explorer'),
                 icon: AppIcons.map,
                 title: 'Explorador natural ($terrains)',
+                featureIndex: 'natural-explorer-1-terrain-type',
                 text:
                     'En tu terreno predilecto el terreno difícil no te ralentiza y no te '
                     'pierdes salvo por magia.',
@@ -126,6 +130,7 @@ class RangerPanel extends ConsumerWidget {
                   key: Key('ranger-extra-attack'),
                   icon: AppIcons.sword,
                   title: 'Ataque adicional',
+                  featureIndex: 'ranger-extra-attack',
                   text: 'Dos ataques por acción de Atacar.',
                 ),
             ],

@@ -28,6 +28,7 @@ class RoguePanel extends ConsumerWidget {
       children: [
         CombatCard(
           title: 'Ataque furtivo',
+          featureIndex: 'sneak-attack',
           trailing: Text(
             dice,
             key: const Key('rogue-sneak-attack'),
@@ -52,6 +53,7 @@ class RoguePanel extends ConsumerWidget {
         ),
         if (level >= 2)
           CombatCard(
+            // No featureIndex: it groups several features (no SRD entry of its own).
             title: 'Recordatorios',
             child: Column(
               children: [
@@ -59,6 +61,7 @@ class RoguePanel extends ConsumerWidget {
                   key: Key('rogue-cunning-action'),
                   icon: AppIcons.hood,
                   title: 'Acción astuta',
+                  featureIndex: 'cunning-action',
                   // SRD: "you can take a bonus action on each of your turns in combat".
                   actionKind: ActionKind.bonusAction,
                   text: 'Correr, Destrabarse u Ocultarse como acción adicional.',
@@ -68,6 +71,7 @@ class RoguePanel extends ConsumerWidget {
                     key: Key('rogue-uncanny-dodge'),
                     icon: AppIcons.shield,
                     title: 'Esquiva asombrosa',
+                    featureIndex: 'uncanny-dodge',
                     // SRD: "you can use your reaction to halve the attack's damage".
                     actionKind: ActionKind.reaction,
                     text: 'Con tu reacción, reduces a la mitad el daño de un ataque que veas.',
@@ -77,6 +81,7 @@ class RoguePanel extends ConsumerWidget {
                     key: Key('rogue-evasion'),
                     icon: AppIcons.bolt,
                     title: 'Evasión',
+                    featureIndex: 'rogue-evasion',
                     text: 'Salvación de Destreza superada: sin daño; fallada: la mitad.',
                   ),
               ],

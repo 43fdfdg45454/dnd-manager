@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'beast_page.dart';
 import 'class_detail_page.dart';
+import 'feature_detail_page.dart';
 import 'item_detail_page.dart';
 import 'race_detail_page.dart';
 import 'spell_detail_page.dart';
@@ -21,6 +22,10 @@ Future<void> openRaceDetail(BuildContext context, String index) =>
 
 Future<void> openClassDetail(BuildContext context, String index) =>
     _open(context, ClassDetailPage(index: index));
+
+/// A class or subclass feature by its catalog index ("font-of-magic").
+Future<void> openFeatureDetail(BuildContext context, String index) =>
+    _open(context, FeatureDetailPage(index: index));
 
 Future<void> openBeastDetail(BuildContext context, String index) =>
     _open(context, BeastPage(index: index));

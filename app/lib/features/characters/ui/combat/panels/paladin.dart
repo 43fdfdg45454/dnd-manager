@@ -165,6 +165,7 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
         CombatCard(
           key: const Key('class-panel-paladin'),
           title: 'Imposición de manos',
+          featureIndex: 'lay-on-hands',
           // SRD: "As an action, you can touch a creature and draw power from the pool".
           actionKind: ActionKind.action,
           trailing: Text(
@@ -236,6 +237,7 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
         CombatCard(
           key: const Key('paladin-divine-sense'),
           title: 'Sentido divino',
+          featureIndex: 'divine-sense',
           // SRD: "As an action, you can open your awareness to detect such forces".
           actionKind: ActionKind.action,
           child: Text(
@@ -250,6 +252,7 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
           trigger: _smites == 0 ? null : _smites,
           child: CombatCard(
             title: 'Castigo divino',
+            featureIndex: 'divine-smite',
             child: slots.isEmpty
                 ? const Text('No tienes espacios de conjuro disponibles.')
                 : Column(
@@ -290,6 +293,7 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
         ),
         CombatCard(
           title: 'Canalizar divinidad',
+          featureIndex: 'channel-divinity',
           // SRD, Oath of Devotion: Sacred Weapon and Turn the Unholy are both used
           // "As an action".
           actionKind: ActionKind.action,

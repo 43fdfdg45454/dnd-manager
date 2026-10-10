@@ -69,6 +69,7 @@ class MonkPanel extends ConsumerWidget {
       children: [
         CombatCard(
           title: 'Ki',
+          featureIndex: 'ki',
           // SRD: Flurry of Blows, Patient Defense and Step of the Wind are each
           // taken "as a bonus action".
           actionKind: level >= 2 ? ActionKind.bonusAction : null,
@@ -118,6 +119,7 @@ class MonkPanel extends ConsumerWidget {
         ),
         CombatCard(
           title: 'Artes marciales',
+          featureIndex: 'martial-arts',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -151,6 +153,7 @@ class MonkPanel extends ConsumerWidget {
         ),
         if (level >= 3)
           CombatCard(
+            // No featureIndex: it groups several features (no SRD entry of its own).
             title: 'Reacciones',
             child: Column(
               children: [
@@ -159,6 +162,7 @@ class MonkPanel extends ConsumerWidget {
                   key: const Key('monk-deflect-missiles'),
                   icon: AppIcons.shield,
                   title: 'Desviar proyectiles',
+                  featureIndex: 'deflect-missiles',
                   actionKind: ActionKind.reaction,
                   text:
                       'Cuando te impacta un ataque con arma a distancia, reduces el daño en '
@@ -171,6 +175,7 @@ class MonkPanel extends ConsumerWidget {
                     key: const Key('monk-slow-fall'),
                     icon: AppIcons.bolt,
                     title: 'Caída lenta',
+                    featureIndex: 'slow-fall',
                     actionKind: ActionKind.reaction,
                     text: 'Al caer, reduces el daño por caída en ${5 * level}.',
                   ),

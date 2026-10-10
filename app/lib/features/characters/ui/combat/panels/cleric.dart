@@ -56,6 +56,7 @@ class ClericPanel extends ConsumerWidget {
           panel: panel,
           resourceKey: 'channel-divinity',
           title: 'Canalizar divinidad',
+          featureIndex: 'channel-divinity-1-rest',
           // SRD, Turn Undead: "As an action, you present your holy symbol".
           actionKind: ActionKind.action,
           actionKey: 'cleric-channel-divinity',
@@ -83,6 +84,7 @@ class ClericPanel extends ConsumerWidget {
         if (level >= 10)
           CombatCard(
             title: 'Intervención divina',
+            featureIndex: 'divine-intervention',
             // SRD: "Imploring your deity's aid requires you to use your action".
             actionKind: ActionKind.action,
             trailing: level >= 20
