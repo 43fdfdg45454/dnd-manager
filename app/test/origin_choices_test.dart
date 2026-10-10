@@ -458,6 +458,78 @@ void main() {
       });
     });
 
+    testWidgets('una dote que quita salvaciones pide cuál y resta habilidades de clase', (
+      tester,
+    ) async {
+      final choice = makeOriginChoiceJson(
+        key: 'campaign.starterFeat',
+        name: 'Dote inicial',
+        kind: 'Feat',
+        source: 'campaign',
+        required: 0,
+        options: [
+          {
+            'index': 'ejemplo-renuncia',
+            'name': 'Renuncia de ejemplo',
+            'eligible': true,
+            'description': ['Una dote inicial ficticia.'],
+            'removeSavingThrows': {
+              'choose': 1,
+              'from': ['str', 'con'],
+            },
+            'skillChoicesDelta': -1,
+          },
+        ],
+      );
+      final characters = await _toBackground(
+        tester,
+        race: 'human',
+        choices: [choice],
+        rules: enabled,
+      );
+      await _next(tester);
+      expect(find.byKey(const Key('step-starter-feat')), findsOneWidget);
+      expect(find.byKey(const Key('origin-removed-saves-title')), findsNothing);
+
+      await _tap(
+        tester,
+        find.byKey(const Key('origin-option-campaign.starterFeat-ejemplo-renuncia')),
+      );
+      expect(find.byKey(const Key('origin-removed-save-str')), findsOneWidget);
+      expect(find.byKey(const Key('origin-removed-save-dex')), findsNothing);
+      expect(find.byKey(const Key('origin-skill-delta')), findsOneWidget);
+
+      // Without the saving throw picked, "Siguiente" stops.
+      await _next(tester);
+      expect(
+        find.text('Dote inicial: elige la salvación que pierdes con Renuncia de ejemplo'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('step-starter-feat')), findsOneWidget);
+
+      await _tap(tester, find.byKey(const Key('origin-removed-save-con')));
+      await _next(tester);
+      expect(find.byKey(const Key('step-equipment')), findsOneWidget);
+      expect(characters.originSaves.last.last, {
+        'key': 'campaign.starterFeat',
+        'selected': {
+          'feat': 'ejemplo-renuncia',
+          'removedSavingThrows': ['con'],
+        },
+      });
+
+      // Back to the background: one class skill fewer, the last pick dropped.
+      for (
+        var i = 0;
+        i < 5 && find.byKey(const Key('wizard-skills-counter')).evaluate().isEmpty;
+        i++
+      ) {
+        await _tap(tester, find.byKey(const Key('wizard-back')));
+      }
+      expect(find.text('Habilidades de clase 1/1'), findsOneWidget);
+      expect(find.byKey(const Key('wizard-skills-delta')), findsOneWidget);
+    });
+
     testWidgets('es opcional: se sigue sin elegir ninguna', (tester) async {
       await _toBackground(tester, race: 'human', choices: [starterChoice()], rules: enabled);
       await _next(tester);

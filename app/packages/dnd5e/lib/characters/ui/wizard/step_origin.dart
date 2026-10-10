@@ -62,6 +62,7 @@ class OriginStep extends ConsumerWidget {
             onText: (slot, text) => controller.setOriginText(choice, slot, text),
             onFeat: (index) => controller.selectOriginFeat(choice, index),
             onFeatAbility: (ability) => controller.setOriginFeatAbility(choice, ability),
+            onRemovedSave: (ability) => controller.toggleOriginRemovedSave(choice, ability),
           ),
       ],
     );

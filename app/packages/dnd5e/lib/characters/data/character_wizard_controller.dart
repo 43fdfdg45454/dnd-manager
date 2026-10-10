@@ -107,20 +107,33 @@ String backgroundTableDetail(BackgroundTable table, String entry) => '${table.na
 /// What the player answered to one origin choice: the picked indexes (or
 /// texts), or a feat with the ability it raises.
 class OriginAnswer {
-  const OriginAnswer({this.picks = const [], this.feat, this.ability});
+  const OriginAnswer({
+    this.picks = const [],
+    this.feat,
+    this.ability,
+    this.removedSavingThrows = const [],
+  });
 
   final List<String> picks;
   final String? feat;
   final String? ability;
 
+  /// Saving throws given up with a feat that asks for them.
+  final List<String> removedSavingThrows;
+
   bool get isEmpty => picks.every((p) => p.trim().isEmpty) && feat == null;
 
-  OriginAnswer copyWith({List<String>? picks, Object? feat = _unset, Object? ability = _unset}) =>
-      OriginAnswer(
-        picks: picks ?? this.picks,
-        feat: identical(feat, _unset) ? this.feat : feat as String?,
-        ability: identical(ability, _unset) ? this.ability : ability as String?,
-      );
+  OriginAnswer copyWith({
+    List<String>? picks,
+    Object? feat = _unset,
+    Object? ability = _unset,
+    List<String>? removedSavingThrows,
+  }) => OriginAnswer(
+    picks: picks ?? this.picks,
+    feat: identical(feat, _unset) ? this.feat : feat as String?,
+    ability: identical(ability, _unset) ? this.ability : ability as String?,
+    removedSavingThrows: removedSavingThrows ?? this.removedSavingThrows,
+  );
 }
 
 const _unset = Object();
@@ -510,14 +523,13 @@ class WizardState {
   String? originChoiceError(OriginChoice choice) {
     final answer = originAnswerOf(choice);
     if (choice.kind == OriginChoiceKind.feat) {
-      if (choice.required == 0) return null;
       final feat = answer.feat == null ? null : choice.option(answer.feat!);
-      if (feat == null) return '${choice.name}: elige una dote';
+      if (feat == null) return choice.required == 0 ? null : '${choice.name}: elige una dote';
       final increase = feat.abilityIncrease;
       if (increase != null && increase.needsPick && answer.ability == null) {
         return '${choice.name}: elige la característica que sube ${feat.name}';
       }
-      return null;
+      return _removedSavesError(choice, feat, answer);
     }
     final picks = answer.picks.where((p) => p.trim().isNotEmpty).length;
     if (picks < choice.required) {
@@ -527,6 +539,45 @@ class WizardState {
           : '${choice.name}: faltan $missing elecciones';
     }
     return null;
+  }
+
+  /// The feat asks which saving throws are given up and the answer does not
+  /// name exactly that many; also checked for optional feats once chosen.
+  String? _removedSavesError(OriginChoice choice, LevelUpOption feat, OriginAnswer answer) {
+    final remove = feat.removeSavingThrows;
+    if (remove == null || !remove.asks) return null;
+    if (answer.removedSavingThrows.length == remove.choose) return null;
+    return remove.choose == 1
+        ? '${choice.name}: elige la salvación que pierdes con ${feat.name}'
+        : '${choice.name}: elige las ${remove.choose} salvaciones que pierdes con ${feat.name}';
+  }
+
+  /// Change of the class skills to choose brought by the starter feat
+  /// (`skillChoicesDelta`, −1: one fewer); 0 without one.
+  int get starterSkillChoicesDelta {
+    final choice = starterFeatChoice;
+    if (choice == null) return 0;
+    final feat = originAnswerOf(choice).feat;
+    return feat == null ? 0 : choice.option(feat)?.skillChoicesDelta ?? 0;
+  }
+
+  /// Class skills to choose: the class count plus [starterSkillChoicesDelta].
+  int get classSkillsToChoose {
+    final choose = classDetail?.skillChoices.choose ?? 0;
+    if (choose <= 0) return 0;
+    final total = choose + starterSkillChoicesDelta;
+    return total < 0 ? 0 : total;
+  }
+
+  /// The starter feat changed how many class skills are chosen and the
+  /// background step no longer matches it; null otherwise.
+  String? get starterSkillsError {
+    if (starterSkillChoicesDelta == 0) return null;
+    final n = classSkillsToChoose;
+    if (skills.length == n) return null;
+    return n == 1
+        ? 'Con esta dote eliges 1 habilidad de clase: ajústalas en Trasfondo'
+        : 'Con esta dote eliges $n habilidades de clase: ajústalas en Trasfondo';
   }
 
   /// First error of the origin choices, or null when every required one is answered.
@@ -973,9 +1024,8 @@ class WizardState {
       case WizardStep.abilities:
         return _validateAbilities();
       case WizardStep.background:
-        final choices = classDetail?.skillChoices;
-        if (choices != null && choices.choose > 0 && skills.length != choices.choose) {
-          final n = choices.choose;
+        final n = classSkillsToChoose;
+        if (n > 0 && skills.length != n) {
           return n == 1 ? 'Elige 1 habilidad' : 'Elige $n habilidades';
         }
         final m = languagesToChoose;
@@ -1003,7 +1053,7 @@ class WizardState {
         }
         if (originError != null) return originError;
         final starter = starterFeatChoice;
-        return starter == null ? null : originChoiceError(starter);
+        return starter == null ? null : originChoiceError(starter) ?? starterSkillsError;
       case WizardStep.equipment:
         return equipmentError ?? trinketError;
       case WizardStep.spells:
@@ -1141,6 +1191,7 @@ class WizardState {
           answers.add(LevelUpChoiceAnswer.picks(choice.key, const []));
         } else {
           final increase = choice.option(feat)?.abilityIncrease;
+          final remove = choice.option(feat)?.removeSavingThrows;
           answers.add(
             LevelUpChoiceAnswer.feat(
               choice.key,
@@ -1148,6 +1199,9 @@ class WizardState {
               ability: increase == null
                   ? null
                   : answer.ability ?? (increase.needsPick ? null : increase.options.first),
+              removedSavingThrows: remove != null && remove.asks
+                  ? answer.removedSavingThrows
+                  : const [],
             ),
           );
         }
@@ -1460,7 +1514,7 @@ class CharacterWizardController extends Notifier<WizardState> {
   }
 
   void toggleSkill(String index) {
-    final choose = state.classDetail?.skillChoices.choose ?? 0;
+    final choose = state.classSkillsToChoose;
     final skills = {...state.skills};
     if (!skills.remove(index)) {
       if (state.backgroundSkills.contains(index) || skills.length >= choose) return;
@@ -1742,6 +1796,7 @@ class CharacterWizardController extends Notifier<WizardState> {
               picks: [for (final i in c.selected) i.index],
               feat: c.feat?.index,
               ability: c.ability,
+              removedSavingThrows: c.removedSavingThrows,
             );
       }
       state = state.copyWith(
@@ -1797,9 +1852,33 @@ class CharacterWizardController extends Notifier<WizardState> {
     _setAnswer(
       choice,
       (a) => a.feat == index
-          ? a.copyWith(feat: null, ability: null)
-          : a.copyWith(feat: index, ability: null),
+          ? a.copyWith(feat: null, ability: null, removedSavingThrows: const [])
+          : a.copyWith(feat: index, ability: null, removedSavingThrows: const []),
     );
+    if (choice.key == starterFeatChoiceKey) _trimSkills();
+  }
+
+  /// Drops the last class skills picked beyond [WizardState.classSkillsToChoose]
+  /// (a starter feat with a negative `skillChoicesDelta`).
+  void _trimSkills() {
+    final choose = state.classSkillsToChoose;
+    if (state.classDetail == null || state.skills.length <= choose) return;
+    state = state.copyWith(skills: state.skills.take(choose).toSet());
+  }
+
+  /// Marks or unmarks [ability] as a saving throw given up with the chosen
+  /// feat; beyond its `choose` a single pick is replaced.
+  void toggleOriginRemovedSave(OriginChoice choice, String ability) {
+    _setAnswer(choice, (a) {
+      final feat = a.feat == null ? null : choice.option(a.feat!);
+      final remove = feat?.removeSavingThrows;
+      if (remove == null) return a;
+      final saves = [...a.removedSavingThrows];
+      if (saves.remove(ability)) return a.copyWith(removedSavingThrows: saves);
+      if (saves.length < remove.choose) return a.copyWith(removedSavingThrows: [...saves, ability]);
+      if (remove.choose == 1) return a.copyWith(removedSavingThrows: [ability]);
+      return a;
+    });
   }
 
   void setOriginFeatAbility(OriginChoice choice, String ability) =>
