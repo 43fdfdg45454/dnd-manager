@@ -55,6 +55,7 @@ class FakeCatalogRepository implements CatalogRepository {
     this.trinketList = const [],
     this.rollTableList = const [],
     this.beastList = const [],
+    this.featureDetails = const {},
   });
 
   final List<SpellSummary> spellList;
@@ -71,6 +72,9 @@ class FakeCatalogRepository implements CatalogRepository {
   final List<CatalogSource> sourceList;
   final List<Trinket> trinketList;
   final List<RollTable> rollTableList;
+
+  /// Class features by index (`feature`); a missing one fails like a 404.
+  final Map<String, Feature> featureDetails;
 
   /// Full statblocks; the list endpoint answers their summaries.
   final List<Beast> beastList;
@@ -236,5 +240,10 @@ class FakeCatalogRepository implements CatalogRepository {
   }
 
   @override
-  Future<Feature> feature(String index) => throw UnimplementedError();
+  Future<Feature> feature(String index) async {
+    _fail();
+    final feature = featureDetails[index];
+    if (feature == null) throw StateError('Rasgo no encontrado: $index');
+    return feature;
+  }
 }

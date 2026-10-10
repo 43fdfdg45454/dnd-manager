@@ -323,6 +323,7 @@ class ClassResourceActionCard extends ConsumerWidget {
     this.trailing,
     this.extra = const [],
     this.actionKind,
+    this.featureIndex,
   });
 
   final ClassPanelContext panel;
@@ -343,6 +344,9 @@ class ClassResourceActionCard extends ConsumerWidget {
   /// feature is not an action of its own.
   final ActionKind? actionKind;
 
+  /// SRD index of the feature for its [CombatCard.featureIndex], or null.
+  final String? featureIndex;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -356,6 +360,7 @@ class ClassResourceActionCard extends ConsumerWidget {
       title: title,
       trailing: trailing,
       actionKind: actionKind,
+      featureIndex: featureIndex,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -403,7 +408,8 @@ class ClassResourceActionCard extends ConsumerWidget {
 }
 
 /// A read-only reminder of a class feature, keyed for tests; [actionKind]
-/// adds its chip under the title.
+/// adds its chip under the title and [featureIndex] a [FeatureInfoButton]
+/// to its right.
 class FeatureReminder extends StatelessWidget {
   const FeatureReminder({
     super.key,
@@ -411,11 +417,15 @@ class FeatureReminder extends StatelessWidget {
     required this.title,
     required this.text,
     this.actionKind,
+    this.featureIndex,
   });
 
   final AppIcons icon;
   final String title;
   final String text;
+
+  /// SRD index of the feature, or null when the SRD has no entry for it.
+  final String? featureIndex;
 
   /// What using the feature costs on the turn, as the SRD says.
   final ActionKind? actionKind;
@@ -426,7 +436,14 @@ class FeatureReminder extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       dense: true,
       leading: AppIcon(icon, color: Theme.of(context).colorScheme.primary),
-      title: Text(title),
+      title: featureIndex == null
+          ? Text(title)
+          : Row(
+              children: [
+                Flexible(child: Text(title)),
+                FeatureInfoButton(index: featureIndex!),
+              ],
+            ),
       subtitle: actionKind == null
           ? Text(text)
           : Column(

@@ -113,6 +113,7 @@ class DruidPanel extends ConsumerWidget {
           panel: panel,
           resourceKey: 'wild-shape',
           title: 'Forma salvaje',
+          featureIndex: 'wild-shape-cr-1-4-or-below-no-flying-or-swim-speed',
           // SRD: "you can use your action to magically assume the shape of a beast".
           actionKind: ActionKind.action,
           actionKey: 'druid-wild-shape',
@@ -153,6 +154,7 @@ class DruidPanel extends ConsumerWidget {
           CombatCard(
             key: const Key('druid-natural-recovery-card'),
             title: 'Recuperación natural',
+            featureIndex: 'natural-recovery',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

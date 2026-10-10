@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/ui/offline_widgets.dart';
+import '../../sessions/data/sessions_controllers.dart';
 import '../data/campaigns_controller.dart';
 import '../domain/campaign_models.dart';
 import 'campaign_form_dialog.dart';
@@ -31,10 +32,14 @@ class CampaignsPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _reload(WidgetRef ref) => Future.wait([
-    ref.read(campaignsControllerProvider.notifier).reload(),
-    ref.read(myInvitationsControllerProvider.notifier).reload(),
-  ]);
+  Future<void> _reload(WidgetRef ref) {
+    // The "Próxima sesión" card of the home page refreshes with the list.
+    ref.invalidate(mySessionsControllerProvider);
+    return Future.wait([
+      ref.read(campaignsControllerProvider.notifier).reload(),
+      ref.read(myInvitationsControllerProvider.notifier).reload(),
+    ]);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

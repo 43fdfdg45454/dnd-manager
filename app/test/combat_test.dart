@@ -21,6 +21,8 @@ import 'package:dnd_companion/features/characters/ui/combat/combat_support.dart'
 import 'package:dnd_companion/features/characters/ui/combat/panels/critical_damage_roll.dart';
 import 'package:dnd_companion/features/characters/ui/combat/resources_section.dart'
     show canRestoreResource;
+import 'package:dnd_companion/features/characters/ui/combat/vitals_section.dart'
+    show ConditionsCard, StatsCard;
 import 'package:dnd_companion/features/characters/ui/combat/wild_magic_surge.dart'
     show isWildMagicSurgeKey;
 import 'package:dnd_companion/features/dice/data/dice_controller.dart';
@@ -527,6 +529,21 @@ void main() {
       expect(withConcentration.combatPatches.last.inspiration, isFalse);
 
       expect(find.text('Concentración: Bless'), findsOneWidget);
+      // The chip lives with the other states, not under the stats grid.
+      expect(
+        find.descendant(
+          of: find.byType(ConditionsCard),
+          matching: find.byKey(const Key('concentration-chip')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(StatsCard),
+          matching: find.byKey(const Key('concentration-chip')),
+        ),
+        findsNothing,
+      );
       await _tap(tester, 'concentration-lose');
       expect(withConcentration.concentrationCalls, [null]);
       expect(find.byKey(const Key('concentration-chip')), findsNothing);
@@ -691,6 +708,34 @@ void main() {
       expect(repo.combatPatches.last.conditions, isEmpty);
       expect(find.byKey(const Key('condition-poisoned')), findsNothing);
     });
+
+    testWidgets(
+      'con concentración y sin condiciones la tarjeta muestra el chip y "Perder" lo quita',
+      (tester) async {
+        final repo = FakeCharactersRepository(
+          characters: [
+            makeCharacterJson(
+              status: 'Active',
+              combat: makeCombatJson(),
+              concentratingOnSpellIndex: 'bless',
+            ),
+          ],
+        );
+        await _pump(tester, characters: repo, catalog: catalog);
+
+        Finder inConditions(String key) =>
+            find.descendant(of: find.byType(ConditionsCard), matching: find.byKey(Key(key)));
+        expect(inConditions('concentration-chip'), findsOneWidget);
+        expect(inConditions('concentration-lose'), findsOneWidget);
+        expect(find.text('Sin condiciones.'), findsNothing);
+
+        await tester.ensureVisible(inConditions('concentration-lose'));
+        await _tap(tester, inConditions('concentration-lose'));
+        expect(repo.concentrationCalls, [null]);
+        expect(find.byKey(const Key('concentration-chip')), findsNothing);
+        expect(find.text('Sin condiciones.'), findsOneWidget);
+      },
+    );
 
     testWidgets('el agotamiento pide el nivel', (tester) async {
       final repo = _repo();

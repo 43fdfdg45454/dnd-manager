@@ -48,6 +48,7 @@ class BardPanel extends ConsumerWidget {
           panel: panel,
           resourceKey: 'bardic-inspiration',
           title: 'Inspiración bárdica',
+          featureIndex: 'bardic-inspiration-d6',
           // SRD: "You can inspire others ... use a bonus action on your turn".
           actionKind: ActionKind.bonusAction,
           actionKey: 'bard-inspire',
@@ -62,6 +63,7 @@ class BardPanel extends ConsumerWidget {
         if (song != null)
           CombatCard(
             title: 'Canción de descanso',
+            featureIndex: 'song-of-rest-d6',
             child: PanelFact(
               key: const Key('bard-song-of-rest'),
               label: 'Curación extra',

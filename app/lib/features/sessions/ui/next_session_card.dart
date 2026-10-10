@@ -7,6 +7,8 @@ import '../../../core/theme/app_icon.dart';
 import '../../../core/theme/icons.dart';
 import '../../../core/theme/textures.dart';
 import '../../../core/theme/tokens.dart';
+import '../../campaigns/data/campaigns_controller.dart';
+import '../data/models.dart';
 import '../data/sessions_controllers.dart';
 import 'session_widgets.dart';
 
@@ -14,6 +16,10 @@ import 'session_widgets.dart';
 /// of the user's campaigns, with the campaign, the local date and the answer of
 /// the user. It takes to the session when tapped and stays hidden while there
 /// is no session (or the request fails: the campaigns list is what matters).
+///
+/// The cached list may be stale, so the card skips sessions that already ended
+/// on the local clock and, once the campaigns list is loaded, sessions of
+/// campaigns that are no longer there (deleted or left).
 class NextSessionCard extends ConsumerWidget {
   const NextSessionCard({super.key});
 
@@ -21,7 +27,13 @@ class NextSessionCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sessions = ref.watch(mySessionsControllerProvider).value;
     if (sessions == null || sessions.isEmpty) return const SizedBox.shrink();
-    final s = sessions.first;
+    final campaigns = ref.watch(campaignsControllerProvider).value;
+    final s = pickNextSession(
+      sessions,
+      now: ref.watch(sessionsClockProvider)(),
+      campaignIds: campaigns?.map((c) => c.id).toSet(),
+    );
+    if (s == null) return const SizedBox.shrink();
     final theme = Theme.of(context);
 
     return RuneCard(
@@ -59,4 +71,19 @@ class NextSessionCard extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// First session of [sessions] (sorted soonest first) that has not ended at
+/// [now] and, when [campaignIds] is known, belongs to one of those campaigns.
+Session? pickNextSession(
+  List<Session> sessions, {
+  required DateTime now,
+  Set<String>? campaignIds,
+}) {
+  for (final s in sessions) {
+    if (s.hasEnded(now)) continue;
+    if (campaignIds != null && !campaignIds.contains(s.campaignId)) continue;
+    return s;
+  }
+  return null;
 }
