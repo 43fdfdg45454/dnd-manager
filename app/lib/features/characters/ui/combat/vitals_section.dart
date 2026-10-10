@@ -10,6 +10,8 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/stat_tiles.dart';
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/data/models.dart' show Condition;
+import '../../../catalog/ui/catalog_detail_links.dart' show DetailInfoButton;
+import '../../../catalog/ui/condition_sheet.dart';
 import '../../../dice/domain/dice_expression.dart';
 import '../../../dice/ui/dice_sheet.dart';
 import '../../data/characters_controller.dart';
@@ -402,12 +404,6 @@ class StatsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = character;
     final sheet = c.sheet;
-    final concentrating = c.concentratingOnSpellIndex;
-    final spellName = concentrating == null
-        ? null
-        : ref.watch(spellInfoProvider(spellInfoKey([concentrating]))).value?[concentrating]?.name ??
-              titleFromSpellIndex(concentrating);
-
     final tokens = context.tokens;
     return CombatCard(
       child: Column(
@@ -493,33 +489,6 @@ class StatsCard extends ConsumerWidget {
               ),
             ],
           ),
-          if (concentrating != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Row(
-                children: [
-                  Flexible(
-                    child: Chip(
-                      key: const Key('concentration-chip'),
-                      avatar: const AppIcon(AppIcons.anchor, size: 18),
-                      label: Text('Concentración: $spellName', overflow: TextOverflow.ellipsis),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    key: const Key('concentration-lose'),
-                    onPressed: canEdit
-                        ? () => runCombat(
-                            context,
-                            () => _controller(ref, c).setConcentration(null),
-                            success: 'Concentración perdida.',
-                          )
-                        : null,
-                    child: const Text('Perder'),
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
     );
@@ -670,9 +639,9 @@ class ConditionsCard extends ConsumerWidget {
   final bool canEdit;
 
   Future<void> _add(BuildContext context, WidgetRef ref) async {
-    final picked = await showDialog<Condition>(
-      context: context,
-      builder: (_) => ConditionPickerDialog(taken: {for (final k in character.conditions) k.index}),
+    final picked = await showConditionPicker(
+      context,
+      taken: {for (final k in character.conditions) k.index},
     );
     if (picked == null || !context.mounted) return;
     if (picked.index == 'exhaustion') {
@@ -723,107 +692,192 @@ class ConditionsCard extends ConsumerWidget {
       for (final cond in ref.watch(conditionsProvider).value ?? const <Condition>[])
         cond.index: cond.name,
     };
-    return CombatCard(
-      title: 'Condiciones',
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 4,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          for (final cond in c.conditions)
-            InputChip(
-              key: Key('condition-${cond.index}'),
-              label: Text(names[cond.index] ?? titleFromSpellIndex(cond.index)),
-              deleteButtonTooltipMessage: 'Quitar',
-              onDeleted: canEdit
-                  ? () => runCombat(
-                      context,
-                      () => _controller(ref, c).patchCombat(
-                        CombatPatch(
-                          conditions: [
-                            for (final other in c.conditions)
-                              if (other.index != cond.index) other,
-                          ],
-                        ),
+    // Concentration is a state of the character too: it goes first, as a chip.
+    final concentrating = c.concentratingOnSpellIndex;
+    final spellName = concentrating == null
+        ? null
+        : ref.watch(spellInfoProvider(spellInfoKey([concentrating]))).value?[concentrating]?.name ??
+              titleFromSpellIndex(concentrating);
+    final conditions = Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        for (final cond in c.conditions)
+          InputChip(
+            key: Key('condition-${cond.index}'),
+            label: Text(names[cond.index] ?? titleFromSpellIndex(cond.index)),
+            deleteButtonTooltipMessage: 'Quitar',
+            onDeleted: canEdit
+                ? () => runCombat(
+                    context,
+                    () => _controller(ref, c).patchCombat(
+                      CombatPatch(
+                        conditions: [
+                          for (final other in c.conditions)
+                            if (other.index != cond.index) other,
+                        ],
                       ),
-                    )
-                  : null,
-            ),
-          if (c.exhaustionLevel > 0)
-            InputChip(
-              key: const Key('condition-exhaustion'),
-              label: Text('${names['exhaustion'] ?? 'Exhaustion'} ${c.exhaustionLevel}'),
-              deleteButtonTooltipMessage: 'Quitar',
-              onPressed: canEdit ? () => _setExhaustion(context, ref) : null,
-              onDeleted: canEdit
-                  ? () => runCombat(
-                      context,
-                      () => _controller(ref, c).patchCombat(const CombatPatch(exhaustionLevel: 0)),
-                    )
-                  : null,
-            ),
-          if (c.conditions.isEmpty && c.exhaustionLevel == 0) const Text('Sin condiciones.'),
-          ActionChip(
-            key: const Key('condition-add'),
-            avatar: const Icon(Icons.add, size: 18),
-            label: const Text('Añadir'),
-            onPressed: canEdit ? () => _add(context, ref) : null,
+                    ),
+                  )
+                : null,
           ),
+        if (c.exhaustionLevel > 0)
+          InputChip(
+            key: const Key('condition-exhaustion'),
+            label: Text('${names['exhaustion'] ?? 'Exhaustion'} ${c.exhaustionLevel}'),
+            deleteButtonTooltipMessage: 'Quitar',
+            onPressed: canEdit ? () => _setExhaustion(context, ref) : null,
+            onDeleted: canEdit
+                ? () => runCombat(
+                    context,
+                    () => _controller(ref, c).patchCombat(const CombatPatch(exhaustionLevel: 0)),
+                  )
+                : null,
+          ),
+        if (c.conditions.isEmpty && c.exhaustionLevel == 0 && concentrating == null)
+          const Text('Sin condiciones.'),
+        ActionChip(
+          key: const Key('condition-add'),
+          avatar: const Icon(Icons.add, size: 18),
+          label: const Text('Añadir'),
+          onPressed: canEdit ? () => _add(context, ref) : null,
+        ),
+      ],
+    );
+    return CombatCard(
+      key: const Key('conditions-card'),
+      title: 'Condiciones',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (concentrating != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Chip(
+                      key: const Key('concentration-chip'),
+                      avatar: const AppIcon(AppIcons.anchor, size: 18),
+                      label: Text('Concentración: $spellName', overflow: TextOverflow.ellipsis),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    key: const Key('concentration-lose'),
+                    onPressed: canEdit
+                        ? () => runCombat(
+                            context,
+                            () => _controller(ref, c).setConcentration(null),
+                            success: 'Concentración perdida.',
+                          )
+                        : null,
+                    child: const Text('Perder'),
+                  ),
+                ],
+              ),
+            ),
+          conditions,
         ],
       ),
     );
   }
 }
 
-/// Picks one condition of the SRD list that is not in [taken].
-class ConditionPickerDialog extends ConsumerWidget {
-  const ConditionPickerDialog({super.key, required this.taken});
+/// Opens the [ConditionPicker] in a draggable bottom sheet (like the other long
+/// pickers of the app) and returns the picked condition, or null.
+Future<Condition?> showConditionPicker(BuildContext context, {required Set<String> taken}) {
+  return showModalBottomSheet<Condition>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.7,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      builder: (_, controller) => ConditionPicker(taken: taken, scrollController: controller),
+    ),
+  );
+}
+
+/// Picks one condition of the SRD list that is not in [taken]; every row has a
+/// [DetailInfoButton] with the rules of the condition (the picker stays open).
+class ConditionPicker extends ConsumerWidget {
+  const ConditionPicker({super.key, required this.taken, this.scrollController});
 
   final Set<String> taken;
+  final ScrollController? scrollController;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final conditions = ref.watch(conditionsProvider);
-    return AlertDialog(
-      title: const Text('Añadir condición'),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: conditions.when(
-          loading: () =>
-              const SizedBox(height: 80, child: Center(child: CircularProgressIndicator())),
-          error: (_, _) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('No se pudo cargar la lista de condiciones.'),
-              TextButton(
-                onPressed: () => ref.invalidate(conditionsProvider),
-                child: const Text('Reintentar'),
-              ),
-            ],
+    final theme = Theme.of(context);
+    final Widget body = conditions.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, _) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('No se pudo cargar la lista de condiciones.'),
+          TextButton(
+            onPressed: () => ref.invalidate(conditionsProvider),
+            child: const Text('Reintentar'),
           ),
-          data: (list) {
-            final available = [
-              for (final cond in list)
-                if (!taken.contains(cond.index)) cond,
-            ];
-            if (available.isEmpty) return const Text('No hay más condiciones disponibles.');
-            return ListView(
-              shrinkWrap: true,
-              children: [
-                for (final cond in available)
-                  ListTile(
-                    key: Key('pick-condition-${cond.index}'),
-                    title: Text(cond.name),
-                    onTap: () => Navigator.of(context).pop(cond),
-                  ),
-              ],
+        ],
+      ),
+      data: (list) {
+        final available = [
+          for (final cond in list)
+            if (!taken.contains(cond.index)) cond,
+        ];
+        if (available.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('No hay más condiciones disponibles.'),
+          );
+        }
+        return ListView.builder(
+          key: const Key('condition-picker-list'),
+          controller: scrollController,
+          itemCount: available.length,
+          itemBuilder: (context, i) {
+            final cond = available[i];
+            return ListTile(
+              key: Key('pick-condition-${cond.index}'),
+              title: Text(cond.name),
+              trailing: DetailInfoButton(
+                key: Key('condition-info-${cond.index}'),
+                tooltip: 'Ver descripción',
+                onPressed: () => showConditionSheet(context, cond),
+              ),
+              onTap: () => Navigator.of(context).pop(cond),
             );
           },
-        ),
+        );
+      },
+    );
+    return SafeArea(
+      top: false,
+      child: Column(
+        key: const Key('condition-picker'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
+            child: Row(
+              children: [
+                Expanded(child: Text('Añadir condición', style: theme.textTheme.titleLarge)),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+              ],
+            ),
+          ),
+          Expanded(child: body),
+        ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
-      ],
     );
   }
 }

@@ -75,6 +75,7 @@ class WarlockPanel extends ConsumerWidget {
       children: [
         CombatCard(
           title: 'Magia del pacto',
+          featureIndex: 'pact-magic',
           trailing: pact == null || pact.level <= 0
               ? null
               : Text('Nivel ${pact.level}', key: const Key('warlock-pact-level')),
@@ -120,6 +121,7 @@ class WarlockPanel extends ConsumerWidget {
         if (known > 0)
           CombatCard(
             title: 'Invocaciones sobrenaturales',
+            featureIndex: 'eldritch-invocations',
             trailing: Text('Conocidas: $known', key: const Key('warlock-invocations-known')),
             child: invocations.isEmpty
                 ? Text(
@@ -143,6 +145,7 @@ class WarlockPanel extends ConsumerWidget {
         if (arcanum.isNotEmpty)
           CombatCard(
             title: 'Arcano místico',
+            featureIndex: 'mystic-arcanum-6th-level',
             child: Text(
               'Un conjuro de nivel ${arcanum.join(', ')} una vez por descanso largo cada uno.',
               key: const Key('warlock-mystic-arcanum'),

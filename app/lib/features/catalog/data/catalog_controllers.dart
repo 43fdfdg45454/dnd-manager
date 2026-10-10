@@ -197,6 +197,12 @@ final spellDetailProvider = FutureProvider.autoDispose.family<SpellDetail, Strin
   retry: _noRetry,
 );
 
+/// A class or subclass feature (`GET /catalog/features/{index}`).
+final featureDetailProvider = FutureProvider.autoDispose.family<Feature, String>(
+  (ref, index) => ref.watch(catalogRepositoryProvider).feature(index),
+  retry: _noRetry,
+);
+
 final itemDetailProvider = FutureProvider.autoDispose.family<ItemDetail, String>(
   (ref, id) => ref.watch(catalogRepositoryProvider).itemDetail(id),
   retry: _noRetry,

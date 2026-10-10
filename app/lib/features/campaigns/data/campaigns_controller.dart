@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/server/app_session_epoch.dart';
+import '../../sessions/data/sessions_controllers.dart';
 import '../domain/campaign_models.dart';
 import 'campaigns_repository.dart';
 
@@ -157,11 +158,14 @@ class CampaignDetailController extends AsyncNotifier<CampaignDetail> {
   Future<void> leave() async {
     await _repository.leave(id);
     _refreshList();
+    // The next session of the home page may belong to this campaign.
+    ref.invalidate(mySessionsControllerProvider);
   }
 
   Future<void> delete() async {
     await _repository.delete(id);
     _refreshList();
+    ref.invalidate(mySessionsControllerProvider);
   }
 }
 

@@ -159,7 +159,7 @@ Notación: `string?` admite `null` o ausencia; **obligatorio** indica que no pue
 
 | Campo | Tipo | Reglas |
 | --- | --- | --- |
-| `formatVersion` | `int?` | Versión del formato: `1` (por defecto) o `2`. El formato 2 añade `optionSets`, `levelChoices` y `grants` ([ver abajo](#formato-2-elecciones-por-nivel)). |
+| `formatVersion` | `int?` | Versión del formato: `1` (por defecto) o `2`. El formato 2 añade `optionSets`, `levelChoices`, `grants` y `heightWeight` ([ver abajo](#formato-2-elecciones-por-nivel)). |
 | `id` | `string` | **Obligatorio**. `[a-z0-9-]{3,40}`. Identifica el paquete y es el prefijo de sus índices. `srd` y `homebrew` están reservados. |
 | `name` | `string` | **Obligatorio**, ≤ 200. Nombre visible ("Reinos de Ejemplo"). |
 | `version` | `string` | **Obligatorio**, ≤ 40. Versión libre del paquete (`1.0.0`). |
@@ -278,16 +278,18 @@ de los dos mapas.
 | `resistances` | `string[]?` | Tipos de daño que la raza resiste siempre (`fire`, `poison`...). |
 | `grants` | `Grants?` | Formato 2. Competencias, idiomas y conjuros fijos de la raza ([ver abajo](#grants-de-raza-y-subraza)). |
 | `extends` | `string?` | Formato 2. Índice de una raza del SRD o de otro paquete ya importado: la entrada **amplía** esa raza en lugar de definir una nueva ([ver abajo](#ampliar-una-raza-existente)). |
+| `heightWeight` | `HeightWeight?` | Formato 2. Tabla de altura y peso aleatorios de la raza ([ver abajo](#heightweight-de-raza-y-subraza)). |
 
 **`Subrace`**: `index` (**obligatorio**, con prefijo), `name` (**obligatorio**, ≤ 200), `description`
 (`string?`, un solo texto de ≤ 10 000), `abilityBonuses` (`AbilityBonus[]?`), `traits` (`Trait[]?`),
 `choices` (`OriginChoices?`), `resistances` (`string[]?`), `speed` (`int?`, 0–200: velocidad que
 **sustituye** a la de la raza; la hoja la desglosa como "Raza 30" + "<subraza> +5") y `grants`
-(`Grants?`, formato 2, como los de la raza).
+(`Grants?`, formato 2, como los de la raza) y `heightWeight` (`HeightWeight?`, formato 2: **sustituye**
+a la de la raza).
 
 #### Ampliar una raza existente
 
-Con `extends` solo se leen `subraces`, `traits` y `grants`; el resto de campos de una raza nueva no
+Con `extends` solo se leen `subraces`, `traits`, `grants` y `heightWeight`; el resto de campos de una raza nueva no
 aplica (`index` y `name` se ignoran y pueden servir de comentario). `speed`, `size`, `abilityBonuses` y
 `languages` dan error: los define la raza base. Reglas:
 
@@ -299,6 +301,8 @@ aplica (`index` y `name` se ignoran y pueden servir de comentario). `speed`, `si
   de subraza se retiran en el siguiente recálculo de la hoja.
 - `traits` y `grants` se añaden a los de la raza base (los rasgos al detalle de la raza; las
   concesiones a todos los personajes de esa raza) mientras el paquete esté instalado.
+- `heightWeight` da a la raza base una tabla de altura y peso (el SRD no trae ninguna); si varios
+  paquetes la dan, manda la del último. La de una subraza manda siempre sobre la de la raza.
 - Reimportar el SRD o el paquete dueño de la raza base no borra las subrazas añadidas.
 
 ```json
@@ -337,6 +341,27 @@ Mismo formato que los [`Grants` de las opciones](#option), con estas diferencias
 
 Las razas del SRD importan así sus competencias fijas (las `proficiencies` de sus rasgos: armas del
 enano, Keen Senses del elfo, entrenamiento con armas del alto elfo, herramientas del gnomo de las rocas…).
+
+#### `HeightWeight` de raza y subraza
+
+Tabla de altura y peso aleatorios (como la del capítulo 4 de las reglas básicas). Sin efecto mecánico:
+el asistente y el editor de la hoja ofrecen un botón "Tirar" que rellena la altura y el peso del
+personaje, que el jugador puede escribir a mano igualmente.
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `baseHeightInches` | `int` | **Obligatorio**, 1–120 pulgadas. |
+| `heightModifier` | `string` | **Obligatorio**. Dados `NdM` (1–10 dados de 2–100 caras) o un entero 1–100. |
+| `baseWeightPounds` | `int` | **Obligatorio**, 1–1000 libras. |
+| `weightModifier` | `string` | **Obligatorio**, mismo formato que `heightModifier` (`"1"` multiplica por 1). |
+
+Altura = `baseHeightInches` + tirada de `heightModifier` (pulgadas). Peso = `baseWeightPounds` +
+(esa misma tirada de altura × tirada de `weightModifier`) (libras). La app los muestra en pies y
+pulgadas y en libras, con la conversión métrica al lado.
+
+```json
+"heightWeight": { "baseHeightInches": 50, "heightModifier": "2d8", "baseWeightPounds": 100, "weightModifier": "2d4" }
+```
 
 **`Trait`**: `index` (**obligatorio**, con prefijo, único en todo el paquete), `name` (**obligatorio**,
 ≤ 200) y `description` (`string[]?`).

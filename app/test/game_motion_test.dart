@@ -309,7 +309,7 @@ void main() {
   group('descansos aprobados', () {
     testWidgets('el jugador ve la luna al aprobarse su descanso largo', (tester) async {
       final (fakes: _, :characters, :hub) = await _pumpPlayer(tester);
-      await _tapKey(tester, 'player-subview-outside');
+      await _tapKey(tester, 'player-subview-detail');
       await _tapKey(tester, 'rest-request-long');
       await _tapKey(tester, 'confirm-action');
       expect(find.byKey(const Key('rest-pending')), findsOneWidget);
@@ -355,7 +355,7 @@ void main() {
         ],
       );
       await _pumpPlayer(tester, messages: messages);
-      await _tapKey(tester, 'player-subview-outside');
+      await _tapKey(tester, 'player-subview-detail');
 
       final unread = find.byKey(const Key('message-m1'));
       final unreadIcon = find.descendant(of: unread, matching: find.byType(AppIcon));

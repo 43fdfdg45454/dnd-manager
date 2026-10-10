@@ -7,6 +7,7 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/ui/action_type.dart';
 import '../../../campaigns/ui/feedback.dart';
+import '../../../catalog/ui/catalog_detail_links.dart' show DetailInfoButton, openFeatureDetail;
 
 /// Spanish message for a failed combat action. Network failures read
 /// "Sin conexión" (nothing changed); a 400 shows the server's reason when it
@@ -284,12 +285,25 @@ class PipPainter extends CustomPainter {
 
 /// A titled card that groups a section of the combat view, in the rune card
 /// style; [title] in the display font, numbers in [AppTypography.numeric].
-/// [actionKind] adds its [ActionTypeChip] under the title.
+/// [actionKind] adds its [ActionTypeChip] under the title. With a
+/// [featureIndex] the title carries a [DetailInfoButton] (key
+/// `feature-info-<index>`) that opens the rules of the feature.
 class CombatCard extends StatelessWidget {
-  const CombatCard({super.key, this.title, this.trailing, this.actionKind, required this.child});
+  const CombatCard({
+    super.key,
+    this.title,
+    this.trailing,
+    this.actionKind,
+    this.featureIndex,
+    required this.child,
+  });
 
   final String? title;
   final Widget? trailing;
+
+  /// SRD index of the class feature the card shows ("font-of-magic"), or null
+  /// when the SRD has no entry of its own for it.
+  final String? featureIndex;
 
   /// What using the card's feature costs on the turn (SRD text); null hides it.
   final ActionKind? actionKind;
@@ -311,6 +325,7 @@ class CombatCard extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(child: Text(title!, style: theme.textTheme.titleMedium)),
+                  if (featureIndex case final index?) FeatureInfoButton(index: index),
                   ?trailing,
                 ],
               ),
@@ -331,3 +346,18 @@ const combatSectionPadding = EdgeInsets.only(top: 16, bottom: 4);
 /// that change in place.
 TextStyle? numericStyle(TextStyle? style) =>
     style == null ? AppTypography.numeric : style.merge(AppTypography.numeric);
+
+/// [DetailInfoButton] keyed `feature-info-<index>` that opens the
+/// [FeatureDetailPage] of a class feature of the catalog.
+class FeatureInfoButton extends StatelessWidget {
+  const FeatureInfoButton({super.key, required this.index});
+
+  final String index;
+
+  @override
+  Widget build(BuildContext context) => DetailInfoButton(
+    key: Key('feature-info-$index'),
+    tooltip: 'Ver rasgo',
+    onPressed: () => openFeatureDetail(context, index),
+  );
+}

@@ -15,7 +15,9 @@ import '../../campaigns/data/campaigns_controller.dart';
 import '../data/characters_controller.dart';
 import '../data/models.dart';
 import '../domain/character_format.dart';
+import '../domain/height_weight.dart';
 import 'character_tabs.dart' show titleFromSpellIndex;
+import 'height_weight_fields.dart';
 import 'point_buy_dialog.dart';
 import 'spell_picker_page.dart';
 
@@ -118,6 +120,10 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
   late String? _alignment = _initial.alignment;
   late bool _applyRacial = _initial.applyRacialBonuses;
   late HpMode _hpMode = _initial.hpMode;
+
+  /// Height (inches) and weight (pounds) as typed; empty clears them.
+  late String _heightText = _initial.heightInches?.toString() ?? '';
+  late String _weightText = _initial.weightPounds?.toString() ?? '';
 
   late final List<_ClassRow> _classes = [
     for (final c in _initial.classes)
@@ -325,7 +331,7 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
     final c = _initial;
     final clear = <String>{};
 
-    String? nullable(String key, String? current, String? initial) {
+    T? nullable<T>(String key, T? current, T? initial) {
       if (current == initial) return null;
       if (current == null) clear.add(key);
       return current;
@@ -380,6 +386,13 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
 
     final copper = goldTextToCopper(_goldController.text)!;
 
+    // Height and weight: the owner changes them without approval (no
+    // mechanical effect); an empty field clears them.
+    final height = parseMeasure(_heightText, min: minHeightInches, max: maxHeightInches);
+    final weight = parseMeasure(_weightText, min: minWeightPounds, max: maxWeightPounds);
+    final heightInches = nullable('heightInches', height, c.heightInches);
+    final weightPounds = nullable('weightPounds', weight, c.weightPounds);
+
     return SheetPatch(
       name: name == c.name ? null : name,
       raceIndex: raceIndex,
@@ -401,6 +414,8 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
       flaws: _changed(_flawsController, c.flaws),
       backgroundDetail: _changed(_backgroundDetailController, c.backgroundDetail),
       copperPieces: copper == c.copperPieces ? null : copper,
+      heightInches: heightInches,
+      weightPounds: weightPounds,
       clear: clear,
     );
   }
@@ -506,6 +521,8 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
               _buildRaceSection(),
               const SizedBox(height: 8),
               _buildBackgroundAndAlignment(),
+              const SizedBox(height: 12),
+              _buildHeightWeight(),
               const SectionTitle('Puntos de golpe'),
               SegmentedButton<HpMode>(
                 key: const Key('editor-hp-mode'),
@@ -605,6 +622,20 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Height and weight with the "Tirar" button of the chosen race or subrace.
+  Widget _buildHeightWeight() {
+    final race = _raceIndex == null ? null : ref.watch(raceDetailProvider(_raceIndex!)).value;
+    return HeightWeightFields(
+      key: const Key('editor-height-weight'),
+      keyPrefix: 'editor',
+      initialHeight: _heightText,
+      initialWeight: _weightText,
+      table: race?.heightWeightFor(_subraceIndex),
+      onHeightChanged: (text) => _heightText = text,
+      onWeightChanged: (text) => _weightText = text,
     );
   }
 

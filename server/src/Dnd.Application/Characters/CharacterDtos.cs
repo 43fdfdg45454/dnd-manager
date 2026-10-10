@@ -240,6 +240,12 @@ public sealed record CharacterDetailDto
     /// <summary>Result of the optional table of the background, e.g. "Especialidad: Bibliotecario".</summary>
     public required string BackgroundDetail { get; init; }
 
+    /// <summary>Height in inches, or null when not given. No mechanical effect.</summary>
+    public required int? HeightInches { get; init; }
+
+    /// <summary>Weight in pounds, or null when not given. No mechanical effect.</summary>
+    public required int? WeightPounds { get; init; }
+
     public required Guid? PortraitFileId { get; init; }
 
     /// <summary>Relative download URL (<c>/api/v1/files/{id}</c>) of the portrait, or null when there is none.</summary>

@@ -225,6 +225,85 @@ public class OriginChoicesEndpointsTests(CatalogApiFactory factory)
         Assert.Contains((await s.Player.GetCharacterAsync(hero.Id)).Proficiencies, p => p is { Type: "Language", Key: "Orc" });
     }
 
+    [Theory]
+    [InlineData("elf", "high-elf", "wizard")]
+    [InlineData("half-elf", null, "rogue")]
+    [InlineData("dwarf", "hill-dwarf", "fighter")]
+    [InlineData("dragonborn", null, "fighter")]
+    public async Task Every_option_of_every_origin_choice_has_a_description(string race, string? subrace, string classIndex)
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var hero = await DraftAsync(s, race, subrace, classIndex);
+        await PatchSheetAsync(s.Player, hero.Id, new { backgroundIndex = "acolyte" });
+
+        var plan = await OriginAsync(s.Player, hero.Id);
+        Assert.NotEmpty(plan.Choices);
+        foreach (var choice in plan.Choices)
+        {
+            Assert.NotEmpty(choice.Options);
+            Assert.All(choice.Options, o => Assert.True(
+                o.Description.Count > 0 && o.Description.All(d => !string.IsNullOrWhiteSpace(d)),
+                $"{choice.Key}: «{o.Index}» no tiene descripción."));
+        }
+    }
+
+    [Fact]
+    public async Task Origin_languages_and_tools_explain_themselves()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var elf = await DraftAsync(s, "elf", "high-elf", "wizard");
+        await PatchSheetAsync(s.Player, elf.Id, new { backgroundIndex = "acolyte" });
+        var plan = await OriginAsync(s.Player, elf.Id);
+
+        var languages = Assert.Single(plan.Choices, c => c.Key == "background.languages");
+        var common = Assert.Single(languages.Options, o => o.Index == "Common");
+        Assert.Equal("Idioma estándar. Hablantes típicos: humanos. Escritura común.", common.Description[0]);
+        var deep = Assert.Single(languages.Options, o => o.Index == "Deep Speech");
+        Assert.StartsWith("Idioma exótico.", deep.Description[0]);
+        Assert.EndsWith("Sin escritura.", deep.Description[0]);
+        var cantrip = Assert.Single(plan.Choices, c => c.Key == "race.subrace.cantrip");
+        Assert.Single(Assert.Single(cantrip.Options, o => o.Index == "mage-hand").Description);
+
+        var dwarf = await DraftAsync(s, "dwarf", "hill-dwarf", "fighter");
+        var tools = Assert.Single((await OriginAsync(s.Player, dwarf.Id)).Choices, c => c.Key == "race.tools");
+        Assert.Contains("artisan's tools", Assert.Single(tools.Options, o => o.Index == "smiths-tools").Description[0], StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void The_language_descriptions_cover_the_srd_dataset()
+    {
+        using var stream = File.OpenRead(SrdFile("5e-SRD-Languages.json"));
+        using var json = System.Text.Json.JsonDocument.Parse(stream);
+        var dataset = json.RootElement.EnumerateArray().ToList();
+        Assert.Equal(dataset.Count, OriginOptionDescriptions.Languages.Count);
+        foreach (var language in dataset)
+        {
+            var name = language.GetProperty("name").GetString()!;
+            var info = Assert.Single(OriginOptionDescriptions.Languages, l => l.Name == name);
+            Assert.Equal(language.GetProperty("type").GetString() == "Exotic", info.Exotic);
+            Assert.Equal(language.TryGetProperty("script", out var script) && script.ValueKind == System.Text.Json.JsonValueKind.String, info.Script is not null);
+            var desc = language.TryGetProperty("desc", out var d) && d.ValueKind == System.Text.Json.JsonValueKind.String ? d.GetString() : null;
+            Assert.Equal(desc, info.Description);
+        }
+
+        Assert.Equal(Dnd.Domain.Catalog.SrdLanguages.All.Order(), OriginOptionDescriptions.Languages.Select(l => l.Name).Order());
+    }
+
+    /// <summary>A file of <c>server/seed/srd</c>, found by walking up from the test binaries.</summary>
+    private static string SrdFile(string name)
+    {
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+        {
+            var candidate = Path.Combine(dir.FullName, "seed", "srd", name);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        throw new FileNotFoundException(name);
+    }
+
     private static string Url(Guid id) => $"{ItemTestHelpers.CharacterUrl(id)}/origin-choices";
 
     private static async Task<CharacterDetailDto> DraftAsync(CampaignScenario s, string race, string? subrace, string classIndex)

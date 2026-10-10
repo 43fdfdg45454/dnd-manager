@@ -757,6 +757,9 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                     b.Property<string>("GrantsJson")
                         .HasColumnType("text");
 
+                    b.Property<string>("HeightWeightJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("Languages")
                         .IsRequired()
                         .HasColumnType("text");
@@ -811,6 +814,9 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(161)");
 
                     b.Property<string>("GrantsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("HeightWeightJson")
                         .HasColumnType("text");
 
                     b.Property<string>("RaceIndex")
@@ -1103,6 +1109,9 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                     b.Property<string>("GrantsJson")
                         .HasColumnType("text");
 
+                    b.Property<string>("HeightWeightJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -1332,6 +1341,9 @@ namespace Dnd.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<int?>("HeightInches")
+                        .HasColumnType("integer");
+
                     b.Property<string>("HitDiceUsedJson")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1409,6 +1421,9 @@ namespace Dnd.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("WeightPounds")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");

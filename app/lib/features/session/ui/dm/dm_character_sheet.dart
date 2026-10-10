@@ -16,7 +16,7 @@ import '../../../characters/ui/change_owner_dialog.dart';
 import '../../../characters/ui/character_tabs.dart' show titleFromSpellIndex;
 import '../../../characters/ui/combat/combat_support.dart' show promptNumber;
 import '../../../characters/ui/combat/concentration_flow.dart' show resolveDamageOutcome;
-import '../../../characters/ui/combat/vitals_section.dart' show ConditionPickerDialog;
+import '../../../characters/ui/combat/vitals_section.dart' show showConditionPicker;
 import '../../data/models.dart';
 import '../../data/session_controllers.dart';
 import '../session_feedback.dart';
@@ -130,12 +130,10 @@ class _DmCharacterSheetState extends ConsumerState<DmCharacterSheet> {
   }
 
   Future<void> _addCondition(PartyMember m) async {
-    final picked = await showDialog<Condition>(
-      context: context,
-      builder: (_) => ConditionPickerDialog(
-        // Exhaustion has levels: the full sheet handles it.
-        taken: {'exhaustion', for (final c in m.conditions) c.index},
-      ),
+    final picked = await showConditionPicker(
+      context,
+      // Exhaustion has levels: the full sheet handles it.
+      taken: {'exhaustion', for (final c in m.conditions) c.index},
     );
     if (picked == null || !mounted) return;
     await _adjust(

@@ -142,7 +142,7 @@ class _OriginChoiceViewState extends State<OriginChoiceView> {
             for (final option in visible)
               LevelUpOptionCard(
                 key: Key('origin-option-${choice.key}-${option.index}'),
-                option: _withResistance(option),
+                option: _forDisplay(option),
                 showSpellLevel: false,
                 selected: isFeat
                     ? answer.feat == option.index
@@ -173,18 +173,24 @@ class _OriginChoiceViewState extends State<OriginChoiceView> {
     );
   }
 
-  /// The draconic ancestry options show the resistance they give as an effect.
-  LevelUpOption _withResistance(LevelUpOption option) {
+  /// The draconic ancestry options show the resistance they give as an effect;
+  /// cantrip options always count as spells of level 0, so their card carries
+  /// the [DetailInfoButton] that opens the spell (as in the level-up).
+  LevelUpOption _forDisplay(LevelUpOption option) {
     final type = option.damageType;
-    if (type == null) return option;
+    final cantrip = widget.choice.kind == OriginChoiceKind.cantrip && option.spellLevel == null;
+    if (type == null && !cantrip) return option;
     return LevelUpOption(
       index: option.index,
       name: option.name,
-      description: ['Resistencia al daño ${damageTypeLabel(type)}.', ...option.description],
+      description: [
+        if (type != null) 'Resistencia al daño ${damageTypeLabel(type)}.',
+        ...option.description,
+      ],
       prerequisitesText: option.prerequisitesText,
       eligible: option.eligible,
       reason: option.reason,
-      spellLevel: option.spellLevel,
+      spellLevel: cantrip ? 0 : option.spellLevel,
       spellCategory: option.spellCategory,
       effectsPreview: option.effectsPreview,
       abilityIncrease: option.abilityIncrease,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/source_chip.dart';
+import '../../characters/domain/height_weight.dart' show describeHeightWeightTable;
 import '../data/catalog_controllers.dart';
 import '../data/models.dart' hide Page;
 import '../domain/catalog_format.dart';
@@ -35,6 +36,12 @@ class RaceDetailPage extends ConsumerWidget {
             FactRow('Edad', r.age),
             FactRow('Alineamiento', r.alignment),
             FactRow('Descripción del tamaño', r.sizeDescription),
+            if (r.heightWeight != null)
+              FactRow(
+                'Altura y peso',
+                describeHeightWeightTable(r.heightWeight!),
+                key: const Key('race-height-weight'),
+              ),
             if (r.traits.isNotEmpty) ...[
               const SectionTitle('Rasgos'),
               for (final t in r.traits) ExpandableEntry(title: t.name, description: t.description),
@@ -68,6 +75,12 @@ class _SubraceCard extends StatelessWidget {
             Text(subrace.name, style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 6),
             FactRow('Bonos de característica', _bonuses(subrace.abilityBonuses)),
+            if (subrace.heightWeight != null)
+              FactRow(
+                'Altura y peso',
+                describeHeightWeightTable(subrace.heightWeight!),
+                key: Key('subrace-height-weight-${subrace.index}'),
+              ),
             if (subrace.description.isNotEmpty) Paragraphs(subrace.description),
             for (final t in subrace.traits)
               ExpandableEntry(title: t.name, description: t.description),

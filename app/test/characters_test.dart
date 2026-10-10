@@ -8,6 +8,7 @@ import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
 import 'package:dnd_companion/features/catalog/data/models.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:dnd_companion/features/characters/data/models.dart';
+import 'package:dnd_companion/features/characters/data/view_mode_controller.dart';
 import 'package:dnd_companion/features/characters/domain/character_format.dart';
 import 'package:dnd_companion/features/characters/domain/change_details.dart';
 import 'package:dnd_companion/features/characters/domain/payload_format.dart';
@@ -495,7 +496,7 @@ void main() {
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
 
-      await _tap(tester, find.byKey(const Key('tab-skills')));
+      await openDetailTab(tester, 'tab-skills');
       expect(find.byKey(const Key('stat-mark-skill.stealth')), findsOneWidget);
       await _tap(tester, find.byKey(const Key('stat-skill.stealth')));
       expect(find.text('Botas élficas'), findsOneWidget);
@@ -526,8 +527,7 @@ void main() {
       final repository = FakeCharactersRepository(characters: [makeCharacterJson()]);
       await _pumpApp(tester, characters: repository, location: '/characters/ch1');
 
-      await tester.tap(find.byKey(const Key('tab-skills')));
-      await tester.pumpAndSettle();
+      await openDetailTab(tester, 'tab-skills');
 
       expect(find.text('Atletismo'), findsOneWidget);
       expect(find.text('Sigilo'), findsOneWidget);
@@ -540,8 +540,7 @@ void main() {
       final repository = FakeCharactersRepository(characters: [makeCharacterJson()]);
       await _pumpApp(tester, characters: repository, location: '/characters/ch1');
 
-      await tester.tap(find.byKey(const Key('tab-traits')));
-      await tester.pumpAndSettle();
+      await openDetailTab(tester, 'tab-traits');
 
       expect(find.text('Second Wind'), findsOneWidget);
       // Level 5 features are not available to a level 3 fighter.
@@ -581,8 +580,7 @@ void main() {
       );
       await _pumpApp(tester, characters: repository, location: '/characters/ch1');
 
-      await tester.tap(find.byKey(const Key('tab-spells')));
-      await tester.pumpAndSettle();
+      await openDetailTab(tester, 'tab-spells');
 
       expect(find.text('Truco'), findsOneWidget);
       expect(find.text('Nivel 1'), findsNWidgets(2)); // slot row + spell group
@@ -642,8 +640,7 @@ void main() {
       );
       await _pumpApp(tester, characters: repository, location: '/characters/ch1');
 
-      await tester.tap(find.byKey(const Key('tab-spells')));
-      await tester.pumpAndSettle();
+      await openDetailTab(tester, 'tab-spells');
 
       final section = find.byKey(const Key('spells-race'));
       expect(section, findsOneWidget);
@@ -689,8 +686,7 @@ void main() {
       );
       await _pumpApp(tester, characters: repository, location: '/characters/ch1');
 
-      await tester.tap(find.byKey(const Key('tab-spells')));
-      await tester.pumpAndSettle();
+      await openDetailTab(tester, 'tab-spells');
 
       expect(find.text('Fighter: '), findsOneWidget);
       expect(find.text(' · Conocidos máx. 3'), findsOneWidget);
@@ -714,8 +710,7 @@ void main() {
       );
       await _pumpApp(tester, characters: repository, location: '/characters/ch1');
 
-      await tester.tap(find.byKey(const Key('tab-spells')));
-      await tester.pumpAndSettle();
+      await openDetailTab(tester, 'tab-spells');
 
       expect(find.byKey(const Key('spells-race')), findsNothing);
       expect(find.byKey(const Key('spell-fire-bolt')), findsOneWidget);
@@ -727,13 +722,11 @@ void main() {
       );
       await _pumpApp(tester, characters: repository, location: '/characters/ch1');
 
-      await tester.tap(find.byKey(const Key('tab-inventory')));
-      await tester.pumpAndSettle();
+      await openDetailTab(tester, 'tab-inventory');
       expect(find.byKey(const Key('inventory-money')), findsOneWidget);
       expect(find.byKey(const Key('inventory-add')), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('tab-notes')));
-      await tester.pumpAndSettle();
+      await openDetailTab(tester, 'tab-notes');
       expect(find.text('Debe dinero al herrero'), findsOneWidget);
       expect(find.text('Sin historia.'), findsOneWidget);
     });
@@ -812,9 +805,41 @@ void main() {
       expect(find.byKey(const Key('tab-combat')), findsOneWidget);
       expect(
         tester.getTopLeft(find.byKey(const Key('tab-combat'))).dx,
-        lessThan(tester.getTopLeft(find.byKey(const Key('tab-summary'))).dx),
+        lessThan(tester.getTopLeft(find.byKey(const Key('tab-detail'))).dx),
       );
       expect(find.byKey(const Key('dice-fab')), findsOneWidget);
+    });
+
+    testWidgets('la ficha tiene dos pestañas principales y Detalle lleva las seis subpestañas', (
+      tester,
+    ) async {
+      final repository = FakeCharactersRepository(characters: [makeCharacterJson()]);
+      await _pumpApp(tester, characters: repository, location: '/characters/ch1');
+
+      final main = tester.widget<TabBar>(find.byKey(const Key('character-tabs')));
+      expect([for (final t in main.tabs) (t as Tab).text], ['Combate', 'Detalle']);
+      // Sin preferencias abre en Detalle, en Resumen.
+      final detail = tester.widget<TabBar>(find.byKey(const Key('character-detail-tabs')));
+      expect(
+        [for (final t in detail.tabs) (t as Tab).text],
+        ['Resumen', 'Habilidades', 'Rasgos', 'Hechizos', 'Inventario', 'Notas'],
+      );
+      expect(detail.controller!.index, 0);
+      expect(find.byKey(const Key('tab-session')), findsNothing);
+    });
+
+    testWidgets('Detalle recuerda la subpestaña al pasar por Combate y volver', (tester) async {
+      final repository = FakeCharactersRepository(characters: [makeCharacterJson()]);
+      await _pumpApp(tester, characters: repository, location: '/characters/ch1');
+
+      await openDetailTab(tester, 'tab-traits');
+      await _tap(tester, find.byKey(const Key('tab-combat')));
+      expect(find.byKey(const Key('combat-view')), findsOneWidget);
+      expect(find.byKey(const Key('character-detail-tabs')), findsNothing);
+
+      await _tap(tester, find.byKey(const Key('tab-detail')));
+      final detail = tester.widget<TabBar>(find.byKey(const Key('character-detail-tabs')));
+      expect(detail.controller!.index, CharacterTab.detailTabs.indexOf(CharacterTab.traits));
     });
 
     testWidgets('el dueño en Draft ve Enviar al DM; un Player no ve Activar', (tester) async {
@@ -923,7 +948,7 @@ void main() {
       tester,
     ) async {
       await _pumpApp(tester, characters: repo(), location: '/characters/ch1');
-      await _tap(tester, find.byKey(const Key('tab-skills')));
+      await openDetailTab(tester, 'tab-skills');
 
       expect(find.byKey(const Key('skills-hint')), findsOneWidget);
       const groups = ['str', 'dex', 'int', 'wis', 'cha'];
@@ -953,7 +978,7 @@ void main() {
 
     testWidgets('tocar tira y la pulsación larga pide ventaja o desventaja', (tester) async {
       await _pumpApp(tester, characters: repo(), location: '/characters/ch1');
-      await _tap(tester, find.byKey(const Key('tab-skills')));
+      await openDetailTab(tester, 'tab-skills');
 
       await _tap(tester, find.byKey(const Key('skill-athletics')));
       expect(find.text('1d20+5'), findsOneWidget);

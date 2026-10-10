@@ -161,8 +161,7 @@ Future<void> _tapVisible(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _openInventory(WidgetTester tester) =>
-    _tap(tester, find.byKey(const Key('tab-inventory')));
+Future<void> _openInventory(WidgetTester tester) => openDetailTab(tester, 'tab-inventory');
 
 Future<void> _menu(WidgetTester tester, String itemId, String action) async {
   await _tap(tester, find.byKey(Key('inv-menu-$itemId')));

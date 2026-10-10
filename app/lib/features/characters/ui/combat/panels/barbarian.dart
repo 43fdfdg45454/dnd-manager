@@ -65,6 +65,7 @@ class _BarbarianPanelState extends ConsumerState<BarbarianPanel> {
         CombatCard(
           key: const Key('class-panel-barbarian'),
           title: 'Furia',
+          featureIndex: 'rage',
           // SRD: "you can enter a rage as a bonus action".
           actionKind: ActionKind.bonusAction,
           trailing: Text(

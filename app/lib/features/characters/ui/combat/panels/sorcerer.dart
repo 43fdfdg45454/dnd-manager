@@ -79,6 +79,7 @@ class SorcererPanel extends ConsumerWidget {
       children: [
         if (tables.isNotEmpty)
           CombatCard(
+            // No featureIndex: roll tables of a subclass, not a feature of the SRD.
             title: 'Tablas de la subclase',
             child: Wrap(
               spacing: 8,
@@ -95,6 +96,8 @@ class SorcererPanel extends ConsumerWidget {
             ),
           ),
         CombatCard(
+          // No featureIndex: sorcery points are part of Font of Magic, linked from
+          // "Magia flexible" (one button per feature).
           title: 'Puntos de hechicería',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,6 +122,7 @@ class SorcererPanel extends ConsumerWidget {
         if (level >= 2)
           CombatCard(
             title: 'Magia flexible',
+            featureIndex: 'font-of-magic',
             // SRD: both conversions of Flexible Casting are made "as a bonus action".
             actionKind: ActionKind.bonusAction,
             child: Column(

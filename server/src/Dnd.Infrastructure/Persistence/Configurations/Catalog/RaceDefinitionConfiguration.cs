@@ -22,6 +22,7 @@ internal sealed class RaceDefinitionConfiguration : IEntityTypeConfiguration<Rac
         builder.Property(x => x.Resistances).HasJsonListConversion();
         builder.Ignore(x => x.Choices);
         builder.Ignore(x => x.Grants);
+        builder.Ignore(x => x.HeightWeight);
         builder.Property(x => x.Languages).HasJsonListConversion();
         builder.Property(x => x.SubraceIndexes).HasJsonListConversion();
         builder.Property(x => x.Age).IsRequired();

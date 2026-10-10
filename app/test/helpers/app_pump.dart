@@ -197,3 +197,19 @@ Future<void> openGeneralSection(WidgetTester tester, String section) async {
   await tester.tap(card);
   await tester.pumpAndSettle();
 }
+
+/// Opens a sub-tab of "Detalle" ([tabKey], e.g. `tab-skills`): taps the main
+/// tab `tab-detail` of the character page (or `player-subview-detail` in the
+/// player's session) and then the sub-tab, scrolling the bar if needed.
+Future<void> openDetailTab(WidgetTester tester, String tabKey) async {
+  final main = find.byKey(const Key('tab-detail'));
+  await tester.tap(
+    main.evaluate().isNotEmpty ? main : find.byKey(const Key('player-subview-detail')),
+  );
+  await tester.pumpAndSettle();
+  final tab = find.byKey(Key(tabKey));
+  await tester.ensureVisible(tab);
+  await tester.pumpAndSettle();
+  await tester.tap(tab);
+  await tester.pumpAndSettle();
+}

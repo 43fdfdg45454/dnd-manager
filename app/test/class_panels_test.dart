@@ -1,14 +1,19 @@
 import 'package:dnd_companion/core/auth/auth_controller.dart';
 import 'package:dnd_companion/core/auth/auth_state.dart';
 import 'package:dnd_companion/core/router/app_router.dart';
+import 'package:dnd_companion/core/theme/icons.dart';
 import 'package:dnd_companion/core/storage/local_preferences.dart';
 import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart';
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
 import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
 import 'package:dnd_companion/features/catalog/data/models.dart';
+import 'package:dnd_companion/features/catalog/ui/catalog_detail_links.dart' show DetailInfoButton;
+import 'package:dnd_companion/features/catalog/ui/feature_detail_page.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
 import 'package:dnd_companion/features/characters/domain/class_theme.dart';
 import 'package:dnd_companion/features/characters/ui/character_page.dart';
+import 'package:dnd_companion/features/characters/ui/combat/panels/panel_support.dart'
+    show FeatureReminder;
 import 'package:dnd_companion/features/dice/data/dice_controller.dart';
 import 'package:dnd_companion/features/items/data/inventory_repository.dart';
 import 'package:flutter/material.dart' hide Page;
@@ -328,6 +333,80 @@ void main() {
     await _tap(tester, 'rogue-sneak-attack-roll');
     expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '24');
     expect(find.text('Ataque furtivo (crítico)'), findsOneWidget);
+  });
+
+  testWidgets('hechicero de nivel 2: "Magia flexible" abre el rasgo Fuente de magia', (
+    tester,
+  ) async {
+    final repo = _repo(
+      'sorcerer',
+      2,
+      resources: [_resource('s1', 'sorcery-points', 'Sorcery Points', 2)],
+      spellSlots: [
+        {'level': 1, 'max': 3, 'used': 0},
+      ],
+    );
+    final catalog = FakeCatalogRepository(
+      featureDetails: const {
+        'font-of-magic': Feature(
+          index: 'font-of-magic',
+          name: 'Font of Magic',
+          classIndex: 'sorcerer',
+          level: 2,
+          description: ['At 2nd level, you tap into a deep wellspring of magic within yourself.'],
+        ),
+      },
+    );
+    await _pump(tester, characters: repo, catalog: catalog);
+
+    final info = find.byKey(const Key('feature-info-font-of-magic'));
+    expect(info, findsOneWidget);
+    await _tap(tester, 'feature-info-font-of-magic');
+    expect(find.byType(FeatureDetailPage), findsOneWidget);
+    expect(find.byKey(const Key('feature-detail-name')), findsOneWidget);
+    expect(find.text('Font of Magic'), findsWidgets);
+    expect(find.text('Clase: Hechicero', findRichText: true), findsOneWidget);
+    expect(find.textContaining('deep wellspring of magic'), findsOneWidget);
+  });
+
+  testWidgets('un recordatorio de rasgo sin índice no tiene botón de información', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              FeatureReminder(
+                key: Key('without-index'),
+                icon: AppIcons.bolt,
+                title: 'Sin índice',
+                text: 'Texto.',
+              ),
+              FeatureReminder(
+                key: Key('with-index'),
+                icon: AppIcons.bolt,
+                title: 'Con índice',
+                text: 'Texto.',
+                featureIndex: 'uncanny-dodge',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('without-index')),
+        matching: find.byType(DetailInfoButton),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('with-index')),
+        matching: find.byKey(const Key('feature-info-uncanny-dodge')),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('hechicero: convierte espacio en puntos y puntos en espacio', (tester) async {

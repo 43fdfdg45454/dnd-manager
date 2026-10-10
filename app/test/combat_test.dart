@@ -21,6 +21,8 @@ import 'package:dnd_companion/features/characters/ui/combat/combat_support.dart'
 import 'package:dnd_companion/features/characters/ui/combat/panels/critical_damage_roll.dart';
 import 'package:dnd_companion/features/characters/ui/combat/resources_section.dart'
     show canRestoreResource;
+import 'package:dnd_companion/features/characters/ui/combat/vitals_section.dart'
+    show ConditionsCard, StatsCard;
 import 'package:dnd_companion/features/characters/ui/combat/wild_magic_surge.dart'
     show isWildMagicSurgeKey;
 import 'package:dnd_companion/features/dice/data/dice_controller.dart';
@@ -34,6 +36,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dice_test.dart' show SequenceRandom;
+import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
@@ -436,7 +439,7 @@ void main() {
       // Solo cuenta la clave del propio personaje: abre en Resumen.
       final tabs = tester.widget<TabBar>(find.byKey(const Key('character-tabs')));
       expect((tabs.tabs.first as Tab).text, 'Combate');
-      expect(tabs.tabs, hasLength(7));
+      expect(tabs.tabs, hasLength(2));
       expect(find.byKey(const Key('combat-view')), findsNothing);
       expect(find.byKey(const Key('view-mode')), findsNothing);
 
@@ -444,17 +447,18 @@ void main() {
       expect(find.byKey(const Key('combat-view')), findsOneWidget);
       // La cabecera con sus acciones y las pestañas siguen a la vista.
       expect(find.byKey(const Key('character-status')), findsOneWidget);
-      expect(find.byKey(const Key('tab-summary')), findsOneWidget);
-      expect(prefs.getString('character.ch1.tab'), 'combat');
+      expect(find.byKey(const Key('tab-detail')), findsOneWidget);
+      expect(prefs.getString('character.ch1.mainView'), 'combat');
 
       // Una pantalla nueva con las mismas preferencias abre directamente en Combate.
       await tester.pumpWidget(const SizedBox());
       await _pump(tester, characters: repo, prefs: prefs);
       expect(find.byKey(const Key('combat-view')), findsOneWidget);
 
-      await _tap(tester, 'tab-spells');
+      await openDetailTab(tester, 'tab-spells');
       expect(find.byKey(const Key('combat-view')), findsNothing);
       expect(prefs.getString('character.ch1.tab'), 'spells');
+      expect(prefs.getString('character.ch1.mainView'), 'detail');
     });
 
     testWidgets('un personaje que quedó en el antiguo modo Combate abre en esa pestaña', (
@@ -525,6 +529,21 @@ void main() {
       expect(withConcentration.combatPatches.last.inspiration, isFalse);
 
       expect(find.text('Concentración: Bless'), findsOneWidget);
+      // The chip lives with the other states, not under the stats grid.
+      expect(
+        find.descendant(
+          of: find.byType(ConditionsCard),
+          matching: find.byKey(const Key('concentration-chip')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(StatsCard),
+          matching: find.byKey(const Key('concentration-chip')),
+        ),
+        findsNothing,
+      );
       await _tap(tester, 'concentration-lose');
       expect(withConcentration.concentrationCalls, [null]);
       expect(find.byKey(const Key('concentration-chip')), findsNothing);
@@ -689,6 +708,34 @@ void main() {
       expect(repo.combatPatches.last.conditions, isEmpty);
       expect(find.byKey(const Key('condition-poisoned')), findsNothing);
     });
+
+    testWidgets(
+      'con concentración y sin condiciones la tarjeta muestra el chip y "Perder" lo quita',
+      (tester) async {
+        final repo = FakeCharactersRepository(
+          characters: [
+            makeCharacterJson(
+              status: 'Active',
+              combat: makeCombatJson(),
+              concentratingOnSpellIndex: 'bless',
+            ),
+          ],
+        );
+        await _pump(tester, characters: repo, catalog: catalog);
+
+        Finder inConditions(String key) =>
+            find.descendant(of: find.byType(ConditionsCard), matching: find.byKey(Key(key)));
+        expect(inConditions('concentration-chip'), findsOneWidget);
+        expect(inConditions('concentration-lose'), findsOneWidget);
+        expect(find.text('Sin condiciones.'), findsNothing);
+
+        await tester.ensureVisible(inConditions('concentration-lose'));
+        await _tap(tester, inConditions('concentration-lose'));
+        expect(repo.concentrationCalls, [null]);
+        expect(find.byKey(const Key('concentration-chip')), findsNothing);
+        expect(find.text('Sin condiciones.'), findsOneWidget);
+      },
+    );
 
     testWidgets('el agotamiento pide el nivel', (tester) async {
       final repo = _repo();
@@ -904,7 +951,7 @@ void main() {
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
 
-      await _tap(tester, 'tab-skills');
+      await openDetailTab(tester, 'tab-skills');
       await _tap(tester, 'skill-athletics');
       expect(find.text('Atletismo'), findsWidgets);
       expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '19');

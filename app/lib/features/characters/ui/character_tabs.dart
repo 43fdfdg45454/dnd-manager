@@ -22,6 +22,7 @@ import '../data/characters_controller.dart';
 import '../data/models.dart';
 import '../domain/character_format.dart';
 import '../domain/class_theme.dart';
+import '../domain/height_weight.dart' show formatHeightAndWeight;
 import 'combat/companion_section.dart';
 import 'level_up/character_choices_section.dart';
 import 'skill_rolls.dart' show rollSkill, rollSkillWithMode;
@@ -172,6 +173,11 @@ class SummaryTab extends StatelessWidget {
               value: c.inspiration ? 'Sí' : 'No',
             ),
           ],
+        ),
+        FactRow(
+          'Altura y peso',
+          formatHeightAndWeight(c.heightInches, c.weightPounds),
+          key: const Key('summary-height-weight'),
         ),
         if (c.companion != null || c.companionFeature != null) ...[
           const SectionTitle('Compañero animal'),

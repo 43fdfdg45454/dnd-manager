@@ -13,6 +13,7 @@ public sealed class GetRaceHandler(ICatalogRepository catalog)
         var extensions = await catalog.ListRaceExtensionsAsync([race.Index], cancellationToken);
         var raceTraits = race.TraitIndexes.Concat(extensions.SelectMany(e => e.TraitIndexes)).Distinct().ToList();
         var grants = extensions.Aggregate(race.Grants, (all, extension) => all.Merge(extension.Grants));
+        var heightWeight = extensions.Select(e => e.HeightWeight).LastOrDefault(t => t is not null) ?? race.HeightWeight;
         var traitIndexes = raceTraits.Concat(subraces.SelectMany(s => s.TraitIndexes)).Distinct().ToList();
         var traits = (await catalog.ListTraitsAsync(traitIndexes, cancellationToken)).ToDictionary(t => t.Index);
 
@@ -34,6 +35,7 @@ public sealed class GetRaceHandler(ICatalogRepository catalog)
                     Resistances = s.Resistances,
                     Speed = s.Speed,
                     Grants = OriginGrantsDto.From(s.Grants),
+                    HeightWeight = HeightWeightDto.From(s.HeightWeight),
                     Source = s.Source,
                 })
                 .ToList(),
@@ -42,6 +44,7 @@ public sealed class GetRaceHandler(ICatalogRepository catalog)
             Choices = RaceChoicesDto.From(race.Choices),
             Resistances = race.Resistances,
             Grants = OriginGrantsDto.From(grants),
+            HeightWeight = HeightWeightDto.From(heightWeight),
         };
     }
 

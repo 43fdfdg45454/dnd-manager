@@ -298,6 +298,41 @@ void main() {
       expect(find.textContaining('Resistencia al daño fuego.'), findsOneWidget);
     });
 
+    testWidgets('un truco de raza muestra su descripción y el botón de información', (
+      tester,
+    ) async {
+      await _toBackground(
+        tester,
+        choices: [
+          makeOriginChoiceJson(
+            key: 'race.subrace.cantrip',
+            name: 'Truco (subraza)',
+            kind: 'Cantrip',
+            options: [
+              {
+                'index': 'light',
+                'name': 'Light',
+                'eligible': true,
+                'description': ['You touch one object that is no larger than 10 feet.'],
+                'spellLevel': 0,
+              },
+              // Without the level: the cantrip kind is enough.
+              {
+                'index': 'mage-hand',
+                'name': 'Mage Hand',
+                'eligible': true,
+                'description': ['A spectral, floating hand appears.'],
+              },
+            ],
+          ),
+        ],
+      );
+      await _next(tester);
+      expect(find.textContaining('You touch one object'), findsOneWidget);
+      expect(find.byKey(const Key('detail-spell-light')), findsOneWidget);
+      expect(find.byKey(const Key('detail-spell-mage-hand')), findsOneWidget);
+    });
+
     testWidgets('al enviar se vuelven a guardar las elecciones tras la hoja completa', (
       tester,
     ) async {

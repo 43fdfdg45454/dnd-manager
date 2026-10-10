@@ -51,7 +51,8 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
         }
 
         // PHB subraces sit on the SRD races: the drow with its bonus, weapons and racial spells by level, the wood elf with its own speed.
-        Assert.Equal(4, result.Counts["raceExtensions"]);
+        // Four races gain PHB subraces; five more only gain their height and weight table.
+        Assert.Equal(9, result.Counts["raceExtensions"]);
         var elf = await GetAsync<RaceDetailDto>(admin, "/api/v1/catalog/races/elf");
         var drow = Assert.Single(elf.Subraces, s => s.Index == $"{PackId}-dark-elf");
         Assert.Contains(drow.AbilityBonuses, b => b is { Ability: "cha", Bonus: 1 });
@@ -65,6 +66,15 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
         Assert.Contains(dwarf.Subraces, s => s.Index == $"{PackId}-mountain-dwarf");
         var variantHuman = await GetAsync<RaceDetailDto>(admin, $"/api/v1/catalog/races/{PackId}-variant-human");
         Assert.NotNull(variantHuman.Choices?.Feats);
+
+        // Phase 29: every race has a height and weight table; the PHB subraces carry their own.
+        Assert.NotNull(variantHuman.HeightWeight);
+        foreach (var raceIndex in new[] { "dwarf", "elf", "halfling", "gnome", "human", "dragonborn", "half-elf", "half-orc", "tiefling" })
+        {
+            var race = await GetAsync<RaceDetailDto>(admin, $"/api/v1/catalog/races/{raceIndex}");
+            Assert.True(race.HeightWeight is not null, $"{raceIndex} sin tabla de altura y peso.");
+            Assert.All(race.Subraces.Where(s => s.Source == PackId), s => Assert.NotNull(s.HeightWeight));
+        }
 
         var backgrounds = await GetAsync<List<BackgroundDto>>(admin, "/api/v1/catalog/backgrounds");
         var sage = Assert.Single(backgrounds, b => b.Index == $"{PackId}-sage");
