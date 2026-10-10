@@ -6,6 +6,8 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_icon.dart';
 import '../../../../core/theme/components.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../../systems/data/systems_repository.dart';
+import '../../../systems/domain/game_system.dart';
 import '../../data/campaigns_controller.dart';
 import '../../domain/campaign_models.dart';
 import 'campaign_section_page.dart';
@@ -54,15 +56,16 @@ class CampaignGeneralPage extends ConsumerWidget {
   }
 }
 
-class _Intro extends StatelessWidget {
+class _Intro extends ConsumerWidget {
   const _Intro({required this.campaign});
 
   final CampaignDetail campaign;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final description = campaign.description.trim();
+    final systemName = gameSystemName(ref.watch(systemsProvider).value, campaign.systemId);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       child: Column(
@@ -71,6 +74,11 @@ class _Intro extends StatelessWidget {
           Text(
             'Dueño: ${campaign.ownerDisplayName} · Tu rol: ${campaign.myRole.label}',
             key: const Key('general-meta'),
+            style: theme.textTheme.bodyMedium?.copyWith(color: context.tokens.inkMuted),
+          ),
+          Text(
+            'Sistema de juego: $systemName',
+            key: const Key('campaign-system'),
             style: theme.textTheme.bodyMedium?.copyWith(color: context.tokens.inkMuted),
           ),
           if (description.isNotEmpty) ...[

@@ -31,6 +31,7 @@ internal sealed class CampaignRepository(AppDbContext db) : ICampaignRepository
                     MyRole = membership.Role,
                     MemberCount = db.CampaignMembers.Count(m => m.CampaignId == campaign.Id),
                     campaign.CreatedAt,
+                    campaign.SystemId,
                 })
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -40,7 +41,7 @@ internal sealed class CampaignRepository(AppDbContext db) : ICampaignRepository
             .OrderBy(r => r.Name, StringComparer.InvariantCultureIgnoreCase)
             .ThenBy(r => r.Id)
             .Select(r => new CampaignSummaryDto(
-                r.Id, r.Name, r.Description, r.OwnerId, r.OwnerDisplayName, r.MyRole.ToString(), r.MemberCount, r.CreatedAt))
+                r.Id, r.Name, r.Description, r.OwnerId, r.OwnerDisplayName, r.MyRole.ToString(), r.MemberCount, r.CreatedAt, r.SystemId))
             .ToList();
     }
 

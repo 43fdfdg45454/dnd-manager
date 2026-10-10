@@ -6,6 +6,8 @@ using Dnd.Api.Realtime;
 using Dnd.Application;
 using Dnd.Application.Abstractions;
 using Dnd.Application.Common;
+using Dnd.Application.Systems;
+using Dnd.Application.Systems.Dnd5e;
 using Dnd.Infrastructure;
 using Dnd.Infrastructure.Files;
 using Microsoft.AspNetCore.DataProtection;
@@ -27,6 +29,7 @@ builder.Logging.ClearProviders();
 builder.Host.UseSerilog((context, _, logger) => LoggingSetup.Configure(context, logger), preserveStaticLogger: true, writeToProviders: true);
 
 builder.Services.AddApplication();
+builder.Services.AddGameSystem<Dnd5eSystem>();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // Realtime campaign events (ADR 0006): the SignalR hub replaces the no-op notifier of the application layer.
@@ -161,6 +164,7 @@ app.MapUserEndpoints();
 app.MapCampaignEndpoints();
 app.MapInvitationEndpoints();
 app.MapCatalogEndpoints();
+app.MapSystemEndpoints();
 app.MapCharacterEndpoints();
 app.MapChangeRequestEndpoints();
 app.MapItemEndpoints();

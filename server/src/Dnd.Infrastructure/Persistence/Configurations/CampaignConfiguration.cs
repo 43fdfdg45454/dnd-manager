@@ -16,6 +16,7 @@ internal sealed class CampaignConfiguration : IEntityTypeConfiguration<Campaign>
 
         builder.Property(x => x.Name).HasMaxLength(Campaign.NameMaxLength).IsRequired();
         builder.Property(x => x.Description).HasMaxLength(Campaign.DescriptionMaxLength).IsRequired();
+        builder.Property(x => x.SystemId).HasMaxLength(Campaign.SystemIdMaxLength).IsRequired().HasDefaultValue(Campaign.DefaultSystemId);
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.UpdatedAt).IsRequired();
         builder.Property(x => x.TimeZoneId).HasMaxLength(CampaignSchedule.TimeZoneIdMaxLength).IsRequired();

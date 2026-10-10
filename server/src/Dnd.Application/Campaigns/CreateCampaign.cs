@@ -1,12 +1,14 @@
 using Dnd.Application.Abstractions;
 using Dnd.Application.Abstractions.Persistence;
 using Dnd.Application.Common;
+using Dnd.Application.Systems;
 using Dnd.Domain.Campaigns;
 using FluentValidation;
 
 namespace Dnd.Application.Campaigns;
 
-public sealed record CreateCampaignRequest(string Name, string? Description);
+/// <param name="SystemId">Game system of the campaign; null uses the instance's default system.</param>
+public sealed record CreateCampaignRequest(string Name, string? Description, string? SystemId = null);
 
 public sealed class CreateCampaignRequestValidator : AbstractValidator<CreateCampaignRequest>
 {
@@ -19,6 +21,9 @@ public sealed class CreateCampaignRequestValidator : AbstractValidator<CreateCam
         RuleFor(x => x.Description)
             .MaximumLength(Campaign.DescriptionMaxLength)
             .WithMessage($"La descripción no puede superar los {Campaign.DescriptionMaxLength} caracteres.");
+        RuleFor(x => x.SystemId)
+            .MaximumLength(Campaign.SystemIdMaxLength)
+            .WithMessage($"El sistema de juego no puede superar los {Campaign.SystemIdMaxLength} caracteres.");
     }
 }
 
@@ -27,6 +32,7 @@ public sealed class CreateCampaignHandler(
     ICampaignRepository campaigns,
     IUserRepository users,
     ICampaignDefaults defaults,
+    IGameSystemRegistry systems,
     IUnitOfWork unitOfWork,
     IDateTimeProvider clock)
 {
@@ -39,7 +45,11 @@ public sealed class CreateCampaignHandler(
             throw AppException.Forbidden("Tu cuenta está desactivada.");
         }
 
-        var campaign = Campaign.Create(request.Name, request.Description, user.Id, clock.UtcNow, defaults.TimeZoneId);
+        var system = request.SystemId is null
+            ? systems.Default
+            : systems.Find(request.SystemId) ?? throw UnknownSystem(request.SystemId);
+
+        var campaign = Campaign.Create(request.Name, request.Description, user.Id, clock.UtcNow, defaults.TimeZoneId, system.Id);
         campaigns.Add(campaign);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -47,4 +57,7 @@ public sealed class CreateCampaignHandler(
         MemberDto[] members = [new(user.Id, user.DisplayName, user.Email, owner.Role.ToString(), owner.JoinedAt)];
         return CampaignDto.From(campaign, members, user.Id);
     }
+
+    private static AppException UnknownSystem(string systemId) =>
+        AppException.Validation("systemId", $"Sistema de juego desconocido: «{systemId}».", "unknown-system");
 }

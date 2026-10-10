@@ -4,6 +4,7 @@ import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart'
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
 import 'package:dnd_companion/features/campaigns/ui/campaigns_page.dart';
 import 'package:dnd_companion/features/characters/data/characters_repository.dart';
+import 'package:dnd_companion/features/systems/domain/game_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,17 +21,28 @@ final _directory = [
   const UserSummary(id: 'p2', displayName: 'Beto', email: 'p2@example.com'),
 ];
 
-Widget _providerScope(FakeCampaignsRepository repository, Widget child) => ProviderScope(
+Widget _providerScope(
+  FakeCampaignsRepository repository,
+  Widget child, {
+  List<GameSystem>? systems,
+}) => ProviderScope(
   overrides: [
     authControllerProvider.overrideWith(() => FixedAuthController(AuthSignedIn(makeUser()))),
     campaignsRepositoryProvider.overrideWithValue(repository),
     charactersRepositoryProvider.overrideWithValue(FakeCharactersRepository()),
+    fakeSystemsOverride(systems),
   ],
   child: child,
 );
 
-Future<void> _pumpList(WidgetTester tester, FakeCampaignsRepository repository) async {
-  await tester.pumpWidget(_providerScope(repository, const MaterialApp(home: CampaignsPage())));
+Future<void> _pumpList(
+  WidgetTester tester,
+  FakeCampaignsRepository repository, {
+  List<GameSystem>? systems,
+}) async {
+  await tester.pumpWidget(
+    _providerScope(repository, const MaterialApp(home: CampaignsPage()), systems: systems),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -91,6 +103,56 @@ void main() {
       expect(find.text('Aún no tienes campañas'), findsNothing);
       expect(find.text('Campaña creada.'), findsOneWidget);
       expect(repository.campaigns.single.description, 'Una descripción');
+    });
+
+    testWidgets('crear muestra el único sistema sin selector y lo envía', (tester) async {
+      final repository = FakeCampaignsRepository();
+      await _pumpList(tester, repository);
+
+      await tester.tap(find.text('Nueva campaña'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<Text>(find.byKey(const Key('campaign-system'))).data,
+        'Sistema de juego: Dungeons & Dragons 5e (SRD 5.1)',
+      );
+      expect(find.byKey(const Key('campaign-system-select')), findsNothing);
+
+      await tester.enterText(find.byKey(const Key('campaign-name')), 'Nueva Aventura');
+      await tester.tap(find.byKey(const Key('campaign-form-submit')));
+      await tester.pumpAndSettle();
+
+      expect(repository.createdSystemIds, ['dnd5e']);
+      expect(repository.campaigns.single.systemId, 'dnd5e');
+    });
+
+    testWidgets('con dos sistemas aparece el selector y se envía el elegido', (tester) async {
+      final repository = FakeCampaignsRepository();
+      await _pumpList(
+        tester,
+        repository,
+        systems: const [
+          dnd5eGameSystem,
+          GameSystem(id: 'otro-sistema', name: 'Otro sistema', version: '1.0'),
+        ],
+      );
+
+      await tester.tap(find.text('Nueva campaña'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('campaign-system')), findsNothing);
+      expect(find.byKey(const Key('campaign-system-select')), findsOneWidget);
+      expect(find.text('Dungeons & Dragons 5e (SRD 5.1)'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('campaign-system-select')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Otro sistema').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('campaign-name')), 'Otra Aventura');
+      await tester.tap(find.byKey(const Key('campaign-form-submit')));
+      await tester.pumpAndSettle();
+
+      expect(repository.createdSystemIds, ['otro-sistema']);
     });
 
     testWidgets('el diálogo exige un nombre', (tester) async {
@@ -160,6 +222,12 @@ void main() {
 
       await tester.tap(find.byKey(const Key('campaign-edit')));
       await tester.pumpAndSettle();
+      // The system is only shown: it never changes.
+      expect(
+        tester.widget<Text>(find.byKey(const Key('campaign-system'))).data,
+        'Sistema de juego: Dungeons & Dragons 5e (SRD 5.1)',
+      );
+      expect(find.byKey(const Key('campaign-system-select')), findsNothing);
       await tester.enterText(find.byKey(const Key('campaign-name')), 'Mina Recuperada');
       await tester.tap(find.byKey(const Key('campaign-form-submit')));
       await tester.pumpAndSettle();
@@ -441,6 +509,46 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(repository.campaigns.single.members.map((m) => m.userId), isNot(contains('p2')));
+    });
+  });
+
+  group('sistema de juego', () {
+    test('sin systemId en la respuesta (caché antigua) la campaña es dnd5e', () {
+      final json = <String, dynamic>{
+        'id': 'c1',
+        'name': 'Antigua',
+        'description': '',
+        'ownerId': 'u1',
+        'ownerDisplayName': 'Usuario Demo',
+        'myRole': 'Owner',
+        'memberCount': 1,
+        'createdAt': '2026-01-01T00:00:00Z',
+      };
+      expect(CampaignSummary.fromJson(json).systemId, 'dnd5e');
+      expect(
+        CampaignDetail.fromJson({
+          ...json,
+          'members': <dynamic>[],
+          'updatedAt': '2026-01-01T00:00:00Z',
+        }).systemId,
+        'dnd5e',
+      );
+      expect(CampaignSummary.fromJson({...json, 'systemId': 'otro'}).systemId, 'otro');
+    });
+
+    test('el nombre de un sistema desconocido es su id', () {
+      expect(gameSystemName(const [dnd5eGameSystem], 'dnd5e'), 'Dungeons & Dragons 5e (SRD 5.1)');
+      expect(gameSystemName(null, 'dnd5e'), 'Dungeons & Dragons 5e');
+      expect(gameSystemName(const [dnd5eGameSystem], 'gurps'), 'gurps');
+    });
+
+    testWidgets('la vista General muestra el sistema de la campaña', (tester) async {
+      await pumpRealApp(tester, location: '/campaigns/c1/general');
+
+      expect(
+        tester.widget<Text>(find.byKey(const Key('campaign-system'))).data,
+        'Sistema de juego: Dungeons & Dragons 5e (SRD 5.1)',
+      );
     });
   });
 

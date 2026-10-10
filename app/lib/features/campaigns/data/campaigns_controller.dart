@@ -53,8 +53,16 @@ class CampaignsController extends AsyncNotifier<List<CampaignSummary>> {
   }
 
   /// Creates a campaign and refreshes the list. Errors are rethrown for the UI.
-  Future<CampaignDetail> create({required String name, required String description}) async {
-    final created = await _repository.create(name: name, description: description);
+  Future<CampaignDetail> create({
+    required String name,
+    required String description,
+    String? systemId,
+  }) async {
+    final created = await _repository.create(
+      name: name,
+      description: description,
+      systemId: systemId,
+    );
     await reload();
     return created;
   }
