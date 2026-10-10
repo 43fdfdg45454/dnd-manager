@@ -2,38 +2,168 @@
 
 El repositorio solo incluye el SRD 5.1 (CC-BY 4.0). Cada instancia puede ampliar su catálogo con
 **paquetes de contenido**: ficheros JSON que el administrador crea a partir de material que posea
-(subclases, objetos, conjuros, razas con sus subrazas y rasgos, trasfondos) y que importa en su
-servidor. Ver [ADR 0007](ADR/0007-paquetes-de-contenido-privados.md).
+y que importa en su servidor. Un paquete puede contener un libro entero: clases completas,
+subclases, dotes, razas, trasfondos, objetos (armas de fuego incluidas), conjuros, criaturas,
+condiciones, documentos de reglas y vocabularios. Ver
+[ADR 0007](ADR/0007-paquetes-de-contenido-privados.md).
 
 > **Nunca se commitean.** Los paquetes suelen contener material con copyright. Guárdalos fuera del
-> repositorio o en `content-packs/`, que está en `.gitignore`. El único paquete de este documento,
-> "Reinos de Ejemplo", es ficticio.
+> repositorio o en `content-packs/`, que está en `.gitignore`. Todos los paquetes de este documento
+> ("Ecos de Ejemplo", "Tierras de Ejemplo"...) son ficticios.
+
+Este documento describe el **formato 3** (`"formatVersion": 3`), el único que acepta el servidor. Un
+paquete de un formato anterior se rechaza con `formatVersion: Versión de formato no admitida`:
+conviértelo (las diferencias están en [Cambios respecto al formato 2](#cambios-respecto-al-formato-2)).
+
+## Paquete base, activación por campaña y dependencias
+
+- **Paquete base.** El SRD es el paquete base del sistema D&D 5e (`id` `srd`): siempre está activo en
+  todas las campañas y no se puede borrar ni reemplazar.
+- **Activación por campaña.** Un paquete importado **no se activa en ninguna campaña**. El Owner o
+  un DM de cada campaña elige qué paquetes usa (`PUT /api/v1/campaigns/{id}/content-packs`). Dentro de
+  una campaña, el asistente de creación, las elecciones de origen, la subida de nivel, la preparación
+  de conjuros, las sustituciones, la tienda, el alijo y la búsqueda de objetos solo ofrecen el SRD, los
+  paquetes activos y el homebrew de la campaña.
+- **Desactivar no rompe nada.** Lo que un personaje ya tiene (clase, subclase, raza, conjuros, objetos
+  del inventario) se sigue resolviendo aunque su paquete se desactive. Las opciones y dotes elegidas de
+  un paquete desactivado aparecen en `invalidChoices` con `code: "pack-disabled"` ("Este contenido
+  pertenece a un paquete desactivado en la campaña.") para que el jugador las sustituya. Una edición
+  de la hoja no puede **añadir** contenido de un paquete desactivado.
+- **Compendio.** Las rutas `GET /api/v1/systems/dnd5e/catalog/*` muestran todo lo importado; con
+  `?campaignId=<id>` (solo miembros de la campaña) muestran solo lo activo en ella.
+- **Dependencias.** Un paquete que amplía contenido de otro paquete (p. ej. subclases para una clase
+  de otro paquete) lo declara en `requires`. El importador solo deja ver al paquete el SRD, los
+  paquetes de `requires` (ya importados) y el propio paquete; una campaña no puede activar un paquete
+  sin activar también los que requiere (`400 missing-requirement`), y no se puede borrar un paquete
+  que otros requieren (`409 required-by`).
 
 ## Ejemplo ficticio
 
+Un paquete con una clase completa de 20 niveles con su propia tabla de espacios de conjuro, un
+recurso que sale de `classSpecific` y una subclase; una dote, una raza, un arma de fuego con su
+munición, dos conjuros, una criatura, una condición, una regla y dos vocabularios:
+
 ```json
 {
-  "formatVersion": 1,
-  "id": "reinos-ejemplo",
-  "name": "Reinos de Ejemplo",
-  "version": "1.0.0",
-  "classesExtended": [
+  "formatVersion": 3,
+  "system": "dnd5e",
+  "id": "ecos-ejemplo",
+  "name": "Ecos de Ejemplo",
+  "version": "3.0.0",
+  "classes": [
     {
-      "classIndex": "fighter",
+      "index": "ecos-ejemplo-tejedor",
+      "name": "Tejedor de ecos",
+      "hitDie": 8,
+      "savingThrows": ["int", "cha"],
+      "proficiencies": {"armor": ["Light Armor"], "weapons": ["Simple Weapons"], "tools": []},
+      "skillChoices": {"choose": 2, "from": ["arcana", "history", "insight", "perception", "performance"]},
+      "startingEquipmentText": "Una daga, una flauta y un paquete de explorador.",
+      "multiclassing": {"prerequisites": {"int": 13}, "proficiencies": {"armor": ["Light Armor"], "skills": 1}},
+      "spellcasting": {
+        "ability": "int",
+        "progression": "table",
+        "preparation": "prepared",
+        "ritual": true,
+        "focus": "Un diapasón",
+        "cantripsKnown": {"1": 2, "4": 3, "10": 4},
+        "slots": {
+          "1": [2],
+          "2": [3],
+          "3": [4, 2],
+          "5": [4, 3, 2],
+          "7": [4, 3, 3, 1],
+          "9": [4, 3, 3, 2, 1],
+          "11": [4, 3, 3, 3, 2],
+          "13": [4, 3, 3, 3, 2, 1],
+          "15": [4, 3, 3, 3, 2, 1, 1],
+          "17": [4, 3, 3, 3, 2, 1, 1, 1],
+          "19": [4, 3, 3, 3, 3, 2, 1, 1, 1]
+        }
+      },
+      "spellList": ["ecos-ejemplo-susurro", "ecos-ejemplo-onda", {"class": "wizard"}],
+      "subclassFlavor": "Coro",
+      "subclassLevel": 2,
+      "description": ["Clase ficticia: músicos que guardan ecos y los devuelven como magia."],
+      "levels": [
+        {
+          "level": 1,
+          "classSpecific": {"ecos": 2},
+          "features": [
+            {
+              "index": "ecos-ejemplo-eco-resonante",
+              "name": "Eco resonante",
+              "description": ["Texto de ejemplo: repites el último sonido que oíste con tu propia voz."]
+            }
+          ]
+        },
+        {
+          "level": 2,
+          "classSpecific": {"ecos": 2},
+          "features": [
+            {
+              "index": "ecos-ejemplo-sintonia",
+              "name": "Sintonía",
+              "description": ["Texto de ejemplo: eliges el coro con el que resuenas."]
+            }
+          ]
+        },
+        {
+          "level": 3,
+          "classSpecific": {"ecos": 2},
+          "features": [
+            {
+              "index": "ecos-ejemplo-pulso",
+              "name": "Pulso",
+              "description": ["Texto de ejemplo: sientes el pulso del combate: +1 a la iniciativa."],
+              "modifiers": [{"kind": "InitiativeBonus", "value": 1}]
+            }
+          ]
+        },
+        {"level": 4, "classSpecific": {"ecos": 2}},
+        {"level": 5, "classSpecific": {"ecos": 3}},
+        {
+          "level": 6,
+          "classSpecific": {"ecos": 3},
+          "features": [{"index": "ecos-ejemplo-eco-doble", "name": "Eco doble", "description": ["Texto de ejemplo."]}]
+        },
+        {"level": 7, "classSpecific": {"ecos": 3}},
+        {"level": 8, "classSpecific": {"ecos": 3}},
+        {"level": 9, "classSpecific": {"ecos": 3}},
+        {"level": 10, "classSpecific": {"ecos": 3}},
+        {
+          "level": 11,
+          "classSpecific": {"ecos": 4},
+          "features": [{"index": "ecos-ejemplo-eco-mayor", "name": "Eco mayor", "description": ["Texto de ejemplo."]}]
+        },
+        {"level": 12, "classSpecific": {"ecos": 4}},
+        {"level": 13, "classSpecific": {"ecos": 4}},
+        {"level": 14, "classSpecific": {"ecos": 4}},
+        {"level": 15, "classSpecific": {"ecos": 4}},
+        {"level": 16, "classSpecific": {"ecos": 4}},
+        {"level": 17, "classSpecific": {"ecos": 5}},
+        {"level": 18, "classSpecific": {"ecos": 5}},
+        {"level": 19, "classSpecific": {"ecos": 5}},
+        {
+          "level": 20,
+          "classSpecific": {"ecos": 5},
+          "features": [{"index": "ecos-ejemplo-voz-eterna", "name": "Voz eterna", "description": ["Texto de ejemplo."]}]
+        }
+      ],
+      "resources": [{"key": "ecos-ejemplo-ecos", "name": "Ecos", "max": "classSpecific:ecos", "recharge": "ShortRest"}],
       "subclasses": [
         {
-          "index": "reinos-ejemplo-centinela",
-          "name": "Centinela",
-          "flavor": "Arquetipo marcial",
-          "description": ["Guardianes ficticios que vigilan las murallas de los Reinos de Ejemplo."],
+          "index": "ecos-ejemplo-coro-del-alba",
+          "name": "Coro del Alba",
+          "description": ["Subclase ficticia."],
           "levels": [
             {
-              "level": 3,
+              "level": 2,
               "features": [
                 {
-                  "index": "reinos-ejemplo-vigilia",
-                  "name": "Vigilia",
-                  "description": ["Texto de ejemplo: mientras estés consciente, ganas un bonificador de +1 a la iniciativa."]
+                  "index": "ecos-ejemplo-voz-del-alba",
+                  "name": "Voz del Alba",
+                  "description": ["Texto de ejemplo."]
                 }
               ]
             }
@@ -42,91 +172,128 @@ servidor. Ver [ADR 0007](ADR/0007-paquetes-de-contenido-privados.md).
       ]
     }
   ],
-  "items": [
+  "feats": [
     {
-      "index": "reinos-ejemplo-espada-del-alba",
-      "name": "Espada del Alba",
-      "category": "Weapon",
-      "subcategory": "Martial Melee",
-      "rarity": "Rare",
-      "requiresAttunement": true,
-      "costCp": null,
-      "weightLb": 3,
-      "damageDice": "1d8",
-      "damageType": "slashing",
-      "versatileDice": "1d10",
-      "properties": ["versatile"],
-      "description": ["Una espada ficticia que brilla con la primera luz del día."],
-      "modifiers": [
-        { "kind": "AttackBonus", "value": 1 },
-        { "kind": "DamageBonus", "value": 1 }
-      ]
-    }
-  ],
-  "spells": [
-    {
-      "index": "reinos-ejemplo-luz-del-alba",
-      "name": "Luz del Alba",
-      "level": 1,
-      "school": "evocation",
-      "castingTime": "1 action",
-      "range": "60 feet",
-      "components": ["V", "S"],
-      "material": null,
-      "duration": "Instantaneous",
-      "concentration": false,
-      "ritual": false,
-      "description": ["Un destello ficticio de luz cálida golpea a una criatura que puedas ver."],
-      "higherLevel": ["El daño aumenta en 1d8 por cada nivel de espacio por encima de 1."],
-      "classes": ["cleric", "paladin"],
-      "subclasses": [],
-      "attackType": null,
-      "damage": { "type": "Radiant", "atSlotLevel": { "1": "2d8", "2": "3d8" } },
-      "dcAbility": "dex"
+      "index": "ecos-ejemplo-oido-fino",
+      "name": "Oído fino",
+      "category": "Sentidos",
+      "description": ["Texto de ejemplo: +2 a la iniciativa."],
+      "modifiers": [{"kind": "InitiativeBonus", "value": 2}]
     }
   ],
   "races": [
     {
-      "index": "reinos-ejemplo-aurano",
-      "name": "Aurano",
+      "index": "ecos-ejemplo-resonante",
+      "name": "Resonante",
       "speed": 30,
       "size": "Medium",
-      "sizeDescription": "Los auranos ficticios miden entre 1,60 y 1,90 metros.",
-      "abilityBonuses": [{ "ability": "cha", "bonus": 2 }],
+      "abilityBonuses": [{"ability": "int", "bonus": 2}],
       "languages": ["Common"],
-      "age": "Viven tanto como los humanos.",
-      "alignment": "Suelen preferir el orden.",
       "traits": [
-        { "index": "reinos-ejemplo-brillo", "name": "Brillo", "description": ["Tu piel emite una luz tenue en un radio de 1,5 metros."] }
-      ],
-      "subraces": [
         {
-          "index": "reinos-ejemplo-aurano-del-alba",
-          "name": "Aurano del Alba",
-          "description": "Auranos ficticios nacidos al amanecer.",
-          "abilityBonuses": [{ "ability": "wis", "bonus": 1 }],
-          "traits": [
-            { "index": "reinos-ejemplo-mirada-clara", "name": "Mirada clara", "description": ["Tienes ventaja en las tiradas para no quedar cegado."] }
-          ]
+          "index": "ecos-ejemplo-oido-de-cristal",
+          "name": "Oído de cristal",
+          "description": ["Texto de ejemplo."]
         }
       ]
     }
   ],
-  "backgrounds": [
+  "items": [
     {
-      "index": "reinos-ejemplo-farero",
-      "name": "Farero",
-      "featureName": "Luz en la costa",
-      "featureDescription": ["Los marineros ficticios de la costa te ofrecen refugio."],
-      "skillProficiencies": ["perception", "survival"],
-      "startingEquipmentText": "Una linterna, un catalejo barato y 10 po."
+      "index": "ecos-ejemplo-trueno-de-mano",
+      "name": "Trueno de mano",
+      "rarity": "Common",
+      "costCp": 25000,
+      "weightLb": 3,
+      "description": ["Arma de fuego ficticia."],
+      "weapon": {
+        "category": "martial",
+        "range": "ranged",
+        "damage": "1d10",
+        "damageType": "piercing",
+        "properties": ["loading"],
+        "rangeNormal": 30,
+        "rangeLong": 90,
+        "special": "Texto de ejemplo: se encasquilla con un 1 o un 2."
+      },
+      "firearm": {"reload": 1, "misfire": 2}
+    },
+    {"index": "ecos-ejemplo-bala", "name": "Bala de eco", "costCp": 20, "weightLb": 0.1, "ammunition": true}
+  ],
+  "spells": [
+    {
+      "index": "ecos-ejemplo-susurro",
+      "name": "Susurro",
+      "level": 0,
+      "school": "enchantment",
+      "castingTime": "1 action",
+      "range": "30 feet",
+      "components": ["V"],
+      "duration": "Instantaneous",
+      "description": ["Truco ficticio: tu voz llega a una criatura que elijas."]
+    },
+    {
+      "index": "ecos-ejemplo-onda",
+      "name": "Onda",
+      "level": 1,
+      "school": "evocation",
+      "castingTime": "1 action",
+      "range": "Self (15-foot cone)",
+      "components": ["V", "S"],
+      "duration": "Instantaneous",
+      "description": ["Conjuro ficticio: una onda de sonido empuja a las criaturas del cono."]
     }
-  ]
+  ],
+  "creatures": [
+    {
+      "index": "ecos-ejemplo-murcielago-eco",
+      "name": "Murciélago de eco",
+      "size": "Tiny",
+      "type": "beast",
+      "alignment": "unaligned",
+      "armorClass": 12,
+      "hitPoints": 3,
+      "hitDice": "1d4+1",
+      "speed": {"walk": 5, "fly": 30},
+      "abilities": {"str": 2, "dex": 15, "con": 12, "int": 2, "wis": 12, "cha": 4},
+      "senses": {"blindsight": "60 ft."},
+      "passivePerception": 11,
+      "challengeRating": 0,
+      "xp": 10,
+      "traits": [{"name": "Ecolocalización", "description": "Texto de ejemplo."}],
+      "actions": [
+        {
+          "name": "Mordisco",
+          "description": "Texto de ejemplo.",
+          "attackBonus": 0,
+          "damage": [{"dice": "1", "type": "piercing"}]
+        }
+      ]
+    }
+  ],
+  "conditions": [{"index": "ecos-ejemplo-resonando", "name": "Resonando", "description": ["Condición ficticia."]}],
+  "rules": [
+    {
+      "index": "ecos-ejemplo-resonancia",
+      "title": "Resonancia",
+      "category": "variant",
+      "body": ["Regla ficticia: los ecos se recuperan con un descanso corto."],
+      "tags": ["ecos"]
+    }
+  ],
+  "reference": {
+    "languages": [{"index": "ecos-ejemplo-lengua-del-eco", "name": "Lengua del eco", "description": ["Idioma ficticio."]}],
+    "damageTypes": [{"index": "ecos-ejemplo-sonico", "name": "Sónico", "description": ["Tipo de daño ficticio."]}]
+  }
 }
 ```
 
 El mismo fichero se usa en los tests del servidor:
-`server/tests/Dnd.Api.Tests/Fixtures/content-pack-example.json`.
+`server/tests/OpenTrpg.Systems.Dnd5e.Api.Tests/Fixtures/content-pack-v3-example.json`. Al activarlo en
+una campaña, el asistente de creación ofrece el "Tejedor de ecos" y la raza "Resonante"; al subir a
+nivel 2 se elige el coro (`subclassLevel: 2`), al nivel 4 la mejora de característica o una dote (la
+"Oído fino" aparece junto a las del SRD) y un truco más, y la hoja calcula los espacios de la tabla
+propia (nivel 5: 4/3/2) y el recurso "Ecos" (2 hasta el nivel 4, 3 desde el 5).
 
 ## Reglas generales
 
@@ -136,17 +303,18 @@ El mismo fichero se usa en los tests del servidor:
   detectar erratas.
 - **Índices**: todos los `index` del paquete empiezan por `<id>-` (prefijo del paquete), solo
   contienen minúsculas, números y guiones y tienen como máximo 100 caracteres. No pueden repetirse
-  dentro del mismo tipo ni coincidir con un índice del SRD o de otro paquete.
-- **Textos**: se recortan los espacios de los extremos. Los nombres (`name`, `featureName`,
+  dentro del mismo tipo ni coincidir con un índice del SRD o de otro paquete. Una clase y una subclase
+  tampoco pueden compartir índice.
+- **Textos**: se recortan los espacios de los extremos. Los nombres (`name`, `title`, `featureName`,
   `flavor`) tienen como máximo 200 caracteres. Los campos de descripción son listas de párrafos
   (`string[]`): como máximo 200 párrafos de 10 000 caracteres; los párrafos vacíos se descartan.
 - **Listas**: como máximo 500 entradas en cada lista del formato (`items`, `spells`,
-  `classesExtended[].subclasses`, `levels[].features`, `traits`...), salvo los límites menores que
-  se indican.
-- **Referencias** (`classIndex`, `classes`, `subclasses` de conjuros): deben existir en el SRD o en el
-  propio paquete. Los paquetes **no añaden clases**; las subrazas y los rasgos se declaran dentro de
-  su raza. Los objetos de `backgrounds[].startingEquipment` deben existir en el SRD o en el propio
-  paquete, y sus categorías en las categorías de equipo del SRD.
+  `classes[].subclasses`, `levels[].features`, `traits`...), salvo los límites menores que se indican.
+- **Referencias** (`extends`, `classes` y `subclasses` de conjuros, `spellList`, `setId`, `requires`...):
+  deben existir en el SRD, en los paquetes de `requires` o en el propio paquete. Las subrazas y los
+  rasgos se declaran dentro de su raza; las subclases, dentro de su clase. Los objetos de
+  `startingEquipment` deben existir en el SRD, en un paquete de `requires` o en el propio paquete, y
+  sus categorías en las categorías de equipo del SRD.
 - **Tamaño máximo del fichero**: 20 MB.
 - El contenido se muestra tal cual: escribe los textos en el idioma que prefieras (el SRD está en
   inglés).
@@ -159,25 +327,101 @@ Notación: `string?` admite `null` o ausencia; **obligatorio** indica que no pue
 
 | Campo | Tipo | Reglas |
 | --- | --- | --- |
-| `formatVersion` | `int?` | Versión del formato: `1` (por defecto) o `2`. El formato 2 añade `optionSets`, `levelChoices`, `grants` y `heightWeight` ([ver abajo](#formato-2-elecciones-por-nivel)). |
+| `formatVersion` | `int` | **Obligatorio**: `3`. |
+| `system` | `string?` | Sistema de juego del paquete. Por defecto `dnd5e`, el único instalado hoy. |
 | `id` | `string` | **Obligatorio**. `[a-z0-9-]{3,40}`. Identifica el paquete y es el prefijo de sus índices. `srd` y `homebrew` están reservados. |
-| `name` | `string` | **Obligatorio**, ≤ 200. Nombre visible ("Reinos de Ejemplo"). |
-| `version` | `string` | **Obligatorio**, ≤ 40. Versión libre del paquete (`1.0.0`). |
-| `classesExtended` | `ClassExtension[]?` | Subclases nuevas para clases existentes. |
-| `items` | `Item[]?` | Objetos. |
+| `name` | `string` | **Obligatorio**, ≤ 200. Nombre visible ("Ecos de Ejemplo"). |
+| `version` | `string` | **Obligatorio**, ≤ 40. Versión libre del paquete (`3.0.0`). |
+| `requires` | `string[]?` | Paquetes (ya importados, del mismo sistema) cuyo contenido usa este. Ver [dependencias](#paquete-base-activación-por-campaña-y-dependencias). |
+| `classes` | `Class[]?` | Clases completas nuevas o ampliaciones de clases existentes con `extends` ([ver abajo](#class)). |
+| `feats` | `Feat[]?` | Dotes ([ver abajo](#feat)). |
+| `items` | `Item[]?` | Objetos, con secciones de arma, armadura, herramienta, munición y arma de fuego. |
 | `spells` | `Spell[]?` | Conjuros. |
-| `races` | `Race[]?` | Razas con sus rasgos y subrazas. |
+| `races` | `Race[]?` | Razas con sus rasgos y subrazas, o ampliaciones de razas existentes. |
 | `backgrounds` | `Background[]?` | Trasfondos. |
-| `optionSets` | `OptionSet[]?` | Formato 2. Conjuntos de opciones (dotes, estilos de combate, invocaciones...). |
-| `trinkets` | `Trinket[]?` | Tabla de baratijas (d100) del asistente de creación ([ver abajo](#trinket)). Formatos 1 y 2. |
-| `rollTables` | `RollTable[]?` | Tablas de tirada genéricas (oleada de magia salvaje...), [ver abajo](#rolltable). Formatos 1 y 2. |
+| `optionSets` | `OptionSet[]?` | Conjuntos de opciones (estilos de combate, invocaciones, maniobras...); [ver abajo](#elecciones-por-nivel-y-opciones). |
+| `trinkets` | `Trinket[]?` | Tabla de baratijas (d100) del asistente de creación ([ver abajo](#trinket)). |
+| `rollTables` | `RollTable[]?` | Tablas de tirada genéricas (oleada de magia salvaje...), [ver abajo](#rolltable). |
+| `creatures` | `Creature[]?` | Criaturas del compendio; las bestias sirven de compañero animal ([ver abajo](#creature)). |
+| `conditions` | `Condition[]?` | Condiciones nuevas ([ver abajo](#condition)). |
+| `rules` | `Rule[]?` | Documentos de reglas sin efecto mecánico ([ver abajo](#rule)). |
+| `reference` | `Reference?` | Vocabularios: idiomas, propiedades de arma, categorías de equipo, tipos de daño, escuelas de magia y herramientas ([ver abajo](#reference)). |
 
-### `ClassExtension`
+### `Class`
+
+Cada entrada de `classes` es **una clase completa** (con `index`) o **la ampliación de una clase
+existente** (con `extends`).
+
+**Clase completa**
 
 | Campo | Tipo | Reglas |
 | --- | --- | --- |
-| `classIndex` | `string` | **Obligatorio**. Clase del SRD (`barbarian`, `bard`, `cleric`, `druid`, `fighter`, `monk`, `paladin`, `ranger`, `rogue`, `sorcerer`, `warlock`, `wizard`). |
-| `subclasses` | `Subclass[]?` | Subclases de esa clase. |
+| `index` | `string` | **Obligatorio**, con prefijo. |
+| `name` | `string` | **Obligatorio**, ≤ 200. |
+| `hitDie` | `int` | **Obligatorio**: 4, 6, 8, 10 o 12. |
+| `savingThrows` | `string[]?` | Características (`str`...`cha`) con competencia en salvaciones. |
+| `proficiencies` | `{ armor, weapons, tools }?` | Listas de texto (≤ 50 de ≤ 100): "Light Armor", "Simple Weapons"... (los mismos nombres que el SRD). |
+| `skillChoices` | `{ choose, from }?` | Habilidades a elegir en el nivel 1 (`from`: índices como `arcana`; vacío = todas). |
+| `startingEquipment` | `StartingEquipment?` | Equipo inicial estructurado, [como el de los trasfondos](#startingequipment), más `gold` (`{ "dice": "5d4", "multiplier": 10 }`: riqueza inicial alternativa). |
+| `startingEquipmentText` | `string?` | ≤ 10 000. Texto del equipo inicial. |
+| `multiclassing` | `Multiclassing?` | Requisitos y competencias al tomar la clase como multiclase (ver abajo). Sin él no hay requisitos ni competencias. |
+| `spellcasting` | `ClassSpellcasting?` | Solo los lanzadores (ver abajo). |
+| `spellList` | `SpellListEntry[]?` | Lista de conjuros de la clase: índices de conjuro y `{ "class": "<índice>" }` para incluir la lista de otra clase. Se suma a los conjuros que nombran la clase en `classes`. |
+| `subclassFlavor` | `string?` | ≤ 200. Nombre de la elección de subclase ("Coro"); por defecto "Subclass". |
+| `subclassLevel` | `int?` | 1–20. Nivel en que se elige la subclase; si falta y hay subclases, 3. |
+| `description` | `string[]?` | Párrafos. |
+| `levels` | `ClassLevel[]` | **Obligatorio**: los niveles 1 a 20, cada uno una vez. |
+| `resources` | `Resource[]?` | Recursos de la clase (usos por descanso), [como los de los rasgos](#levelsfeaturesresource), con un máximo más: `"classSpecific:<clave>"` (ver abajo). |
+| `subclasses` | `Subclass[]?` | Subclases de la clase. |
+| `levelChoices` | `LevelChoice[]?` | Elecciones por nivel ([ver abajo](#levelchoices)); se suman a las generadas. |
+
+**`ClassLevel`**: `level` (**obligatorio**, 1–20), `profBonus` (`int?`, 2–6; si falta, la tabla
+estándar), `features` (`Feature[]?`), `abilityScoreImprovement` (`bool?`) y `classSpecific` (objeto
+de hasta 30 valores libres: `{ "ecos": 2, "dado_de_eco": "d6" }`, que el detalle de la clase muestra
+por nivel). Si ningún nivel marca `abilityScoreImprovement`, las mejoras son las estándar (4, 8, 12,
+16 y 19); si alguno lo marca, solo los marcados con `true`.
+
+**Elecciones generadas.** El servidor crea las elecciones que el SRD declara a mano para sus clases:
+la subclase en `subclassLevel`, la mejora de característica o dote en cada nivel de mejora, los
+trucos nuevos cada vez que crece `cantripsKnown` (de la lista de la clase) y, en los lanzadores
+`known`, los conjuros nuevos cada vez que crece `spellsKnown` (con sustitución de uno conocido). Una
+elección de `levelChoices` con el mismo nivel y `key` (`subclass`, `asi`, `cantrips`, `spells-known`)
+sustituye a la generada.
+
+**`ClassSpellcasting`**
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `ability` | `string` | **Obligatorio**: `int`, `wis`, `cha`... |
+| `progression` | `string` | **Obligatorio**: `full` (como el mago), `half` (paladín), `third` (caballero arcano), `pact` (brujo) o `table` (tabla propia en `slots`). |
+| `slots` | `{ "<nivel>": int[] }?` | **Obligatorio** con `table`; admitido con `pact`. Claves: nivel de clase; valor: espacios de nivel 1 a 9 (de 1 a 9 cantidades). Cada nivel usa la fila de la clave más alta que no lo supere. Con `pact` sin `slots`, la tabla del brujo. |
+| `cantripsKnown` | `{ "<nivel>": int }?` | Trucos conocidos desde ese nivel de clase. |
+| `spellsKnown` | `{ "<nivel>": int }?` | Conjuros conocidos desde ese nivel (lanzadores `known`). |
+| `preparation` | `string?` | `prepared` (prepara cada día: modificador + nivel de clase, o su mitad en `half` y su tercio en `third`; mínimo 1) o `known` (conoce una cantidad fija). Por defecto `known` si hay `spellsKnown` y `prepared` si no. |
+| `ritual` | `bool?` | Puede lanzar rituales. |
+| `focus` | `string?` | ≤ 100. Foco de lanzamiento (texto). |
+
+Para el multiclase, `full` cuenta el nivel completo, `half` la mitad y `third` un tercio (como en el
+SRD); `pact` y `table` no suman al nivel de lanzador conjunto: aportan sus propios espacios.
+
+**`Multiclassing`**: `prerequisites` (`{ "int": 13 }`: puntuación mínima por característica; todas
+deben cumplirse) y `proficiencies` (`armor`, `weapons`, `tools` como en la clase y `skills`: número
+de habilidades de la lista de la clase que se eligen, 0–4).
+
+**Recurso desde `classSpecific`.** Un recurso de la clase con `"max": "classSpecific:ecos"` toma su
+máximo del valor numérico `ecos` de `classSpecific` en cada nivel (equivale a un `byLevel` con esos
+valores); es un error si ningún nivel lo tiene.
+
+**Ampliación (`extends`)**
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `extends` | `string` | **Obligatorio**. Índice de una clase del SRD (`barbarian`, `bard`, `cleric`, `druid`, `fighter`, `monk`, `paladin`, `ranger`, `rogue`, `sorcerer`, `warlock`, `wizard`) o de un paquete de `requires`. |
+| `subclasses` | `Subclass[]?` | Subclases nuevas de esa clase. |
+| `levelChoices` | `LevelChoice[]?` | Elecciones nuevas de la clase base. |
+
+El resto de campos de una clase completa son un error en una ampliación ("No se admite en una clase
+con extends"). Las subclases de una clase del propio paquete van en su definición, no en un `extends`.
 
 **`Subclass`**
 
@@ -187,18 +431,37 @@ Notación: `string?` admite `null` o ausencia; **obligatorio** indica que no pue
 | `name` | `string` | **Obligatorio**, ≤ 200. |
 | `flavor` | `string?` | ≤ 200. Nombre de la elección ("Martial Archetype"); por defecto, el de la clase. |
 | `description` | `string[]?` | Párrafos. |
-| `levels` | `SubclassLevel[]?` | Rasgos por nivel. |
-| `spellcasting` | `SubclassSpellcasting?` | Con `"formatVersion": 2`: la subclase convierte en lanzadora a una clase que no lanza conjuros (ver [`subclasses[].spellcasting`](#subclassesspellcasting)). |
-| `expandedSpellList` | `ExpandedSpell[]?` | Con `"formatVersion": 2`: conjuros que se añaden a la lista de la clase para los personajes con esta subclase, sin concederlos (ver [`subclasses[].expandedSpellList`](#subclassesexpandedspelllist)). |
+| `levels` | `SubclassLevel[]?` | Rasgos y concesiones por nivel. |
+| `levelChoices` | `LevelChoice[]?` | Elecciones de la subclase ([ver abajo](#levelchoices)). |
+| `spellcasting` | `SubclassSpellcasting?` | La subclase convierte en lanzadora a una clase que no lanza conjuros (ver [`subclasses[].spellcasting`](#subclassesspellcasting)). |
+| `expandedSpellList` | `ExpandedSpell[]?` | Conjuros que se añaden a la lista de la clase para los personajes con esta subclase, sin concederlos (ver [`subclasses[].expandedSpellList`](#subclassesexpandedspelllist)). |
 
-**`SubclassLevel`**: `level` (`int`, **obligatorio**, 1–20, sin repetir dentro de la subclase) y
-`features` (`Feature[]?`).
+**`SubclassLevel`**: `level` (`int`, **obligatorio**, 1–20, sin repetir dentro de la subclase),
+`features` (`Feature[]?`) y `grants` (`Grants?`, ver [`levels[].grants`](#levelsgrants)).
 
-**`Feature`**: `index` (**obligatorio**, con prefijo), `name` (**obligatorio**, ≤ 200),
-`description` (`string[]?`) y, con `"formatVersion": 2`, `resource` (`Resource?`, ver
+**`Feature`** (de clase o de subclase): `index` (**obligatorio**, con prefijo), `name`
+(**obligatorio**, ≤ 200), `description` (`string[]?`), `resource` (`Resource?`, ver
 [`levels[].features[].resource`](#levelsfeaturesresource)), `companion` (`Companion?`, ver
 [`levels[].features[].companion`](#levelsfeaturescompanion)) y `modifiers` (`Modifier[]?`, ver
 [`levels[].features[].modifiers`](#levelsfeaturesmodifiers)).
+
+### `Feat`
+
+Dotes que se ofrecen en cada mejora de característica (y en las razas que conceden una dote), junto a
+las del SRD. Son opciones del conjunto `feats` y admiten los mismos campos que una
+[`Option`](#option) (salvo `cost`), más una categoría:
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `index` | `string` | **Obligatorio**, con prefijo. |
+| `name` | `string` | **Obligatorio**, ≤ 200. |
+| `category` | `string?` | ≤ 40. Agrupación libre ("Sentidos", "Combate", "Origen"...). |
+| `description` | `string[]?` | Párrafos. |
+| `prerequisitesText`, `prerequisites` | | Como en [`Option`](#option). |
+| `abilityIncrease`, `modifiers`, `grants`, `resource` | | Como en [`Option`](#option). |
+
+Una dote también puede declararse como opción de `optionSets` con `"setId": "feats"`; `feats` es el
+atajo recomendado.
 
 ### `Item`
 
@@ -237,6 +500,25 @@ si lo requiere, sintonizado):
 | `target` | `string?` | Característica (`str`...`cha`) obligatoria en `AbilityBonus` y `AbilitySet`; característica o `null` (todas) en `SaveBonus`; índice de habilidad o `null` (todas) en `SkillBonus`, ≤ 64; `null` en el resto. |
 | `value` | `int` | **Obligatorio**. −10 a 30; en `AbilitySet`, 1 a 30. |
 
+#### Secciones `weapon`, `armor`, `tool`, `ammunition` y `firearm`
+
+En lugar de los campos sueltos de arma o armadura, un objeto puede llevar secciones. `category` se
+deduce de ellas si falta (`Weapon`, `Armor` o `Shield`, `Tool`, `Consumable` para la munición).
+
+| Sección | Campos |
+| --- | --- |
+| `weapon` | `category` (**obligatorio**: `simple` o `martial`), `range` (**obligatorio**: `melee` o `ranged`), `damage` (**obligatorio**, dados), `damageType` (**obligatorio**), `versatileDamage`, `properties` (`string[]`), `rangeNormal`, `rangeLong` y `special` (texto de una propiedad especial, ≤ 10 000). La subcategoría por defecto es "Martial Ranged", "Simple Melee"... |
+| `armor` | `category` (**obligatorio**: `light`, `medium`, `heavy` o `shield`), `baseAc` (**obligatorio**), `dexBonus` (por defecto, sí salvo las pesadas), `maxDexBonus` (por defecto 2 en las intermedias), `strMin` y `stealthDisadvantage`. |
+| `tool` | `true`: el objeto es una herramienta. |
+| `ammunition` | `true`: el objeto es munición (subcategoría "Ammunition"). |
+| `firearm` | `{ "reload": 1-100?, "misfire": 1-20 }`: arma de fuego con su recarga (disparos entre recargas) y su fallo (resultado del d20 igual o inferior con el que se encasquilla). Son informativos: la app los muestra en el detalle del arma y no los tira. Necesita `weapon` y añade la propiedad `firearm`. |
+
+`weapon` y los campos sueltos de arma (`damageDice`, `properties`...) no se pueden combinar, ni
+`armor` con los sueltos de armadura, ni `weapon` con `armor`. Lo que no tiene columna propia
+(`special`, `tool`, `ammunition`, `firearm`) llega a la app en `systemData` del detalle del objeto
+(`GET /api/v1/systems/dnd5e/catalog/items/{id}`):
+`{ "special": "...", "firearm": { "reload": 1, "misfire": 2 } }`.
+
 ### `Spell`
 
 | Campo | Tipo | Reglas |
@@ -250,7 +532,7 @@ si lo requiere, sintonizado):
 | `material` | `string?` | ≤ 10 000. |
 | `concentration`, `ritual` | `bool?` | Por defecto `false`. |
 | `description`, `higherLevel` | `string[]?` | Párrafos. |
-| `classes` | `string[]?` | Clases que pueden aprenderlo (índices del SRD). |
+| `classes` | `string[]?` | Clases que pueden aprenderlo: del SRD, de `requires` o del propio paquete. `lists` es un sinónimo (se suman). Una clase también puede incluir el conjuro desde su [`spellList`](#class). |
 | `subclasses` | `string[]?` | Subclases del SRD o del propio paquete. |
 | `attackType` | `string?` | `melee`, `ranged` o `null`. |
 | `damage` | `SpellDamage?` | `null` si no hace daño. |
@@ -276,15 +558,15 @@ de los dos mapas.
 | `subraces` | `Subrace[]?` | Subrazas. |
 | `choices` | `OriginChoices?` | Decisiones que la raza pide al crear el personaje (ver abajo). |
 | `resistances` | `string[]?` | Tipos de daño que la raza resiste siempre (`fire`, `poison`...). |
-| `grants` | `Grants?` | Formato 2. Competencias, idiomas y conjuros fijos de la raza ([ver abajo](#grants-de-raza-y-subraza)). |
-| `extends` | `string?` | Formato 2. Índice de una raza del SRD o de otro paquete ya importado: la entrada **amplía** esa raza en lugar de definir una nueva ([ver abajo](#ampliar-una-raza-existente)). |
-| `heightWeight` | `HeightWeight?` | Formato 2. Tabla de altura y peso aleatorios de la raza ([ver abajo](#heightweight-de-raza-y-subraza)). |
+| `grants` | `Grants?` | Competencias, idiomas y conjuros fijos de la raza ([ver abajo](#grants-de-raza-y-subraza)). |
+| `extends` | `string?` | Índice de una raza del SRD o de un paquete de `requires`: la entrada **amplía** esa raza en lugar de definir una nueva ([ver abajo](#ampliar-una-raza-existente)). |
+| `heightWeight` | `HeightWeight?` | Tabla de altura y peso aleatorios de la raza ([ver abajo](#heightweight-de-raza-y-subraza)). |
 
 **`Subrace`**: `index` (**obligatorio**, con prefijo), `name` (**obligatorio**, ≤ 200), `description`
 (`string?`, un solo texto de ≤ 10 000), `abilityBonuses` (`AbilityBonus[]?`), `traits` (`Trait[]?`),
 `choices` (`OriginChoices?`), `resistances` (`string[]?`), `speed` (`int?`, 0–200: velocidad que
 **sustituye** a la de la raza; la hoja la desglosa como "Raza 30" + "<subraza> +5") y `grants`
-(`Grants?`, formato 2, como los de la raza) y `heightWeight` (`HeightWeight?`, formato 2: **sustituye**
+(`Grants?`, como los de la raza) y `heightWeight` (`HeightWeight?`: **sustituye**
 a la de la raza).
 
 #### Ampliar una raza existente
@@ -293,7 +575,7 @@ Con `extends` solo se leen `subraces`, `traits`, `grants` y `heightWeight`; el r
 aplica (`index` y `name` se ignoran y pueden servir de comentario). `speed`, `size`, `abilityBonuses` y
 `languages` dan error: los define la raza base. Reglas:
 
-- La raza base debe existir en el catálogo (SRD u otro paquete ya importado) y no puede ser del propio
+- La raza base debe existir en el SRD o en un paquete de `requires` y no puede ser del propio
   paquete (sus subrazas van en su definición). Cada raza se amplía una sola vez por paquete.
 - Las subrazas se registran con la raza base y con el paquete como origen: aparecen en el catálogo y en
   el asistente junto a las del SRD, y al desinstalar el paquete desaparecen. Los personajes que las
@@ -376,9 +658,9 @@ pulgadas y en libras, con la conversión métrica al lado.
 | `featureDescription` | `string[]?` | Párrafos. |
 | `skillProficiencies` | `string[]?` | Índices de habilidad del SRD (`perception`, `animal-handling`, `sleight-of-hand`...). |
 | `startingEquipmentText` | `string?` | ≤ 10 000. |
-| `startingEquipment` | `StartingEquipment?` | Equipo inicial estructurado (formatos 1 y 2). Sin él, el asistente de creación solo muestra `startingEquipmentText` y el jugador añade los objetos a mano. |
+| `startingEquipment` | `StartingEquipment?` | Equipo inicial estructurado. Sin él, el asistente de creación solo muestra `startingEquipmentText` y el jugador añade los objetos a mano. |
 | `choices` | `OriginChoices?` | Decisiones que el trasfondo pide al crear el personaje (idiomas, herramientas...). |
-| `personality` | `Personality?` | Tablas de rasgos de personalidad, ideales, vínculos y defectos ([ver abajo](#personality)). Formatos 1 y 2. |
+| `personality` | `Personality?` | Tablas de rasgos de personalidad, ideales, vínculos y defectos ([ver abajo](#personality)). |
 | `optionalTables` | `BackgroundTable[]?` | Tablas opcionales del trasfondo (especialidad, origen...), ≤ 20 ([ver abajo](#backgroundtable)). |
 
 #### `Personality`
@@ -435,7 +717,7 @@ bonds, flaws }` o `null`) y `optionalTables` (`[{ key, name, entries }]`, vacío
 
 #### `OriginChoices`
 
-Decisiones de una raza, subraza o trasfondo (todas opcionales; formatos 1 y 2). El SRD las importa de
+Decisiones de una raza, subraza o trasfondo (todas opcionales). El SRD las importa de
 `ability_bonus_options`, `language_options`, las elecciones de competencias de los rasgos y
 `trait_specific` (linaje dracónico, truco del alto elfo). La API las devuelve normalizadas en
 `GET /api/v1/systems/dnd5e/catalog/races/{index}` (`choices` de la raza y de cada subraza) y en
@@ -473,8 +755,8 @@ Ejemplo ficticio de raza al estilo del humano variante:
 
 #### `StartingEquipment`
 
-Mismo esquema que el equipo inicial del catálogo (clases y trasfondos del SRD), sin `gold`: la riqueza
-inicial alternativa es solo de las clases y los paquetes no añaden clases.
+Mismo esquema que el equipo inicial del catálogo (clases y trasfondos del SRD). En los trasfondos no
+se admite `gold`: la riqueza inicial alternativa es solo de las clases (`classes[].startingEquipment`).
 
 ```json
 "startingEquipment": {
@@ -573,14 +855,14 @@ hechicero, d100). No forma parte del SRD.
 | `dice` | `string` | **Obligatorio**: `d2`, `d3`, `d4`, `d6`, `d8`, `d10`, `d12`, `d20` o `d100`. |
 | `entries` | `Entry[]` | **Obligatorio**: `{ "from": int, "to": int?, "text": string }`. `to` ausente = `from`; `text` obligatorio, ≤ 2000. |
 | `classIndex` | `string?` | Clase del catálogo. Si se da `subclassIndex`, se deduce de ella. |
-| `subclassIndex` | `string?` | Subclase del SRD, del propio paquete o de otro paquete ya importado. |
+| `subclassIndex` | `string?` | Subclase del SRD, del propio paquete o de un paquete de `requires`. |
 
 Las entradas deben cubrir **todos** los resultados del dado (1..N) **sin huecos ni solapes**; el
 error indica el rango que falta o la entrada que se solapa.
 
 ```json
-"classesExtended": [
-  { "classIndex": "sorcerer", "subclasses": [ { "index": "reinos-ejemplo-chispa", "name": "Chispa de ejemplo" } ] }
+"classes": [
+  { "extends": "sorcerer", "subclasses": [ { "index": "reinos-ejemplo-chispa", "name": "Chispa de ejemplo" } ] }
 ],
 "rollTables": [
   {
@@ -612,6 +894,63 @@ Si varios paquetes definen la misma `key`, gana el **último importado**. `GET
 ordenadas por nombre: `[{ key, name, dice, classIndex, subclassIndex, source, entries: [{ from, to,
 text }] }]` (vacía con solo el SRD).
 
+### `Creature`
+
+Criaturas del compendio (`GET /api/v1/systems/dnd5e/catalog/beasts`, con `type=` para filtrar por tipo).
+Las de tipo `beast` pueden elegirse como compañero animal con los rasgos `companion`.
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `index` | `string` | **Obligatorio**, con prefijo. |
+| `name` | `string` | **Obligatorio**, ≤ 200. |
+| `size` | `string` | **Obligatorio**: `Tiny`, `Small`, `Medium`, `Large`, `Huge` o `Gargantuan`. |
+| `type` | `string` | **Obligatorio** (`beast`, `monstrosity`, `undead`...); `subtype` opcional. |
+| `alignment` | `string?` | ≤ 100. |
+| `armorClass` | `int` | **Obligatorio**, 1–40; `armorClassType` opcional ("natural armor"). |
+| `hitPoints` | `int` | **Obligatorio**, 1–10 000; `hitDice` opcional ("1d4+1"). |
+| `speed` | `{ "walk": 30, "fly": 60... }?` | Pies por modo de movimiento. |
+| `abilities` | `{ "str": 10... }?` | Puntuaciones 1–30; las que falten valen 10. |
+| `savingThrows`, `skills` | `{ "dex": 4 }?`, `{ "perception": 3 }?` | Bonificadores, −10 a 30. |
+| `damageVulnerabilities`, `damageResistances`, `damageImmunities`, `conditionImmunities` | `string[]?` | ≤ 30 entradas. |
+| `senses` | `{ "darkvision": "60 ft." }?` | Texto por sentido. |
+| `passivePerception` | `int?` | 0–40, por defecto 10. |
+| `languages` | `string?` | Texto. |
+| `challengeRating` | `number` | **Obligatorio**, 0–30 (`0.125`, `0.25` y `0.5` para 1/8, 1/4 y 1/2). |
+| `xp`, `proficiencyBonus` | `int?` | `proficiencyBonus` por defecto según el desafío. |
+| `traits`, `actions`, `reactions`, `legendaryActions` | `Action[]?` | `{ "name", "description", "attackBonus"?, "damage"?: [{ "dice", "type" }], "save"?: { "dc", "ability" }, "multiattack"? }`. |
+| `description` | `string[]?` | Párrafos. |
+
+### `Condition`
+
+`index` (**obligatorio**, con prefijo), `name` (**obligatorio**, ≤ 200) y `description`
+(`string[]?`). Se suman a las 15 condiciones del SRD (`GET /api/v1/systems/dnd5e/catalog/conditions`) y se
+pueden aplicar a los personajes como las del SRD.
+
+### `Rule`
+
+Documentos de reglas sin efecto mecánico (reglas opcionales, armas de fuego, niveles auxiliares...):
+la app los muestra en la pestaña **Reglas** del compendio, con búsqueda.
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `index` | `string` | **Obligatorio**, con prefijo. |
+| `title` | `string` | **Obligatorio**, ≤ 200. |
+| `category` | `string?` | Clave de agrupación en minúsculas: `variant`, `multiclassing`, `equipment`, `combat`, `general` (por defecto)... |
+| `body` | `string[]` | **Obligatorio**: al menos un párrafo (Markdown ligero). |
+| `tags` | `string[]?` | Etiquetas para la búsqueda. |
+
+`GET /api/v1/systems/dnd5e/catalog/rules` (filtros `q=` y `category=`) devuelve
+`[{ index, title, category, tags, source }]`; `GET .../rules/{index}` añade `body`.
+
+### `Reference`
+
+Vocabularios que el SRD trae de serie y que un paquete puede ampliar: un objeto con las listas
+`languages`, `weaponProperties`, `equipmentCategories`, `damageTypes`, `magicSchools` y `tools`, cuyas
+entradas son `{ "index", "name", "description"? }` (índice con prefijo). Los tipos de daño de un
+paquete valen donde se pide un tipo de daño (p. ej. las resistencias de origen).
+`GET /api/v1/systems/dnd5e/catalog/reference/{kind}` (`languages`, `weaponProperties`...) devuelve
+`[{ kind, index, name, description, source }]`.
+
 ## Errores de validación
 
 El paquete se valida entero antes de escribir nada. Si tiene errores, la API responde `400` con un
@@ -626,7 +965,7 @@ JSON (como máximo 100; el resto se resume en una línea):
   "errors": [
     "items[3].modifiers[0].kind: Tipo de modificador desconocido. Valores admitidos: AbilityBonus, ...",
     "spells[0].index: Debe empezar por \"reinos-ejemplo-\" (el id del paquete).",
-    "classesExtended[0].classIndex: La clase 'artificer' no existe en el catálogo (los paquetes no añaden clases)."
+    "classes[0].extends: La clase 'artificer' no existe en el catálogo (debe ser del SRD o de un paquete de \"requires\")."
   ]
 }
 ```
@@ -649,33 +988,43 @@ Solo el administrador de la instancia.
 
   # Multipart con el campo "file"...
   curl --fail-with-body -X POST "$URL/api/v1/admin/content-packs" \
-    -H "Authorization: Bearer $TOKEN" -F "file=@content-packs/reinos-ejemplo.json;type=application/json"
+    -H "Authorization: Bearer $TOKEN" -F "file=@content-packs/ecos-ejemplo.json;type=application/json"
 
   # ...o el JSON como cuerpo
   curl --fail-with-body -X POST "$URL/api/v1/admin/content-packs" \
     -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-    --data-binary @content-packs/reinos-ejemplo.json
+    --data-binary @content-packs/ecos-ejemplo.json
 
   curl -fsS "$URL/api/v1/admin/content-packs" -H "Authorization: Bearer $TOKEN"     # lista
-  curl -fsS -X DELETE "$URL/api/v1/admin/content-packs/reinos-ejemplo" -H "Authorization: Bearer $TOKEN"
+  curl -fsS -X DELETE "$URL/api/v1/admin/content-packs/ecos-ejemplo" -H "Authorization: Bearer $TOKEN"
   ```
 
 | Petición | Respuesta |
 | --- | --- |
-| `GET /api/v1/admin/content-packs` | `200 [{ id, name, version, importedAt, counts }]` |
-| `POST /api/v1/admin/content-packs` | `201 { id, name, version, counts }`, `400` (errores), `413` (> 20 MB) |
-| `DELETE /api/v1/admin/content-packs/{id}` | `204`, o `404` si no existe |
-| `GET /api/v1/systems/dnd5e/catalog/sources` (cualquier usuario) | `200 [{ id, name, version }]`: `srd` y los paquetes, para etiquetar el contenido |
+| `GET /api/v1/admin/content-packs` | `200 [{ id, systemId, name, version, formatVersion, isBase, importedAt, counts, requires }]`, el paquete base (`srd`, `formatVersion` 0) incluido |
+| `POST /api/v1/admin/content-packs` | `201 { id, systemId, name, version, formatVersion, requires, counts }`, `400` (errores), `409 base-pack` (id del paquete base), `413` (> 20 MB) |
+| `DELETE /api/v1/admin/content-packs/{id}` | `204`; `404` si no existe; `409 base-pack` para el paquete base; `409 required-by` si otro paquete lo requiere |
+| `GET /api/v1/systems/dnd5e/catalog/sources` (cualquier usuario) | `200 [{ id, name, version, isBase, enabled }]`: el SRD primero y luego los paquetes, para etiquetar el contenido. Con `?campaignId=`, `enabled` dice si está activo en esa campaña; sin él, `null`. |
 
-`counts` tiene el número de `subclasses`, `features`, `items`, `spells`, `races`, `subraces`,
-`raceExtensions` (razas ampliadas con `extends`), `traits`, `backgrounds`, `optionSets`, `options`, `levelChoices`, `trinkets` y `rollTables` importados.
+`counts` tiene el número de `classes`, `subclasses`, `features`, `feats`, `optionSets`, `options` (las
+dotes incluidas), `levelChoices` (las generadas incluidas), `items`, `spells`, `races`, `subraces`,
+`raceExtensions` (razas ampliadas con `extends`), `traits`, `backgrounds`, `trinkets`, `rollTables`,
+`creatures`, `conditions`, `rules` y `reference` importados.
+
+### Activar paquetes en una campaña
+
+| Petición | Respuesta |
+| --- | --- |
+| `GET /api/v1/campaigns/{id}/content-packs` (miembros) | `200 [{ id, name, version, isBase, enabled, requires }]`: los paquetes del sistema de la campaña; el base, siempre `enabled`. |
+| `PUT /api/v1/campaigns/{id}/content-packs` (Owner o DM) `{ "packIds": ["ecos-ejemplo"] }` | `200` con la lista anterior. **Sustituye** el conjunto de paquetes activos (el base se ignora). `400 unknown-pack` si un id no existe o es de otro sistema; `400 missing-requirement` si falta activar un paquete de `requires`. Emite `campaign.updated` por el hub de la campaña. |
 
 **Reimportar** (mismo `id`, misma u otra `version`) reemplaza todo el contenido del paquete en una
-transacción. Los objetos se actualizan por `index` y **conservan su identificador**, así que los
-inventarios, tiendas y alijos que los usan siguen funcionando; un objeto que desaparece del paquete
-se borra, salvo que esté en uso.
+transacción y conserva su activación en las campañas. Las clases y los objetos se actualizan por
+`index` (los objetos **conservan su identificador**, así que los inventarios, tiendas y alijos que los
+usan siguen funcionando); un objeto que desaparece del paquete se borra, salvo que esté en uso.
 
-**Borrar** quita del catálogo todo el contenido del paquete. Los personajes conservan los índices
+**Borrar** quita del catálogo todo el contenido del paquete y su activación en las campañas (antes hay
+que borrar los paquetes que lo requieren). Los personajes conservan los índices
 que usaban y siguen cargando: la ficha marca `catalogMissing` en las clases, subclases y conjuros que
 ya no existen (y `raceCatalogMissing`/`backgroundCatalogMissing`), y una clase desconocida cuenta como
 d8 sin rasgos. Los objetos del paquete que estén en uso se conservan para esas entradas, pero dejan
@@ -685,13 +1034,12 @@ El contenido del catálogo indica su origen en `source` (`srd`, `homebrew` para 
 el `id` del paquete). Actualizar el SRD (nueva versión del servidor) no toca los paquetes, y las
 copias de seguridad de la base de datos los incluyen.
 
-## Formato 2: elecciones por nivel
+## Elecciones por nivel y opciones
 
-Con `"formatVersion": 2` un paquete puede ampliar el **asistente de subida de nivel**: añadir opciones
-a los conjuntos del SRD (dotes a `feats`, estilos a `fighting-styles`, invocaciones a
-`eldritch-invocations`...), crear conjuntos nuevos, declarar las elecciones de sus subclases (y de las
-clases base) y lo que conceden. Sin `formatVersion: 2`, los campos de esta sección son un error. El
-formato 1 sigue aceptándose tal cual.
+Un paquete puede ampliar el **asistente de subida de nivel**: añadir opciones a los conjuntos del SRD
+(dotes a `feats`, estilos a `fighting-styles`, invocaciones a `eldritch-invocations`...), crear
+conjuntos nuevos, declarar las elecciones de sus clases y subclases (y de las clases que amplía) y lo
+que conceden.
 
 ### Ejemplo ficticio
 
@@ -700,7 +1048,7 @@ un conjunto nuevo:
 
 ```json
 {
-  "formatVersion": 2,
+  "formatVersion": 3,
   "id": "tierras-ejemplo",
   "name": "Tierras de Ejemplo",
   "version": "2.0.0",
@@ -739,9 +1087,9 @@ un conjunto nuevo:
       ]
     }
   ],
-  "classesExtended": [
+  "classes": [
     {
-      "classIndex": "fighter",
+      "extends": "fighter",
       "subclasses": [
         {
           "index": "tierras-ejemplo-guardia",
@@ -752,7 +1100,11 @@ un conjunto nuevo:
             {
               "level": 3,
               "features": [
-                { "index": "tierras-ejemplo-juramento", "name": "Juramento", "description": ["Texto de ejemplo: al entrar en la Guardia pronuncias un juramento."] }
+                {
+                  "index": "tierras-ejemplo-juramento",
+                  "name": "Juramento",
+                  "description": ["Texto de ejemplo: al entrar en la Guardia pronuncias un juramento."]
+                }
               ],
               "grants": { "skills": ["perception"] }
             }
@@ -775,7 +1127,7 @@ un conjunto nuevo:
 }
 ```
 
-El mismo fichero se usa en los tests: `server/tests/Dnd.Api.Tests/Fixtures/content-pack-v2-example.json`.
+El mismo fichero se usa en los tests: `server/tests/OpenTrpg.Systems.Dnd5e.Api.Tests/Fixtures/content-pack-v2-example.json`.
 Al subir a guerrero 3, el asistente ofrece la subclase "Guardia de las Tierras" junto a las del SRD y,
 si se elige, también el "Juramento"; al subir a nivel 4, la dote aparece junto a Grappler.
 
@@ -928,8 +1280,8 @@ En la app:
 
 ### `levelChoices`
 
-En `classesExtended[].levelChoices` (elecciones de la clase base) y en
-`classesExtended[].subclasses[].levelChoices` (de la subclase). Cada una:
+En `classes[].levelChoices` (elecciones de la clase, completa o ampliada con `extends`) y en
+`classes[].subclasses[].levelChoices` (de la subclase). Cada una:
 
 | Campo | Tipo | Reglas |
 | --- | --- | --- |
@@ -1066,7 +1418,7 @@ listados cuentan como de la lista de la clase **solo para los personajes con esa
 
 Errores: `...expandedSpellList[0].index` (falta, índice no válido, el conjuro no existe en el
 catálogo ni en el paquete, o repetido), `...expandedSpellList[0].level` (falta, fuera de 0–9 o
-distinto del nivel del conjuro) y `...expandedSpellList` sin `"formatVersion": 2`.
+distinto del nivel del conjuro).
 
 ### `levels[].grants`
 
@@ -1075,10 +1427,11 @@ la clase con la subclase elegida (dominios con conjuros siempre preparados, comp
 
 ### `levels[].features[].resource`
 
-Cada rasgo de un nivel de subclase puede llevar un `resource` (el mismo `Resource` de las opciones):
-el personaje lo recibe como recurso automático al alcanzar ese nivel de la clase con esa subclase, sin
-elección en el asistente, y lo pierde si cambia de subclase o baja de nivel. `classLevel` es el nivel
-en la clase de la subclase. El origen del recurso es el rasgo con su nivel ("Ventaja táctica (nivel 3)").
+Cada rasgo de un nivel de clase o de subclase puede llevar un `resource` (el mismo `Resource` de las
+opciones): el personaje lo recibe como recurso automático al alcanzar ese nivel de la clase (con esa
+subclase, si es de subclase), sin elección en el asistente, y lo pierde si cambia de subclase o baja de
+nivel. `classLevel` es el nivel en esa clase. Los `resources` de una clase completa funcionan igual
+desde el nivel 1. El origen del recurso es el rasgo con su nivel ("Ventaja táctica (nivel 3)").
 
 ```json
 {
@@ -1108,7 +1461,7 @@ en la clase de la subclase. El origen del recurso es el rasgo con su nivel ("Ven
 
 ### `levels[].features[].modifiers`
 
-Con `"formatVersion": 2`, cada rasgo de un nivel de subclase puede llevar `modifiers`: hasta 10
+Cada rasgo de un nivel de clase o de subclase puede llevar `modifiers`: hasta 10
 `Modifier` con la misma forma y validación que los de las opciones (`kind`, `target`, `value` y
 `condition` opcional, ver [`Option`](#option)). Se aplican a la hoja mientras el personaje tenga esa
 subclase y su nivel en la clase alcance el del rasgo, y se pierden al cambiar de subclase o bajar de
@@ -1137,7 +1490,7 @@ Sirve para los rasgos pasivos que suman números (CA, iniciativa, velocidad, sal
 habilidades, PG máximos). **Límite conocido:** lo que exige una decisión del jugador en el momento
 (reacciones, ventaja situacional, efectos de un solo uso) sigue en la descripción del rasgo.
 
-Errores con ruta: `...features[0].modifiers` (más de 10, o sin `"formatVersion": 2`),
+Errores con ruta: `...features[0].modifiers` (más de 10),
 `...features[0].modifiers[0].kind`, `...modifiers[0].value`, `...modifiers[0].condition` y
 `...modifiers[0]` (objetivo no válido para el tipo).
 
@@ -1170,8 +1523,7 @@ compendio) que cumpla el filtro, y la guarda con su nombre y sus PG actuales.
 | `attackBonusFromCharacter` | `bool?` | Suma el bonificador de competencia del personaje a las tiradas de ataque y al daño (una vez por ataque, en el primer dado de daño). |
 
 Errores con ruta: `...companion.beastFilter`, `...companion.beastFilter.maxChallengeRating`,
-`...companion.beastFilter.sizes[0]`, `...companion.hitPoints`; sin `"formatVersion": 2`,
-`...companion`.
+`...companion.beastFilter.sizes[0]` y `...companion.hitPoints`.
 
 En la API:
 
@@ -1195,3 +1547,23 @@ En la API:
 La pestaña Combate (y la hoja) ofrece "Elegir compañero" con las bestias que cumplen el filtro y
 muestra el bloque del compañero con CA, PG (con controles de daño y curación), salvaciones,
 habilidades y ataques con botones de tirada; cada valor abre su desglose.
+
+## Cambios respecto al formato 2
+
+Para convertir un paquete del formato 2:
+
+1. `"formatVersion": 2` → `"formatVersion": 3` (también en los paquetes sin `formatVersion`, que eran
+   del formato 1).
+2. `classesExtended` → `classes`, y en cada entrada `classIndex` → `extends`:
+   `{ "classIndex": "fighter", "subclasses": [...] }` pasa a ser
+   `{ "extends": "fighter", "subclasses": [...] }`.
+3. Si el paquete amplía contenido de otro paquete (una subclase de una clase de otro paquete, una
+   subraza de una raza de otro paquete, una opción de un conjunto de otro paquete...), declara ese
+   paquete en `requires`.
+4. Opcional: las dotes de `optionSets` con `"setId": "feats"` pueden pasar a `feats` (añadiendo
+   `category`).
+
+Todo lo demás del formato 2 (opciones, elecciones por nivel, concesiones, recursos, modificadores,
+compañeros, razas ampliadas, altura y peso, tablas de tirada, baratijas, equipo inicial) se mantiene
+igual. Tras importar, recuerda activar el paquete en las campañas que lo usen.
+
