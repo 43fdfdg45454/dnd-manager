@@ -30,8 +30,8 @@ docs/     PLAN.md (plan maestro) y ADR/ (decisiones de arquitectura)
 ```bash
 # Servidor
 cd server && dotnet build && dotnet test
-cd server && dotnet run --project src/Dnd.Api          # http://localhost:8080/swagger
-cd server && dotnet ef migrations add <Nombre> -p src/Dnd.Infrastructure -s src/Dnd.Api
+cd server && dotnet run --project src/Core/OpenTrpg.Core.Api   # http://localhost:8080/swagger
+cd server && dotnet ef migrations add <Nombre> -p src/Core/OpenTrpg.Core.Infrastructure -s src/Core/OpenTrpg.Core.Api
 
 # Cliente
 cd app && flutter pub get && flutter analyze && flutter test
