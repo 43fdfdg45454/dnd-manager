@@ -67,4 +67,6 @@ de paquetes es admitir clases completas, dotes y mecánicas propias de esas clas
 - Un solo repositorio (monorepo: `server/`, `app/`, `docs/`) sigue bastando. Los paquetes privados
   (PHB, Valda's) no pueden entrar en él (ADR 0007); si se quieren versionar, van en un repositorio
   privado aparte del propietario.
-- Las migraciones de EF del catálogo y la ficha pasan a ser del módulo 5e; las del núcleo, del núcleo.
+- Un único `AppDbContext` con modelo compuesto (el núcleo y cada módulo aportan sus configuraciones) y
+  una sola historia de migraciones: 11 de las 32 migraciones existentes tocan tablas de ambos lados y no
+  pueden repartirse (enmendado en la fase 30, `docs/specs/fase-30-inventario-y-contrato.md` §4.5).
