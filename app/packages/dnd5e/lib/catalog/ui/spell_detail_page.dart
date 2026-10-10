@@ -25,6 +25,10 @@ class SpellDetailPage extends ConsumerWidget {
               c.index: c.name,
           }
         : const <String, String>{};
+    // Names of its tags (content packs), only when it has some.
+    final tagNames = spell.value?.tags.isNotEmpty ?? false
+        ? ref.watch(referenceProvider(ReferenceKinds.spellTags)).value
+        : null;
     return Scaffold(
       appBar: AppBar(title: Text(spell.value?.name ?? 'Hechizo')),
       body: CatalogAsyncBody<SpellDetail>(
@@ -69,6 +73,12 @@ class SpellDetailPage extends ConsumerWidget {
                 'Solo para ${s.ritualForClasses.map((c) => classNames[c] ?? titleFromIndex(c)).join(', ')}',
               ),
             FactRow('Clases', s.classes.join(', ')),
+            if (s.tags.isNotEmpty)
+              FactRow(
+                'Etiquetas',
+                s.tags.map((t) => tagNames?[t]?.name ?? titleFromIndex(t)).join(', '),
+                key: const Key('spell-tags'),
+              ),
             for (final e in s.expandedBy)
               Padding(
                 key: Key('spell-expanded-${e.subclassIndex}'),

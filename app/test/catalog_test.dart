@@ -347,6 +347,38 @@ void main() {
       expect(repository.spellCalls.last.classIndex, 'wizard');
     });
 
+    testWidgets('el filtro por etiqueta solo aparece con etiquetas y consulta con tag', (
+      tester,
+    ) async {
+      final repository = FakeCatalogRepository(
+        sourceList: const [CatalogSource(id: 'srd', name: 'SRD 5.1')],
+        spellList: const [
+          SpellSummary(index: 'light', name: 'Light', level: 0, tags: ['brio-ejemplo-luz']),
+          SpellSummary(index: 'magic-missile', name: 'Magic Missile', level: 1),
+        ],
+        classList: [_wizard],
+        referenceEntries: const [
+          ReferenceEntry(kind: 'spellTags', index: 'brio-ejemplo-luz', name: 'Luz de ejemplo'),
+        ],
+      );
+      await _pumpCompendium(tester, repository);
+      expect(find.text('Magic Missile'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('filter-spell-tag')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Luz de ejemplo').last);
+      await tester.pumpAndSettle();
+
+      expect(repository.spellTagCalls.last, 'brio-ejemplo-luz');
+      expect(find.text('Light'), findsOneWidget);
+      expect(find.text('Magic Missile'), findsNothing);
+    });
+
+    testWidgets('sin etiquetas en el catálogo no hay filtro por etiqueta', (tester) async {
+      await _pumpCompendium(tester, _repository());
+      expect(find.byKey(const Key('filter-spell-tag')), findsNothing);
+    });
+
     testWidgets('la búsqueda espera 300 ms antes de consultar', (tester) async {
       final repository = _repository();
       await _pumpCompendium(tester, repository);

@@ -113,6 +113,9 @@ class FakeCatalogRepository implements CatalogRepository {
 
   Object? error;
   final List<SpellCall> spellCalls = [];
+
+  /// `tag` of each `GET /spells` call, in order.
+  final List<String?> spellTagCalls = [];
   final List<({String? search, String? category, int page})> itemCalls = [];
 
   /// `group` of every items call (weapon/armor group filter).
@@ -190,11 +193,13 @@ class FakeCatalogRepository implements CatalogRepository {
     String? school,
     bool? ritual,
     bool? concentration,
+    String? tag,
     int page = 1,
     int pageSize = 50,
     String? campaignId,
   }) async {
     _fail();
+    spellTagCalls.add(tag);
     spellCalls.add((
       search: search,
       level: level,
@@ -204,7 +209,12 @@ class FakeCatalogRepository implements CatalogRepository {
     ));
     final q = (search ?? '').toLowerCase();
     final filtered = _scoped(spellList, (s) => s.source, campaignId)
-        .where((s) => (level == null || s.level == level) && s.name.toLowerCase().contains(q))
+        .where(
+          (s) =>
+              (level == null || s.level == level) &&
+              (tag == null || s.tags.contains(tag)) &&
+              s.name.toLowerCase().contains(q),
+        )
         .toList();
     return _slice(filtered, page, pageSize);
   }

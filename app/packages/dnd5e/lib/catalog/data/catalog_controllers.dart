@@ -16,11 +16,14 @@ const catalogPageSize = 50;
 Duration? _noRetry(int retryCount, Object error) => null;
 
 class SpellFilters {
-  const SpellFilters({this.level, this.classIndex});
+  const SpellFilters({this.level, this.classIndex, this.tag});
 
   /// 0 (cantrips) to 9; null means every level.
   final int? level;
   final String? classIndex;
+
+  /// A tag of the content packs (`reference.spellTags`); null: any.
+  final String? tag;
 }
 
 /// Spell filters of the compendium opened from a campaign (the argument;
@@ -33,10 +36,14 @@ class SpellFiltersController extends Notifier<SpellFilters> {
   @override
   SpellFilters build() => const SpellFilters();
 
-  void setLevel(int? level) => state = SpellFilters(level: level, classIndex: state.classIndex);
+  void setLevel(int? level) =>
+      state = SpellFilters(level: level, classIndex: state.classIndex, tag: state.tag);
 
   void setClass(String? classIndex) =>
-      state = SpellFilters(level: state.level, classIndex: classIndex);
+      state = SpellFilters(level: state.level, classIndex: classIndex, tag: state.tag);
+
+  void setTag(String? tag) =>
+      state = SpellFilters(level: state.level, classIndex: state.classIndex, tag: tag);
 }
 
 final spellFiltersProvider = NotifierProvider.autoDispose
@@ -175,6 +182,7 @@ class SpellsController extends _CompendiumPagedController<SpellSummary> {
       search: ref.read(compendiumSearchProvider(compendium)),
       level: filters.level,
       classIndex: filters.classIndex,
+      tag: filters.tag,
       page: page,
       pageSize: catalogPageSize,
       campaignId: campaignId,
