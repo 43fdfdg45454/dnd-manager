@@ -20,10 +20,15 @@ class CampaignsRepository {
   Future<List<CampaignSummary>> list() async =>
       (await _client.getCached(_base, parse: parseList(CampaignSummary.fromJson))).data;
 
-  Future<CampaignDetail> create({required String name, required String description}) async {
+  /// A null [systemId] lets the server use its default game system.
+  Future<CampaignDetail> create({
+    required String name,
+    required String description,
+    String? systemId,
+  }) async {
     final response = await _client.dio.post<Map<String, dynamic>>(
       _base,
-      data: {'name': name, 'description': description},
+      data: {'name': name, 'description': description, 'systemId': ?systemId},
     );
     return CampaignDetail.fromJson(response.data!);
   }

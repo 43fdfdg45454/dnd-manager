@@ -99,6 +99,7 @@ class AppFakes {
     stashRepositoryProvider.overrideWithValue(stash),
     messagesRepositoryProvider.overrideWithValue(messages),
     restRequestsRepositoryProvider.overrideWithValue(restRequests),
+    fakeSystemsOverride(),
   ];
 }
 

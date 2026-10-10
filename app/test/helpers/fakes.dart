@@ -15,6 +15,8 @@ import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart'
 import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
 import 'package:dnd_companion/features/home/data/server_info.dart';
 import 'package:dnd_companion/features/home/data/server_info_repository.dart';
+import 'package:dnd_companion/features/systems/data/systems_repository.dart';
+import 'package:dnd_companion/features/systems/domain/game_system.dart';
 
 UserDto makeUser({
   String id = 'u1',
@@ -282,6 +284,7 @@ CampaignDetail makeCampaign({
   String timeZoneId = 'Europe/Madrid',
   List<int> reminderOffsetsMinutes = const [1440, 120],
   bool playersCanTakeFromStash = false,
+  String systemId = defaultGameSystemId,
 }) {
   final list =
       members ??
@@ -305,6 +308,7 @@ CampaignDetail makeCampaign({
     timeZoneId: timeZoneId,
     reminderOffsetsMinutes: reminderOffsetsMinutes,
     playersCanTakeFromStash: playersCanTakeFromStash,
+    systemId: systemId,
   );
 }
 
@@ -350,18 +354,28 @@ class FakeCampaignsRepository implements CampaignsRepository {
           myRole: c.myRole,
           memberCount: c.members.length,
           createdAt: c.createdAt,
+          systemId: c.systemId,
         ),
     ];
   }
 
+  /// `systemId` sent with each [create] (null when none was sent).
+  final List<String?> createdSystemIds = [];
+
   @override
-  Future<CampaignDetail> create({required String name, required String description}) async {
+  Future<CampaignDetail> create({
+    required String name,
+    required String description,
+    String? systemId,
+  }) async {
     _fail();
+    createdSystemIds.add(systemId);
     final created = makeCampaign(
       id: 'c${campaigns.length + 1}',
       name: name,
       description: description,
       members: [makeMember(userId: currentUserId, role: CampaignRole.owner)],
+      systemId: systemId ?? defaultGameSystemId,
     );
     campaigns.add(created);
     return created;
@@ -545,3 +559,25 @@ class FakeCampaignsRepository implements CampaignsRepository {
 final fakeCampaignsOverride = campaignsRepositoryProvider.overrideWithValue(
   FakeCampaignsRepository(),
 );
+
+/// The game system of every server so far.
+const dnd5eGameSystem = GameSystem(
+  id: 'dnd5e',
+  name: 'Dungeons & Dragons 5e (SRD 5.1)',
+  version: '5.1',
+  isDefault: true,
+);
+
+/// In-memory `GET /systems`; [dnd5eGameSystem] alone by default.
+class FakeSystemsRepository implements SystemsRepository {
+  FakeSystemsRepository([List<GameSystem>? systems]) : systems = systems ?? const [dnd5eGameSystem];
+
+  final List<GameSystem> systems;
+
+  @override
+  Future<List<GameSystem>> list() async => systems;
+}
+
+/// Overrides the systems backend with [FakeSystemsRepository].
+Override fakeSystemsOverride([List<GameSystem>? systems]) =>
+    systemsRepositoryProvider.overrideWithValue(FakeSystemsRepository(systems));
