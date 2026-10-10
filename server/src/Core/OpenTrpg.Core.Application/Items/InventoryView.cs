@@ -1,5 +1,5 @@
 using OpenTrpg.Core.Application.Abstractions.Persistence;
-using OpenTrpg.Core.Application.Characters;
+using OpenTrpg.Core.Application.Systems;
 using OpenTrpg.Core.Domain.Catalog;
 using OpenTrpg.Core.Domain.Characters;
 using OpenTrpg.Core.Domain.Items;
@@ -9,9 +9,6 @@ namespace OpenTrpg.Core.Application.Items;
 /// <summary>Builds inventory DTOs from a character with its items loaded and the templates they reference.</summary>
 public static class InventoryView
 {
-    /// <summary>Carrying capacity in pounds per point of Strength (SRD).</summary>
-    public const int CarryCapacityPerStrength = 15;
-
     public static async Task<IReadOnlyDictionary<Guid, ItemTemplate>> LoadTemplatesAsync(
         IItemTemplateRepository templates,
         IEnumerable<Guid?> templateIds,
@@ -29,20 +26,8 @@ public static class InventoryView
     public static EffectiveItem Resolve(IReadOnlyDictionary<Guid, ItemTemplate> templates, CharacterItem item) =>
         EffectiveItem.Resolve(TemplateOf(templates, item.TemplateId), item.Overrides);
 
-    /// <summary>
-    /// Gear of the equipped entries among <paramref name="items"/> (in inventory order): armor, shield
-    /// and the modifiers of the active items (attunement included).
-    /// </summary>
-    public static EquippedGear Gear(IEnumerable<CharacterItem> items, IReadOnlyDictionary<Guid, ItemTemplate> templates) =>
-        EquippedGear.FromEquipped(items
-            .Where(i => i.Equipped)
-            .OrderBy(i => i.SortOrder)
-            .ThenBy(i => i.CreatedAt)
-            .ThenBy(i => i.Id)
-            .Select(i => (Resolve(templates, i), i.Attuned)));
-
-    /// <param name="strengthScore">Final Strength score from the calculated sheet.</param>
-    public static InventoryDto Build(Character character, IReadOnlyDictionary<Guid, ItemTemplate> templates, int strengthScore)
+    /// <param name="carryingCapacity">How much the character can carry, in pounds (given by the game system).</param>
+    public static InventoryDto Build(Character character, IReadOnlyDictionary<Guid, ItemTemplate> templates, int carryingCapacity)
     {
         var items = character.Items
             .Select(i => CharacterItemDto.From(i, TemplateOf(templates, i.TemplateId)))
@@ -52,21 +37,22 @@ public static class InventoryView
             .ToList();
         var totalWeight = items.Sum(i => (i.Effective.WeightLb ?? 0m) * i.Quantity);
 
-        return new InventoryDto(items, character.Money, totalWeight, strengthScore * CarryCapacityPerStrength, character.AttunedCount);
+        return new InventoryDto(items, character.Money, totalWeight, carryingCapacity, character.AttunedCount);
     }
 }
 
-/// <summary>Inventory DTOs of a character, calculating its sheet for the carrying capacity.</summary>
-public sealed class InventoryReader(IItemTemplateRepository templates, ICharacterSheetService sheets)
+/// <summary>Inventory DTOs of a character, with the carrying capacity the game system gives.</summary>
+public sealed class InventoryReader(IItemTemplateRepository templates, CampaignSystems systems)
 {
     public Task<IReadOnlyDictionary<Guid, ItemTemplate>> TemplatesAsync(Character character, CancellationToken cancellationToken) =>
         InventoryView.LoadTemplatesAsync(templates, character.Items.Select(i => i.TemplateId), cancellationToken);
 
     public async Task<InventoryDto> BuildAsync(Character character, CancellationToken cancellationToken)
     {
-        var sheet = await sheets.CalculateAsync(character, cancellationToken);
+        var system = await systems.ForCharacterAsync(character, cancellationToken);
+        var capacity = await system.Items.CarryingCapacityAsync(new CharacterRef(character), cancellationToken);
         var loaded = await TemplatesAsync(character, cancellationToken);
-        return InventoryView.Build(character, loaded, sheet.Abilities[Abilities.Str].Score);
+        return InventoryView.Build(character, loaded, capacity);
     }
 
     public async Task<CharacterItemDto> BuildItemAsync(CharacterItem item, CancellationToken cancellationToken)

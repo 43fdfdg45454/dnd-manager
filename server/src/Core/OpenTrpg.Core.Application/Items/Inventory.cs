@@ -10,6 +10,7 @@ using OpenTrpg.Core.Domain.Catalog;
 using OpenTrpg.Core.Domain.Characters;
 using OpenTrpg.Core.Domain.Items;
 using FluentValidation;
+using OpenTrpg.Core.Application.Systems;
 
 namespace OpenTrpg.Core.Application.Items;
 
@@ -304,7 +305,7 @@ public sealed class AddInventoryItemHandler(
 public sealed class UpdateInventoryItemHandler(
     CharacterLoader loader,
     InventoryReader reader,
-    ICharacterSheetService sheets,
+    InventoryHooks hooks,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
     IDateTimeProvider clock)
@@ -333,7 +334,7 @@ public sealed class UpdateInventoryItemHandler(
             clock.UtcNow);
         if (request.Equipped is not null || request.Attuned is not null)
         {
-            await sheets.RecalculateAsync(character, cancellationToken);
+            await hooks.ChangedAsync(character, InventoryChangeKinds.Updated, item.Id, cancellationToken);
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -368,7 +369,7 @@ public sealed class RemoveInventoryItemHandler(
     CharacterLoader loader,
     InventoryOperations operations,
     InventoryReader reader,
-    ICharacterSheetService sheets,
+    InventoryHooks hooks,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
     IDateTimeProvider clock)
@@ -391,7 +392,7 @@ public sealed class RemoveInventoryItemHandler(
             character.RemoveItem(itemId, quantity, clock.UtcNow);
             if (wasEquipped)
             {
-                await sheets.RecalculateAsync(character, cancellationToken);
+                await hooks.ChangedAsync(character, InventoryChangeKinds.Removed, itemId, cancellationToken);
             }
 
             await unitOfWork.SaveChangesAsync(cancellationToken);

@@ -9,25 +9,27 @@ public class RestRequestTests
     private static readonly Guid Player = Guid.NewGuid();
     private static readonly Guid Dm = Guid.NewGuid();
 
+    private static RestRequest New(RestKind kind, IReadOnlyDictionary<string, int>? hitDice) =>
+        RestRequest.Create(Guid.NewGuid(), Guid.NewGuid(), Player, Dnd5eRestPayload.KindName(kind),
+            Dnd5eRestPayload.Serialize(Dnd5eRestPayload.Normalize(kind, hitDice)), Now);
+
     [Fact]
     public void A_short_rest_request_keeps_the_dice_to_spend_and_drops_empty_entries()
     {
-        var request = RestRequest.Create(Guid.NewGuid(), Guid.NewGuid(), Player, RestKind.Short,
-            new Dictionary<string, int> { [" fighter "] = 2, ["wizard"] = 0 }, Now);
+        var request = New(RestKind.Short, new Dictionary<string, int> { [" fighter "] = 2, ["wizard"] = 0 });
 
         Assert.True(request.IsPending);
-        Assert.Equal((RestKind.Short, Now, Player), (request.Kind, request.RequestedAt, request.RequestedByUserId));
-        Assert.Equal(new Dictionary<string, int> { ["fighter"] = 2 }, request.HitDice);
+        Assert.Equal(("Short", Now, Player), (request.Kind, request.RequestedAt, request.RequestedByUserId));
+        Assert.Equal(new Dictionary<string, int> { ["fighter"] = 2 }, Dnd5eRestPayload.HitDice(request));
     }
 
     [Fact]
     public void A_long_rest_request_spends_no_hit_dice()
     {
-        var empty = RestRequest.Create(Guid.NewGuid(), Guid.NewGuid(), Player, RestKind.Long, null, Now);
+        var empty = New(RestKind.Long, null);
 
-        Assert.Empty(empty.HitDice);
-        Assert.Throws<DomainException>(() => RestRequest.Create(Guid.NewGuid(), Guid.NewGuid(), Player, RestKind.Long,
-            new Dictionary<string, int> { ["fighter"] = 1 }, Now));
+        Assert.Empty(Dnd5eRestPayload.HitDice(empty));
+        Assert.Throws<DomainException>(() => New(RestKind.Long, new Dictionary<string, int> { ["fighter"] = 1 }));
     }
 
     [Theory]
@@ -35,14 +37,13 @@ public class RestRequestTests
     [InlineData(21)]
     public void Dice_counts_out_of_range_are_rejected(int count)
     {
-        Assert.Throws<DomainException>(() => RestRequest.Create(Guid.NewGuid(), Guid.NewGuid(), Player, RestKind.Short,
-            new Dictionary<string, int> { ["fighter"] = count }, Now));
+        Assert.Throws<DomainException>(() => New(RestKind.Short, new Dictionary<string, int> { ["fighter"] = count }));
     }
 
     [Fact]
     public void Only_a_pending_request_is_resolved()
     {
-        var approved = RestRequest.Create(Guid.NewGuid(), Guid.NewGuid(), Player, RestKind.Long, null, Now);
+        var approved = New(RestKind.Long, null);
         approved.Approve(Dm, "  ", Now);
 
         Assert.Equal((RestRequestStatus.Approved, (Guid?)Dm, (string?)null), (approved.Status, approved.ResolvedByUserId, approved.Comment));
@@ -54,15 +55,15 @@ public class RestRequestTests
     [Fact]
     public void Rejecting_takes_an_optional_comment_and_cancelling_records_who()
     {
-        var rejected = RestRequest.Create(Guid.NewGuid(), Guid.NewGuid(), Player, RestKind.Short, null, Now);
-        var cancelled = RestRequest.Create(Guid.NewGuid(), Guid.NewGuid(), Player, RestKind.Short, null, Now);
+        var rejected = New(RestKind.Short, null);
+        var cancelled = New(RestKind.Short, null);
 
         rejected.Reject(Dm, " Hay orcos cerca ", Now);
         cancelled.Cancel(Player, Now);
 
         Assert.Equal((RestRequestStatus.Rejected, "Hay orcos cerca"), (rejected.Status, rejected.Comment));
         Assert.Equal((RestRequestStatus.Cancelled, (Guid?)Player), (cancelled.Status, cancelled.ResolvedByUserId));
-        Assert.Throws<DomainException>(() => RestRequest.Create(Guid.NewGuid(), Guid.NewGuid(), Player, RestKind.Short, null, Now)
+        Assert.Throws<DomainException>(() => New(RestKind.Short, null)
             .Reject(Dm, new string('x', RestRequest.CommentMaxLength + 1), Now));
     }
 }

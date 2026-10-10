@@ -88,14 +88,13 @@ internal sealed class RestRequestConfiguration : IEntityTypeConfiguration<RestRe
         builder.ToTable("RestRequests");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(16).IsRequired();
+        builder.Property(x => x.Kind).HasMaxLength(RestRequest.KindMaxLength).IsRequired();
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
-        builder.Property(x => x.HitDiceJson).IsRequired();
+        builder.Property(x => x.PayloadJson).IsRequired();
         builder.Property(x => x.Comment).HasMaxLength(RestRequest.CommentMaxLength);
         builder.Property(x => x.RequestedAt).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Ignore(x => x.IsPending);
-        builder.Ignore(x => x.HitDice);
 
         builder.HasOne<Campaign>().WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(x => new { x.CampaignId, x.Status });

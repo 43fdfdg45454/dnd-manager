@@ -5,6 +5,7 @@ using OpenTrpg.Core.Application.Common;
 using OpenTrpg.Core.Application.Files;
 using OpenTrpg.Core.Application.Items;
 using OpenTrpg.Core.Application.Party;
+using OpenTrpg.Core.Application.Systems;
 using OpenTrpg.Core.Domain.Catalog;
 using OpenTrpg.Core.Domain.Characters;
 
@@ -42,24 +43,11 @@ public interface ICharacterSheetService
 
     Task<CharacterDetailDto> BuildDetailAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default);
 
-    /// <summary>Like <see cref="RecalculateAsync(Dnd5eCharacter, CancellationToken)"/> for a core character (loads its 5e part).</summary>
-    Task<CharacterSheet> RecalculateAsync(Character character, CancellationToken cancellationToken = default);
-
-    /// <summary>Like <see cref="CalculateAsync(Dnd5eCharacter, CancellationToken)"/> for a core character (loads its 5e part).</summary>
-    Task<CharacterSheet> CalculateAsync(Character character, CancellationToken cancellationToken = default);
-
-    /// <summary>Like <see cref="BuildDetailAsync(Dnd5eCharacter, CancellationToken)"/> for a core character (loads its 5e part).</summary>
-    Task<CharacterDetailDto> BuildDetailAsync(Character character, CancellationToken cancellationToken = default);
-
     /// <summary>The DM's view of the given characters (loaded with every child collection), sorted by name.</summary>
     Task<IReadOnlyList<PartyMemberDto>> BuildPartyAsync(IReadOnlyList<Dnd5eCharacter> characters, CancellationToken cancellationToken = default);
 
-    /// <summary>Summaries sorted by name. Hit points only for characters the viewer owns, or all when a DM.</summary>
-    Task<IReadOnlyList<CharacterSummaryDto>> BuildSummariesAsync(
-        IReadOnlyList<Dnd5eCharacter> characters,
-        Guid viewerUserId,
-        bool viewerIsDm,
-        CancellationToken cancellationToken = default);
+    /// <summary>The D&amp;D 5e fields of the detail of a character (see <see cref="ISheetSystem.BuildDetailAsync"/>).</summary>
+    Task<Dnd5eCharacterDetailDto> BuildSystemDetailAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default);
 }
 
 public sealed class CharacterSheetService(
@@ -72,20 +60,9 @@ public sealed class CharacterSheetService(
     IItemTemplateRepository itemTemplates,
     ICharacterCompanionRepository companions,
     CompanionPlanner companionPlanner,
+    CharacterViews views,
     IDateTimeProvider clock) : ICharacterSheetService
 {
-    public async Task<CharacterSheet> RecalculateAsync(Character character, CancellationToken cancellationToken = default) =>
-        await RecalculateAsync(await LoadDnd5eAsync(character, cancellationToken), cancellationToken);
-
-    public async Task<CharacterDetailDto> BuildDetailAsync(Character character, CancellationToken cancellationToken = default) =>
-        await BuildDetailAsync(await LoadDnd5eAsync(character, cancellationToken), cancellationToken);
-
-    public async Task<CharacterSheet> CalculateAsync(Character character, CancellationToken cancellationToken = default) =>
-        await CalculateAsync(await LoadDnd5eAsync(character, cancellationToken), cancellationToken);
-
-    private async Task<Dnd5eCharacter> LoadDnd5eAsync(Character character, CancellationToken cancellationToken) =>
-        await dnd5eCharacters.GetWithDetailsAsync(character.Id, cancellationToken) ?? throw CharacterErrors.CharacterNotFound();
-
     public async Task<CharacterSheet> CalculateAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default)
     {
         var sheetCatalog = await SheetCatalog.LoadAsync(catalog, [character], includeSpells: false, cancellationToken);
@@ -240,16 +217,13 @@ public sealed class CharacterSheetService(
         }
     }
 
-    public async Task<CharacterDetailDto> BuildDetailAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default)
+    public Task<CharacterDetailDto> BuildDetailAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default) =>
+        views.BuildDetailAsync(new CharacterRef(character.Character, character), cancellationToken);
+
+    public async Task<Dnd5eCharacterDetailDto> BuildSystemDetailAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default)
     {
         var sheetCatalog = await SheetCatalog.LoadAsync(catalog, [character], includeSpells: true, cancellationToken);
         var sheet = await CalculateAsync(character, sheetCatalog, cancellationToken);
-        var ownerName = character.OwnerUserId is { } ownerId
-            ? (await users.GetDisplayNamesAsync([ownerId], cancellationToken)).GetValueOrDefault(ownerId)
-            : null;
-        var pending = await changeRequests.ListViewsAsync(
-            new ChangeRequestQuery(CharacterId: character.Id, Status: ChangeRequestStatus.Pending),
-            cancellationToken);
         var pendingRest = (await restRequests.ListPendingAsync([character.Id], cancellationToken)).FirstOrDefault();
         var templates = await InventoryView.LoadTemplatesAsync(itemTemplates, character.Items.Select(i => i.TemplateId), cancellationToken);
         var autoTemplates = AutoResourceTemplates(character, sheet)
@@ -296,14 +270,8 @@ public sealed class CharacterSheetService(
         var companionGrant = sheetCatalog.Companion(character);
         var companion = await companions.GetByCharacterAsync(character.Id, cancellationToken);
 
-        return new CharacterDetailDto
+        return new Dnd5eCharacterDetailDto
         {
-            Id = character.Id,
-            CampaignId = character.CampaignId,
-            OwnerUserId = character.OwnerUserId,
-            OwnerDisplayName = ownerName,
-            Name = character.Name,
-            Status = character.Status.ToString(),
             RaceIndex = character.RaceIndex,
             RaceName = sheetCatalog.Race(character.RaceIndex)?.Name,
             SubraceIndex = character.SubraceIndex,
@@ -330,21 +298,8 @@ public sealed class CharacterSheetService(
             Conditions = character.Conditions.Select(c => new CharacterConditionDto(c.Index, c.Note)).ToList(),
             ConcentratingOnSpellIndex = character.ConcentratingOnSpellIndex,
             Inspiration = character.Inspiration,
-            CopperPieces = character.Character.Money,
             HitDiceUsed = character.HitDiceUsed,
-            Notes = character.Character.Notes,
-            Backstory = character.Character.Backstory,
-            PersonalityTraits = character.Character.PersonalityTraits,
-            Ideals = character.Character.Ideals,
-            Bonds = character.Character.Bonds,
-            Flaws = character.Character.Flaws,
             BackgroundDetail = character.BackgroundDetail,
-            HeightInches = character.Character.HeightInches,
-            WeightPounds = character.Character.WeightPounds,
-            PortraitFileId = character.Character.PortraitFileId,
-            PortraitUrl = FileUrls.For(character.Character.PortraitFileId),
-            CreatedAt = character.CreatedAt,
-            UpdatedAt = character.Character.UpdatedAt,
             Classes = classes,
             Proficiencies = character.Proficiencies
                 .OrderBy(p => p.Type)
@@ -359,8 +314,7 @@ public sealed class CharacterSheetService(
             Resources = resources,
             SpellSlots = SpellSlots(character, sheet),
             Sheet = ToDto(sheet),
-            PendingChangeRequests = pending.Select(ChangeRequestDto.From).ToList(),
-            Inventory = InventoryView.Build(character.Character, templates, sheet.Abilities[Abilities.Str].Score),
+            Inventory = InventoryView.Build(character.Character, templates, Dnd5eInventory.CarryingCapacity(sheet.Abilities[Abilities.Str].Score)),
             Combat = CombatSummaryBuilder.Build(character, sheet, sheetCatalog, templates, resources),
             PendingRest = pendingRest is null ? null : PendingRestDto.From(pendingRest),
             PendingLevelUpTo = character.PendingLevelUpTo,
@@ -387,50 +341,6 @@ public sealed class CharacterSheetService(
         };
     }
 
-    public async Task<IReadOnlyList<CharacterSummaryDto>> BuildSummariesAsync(
-        IReadOnlyList<Dnd5eCharacter> characters,
-        Guid viewerUserId,
-        bool viewerIsDm,
-        CancellationToken cancellationToken = default)
-    {
-        var sheetCatalog = await SheetCatalog.LoadAsync(catalog, characters, includeSpells: false, cancellationToken);
-        var visible = characters.Where(c => c.CanViewSheet(viewerUserId, viewerIsDm)).Select(c => c.Id).ToList();
-        var gear = await gearProvider.GetAsync(visible, cancellationToken);
-        var ownerIds = characters.Select(c => c.OwnerUserId).OfType<Guid>().Distinct().ToList();
-        var owners = await users.GetDisplayNamesAsync(ownerIds, cancellationToken);
-
-        return characters
-            .OrderBy(c => c.Name, StringComparer.InvariantCultureIgnoreCase)
-            .ThenBy(c => c.Id)
-            .Select(c =>
-            {
-                var showHp = c.CanViewSheet(viewerUserId, viewerIsDm);
-                var hitPointsMax = showHp
-                    ? SheetCalculator.Calculate(sheetCatalog.InputFor(c, gear.GetValueOrDefault(c.Id) ?? EquippedGear.None)).HitPointsMax
-                    : (int?)null;
-                return new CharacterSummaryDto(
-                    c.Id,
-                    c.CampaignId,
-                    c.OwnerUserId,
-                    c.OwnerUserId is { } owner ? owners.GetValueOrDefault(owner) : null,
-                    c.Name,
-                    c.Status.ToString(),
-                    sheetCatalog.Race(c.RaceIndex)?.Name,
-                    c.OrderedClasses
-                        .Select(k => new CharacterClassSummaryDto(
-                            k.ClassIndex,
-                            sheetCatalog.Class(k.ClassIndex)?.Name ?? k.ClassIndex,
-                            sheetCatalog.Subclass(k.SubclassIndex)?.Name,
-                            k.Level))
-                        .ToList(),
-                    c.TotalLevel,
-                    showHp ? c.HitPointsCurrent : null,
-                    hitPointsMax,
-                    FileUrls.For(c.Character.PortraitFileId));
-            })
-            .ToList();
-    }
-
     /// <summary>
     /// The gear comes from the loaded inventory (<see cref="Character.Items"/>), not from the database, so
     /// that unsaved changes (equip, attune, remove) are already reflected before saving.
@@ -439,7 +349,7 @@ public sealed class CharacterSheetService(
     {
         var equipped = character.Items.Where(i => i.Equipped).ToList();
         var templates = await InventoryView.LoadTemplatesAsync(itemTemplates, equipped.Select(i => i.TemplateId), cancellationToken);
-        return SheetCalculator.Calculate(sheetCatalog.InputFor(character, InventoryView.Gear(equipped, templates)));
+        return SheetCalculator.Calculate(sheetCatalog.InputFor(character, Dnd5eInventory.Gear(equipped, templates)));
     }
 
     /// <summary>Sheets of several characters with their inventories loaded, with one template query for all.</summary>
@@ -454,7 +364,7 @@ public sealed class CharacterSheetService(
             cancellationToken);
         return characters.ToDictionary(
             c => c.Id,
-            c => SheetCalculator.Calculate(sheetCatalog.InputFor(c, InventoryView.Gear(c.Items.Where(i => i.Equipped), templates))));
+            c => SheetCalculator.Calculate(sheetCatalog.InputFor(c, Dnd5eInventory.Gear(c.Items.Where(i => i.Equipped), templates))));
     }
 
     /// <summary>Levels with slots (or spent ones), pact slots first as level 0.</summary>

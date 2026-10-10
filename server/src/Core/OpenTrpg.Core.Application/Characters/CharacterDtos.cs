@@ -1,3 +1,4 @@
+using OpenTrpg.Core.Application.Systems;
 using OpenTrpg.Core.Application.ChangeRequests;
 using OpenTrpg.Core.Application.Items;
 using OpenTrpg.Core.Domain.Catalog;
@@ -8,20 +9,13 @@ namespace OpenTrpg.Core.Application.Characters;
 /// <summary>One class of a character in the summary.</summary>
 public sealed record CharacterClassSummaryDto(string ClassIndex, string ClassName, string? SubclassName, int Level);
 
-/// <summary>What every member sees of a character. Hit points only for the owner and DMs (null otherwise).</summary>
-public sealed record CharacterSummaryDto(
-    Guid Id,
-    Guid CampaignId,
-    Guid? OwnerUserId,
-    string? OwnerDisplayName,
-    string Name,
-    string Status,
+/// <summary>The D&amp;D 5e fields of a character in the campaign roster (<see cref="ISheetSystem.BuildRosterLine"/>).</summary>
+public sealed record Dnd5eRosterLineDto(
     string? RaceName,
     IReadOnlyList<CharacterClassSummaryDto> Classes,
     int Level,
     int? HitPointsCurrent,
-    int? HitPointsMax,
-    string? PortraitUrl);
+    int? HitPointsMax);
 
 /// <param name="CatalogMissing">True when the class or the subclass is no longer in the catalog (e.g. its content pack was deleted).</param>
 public sealed record CharacterClassDto(string ClassIndex, string ClassName, string? SubclassIndex, string? SubclassName, int Level, int Order, bool CatalogMissing = false);
@@ -137,21 +131,12 @@ public sealed record ResistanceDto(string DamageType, string Source, string Labe
 /// <summary>Breath weapon: damage dice at the current level, damage type, saving throw ability, area and DC.</summary>
 public sealed record BreathWeaponValueDto(string Name, string Source, string DamageType, string Dice, string SaveAbility, string Area, int Dc);
 
-/// <summary>Full character: stored fields, child collections, calculated sheet, inventory and pending change requests.</summary>
-public sealed record CharacterDetailDto
+/// <summary>
+/// The D&amp;D 5e fields of the detail of a character (<see cref="ISheetSystem.BuildDetailAsync"/>), written at the same
+/// level as the core fields of <see cref="CharacterDetailDto"/>.
+/// </summary>
+public sealed record Dnd5eCharacterDetailDto
 {
-    public required Guid Id { get; init; }
-
-    public required Guid CampaignId { get; init; }
-
-    public required Guid? OwnerUserId { get; init; }
-
-    public required string? OwnerDisplayName { get; init; }
-
-    public required string Name { get; init; }
-
-    public required string Status { get; init; }
-
     public required string? RaceIndex { get; init; }
 
     public required string? RaceName { get; init; }
@@ -210,40 +195,11 @@ public sealed record CharacterDetailDto
 
     public required bool Inspiration { get; init; }
 
-    public required int CopperPieces { get; init; }
-
     /// <summary>Spent hit dice by class index.</summary>
     public required IReadOnlyDictionary<string, int> HitDiceUsed { get; init; }
 
-    public required string Notes { get; init; }
-
-    public required string Backstory { get; init; }
-
-    public required string PersonalityTraits { get; init; }
-
-    public required string Ideals { get; init; }
-
-    public required string Bonds { get; init; }
-
-    public required string Flaws { get; init; }
-
     /// <summary>Result of the optional table of the background, e.g. "Especialidad: Bibliotecario".</summary>
     public required string BackgroundDetail { get; init; }
-
-    /// <summary>Height in inches, or null when not given. No mechanical effect.</summary>
-    public required int? HeightInches { get; init; }
-
-    /// <summary>Weight in pounds, or null when not given. No mechanical effect.</summary>
-    public required int? WeightPounds { get; init; }
-
-    public required Guid? PortraitFileId { get; init; }
-
-    /// <summary>Relative download URL (<c>/api/v1/files/{id}</c>) of the portrait, or null when there is none.</summary>
-    public required string? PortraitUrl { get; init; }
-
-    public required DateTimeOffset CreatedAt { get; init; }
-
-    public required DateTimeOffset UpdatedAt { get; init; }
 
     public required IReadOnlyList<CharacterClassDto> Classes { get; init; }
 
@@ -258,8 +214,6 @@ public sealed record CharacterDetailDto
     public required IReadOnlyList<SpellSlotDto> SpellSlots { get; init; }
 
     public required CharacterSheetDto Sheet { get; init; }
-
-    public required IReadOnlyList<ChangeRequestDto> PendingChangeRequests { get; init; }
 
     public required InventoryDto Inventory { get; init; }
 

@@ -9,6 +9,9 @@ public interface ISheetSystem
     /// <summary>Editable and overridable fields.</summary>
     SheetSchema Schema { get; }
 
+    /// <summary>The change request type (one of <see cref="IChangeRequestSystem.Types"/>) of a sheet edit that needs approval.</summary>
+    string EditRequestType { get; }
+
     /// <summary>Calculates the sheet of a character.</summary>
     Task<SystemSheet> CalculateAsync(CharacterRef character, CancellationToken cancellationToken = default);
 
@@ -21,10 +24,13 @@ public interface ISheetSystem
     /// </summary>
     Task<SystemSheet> RecalculateAsync(CharacterRef character, CancellationToken cancellationToken = default);
 
-    /// <summary>Checks a sheet edit (body of the system's sheet patch) without applying it.</summary>
-    Task ValidateEditAsync(CharacterRef character, JsonElement patch, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Checks a sheet edit (the system's sheet patch, which includes the core profile fields) without applying it and
+    /// returns it normalized (absent fields omitted), as the core stores it in a change request.
+    /// </summary>
+    Task<JsonObject> ValidateEditAsync(CharacterRef character, JsonElement patch, CancellationToken cancellationToken = default);
 
-    /// <summary>Applies a sheet edit checked by <see cref="ValidateEditAsync"/>.</summary>
+    /// <summary>Applies a sheet edit checked by <see cref="ValidateEditAsync"/> and recalculates the sheet.</summary>
     Task ApplyEditAsync(CharacterRef character, JsonElement patch, DateTimeOffset now, CancellationToken cancellationToken = default);
 
     /// <summary>The current values of the fields the edit changes, in the same shape ("before" of a change request).</summary>

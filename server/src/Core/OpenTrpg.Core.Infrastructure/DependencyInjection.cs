@@ -15,6 +15,7 @@ using OpenTrpg.Core.Domain.Sessions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTrpg.Core.Application.Systems.Dnd5e;
 
 namespace OpenTrpg.Core.Infrastructure;
 
@@ -54,7 +55,8 @@ public static class DependencyInjection
         services.AddScoped<IReleaseRepository, ReleaseRepository>();
         services.AddScoped<IInstanceStatsRepository, InstanceStatsRepository>();
         services.AddScoped<ISrdSeeder, SrdSeeder>();
-        services.AddScoped<IContentPackImporter, ContentPackImporter>();
+        services.AddScoped<IContentPackImporter, ContentPackRegistry>();
+        services.AddScoped<IDnd5eCatalogSystem, Dnd5eCatalogSystem>();
         services.AddScoped<SystemDocumentSeeder>();
 
         services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));

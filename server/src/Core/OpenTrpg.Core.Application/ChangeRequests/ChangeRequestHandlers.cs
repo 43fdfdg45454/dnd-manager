@@ -1,8 +1,10 @@
+using System.Text.Json;
 using OpenTrpg.Core.Application.Abstractions;
 using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Application.Characters;
 using OpenTrpg.Core.Application.Common;
 using OpenTrpg.Core.Application.Items;
+using OpenTrpg.Core.Application.Systems;
 using OpenTrpg.Core.Domain.Campaigns;
 using OpenTrpg.Core.Domain.Characters;
 using FluentValidation;
@@ -94,13 +96,10 @@ public sealed class ApproveChangeRequestRequestValidator : AbstractValidator<App
 /// </summary>
 public sealed class ApproveChangeRequestHandler(
     ChangeRequestLoader loader,
-    IDnd5eCharacterRepository characters,
-    ICharacterSheetService sheets,
-    SpellPreparationPlanner preparation,
-    OriginChoicesPlanner originChoices,
-    IValidator<SheetPatch> patchValidator,
+    ICharacterRepository characters,
+    CampaignSystems systems,
+    CharacterActivation activation,
     InventoryOperations inventory,
-    CompanionPlanner companions,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
     IDateTimeProvider clock)
@@ -119,30 +118,26 @@ public sealed class ApproveChangeRequestHandler(
         }
 
         var character = await characters.GetWithDetailsAsync(request.CharacterId, cancellationToken) ?? throw CharacterErrors.CharacterNotFound();
+        var reference = new CharacterRef(character);
+        var system = await systems.ForCharacterAsync(character, cancellationToken);
         var now = clock.UtcNow;
         switch (request.Type)
         {
             case ChangeRequestTypes.Activate:
-                if (character.Status == CharacterStatus.Draft)
-                {
-                    await originChoices.EnsureCompleteAsync(character, cancellationToken);
-                }
-
-                var sheet = await sheets.CalculateAsync(character, cancellationToken);
-                character.Activate(sheet.HitPointsMax, now);
-                await preparation.RequireInitialPreparationAsync(character, now, cancellationToken);
-                break;
-            case Dnd5eChangeRequestTypes.EditSheet:
-                await ApplySheetPatchAsync(character, request.PayloadJson, now, cancellationToken);
+                await activation.ActivateAsync(reference, system, now, cancellationToken);
                 break;
             case ChangeRequestTypes.AddItem or ChangeRequestTypes.CustomItem or ChangeRequestTypes.RemoveItem or ChangeRequestTypes.AdjustMoney:
-                await inventory.ApplyApprovedAsync(character.Character, request, now, cancellationToken);
+                await inventory.ApplyApprovedAsync(character, request, now, cancellationToken);
 
-                // Removing an equipped item can lower the sheet (item modifiers): cap the current hit points.
-                await sheets.RecalculateAsync(character, cancellationToken);
+                // Removing an equipped item can lower the sheet (item modifiers): the system recalculates it.
+                await system.Items.OnInventoryChangedAsync(reference, new InventoryChange(InventoryChangeKinds.Approved), cancellationToken);
                 break;
-            case Dnd5eChangeRequestTypes.Companion:
-                await companions.ApplyApprovedAsync(character, request.PayloadJson, now, cancellationToken);
+            case var type when system.ChangeRequests.Types.Contains(type):
+                using (var payload = JsonDocument.Parse(request.PayloadJson))
+                {
+                    await system.ChangeRequests.ApplyAsync(reference, type, payload.RootElement, now, cancellationToken);
+                }
+
                 break;
             default:
                 throw AppException.Conflict("Este tipo de solicitud todavía no está soportado.");
@@ -154,23 +149,6 @@ public sealed class ApproveChangeRequestHandler(
         await notifier.CharacterUpdatedAsync(request.CampaignId, request.CharacterId, now, cancellationToken);
         await notifier.ChangeRequestResolvedAsync(request.RequestedByUserId, request.CampaignId, request.CharacterId, request.Id, now, cancellationToken);
         return await loader.ToDtoAsync(request.Id, cancellationToken);
-    }
-
-    private async Task ApplySheetPatchAsync(Dnd5eCharacter character, string payloadJson, DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        var patch = SheetPatchJson.TryDeserialize(payloadJson)
-            ?? throw AppException.Validation("payload", "El contenido de la solicitud no es una edición de hoja válida.");
-        var validation = await patchValidator.ValidateAsync(patch, cancellationToken);
-        if (!validation.IsValid)
-        {
-            throw AppException.Validation("payload", validation.Errors[0].ErrorMessage);
-        }
-
-        // Sheet edit requests come from the owner of an active character, who cannot prepare spells this way.
-        var edit = patch.ToSheetEdit() with { KeepSpellPreparation = true };
-        await sheets.EnsureCatalogReferencesAsync(character, edit, cancellationToken);
-        character.ApplySheetEdit(edit, now);
-        await sheets.RecalculateAsync(character, cancellationToken);
     }
 }
 

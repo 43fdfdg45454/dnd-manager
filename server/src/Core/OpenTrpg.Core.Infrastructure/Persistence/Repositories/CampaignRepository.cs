@@ -14,6 +14,9 @@ internal sealed class CampaignRepository(AppDbContext db) : ICampaignRepository
     public Task<Campaign?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         db.Campaigns.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
+    public Task<string?> GetSystemIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        db.Campaigns.AsNoTracking().Where(x => x.Id == id).Select(x => x.SystemId).FirstOrDefaultAsync(cancellationToken);
+
     public async Task<IReadOnlyList<CampaignSummaryDto>> ListSummariesForUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var rows = await (

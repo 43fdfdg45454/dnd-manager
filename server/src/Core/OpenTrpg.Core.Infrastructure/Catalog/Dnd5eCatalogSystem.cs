@@ -3,6 +3,8 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using OpenTrpg.Core.Application.Abstractions;
 using OpenTrpg.Core.Application.ContentPacks;
+using OpenTrpg.Core.Application.Systems;
+using OpenTrpg.Core.Application.Systems.Dnd5e;
 using OpenTrpg.Core.Domain.Catalog;
 using OpenTrpg.Core.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -11,14 +13,18 @@ using Microsoft.Extensions.Logging;
 namespace OpenTrpg.Core.Infrastructure.Catalog;
 
 /// <summary>
-/// Imports the private content packs of the instance (<c>docs/content-packs.md</c>). A pack is validated as a
-/// whole (every error with its JSON path) and then written in one transaction: the definitions with
-/// <c>Source</c> = pack id are replaced, item templates are upserted by index so their ids survive (items
-/// dropped from the pack are deleted unless an inventory, shop or stash uses them) and the
-/// <see cref="CatalogImport"/> of the pack (<c>pack:&lt;id&gt;</c>) is rewritten. Re-importing the same
-/// version replaces the content as well.
+/// The D&amp;D 5e catalog (<see cref="ICatalogSystem"/>): the SRD as base pack and the private content packs of the
+/// instance (<c>docs/content-packs.md</c>). A pack is validated as a whole (every error with its JSON path) and its
+/// definitions are written inside the transaction the core's <c>ContentPackRegistry</c> opened: the definitions with
+/// <c>Source</c> = pack id are replaced and item templates are upserted by index so their ids survive (items dropped
+/// from the pack are deleted unless an inventory, shop or stash uses them). Re-importing the same version replaces
+/// the content as well.
 /// </summary>
-internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProvider clock, ILogger<ContentPackImporter> logger) : IContentPackImporter
+internal sealed partial class Dnd5eCatalogSystem(
+    AppDbContext db,
+    ISrdSeeder seeder,
+    IDateTimeProvider clock,
+    ILogger<Dnd5eCatalogSystem> logger) : IDnd5eCatalogSystem
 {
     /// <summary>Errors returned at most; the rest are summarized in one line.</summary>
     public const int MaxErrors = 100;
@@ -31,7 +37,18 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
         MaxDepth = 32,
     };
 
-    public async Task<ContentPackImportResultDto> ImportAsync(Stream json, CancellationToken cancellationToken = default)
+    public IReadOnlyList<string> DefinitionTypes { get; } =
+    [
+        "classes", "subclasses", "subclassLevels", "features", "races", "subraces", "traits", "spells", "backgrounds",
+        "items", "optionSets", "options", "levelChoiceRules", "trinkets", "rollTables", "beasts", "conditions",
+    ];
+
+    public bool IsReservedSource(string id) => Dnd5eCatalogSources.IsReserved(id);
+
+    public async Task LoadBasePackAsync(CancellationToken cancellationToken = default) =>
+        await seeder.SeedAsync(cancellationToken);
+
+    public async Task<PackImportResult> ImportPackAsync(Stream json, CancellationToken cancellationToken = default)
     {
         var pack = await DeserializeAsync(json, cancellationToken);
         var validator = new ContentPackValidator(await LoadContextAsync(cancellationToken));
@@ -50,101 +67,40 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
         var now = clock.UtcNow;
         var counts = rows.Counts();
 
-        await using (var transaction = await db.Database.BeginTransactionAsync(cancellationToken))
-        {
-            // The pack's races are updated in place: other packs may have added subraces to them (races[].extends).
-            var raceIndexes = rows.Races.Select(r => r.Index).ToList();
-            await DeleteDefinitionsAsync(id, raceIndexes, cancellationToken);
-            var existingRaces = (await db.CatalogRaces.AsNoTracking().Where(x => x.Source == id).Select(x => x.Index).ToListAsync(cancellationToken))
-                .ToHashSet(StringComparer.Ordinal);
+        // The pack's races are updated in place: other packs may have added subraces to them (races[].extends).
+        var raceIndexes = rows.Races.Select(r => r.Index).ToList();
+        await DeleteDefinitionsAsync(id, raceIndexes, cancellationToken);
+        var existingRaces = (await db.CatalogRaces.AsNoTracking().Where(x => x.Source == id).Select(x => x.Index).ToListAsync(cancellationToken))
+            .ToHashSet(StringComparer.Ordinal);
 
-            db.CatalogSubclasses.AddRange(rows.Subclasses);
-            db.CatalogSubclassLevels.AddRange(rows.SubclassLevels);
-            db.CatalogFeatures.AddRange(rows.Features);
-            db.CatalogRaces.UpdateRange(rows.Races.Where(r => existingRaces.Contains(r.Index)));
-            db.CatalogRaces.AddRange(rows.Races.Where(r => !existingRaces.Contains(r.Index)));
-            db.CatalogSubraces.AddRange(rows.Subraces);
-            db.CatalogRaceExtensions.AddRange(rows.RaceExtensions);
-            db.CatalogTraits.AddRange(rows.Traits);
-            db.CatalogSpells.AddRange(rows.Spells);
-            db.CatalogBackgrounds.AddRange(rows.Backgrounds);
-            db.CatalogOptionSets.AddRange(rows.OptionSets);
-            db.CatalogOptions.AddRange(rows.Options);
-            db.CatalogLevelChoiceRules.AddRange(rows.LevelChoiceRules);
-            db.CatalogTrinkets.AddRange(rows.Trinkets);
-            db.CatalogRollTables.AddRange(rows.RollTables);
-            await db.SaveChangesAsync(cancellationToken);
-            db.ChangeTracker.Clear();
-
-            await CatalogItems.UpsertAsync(db, id, rows.Items, now, cancellationToken);
-            await CatalogItems.DeleteUnusedAsync(db, id, rows.Items.Select(i => i.Index).ToList(), cancellationToken);
-
-            var ruleset = CatalogSources.PackRuleset(id);
-            await db.CatalogImports.Where(x => x.Ruleset == ruleset).ExecuteDeleteAsync(cancellationToken);
-            db.CatalogImports.Add(new CatalogImport
-            {
-                Ruleset = ruleset,
-                DatasetVersion = validator.Version,
-                Name = validator.Name,
-                ImportedAt = now,
-                CreatedAt = now,
-                CountsJson = JsonSerializer.Serialize(counts),
-            });
-            await db.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-        }
-
+        db.CatalogSubclasses.AddRange(rows.Subclasses);
+        db.CatalogSubclassLevels.AddRange(rows.SubclassLevels);
+        db.CatalogFeatures.AddRange(rows.Features);
+        db.CatalogRaces.UpdateRange(rows.Races.Where(r => existingRaces.Contains(r.Index)));
+        db.CatalogRaces.AddRange(rows.Races.Where(r => !existingRaces.Contains(r.Index)));
+        db.CatalogSubraces.AddRange(rows.Subraces);
+        db.CatalogRaceExtensions.AddRange(rows.RaceExtensions);
+        db.CatalogTraits.AddRange(rows.Traits);
+        db.CatalogSpells.AddRange(rows.Spells);
+        db.CatalogBackgrounds.AddRange(rows.Backgrounds);
+        db.CatalogOptionSets.AddRange(rows.OptionSets);
+        db.CatalogOptions.AddRange(rows.Options);
+        db.CatalogLevelChoiceRules.AddRange(rows.LevelChoiceRules);
+        db.CatalogTrinkets.AddRange(rows.Trinkets);
+        db.CatalogRollTables.AddRange(rows.RollTables);
+        await db.SaveChangesAsync(cancellationToken);
         db.ChangeTracker.Clear();
-        logger.LogInformation(
-            "Content pack {PackId} {Version} imported: {Counts}",
-            id,
-            validator.Version,
-            string.Join(", ", counts.Select(c => $"{c.Key}={c.Value}")));
-        return new ContentPackImportResultDto(id, validator.Name, validator.Version, counts);
+
+        await CatalogItems.UpsertAsync(db, id, rows.Items, now, cancellationToken);
+        await CatalogItems.DeleteUnusedAsync(db, id, rows.Items.Select(i => i.Index).ToList(), cancellationToken);
+        return new PackImportResult(id, validator.Name, validator.Version, counts);
     }
 
-    public async Task<IReadOnlyList<ContentPackDto>> ListAsync(CancellationToken cancellationToken = default)
+    public async Task DeletePackAsync(string packId, CancellationToken cancellationToken = default)
     {
-        var imports = await db.CatalogImports.AsNoTracking()
-            .Where(x => x.Ruleset.StartsWith(CatalogSources.PackRulesetPrefix))
-            .ToListAsync(cancellationToken);
-
-        return imports
-            .Select(x => new ContentPackDto(
-                x.Ruleset[CatalogSources.PackRulesetPrefix.Length..],
-                x.Name ?? x.Ruleset[CatalogSources.PackRulesetPrefix.Length..],
-                x.DatasetVersion,
-                x.ImportedAt,
-                ParseCounts(x.CountsJson)))
-            .OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
-            .ThenBy(x => x.Id, StringComparer.Ordinal)
-            .ToList();
-    }
-
-    public async Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default)
-    {
-        if (Dnd5eCatalogSources.IsReserved(id))
-        {
-            return false;
-        }
-
-        var ruleset = CatalogSources.PackRuleset(id);
-        if (!await db.CatalogImports.AnyAsync(x => x.Ruleset == ruleset, cancellationToken))
-        {
-            return false;
-        }
-
-        await using (var transaction = await db.Database.BeginTransactionAsync(cancellationToken))
-        {
-            await DeleteDefinitionsAsync(id, [], cancellationToken);
-            var kept = await CatalogItems.DeleteUnusedAsync(db, id, [], cancellationToken);
-            await db.CatalogImports.Where(x => x.Ruleset == ruleset).ExecuteDeleteAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-
-            logger.LogInformation("Content pack {PackId} deleted ({KeptItems} items kept because they are in use)", id, kept);
-        }
-
-        return true;
+        await DeleteDefinitionsAsync(packId, [], cancellationToken);
+        var kept = await CatalogItems.DeleteUnusedAsync(db, packId, [], cancellationToken);
+        logger.LogInformation("Content pack {PackId}: {KeptItems} items kept because they are in use", packId, kept);
     }
 
     private static ContentPackInvalidException Invalid(IReadOnlyList<string> errors) =>
@@ -348,17 +304,5 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
         await db.CatalogTraits.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogSpells.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogBackgrounds.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
-    }
-
-    private static IReadOnlyDictionary<string, int> ParseCounts(string json)
-    {
-        try
-        {
-            return JsonSerializer.Deserialize<Dictionary<string, int>>(json) ?? [];
-        }
-        catch (JsonException)
-        {
-            return new Dictionary<string, int>();
-        }
     }
 }

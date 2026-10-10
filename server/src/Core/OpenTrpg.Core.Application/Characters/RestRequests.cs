@@ -1,19 +1,24 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
+using FluentValidation;
 using OpenTrpg.Core.Application.Abstractions;
 using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Application.Common;
+using OpenTrpg.Core.Application.Systems;
 using OpenTrpg.Core.Domain.Campaigns;
 using OpenTrpg.Core.Domain.Characters;
-using FluentValidation;
-using OpenTrpg.Core.Domain.Rules;
 
 namespace OpenTrpg.Core.Application.Characters;
 
-// Rests approved by the DM (phase 16b): the owner asks for a short or long rest, a DM approves it
-// (the rest is applied with the PHB rules), rejects it, or makes it moot by resting the character directly.
+// Rests approved by the DM (phase 16b): the owner asks for a rest of one of the game system's kinds, a DM approves
+// it (the system applies the rest), rejects it, or makes it moot by resting the character directly.
 
-/// <summary>A rest request with the names of the people involved.</summary>
-/// <param name="Kind">"Short" or "Long".</param>
-/// <param name="HitDice">Hit dice the player wants to spend per class index (short rest only).</param>
+/// <summary>
+/// A rest request with the names of the people involved. The fields of the system's payload (in D&amp;D 5e,
+/// <c>hitDice</c>) are written at the same level.
+/// </summary>
+/// <param name="Kind">One of the system's rest kinds ("Short" or "Long" in D&amp;D 5e).</param>
 /// <param name="Status">Pending, Approved, Rejected or Cancelled.</param>
 public sealed record RestRequestDto(
     Guid Id,
@@ -23,7 +28,6 @@ public sealed record RestRequestDto(
     Guid RequestedByUserId,
     string RequestedByDisplayName,
     string Kind,
-    IReadOnlyDictionary<string, int> HitDice,
     string Status,
     DateTimeOffset RequestedAt,
     Guid? ResolvedByUserId,
@@ -31,6 +35,10 @@ public sealed record RestRequestDto(
     DateTimeOffset? ResolvedAt,
     string? Comment)
 {
+    /// <summary>The fields of the system's payload.</summary>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? Payload { get; init; }
+
     public static RestRequestDto From(RestRequestView view)
     {
         var request = view.Request;
@@ -41,61 +49,42 @@ public sealed record RestRequestDto(
             view.CharacterName,
             request.RequestedByUserId,
             view.RequestedByDisplayName,
-            request.Kind.ToString(),
-            request.HitDice,
+            request.Kind,
             request.Status.ToString(),
             request.RequestedAt,
             request.ResolvedByUserId,
             view.ResolvedByDisplayName,
             request.ResolvedAt,
-            request.Comment);
+            request.Comment)
+        {
+            Payload = JsonFields.From(RestPayloads.Parse(request.PayloadJson)),
+        };
     }
 }
 
-/// <summary>The pending rest of a character, as shown on the sheet and at the DM's table.</summary>
-/// <param name="Kind">"Short" or "Long".</param>
-public sealed record PendingRestDto(Guid Id, string Kind, IReadOnlyDictionary<string, int> HitDice, DateTimeOffset RequestedAt)
+/// <summary>Body of a rest request: the kind and, at the same level, the fields of the system's payload.</summary>
+/// <param name="Kind">One of the system's rest kinds (any case; "short" or "long" in D&amp;D 5e).</param>
+public sealed record CreateRestRequestRequest(string Kind)
 {
-    public static PendingRestDto From(RestRequest request) =>
-        new(request.Id, request.Kind.ToString(), request.HitDice, request.RequestedAt);
+    /// <summary>The fields of the system's payload (in D&amp;D 5e, <c>hitDice</c>).</summary>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? Payload { get; init; }
 }
 
-/// <param name="Kind">"short" or "long" (any case).</param>
-/// <param name="HitDice">Short rest: hit dice to spend per class index (absent: none).</param>
-public sealed record CreateRestRequestRequest(string Kind, IReadOnlyDictionary<string, int>? HitDice);
-
-public static class RestKinds
+internal static class RestPayloads
 {
-    /// <summary>Parses "short"/"long" in any case; null when it is neither.</summary>
-    public static RestKind? TryParse(string? value) => value?.Trim().ToLowerInvariant() switch
+    public static JsonObject? Parse(string json)
     {
-        "short" => RestKind.Short,
-        "long" => RestKind.Long,
-        _ => null,
-    };
-}
-
-public sealed class CreateRestRequestRequestValidator : AbstractValidator<CreateRestRequestRequest>
-{
-    public const int MaxClasses = 20;
-
-    public CreateRestRequestRequestValidator()
-    {
-        RuleFor(x => x.Kind)
-            .Must(k => RestKinds.TryParse(k) is not null)
-            .WithMessage("El descanso debe ser short o long.");
-        RuleFor(x => x.HitDice!)
-            .Must(d => d.Count <= MaxClasses).WithMessage($"No se admiten más de {MaxClasses} clases.")
-            .Must(d => d.All(e => !string.IsNullOrWhiteSpace(e.Key) && e.Value is >= 0 and <= RestRequest.MaxHitDicePerClass))
-            .WithMessage($"Cada clase debe indicar entre 0 y {RestRequest.MaxHitDicePerClass} dados de golpe.")
-            .When(x => x.HitDice is not null)
-            .OverridePropertyName("hitDice");
-        RuleFor(x => x.HitDice!)
-            .Must(d => d.Values.All(v => v == 0))
-            .WithMessage("El descanso largo no gasta dados de golpe.")
-            .When(x => x.HitDice is not null && RestKinds.TryParse(x.Kind) == RestKind.Long)
-            .OverridePropertyName("hitDice");
+        try
+        {
+            return JsonNode.Parse(json) as JsonObject;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
+
 }
 
 /// <summary>Body of approve and reject: an optional comment for the player.</summary>
@@ -159,12 +148,12 @@ public sealed class RestRequestLoader(IRestRequestRepository requests, ICampaign
 }
 
 /// <summary>
-/// The owner of an active character asks the DM for a rest. A short rest names the hit dice to spend,
-/// which must not exceed the remaining ones now (approval spends what remains then). One pending
-/// request per character (409).
+/// The owner of an active character asks the DM for a rest. The game system checks the kind's payload (in D&amp;D 5e,
+/// the hit dice to spend, which must not exceed the remaining ones now). One pending request per character (409).
 /// </summary>
 public sealed class CreateRestRequestHandler(
-    Dnd5eCharacterLoader characters,
+    CharacterLoader characters,
+    CampaignSystems systems,
     IRestRequestRepository requests,
     RestRequestLoader loader,
     IUnitOfWork unitOfWork,
@@ -184,21 +173,15 @@ public sealed class CreateRestRequestHandler(
             throw AppException.Conflict("Solo un personaje activo puede pedir un descanso.");
         }
 
-        var kind = RestKinds.TryParse(body.Kind) ?? throw AppException.Validation("kind", "El descanso debe ser short o long.");
-        var hitDice = kind == RestKind.Short ? body.HitDice ?? new Dictionary<string, int>() : new Dictionary<string, int>();
-        foreach (var (classIndex, count) in hitDice)
-        {
-            var index = classIndex.Trim();
-            if (count > 0 && !character.Classes.Any(c => c.ClassIndex == index))
-            {
-                throw AppException.Validation("hitDice", $"El personaje no tiene la clase '{index}'.");
-            }
-
-            if (count > character.HitDiceRemaining(index))
-            {
-                throw AppException.Validation("hitDice", $"No quedan suficientes dados de golpe de '{index}'.");
-            }
-        }
+        var system = await systems.ForCharacterAsync(character, cancellationToken);
+        var kinds = system.Rests.Kinds;
+        var kind = kinds.FirstOrDefault(k => string.Equals(k, body.Kind?.Trim(), StringComparison.OrdinalIgnoreCase))
+            ?? throw AppException.Validation("kind", $"El descanso debe ser {string.Join(" o ", kinds.Select(k => k.ToLowerInvariant()))}.");
+        var payload = await system.Rests.ValidateRequestAsync(
+            new CharacterRef(character),
+            kind,
+            JsonFields.ToElement(body.Payload),
+            cancellationToken);
 
         if (await requests.GetPendingAsync(character.Id, cancellationToken) is not null)
         {
@@ -206,7 +189,7 @@ public sealed class CreateRestRequestHandler(
         }
 
         var now = clock.UtcNow;
-        var request = RestRequest.Create(character.CampaignId, character.Id, currentUserId, kind, hitDice, now);
+        var request = RestRequest.Create(character.CampaignId, character.Id, currentUserId, kind, payload.ToJsonString(), now);
         requests.Add(request);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await notifier.RestRequestUpdatedAsync(request.CampaignId, request.CharacterId, request.Id, now, cancellationToken);
@@ -283,19 +266,13 @@ public sealed class GetRestRequestHandler(IRestRequestRepository requests, ICamp
     }
 }
 
-/// <summary>
-/// A DM approves a pending rest and it is applied in the same transaction with the PHB rules: a short
-/// rest spends the requested hit dice (capped at the remaining ones now), a long rest restores hit
-/// points, slots and resources, recovers half the hit dice and lowers exhaustion.
-/// </summary>
+/// <summary>A DM approves a pending rest and the game system applies it in the same transaction.</summary>
 public sealed class ApproveRestRequestHandler(
     RestRequestLoader loader,
-    IDnd5eCharacterRepository characters,
-    ICharacterSheetService sheets,
-    IDiceRoller dice,
+    ICharacterRepository characters,
+    CampaignSystems systems,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
-    CompanionPlanner companions,
     IDateTimeProvider clock)
 {
     public async Task<RestRequestDto> HandleAsync(Guid currentUserId, Guid requestId, ResolveRestRequestRequest? body, CancellationToken cancellationToken = default)
@@ -312,16 +289,11 @@ public sealed class ApproveRestRequestHandler(
         }
 
         var character = await characters.GetWithDetailsAsync(request.CharacterId, cancellationToken) ?? throw CharacterErrors.CharacterNotFound();
-        var sheet = await sheets.CalculateAsync(character, cancellationToken);
+        var system = await systems.ForCharacterAsync(character, cancellationToken);
         var now = clock.UtcNow;
-        if (request.Kind == RestKind.Short)
+        using (var payload = JsonDocument.Parse(request.PayloadJson))
         {
-            character.ShortRest(character.ClampHitDiceToRemaining(request.HitDice), sheet, dice, now);
-        }
-        else
-        {
-            character.LongRest(sheet, now);
-            await companions.RestoreAfterLongRestAsync([character], now, cancellationToken);
+            await system.Rests.ApplyAsync(new CharacterRef(character), request.Kind, payload.RootElement, now, cancellationToken);
         }
 
         request.Approve(currentUserId, body?.Comment, now);

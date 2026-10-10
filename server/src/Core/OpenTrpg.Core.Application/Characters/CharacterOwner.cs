@@ -46,7 +46,7 @@ public sealed record SetCharacterOwnerRequest
 public sealed class SetCharacterOwnerHandler(
     CharacterLoader loader,
     CharacterOwnerRules rules,
-    ICharacterSheetService sheets,
+    CharacterViews views,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
     IDateTimeProvider clock)
@@ -73,6 +73,6 @@ public sealed class SetCharacterOwnerHandler(
         character.ChangeOwner(request.OwnerUserId.Value, clock.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, clock.UtcNow, cancellationToken);
-        return await sheets.BuildDetailAsync(character, cancellationToken);
+        return await views.BuildDetailAsync(character, cancellationToken);
     }
 }

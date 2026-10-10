@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using OpenTrpg.Core.Application.Abstractions;
 using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Application.Common;
+using OpenTrpg.Core.Application.Systems;
 using OpenTrpg.Core.Domain.Campaigns;
 using OpenTrpg.Core.Domain.Characters;
 using FluentValidation;
@@ -48,8 +49,9 @@ public sealed class CreateCharacterRequestValidator : AbstractValidator<CreateCh
 public sealed class CreateCharacterHandler(
     ICampaignAccess access,
     CharacterOwnerRules ownerRules,
-    IDnd5eCharacterRepository characters,
-    ICharacterSheetService sheets,
+    ICharacterRepository characters,
+    CampaignSystems systems,
+    CharacterViews views,
     IUnitOfWork unitOfWork,
     IDateTimeProvider clock)
 {
@@ -87,11 +89,12 @@ public sealed class CreateCharacterHandler(
             character.SetHeightAndWeight(request.HeightInches, request.WeightPounds, clock.UtcNow);
         }
 
-        var dnd5e = Dnd5eCharacter.Create(character);
-        await sheets.RecalculateAsync(dnd5e, cancellationToken);
-        characters.Add(dnd5e);
+        characters.Add(character);
+        var reference = new CharacterRef(character);
+        var system = await systems.ForCampaignAsync(campaignId, cancellationToken);
+        await system.Creation.InitializeAsync(reference, null, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return await sheets.BuildDetailAsync(dnd5e, cancellationToken);
+        return await views.BuildDetailAsync(reference, cancellationToken);
     }
 }

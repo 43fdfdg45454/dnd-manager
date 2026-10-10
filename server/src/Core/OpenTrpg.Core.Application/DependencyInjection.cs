@@ -16,6 +16,7 @@ using OpenTrpg.Core.Application.Releases;
 using OpenTrpg.Core.Application.Sessions;
 using OpenTrpg.Core.Application.Setup;
 using OpenTrpg.Core.Application.Systems;
+using OpenTrpg.Core.Application.Systems.Dnd5e;
 using OpenTrpg.Core.Application.Items;
 using OpenTrpg.Core.Application.Users;
 using OpenTrpg.Core.Domain.Characters;
@@ -67,8 +68,8 @@ public static class DependencyInjection
         services.AddScoped<LeaveCampaignHandler>();
         services.AddScoped<TransferOwnershipHandler>();
 
-        services.AddSingleton<ListSystemsHandler>();
-        services.AddSingleton<GetAttributionHandler>();
+        services.AddScoped<ListSystemsHandler>();
+        services.AddScoped<GetAttributionHandler>();
         services.AddScoped<ListClassesHandler>();
         services.AddScoped<GetClassHandler>();
         services.AddScoped<GetFeatureHandler>();
@@ -101,6 +102,19 @@ public static class DependencyInjection
         services.AddScoped<ICharacterSheetService, CharacterSheetService>();
         services.AddScoped<CharacterLoader>();
         services.AddScoped<Dnd5eCharacterLoader>();
+        services.AddScoped<CharacterViews>();
+        services.AddScoped<CharacterActivation>();
+        services.AddScoped<InventoryHooks>();
+        services.AddScoped<Dnd5eCharacterParts>();
+        services.AddScoped<Dnd5eSheetSystem>();
+        services.AddScoped<Dnd5eCreationSystem>();
+        services.AddScoped<Dnd5eProgressionSystem>();
+        services.AddScoped<Dnd5eCombatSystem>();
+        services.AddScoped<Dnd5eRestSystem>();
+        services.AddScoped<Dnd5eChoiceSystem>();
+        services.AddScoped<Dnd5ePartySystem>();
+        services.AddScoped<Dnd5eItemSystem>();
+        services.AddScoped<Dnd5eChangeRequestSystem>();
         services.AddScoped<CharacterTracker>();
         services.AddScoped<ListCharactersHandler>();
         services.AddScoped<CharacterOwnerRules>();

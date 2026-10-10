@@ -1729,14 +1729,14 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("HitDiceJson")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("RequestedAt")
                         .HasColumnType("timestamp with time zone");

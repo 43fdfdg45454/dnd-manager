@@ -12,10 +12,10 @@ public interface IDnd5eCharacterRepository
     Task<Dnd5eCharacter?> GetWithDetailsAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Read-only characters of the campaign with their classes, overrides and choices loaded (what the
-    /// summaries need, maximum hit points included).
+    /// Read-only characters with the given ids, with their core character, classes, overrides and choices loaded
+    /// (what the roster needs, maximum hit points included).
     /// </summary>
-    Task<IReadOnlyList<Dnd5eCharacter>> ListByCampaignAsync(Guid campaignId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Dnd5eCharacter>> ListByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Tracked active characters of the campaign (the party) with every child collection loaded, ready

@@ -157,8 +157,11 @@ public sealed partial class Dnd5eCharacter
     public void Activate(int maxHp, DateTimeOffset now)
     {
         Character.Activate(now);
-        HitPointsCurrent = Math.Max(0, maxHp);
+        EnterPlay(maxHp);
     }
+
+    /// <summary>The 5e part of an activation, once the core character is active: full hit points.</summary>
+    public void EnterPlay(int maxHp) => HitPointsCurrent = Math.Max(0, maxHp);
 
     /// <summary>
     /// Keeps the current hit points consistent after the maximum changed (sheet edits): a draft always

@@ -21,6 +21,9 @@ public interface ICampaignRepository
     /// <summary>Read-only campaign without members.</summary>
     Task<Campaign?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
+    /// <summary>The game system of the campaign, or null when the campaign does not exist.</summary>
+    Task<string?> GetSystemIdAsync(Guid id, CancellationToken cancellationToken = default);
+
     /// <summary>Campaigns where the user is a member, ordered by name.</summary>
     Task<IReadOnlyList<CampaignSummaryDto>> ListSummariesForUserAsync(Guid userId, CancellationToken cancellationToken = default);
 

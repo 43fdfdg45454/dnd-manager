@@ -13,7 +13,7 @@ public sealed record SetPortraitRequest(Guid? FileId);
 public sealed class SetPortraitHandler(
     CharacterLoader loader,
     IFileRepository files,
-    ICharacterSheetService sheets,
+    CharacterViews views,
     FileCleanup cleanup,
     IUnitOfWork unitOfWork,
     IDateTimeProvider clock)
@@ -45,6 +45,6 @@ public sealed class SetPortraitHandler(
             await cleanup.ReleaseAsync([previous], cancellationToken);
         }
 
-        return await sheets.BuildDetailAsync(character, cancellationToken);
+        return await views.BuildDetailAsync(character, cancellationToken);
     }
 }

@@ -38,13 +38,28 @@ public sealed class ApiRegressionTests(RegressionApiFactory factory) : IClassFix
         }
 
         var expected = await File.ReadAllTextAsync(fixturePath);
-        if (expected != actual)
+        if (Canonical(expected) != Canonical(actual))
         {
             var actualPath = Path.ChangeExtension(fixturePath, ".actual.json");
             await File.WriteAllTextAsync(actualPath, actual);
             Assert.Fail($"The API answers differ from {FixtureName} (first difference at step '{FirstDifference(expected, actual)}'); actual written to {actualPath}.");
         }
     }
+
+    /// <summary>
+    /// The answers with the keys of every object sorted: since the split the fields of the game system are written
+    /// after the core ones, so only the order of the keys may change.
+    /// </summary>
+    private static string Canonical(string json) => Sorted(JsonNode.Parse(json))?.ToJsonString() ?? "null";
+
+    private static JsonNode? Sorted(JsonNode? node) => node switch
+    {
+        JsonObject o => new JsonObject(o.OrderBy(p => p.Key, StringComparer.Ordinal)
+            .Select(p => KeyValuePair.Create(p.Key, Sorted(p.Value)))),
+        JsonArray a => new JsonArray(a.Select(Sorted).ToArray()),
+        null => null,
+        _ => node.DeepClone(),
+    };
 
     private static string SourceDirectory([CallerFilePath] string path = "") => Path.GetDirectoryName(path)!;
 
@@ -54,8 +69,8 @@ public sealed class ApiRegressionTests(RegressionApiFactory factory) : IClassFix
         var actualSteps = JsonNode.Parse(actual)!.AsArray();
         for (var i = 0; i < Math.Max(expectedSteps.Count, actualSteps.Count); i++)
         {
-            var e = i < expectedSteps.Count ? expectedSteps[i]?.ToJsonString() : null;
-            var a = i < actualSteps.Count ? actualSteps[i]?.ToJsonString() : null;
+            var e = i < expectedSteps.Count ? Sorted(expectedSteps[i])?.ToJsonString() : null;
+            var a = i < actualSteps.Count ? Sorted(actualSteps[i])?.ToJsonString() : null;
             if (e != a)
             {
                 return ((i < actualSteps.Count ? actualSteps[i] : expectedSteps[i])!["step"]!).GetValue<string>();

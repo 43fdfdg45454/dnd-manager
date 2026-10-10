@@ -4,11 +4,17 @@ using OpenTrpg.Core.Domain.Characters;
 namespace OpenTrpg.Core.Application.Systems;
 
 /// <summary>
-/// A character as the core hands it to its game system: the core character (tracked when the use case
-/// modifies it). The system loads its own part of the character (same key) when it needs it.
+/// A character as the core hands it to its game system: the core character (tracked when the use case modifies it)
+/// and the system's part of the same character once loaded. The system loads its part (same key) the first time it
+/// needs it and keeps it in <see cref="System"/>, so several calls on the same reference load it once.
 /// </summary>
-public sealed record CharacterRef(Character Character)
+public sealed class CharacterRef(Character character, object? system = null)
 {
+    public Character Character { get; } = character;
+
+    /// <summary>The system's part of the character (opaque for the core), or null while it is not loaded.</summary>
+    public object? System { get; set; } = system;
+
     public Guid Id => Character.Id;
 
     public Guid CampaignId => Character.CampaignId;

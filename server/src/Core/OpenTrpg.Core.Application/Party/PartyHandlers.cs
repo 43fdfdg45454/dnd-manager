@@ -171,27 +171,8 @@ public sealed class PartyRestHandler(
     {
         var party = await loader.LoadAsync(campaignId, currentUserId, cancellationToken);
         var targets = Dnd5ePartyLoader.Select(party, request.CharacterIds);
-        var sheetsById = await sheets.CalculateManyAsync(targets, cancellationToken);
         var now = clock.UtcNow;
-        var noHitDice = new Dictionary<string, int>(StringComparer.Ordinal);
-
-        foreach (var character in targets)
-        {
-            var sheet = sheetsById[character.Id];
-            if (request.Kind == PartyRestKinds.Long)
-            {
-                character.LongRest(sheet, now);
-            }
-            else
-            {
-                character.ShortRest(noHitDice, sheet, dice, now);
-            }
-        }
-
-        if (request.Kind == PartyRestKinds.Long)
-        {
-            await companions.RestoreAfterLongRestAsync(targets, now, cancellationToken);
-        }
+        await RestAsync(targets, request.Kind, now, cancellationToken);
 
         // The forced rest answers any rest the players were asking for.
         var cancelled = await restRequests.CancelPendingAsync(targets.Select(c => c.Id).ToList(), currentUserId, now, cancellationToken);
@@ -207,6 +188,31 @@ public sealed class PartyRestHandler(
         }
 
         return new PartyDto(await sheets.BuildPartyAsync(party, cancellationToken));
+    }
+
+    /// <summary>Rests the characters (a short rest spends no hit dice); the caller saves.</summary>
+    public async Task RestAsync(IReadOnlyList<Dnd5eCharacter> targets, string kind, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var sheetsById = await sheets.CalculateManyAsync(targets, cancellationToken);
+        var noHitDice = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        foreach (var character in targets)
+        {
+            var sheet = sheetsById[character.Id];
+            if (kind == PartyRestKinds.Long)
+            {
+                character.LongRest(sheet, now);
+            }
+            else
+            {
+                character.ShortRest(noHitDice, sheet, dice, now);
+            }
+        }
+
+        if (kind == PartyRestKinds.Long)
+        {
+            await companions.RestoreAfterLongRestAsync(targets, now, cancellationToken);
+        }
     }
 }
 
@@ -226,9 +232,27 @@ public sealed class PartyAdjustHandler(
     {
         var party = await loader.LoadAsync(campaignId, currentUserId, cancellationToken);
         var targets = Dnd5ePartyLoader.Select(party, adjustments.Select(a => a.CharacterId).ToList());
+        var now = clock.UtcNow;
+        var damage = await ApplyAsync(targets, adjustments, now, cancellationToken);
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        foreach (var character in targets)
+        {
+            await notifier.CharacterUpdatedAsync(campaignId, character.Id, now, cancellationToken);
+        }
+
+        return new PartyDto(await sheets.BuildPartyAsync(party, cancellationToken)) { Damage = damage };
+    }
+
+    /// <summary>Applies the adjustments (see the class summary); the caller saves. Returns what the damage did.</summary>
+    public async Task<List<DamageOutcomeDto>> ApplyAsync(
+        IReadOnlyList<Dnd5eCharacter> targets,
+        IReadOnlyList<PartyAdjustment> adjustments,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
         var sheetsById = (await sheets.CalculateManyAsync(targets, cancellationToken)).ToDictionary();
         var byId = targets.ToDictionary(c => c.Id);
-        var now = clock.UtcNow;
         var damage = new List<DamageOutcomeDto>();
 
         foreach (var adjustment in adjustments)
@@ -262,13 +286,7 @@ public sealed class PartyAdjustHandler(
             }
         }
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-        foreach (var character in targets)
-        {
-            await notifier.CharacterUpdatedAsync(campaignId, character.Id, now, cancellationToken);
-        }
-
-        return new PartyDto(await sheets.BuildPartyAsync(party, cancellationToken)) { Damage = damage };
+        return damage;
     }
 
     /// <summary>The character's overrides with <c>hitPointsMax</c> set to <paramref name="value"/> (0 removes it).</summary>

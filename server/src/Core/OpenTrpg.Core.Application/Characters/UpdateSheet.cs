@@ -1,6 +1,10 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using OpenTrpg.Core.Application.Abstractions;
 using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Application.ChangeRequests;
+using OpenTrpg.Core.Application.Common;
+using OpenTrpg.Core.Application.Systems;
 using OpenTrpg.Core.Domain.Characters;
 
 namespace OpenTrpg.Core.Application.Characters;
@@ -9,57 +13,66 @@ namespace OpenTrpg.Core.Application.Characters;
 public sealed record SheetPatchResult(CharacterDetailDto? Character, ChangeRequestDto? ChangeRequest);
 
 /// <summary>
-/// Edits the sheet. DMs, and the owner of a draft, edit directly; the owner of an active character
-/// creates an EditSheet change request with the patch as payload. Height and weight have no mechanical
-/// effect, so they are always applied directly (only the rest of the patch goes to the DM).
+/// Edits the sheet with the game system's patch (which includes the core profile fields). DMs, and the owner of a
+/// draft, edit directly; the owner of an active character creates a change request of the system's edit type with
+/// the patch as payload. Height and weight have no mechanical effect, so they are always applied directly (only the
+/// rest of the patch goes to the DM).
 /// </summary>
 public sealed class UpdateSheetHandler(
-    Dnd5eCharacterLoader loader,
-    ICharacterSheetService sheets,
+    CharacterLoader loader,
+    CampaignSystems systems,
+    CharacterViews views,
     IChangeRequestRepository changeRequests,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
     IDateTimeProvider clock)
 {
-    public async Task<SheetPatchResult> HandleAsync(Guid currentUserId, Guid characterId, SheetPatch patch, CancellationToken cancellationToken = default)
+    public async Task<SheetPatchResult> HandleAsync(Guid currentUserId, Guid characterId, JsonElement patch, CancellationToken cancellationToken = default)
     {
         var loaded = await loader.LoadAsync(characterId, currentUserId, cancellationToken);
         var character = loaded.Character;
+        var reference = new CharacterRef(character);
         var mode = character.ResolveSheetEdit(currentUserId, loaded.IsDm);
-
-        var edit = patch.ToSheetEdit();
-        await sheets.EnsureCatalogReferencesAsync(character, edit, cancellationToken);
+        var system = await systems.ForCharacterAsync(character, cancellationToken);
+        var normalized = await system.Sheets.ValidateEditAsync(reference, patch, cancellationToken);
 
         if (mode == SheetEditMode.Direct)
         {
-            character.ApplySheetEdit(edit, clock.UtcNow);
-            await sheets.RecalculateAsync(character, cancellationToken);
+            await system.Sheets.ApplyEditAsync(reference, patch, clock.UtcNow, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, clock.UtcNow, cancellationToken);
-            return new SheetPatchResult(await sheets.BuildDetailAsync(character, cancellationToken), null);
+            return new SheetPatchResult(await views.BuildDetailAsync(reference, cancellationToken), null);
         }
 
-        var appliedHeightOrWeight = patch.HasHeightOrWeight;
+        var profile = normalized.Deserialize<CharacterProfilePatch>(JsonSerializerOptions.Web) ?? new CharacterProfilePatch();
+        var appliedHeightOrWeight = profile.HasHeightOrWeight;
         if (appliedHeightOrWeight)
         {
-            character.Character.SetHeightAndWeight(edit.HeightInches, edit.WeightPounds, clock.UtcNow);
-            patch = patch.WithoutHeightAndWeight();
-            if (patch.IsEmpty)
+            var edit = profile.ToProfileEdit();
+            character.SetHeightAndWeight(edit.HeightInches, edit.WeightPounds, clock.UtcNow);
+            foreach (var field in CharacterProfilePatch.HeightAndWeightFields)
+            {
+                normalized.Remove(field);
+            }
+
+            if (normalized.Count == 0)
             {
                 await unitOfWork.SaveChangesAsync(cancellationToken);
                 await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, clock.UtcNow, cancellationToken);
-                return new SheetPatchResult(await sheets.BuildDetailAsync(character, cancellationToken), null);
+                return new SheetPatchResult(await views.BuildDetailAsync(reference, cancellationToken), null);
             }
         }
 
+        var payload = JsonSerializer.SerializeToElement(normalized);
+        var before = await system.Sheets.SnapshotAsync(reference, payload, cancellationToken);
         var request = ChangeRequest.Create(
             character.CampaignId,
             character.Id,
             currentUserId,
-            Dnd5eChangeRequestTypes.EditSheet,
-            SheetPatchJson.Serialize(patch),
+            system.Sheets.EditRequestType,
+            normalized.ToJsonString(),
             clock.UtcNow,
-            SheetPatchJson.Serialize(SheetPatchSnapshot.Before(character, patch)));
+            before.ToJsonString());
         changeRequests.Add(request);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         if (appliedHeightOrWeight)

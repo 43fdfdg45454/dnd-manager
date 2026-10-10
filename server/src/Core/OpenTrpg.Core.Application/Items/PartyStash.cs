@@ -9,6 +9,7 @@ using OpenTrpg.Core.Domain.Catalog;
 using OpenTrpg.Core.Domain.Characters;
 using OpenTrpg.Core.Domain.Items;
 using FluentValidation;
+using OpenTrpg.Core.Application.Systems;
 
 namespace OpenTrpg.Core.Application.Items;
 
@@ -401,7 +402,7 @@ public sealed class ReturnStashItemHandler(
     ICampaignAccess access,
     StashSupport support,
     InventoryReader inventory,
-    ICharacterSheetService sheets,
+    InventoryHooks hooks,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
     IDateTimeProvider clock)
@@ -437,7 +438,7 @@ public sealed class ReturnStashItemHandler(
         if (wasEquipped)
         {
             // Giving back an equipped item can lower the sheet (item modifiers): cap the current hit points.
-            await sheets.RecalculateAsync(character, cancellationToken);
+            await hooks.ChangedAsync(character, InventoryChangeKinds.Returned, entry.Id, cancellationToken);
         }
 
         await support.PutAsync(campaignId, templateId, overrides, effective, request.Quantity, null, charges, chargesMax, currentUserId, now, cancellationToken);

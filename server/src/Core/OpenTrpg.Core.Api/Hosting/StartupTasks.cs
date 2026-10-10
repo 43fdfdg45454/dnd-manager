@@ -1,4 +1,4 @@
-using OpenTrpg.Core.Application.Abstractions;
+using OpenTrpg.Core.Application.Systems;
 using OpenTrpg.Core.Infrastructure.Catalog;
 using OpenTrpg.Core.Infrastructure.Files;
 using OpenTrpg.Core.Infrastructure.Persistence;
@@ -10,8 +10,8 @@ namespace OpenTrpg.Core.Api.Hosting;
 public static class StartupTasks
 {
     /// <summary>
-    /// Applies migrations (if enabled), imports the SRD catalog (if enabled and not imported yet),
-    /// and registers the bundled SRD PDF as a system library document (if the operator provided it).
+    /// Applies migrations (if enabled), loads the base pack of every game system (if enabled and not loaded yet; the
+    /// SRD in D&amp;D 5e) and registers the documents of the systems in the library (if the operator provided them).
     /// </summary>
     public static async Task InitializeAsync(this WebApplication app, CancellationToken cancellationToken = default)
     {
@@ -25,7 +25,10 @@ public static class StartupTasks
 
         if (services.GetRequiredService<IOptions<CatalogOptions>>().Value.SeedOnStartup)
         {
-            await services.GetRequiredService<ISrdSeeder>().SeedAsync(cancellationToken);
+            foreach (var system in services.GetRequiredService<IGameSystemRegistry>().All)
+            {
+                await system.Catalog.LoadBasePackAsync(cancellationToken);
+            }
         }
 
         await services.GetRequiredService<SystemDocumentSeeder>().SeedAsync(cancellationToken);

@@ -2,14 +2,34 @@ using OpenTrpg.Core.Application.Abstractions;
 using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Application.ChangeRequests;
 using OpenTrpg.Core.Application.Common;
+using OpenTrpg.Core.Application.Systems;
 using OpenTrpg.Core.Domain.Characters;
 
 namespace OpenTrpg.Core.Application.Characters;
 
+/// <summary>
+/// Activation of a character (a DM directly or by approving an Activate request): the game system checks that a
+/// draft is ready, the core changes its status and the system prepares its part (in D&amp;D 5e, full hit points and
+/// the initial spell preparation) in the same unit of work.
+/// </summary>
+public sealed class CharacterActivation
+{
+    public async Task ActivateAsync(CharacterRef character, IGameSystem system, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        if (character.Character.Status == CharacterStatus.Draft)
+        {
+            await system.Creation.EnsureReadyForActivationAsync(character, cancellationToken);
+        }
+
+        character.Character.Activate(now);
+        await system.Creation.PrepareActivationAsync(character, now, cancellationToken);
+    }
+}
+
 /// <summary>The owner of a draft asks the DMs to activate it (an Activate change request).</summary>
 public sealed class SubmitCharacterHandler(
-    Dnd5eCharacterLoader loader,
-    OriginChoicesPlanner originChoices,
+    CharacterLoader loader,
+    CampaignSystems systems,
     IChangeRequestRepository changeRequests,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
@@ -18,8 +38,9 @@ public sealed class SubmitCharacterHandler(
     public async Task<ChangeRequestDto> HandleAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken = default)
     {
         var character = (await loader.LoadAsync(characterId, currentUserId, cancellationToken)).Character;
-        character.Character.EnsureCanSubmit(currentUserId);
-        await originChoices.EnsureCompleteAsync(character, cancellationToken);
+        character.EnsureCanSubmit(currentUserId);
+        var system = await systems.ForCharacterAsync(character, cancellationToken);
+        await system.Creation.EnsureReadyForActivationAsync(new CharacterRef(character), cancellationToken);
 
         if ((await changeRequests.ListPendingAsync(character.Id, ChangeRequestTypes.Activate, cancellationToken)).Count > 0)
         {
@@ -37,14 +58,14 @@ public sealed class SubmitCharacterHandler(
 }
 
 /// <summary>
-/// A DM activates a draft directly; it enters play at full hit points (and must prepare spells when it prepares
-/// them and has none prepared yet). Pending Activate requests of the character are marked approved by the same DM.
+/// A DM activates a draft directly (see <see cref="CharacterActivation"/>). Pending Activate requests of the character
+/// are marked approved by the same DM.
 /// </summary>
 public sealed class ActivateCharacterHandler(
-    Dnd5eCharacterLoader loader,
-    ICharacterSheetService sheets,
-    SpellPreparationPlanner preparation,
-    OriginChoicesPlanner originChoices,
+    CharacterLoader loader,
+    CampaignSystems systems,
+    CharacterActivation activation,
+    CharacterViews views,
     IChangeRequestRepository changeRequests,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
@@ -59,15 +80,10 @@ public sealed class ActivateCharacterHandler(
         }
 
         var character = loaded.Character;
-        if (character.Status == CharacterStatus.Draft)
-        {
-            await originChoices.EnsureCompleteAsync(character, cancellationToken);
-        }
-
+        var reference = new CharacterRef(character);
+        var system = await systems.ForCharacterAsync(character, cancellationToken);
         var now = clock.UtcNow;
-        var sheet = await sheets.CalculateAsync(character, cancellationToken);
-        character.Activate(sheet.HitPointsMax, now);
-        await preparation.RequireInitialPreparationAsync(character, now, cancellationToken);
+        await activation.ActivateAsync(reference, system, now, cancellationToken);
 
         foreach (var pending in await changeRequests.ListPendingAsync(character.Id, ChangeRequestTypes.Activate, cancellationToken))
         {
@@ -76,7 +92,7 @@ public sealed class ActivateCharacterHandler(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, clock.UtcNow, cancellationToken);
-        return await sheets.BuildDetailAsync(character, cancellationToken);
+        return await views.BuildDetailAsync(reference, cancellationToken);
     }
 }
 

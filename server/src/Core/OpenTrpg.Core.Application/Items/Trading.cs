@@ -6,6 +6,7 @@ using OpenTrpg.Core.Domain.Campaigns;
 using OpenTrpg.Core.Domain.Characters;
 using OpenTrpg.Core.Domain.Items;
 using FluentValidation;
+using OpenTrpg.Core.Application.Systems;
 
 namespace OpenTrpg.Core.Application.Items;
 
@@ -111,7 +112,7 @@ public sealed class SellHandler(
     TradeLoader loader,
     ITransactionRepository transactions,
     InventoryReader inventory,
-    ICharacterSheetService sheets,
+    InventoryHooks hooks,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
     IDateTimeProvider clock)
@@ -146,7 +147,7 @@ public sealed class SellHandler(
         if (wasEquipped)
         {
             // Selling an equipped item can lower the sheet (item modifiers): cap the current hit points.
-            await sheets.RecalculateAsync(character, cancellationToken);
+            await hooks.ChangedAsync(character, InventoryChangeKinds.Sold, item.Id, cancellationToken);
         }
 
         var transaction = Transaction.Record(shop.CampaignId, shop.Id, character.Id, currentUserId, TransactionType.Sale, effective.Name, request.Quantity, total, now);

@@ -49,7 +49,7 @@ public static class CharacterEndpoints
         group.MapPatch("/sheet", async Task<Results<Ok<CharacterDetailDto>, Accepted<ChangeRequestDto>>> (
                 Guid id, SheetPatch patch, ClaimsPrincipal user, UpdateSheetHandler handler, CancellationToken ct) =>
             {
-                var result = await handler.HandleAsync(user.GetUserId(), id, patch, ct);
+                var result = await handler.HandleAsync(user.GetUserId(), id, SheetPatchJson.ToElement(patch), ct);
                 return result.ChangeRequest is { } request
                     ? TypedResults.Accepted($"/api/v1/change-requests/{request.Id}", request)
                     : TypedResults.Ok(result.Character!);

@@ -25,10 +25,8 @@ public sealed record OverridePatch(string Field, int Value, string? Note = null)
 /// <see cref="RaceIndex"/>, <see cref="SubraceIndex"/>, <see cref="BackgroundIndex"/> and
 /// <see cref="Alignment"/> distinguish absent (unchanged) from an explicit <c>null</c> (cleared).
 /// </summary>
-public sealed record SheetPatch
+public sealed record SheetPatch : CharacterProfilePatch
 {
-    public string? Name { get; init; }
-
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public Optional<string?> RaceIndex { get; init; }
 
@@ -56,38 +54,8 @@ public sealed record SheetPatch
 
     public IReadOnlyList<OverridePatch>? Overrides { get; init; }
 
-    public string? Notes { get; init; }
-
-    public string? Backstory { get; init; }
-
-    /// <summary>Personality traits of the background (free text; the wizard writes one per line).</summary>
-    public string? PersonalityTraits { get; init; }
-
-    public string? Ideals { get; init; }
-
-    public string? Bonds { get; init; }
-
-    public string? Flaws { get; init; }
-
     /// <summary>Result of the optional table of the background, e.g. "Especialidad: Bibliotecario".</summary>
     public string? BackgroundDetail { get; init; }
-
-    public int? CopperPieces { get; init; }
-
-    /// <summary>
-    /// Height in inches (1–200); explicit <c>null</c> clears it. No mechanical effect: the owner of an
-    /// active character changes it without approval.
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public Optional<int?> HeightInches { get; init; }
-
-    /// <summary>Weight in pounds (1–2000); explicit <c>null</c> clears it. Same rules as <see cref="HeightInches"/>.</summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public Optional<int?> WeightPounds { get; init; }
-
-    /// <summary>True when the patch changes height or weight.</summary>
-    [JsonIgnore]
-    public bool HasHeightOrWeight => HeightInches.IsSet || WeightPounds.IsSet;
 
     /// <summary>The same patch without height and weight (what still needs approval for an active character's owner).</summary>
     public SheetPatch WithoutHeightAndWeight() => this with { HeightInches = default, WeightPounds = default };
@@ -129,9 +97,6 @@ public sealed record SheetPatch
         WeightPounds = ClearableNumber(WeightPounds),
     };
 
-    /// <summary>Absent → null (unchanged); explicit null → 0 (cleared, as <see cref="SheetEdit"/> expects).</summary>
-    private static int? ClearableNumber(Optional<int?> value) => value.IsSet ? value.Value ?? 0 : null;
-
     /// <summary>Absent → null (unchanged); explicit null → "" (cleared, as <see cref="SheetEdit"/> expects).</summary>
     private static string? Clearable(Optional<string?> value) => value.IsSet ? value.Value ?? string.Empty : null;
 }
@@ -145,6 +110,8 @@ public static class SheetPatchJson
     };
 
     public static string Serialize(SheetPatch patch) => JsonSerializer.Serialize(patch, Options);
+
+    public static JsonElement ToElement(SheetPatch patch) => JsonSerializer.SerializeToElement(patch, Options);
 
     /// <summary>Null when the payload is not a valid patch.</summary>
     public static SheetPatch? TryDeserialize(string json)
@@ -172,10 +139,7 @@ public sealed class SheetPatchValidator : AbstractValidator<SheetPatch>
 
     public SheetPatchValidator()
     {
-        RuleFor(x => x.Name)
-            .NotEmpty().WithMessage("El nombre no puede estar vacío.")
-            .MaximumLength(Character.NameMaxLength).WithMessage($"El nombre no puede superar los {Character.NameMaxLength} caracteres.")
-            .When(x => x.Name is not null);
+        Include(new CharacterProfilePatchValidator());
 
         ClearableIndex(x => x.RaceIndex, "raceIndex", Dnd5eCharacter.IndexMaxLength, "La raza");
         ClearableIndex(x => x.SubraceIndex, "subraceIndex", Dnd5eCharacter.IndexMaxLength, "La subraza");
@@ -287,31 +251,8 @@ public sealed class SheetPatchValidator : AbstractValidator<SheetPatch>
                 .OverridePropertyName("overrides");
         });
 
-        RuleFor(x => x.Notes).MaximumLength(Character.TextMaxLength)
-            .WithMessage($"Las notas no pueden superar los {Character.TextMaxLength} caracteres.");
-        RuleFor(x => x.Backstory).MaximumLength(Character.TextMaxLength)
-            .WithMessage($"La historia no puede superar los {Character.TextMaxLength} caracteres.");
-        RuleFor(x => x.PersonalityTraits).MaximumLength(Character.PersonalityMaxLength)
-            .WithMessage($"Los rasgos de personalidad no pueden superar los {Character.PersonalityMaxLength} caracteres.");
-        RuleFor(x => x.Ideals).MaximumLength(Character.PersonalityMaxLength)
-            .WithMessage($"Los ideales no pueden superar los {Character.PersonalityMaxLength} caracteres.");
-        RuleFor(x => x.Bonds).MaximumLength(Character.PersonalityMaxLength)
-            .WithMessage($"Los vínculos no pueden superar los {Character.PersonalityMaxLength} caracteres.");
-        RuleFor(x => x.Flaws).MaximumLength(Character.PersonalityMaxLength)
-            .WithMessage($"Los defectos no pueden superar los {Character.PersonalityMaxLength} caracteres.");
         RuleFor(x => x.BackgroundDetail).MaximumLength(Dnd5eCharacter.BackgroundDetailMaxLength)
             .WithMessage($"El detalle del trasfondo no puede superar los {Dnd5eCharacter.BackgroundDetailMaxLength} caracteres.");
-        RuleFor(x => x.CopperPieces).InclusiveBetween(0, Character.MaxMoney)
-            .WithMessage($"El dinero debe estar entre 0 y {Character.MaxMoney} pc.")
-            .When(x => x.CopperPieces is not null);
-        RuleFor(x => x.HeightInches)
-            .Must(v => !v.IsSet || v.Value is null || v.Value is >= Character.MinHeightInches and <= Character.MaxHeightInches)
-            .WithMessage($"La altura debe estar entre {Character.MinHeightInches} y {Character.MaxHeightInches} pulgadas.")
-            .OverridePropertyName("heightInches");
-        RuleFor(x => x.WeightPounds)
-            .Must(v => !v.IsSet || v.Value is null || v.Value is >= Character.MinWeightPounds and <= Character.MaxWeightPounds)
-            .WithMessage($"El peso debe estar entre {Character.MinWeightPounds} y {Character.MaxWeightPounds} libras.")
-            .OverridePropertyName("weightPounds");
     }
 
     /// <summary>Same ranges the domain enforces (see <see cref="OverrideFields"/>).</summary>

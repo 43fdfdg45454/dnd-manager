@@ -44,7 +44,18 @@ public sealed class ApplyLevelUpHandler(
         var loaded = await characters.LoadAsync(characterId, currentUserId, cancellationToken);
         LevelUpRules.EnsureCanLevelUp(loaded, currentUserId);
         var character = loaded.Character;
+        var now = clock.UtcNow;
+        await ApplyAsync(character, request, now, cancellationToken);
 
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, now, cancellationToken);
+        await notifier.NotifyAsync(new CampaignEvent(Dnd5eEventTypes.LevelUpCompleted, character.CampaignId, character.Id, null, now), cancellationToken);
+        return await sheets.BuildDetailAsync(character, cancellationToken);
+    }
+
+    /// <summary>Applies the level-up (checked against the plan) and recalculates the sheet; the caller saves.</summary>
+    public async Task ApplyAsync(Dnd5eCharacter character, LevelUpRequest request, DateTimeOffset now, CancellationToken cancellationToken)
+    {
         var answers = ParseAnswers(request.Choices ?? []);
         var pending = answers.Values
             .SelectMany(a => a.Feat is null ? a.Selected : [.. a.Selected, a.Feat])
@@ -68,7 +79,6 @@ public sealed class ApplyLevelUpHandler(
         var resolved = Resolve(plan, answers);
 
         // ---- Apply (one SaveChanges: one transaction) -------------------------------------------------
-        var now = clock.UtcNow;
         var oldMax = plan.Sheet.HitPointsMax;
         var classIndex = plan.Class.Index;
 
@@ -124,11 +134,6 @@ public sealed class ApplyLevelUpHandler(
         {
             character.RequireSpellPreparation(SpellPreparationReason.LevelUp, now);
         }
-
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-        await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, now, cancellationToken);
-        await notifier.NotifyAsync(new CampaignEvent(Dnd5eEventTypes.LevelUpCompleted, character.CampaignId, character.Id, null, now), cancellationToken);
-        return await sheets.BuildDetailAsync(character, cancellationToken);
     }
 
     // ---- Validation ----------------------------------------------------------------------------------

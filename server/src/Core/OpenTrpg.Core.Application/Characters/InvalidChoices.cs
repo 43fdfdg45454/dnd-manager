@@ -251,6 +251,16 @@ public sealed class InvalidChoicesHandler(
         var loaded = await loader.LoadAsync(characterId, currentUserId, cancellationToken);
         var character = loaded.Character;
         character.EnsureCanTrack(currentUserId, loaded.IsDm);
+        var now = clock.UtcNow;
+        await ApplyAsync(character, request, now, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, now, cancellationToken);
+        return await sheets.BuildDetailAsync(character, cancellationToken);
+    }
+
+    /// <summary>Replaces the invalid choices with the answers and recalculates the sheet; the caller saves.</summary>
+    public async Task ApplyAsync(Dnd5eCharacter character, ReplaceInvalidChoicesRequest request, DateTimeOffset now, CancellationToken cancellationToken)
+    {
         var sheet = await sheets.CalculateAsync(character, cancellationToken);
         var plan = await planner.PlanAsync(character, sheet, cancellationToken);
         if (plan.Count == 0)
@@ -264,11 +274,7 @@ public sealed class InvalidChoicesHandler(
             throw AppException.Validation("choices", $"La elección '{unknown.Key}' no corresponde a ninguna sustitución pendiente.");
         }
 
-        var now = clock.UtcNow;
         await planner.ApplyAsync(character, plan, answers, now, cancellationToken);
         await sheets.RecalculateAsync(character, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-        await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, now, cancellationToken);
-        return await sheets.BuildDetailAsync(character, cancellationToken);
     }
 }

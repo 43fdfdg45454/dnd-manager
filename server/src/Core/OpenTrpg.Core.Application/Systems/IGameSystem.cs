@@ -1,8 +1,10 @@
 namespace OpenTrpg.Core.Application.Systems;
 
 /// <summary>
-/// A registered game system (D&amp;D 5e is the first one). For now it only carries its identity and
-/// information; the rest of the contract (sheets, creation, combat…) arrives when the server is split.
+/// A registered game system (D&amp;D 5e is the first one): its identity and information plus the parts of the rules
+/// the core calls (sheets, creation, rests, items, change requests, catalog…). Registered per request scope (see
+/// <see cref="GameSystemServiceCollectionExtensions.AddGameSystem{TSystem}"/>); a campaign's system is resolved
+/// with <see cref="CampaignSystems"/>.
 /// </summary>
 public interface IGameSystem
 {
@@ -11,6 +13,28 @@ public interface IGameSystem
 
     /// <summary>Name, version, attributions and system documents.</summary>
     GameSystemInfo Info { get; }
+
+    ISheetSystem Sheets { get; }
+
+    ICreationSystem Creation { get; }
+
+    IProgressionSystem Progression { get; }
+
+    ICombatSystem Combat { get; }
+
+    IRestSystem Rests { get; }
+
+    ICatalogSystem Catalog { get; }
+
+    IChoiceSystem Choices { get; }
+
+    IPartySystem Party { get; }
+
+    IItemSystem Items { get; }
+
+    ICurrencySystem Currency { get; }
+
+    IChangeRequestSystem ChangeRequests { get; }
 
     /// <summary>Realtime event kinds the system publishes, in addition to the core ones (<c>CampaignEventTypes</c>).</summary>
     IReadOnlyList<string> RealtimeEventKinds { get; }

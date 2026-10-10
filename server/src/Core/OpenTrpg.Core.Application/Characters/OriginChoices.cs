@@ -380,6 +380,16 @@ public sealed class OriginChoicesHandler(
             throw AppException.Conflict("Las elecciones de raza y trasfondo de un personaje activo solo las cambia un DM.");
         }
 
+        var now = clock.UtcNow;
+        await ApplyAsync(character, request, now, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, now, cancellationToken);
+        return OriginChoicesPlanner.ToDto(character, await planner.PlanAsync(character, cancellationToken));
+    }
+
+    /// <summary>Records (or removes) the answers and recalculates the sheet; the caller saves.</summary>
+    public async Task ApplyAsync(Dnd5eCharacter character, SaveOriginChoicesRequest request, DateTimeOffset now, CancellationToken cancellationToken)
+    {
         var plan = await planner.PlanAsync(character, cancellationToken);
         var resolved = new List<(PlannedOriginChoice Choice, ChoiceSelection? Selection)>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -396,7 +406,6 @@ public sealed class OriginChoicesHandler(
             resolved.Add((choice, Resolve(choice, answer)));
         }
 
-        var now = clock.UtcNow;
         foreach (var (choice, selection) in resolved)
         {
             if (selection is null)
@@ -410,9 +419,6 @@ public sealed class OriginChoicesHandler(
         }
 
         await sheets.RecalculateAsync(character, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-        await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, now, cancellationToken);
-        return OriginChoicesPlanner.ToDto(character, await planner.PlanAsync(character, cancellationToken));
     }
 
     /// <summary>Validates an answer against its planned choice; null removes the answer.</summary>

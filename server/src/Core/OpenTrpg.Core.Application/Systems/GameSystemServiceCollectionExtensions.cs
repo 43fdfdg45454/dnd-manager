@@ -5,13 +5,17 @@ namespace OpenTrpg.Core.Application.Systems;
 
 public static class GameSystemServiceCollectionExtensions
 {
-    /// <summary>Registers a game system (singleton) and the <see cref="IGameSystemRegistry"/> that lists it.</summary>
+    /// <summary>
+    /// Registers a game system (per request scope: its parts use scoped services), the <see cref="IGameSystemRegistry"/>
+    /// that lists the systems and <see cref="CampaignSystems"/>.
+    /// </summary>
     public static IServiceCollection AddGameSystem<TSystem>(this IServiceCollection services)
         where TSystem : class, IGameSystem
     {
-        services.TryAddSingleton<TSystem>();
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IGameSystem, TSystem>(sp => sp.GetRequiredService<TSystem>()));
-        services.TryAddSingleton<IGameSystemRegistry, GameSystemRegistry>();
+        services.TryAddScoped<TSystem>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IGameSystem, TSystem>(sp => sp.GetRequiredService<TSystem>()));
+        services.TryAddScoped<IGameSystemRegistry, GameSystemRegistry>();
+        services.TryAddScoped<CampaignSystems>();
         return services;
     }
 }

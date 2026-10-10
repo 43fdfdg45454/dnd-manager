@@ -12,7 +12,7 @@ internal sealed class Dnd5eCharacterRepository(AppDbContext db) : IDnd5eCharacte
             .OrderBy(x => x.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<Dnd5eCharacter>> ListByCampaignAsync(Guid campaignId, CancellationToken cancellationToken = default) =>
+    public async Task<IReadOnlyList<Dnd5eCharacter>> ListByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default) =>
         await db.Set<Dnd5eCharacter>()
             .AsNoTracking()
             .Include(x => x.Character)
@@ -20,7 +20,7 @@ internal sealed class Dnd5eCharacterRepository(AppDbContext db) : IDnd5eCharacte
             .Include(x => x.Overrides)
             .Include(x => x.Choices)
             .AsSplitQuery()
-            .Where(x => x.Character.CampaignId == campaignId)
+            .Where(x => ids.Contains(x.Id))
             .OrderBy(x => x.Id)
             .ToListAsync(cancellationToken);
 

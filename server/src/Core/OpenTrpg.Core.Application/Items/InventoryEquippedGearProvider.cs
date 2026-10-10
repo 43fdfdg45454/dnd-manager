@@ -28,6 +28,6 @@ public sealed class InventoryEquippedGearProvider(ICharacterRepository character
             .GroupBy(i => i.CharacterId)
             .ToDictionary(
                 g => g.Key,
-                g => InventoryView.Gear(g, loaded));
+                g => Dnd5eInventory.Gear(g, loaded));
     }
 }
