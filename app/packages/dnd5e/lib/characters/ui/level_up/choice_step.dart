@@ -267,7 +267,8 @@ class _AsiPanel extends StatelessWidget {
             builder: (context) {
               final points = selection.asi[ability] ?? 0;
               final score = state.naturalScore(ability);
-              final atCap = score + points >= improvementMaxScore;
+              final max = state.maxScore(ability);
+              final atCap = score + points >= max;
               final canAdd = total < improvementPoints && points < improvementPoints && !atCap;
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
@@ -285,7 +286,7 @@ class _AsiPanel extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(left: 6),
                         child: Text(
-                          'máx. $improvementMaxScore',
+                          'máx. $max',
                           key: Key('levelup-asi-cap-$ability'),
                           style: theme.textTheme.labelSmall?.copyWith(color: tokens.oldGold),
                         ),
@@ -397,7 +398,8 @@ class _FeatPanel extends StatelessWidget {
                     '${state.naturalScore(ability) + increase.amount}',
                   ),
                   selected: selection.featAbility == ability,
-                  onSelected: state.naturalScore(ability) + increase.amount > improvementMaxScore
+                  onSelected:
+                      state.naturalScore(ability) + increase.amount > state.maxScore(ability)
                       ? null
                       : (_) => controller.setFeatAbility(choice, ability),
                 ),

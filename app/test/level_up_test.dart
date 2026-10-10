@@ -195,18 +195,22 @@ Map<String, dynamic> _improvementPlan() => _plan(
 );
 
 /// Fighter with Str 19 without items (the 20 cap applies at +1).
-Map<String, dynamic> _character({int? pendingLevelUpTo = 3, List<Object>? choices}) =>
-    makeCharacterJson(
-      status: 'Active',
-      pendingLevelUpTo: pendingLevelUpTo,
-      combat: makeCombatJson(),
-      classes: [
-        {'classIndex': 'fighter', 'className': 'Fighter', 'level': (pendingLevelUpTo ?? 3) - 1},
-      ],
-      breakdowns: {
-        'ability.str': makeBreakdownJson([('base', 'Base', 17), ('race', 'Humano', 2)]),
-      },
-    )..['choices'] = choices ?? const <Object>[];
+Map<String, dynamic> _character({
+  int? pendingLevelUpTo = 3,
+  List<Object>? choices,
+  Map<String, dynamic> sheetExtra = const {},
+}) => makeCharacterJson(
+  status: 'Active',
+  sheetExtra: sheetExtra,
+  pendingLevelUpTo: pendingLevelUpTo,
+  combat: makeCombatJson(),
+  classes: [
+    {'classIndex': 'fighter', 'className': 'Fighter', 'level': (pendingLevelUpTo ?? 3) - 1},
+  ],
+  breakdowns: {
+    'ability.str': makeBreakdownJson([('base', 'Base', 17), ('race', 'Humano', 2)]),
+  },
+)..['choices'] = choices ?? const <Object>[];
 
 DioException _problem(int status, String detail) {
   final options = RequestOptions(path: '/api/v1/systems/dnd5e/characters/ch1/level-up');
@@ -797,6 +801,33 @@ void main() {
       await _next(tester);
       expect(find.byKey(const Key('levelup-review')), findsOneWidget);
       expect(find.text('+1 Fue, +1 Des'), findsOneWidget);
+    });
+
+    testWidgets('Mejora: un máximo propio de la hoja deja pasar de 20', (tester) async {
+      await _pump(
+        tester,
+        plan: _improvementPlan(),
+        character: _character(
+          pendingLevelUpTo: 4,
+          sheetExtra: {
+            'abilityMaxScores': {'str': 22},
+          },
+        ),
+      );
+      await _next(tester);
+      await _writeHp(tester, '5');
+      await _next(tester);
+
+      await _tapKey(tester, 'levelup-asi-str-plus');
+      expect(find.text('19 → 20'), findsOneWidget);
+      expect(find.byKey(const Key('levelup-asi-cap-str')), findsNothing);
+      await _tapKey(tester, 'levelup-asi-str-plus');
+      expect(find.text('19 → 21'), findsOneWidget);
+      expect(find.text('Puntos repartidos: 2 de 2'), findsOneWidget);
+
+      await _next(tester);
+      expect(find.byKey(const Key('levelup-review')), findsOneWidget);
+      expect(find.text('+2 Fue'), findsOneWidget);
     });
 
     testWidgets('Conjuros con filtro de escuela: muestra el motivo de los no elegibles', (

@@ -70,7 +70,8 @@ class AttackCard extends StatefulWidget {
 }
 
 class _AttackCardState extends State<AttackCard> {
-  /// The last attack roll was a natural 20: the damage dice are doubled.
+  /// The last attack roll was a critical (natural 20, or from the attack's
+  /// `criticalRange`): the damage dice are doubled.
   bool _critical = false;
   bool _twoHanded = false;
 
@@ -82,9 +83,10 @@ class _AttackCardState extends State<AttackCard> {
       d20Expression(_attack.attackBonus, mode: mode),
       label: 'Ataque: ${_attack.name}',
       kind: RollKind.attack,
+      criticalRange: _attack.criticalRange,
       onResult: (result) {
         if (!mounted) return;
-        setState(() => _critical = result.isCritical);
+        setState(() => _critical = result.isCriticalFrom(_attack.criticalRange));
       },
     );
   }
@@ -174,7 +176,38 @@ class _AttackCardState extends State<AttackCard> {
             style: numericStyle(theme.textTheme.bodyLarge),
           ),
           if (details.isNotEmpty) Text(details, style: theme.textTheme.bodySmall),
-          if (a.notes != null) Text(a.notes!, style: theme.textTheme.bodySmall),
+          if (a.notes != null)
+            Text(
+              a.natural ? 'Arma natural · ${a.notes}' : a.notes!,
+              key: Key('attack-notes-${widget.index}'),
+              style: theme.textTheme.bodySmall,
+            ),
+          if (a.criticalRange < 20)
+            Text(
+              [
+                'Crítico con ${a.criticalRange}-20',
+                if (a.criticalRangeSource != null) a.criticalRangeSource!,
+              ].join(' · '),
+              key: Key('attack-crit-range-${widget.index}'),
+              style: theme.textTheme.bodySmall,
+            ),
+          for (var w = 0; w < a.warnings.length; w++)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Row(
+                key: Key('attack-warning-${widget.index}-$w'),
+                children: [
+                  Icon(Icons.warning_amber, size: 16, color: theme.colorScheme.error),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      a.warnings[w],
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           if (widget.rageBonus != 0)
             Padding(
               padding: const EdgeInsets.only(top: 4),

@@ -149,14 +149,26 @@ class _SpellCardState extends ConsumerState<SpellCard> {
     return widget.character.sheet.abilities[abilityKeyOf(ability)]?.modifier ?? 0;
   }
 
+  /// Spell attack bonus: the cantrip one when a feature changes it.
+  int get _attackBonus {
+    final casting = _casting;
+    if (casting == null) return 0;
+    return _detail.level == 0
+        ? casting.cantripAttackBonus ?? casting.attackBonus
+        : casting.attackBonus;
+  }
+
   Future<void> _rollAttack([AdvantageMode mode = AdvantageMode.normal]) async {
+    final criticalRange = _casting?.criticalRange ?? 20;
     await rollAndShow(
       context,
-      d20Expression(_casting?.attackBonus ?? 0, mode: mode),
+      d20Expression(_attackBonus, mode: mode),
       label: 'Ataque: ${_detail.name}',
+      kind: RollKind.attack,
+      criticalRange: criticalRange,
       onResult: (result) {
         if (!mounted) return;
-        setState(() => _critical = result.isCritical);
+        setState(() => _critical = result.isCriticalFrom(criticalRange));
       },
     );
   }
@@ -329,6 +341,13 @@ class _SpellCardState extends ConsumerState<SpellCard> {
     final heal = _heal;
     final modifier = _abilityModifier;
     final ability = casting?.ability ?? '';
+    // Cantrips use their own DC and attack when a feature changes them.
+    final cantrip = d.level == 0;
+    final cantripDc = cantrip ? casting?.cantripSaveDc : null;
+    final saveDc = cantripDc ?? casting?.saveDc ?? 0;
+    final dcKey = 'spellSaveDc.${casting?.classIndex}${cantripDc != null ? '.cantrip' : ''}';
+    final attackKey =
+        'spellAttackBonus.${casting?.classIndex}${cantrip && casting?.cantripAttackBonus != null ? '.cantrip' : ''}';
     return [
       if (d.attackType != null && casting != null)
         _fact(
@@ -336,8 +355,8 @@ class _SpellCardState extends ConsumerState<SpellCard> {
           StatValue(
             statKey: 'spell.$_index.attack',
             title: 'Ataque de conjuro: ${d.name}',
-            text: formatModifier(casting.attackBonus),
-            breakdown: breakdowns['spellAttackBonus.${casting.classIndex}'],
+            text: formatModifier(_attackBonus),
+            breakdown: breakdowns[attackKey],
             style: style,
           ),
         ),
@@ -349,9 +368,9 @@ class _SpellCardState extends ConsumerState<SpellCard> {
                 StatValue(
                   statKey: 'spell.$_index.dc',
                   title: 'CD de salvación: ${d.name}',
-                  text: 'CD ${casting.saveDc} (${abilityName(d.dcAbility!)})',
-                  totalText: 'CD ${casting.saveDc}',
-                  breakdown: breakdowns['spellSaveDc.${casting.classIndex}'],
+                  text: 'CD $saveDc (${abilityName(d.dcAbility!)})',
+                  totalText: 'CD $saveDc',
+                  breakdown: breakdowns[dcKey],
                   style: style,
                 ),
               ),

@@ -67,7 +67,7 @@ class _RestSectionState extends ConsumerState<RestSection> {
       title: 'Descanso largo',
       message:
           'Se recuperarán los puntos de golpe, los espacios de conjuro y los recursos que '
-          'se recargan con un descanso largo.',
+          'se recargan con un descanso largo${_allHitDiceNote()}.',
       confirmLabel: 'Descansar',
     );
     if (!confirmed || !mounted) return;
@@ -78,6 +78,14 @@ class _RestSectionState extends ConsumerState<RestSection> {
       success: 'Descanso largo realizado.',
     );
     if (done) rage.end();
+  }
+
+  /// Mentions that every hit die comes back, with the rule that says so.
+  String _allHitDiceNote() {
+    final sheet = _character.sheet;
+    if (!sheet.recoversAllHitDice) return '';
+    final source = sheet.hitDiceRecoverySource;
+    return ', y todos los dados de golpe${source == null || source.isEmpty ? '' : ' ($source)'}';
   }
 
   // -- Requests (player) ------------------------------------------------------
@@ -103,7 +111,8 @@ class _RestSectionState extends ConsumerState<RestSection> {
       title: 'Pedir descanso largo',
       message:
           'El DM recibirá la petición. Al aprobarla se recuperarán los puntos de golpe, los '
-          'espacios de conjuro, los recursos de descanso largo y la mitad de los dados de golpe.',
+          'espacios de conjuro, los recursos de descanso largo y '
+          '${_character.sheet.recoversAllHitDice ? 'todos los dados de golpe' : 'la mitad de los dados de golpe'}.',
       confirmLabel: 'Pedir',
     );
     if (!confirmed || !mounted) return;

@@ -41,6 +41,7 @@ Map<String, dynamic> makeCharacterJson({
   List<Map<String, dynamic>> resources = const [],
   String? concentratingOnSpellIndex,
   List<Map<String, dynamic>> spellcasting = const [],
+  Map<String, dynamic> sheetExtra = const {},
 }) => {
   'id': id,
   'campaignId': campaignId,
@@ -130,6 +131,7 @@ Map<String, dynamic> makeCharacterJson({
     'breakdowns': breakdowns,
     'resistances': resistances,
     'breathWeapon': ?breathWeapon,
+    ...sheetExtra,
   },
   'pendingChangeRequests': pending,
   'pendingRest': pendingRest,

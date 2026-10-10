@@ -1156,7 +1156,7 @@ void main() {
       },
     });
 
-    FakeCharactersRepository caster() {
+    FakeCharactersRepository caster({Map<String, dynamic> wizardExtra = const {}}) {
       final json = makeCharacterJson(
         status: 'Active',
         classes: [
@@ -1185,6 +1185,7 @@ void main() {
           'saveDc': 15,
           'attackBonus': 7,
           'preparedMax': 6,
+          ...wizardExtra,
         },
         {
           'classIndex': 'cleric',
@@ -1274,6 +1275,35 @@ void main() {
       expect(find.text('4d10'), findsOneWidget);
       expect(find.text('Daño: Fire Bolt (crítico)'), findsOneWidget);
       expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '40');
+    });
+
+    testWidgets('los trucos usan su propio ataque y el crítico baja a 19 si la hoja lo dice', (
+      tester,
+    ) async {
+      final repo = caster(
+        wizardExtra: {
+          'cantripAttackBonus': 9,
+          'criticalRange': 19,
+          'criticalRangeSource': 'Chispa (nivel 3)',
+        },
+      );
+      await _pump(tester, characters: repo, catalog: catalog(), face: 19);
+      String facts(String index) => tester
+          .widgetList<Text>(
+            find.descendant(of: find.byKey(Key('spell-facts-$index')), matching: find.byType(Text)),
+          )
+          .map((t) => t.data)
+          .join(' ');
+      expect(facts('fire-bolt'), 'Ataque a distancia +9 Daño 2d10 fuego');
+      await _tap(tester, 'spell-attack-fire-bolt');
+      expect(find.text('1d20+9'), findsOneWidget);
+      expect(find.byKey(const Key('dice-critical')), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<FilterChip>(find.byKey(const Key('spell-crit-fire-bolt'))).selected,
+        isTrue,
+      );
     });
 
     testWidgets('el nivel de lanzamiento escala el daño y gasta ese espacio', (tester) async {
@@ -2465,6 +2495,95 @@ void main() {
       await tester.pumpAndSettle();
       expect(repo.concentrationCalls, [null]);
       expect(find.byKey(const Key('concentration-chip')), findsNothing);
+    });
+  });
+
+  group('reglas de hoja de los paquetes', () {
+    FakeCharactersRepository repo({
+      List<Map<String, dynamic>>? attacks,
+      Map<String, dynamic> sheetExtra = const {},
+      int hp = 20,
+    }) => FakeCharactersRepository(
+      characters: [
+        makeCharacterJson(
+          status: 'Active',
+          ownerUserId: 'u1',
+          hitPointsCurrent: hp,
+          temporaryHitPoints: 0,
+          combat: makeCombatJson(attacks: attacks),
+          sheetExtra: sheetExtra,
+        ),
+      ],
+    );
+
+    final hookSword = {
+      'itemId': 'it9',
+      'name': 'Espada garfio',
+      'attackBonus': 5,
+      'damage': '1d8+3',
+      'damageType': 'Slashing',
+      'properties': <String>[],
+      'criticalRange': 19,
+      'criticalRangeSource': 'Ojo atento (nivel 3)',
+      'warnings': ['Requiere Fuerza 18; tienes 16.'],
+    };
+    final claws = {
+      'name': 'Garras',
+      'attackBonus': 5,
+      'damage': '1d4+3',
+      'damageType': 'Slashing',
+      'properties': <String>[],
+      'notes': 'Escamado',
+      'natural': true,
+    };
+
+    testWidgets('un ataque muestra su rango de crítico, avisos y si es natural', (tester) async {
+      await _pump(tester, characters: repo(attacks: [hookSword, claws]));
+      expect(find.text('Crítico con 19-20 · Ojo atento (nivel 3)'), findsOneWidget);
+      expect(find.byKey(const Key('attack-warning-0-0')), findsOneWidget);
+      expect(find.text('Requiere Fuerza 18; tienes 16.'), findsOneWidget);
+      expect(find.byKey(const Key('attack-crit-range-1')), findsNothing);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('attack-notes-1'))).data,
+        'Arma natural · Escamado',
+      );
+    });
+
+    testWidgets('con rango 19 un 19 natural es crítico; con 20 no', (tester) async {
+      await _pump(tester, characters: repo(attacks: [hookSword, claws]), face: 19);
+      await _tap(tester, 'attack-roll-0');
+      expect(find.byKey(const Key('dice-critical')), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(tester.widget<FilterChip>(find.byKey(const Key('attack-crit-0'))).selected, isTrue);
+
+      await _tap(tester, 'attack-roll-1');
+      expect(find.byKey(const Key('dice-critical')), findsNothing);
+    });
+
+    testWidgets('las salvaciones de muerte dibujan tantos fallos como pide la hoja', (
+      tester,
+    ) async {
+      final down = repo(
+        hp: 0,
+        sheetExtra: {'deathSaveFailuresToDie': 4, 'deathSaveFailuresSource': 'Tenaz (nivel 2)'},
+      );
+      await _pump(tester, characters: down);
+      expect(find.byKey(const Key('death-failure-3')), findsOneWidget);
+      expect(find.byKey(const Key('death-failure-4')), findsNothing);
+      expect(find.byKey(const Key('death-success-3')), findsNothing);
+      expect(find.text('Mueres con 4 fallos (Tenaz (nivel 2)).'), findsOneWidget);
+      await _tap(tester, 'death-failure-2');
+      expect(down.combatPatches.last.deathSaveFailures, 3);
+      // Tres fallos aún no bastan: el aviso sigue pidiendo la salvación.
+      expect(find.byKey(const Key('death-save-banner')), findsOneWidget);
+    });
+
+    testWidgets('sin regla propia siguen siendo tres fallos', (tester) async {
+      await _pump(tester, characters: repo(hp: 0));
+      expect(find.byKey(const Key('death-failure-2')), findsOneWidget);
+      expect(find.byKey(const Key('death-failure-3')), findsNothing);
+      expect(find.byKey(const Key('death-failures-to-die')), findsNothing);
     });
   });
 }
