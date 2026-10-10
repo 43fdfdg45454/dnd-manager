@@ -71,7 +71,7 @@ public class PartyEndpointsTests(CatalogApiFactory factory)
         foreach (var character in new[] { rested, tired })
         {
             var secondWind = character.Resources.Single(r => r.Key == "second-wind");
-            Assert.Equal(HttpStatusCode.OK, (await s.Player.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/resources/{secondWind.Id}/spend", null)).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await s.Player.Client.PostAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(character.Id)}/resources/{secondWind.Id}/spend", null)).StatusCode);
         }
 
         await AdjustAsync(s.Dm, s.CampaignId, new[] { new { characterId = rested.Id, hitPointsDelta = -4 } });
@@ -175,7 +175,7 @@ public class PartyEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(HttpStatusCode.NotFound, (await s.Dm.Client.PostAsJsonAsync(url, new[] { new { characterId = Guid.NewGuid(), hitPointsDelta = -1 } })).StatusCode);
     }
 
-    internal static string PartyUrl(Guid campaignId) => $"/api/v1/campaigns/{campaignId}/party";
+    internal static string PartyUrl(Guid campaignId) => $"/api/v1/systems/dnd5e/campaigns/{campaignId}/party";
 
     /// <summary>A level 3 fighter (Con 14) of <paramref name="owner"/>, activated by <paramref name="dm"/>.</summary>
     internal static Task<CharacterDetailDto> ActiveFighterAsync(SignedInUser owner, SignedInUser dm, Guid campaignId, string name) =>

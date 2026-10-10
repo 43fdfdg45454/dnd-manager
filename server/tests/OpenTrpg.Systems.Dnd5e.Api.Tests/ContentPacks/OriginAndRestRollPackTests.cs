@@ -92,12 +92,12 @@ public class OriginAndRestRollPackTests(OriginPackApiFactory factory) : IClassFi
         Assert.True(import.StatusCode == HttpStatusCode.Created, await import.Content.ReadAsStringAsync());
 
         var s = await factory.CreateCampaignScenarioAsync();
-        var race = await s.Player.Client.GetFromJsonAsync<RaceDetailDto>("/api/v1/catalog/races/augurios-ejemplo-viajero");
+        var race = await s.Player.Client.GetFromJsonAsync<RaceDetailDto>("/api/v1/systems/dnd5e/catalog/races/augurios-ejemplo-viajero");
         Assert.Equal((2, 6, 1), (race!.Choices!.AbilityBonuses!.Choose, race.Choices.AbilityBonuses.From.Count, race.Choices.Feats!.Choose));
         Assert.Equal(["cold"], race.Resistances);
 
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Viajera");
-        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/sheet", new
+        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet", new
         {
             raceIndex = "augurios-ejemplo-viajero",
             backgroundIndex = "augurios-ejemplo-vigia",
@@ -143,10 +143,10 @@ public class OriginAndRestRollPackTests(OriginPackApiFactory factory) : IClassFi
         Assert.False(afterRoll.RestRollsPending);
 
         // A short rest keeps the values; a long rest asks for new ones.
-        var shortRest = await s.Dm.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/rest/short", new { });
+        var shortRest = await s.Dm.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/rest/short", new { });
         Assert.Equal(HttpStatusCode.OK, shortRest.StatusCode);
         Assert.False((await shortRest.Content.ReadFromJsonAsync<CharacterDetailDto>())!.RestRollsPending);
-        var longRest = await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/rest/long", null);
+        var longRest = await s.Dm.Client.PostAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/rest/long", null);
         Assert.Equal(HttpStatusCode.OK, longRest.StatusCode);
         var rested = (await longRest.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
         Assert.True(rested.RestRollsPending);
@@ -204,8 +204,8 @@ public class OriginAndRestRollPackTests(OriginPackApiFactory factory) : IClassFi
         }
     }
 
-    private static string Url(Guid id) => $"{ItemTestHelpers.CharacterUrl(id)}/origin-choices";
+    private static string Url(Guid id) => $"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/origin-choices";
 
     private static Task<HttpResponseMessage> RollAsync(SignedInUser actor, Guid characterId, Guid resourceId, params int[] values) =>
-        actor.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(characterId)}/resources/{resourceId}/rolls", new { values });
+        actor.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(characterId)}/resources/{resourceId}/rolls", new { values });
 }

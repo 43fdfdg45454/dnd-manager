@@ -14,7 +14,7 @@ namespace OpenTrpg.Systems.Dnd5e.Api.Tests;
 [Collection(CatalogCollection.Name)]
 public class StartingEquipmentTests(CatalogApiFactory factory, ITestOutputHelper output)
 {
-    private const string Base = "/api/v1/catalog";
+    private const string Base = "/api/v1/systems/dnd5e/catalog";
 
     private async Task<T> GetAsync<T>(string url)
     {

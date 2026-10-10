@@ -205,15 +205,21 @@ void main() {
       adapter.body = makeCharacterJson();
       await repository.classAction('ch1', 'lay-on-hands', {'amount': 5, 'targetSelf': false});
       expect(adapter.requests.last.method, 'POST');
-      expect(adapter.requests.last.path, '/api/v1/characters/ch1/class-actions/lay-on-hands');
+      expect(
+        adapter.requests.last.path,
+        '/api/v1/systems/dnd5e/characters/ch1/class-actions/lay-on-hands',
+      );
       expect(adapter.requests.last.data, {'amount': 5, 'targetSelf': false});
       await repository.classAction('ch1', 'rage');
-      expect(adapter.requests.last.path, '/api/v1/characters/ch1/class-actions/rage');
+      expect(adapter.requests.last.path, '/api/v1/systems/dnd5e/characters/ch1/class-actions/rage');
       expect(adapter.requests.last.data, <String, dynamic>{});
 
       adapter.body = {'character': makeCharacterJson(name: 'Tras el castigo'), 'damageDice': '3d8'};
       final smite = await repository.divineSmite('ch1', 2);
-      expect(adapter.requests.last.path, '/api/v1/characters/ch1/class-actions/divine-smite');
+      expect(
+        adapter.requests.last.path,
+        '/api/v1/systems/dnd5e/characters/ch1/class-actions/divine-smite',
+      );
       expect(adapter.requests.last.data, {'slotLevel': 2});
       expect(smite.damageDice, '3d8');
       expect(smite.character.name, 'Tras el castigo');
@@ -247,7 +253,7 @@ void main() {
       };
       final result = await repository.applyDamage('ch1', 8);
       expect(adapter.requests.last.method, 'POST');
-      expect(adapter.requests.last.path, '/api/v1/characters/ch1/damage');
+      expect(adapter.requests.last.path, '/api/v1/systems/dnd5e/characters/ch1/damage');
       expect(adapter.requests.last.data, {'amount': 8});
       expect(result.character.hitPointsCurrent, 12);
       expect(result.outcome.concentratingOn, 'bless');
@@ -261,7 +267,7 @@ void main() {
       adapter.body = makeOriginChoicesJson([makeOriginChoiceJson()]);
       final plan = await repository.originChoices('ch1');
       expect(adapter.requests.last.method, 'GET');
-      expect(adapter.requests.last.path, '/api/v1/characters/ch1/origin-choices');
+      expect(adapter.requests.last.path, '/api/v1/systems/dnd5e/characters/ch1/origin-choices');
       expect(plan.choices.single.kind, OriginChoiceKind.skill);
       expect(plan.choices.single.required, 1);
 
@@ -270,7 +276,7 @@ void main() {
         const LevelUpChoiceAnswer.feat('race.feat', 'grappler', ability: 'str'),
       ]);
       expect(adapter.requests.last.method, 'PUT');
-      expect(adapter.requests.last.path, '/api/v1/characters/ch1/origin-choices');
+      expect(adapter.requests.last.path, '/api/v1/systems/dnd5e/characters/ch1/origin-choices');
       expect(adapter.requests.last.data, {
         'choices': [
           {
@@ -289,10 +295,10 @@ void main() {
         const LevelUpChoiceAnswer.picks('replace.dueling', ['defense']),
       ]);
       expect(adapter.requests.last.method, 'POST');
-      expect(adapter.requests.last.path, '/api/v1/characters/ch1/invalid-choices');
+      expect(adapter.requests.last.path, '/api/v1/systems/dnd5e/characters/ch1/invalid-choices');
 
       await repository.saveResourceRolls('ch1', 'r1', [14, 3]);
-      expect(adapter.requests.last.path, '/api/v1/characters/ch1/resources/r1/rolls');
+      expect(adapter.requests.last.path, '/api/v1/systems/dnd5e/characters/ch1/resources/r1/rolls');
       expect(adapter.requests.last.data, {
         'values': [14, 3],
       });
@@ -300,7 +306,10 @@ void main() {
       await repository.classAction('ch1', 'natural-recovery', {
         'slotLevels': [2],
       });
-      expect(adapter.requests.last.path, '/api/v1/characters/ch1/class-actions/natural-recovery');
+      expect(
+        adapter.requests.last.path,
+        '/api/v1/systems/dnd5e/characters/ch1/class-actions/natural-recovery',
+      );
     });
 
     test('party/adjust devuelve los desenlaces de daño', () async {
@@ -327,7 +336,7 @@ void main() {
       final result = await repository.adjust('c1', [
         const PartyAdjustment(characterId: 'ch1', hitPointsDelta: -9),
       ]);
-      expect(adapter.requests.last.path, '/api/v1/campaigns/c1/party/adjust');
+      expect(adapter.requests.last.path, '/api/v1/systems/dnd5e/campaigns/c1/party/adjust');
       expect(result.damage.single.concentrationEnded, isTrue);
       expect(result.damage.single.concentratingOn, 'bless');
     });

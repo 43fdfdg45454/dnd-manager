@@ -17,7 +17,7 @@ public class PersonalityEndpointsTests(CatalogApiFactory factory)
     public async Task The_srd_acolyte_has_eight_traits_and_six_ideals_bonds_and_flaws_with_alignments()
     {
         var s = await factory.CreateCampaignScenarioAsync();
-        var backgrounds = await s.Player.Client.GetFromJsonAsync<List<BackgroundDto>>("/api/v1/catalog/backgrounds");
+        var backgrounds = await s.Player.Client.GetFromJsonAsync<List<BackgroundDto>>("/api/v1/systems/dnd5e/catalog/backgrounds");
         var acolyte = Assert.Single(backgrounds!, b => b.Index == "acolyte");
 
         var personality = acolyte.Personality!;
@@ -90,5 +90,5 @@ public class PersonalityEndpointsTests(CatalogApiFactory factory)
         backgroundDetail = "Especialidad: Ejemplo",
     };
 
-    private static string SheetUrl(Guid id) => $"{ItemTestHelpers.CharacterUrl(id)}/sheet";
+    private static string SheetUrl(Guid id) => $"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/sheet";
 }

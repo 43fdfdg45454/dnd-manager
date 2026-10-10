@@ -210,7 +210,7 @@ Map<String, dynamic> _character({int? pendingLevelUpTo = 3, List<Object>? choice
     )..['choices'] = choices ?? const <Object>[];
 
 DioException _problem(int status, String detail) {
-  final options = RequestOptions(path: '/api/v1/characters/ch1/level-up');
+  final options = RequestOptions(path: '/api/v1/systems/dnd5e/characters/ch1/level-up');
   return DioException(
     requestOptions: options,
     type: DioExceptionType.badResponse,

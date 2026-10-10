@@ -150,7 +150,7 @@ public class CombatEndpointsTests(CatalogApiFactory factory)
     {
         var s = await factory.CreateCampaignScenarioAsync();
         var character = await SetupAsync(s.Player, s.CampaignId, "paladin", 1, new { str = 16, dex = 10, con = 10, @int = 8, wis = 10, cha = 14 });
-        var hurt = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/combat", new { hitPointsCurrent = 4 });
+        var hurt = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(character.Id)}/combat", new { hitPointsCurrent = 4 });
         Assert.Equal(HttpStatusCode.OK, hurt.StatusCode);
 
         var tooMuch = await s.Player.Client.PostAsJsonAsync(ActionUrl(character.Id, "lay-on-hands"), new { amount = 6 });
@@ -175,7 +175,7 @@ public class CombatEndpointsTests(CatalogApiFactory factory)
         var character = await SetupAsync(s.Player, s.CampaignId, "wizard", 5, new { str = 8, dex = 14, con = 12, @int = 18, wis = 10, cha = 10 });
         foreach (var level in new[] { 1, 2, 3 })
         {
-            Assert.Equal(HttpStatusCode.OK, (await s.Player.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/spell-slots/{level}/spend", null)).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await s.Player.Client.PostAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(character.Id)}/spell-slots/{level}/spend", null)).StatusCode);
         }
 
         var excess = await s.Player.Client.PostAsJsonAsync(ActionUrl(character.Id, "arcane-recovery"), new { slotLevels = new[] { 3, 1 } });
@@ -209,7 +209,7 @@ public class CombatEndpointsTests(CatalogApiFactory factory)
 
     // ---- Helpers ---------------------------------------------------------------------------------------
 
-    private static string ActionUrl(Guid id, string action) => $"{ItemTestHelpers.CharacterUrl(id)}/class-actions/{action}";
+    private static string ActionUrl(Guid id, string action) => $"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/class-actions/{action}";
 
     /// <summary>Draft of <paramref name="owner"/> with one class, base scores (no racial bonuses) and optional weapon proficiencies.</summary>
     private static async Task<CharacterDetailDto> SetupAsync(SignedInUser owner, Guid campaignId, string classIndex, int level, object scores, params string[] weapons)
@@ -226,7 +226,7 @@ public class CombatEndpointsTests(CatalogApiFactory factory)
 
     private static async Task<CharacterDetailDto> PatchSheetAsync(SignedInUser actor, Guid id, object patch)
     {
-        var response = await actor.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(id)}/sheet", patch);
+        var response = await actor.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/sheet", patch);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         return (await response.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
     }

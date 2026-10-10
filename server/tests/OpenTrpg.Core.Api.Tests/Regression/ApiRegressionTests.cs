@@ -134,7 +134,7 @@ internal sealed partial class RegressionRun(RegressionApiFactory factory)
 
     private async Task CatalogAsync()
     {
-        const string catalog = "/api/v1/catalog";
+        const string catalog = "/api/v1/systems/dnd5e/catalog";
         await Step("catalog.attribution", _player, HttpMethod.Get, $"{catalog}/attribution");
         await Step("catalog.classes", _player, HttpMethod.Get, $"{catalog}/classes");
         await Step("catalog.class", _player, HttpMethod.Get, $"{catalog}/classes/wizard");
@@ -166,7 +166,7 @@ internal sealed partial class RegressionRun(RegressionApiFactory factory)
         Remember(Guid.Parse(id), "character");
         var url = $"/api/v1/characters/{id}";
 
-        await Step("character.sheet.draft", _player, HttpMethod.Patch, $"{url}/sheet", new
+        await Step("character.sheet.draft", _player, HttpMethod.Patch, $"{Dnd5e(url)}/sheet", new
         {
             raceIndex = "dwarf",
             subraceIndex = "hill-dwarf",
@@ -187,9 +187,9 @@ internal sealed partial class RegressionRun(RegressionApiFactory factory)
             backstory = "Historia",
         });
 
-        var origin = await Step("character.origin-choices.get", _player, HttpMethod.Get, $"{url}/origin-choices");
-        await Step("character.origin-choices.put", _player, HttpMethod.Put, $"{url}/origin-choices", new JsonObject { ["choices"] = AutoAnswers(origin?["choices"]?.AsArray()) });
-        await Step("character.spell-preparation.get.draft", _player, HttpMethod.Get, $"{url}/spell-preparation");
+        var origin = await Step("character.origin-choices.get", _player, HttpMethod.Get, $"{Dnd5e(url)}/origin-choices");
+        await Step("character.origin-choices.put", _player, HttpMethod.Put, $"{Dnd5e(url)}/origin-choices", new JsonObject { ["choices"] = AutoAnswers(origin?["choices"]?.AsArray()) });
+        await Step("character.spell-preparation.get.draft", _player, HttpMethod.Get, $"{Dnd5e(url)}/spell-preparation");
         await Step("character.get.draft", _player, HttpMethod.Get, url);
         await Step("character.list.player", _player, HttpMethod.Get, $"/api/v1/campaigns/{c}/characters");
         await Step("character.list.dm", _dm, HttpMethod.Get, $"/api/v1/campaigns/{c}/characters");
@@ -201,57 +201,57 @@ internal sealed partial class RegressionRun(RegressionApiFactory factory)
         await Step("change-request.approve.activate", _dm, HttpMethod.Post, $"/api/v1/change-requests/{activate}/approve", new { comment = "Adelante" });
         await Step("character.get.active", _player, HttpMethod.Get, url);
 
-        var edit = await Step("character.sheet.request", _player, HttpMethod.Patch, $"{url}/sheet", new { notes = "Notas nuevas", alignment = "Neutral" });
+        var edit = await Step("character.sheet.request", _player, HttpMethod.Patch, $"{Dnd5e(url)}/sheet", new { notes = "Notas nuevas", alignment = "Neutral" });
         await Step("change-request.reject", _dm, HttpMethod.Post, $"/api/v1/change-requests/{Id(edit, "id")}/reject", new { comment = "No" });
-        var edit2 = await Step("character.sheet.request.2", _player, HttpMethod.Patch, $"{url}/sheet", new { backstory = "Otra historia" });
+        var edit2 = await Step("character.sheet.request.2", _player, HttpMethod.Patch, $"{Dnd5e(url)}/sheet", new { backstory = "Otra historia" });
         await Step("change-request.cancel", _player, HttpMethod.Post, $"/api/v1/change-requests/{Id(edit2, "id")}/cancel");
-        var edit3 = await Step("character.sheet.request.3", _player, HttpMethod.Patch, $"{url}/sheet", new { name = "Regresión II", overrides = new[] { new { field = "speed", value = 30, note = "Botas" } } });
+        var edit3 = await Step("character.sheet.request.3", _player, HttpMethod.Patch, $"{Dnd5e(url)}/sheet", new { name = "Regresión II", overrides = new[] { new { field = "speed", value = 30, note = "Botas" } } });
         await Step("change-request.approve.sheet", _dm, HttpMethod.Post, $"/api/v1/change-requests/{Id(edit3, "id")}/approve");
-        await Step("character.sheet.dm", _dm, HttpMethod.Patch, $"{url}/sheet", new { notes = "Notas del DM" });
+        await Step("character.sheet.dm", _dm, HttpMethod.Patch, $"{Dnd5e(url)}/sheet", new { notes = "Notas del DM" });
         return id;
     }
 
     private async Task TrackingAsync(string id)
     {
         var url = $"/api/v1/characters/{id}";
-        await Step("combat.update", _player, HttpMethod.Patch, $"{url}/combat", new { temporaryHitPoints = 3, inspiration = true, conditions = new[] { new { index = "poisoned", note = "Veneno" } } });
-        await Step("concentration.start", _player, HttpMethod.Post, $"{url}/concentration", new { spellIndex = "shield" });
-        await Step("damage", _player, HttpMethod.Post, $"{url}/damage", new { amount = 5 });
-        await Step("concentration.stop", _player, HttpMethod.Post, $"{url}/concentration", new { spellIndex = (string?)null });
-        await Step("spell-slots.spend", _player, HttpMethod.Post, $"{url}/spell-slots/1/spend", new { amount = 1 });
-        await Step("spell-slots.restore", _player, HttpMethod.Post, $"{url}/spell-slots/1/restore");
-        await Step("spell-slots.spend.again", _player, HttpMethod.Post, $"{url}/spell-slots/1/spend");
-        await Step("class-action.arcane-recovery", _player, HttpMethod.Post, $"{url}/class-actions/arcane-recovery", new { slotLevels = new[] { 1 } });
-        await Step("class-action.rage", _player, HttpMethod.Post, $"{url}/class-actions/rage");
-        await Step("class-action.unknown", _player, HttpMethod.Post, $"{url}/class-actions/fly");
+        await Step("combat.update", _player, HttpMethod.Patch, $"{Dnd5e(url)}/combat", new { temporaryHitPoints = 3, inspiration = true, conditions = new[] { new { index = "poisoned", note = "Veneno" } } });
+        await Step("concentration.start", _player, HttpMethod.Post, $"{Dnd5e(url)}/concentration", new { spellIndex = "shield" });
+        await Step("damage", _player, HttpMethod.Post, $"{Dnd5e(url)}/damage", new { amount = 5 });
+        await Step("concentration.stop", _player, HttpMethod.Post, $"{Dnd5e(url)}/concentration", new { spellIndex = (string?)null });
+        await Step("spell-slots.spend", _player, HttpMethod.Post, $"{Dnd5e(url)}/spell-slots/1/spend", new { amount = 1 });
+        await Step("spell-slots.restore", _player, HttpMethod.Post, $"{Dnd5e(url)}/spell-slots/1/restore");
+        await Step("spell-slots.spend.again", _player, HttpMethod.Post, $"{Dnd5e(url)}/spell-slots/1/spend");
+        await Step("class-action.arcane-recovery", _player, HttpMethod.Post, $"{Dnd5e(url)}/class-actions/arcane-recovery", new { slotLevels = new[] { 1 } });
+        await Step("class-action.rage", _player, HttpMethod.Post, $"{Dnd5e(url)}/class-actions/rage");
+        await Step("class-action.unknown", _player, HttpMethod.Post, $"{Dnd5e(url)}/class-actions/fly");
 
-        var withResource = await Step("resources.add", _player, HttpMethod.Post, $"{url}/resources", new { name = "Suerte", max = 3, recharge = "LongRest" });
+        var withResource = await Step("resources.add", _player, HttpMethod.Post, $"{Dnd5e(url)}/resources", new { name = "Suerte", max = 3, recharge = "LongRest" });
         var resource = Id(withResource, "id");
-        await Step("resources.spend", _player, HttpMethod.Post, $"{url}/resources/{resource}/spend", new { amount = 2 });
-        await Step("resources.restore", _player, HttpMethod.Post, $"{url}/resources/{resource}/restore");
-        await Step("resources.rolls", _player, HttpMethod.Post, $"{url}/resources/{resource}/rolls", new { values = new[] { 1 } });
-        await Step("resources.delete", _player, HttpMethod.Delete, $"{url}/resources/{resource}");
+        await Step("resources.spend", _player, HttpMethod.Post, $"{Dnd5e(url)}/resources/{resource}/spend", new { amount = 2 });
+        await Step("resources.restore", _player, HttpMethod.Post, $"{Dnd5e(url)}/resources/{resource}/restore");
+        await Step("resources.rolls", _player, HttpMethod.Post, $"{Dnd5e(url)}/resources/{resource}/rolls", new { values = new[] { 1 } });
+        await Step("resources.delete", _player, HttpMethod.Delete, $"{Dnd5e(url)}/resources/{resource}");
 
-        await Step("rest.short.player", _player, HttpMethod.Post, $"{url}/rest/short", new { hitDice = new Dictionary<string, int> { ["wizard"] = 1 } });
-        await Step("rest.short", _dm, HttpMethod.Post, $"{url}/rest/short", new { hitDice = new Dictionary<string, int> { ["wizard"] = 1 } });
-        await Step("rest.long", _dm, HttpMethod.Post, $"{url}/rest/long");
+        await Step("rest.short.player", _player, HttpMethod.Post, $"{Dnd5e(url)}/rest/short", new { hitDice = new Dictionary<string, int> { ["wizard"] = 1 } });
+        await Step("rest.short", _dm, HttpMethod.Post, $"{Dnd5e(url)}/rest/short", new { hitDice = new Dictionary<string, int> { ["wizard"] = 1 } });
+        await Step("rest.long", _dm, HttpMethod.Post, $"{Dnd5e(url)}/rest/long");
 
-        await Step("invalid-choices.get", _player, HttpMethod.Get, $"{url}/invalid-choices");
-        await Step("invalid-choices.post", _player, HttpMethod.Post, $"{url}/invalid-choices", new { choices = Array.Empty<object>() });
+        await Step("invalid-choices.get", _player, HttpMethod.Get, $"{Dnd5e(url)}/invalid-choices");
+        await Step("invalid-choices.post", _player, HttpMethod.Post, $"{Dnd5e(url)}/invalid-choices", new { choices = Array.Empty<object>() });
 
-        await Step("companion.set", _player, HttpMethod.Put, $"{url}/companion", new { beastIndex = "wolf", name = "Lobo" });
-        await Step("companion.hp", _player, HttpMethod.Post, $"{url}/companion/hp", new { delta = -1 });
-        await Step("companion.delete", _dm, HttpMethod.Delete, $"{url}/companion");
+        await Step("companion.set", _player, HttpMethod.Put, $"{Dnd5e(url)}/companion", new { beastIndex = "wolf", name = "Lobo" });
+        await Step("companion.hp", _player, HttpMethod.Post, $"{Dnd5e(url)}/companion/hp", new { delta = -1 });
+        await Step("companion.delete", _dm, HttpMethod.Delete, $"{Dnd5e(url)}/companion");
 
-        await Step("spell-preparation.get", _player, HttpMethod.Get, $"{url}/spell-preparation");
-        await Step("spell-preparation.post.player", _player, HttpMethod.Post, $"{url}/spell-preparation", new { classes = new[] { new { classIndex = "wizard", spells = new[] { "magic-missile", "shield" } } } });
-        await Step("spell-preparation.post.dm", _dm, HttpMethod.Post, $"{url}/spell-preparation", new { classes = new[] { new { classIndex = "wizard", spells = new[] { "magic-missile", "sleep" } } } });
-        await Step("spell-preparation.keep", _dm, HttpMethod.Post, $"{url}/spell-preparation/keep");
+        await Step("spell-preparation.get", _player, HttpMethod.Get, $"{Dnd5e(url)}/spell-preparation");
+        await Step("spell-preparation.post.player", _player, HttpMethod.Post, $"{Dnd5e(url)}/spell-preparation", new { classes = new[] { new { classIndex = "wizard", spells = new[] { "magic-missile", "shield" } } } });
+        await Step("spell-preparation.post.dm", _dm, HttpMethod.Post, $"{Dnd5e(url)}/spell-preparation", new { classes = new[] { new { classIndex = "wizard", spells = new[] { "magic-missile", "sleep" } } } });
+        await Step("spell-preparation.keep", _dm, HttpMethod.Post, $"{Dnd5e(url)}/spell-preparation/keep");
     }
 
     private async Task PartyAndLevelUpAsync(string c, string id)
     {
-        var party = $"/api/v1/campaigns/{c}/party";
+        var party = $"/api/v1/systems/dnd5e/campaigns/{c}/party";
         await Step("party.get", _dm, HttpMethod.Get, party);
         await Step("party.get.player", _player, HttpMethod.Get, party);
         await Step("party.adjust", _dm, HttpMethod.Post, $"{party}/adjust", new object[]
@@ -265,9 +265,9 @@ internal sealed partial class RegressionRun(RegressionApiFactory factory)
         await Step("party.grant-level.again", _dm, HttpMethod.Post, $"{party}/grant-level");
 
         var url = $"/api/v1/characters/{id}";
-        var plan = await Step("level-up.plan", _player, HttpMethod.Get, $"{url}/level-up");
-        await Step("level-up.plan.class", _player, HttpMethod.Get, $"{url}/level-up?classIndex=wizard");
-        await Step("level-up.apply", _player, HttpMethod.Post, $"{url}/level-up", new JsonObject
+        var plan = await Step("level-up.plan", _player, HttpMethod.Get, $"{Dnd5e(url)}/level-up");
+        await Step("level-up.plan.class", _player, HttpMethod.Get, $"{Dnd5e(url)}/level-up?classIndex=wizard");
+        await Step("level-up.apply", _player, HttpMethod.Post, $"{Dnd5e(url)}/level-up", new JsonObject
         {
             ["classIndex"] = "wizard",
             ["hitPointsRolled"] = 4,
@@ -335,7 +335,7 @@ internal sealed partial class RegressionRun(RegressionApiFactory factory)
         await Step("homebrew.list", _dm, HttpMethod.Get, items);
         await Step("homebrew.get", _player, HttpMethod.Get, $"{items}/{template}");
         await Step("homebrew.patch", _dm, HttpMethod.Patch, $"{items}/{template}", new { costCp = 2000, description = new[] { "Una espada mejor." } });
-        await Step("catalog.item.homebrew", _player, HttpMethod.Get, $"/api/v1/catalog/items/{template}");
+        await Step("catalog.item.homebrew", _player, HttpMethod.Get, $"/api/v1/systems/dnd5e/catalog/items/{template}");
 
         var shop = await Step("shop.create", _dm, HttpMethod.Post, $"/api/v1/campaigns/{c}/shops", new { name = "Herrería", description = "Armas", buybackPercent = 50 });
         var shopUrl = $"/api/v1/shops/{Id(shop, "id")}";
@@ -402,6 +402,9 @@ internal sealed partial class RegressionRun(RegressionApiFactory factory)
         var invitation = await Step($"campaign.invite.{role}", _owner, HttpMethod.Post, $"/api/v1/campaigns/{c}/members", new { userId = user.Id, role });
         await Step($"campaign.accept.{role}", user, HttpMethod.Post, $"/api/v1/invitations/{Id(invitation, "id")}/accept");
     }
+
+    /// <summary>The D&amp;D 5e route of a core character route (phase 32B: <c>/api/v1/systems/dnd5e/...</c>).</summary>
+    private static string Dnd5e(string coreUrl) => coreUrl.Replace("/api/v1/", "/api/v1/systems/dnd5e/", StringComparison.Ordinal);
 
     private static string FindItem(JsonNode? inventory, string templateId, bool last)
     {

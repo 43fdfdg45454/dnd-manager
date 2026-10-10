@@ -106,7 +106,7 @@ public class ItemModifierEndpointsTests(CatalogApiFactory factory)
 
         var detail = await s.Player.GetCharacterAsync(character.Id);
         Assert.Equal((10, 10), (detail.Sheet.HitPointsMax, detail.HitPointsCurrent));
-        var heal = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/combat", new { hitPointsCurrent = 10 });
+        var heal = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(character.Id)}/combat", new { hitPointsCurrent = 10 });
         Assert.Equal(HttpStatusCode.OK, heal.StatusCode);
     }
 
@@ -306,7 +306,7 @@ public class ItemModifierEndpointsTests(CatalogApiFactory factory)
         string? weaponProficiency = null)
     {
         var character = await player.CreateCharacterAsync(campaignId);
-        var patch = await player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/sheet", new
+        var patch = await player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(character.Id)}/sheet", new
         {
             classes = new[] { new { classIndex = "fighter", level = 1 } },
             baseAbilities = new { str, dex, con, @int = 10, wis = 10, cha = 10 },

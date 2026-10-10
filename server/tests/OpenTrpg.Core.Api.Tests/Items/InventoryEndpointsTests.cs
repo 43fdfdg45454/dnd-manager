@@ -140,7 +140,7 @@ public class InventoryEndpointsTests(CatalogApiFactory factory)
     {
         var s = await factory.CreateCampaignScenarioAsync();
         var character = await s.Player.CreateCharacterAsync(s.CampaignId);
-        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/sheet", new
+        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(character.Id)}/sheet", new
         {
             classes = new[] { new { classIndex = "fighter", level = 1 } },
             baseAbilities = new { str = 15, dex = 14, con = 14, @int = 10, wis = 10, cha = 10 },

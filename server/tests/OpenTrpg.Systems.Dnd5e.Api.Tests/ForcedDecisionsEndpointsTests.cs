@@ -61,7 +61,7 @@ public class ForcedDecisionsEndpointsTests(CatalogApiFactory factory)
         var cleric = await ActiveAsync(s, "cleric", 10, ClericScores);
         await ConcentrateAsync(s.Player, cleric.Id, "bless");
 
-        var response = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/adjust", new[] { new { characterId = cleric.Id, hitPointsDelta = -30 } });
+        var response = await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/adjust", new[] { new { characterId = cleric.Id, hitPointsDelta = -30 } });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var party = (await response.Content.ReadFromJsonAsync<PartyDto>())!;
@@ -84,7 +84,7 @@ public class ForcedDecisionsEndpointsTests(CatalogApiFactory factory)
 
         foreach (var level in new[] { 1, 1, 2 })
         {
-            Assert.Equal(HttpStatusCode.OK, (await s.Player.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(land.Id)}/spell-slots/{level}/spend", null)).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await s.Player.Client.PostAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(land.Id)}/spell-slots/{level}/spend", null)).StatusCode);
         }
 
         var excess = await s.Player.Client.PostAsJsonAsync(ActionUrl(land.Id), new { slotLevels = new[] { 2, 1 } });
@@ -108,7 +108,7 @@ public class ForcedDecisionsEndpointsTests(CatalogApiFactory factory)
     {
         var s = await factory.CreateCampaignScenarioAsync();
         var hero = await ActiveAsync(s, "fighter", 3, new { str = 13, dex = 14, con = 14, @int = 10, wis = 10, cha = 10 }, subclass: "champion", grant: true);
-        var level4 = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/level-up", new
+        var level4 = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/level-up", new
         {
             classIndex = "fighter",
             hitPointsRolled = 6,
@@ -124,7 +124,7 @@ public class ForcedDecisionsEndpointsTests(CatalogApiFactory factory)
         Assert.Contains("Strength 13", taken.PrerequisitesText);
 
         // The DM lowers Strength: Grappler (Strength 13) is no longer valid.
-        var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/sheet", new { baseAbilities = new { str = 10, dex = 14, con = 14, @int = 10, wis = 10, cha = 10 } });
+        var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet", new { baseAbilities = new { str = 10, dex = 14, con = 14, @int = 10, wis = 10, cha = 10 } });
         Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
 
         var detail = await s.Player.GetCharacterAsync(hero.Id);
@@ -132,35 +132,35 @@ public class ForcedDecisionsEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(("replace.grappler", "fighter", "asi", "feats"), (invalid.ReplaceKey, invalid.ClassIndex, invalid.Key, invalid.SetId));
         Assert.Contains("Fuerza 13", invalid.Reason);
 
-        var forced = await s.Player.Client.GetFromJsonAsync<InvalidChoicesDto>($"{ItemTestHelpers.CharacterUrl(hero.Id)}/invalid-choices");
+        var forced = await s.Player.Client.GetFromJsonAsync<InvalidChoicesDto>($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/invalid-choices");
         var replacement = Assert.Single(forced!.Choices);
         Assert.Equal(("replace.grappler", "AsiOrFeat", true), (replacement.Key, replacement.Kind, replacement.Replaces));
         Assert.Equal("grappler", Assert.Single(replacement.Known).Index);
 
         // The next level-up asks for it too.
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { hero.Id } })).StatusCode);
-        var plan = await s.Player.Client.GetFromJsonAsync<LevelUpPlanDto>($"{ItemTestHelpers.CharacterUrl(hero.Id)}/level-up");
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { hero.Id } })).StatusCode);
+        var plan = await s.Player.Client.GetFromJsonAsync<LevelUpPlanDto>($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/level-up");
         Assert.Contains(plan!.Choices, c => c.Key == "replace.grappler");
 
         // The SRD has no other feat: the replacement drops it.
-        var replaced = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/invalid-choices", new { choices = Array.Empty<object>() });
+        var replaced = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/invalid-choices", new { choices = Array.Empty<object>() });
         Assert.True(replaced.StatusCode == HttpStatusCode.OK, await replaced.Content.ReadAsStringAsync());
         var after = (await replaced.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
         Assert.Empty(after.InvalidChoices);
         Assert.Contains(after.Choices, c => c.Replaced.Any(r => r.Index == "grappler"));
-        Assert.Equal(HttpStatusCode.Conflict, (await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/invalid-choices", new { choices = Array.Empty<object>() })).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/invalid-choices", new { choices = Array.Empty<object>() })).StatusCode);
     }
 
     // ---- Helpers ---------------------------------------------------------------------------------------
 
-    private static string DamageUrl(Guid id) => $"{ItemTestHelpers.CharacterUrl(id)}/damage";
+    private static string DamageUrl(Guid id) => $"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/damage";
 
-    private static string ActionUrl(Guid id) => $"{ItemTestHelpers.CharacterUrl(id)}/class-actions/natural-recovery";
+    private static string ActionUrl(Guid id) => $"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/class-actions/natural-recovery";
 
     private static async Task<CharacterDetailDto> ActiveAsync(CampaignScenario s, string classIndex, int level, object scores, string? subclass = null, bool grant = false)
     {
         var character = await s.Player.CreateCharacterAsync(s.CampaignId, classIndex);
-        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/sheet", new
+        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(character.Id)}/sheet", new
         {
             classes = new[] { new { classIndex, subclassIndex = subclass, level } },
             baseAbilities = scores,
@@ -170,7 +170,7 @@ public class ForcedDecisionsEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/activate", null)).StatusCode);
         if (grant)
         {
-            Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { character.Id } })).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { character.Id } })).StatusCode);
         }
 
         return await s.Player.GetCharacterAsync(character.Id);
@@ -178,7 +178,7 @@ public class ForcedDecisionsEndpointsTests(CatalogApiFactory factory)
 
     private static async Task<CharacterDetailDto> ConcentrateAsync(SignedInUser actor, Guid id, string? spellIndex)
     {
-        var response = await actor.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(id)}/concentration", new { spellIndex });
+        var response = await actor.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/concentration", new { spellIndex });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         return (await response.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
     }

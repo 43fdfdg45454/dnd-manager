@@ -12,7 +12,7 @@ namespace OpenTrpg.Systems.Dnd5e.Api.Tests;
 [Collection(CatalogCollection.Name)]
 public class CatalogEndpointsTests(CatalogApiFactory factory)
 {
-    private const string Base = "/api/v1/catalog";
+    private const string Base = "/api/v1/systems/dnd5e/catalog";
 
     private async Task<HttpClient> ClientAsync() => (await factory.CreateSignedInUserAsync()).Client;
 

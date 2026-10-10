@@ -70,7 +70,7 @@ public class SpellPreparationEndpointsTests(CatalogApiFactory factory, ITestOutp
         var s = await factory.CreateCampaignScenarioAsync();
         var cleric = await ActiveAsync(s, "cleric", 1, ClericScores, [("sacred-flame", true)]);
         var domain = await s.Dm.Client.PatchAsJsonAsync(
-            $"{ItemTestHelpers.CharacterUrl(cleric.Id)}/sheet",
+            $"{ItemTestHelpers.Dnd5eCharacterUrl(cleric.Id)}/sheet",
             new
             {
                 spells = new[]
@@ -147,10 +147,10 @@ public class SpellPreparationEndpointsTests(CatalogApiFactory factory, ITestOutp
         var s = await factory.CreateCampaignScenarioAsync();
         var cleric = await ActiveAsync(s, "cleric", 1, ClericScores, [("bless", true), ("cure-wounds", true), ("guiding-bolt", true)]);
         var lowered = await s.Dm.Client.PatchAsJsonAsync(
-            $"{ItemTestHelpers.CharacterUrl(cleric.Id)}/sheet",
+            $"{ItemTestHelpers.Dnd5eCharacterUrl(cleric.Id)}/sheet",
             new { baseAbilities = new { str = 10, dex = 12, con = 14, @int = 10, wis = 10, cha = 10 } });
         Assert.Equal(HttpStatusCode.OK, lowered.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(cleric.Id)}/rest/long", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(cleric.Id)}/rest/long", null)).StatusCode);
 
         var preparation = await GetAsync(s.Player, cleric.Id);
         var keep = await s.Player.Client.PostAsync($"{Url(cleric.Id)}/keep", null);
@@ -195,9 +195,9 @@ public class SpellPreparationEndpointsTests(CatalogApiFactory factory, ITestOutp
         var paladin = await ActiveAsync(s, "paladin", 1, PaladinScores, []);
         Assert.False(paladin.SpellPreparationPending);
         Assert.Empty((await GetAsync(s.Player, paladin.Id)).Classes);
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { paladin.Id } })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { paladin.Id } })).StatusCode);
 
-        var levelUpUrl = $"{ItemTestHelpers.CharacterUrl(paladin.Id)}/level-up";
+        var levelUpUrl = $"{ItemTestHelpers.Dnd5eCharacterUrl(paladin.Id)}/level-up";
         var plan = (await s.Player.Client.GetFromJsonAsync<LevelUpPlanDto>(levelUpUrl))!;
         var choices = plan.Choices
             .Select(ch => new { key = ch.Key, selected = ch.Options.Where(o => o.Eligible).Take(ch.Required).Select(o => o.Index).ToArray() })
@@ -219,7 +219,7 @@ public class SpellPreparationEndpointsTests(CatalogApiFactory factory, ITestOutp
         var cleric = await ActiveAsync(s, "cleric", 1, ClericScores, [("bless", true)]);
         var fighter = await s.Player.CreateActiveCharacterAsync(s.Dm, s.CampaignId, "Guerrera");
 
-        var response = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/rest", new { kind = "long" });
+        var response = await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/rest", new { kind = "long" });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var party = (await response.Content.ReadFromJsonAsync<PartyDto>())!;
@@ -234,7 +234,7 @@ public class SpellPreparationEndpointsTests(CatalogApiFactory factory, ITestOutp
         var cleric = await ActiveAsync(s, "cleric", 1, ClericScores, [("bless", true), ("cure-wounds", false)]);
 
         var patch = await s.Player.Client.PatchAsJsonAsync(
-            $"{ItemTestHelpers.CharacterUrl(cleric.Id)}/sheet",
+            $"{ItemTestHelpers.Dnd5eCharacterUrl(cleric.Id)}/sheet",
             new { spells = new[] { new { spellIndex = "bless", classIndex = "cleric", isPrepared = false }, new { spellIndex = "cure-wounds", classIndex = "cleric", isPrepared = true } } });
         Assert.Equal(HttpStatusCode.Accepted, patch.StatusCode);
         var request = (await patch.Content.ReadFromJsonAsync<ChangeRequestDto>())!;
@@ -261,11 +261,11 @@ public class SpellPreparationEndpointsTests(CatalogApiFactory factory, ITestOutp
 
         foreach (var (index, category) in expected)
         {
-            var detail = await client.GetFromJsonAsync<SpellDetailDto>($"/api/v1/catalog/spells/{index}");
+            var detail = await client.GetFromJsonAsync<SpellDetailDto>($"/api/v1/systems/dnd5e/catalog/spells/{index}");
             Assert.Equal((index, category), (index, detail!.Category));
         }
 
-        using var page = await client.GetFromJsonAsync<JsonDocument>("/api/v1/catalog/spells?search=fireball");
+        using var page = await client.GetFromJsonAsync<JsonDocument>("/api/v1/systems/dnd5e/catalog/spells?search=fireball");
         Assert.Contains(page!.RootElement.GetProperty("items").EnumerateArray(), i => i.GetProperty("category").GetString() == "Damage");
     }
 
@@ -303,7 +303,7 @@ public class SpellPreparationEndpointsTests(CatalogApiFactory factory, ITestOutp
         });
     }
 
-    private static string Url(Guid id) => $"{ItemTestHelpers.CharacterUrl(id)}/spell-preparation";
+    private static string Url(Guid id) => $"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/spell-preparation";
 
     private static object Prepare(string classIndex, params string[] spells) => new { classes = new[] { new { classIndex, spells } } };
 
@@ -311,7 +311,7 @@ public class SpellPreparationEndpointsTests(CatalogApiFactory factory, ITestOutp
     private static async Task<CharacterDetailDto> ActiveAsync(CampaignScenario s, string classIndex, int level, object scores, (string Index, bool Prepared)[] spells)
     {
         var character = await s.Player.CreateCharacterAsync(s.CampaignId, classIndex);
-        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/sheet", new
+        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(character.Id)}/sheet", new
         {
             classes = new[] { new { classIndex, subclassIndex = (string?)null, level } },
             baseAbilities = scores,
@@ -364,5 +364,5 @@ public class SpellPreparationEndpointsTests(CatalogApiFactory factory, ITestOutp
     }
 
     private static async Task<PartyDto> GetPartyAsync(SignedInUser dm, Guid campaignId) =>
-        (await dm.Client.GetFromJsonAsync<PartyDto>($"/api/v1/campaigns/{campaignId}/party"))!;
+        (await dm.Client.GetFromJsonAsync<PartyDto>($"/api/v1/systems/dnd5e/campaigns/{campaignId}/party"))!;
 }

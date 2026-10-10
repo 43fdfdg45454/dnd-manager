@@ -68,17 +68,17 @@ public class HeightWeightPackTests(HeightWeightPackApiFactory factory) : IClassF
         Assert.True(import.StatusCode == HttpStatusCode.Created, await import.Content.ReadAsStringAsync());
 
         var s = await factory.CreateCampaignScenarioAsync();
-        var halfling = (await s.Player.Client.GetFromJsonAsync<RaceDetailDto>("/api/v1/catalog/races/halfling"))!;
+        var halfling = (await s.Player.Client.GetFromJsonAsync<RaceDetailDto>("/api/v1/systems/dnd5e/catalog/races/halfling"))!;
         Assert.Equal(new HeightWeightDto(30, "1d6", 40, "1"), halfling.HeightWeight);
         var tallFolk = Assert.Single(halfling.Subraces, r => r.Index == "talla-ejemplo-tall-folk");
         Assert.Equal(new HeightWeightDto(40, "2d6", 60, "1d3"), tallFolk.HeightWeight);
         Assert.All(halfling.Subraces.Where(r => r.Source == "srd"), r => Assert.Null(r.HeightWeight));
 
-        var giant = (await s.Player.Client.GetFromJsonAsync<RaceDetailDto>("/api/v1/catalog/races/talla-ejemplo-giant-folk"))!;
+        var giant = (await s.Player.Client.GetFromJsonAsync<RaceDetailDto>("/api/v1/systems/dnd5e/catalog/races/talla-ejemplo-giant-folk"))!;
         Assert.Equal(new HeightWeightDto(70, "3d4", 200, "2d3"), giant.HeightWeight);
 
         // The SRD has no table.
-        var elf = (await s.Player.Client.GetFromJsonAsync<RaceDetailDto>("/api/v1/catalog/races/elf"))!;
+        var elf = (await s.Player.Client.GetFromJsonAsync<RaceDetailDto>("/api/v1/systems/dnd5e/catalog/races/elf"))!;
         Assert.Null(elf.HeightWeight);
         Assert.All(elf.Subraces, r => Assert.Null(r.HeightWeight));
     }
@@ -145,7 +145,7 @@ public class HeightWeightPackTests(HeightWeightPackApiFactory factory) : IClassF
     {
         var s = await factory.CreateCampaignScenarioAsync();
         var hero = await s.Player.CreateActiveCharacterAsync(s.Dm, s.CampaignId);
-        var url = $"{ItemTestHelpers.CharacterUrl(hero.Id)}/sheet";
+        var url = $"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet";
         Assert.Equal(((int?)null, (int?)null), (hero.HeightInches, hero.WeightPounds));
 
         var direct = await s.Player.Client.PatchAsJsonAsync(url, new { heightInches = 67, weightPounds = 165 });

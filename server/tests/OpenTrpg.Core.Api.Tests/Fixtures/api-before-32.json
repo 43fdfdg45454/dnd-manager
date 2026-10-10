@@ -160,7 +160,7 @@
   },
   {
     "step": "catalog.attribution",
-    "request": "GET /api/v1/catalog/attribution",
+    "request": "GET /api/v1/systems/dnd5e/catalog/attribution",
     "status": 200,
     "body": {
       "ruleset": "srd-5.1",
@@ -170,7 +170,7 @@
   },
   {
     "step": "catalog.classes",
-    "request": "GET /api/v1/catalog/classes",
+    "request": "GET /api/v1/systems/dnd5e/catalog/classes",
     "status": 200,
     "body": [
       {
@@ -345,7 +345,7 @@
   },
   {
     "step": "catalog.class",
-    "request": "GET /api/v1/catalog/classes/wizard",
+    "request": "GET /api/v1/systems/dnd5e/catalog/classes/wizard",
     "status": 200,
     "body": {
       "index": "wizard",
@@ -1277,7 +1277,7 @@
   },
   {
     "step": "catalog.races",
-    "request": "GET /api/v1/catalog/races",
+    "request": "GET /api/v1/systems/dnd5e/catalog/races",
     "status": 200,
     "body": [
       {
@@ -1450,7 +1450,7 @@
   },
   {
     "step": "catalog.race",
-    "request": "GET /api/v1/catalog/races/dwarf",
+    "request": "GET /api/v1/systems/dnd5e/catalog/races/dwarf",
     "status": 200,
     "body": {
       "index": "dwarf",
@@ -1585,7 +1585,7 @@
   },
   {
     "step": "catalog.spells",
-    "request": "GET /api/v1/catalog/spells?search=fire&pageSize=10",
+    "request": "GET /api/v1/systems/dnd5e/catalog/spells?search=fire&pageSize=10",
     "status": 200,
     "body": {
       "items": [
@@ -1754,7 +1754,7 @@
   },
   {
     "step": "catalog.spell",
-    "request": "GET /api/v1/catalog/spells/fire-bolt",
+    "request": "GET /api/v1/systems/dnd5e/catalog/spells/fire-bolt",
     "status": 200,
     "body": {
       "index": "fire-bolt",
@@ -1802,7 +1802,7 @@
   },
   {
     "step": "catalog.beasts",
-    "request": "GET /api/v1/catalog/beasts?q=wolf",
+    "request": "GET /api/v1/systems/dnd5e/catalog/beasts?q=wolf",
     "status": 200,
     "body": [
       {
@@ -1846,7 +1846,7 @@
   },
   {
     "step": "catalog.beast",
-    "request": "GET /api/v1/catalog/beasts/wolf",
+    "request": "GET /api/v1/systems/dnd5e/catalog/beasts/wolf",
     "status": 200,
     "body": {
       "index": "wolf",
@@ -1920,7 +1920,7 @@
   },
   {
     "step": "catalog.items",
-    "request": "GET /api/v1/catalog/items?search=Longsword&pageSize=5",
+    "request": "GET /api/v1/systems/dnd5e/catalog/items?search=Longsword&pageSize=5",
     "status": 200,
     "body": {
       "items": [
@@ -1944,7 +1944,7 @@
   },
   {
     "step": "catalog.item",
-    "request": "GET /api/v1/catalog/items/<id26>",
+    "request": "GET /api/v1/systems/dnd5e/catalog/items/<id26>",
     "status": 200,
     "body": {
       "id": "<id26>",
@@ -1980,7 +1980,7 @@
   },
   {
     "step": "catalog.items.potion",
-    "request": "GET /api/v1/catalog/items?search=Potion%20of%20Healing&pageSize=5",
+    "request": "GET /api/v1/systems/dnd5e/catalog/items?search=Potion%20of%20Healing&pageSize=5",
     "status": 200,
     "body": {
       "items": [
@@ -2016,19 +2016,19 @@
   },
   {
     "step": "catalog.trinkets",
-    "request": "GET /api/v1/catalog/trinkets",
+    "request": "GET /api/v1/systems/dnd5e/catalog/trinkets",
     "status": 200,
     "body": []
   },
   {
     "step": "catalog.roll-tables",
-    "request": "GET /api/v1/catalog/roll-tables",
+    "request": "GET /api/v1/systems/dnd5e/catalog/roll-tables",
     "status": 200,
     "body": []
   },
   {
     "step": "catalog.conditions",
-    "request": "GET /api/v1/catalog/conditions",
+    "request": "GET /api/v1/systems/dnd5e/catalog/conditions",
     "status": 200,
     "body": [
       {
@@ -2174,7 +2174,7 @@
   },
   {
     "step": "catalog.skills",
-    "request": "GET /api/v1/catalog/skills",
+    "request": "GET /api/v1/systems/dnd5e/catalog/skills",
     "status": 200,
     "body": [
       {
@@ -2325,7 +2325,7 @@
   },
   {
     "step": "catalog.backgrounds",
-    "request": "GET /api/v1/catalog/backgrounds",
+    "request": "GET /api/v1/systems/dnd5e/catalog/backgrounds",
     "status": 200,
     "body": [
       {
@@ -2453,7 +2453,7 @@
   },
   {
     "step": "catalog.equipment-category",
-    "request": "GET /api/v1/catalog/equipment-categories/arcane-foci",
+    "request": "GET /api/v1/systems/dnd5e/catalog/equipment-categories/arcane-foci",
     "status": 200,
     "body": {
       "index": "arcane-foci",
@@ -2489,7 +2489,7 @@
   },
   {
     "step": "catalog.feature",
-    "request": "GET /api/v1/catalog/features/arcane-recovery",
+    "request": "GET /api/v1/systems/dnd5e/catalog/features/arcane-recovery",
     "status": 200,
     "body": {
       "index": "arcane-recovery",
@@ -2505,7 +2505,7 @@
   },
   {
     "step": "catalog.sources",
-    "request": "GET /api/v1/catalog/sources",
+    "request": "GET /api/v1/systems/dnd5e/catalog/sources",
     "status": 200,
     "body": [
       {
@@ -3253,7 +3253,7 @@
   },
   {
     "step": "character.sheet.draft",
-    "request": "PATCH /api/v1/characters/<character>/sheet",
+    "request": "PATCH /api/v1/systems/dnd5e/characters/<character>/sheet",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -4237,7 +4237,7 @@
   },
   {
     "step": "character.origin-choices.get",
-    "request": "GET /api/v1/characters/<character>/origin-choices",
+    "request": "GET /api/v1/systems/dnd5e/characters/<character>/origin-choices",
     "status": 200,
     "body": {
       "characterId": "<character>",
@@ -4609,7 +4609,7 @@
   },
   {
     "step": "character.origin-choices.put",
-    "request": "PUT /api/v1/characters/<character>/origin-choices",
+    "request": "PUT /api/v1/systems/dnd5e/characters/<character>/origin-choices",
     "status": 200,
     "body": {
       "characterId": "<character>",
@@ -4986,7 +4986,7 @@
   },
   {
     "step": "character.spell-preparation.get.draft",
-    "request": "GET /api/v1/characters/<character>/spell-preparation",
+    "request": "GET /api/v1/systems/dnd5e/characters/<character>/spell-preparation",
     "status": 200,
     "body": {
       "pending": false,
@@ -7224,7 +7224,7 @@
   },
   {
     "step": "character.sheet.request",
-    "request": "PATCH /api/v1/characters/<character>/sheet",
+    "request": "PATCH /api/v1/systems/dnd5e/characters/<character>/sheet",
     "status": 202,
     "body": {
       "id": "<id50>",
@@ -7280,7 +7280,7 @@
   },
   {
     "step": "character.sheet.request.2",
-    "request": "PATCH /api/v1/characters/<character>/sheet",
+    "request": "PATCH /api/v1/systems/dnd5e/characters/<character>/sheet",
     "status": 202,
     "body": {
       "id": "<id51>",
@@ -7332,7 +7332,7 @@
   },
   {
     "step": "character.sheet.request.3",
-    "request": "PATCH /api/v1/characters/<character>/sheet",
+    "request": "PATCH /api/v1/systems/dnd5e/characters/<character>/sheet",
     "status": 202,
     "body": {
       "id": "<id52>",
@@ -7400,7 +7400,7 @@
   },
   {
     "step": "character.sheet.dm",
-    "request": "PATCH /api/v1/characters/<character>/sheet",
+    "request": "PATCH /api/v1/systems/dnd5e/characters/<character>/sheet",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -8424,7 +8424,7 @@
   },
   {
     "step": "combat.update",
-    "request": "PATCH /api/v1/characters/<character>/combat",
+    "request": "PATCH /api/v1/systems/dnd5e/characters/<character>/combat",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -9453,7 +9453,7 @@
   },
   {
     "step": "concentration.start",
-    "request": "POST /api/v1/characters/<character>/concentration",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/concentration",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -10482,7 +10482,7 @@
   },
   {
     "step": "damage",
-    "request": "POST /api/v1/characters/<character>/damage",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/damage",
     "status": 200,
     "body": {
       "character": {
@@ -11521,7 +11521,7 @@
   },
   {
     "step": "concentration.stop",
-    "request": "POST /api/v1/characters/<character>/concentration",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/concentration",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -12550,7 +12550,7 @@
   },
   {
     "step": "spell-slots.spend",
-    "request": "POST /api/v1/characters/<character>/spell-slots/1/spend",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/spell-slots/1/spend",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -13579,7 +13579,7 @@
   },
   {
     "step": "spell-slots.restore",
-    "request": "POST /api/v1/characters/<character>/spell-slots/1/restore",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/spell-slots/1/restore",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -14608,7 +14608,7 @@
   },
   {
     "step": "spell-slots.spend.again",
-    "request": "POST /api/v1/characters/<character>/spell-slots/1/spend",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/spell-slots/1/spend",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -15637,7 +15637,7 @@
   },
   {
     "step": "class-action.arcane-recovery",
-    "request": "POST /api/v1/characters/<character>/class-actions/arcane-recovery",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/class-actions/arcane-recovery",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -16666,7 +16666,7 @@
   },
   {
     "step": "class-action.rage",
-    "request": "POST /api/v1/characters/<character>/class-actions/rage",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/class-actions/rage",
     "status": 400,
     "body": {
       "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
@@ -16677,7 +16677,7 @@
   },
   {
     "step": "class-action.unknown",
-    "request": "POST /api/v1/characters/<character>/class-actions/fly",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/class-actions/fly",
     "status": 404,
     "body": {
       "type": "https://tools.ietf.org/html/rfc9110#section-15.5.5",
@@ -16688,7 +16688,7 @@
   },
   {
     "step": "resources.add",
-    "request": "POST /api/v1/characters/<character>/resources",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/resources",
     "status": 201,
     "body": {
       "id": "<id53>",
@@ -16709,7 +16709,7 @@
   },
   {
     "step": "resources.spend",
-    "request": "POST /api/v1/characters/<character>/resources/<id53>/spend",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/resources/<id53>/spend",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -17770,7 +17770,7 @@
   },
   {
     "step": "resources.restore",
-    "request": "POST /api/v1/characters/<character>/resources/<id53>/restore",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/resources/<id53>/restore",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -18831,7 +18831,7 @@
   },
   {
     "step": "resources.rolls",
-    "request": "POST /api/v1/characters/<character>/resources/<id53>/rolls",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/resources/<id53>/rolls",
     "status": 400,
     "body": {
       "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
@@ -18842,13 +18842,13 @@
   },
   {
     "step": "resources.delete",
-    "request": "DELETE /api/v1/characters/<character>/resources/<id53>",
+    "request": "DELETE /api/v1/systems/dnd5e/characters/<character>/resources/<id53>",
     "status": 204,
     "body": null
   },
   {
     "step": "rest.short.player",
-    "request": "POST /api/v1/characters/<character>/rest/short",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/rest/short",
     "status": 403,
     "body": {
       "type": "https://tools.ietf.org/html/rfc9110#section-15.5.4",
@@ -18859,7 +18859,7 @@
   },
   {
     "step": "rest.short",
-    "request": "POST /api/v1/characters/<character>/rest/short",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/rest/short",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -19890,7 +19890,7 @@
   },
   {
     "step": "rest.long",
-    "request": "POST /api/v1/characters/<character>/rest/long",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/rest/long",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -20919,7 +20919,7 @@
   },
   {
     "step": "invalid-choices.get",
-    "request": "GET /api/v1/characters/<character>/invalid-choices",
+    "request": "GET /api/v1/systems/dnd5e/characters/<character>/invalid-choices",
     "status": 200,
     "body": {
       "characterId": "<character>",
@@ -20929,7 +20929,7 @@
   },
   {
     "step": "invalid-choices.post",
-    "request": "POST /api/v1/characters/<character>/invalid-choices",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/invalid-choices",
     "status": 409,
     "body": {
       "type": "https://tools.ietf.org/html/rfc9110#section-15.5.10",
@@ -20940,7 +20940,7 @@
   },
   {
     "step": "companion.set",
-    "request": "PUT /api/v1/characters/<character>/companion",
+    "request": "PUT /api/v1/systems/dnd5e/characters/<character>/companion",
     "status": 409,
     "body": {
       "type": "https://tools.ietf.org/html/rfc9110#section-15.5.10",
@@ -20951,7 +20951,7 @@
   },
   {
     "step": "companion.hp",
-    "request": "POST /api/v1/characters/<character>/companion/hp",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/companion/hp",
     "status": 404,
     "body": {
       "type": "https://tools.ietf.org/html/rfc9110#section-15.5.5",
@@ -20962,7 +20962,7 @@
   },
   {
     "step": "companion.delete",
-    "request": "DELETE /api/v1/characters/<character>/companion",
+    "request": "DELETE /api/v1/systems/dnd5e/characters/<character>/companion",
     "status": 404,
     "body": {
       "type": "https://tools.ietf.org/html/rfc9110#section-15.5.5",
@@ -20973,7 +20973,7 @@
   },
   {
     "step": "spell-preparation.get",
-    "request": "GET /api/v1/characters/<character>/spell-preparation",
+    "request": "GET /api/v1/systems/dnd5e/characters/<character>/spell-preparation",
     "status": 200,
     "body": {
       "pending": true,
@@ -21043,7 +21043,7 @@
   },
   {
     "step": "spell-preparation.post.player",
-    "request": "POST /api/v1/characters/<character>/spell-preparation",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/spell-preparation",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -22072,7 +22072,7 @@
   },
   {
     "step": "spell-preparation.post.dm",
-    "request": "POST /api/v1/characters/<character>/spell-preparation",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/spell-preparation",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -23101,7 +23101,7 @@
   },
   {
     "step": "spell-preparation.keep",
-    "request": "POST /api/v1/characters/<character>/spell-preparation/keep",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/spell-preparation/keep",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -24130,7 +24130,7 @@
   },
   {
     "step": "party.get",
-    "request": "GET /api/v1/campaigns/<campaign>/party",
+    "request": "GET /api/v1/systems/dnd5e/campaigns/<campaign>/party",
     "status": 200,
     "body": {
       "characters": [
@@ -24186,7 +24186,7 @@
   },
   {
     "step": "party.get.player",
-    "request": "GET /api/v1/campaigns/<campaign>/party",
+    "request": "GET /api/v1/systems/dnd5e/campaigns/<campaign>/party",
     "status": 403,
     "body": {
       "type": "https://tools.ietf.org/html/rfc9110#section-15.5.4",
@@ -24197,7 +24197,7 @@
   },
   {
     "step": "party.adjust",
-    "request": "POST /api/v1/campaigns/<campaign>/party/adjust",
+    "request": "POST /api/v1/systems/dnd5e/campaigns/<campaign>/party/adjust",
     "status": 200,
     "body": {
       "characters": [
@@ -24262,7 +24262,7 @@
   },
   {
     "step": "party.rest.short",
-    "request": "POST /api/v1/campaigns/<campaign>/party/rest",
+    "request": "POST /api/v1/systems/dnd5e/campaigns/<campaign>/party/rest",
     "status": 200,
     "body": {
       "characters": [
@@ -24318,7 +24318,7 @@
   },
   {
     "step": "party.rest.long",
-    "request": "POST /api/v1/campaigns/<campaign>/party/rest",
+    "request": "POST /api/v1/systems/dnd5e/campaigns/<campaign>/party/rest",
     "status": 200,
     "body": {
       "characters": [
@@ -24374,7 +24374,7 @@
   },
   {
     "step": "party.grant-level",
-    "request": "POST /api/v1/campaigns/<campaign>/party/grant-level",
+    "request": "POST /api/v1/systems/dnd5e/campaigns/<campaign>/party/grant-level",
     "status": 200,
     "body": {
       "characters": [
@@ -24430,7 +24430,7 @@
   },
   {
     "step": "party.revoke-level",
-    "request": "DELETE /api/v1/campaigns/<campaign>/party/grant-level",
+    "request": "DELETE /api/v1/systems/dnd5e/campaigns/<campaign>/party/grant-level",
     "status": 200,
     "body": {
       "characters": [
@@ -24486,7 +24486,7 @@
   },
   {
     "step": "party.grant-level.again",
-    "request": "POST /api/v1/campaigns/<campaign>/party/grant-level",
+    "request": "POST /api/v1/systems/dnd5e/campaigns/<campaign>/party/grant-level",
     "status": 200,
     "body": {
       "characters": [
@@ -24542,7 +24542,7 @@
   },
   {
     "step": "level-up.plan",
-    "request": "GET /api/v1/characters/<character>/level-up",
+    "request": "GET /api/v1/systems/dnd5e/characters/<character>/level-up",
     "status": 200,
     "body": {
       "characterId": "<character>",
@@ -25207,7 +25207,7 @@
   },
   {
     "step": "level-up.plan.class",
-    "request": "GET /api/v1/characters/<character>/level-up?classIndex=wizard",
+    "request": "GET /api/v1/systems/dnd5e/characters/<character>/level-up?classIndex=wizard",
     "status": 200,
     "body": {
       "characterId": "<character>",
@@ -25872,7 +25872,7 @@
   },
   {
     "step": "level-up.apply",
-    "request": "POST /api/v1/characters/<character>/level-up",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/level-up",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -32230,7 +32230,7 @@
   },
   {
     "step": "catalog.item.homebrew",
-    "request": "GET /api/v1/catalog/items/<id67>",
+    "request": "GET /api/v1/systems/dnd5e/catalog/items/<id67>",
     "status": 200,
     "body": {
       "id": "<id67>",
