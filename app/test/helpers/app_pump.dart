@@ -9,6 +9,7 @@ import 'package:opentrpg_core/core/auth/user_dto.dart';
 import 'package:opentrpg_core/core/router/app_router.dart';
 import 'package:opentrpg_core/core/theme/app_theme.dart';
 import 'package:opentrpg_core/features/campaigns/data/campaigns_repository.dart';
+import 'package:opentrpg_core/features/content_packs/data/campaign_content_packs_repository.dart';
 import 'package:opentrpg_core/features/items/data/campaign_items_repository.dart';
 import 'package:opentrpg_core/features/items/data/inventory_repository.dart';
 import 'package:opentrpg_core/features/items/data/shops_repository.dart';
@@ -21,6 +22,7 @@ import 'package:opentrpg_dnd5e/session/data/party_repository.dart';
 
 import 'catalog_fakes.dart';
 import 'character_fakes.dart';
+import 'content_pack_fakes.dart';
 import 'fake_realtime_hub.dart';
 import 'fakes.dart';
 import 'item_fakes.dart';
@@ -42,6 +44,7 @@ class AppFakes {
     FakeStashRepository? stash,
     FakeMessagesRepository? messages,
     FakeRestRequestsRepository? restRequests,
+    FakeCampaignContentPacksRepository? contentPacks,
   }) {
     final items = inventory ?? FakeInventoryRepository();
     return AppFakes._(
@@ -56,6 +59,7 @@ class AppFakes {
       stash: stash ?? FakeStashRepository(inventory: items),
       messages: messages ?? FakeMessagesRepository(),
       restRequests: restRequests ?? FakeRestRequestsRepository(),
+      contentPacks: contentPacks ?? FakeCampaignContentPacksRepository(),
     );
   }
 
@@ -71,6 +75,7 @@ class AppFakes {
     required this.stash,
     required this.messages,
     required this.restRequests,
+    required this.contentPacks,
   });
 
   final FakeCampaignsRepository campaigns;
@@ -84,6 +89,7 @@ class AppFakes {
   final FakeStashRepository stash;
   final FakeMessagesRepository messages;
   final FakeRestRequestsRepository restRequests;
+  final FakeCampaignContentPacksRepository contentPacks;
 
   List<Override> get overrides => [
     campaignsRepositoryProvider.overrideWithValue(campaigns),
@@ -98,6 +104,7 @@ class AppFakes {
     stashRepositoryProvider.overrideWithValue(stash),
     messagesRepositoryProvider.overrideWithValue(messages),
     restRequestsRepositoryProvider.overrideWithValue(restRequests),
+    campaignContentPacksRepositoryProvider.overrideWithValue(contentPacks),
     fakeSystemsOverride(),
     dnd5eSystemsOverride(),
   ];

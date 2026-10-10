@@ -165,6 +165,52 @@ void main() {
     expect(find.text('El paquete ya no existe.'), findsOneWidget);
   });
 
+  testWidgets('muestra sistema, formato, dependencias y la marca del paquete base', (tester) async {
+    await _pumpPage(
+      tester,
+      packs: [
+        makeContentPack(
+          id: 'srd',
+          name: 'SRD 5.1',
+          formatVersion: 0,
+          isBase: true,
+          counts: const {},
+        ),
+        makeContentPack(requires: const ['srd']),
+      ],
+    );
+
+    expect(find.byKey(const Key('content-base-srd')), findsOneWidget);
+    expect(find.byKey(const Key('content-base-reinos-ejemplo')), findsNothing);
+    expect(find.textContaining('Sistema dnd5e'), findsNWidgets(2));
+    expect(find.textContaining('Integrado'), findsOneWidget);
+    expect(find.textContaining('Formato 3'), findsOneWidget);
+    expect(find.textContaining('Requiere: srd'), findsOneWidget);
+    // The base pack cannot be deleted from the app.
+    expect(find.byKey(const Key('content-delete-srd')), findsNothing);
+    expect(find.byKey(const Key('content-delete-reinos-ejemplo')), findsOneWidget);
+  });
+
+  testWidgets('un 409 al borrar explica por qué', (tester) async {
+    final repository = await _pumpPage(tester);
+    repository.deleteError = dioError(
+      409,
+      data: {
+        'title': 'Conflicto',
+        'detail': 'Otro paquete depende de este: Paquete de Ejemplo.',
+        'code': 'required-by',
+      },
+    );
+
+    await tester.tap(find.byKey(const Key('content-delete-reinos-ejemplo')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-action')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Otro paquete depende de este: Paquete de Ejemplo.'), findsOneWidget);
+    expect(repository.deleted, isEmpty);
+  });
+
   test('contentPackErrors lee la lista y también el mapa por campo', () {
     DioException badRequest(Object? errors) {
       final options = RequestOptions(path: '/x');

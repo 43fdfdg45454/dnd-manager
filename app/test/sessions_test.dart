@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:opentrpg_core/features/content_packs/data/campaign_content_packs_repository.dart';
 import 'package:opentrpg_core/core/auth/auth_controller.dart';
 import 'package:opentrpg_core/core/auth/auth_repository.dart';
 import 'package:opentrpg_core/core/auth/auth_state.dart';
@@ -26,6 +27,7 @@ import 'package:opentrpg_core/features/sessions/ui/session_page.dart';
 import 'package:opentrpg_core/features/sessions/ui/summary_editor_page.dart';
 import 'package:table_calendar/table_calendar.dart';
 
+import 'helpers/content_pack_fakes.dart';
 import 'helpers/app_pump.dart';
 import 'helpers/fake_realtime_hub.dart';
 import 'helpers/fakes.dart';
@@ -94,6 +96,9 @@ Future<GoRouter> _pumpApp(
         sessionsClockProvider.overrideWithValue(() => sessionsTestNow),
         fakeServerConfigOverride(),
         fakeServerInfoOverride,
+        campaignContentPacksRepositoryProvider.overrideWithValue(
+          FakeCampaignContentPacksRepository(),
+        ),
       ],
       child: MaterialApp.router(routerConfig: router, builder: reducedMotionBuilder),
     ),
