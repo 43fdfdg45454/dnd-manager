@@ -34,6 +34,16 @@ public sealed class SubclassDefinition
     /// <summary>Indexes of the spells of <see cref="ExpandedSpellList"/>.</summary>
     public IReadOnlySet<string> ExpandedSpellIndexes => ExpandedSpellList.Select(s => s.Index).ToHashSet(StringComparer.Ordinal);
 
+    /// <summary>Spell tags whose spells the subclass adds to its class's list (<c>expandedSpellList: [{ "tags": [...] }]</c>).</summary>
+    public IReadOnlyList<string> ExpandedSpellTags => ExpandedSpell.ParseTags(ExpandedSpellListJson);
+
+    /// <summary>Whether the subclass adds <paramref name="spell"/> to its class's list (by index or by one of its tags).</summary>
+    public bool Expands(SpellDefinition spell)
+    {
+        ArgumentNullException.ThrowIfNull(spell);
+        return ExpandedSpellIndexes.Contains(spell.Index) || (spell.Tags.Count > 0 && spell.Tags.Any(ExpandedSpellTags.Contains));
+    }
+
     /// <summary>What the character needs to choose the subclass (<see cref="OptionPrerequisites"/> as JSON); null = nothing.</summary>
     public string? PrerequisitesJson { get; init; }
 

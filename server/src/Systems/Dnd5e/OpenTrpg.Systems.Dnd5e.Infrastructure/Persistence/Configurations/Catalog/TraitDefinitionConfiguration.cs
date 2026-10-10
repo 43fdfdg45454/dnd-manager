@@ -25,5 +25,6 @@ internal sealed class TraitDefinitionConfiguration : IEntityTypeConfiguration<Tr
         builder.Property(x => x.Description).HasJsonListConversion();
         builder.Property(x => x.RaceIndexes).HasJsonListConversion();
         builder.Property(x => x.SubraceIndexes).HasJsonListConversion();
+        builder.Ignore(x => x.Resource);
     }
 }

@@ -380,8 +380,14 @@ public sealed record SpellSummaryDto(
     string Category,
     IReadOnlyList<SpellExpansionDto> ExpandedBy)
 {
+    /// <summary>Tags of the content packs (<c>reference.spellTags</c>).</summary>
+    public IReadOnlyList<string> Tags { get; init; } = [];
+
     public static SpellSummaryDto From(SpellDefinition s, IReadOnlyList<SpellExpansionDto>? expandedBy = null) => new(
-        s.Index, s.Name, s.Level, s.School, s.CastingTime, s.Range, s.Components, s.Duration, s.Concentration, s.Ritual, s.ClassIndexes, s.Source, s.Category.ToString(), expandedBy ?? []);
+        s.Index, s.Name, s.Level, s.School, s.CastingTime, s.Range, s.Components, s.Duration, s.Concentration, s.Ritual, s.ClassIndexes, s.Source, s.Category.ToString(), expandedBy ?? [])
+    {
+        Tags = s.Tags,
+    };
 }
 
 /// <summary>
@@ -391,10 +397,18 @@ public sealed record SpellSummaryDto(
 public sealed record SpellExpansionDto(string SubclassIndex, string SubclassName, string ClassIndex, string Source)
 {
     /// <summary>Spell index → the subclasses that expand their class's list with it.</summary>
-    public static ILookup<string, SpellExpansionDto> Lookup(IEnumerable<SubclassDefinition> subclasses) =>
-        subclasses
-            .SelectMany(sc => sc.ExpandedSpellList.Select(e => (e.Index, Dto: new SpellExpansionDto(sc.Index, sc.Name, sc.ClassIndex, sc.Source))))
+    /// <param name="spells">Spells whose tags may match the tags of an expanded list (<c>{ "tags": [...] }</c>).</param>
+    public static ILookup<string, SpellExpansionDto> Lookup(IEnumerable<SubclassDefinition> subclasses, IEnumerable<SpellDefinition>? spells = null)
+    {
+        var list = subclasses.ToList();
+        var tagged = (spells ?? []).Where(s => s.Tags.Count > 0).ToList();
+        return list
+            .SelectMany(sc => sc.ExpandedSpellList.Select(e => e.Index)
+                .Concat(sc.ExpandedSpellTags.Count == 0 ? [] : tagged.Where(sc.Expands).Select(s => s.Index))
+                .Distinct(StringComparer.Ordinal)
+                .Select(index => (Index: index, Dto: new SpellExpansionDto(sc.Index, sc.Name, sc.ClassIndex, sc.Source))))
             .ToLookup(x => x.Index, x => x.Dto, StringComparer.Ordinal);
+    }
 }
 
 /// <summary>
@@ -434,6 +448,9 @@ public sealed record SpellDetailDto(
 {
     /// <summary>Classes of content packs that cast this spell as a ritual although it is not one (<c>treatAsRitual</c>).</summary>
     public IReadOnlyList<string> RitualForClasses { get; init; } = [];
+
+    /// <summary>Tags of the content packs (<c>reference.spellTags</c>).</summary>
+    public IReadOnlyList<string> Tags { get; init; } = [];
 }
 
 public sealed record ConditionDto(string Index, string Name, IReadOnlyList<string> Description)

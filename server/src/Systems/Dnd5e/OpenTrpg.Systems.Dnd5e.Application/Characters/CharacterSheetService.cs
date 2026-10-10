@@ -436,8 +436,8 @@ public sealed class CharacterSheetService(
             .ToList();
 
     /// <summary>Templates of the automatic resources: SRD class resources and those of chosen options and subclass features.</summary>
-    private static List<ResourceTemplate> AutoResourceTemplates(Dnd5eCharacter character, CharacterSheet sheet) =>
-        [.. ClassResourceRules.ForClasses(character.Classes, sheet.AbilityModifiers), .. sheet.ChoiceResources];
+    internal static List<ResourceTemplate> AutoResourceTemplates(Dnd5eCharacter character, CharacterSheet sheet) =>
+        [.. ResourceTemplate.WithBonuses([.. ClassResourceRules.ForClasses(character.Classes, sheet.AbilityModifiers), .. sheet.ChoiceResources], sheet.FeatureModifiers)];
 
     private static CharacterSheetDto ToDto(CharacterSheet sheet) => new(
         sheet.Abilities.ToDictionary(a => a.Key, a => new AbilityDto(a.Value.Score, a.Value.Modifier, a.Value.Overridden)),
@@ -453,6 +453,8 @@ public sealed class CharacterSheetService(
         sheet.HitDice.Select(h => new HitDiceDto(h.ClassIndex, h.Die, h.Total, h.Remaining)).ToList(),
         sheet.Spellcasting.Select(s => new SpellcastingDto(s.ClassIndex, s.Ability, s.SaveDc, s.AttackBonus, s.PreparedMax)
         {
+            Name = s.Name,
+            AbilityOverridden = s.AbilityOverridden,
             SpellsKnownMax = s.SpellsKnownMax,
             CantripsKnownMax = s.CantripsKnownMax,
             MaxSpellLevel = s.MaxSpellLevel,
@@ -474,6 +476,7 @@ public sealed class CharacterSheetService(
         Immunities = sheet.Immunities.Select(Defense).ToList(),
         ConditionImmunities = sheet.ConditionImmunities.Select(Defense).ToList(),
         LostSavingThrows = sheet.LostSavingThrows.Select(Defense).ToList(),
+        LostSkills = sheet.LostSkills.Select(Defense).ToList(),
         ClassSaveDcs = sheet.ClassSaveDcs.Select(d => new ClassSaveDcDto(d.ClassIndex, d.Name, d.Ability, d.Dc, d.BreakdownKey)).ToList(),
         PassiveInvestigation = sheet.PassiveInvestigation,
         PassiveInsight = sheet.PassiveInsight,

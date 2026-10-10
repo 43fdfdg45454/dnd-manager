@@ -161,7 +161,7 @@ public sealed class ApplyLevelUpHandler(
     // ---- Validation ----------------------------------------------------------------------------------
 
     /// <summary>An answer as sent: picks (normalized indexes or texts), replaced picks, or an ASI/feat object.</summary>
-    private sealed record Answer(string Key, List<string> Selected, List<string> Replaced, Dictionary<string, int>? Asi, string? Feat, string? Ability);
+    private sealed record Answer(string Key, List<string> Selected, List<string> Replaced, Dictionary<string, int>? Asi, string? Feat, string? Ability, List<string>? RemovedSavingThrows = null);
 
     private static Dictionary<string, Answer> ParseAnswers(IReadOnlyList<LevelUpChoiceAnswer> choices)
     {
@@ -211,12 +211,16 @@ public sealed class ApplyLevelUpHandler(
         return result;
     }
 
-    /// <summary><c>{ "asi": { "str": 1, "dex": 1 } }</c> or <c>{ "feat": "grappler", "ability": "str" }</c>.</summary>
+    /// <summary>
+    /// <c>{ "asi": { "str": 1, "dex": 1 } }</c> or <c>{ "feat": "grappler", "ability": "str" }</c>, plus
+    /// <c>"removedSavingThrows": ["con"]</c> for a feat that asks which saving throws are lost.
+    /// </summary>
     private static Answer ParseImprovement(string key, JsonElement selected, List<string> replaced)
     {
         Dictionary<string, int>? asi = null;
         string? feat = null;
         string? ability = null;
+        List<string>? removed = null;
         foreach (var property in selected.EnumerateObject())
         {
             switch (property.Name.ToLowerInvariant())
@@ -241,12 +245,17 @@ public sealed class ApplyLevelUpHandler(
                 case "ability" when property.Value.ValueKind is JsonValueKind.String or JsonValueKind.Null:
                     ability = property.Value.GetString()?.Trim().ToLowerInvariant();
                     break;
+                case "removedsavingthrows" when property.Value.ValueKind == JsonValueKind.Array:
+                    removed = property.Value.EnumerateArray()
+                        .Select(e => e.ValueKind == JsonValueKind.String ? e.GetString()?.Trim().ToLowerInvariant() ?? string.Empty : string.Empty)
+                        .ToList();
+                    break;
                 default:
                     throw AppException.Validation("choices", $"La elección '{key}' tiene un campo desconocido: {property.Name}.");
             }
         }
 
-        return new Answer(key, [], replaced, asi, string.IsNullOrEmpty(feat) ? null : feat, string.IsNullOrEmpty(ability) ? null : ability);
+        return new Answer(key, [], replaced, asi, string.IsNullOrEmpty(feat) ? null : feat, string.IsNullOrEmpty(ability) ? null : ability, removed);
     }
 
     /// <summary>Validates every answer against the plan and turns it into the selection to record.</summary>
@@ -444,6 +453,7 @@ public sealed class ApplyLevelUpHandler(
             SetId = feat.Definition?.SetId ?? OptionSets.Feats,
             Feat = new ChoiceItem(feat.Index, feat.Name),
             Ability = raised,
+            RemovedSavingThrows = OriginChoicesHandler.RemovedSavingThrowsOf(feat, answer.RemovedSavingThrows),
         };
     }
 

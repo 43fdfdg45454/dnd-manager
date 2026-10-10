@@ -60,6 +60,9 @@ public sealed record CharacterResourceDto(Guid Id, string? Key, string Name, int
     /// <summary>Chosen options that spend this resource (by its key), each with its amount: the "Usar" buttons of the Combat tab.</summary>
     public IReadOnlyList<CharacterOptionCostDto> Options { get; init; } = [];
 
+    /// <summary>Die rolled to get the uses back (<c>POST …/resources/{id}/recharge-roll</c>), or null.</summary>
+    public RechargeRollDto? RechargeRoll { get; init; }
+
     /// <param name="template">Current template of an automatic resource (its die, origin and breakdown), if any.</param>
     public static CharacterResourceDto From(CharacterResource r, ResourceTemplate? template = null) => new(r.Id, r.Key, r.Name, r.Max, r.Used, r.Recharge.ToString(), r.IsAuto)
     {
@@ -69,8 +72,12 @@ public sealed record CharacterResourceDto(Guid Id, string? Key, string Name, int
         Dice = template?.Dice,
         Source = template?.Source,
         Breakdown = template?.Breakdown is { } breakdown && breakdown.Total == r.Max ? ValueBreakdownDto.From(breakdown) : null,
+        RechargeRoll = template?.RechargeRoll is { } recharge ? new RechargeRollDto(recharge.Dice, recharge.Min) : null,
     };
 }
+
+/// <summary>The uses come back with <see cref="Min"/> or more on a <see cref="Dice"/> ("d6").</summary>
+public sealed record RechargeRollDto(string Dice, int Min);
 
 /// <summary>Dice rolled after a rest: <see cref="Count"/> × <see cref="Dice"/> ("d20") after a <see cref="Rest"/> ("short" or "long") rest.</summary>
 public sealed record RollOnRestDto(string Dice, int Count, string Rest);
@@ -90,6 +97,12 @@ public sealed record HitDiceDto(string ClassIndex, int Die, int Total, int Remai
 
 public sealed record SpellcastingDto(string ClassIndex, string Ability, int SaveDc, int AttackBonus, int? PreparedMax)
 {
+    /// <summary>Name of an entry of an option, feat or subclass that grants spells with its own ability (its index is <see cref="ClassIndex"/>); null for classes and "race".</summary>
+    public string? Name { get; init; }
+
+    /// <summary>True when the ability was chosen by an override (<c>spellcastingAbility.&lt;classIndex&gt;</c>, 1 = str … 6 = cha): the app marks it.</summary>
+    public bool AbilityOverridden { get; init; }
+
     /// <summary>Spells known allowed at the class level (subclass casters from content packs); null when the class has no fixed number.</summary>
     public int? SpellsKnownMax { get; init; }
 
@@ -166,6 +179,9 @@ public sealed record CharacterSheetDto(
 
     /// <summary>Saving throw proficiencies lost by an origin feat; <see cref="DefenseDto.Type"/> is the ability.</summary>
     public IReadOnlyList<DefenseDto> LostSavingThrows { get; init; } = [];
+
+    /// <summary>Skill proficiencies the character loses (<c>grants.removeSkills</c>), with their origin.</summary>
+    public IReadOnlyList<DefenseDto> LostSkills { get; init; } = [];
 
     /// <summary>Save DCs of the classes besides the spell one, each with its breakdown key.</summary>
     public IReadOnlyList<ClassSaveDcDto> ClassSaveDcs { get; init; } = [];

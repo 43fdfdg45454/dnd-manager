@@ -116,7 +116,13 @@ public sealed class ResourceRollsRequestValidator : AbstractValidator<ResourceRo
     }
 }
 
-/// <param name="Recharge">ShortRest, LongRest, Dawn or Manual.</param>
+/// <summary>The value rolled with the recharge die of a resource (<c>POST …/resources/{id}/recharge-roll</c>).</summary>
+public sealed record RechargeRollRequest(int Value);
+
+/// <summary>Result of a recharge roll: the character and whether the uses came back.</summary>
+public sealed record RechargeRollResultDto(CharacterDetailDto Character, bool Recharged);
+
+/// <param name="Recharge">ShortRest, LongRest, Dawn, Manual or Initiative.</param>
 public sealed record AddResourceRequest(string Name, int Max, string Recharge);
 
 public sealed class AddResourceRequestValidator : AbstractValidator<AddResourceRequest>
@@ -302,6 +308,34 @@ public sealed class ResourceHandler(CharacterTracker tracker, IUnitOfWork unitOf
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await tracker.NotifyAsync(character, cancellationToken);
         return CharacterResourceDto.From(resource);
+    }
+
+    /// <summary>
+    /// The character rolls initiative: the resources that recharge then get their uses back (owner or DM, without
+    /// approval, like any combat tracking).
+    /// </summary>
+    public async Task<CharacterDetailDto> RechargeOnInitiativeAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken = default)
+    {
+        var character = await tracker.LoadAsync(currentUserId, characterId, cancellationToken);
+        character.RechargeOnInitiative(clock.UtcNow);
+        return await tracker.SaveAsync(character, cancellationToken);
+    }
+
+    /// <summary>
+    /// The roll of the recharge die of a resource (owner or DM, without approval): its uses come back when the value
+    /// reaches the minimum. 400 when the resource has no recharge die or the value is not a face of the die.
+    /// </summary>
+    public async Task<RechargeRollResultDto> RollRechargeAsync(Guid currentUserId, Guid characterId, Guid resourceId, RechargeRollRequest request, CancellationToken cancellationToken = default)
+    {
+        var character = await tracker.LoadAsync(currentUserId, characterId, cancellationToken);
+        var resource = character.Resources.FirstOrDefault(r => r.Id == resourceId)
+            ?? throw AppException.NotFound("El recurso no existe.");
+        var sheet = await tracker.SheetAsync(character, cancellationToken);
+        var roll = CharacterSheetService.AutoResourceTemplates(character, sheet)
+            .FirstOrDefault(t => resource.IsAuto && t.Key == resource.Key && t.RechargeRoll is not null)?.RechargeRoll
+            ?? throw AppException.Validation("resourceId", $"{resource.Name} no se recupera con una tirada.");
+        var recharged = character.RollResourceRecharge(resourceId, roll, request.Value, clock.UtcNow);
+        return new RechargeRollResultDto(await tracker.SaveAsync(character, cancellationToken), recharged);
     }
 
     /// <summary>Stores the dice rolled after a rest for a resource that asks for them (owner or DM, without approval).</summary>

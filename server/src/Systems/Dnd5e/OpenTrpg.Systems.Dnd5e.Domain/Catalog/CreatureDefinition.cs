@@ -65,8 +65,10 @@ public sealed class ReferenceEntry
     public const string DamageTypes = "damageTypes";
     public const string MagicSchools = "magicSchools";
     public const string Tools = "tools";
+    public const string SpellTags = "spellTags";
+    public const string ArmorProperties = "armorProperties";
 
-    public static readonly IReadOnlyList<string> Kinds = [Languages, WeaponProperties, EquipmentCategories, DamageTypes, MagicSchools, Tools];
+    public static readonly IReadOnlyList<string> Kinds = [Languages, WeaponProperties, EquipmentCategories, DamageTypes, MagicSchools, Tools, SpellTags, ArmorProperties];
 
     /// <summary>One of <see cref="Kinds"/>.</summary>
     public required string Kind { get; init; }

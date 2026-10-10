@@ -63,6 +63,21 @@ internal sealed class CatalogRepository(AppDbContext db, CatalogScopeContext sco
             .ToList();
     }
 
+    /// <summary>The spells with the tags of the content packs in scope (<see cref="SpellTag"/>).</summary>
+    private async Task<List<SpellDefinition>> WithTagsAsync(List<SpellDefinition> spells, CancellationToken cancellationToken)
+    {
+        if (spells.Count == 0)
+        {
+            return spells;
+        }
+
+        var tags = (await Scoped(db.Set<SpellTag>().AsNoTracking()).Select(x => new { x.SpellIndex, x.Tag }).ToListAsync(cancellationToken))
+            .ToLookup(x => x.SpellIndex, x => x.Tag, StringComparer.Ordinal);
+        return tags.Count == 0
+            ? spells
+            : spells.Select(s => tags[s.Index].Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList() is { Count: > 0 } list ? s.WithTags(list) : s).ToList();
+    }
+
     public async Task<IReadOnlyList<ClassDefinition>> ListClassesAsync(CancellationToken cancellationToken = default) =>
         await Scoped(db.Set<ClassDefinition>().AsNoTracking()).OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
 
@@ -142,23 +157,26 @@ internal sealed class CatalogRepository(AppDbContext db, CatalogScopeContext sco
 
         var ordered = query.OrderBy(x => x.Level).ThenBy(x => x.Name).ThenBy(x => x.Index);
 
-        if (filter.ClassIndex is not { } classIndex)
+        if (filter.ClassIndex is null && filter.Tag is null)
         {
             var total = await query.CountAsync(cancellationToken);
             var items = await ordered.Skip(skip).Take(take).ToListAsync(cancellationToken);
-            return (items, total);
+            return (await WithTagsAsync(items, cancellationToken), total);
         }
 
         // Class indexes live in a JSON text column, which cannot be queried portably (PostgreSQL and
-        // SQLite). The whole SRD has ~320 spells, so the class filter and the paging run in memory.
-        var matching = (await WithPackSpellListsAsync(await ordered.ToListAsync(cancellationToken), cancellationToken))
-            .Where(x => x.ClassIndexes.Contains(classIndex, StringComparer.Ordinal))
+        // SQLite). The whole SRD has ~320 spells, so the class and tag filters and the paging run in memory.
+        var matching = (await WithTagsAsync(await WithPackSpellListsAsync(await ordered.ToListAsync(cancellationToken), cancellationToken), cancellationToken))
+            .Where(x => filter.ClassIndex is not { } classIndex || x.ClassIndexes.Contains(classIndex, StringComparer.Ordinal))
+            .Where(x => filter.Tag is not { } tag || x.Tags.Contains(tag, StringComparer.Ordinal))
             .ToList();
         return (matching.Skip(skip).Take(take).ToList(), matching.Count);
     }
 
-    public Task<SpellDefinition?> GetSpellAsync(string index, CancellationToken cancellationToken = default) =>
-        db.Set<SpellDefinition>().AsNoTracking().FirstOrDefaultAsync(x => x.Index == index, cancellationToken);
+    public async Task<SpellDefinition?> GetSpellAsync(string index, CancellationToken cancellationToken = default) =>
+        await db.Set<SpellDefinition>().AsNoTracking().FirstOrDefaultAsync(x => x.Index == index, cancellationToken) is { } spell
+            ? (await WithTagsAsync([spell], cancellationToken))[0]
+            : null;
 
     public async Task<(IReadOnlyList<ItemTemplate> Items, int Total)> SearchSrdItemsAsync(ItemFilter filter, int skip, int take, CancellationToken cancellationToken = default)
     {
@@ -250,10 +268,13 @@ internal sealed class CatalogRepository(AppDbContext db, CatalogScopeContext sco
         indexes.Count == 0 ? [] : await db.Set<BackgroundDefinition>().AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<SpellDefinition>> ListSpellsByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
-        indexes.Count == 0 ? [] : await db.Set<SpellDefinition>().AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+        indexes.Count == 0 ? [] : await WithTagsAsync(await db.Set<SpellDefinition>().AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken), cancellationToken);
 
     public async Task<IReadOnlyList<FeatureDefinition>> ListFeaturesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
         indexes.Count == 0 ? [] : await db.Set<FeatureDefinition>().AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<TraitDefinition>> ListTraitResourcesAsync(CancellationToken cancellationToken = default) =>
+        await db.Set<TraitDefinition>().AsNoTracking().Where(x => x.ResourceJson != null).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<FeatureDefinition>> ListFeatureEffectsAsync(IReadOnlyCollection<string> classIndexes, IReadOnlyCollection<string> subclassIndexes, CancellationToken cancellationToken = default) =>
         classIndexes.Count == 0 && subclassIndexes.Count == 0
@@ -264,8 +285,10 @@ internal sealed class CatalogRepository(AppDbContext db, CatalogScopeContext sco
                 .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<SpellDefinition>> ListAllSpellsAsync(CancellationToken cancellationToken = default) =>
-        await WithPackSpellListsAsync(
-            await Scoped(db.Set<SpellDefinition>().AsNoTracking()).OrderBy(x => x.Level).ThenBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken),
+        await WithTagsAsync(
+            await WithPackSpellListsAsync(
+                await Scoped(db.Set<SpellDefinition>().AsNoTracking()).OrderBy(x => x.Level).ThenBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken),
+                cancellationToken),
             cancellationToken);
 
     public async Task<IReadOnlyList<LevelChoiceRule>> ListLevelChoiceRulesAsync(string classIndex, CancellationToken cancellationToken = default) =>

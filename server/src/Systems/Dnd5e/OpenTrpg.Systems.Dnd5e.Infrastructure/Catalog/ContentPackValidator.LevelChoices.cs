@@ -80,7 +80,7 @@ internal sealed partial class ContentPackValidator
         ForEach($"{path}.options", set.Options, (optionPath, option) => Option(optionPath, option, setId, rows));
     }
 
-    private void Option(string path, PackOptionJson option, string setId, ContentPackRows rows, string? category = null, bool creationOnly = false, bool starter = false)
+    private void Option(string path, PackOptionJson option, string setId, ContentPackRows rows, string? category = null, bool creationOnly = false, bool starter = false, bool repeatable = false)
     {
         var index = Index($"{path}.index", "options", option.Index);
         var definition = new OptionDefinition
@@ -101,6 +101,7 @@ internal sealed partial class ContentPackValidator
             Category = category,
             CreationOnly = creationOnly,
             Starter = starter,
+            Repeatable = repeatable,
             Source = _id,
         };
 
@@ -439,6 +440,9 @@ internal sealed partial class ContentPackValidator
             ItemModifierKind.DeathSaveFailures => target is not null ? "Este tipo de modificador no admite objetivo."
                 : value is < 3 or > 10 ? "Los fallos para morir deben estar entre 3 y 10." : null,
             ItemModifierKind.HitDiceRecovery => target != ModifierTargets.All ? "El objetivo debe ser \"all\" (todos los dados de golpe)." : null,
+            ItemModifierKind.ResourceMaxBonus => target is null || target.Length > IndexMaxLength || !IndexPattern().IsMatch(target)
+                ? "El objetivo debe ser la clave de un recurso (\"ki\", \"mipaquete-dados\")."
+                : value is < ItemLimits.MinModifier or > ItemLimits.MaxModifier ? $"El valor debe estar entre {ItemLimits.MinModifier} y {ItemLimits.MaxModifier}." : null,
             _ => "El tipo de modificador no es válido.",
         };
 
@@ -463,7 +467,7 @@ internal sealed partial class ContentPackValidator
         ],
         ItemModifierKind.SpellSaveDcBonus or ItemModifierKind.SpellAttackBonus => [ModifierConditions.Cantrip],
         ItemModifierKind.PassiveBonus or ItemModifierKind.AbilityMax or ItemModifierKind.Speed
-            or ItemModifierKind.DeathSaveFailures or ItemModifierKind.HitDiceRecovery => [],
+            or ItemModifierKind.DeathSaveFailures or ItemModifierKind.HitDiceRecovery or ItemModifierKind.ResourceMaxBonus => [],
         _ => ModifierConditions.All.Where(c => c != ModifierConditions.Cantrip).ToList(),
     };
 
@@ -554,14 +558,7 @@ internal sealed partial class ContentPackValidator
             int? usesPerLongRest = null;
             if (spell.UsesPerLongRest is not null)
             {
-                if (origin)
-                {
-                    usesPerLongRest = OptionalInt($"{spellPath}.usesPerLongRest", spell.UsesPerLongRest, 1, 20);
-                }
-                else
-                {
-                    AddError($"{spellPath}.usesPerLongRest", "Solo se admite en las razas y subrazas (para opciones, usa resource).");
-                }
+                usesPerLongRest = OptionalInt($"{spellPath}.usesPerLongRest", spell.UsesPerLongRest, 1, 20);
             }
 
             if (index is null)
@@ -574,18 +571,13 @@ internal sealed partial class ContentPackValidator
             spells.Add(new { index, minLevel, usesPerLongRest });
         });
 
+        // Races and subraces must say how they cast what they grant; options, feats and subclass levels may (else they use
+        // the ability of the class of the pick).
         string? spellcastingAbility = null;
         var ability = grants.SpellcastingAbility?.Trim().ToLowerInvariant();
-        if (!origin)
+        if (string.IsNullOrEmpty(ability))
         {
-            if (!string.IsNullOrEmpty(ability))
-            {
-                AddError($"{path}.spellcastingAbility", "Solo se admite en las razas y subrazas.");
-            }
-        }
-        else if (string.IsNullOrEmpty(ability))
-        {
-            if (spells.Count + cantrips.Count > 0)
+            if (origin && spells.Count + cantrips.Count > 0)
             {
                 AddError($"{path}.spellcastingAbility", "Campo obligatorio cuando se conceden conjuros o trucos (int, wis o cha...).");
             }
@@ -664,7 +656,8 @@ internal sealed partial class ContentPackValidator
         ForEachText($"{path}.conditionImmunities", grants.ConditionImmunities, (conditionPath, value) =>
         {
             var condition = value.ToLowerInvariant();
-            if (Domain.Catalog.DamageTypes.Conditions.Contains(condition, StringComparer.Ordinal) || _packConditions.Contains(condition))
+            if (Domain.Catalog.DamageTypes.Conditions.Contains(condition, StringComparer.Ordinal) || _packConditions.Contains(condition)
+                || _context.Conditions?.Contains(condition) == true)
             {
                 if (!conditions.Contains(condition))
                 {
@@ -673,7 +666,7 @@ internal sealed partial class ContentPackValidator
             }
             else
             {
-                AddError(conditionPath, $"Estado desconocido. Valores admitidos: {string.Join(", ", Domain.Catalog.DamageTypes.Conditions)} o los estados del paquete.");
+                AddError(conditionPath, $"Estado desconocido. Valores admitidos: {string.Join(", ", Domain.Catalog.DamageTypes.Conditions)} o los estados del paquete y de los paquetes requeridos.");
             }
         });
         if (conditions.Count > 0)
@@ -723,6 +716,24 @@ internal sealed partial class ContentPackValidator
         if (OptionalInt($"{path}.skillChoicesDelta", grants.SkillChoicesDelta, -10, 10) is { } delta and not 0)
         {
             result["skillChoicesDelta"] = delta;
+        }
+
+        var lostSkills = new List<string>();
+        ForEachText($"{path}.removeSkills", grants.RemoveSkills, (skillPath, skill) =>
+        {
+            var key = skill.ToLowerInvariant();
+            if (!_skills.ContainsKey(key))
+            {
+                AddError(skillPath, $"La habilidad '{skill}' no existe (usa índices como \"perception\" o \"animal-handling\").");
+            }
+            else if (!lostSkills.Contains(key))
+            {
+                lostSkills.Add(key);
+            }
+        });
+        if (lostSkills.Count > 0)
+        {
+            result["removeSkills"] = lostSkills;
         }
 
         var weapons = new List<object>();
@@ -860,6 +871,22 @@ internal sealed partial class ContentPackValidator
             rollOnRest = new { dice = die is null ? null : $"d{die}", count, rest = rest == RestKind.Short ? "short" : "long" };
         }
 
+        object? rechargeRoll = null;
+        if (resource.RechargeRoll is { } rechargeJson)
+        {
+            var die = RollOnRest.ParseDie(rechargeJson.Dice);
+            if (die is null)
+            {
+                AddError($"{path}.rechargeRoll.dice", $"Dado no válido: usa {string.Join(", ", RollOnRest.AllowedDice.Select(d => $"d{d}"))}.");
+            }
+
+            var minimum = RequiredInt($"{path}.rechargeRoll.min", rechargeJson.Min, 1, die ?? 100);
+            if (die is not null && minimum is not null)
+            {
+                rechargeRoll = new { dice = $"d{die}", min = minimum };
+            }
+        }
+
         string? dice = null;
         if (resource.Dice is not null)
         {
@@ -897,6 +924,11 @@ internal sealed partial class ContentPackValidator
             result["rollOnRest"] = rollOnRest;
         }
 
+        if (rechargeRoll is not null)
+        {
+            result["rechargeRoll"] = rechargeRoll;
+        }
+
         if (dice is not null)
         {
             result["dice"] = dice;
@@ -912,7 +944,8 @@ internal sealed partial class ContentPackValidator
 
     private const string ResourceMaxHelp =
         "un entero entre 1 y 999, una fórmula (términos separados por \"+\", cada uno un entero o [n*]símbolo con proficiencyBonus, " +
-        "classLevel, halfClassLevel o mod:<característica>), { \"formula\": \"...\", \"min\": 0 } o { \"byLevel\": { \"3\": 4 } }";
+        "classLevel, halfClassLevel o mod:<característica>), { \"formula\": \"...\", \"min\": 0 }, { \"byLevel\": { \"3\": 4 } } " +
+        "o ambos ({ \"formula\": \"mod:int\", \"byLevel\": { \"3\": 1 } }, que se suman)";
 
     /// <summary>
     /// Normalizes the <c>max</c> of a resource: the formula text (integers and simple formulas included),
@@ -949,18 +982,13 @@ internal sealed partial class ContentPackValidator
         var properties = maxObject.EnumerateObject().ToDictionary(p => p.Name, p => p.Value, StringComparer.OrdinalIgnoreCase);
         if (properties.Keys.FirstOrDefault(k => !k.Equals("formula", StringComparison.OrdinalIgnoreCase) && !k.Equals("min", StringComparison.OrdinalIgnoreCase) && !k.Equals("byLevel", StringComparison.OrdinalIgnoreCase)) is { } unknown)
         {
-            AddError($"{path}.{unknown}", "Campo desconocido: usa formula y min, o byLevel.");
+            AddError($"{path}.{unknown}", "Campo desconocido: usa formula, min y byLevel.");
             return null;
         }
 
+        SortedDictionary<string, int?>? table = null;
         if (properties.TryGetValue("byLevel", out var byLevel))
         {
-            if (properties.Count > 1)
-            {
-                AddError(path, "byLevel no se combina con formula ni min.");
-                return null;
-            }
-
             if (byLevel.ValueKind != JsonValueKind.Object)
             {
                 AddError($"{path}.byLevel", "Debe ser un objeto { \"nivel\": usos }.");
@@ -971,7 +999,7 @@ internal sealed partial class ContentPackValidator
                 p => p.Name,
                 p => (string?)(p.Value.ValueKind == JsonValueKind.Number ? p.Value.GetRawText() : null),
                 StringComparer.Ordinal);
-            var table = LevelTable($"{path}.byLevel", entries, (entryPath, text) =>
+            table = LevelTable($"{path}.byLevel", entries, (entryPath, text) =>
             {
                 if (int.TryParse(text, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var uses)
                     && uses is >= 0 and <= CharacterResource.MaxUses)
@@ -982,10 +1010,25 @@ internal sealed partial class ContentPackValidator
                 AddError(entryPath, $"Debe ser un entero entre 0 y {CharacterResource.MaxUses}.");
                 return (int?)null;
             });
-            return table is null ? null : new { byLevel = table };
+            if (table is null)
+            {
+                return null;
+            }
+
+            // A table alone; with a formula, both are added up (the formula's minimum is 0 by default).
+            if (!properties.ContainsKey("formula"))
+            {
+                if (properties.ContainsKey("min"))
+                {
+                    AddError($"{path}.min", "Con byLevel, min solo se admite junto a formula.");
+                    return null;
+                }
+
+                return new { byLevel = table };
+            }
         }
 
-        var min = 1;
+        var min = table is null ? 1 : 0;
         if (properties.TryGetValue("min", out var minElement))
         {
             if (minElement.ValueKind != JsonValueKind.Number || !minElement.TryGetInt32(out min) || min is < 0 or > CharacterResource.MaxUses)
@@ -1002,13 +1045,13 @@ internal sealed partial class ContentPackValidator
             return null;
         }
 
-        if (!OptionResource.IsValidMax(formula, min))
+        if (!OptionResource.IsValidMax(formula, table is null ? min : 0))
         {
             AddError($"{path}.formula", $"Fórmula no válida: debe ser {ResourceMaxHelp}.");
             return null;
         }
 
-        return new { formula, min };
+        return table is null ? new { formula, min } : new { formula, min, byLevel = table };
     }
 
     /// <summary>
@@ -1444,8 +1487,10 @@ internal sealed partial class ContentPackValidator
             }
         });
 
+        var tags = SpellTagList($"{path}.tags", filter.Tags);
         return LevelChoiceJson.Serialize(new
         {
+            tags = tags.Count > 0 ? tags : null,
             spellList,
             spellLevels = levels,
             maxSpellLevelBySlots = filter.MaxSpellLevelBySlots ?? false,

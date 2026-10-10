@@ -91,6 +91,9 @@ internal sealed class PackSharedTraitJson
     public List<string?>? Races { get; set; }
 
     public List<string?>? Subraces { get; set; }
+
+    /// <summary>Limited-use resource of the trait (same shape as an option's; classLevel is the character level).</summary>
+    public PackResourceJson? Resource { get; set; }
 }
 
 internal sealed class PackRollTableJson
@@ -329,6 +332,8 @@ internal sealed class PackClassResourceJson
 
     public Dictionary<string, string?>? DiceByLevel { get; set; }
 
+    public PackRechargeRollJson? RechargeRoll { get; set; }
+
     public PackResourceJson ToResource(JsonElement? max) => new()
     {
         Key = Key,
@@ -338,6 +343,7 @@ internal sealed class PackClassResourceJson
         RollOnRest = RollOnRest,
         Dice = Dice,
         DiceByLevel = DiceByLevel,
+        RechargeRoll = RechargeRoll,
     };
 }
 
@@ -372,6 +378,9 @@ internal sealed class PackFeatJson
 
     /// <summary>Starter feat (the optional "Dote inicial" of level 1 when the campaign enables it); implies creationOnly.</summary>
     public bool? Starter { get; set; }
+
+    /// <summary>The feat can be taken more than once.</summary>
+    public bool? Repeatable { get; set; }
 }
 
 internal sealed class PackCreatureJson
@@ -505,6 +514,12 @@ internal sealed class PackReferenceJson
     public List<PackReferenceEntryJson?>? MagicSchools { get; set; }
 
     public List<PackReferenceEntryJson?>? Tools { get; set; }
+
+    /// <summary>Spell tags (compendium filter, <c>filter.tags</c> and expanded lists by tag).</summary>
+    public List<PackReferenceEntryJson?>? SpellTags { get; set; }
+
+    /// <summary>Armor properties (<c>items[].armor.properties</c>, and armor enhancements).</summary>
+    public List<PackReferenceEntryJson?>? ArmorProperties { get; set; }
 }
 
 internal sealed class PackReferenceEntryJson
@@ -517,6 +532,9 @@ internal sealed class PackReferenceEntryJson
 
     /// <summary>Only in <c>equipmentCategories</c>: the items of the category (starting equipment picks from it).</summary>
     public List<string?>? Items { get; set; }
+
+    /// <summary>Only in <c>spellTags</c>: spells of the SRD, of a required pack or of the pack that get the tag.</summary>
+    public List<string?>? Spells { get; set; }
 }
 
 internal sealed class PackSubclassJson
@@ -555,6 +573,9 @@ internal sealed class PackExpandedSpellJson
     public string? Index { get; set; }
 
     public int? Level { get; set; }
+
+    /// <summary>Instead of <see cref="Index"/> and <see cref="Level"/>: every spell with one of these tags.</summary>
+    public List<string?>? Tags { get; set; }
 }
 
 internal sealed class PackSubclassSpellcastingJson
@@ -825,6 +846,9 @@ internal sealed class PackSpellJson
 
     public List<string?>? Subclasses { get; set; }
 
+    /// <summary>Tags of the spell (<c>reference.spellTags</c> of the pack or of a required pack).</summary>
+    public List<string?>? Tags { get; set; }
+
     public string? AttackType { get; set; }
 
     /// <summary>One damage part, or an array of parts (Flame Strike: fire and radiant).</summary>
@@ -1051,6 +1075,9 @@ internal sealed class PackTraitJson
     public string? Name { get; set; }
 
     public List<string?>? Description { get; set; }
+
+    /// <summary>Limited-use resource of the trait (same shape as an option's; classLevel is the character level).</summary>
+    public PackResourceJson? Resource { get; set; }
 
     /// <summary>True when given as a string: a reference to <c>traits[]</c>.</summary>
     [JsonIgnore]
@@ -1328,6 +1355,9 @@ internal sealed class PackGrantsJson
     /// <summary>Change of the class skills chosen at creation (−2: two fewer).</summary>
     public int? SkillChoicesDelta { get; set; }
 
+    /// <summary>Skill proficiencies lost (<c>["athletics"]</c>).</summary>
+    public List<string?>? RemoveSkills { get; set; }
+
     /// <summary>Natural weapons (claws, bite...): attacks of the sheet.</summary>
     public List<PackNaturalWeaponJson?>? NaturalWeapons { get; set; }
 }
@@ -1389,6 +1419,18 @@ internal sealed class PackResourceJson
 
     /// <summary>Die by class level (<c>{"3": "d8", "10": "d10"}</c>).</summary>
     public Dictionary<string, string?>? DiceByLevel { get; set; }
+
+    /// <summary>Die rolled to get the uses back (<c>{"dice": "d6", "min": 5}</c>).</summary>
+    public PackRechargeRollJson? RechargeRoll { get; set; }
+}
+
+internal sealed class PackRechargeRollJson
+{
+    /// <summary>"d6".</summary>
+    public string? Dice { get; set; }
+
+    /// <summary>Lowest roll that recharges (1 to the die's faces).</summary>
+    public int? Min { get; set; }
 }
 
 internal sealed class PackRollOnRestJson
@@ -1459,6 +1501,9 @@ internal sealed class PackChoiceFilterJson
 
     /// <summary>Spell choices: only rituals (or spells the class casts as rituals).</summary>
     public bool? RitualOnly { get; set; }
+
+    /// <summary>Spell choices: only spells with one of these tags (<c>reference.spellTags</c>).</summary>
+    public List<string?>? Tags { get; set; }
 }
 
 // ---- Converters ------------------------------------------------------------------------------------
@@ -1520,12 +1565,12 @@ internal sealed class PackTraitConverter : JsonConverter<PackTraitJson>
                 return new PackTraitJson { Index = reader.GetString(), IsReference = true };
             default:
                 var shape = JsonSerializer.Deserialize<Shape>(ref reader, options);
-                return shape is null ? null : new PackTraitJson { Index = shape.Index, Name = shape.Name, Description = shape.Description };
+                return shape is null ? null : new PackTraitJson { Index = shape.Index, Name = shape.Name, Description = shape.Description, Resource = shape.Resource };
         }
     }
 
     public override void Write(Utf8JsonWriter writer, PackTraitJson value, JsonSerializerOptions options) =>
-        JsonSerializer.Serialize(writer, new Shape { Index = value.Index, Name = value.Name, Description = value.Description }, options);
+        JsonSerializer.Serialize(writer, new Shape { Index = value.Index, Name = value.Name, Description = value.Description, Resource = value.Resource }, options);
 
     private sealed class Shape
     {
@@ -1534,5 +1579,7 @@ internal sealed class PackTraitConverter : JsonConverter<PackTraitJson>
         public string? Name { get; set; }
 
         public List<string?>? Description { get; set; }
+
+        public PackResourceJson? Resource { get; set; }
     }
 }

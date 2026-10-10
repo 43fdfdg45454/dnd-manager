@@ -65,6 +65,9 @@ public enum ItemModifierKind
 
     /// <summary>Hit dice recovered on a long rest (target "all"; half by default).</summary>
     HitDiceRecovery,
+
+    /// <summary>Adds the value to the maximum of the character resource whose key is the target.</summary>
+    ResourceMaxBonus,
 }
 
 /// <summary>

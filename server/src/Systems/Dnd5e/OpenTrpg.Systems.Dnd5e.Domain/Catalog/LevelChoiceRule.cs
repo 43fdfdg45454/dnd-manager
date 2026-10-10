@@ -263,6 +263,9 @@ public sealed class OptionDefinition
     /// </summary>
     public bool Starter { get; init; }
 
+    /// <summary>Repeatable feat: an Ability Score Improvement offers it again after it is taken (each pick counts on its own).</summary>
+    public bool Repeatable { get; init; }
+
     public OptionPrerequisites Prerequisites => LevelChoiceJson.ParsePrerequisites(PrerequisitesJson);
 
     public IReadOnlyList<ChoiceModifier> Modifiers => LevelChoiceJson.ParseModifiers(ModifiersJson);

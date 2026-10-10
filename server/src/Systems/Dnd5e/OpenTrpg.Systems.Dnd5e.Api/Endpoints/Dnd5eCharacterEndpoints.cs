@@ -127,6 +127,16 @@ public static class Dnd5eCharacterEndpoints
             .WithSummary("Recupera usos gastados de un recurso.")
             .ProducesValidationProblem();
 
+        group.MapPost("/resources/initiative", async (Guid id, ClaimsPrincipal user, ResourceHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.RechargeOnInitiativeAsync(user.GetUserId(), id, ct)))
+            .WithName("RechargeResourcesOnInitiative")
+            .WithSummary("Recupera los recursos que vuelven al tirar iniciativa (dueño o DM, sin aprobación).");
+
+        group.MapPost("/resources/{resourceId:guid}/recharge-roll", async (Guid id, Guid resourceId, RechargeRollRequest request, ClaimsPrincipal user, ResourceHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.RollRechargeAsync(user.GetUserId(), id, resourceId, request, ct)))
+            .WithName("RollResourceRecharge")
+            .WithSummary("Registra la tirada de recarga de un recurso: con el mínimo o más recupera todos sus usos.");
+
         group.MapPost("/resources/{resourceId:guid}/rolls", async (Guid id, Guid resourceId, ResourceRollsRequest request, ClaimsPrincipal user, ResourceHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.RecordRollsAsync(user.GetUserId(), id, resourceId, request, ct)))
             .WithName("RecordResourceRolls")

@@ -47,6 +47,19 @@ public sealed class SpellDefinition
 
     public IReadOnlyList<string> SubclassIndexes { get; init; } = [];
 
+    private IReadOnlyList<string> _tags = [];
+
+    /// <summary>Tags of the content packs (<see cref="SpellTag"/>), filled in by the repository; not a column.</summary>
+    public IReadOnlyList<string> Tags { get => _tags; init => _tags = value; }
+
+    /// <summary>A copy of the spell with <paramref name="tags"/>.</summary>
+    public SpellDefinition WithTags(IReadOnlyList<string> tags)
+    {
+        var copy = (SpellDefinition)MemberwiseClone();
+        copy._tags = tags;
+        return copy;
+    }
+
     /// <summary>"melee" or "ranged" for spell attacks.</summary>
     public string? AttackType { get; init; }
 

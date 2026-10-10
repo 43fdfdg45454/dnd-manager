@@ -194,6 +194,7 @@ internal sealed partial class Dnd5eCatalogSystem(
         db.Set<RuleDefinition>().AddRange(rows.Rules);
         db.Set<ReferenceEntry>().AddRange(rows.ReferenceEntries);
         db.Set<EquipmentCategory>().AddRange(rows.EquipmentCategories);
+        db.Set<SpellTag>().AddRange(rows.SpellTags);
         db.Set<SkillDefinition>().AddRange(rows.Skills);
         await db.SaveChangesAsync(cancellationToken);
         db.ChangeTracker.Clear();
@@ -321,6 +322,14 @@ internal sealed partial class Dnd5eCatalogSystem(
             .Where(x => x.ResourceJson != null && reach.Contains(x.Source))
             .Select(x => new { x.ResourceJson, x.Source })
             .ToListAsync(cancellationToken));
+        resourceRows.AddRange(await db.Set<TraitDefinition>().AsNoTracking()
+            .Where(x => x.ResourceJson != null && reach.Contains(x.Source))
+            .Select(x => new { x.ResourceJson, x.Source })
+            .ToListAsync(cancellationToken));
+        var conditions = await db.Set<ConditionDefinition>().AsNoTracking()
+            .Where(x => reach.Contains(x.Source) && x.Source != ownId)
+            .Select(x => x.Index)
+            .ToListAsync(cancellationToken);
         var classResources = (await db.Set<ClassDefinition>().AsNoTracking()
                 .Where(x => x.ResourcesJson != null && reach.Contains(x.Source))
                 .Select(x => new { x.ResourcesJson, x.Source })
@@ -365,6 +374,7 @@ internal sealed partial class Dnd5eCatalogSystem(
         {
             Packs = packs,
             Vocabularies = vocabularies,
+            Conditions = conditions.ToHashSet(StringComparer.Ordinal),
         };
     }
 
@@ -466,6 +476,7 @@ internal sealed partial class Dnd5eCatalogSystem(
         await db.Set<RuleDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<ReferenceEntry>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<EquipmentCategory>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<SpellTag>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<TrinketEntry>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<RollTable>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<LevelChoiceRule>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);

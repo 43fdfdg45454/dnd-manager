@@ -16,4 +16,7 @@ public enum ResourceRecharge
 
     /// <summary>Never restored automatically.</summary>
     Manual,
+
+    /// <summary>Restored when the character rolls initiative (by the owner or a DM), and by short and long rests.</summary>
+    Initiative,
 }

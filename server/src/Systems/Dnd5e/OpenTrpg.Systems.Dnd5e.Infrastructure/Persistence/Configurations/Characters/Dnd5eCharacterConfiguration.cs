@@ -180,7 +180,7 @@ internal sealed class CharacterOverrideConfiguration : IEntityTypeConfiguration<
         builder.ToTable("CharacterOverrides");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.Property(x => x.Field).HasMaxLength(Dnd5eCharacter.IndexMaxLength + 16).IsRequired();
+        builder.Property(x => x.Field).HasMaxLength(Dnd5eCharacter.IndexMaxLength + 32).IsRequired();
         builder.Property(x => x.Note).HasMaxLength(CharacterOverride.NoteMaxLength);
         builder.HasIndex(x => new { x.CharacterId, x.Field }).IsUnique();
     }

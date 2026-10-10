@@ -349,6 +349,9 @@ public sealed record OptionGrants(
     /// <summary>Change of the number of class skills chosen at creation (−2: two fewer); 0 = none.</summary>
     public int SkillChoicesDelta { get; init; }
 
+    /// <summary>Skill proficiencies the character loses (<c>grants.removeSkills</c>), whatever gave them.</summary>
+    public IReadOnlyList<string> RemoveSkills { get; init; } = [];
+
     /// <summary>Natural weapons: attacks of the sheet.</summary>
     public IReadOnlyList<NaturalWeapon> NaturalWeapons { get; init; } = [];
 
@@ -358,7 +361,7 @@ public sealed record OptionGrants(
 
     /// <summary>Whether it changes the sheet beyond proficiencies (defenses, size, natural weapons, lost saving throws).</summary>
     public bool HasSheetEffects =>
-        Resistances.Count + Immunities.Count + ConditionImmunities.Count + NaturalWeapons.Count > 0 || Size is not null || RemoveSavingThrows is not null;
+        Resistances.Count + Immunities.Count + ConditionImmunities.Count + NaturalWeapons.Count > 0 || Size is not null || RemoveSavingThrows is not null || RemoveSkills.Count > 0;
 
     /// <summary>Whether it grants spells or cantrips.</summary>
     public bool HasSpells => Spells.Count + Cantrips.Count > 0;
@@ -395,6 +398,7 @@ public sealed record OptionGrants(
             Size = Size ?? other.Size,
             RemoveSavingThrows = RemoveSavingThrows ?? other.RemoveSavingThrows,
             SkillChoicesDelta = SkillChoicesDelta + other.SkillChoicesDelta,
+            RemoveSkills = Union(RemoveSkills, other.RemoveSkills),
             NaturalWeapons = [.. NaturalWeapons, .. other.NaturalWeapons.Where(w => NaturalWeapons.All(n => n.Name != w.Name))],
         };
     }
@@ -403,7 +407,8 @@ public sealed record OptionGrants(
 /// <summary>
 /// Limited-use resource of an option or a subclass feature. Its maximum is <see cref="Max"/>, a
 /// <see cref="ResourceFormula"/> ("2", "proficiencyBonus", "2*classLevel+mod:int"), raised to <see cref="Min"/>,
-/// unless <see cref="MaxByLevel"/> is given: then the value of the highest class level not above the character's.
+/// unless <see cref="MaxByLevel"/> is given: then the value of the highest class level not above the character's, plus
+/// the formula when <see cref="AddsFormulaToTable"/> (<c>{"formula": "mod:int", "byLevel": {...}}</c>).
 /// </summary>
 public sealed record OptionResource(string Key, string Name, string Max, ResourceRecharge Recharge)
 {
@@ -421,6 +426,12 @@ public sealed record OptionResource(string Key, string Name, string Max, Resourc
 
     /// <summary>Faces of the die by class level (<c>"diceByLevel": {"3": "d8", "10": "d10"}</c>); overrides <see cref="Die"/> from each level.</summary>
     public IReadOnlyDictionary<int, int>? DieByLevel { get; init; }
+
+    /// <summary>The maximum is the <see cref="MaxByLevel"/> entry plus the formula <see cref="Max"/> (both given).</summary>
+    public bool AddsFormulaToTable { get; init; }
+
+    /// <summary>A die that gives the uses back on a high roll (<c>"rechargeRoll": {"dice": "d6", "min": 5}</c>), or null.</summary>
+    public RechargeRoll? RechargeRoll { get; init; }
 
     public const string ProficiencyBonusFormula = ResourceFormula.ProficiencyBonus;
     public const string ClassLevelFormula = ResourceFormula.ClassLevel;
@@ -464,20 +475,28 @@ public sealed record OptionResource(string Key, string Name, string Max, Resourc
         var builder = new BreakdownBuilder();
         if (MaxByLevel is { Count: > 0 } table)
         {
-            if (AtLevel(table, classLevel) is not { } entry)
+            var entry = AtLevel(table, classLevel);
+            if (entry is null && !AddsFormulaToTable)
             {
                 return null;
             }
 
-            builder.Add(BreakdownSources.Feature, BreakdownLabels.ByLevel(label, entry.Level), entry.Value);
-            return builder.Clamp(0, CharacterResource.MaxUses, BreakdownLabels.UsesLimit).Build();
+            if (entry is { } found)
+            {
+                builder.Add(BreakdownSources.Feature, BreakdownLabels.ByLevel(label, found.Level), found.Value);
+            }
+
+            if (!AddsFormulaToTable)
+            {
+                return builder.Clamp(0, CharacterResource.MaxUses, BreakdownLabels.UsesLimit).Build();
+            }
         }
 
         if (ResourceFormula.Parse(Max) is { } terms)
         {
             ResourceFormula.AddTerms(builder, terms, proficiencyBonus, classLevel, abilityModifier, label);
         }
-        else
+        else if (!AddsFormulaToTable)
         {
             builder.Add(BreakdownSources.Feature, label, int.TryParse(Max, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number) ? number : 1);
         }
@@ -501,6 +520,12 @@ public sealed record OptionResource(string Key, string Name, string Max, Resourc
         var levels = table.Keys.Where(l => l <= classLevel).ToList();
         return levels.Count == 0 ? null : (levels.Max(), table[levels.Max()]);
     }
+}
+
+/// <summary>A die rolled to get the uses of a resource back: <see cref="Min"/> or more on a d<see cref="Die"/> ("d6", 5).</summary>
+public sealed record RechargeRoll(int Die, int Min)
+{
+    public string Dice => $"d{Die}";
 }
 
 /// <summary>
@@ -542,6 +567,16 @@ public sealed record ChoiceFilter(string? SpellList, IReadOnlyList<int> SpellLev
 
     /// <summary>Spell choices: only rituals, or spells the class casts as rituals (<see cref="ClassSpellcastingInfo.TreatAsRitual"/>).</summary>
     public bool RitualOnly { get; init; }
+
+    /// <summary>Spell choices: only spells with one of these tags (<see cref="SpellTag"/>); empty = any.</summary>
+    public IReadOnlyList<string> Tags { get; init; } = [];
+
+    /// <summary>Whether <paramref name="spell"/> has one of <see cref="Tags"/> (always, without tags).</summary>
+    public bool AllowsTags(SpellDefinition spell)
+    {
+        ArgumentNullException.ThrowIfNull(spell);
+        return Tags.Count == 0 || spell.Tags.Any(Tags.Contains);
+    }
 
     /// <summary>Whether a spell of <paramref name="school"/> ("Evocation" or "evocation") is allowed at the class level.</summary>
     public bool AllowsSchool(string school, int classLevel) =>
@@ -819,6 +854,7 @@ public static class LevelChoiceJson
                             : [])
                     : null,
                 SkillChoicesDelta = Int(Property(root, "skillChoicesDelta")) ?? 0,
+                RemoveSkills = List("removeSkills"),
                 NaturalWeapons = Property(root, "naturalWeapons") is { ValueKind: JsonValueKind.Array } weapons
                     ? weapons.EnumerateArray().Select(NaturalWeaponOf).OfType<NaturalWeapon>().ToList()
                     : [],
@@ -862,6 +898,7 @@ public static class LevelChoiceJson
 
             var max = "1";
             var min = 1;
+            var combined = false;
             Dictionary<int, int>? byLevel = null;
             switch (Property(root, "max"))
             {
@@ -877,8 +914,9 @@ public static class LevelChoiceJson
                         byLevel = LevelTable(table, e => Int(e));
                     }
 
+                    combined = byLevel is { Count: > 0 } && Text(Property(maxObject, "formula")) is not null;
                     max = Text(Property(maxObject, "formula")) ?? "1";
-                    min = Int(Property(maxObject, "min")) ?? 1;
+                    min = Int(Property(maxObject, "min")) ?? (combined ? 0 : 1);
                     break;
             }
 
@@ -905,6 +943,13 @@ public static class LevelChoiceJson
                 Min = min,
                 Die = RollOnRest.ParseDie(Text(Property(root, "dice"))),
                 DieByLevel = diceByLevel is { Count: > 0 } ? diceByLevel : null,
+                AddsFormulaToTable = combined,
+                RechargeRoll = Property(root, "rechargeRoll") is { ValueKind: JsonValueKind.Object } rechargeJson
+                    && RollOnRest.ParseDie(Text(Property(rechargeJson, "dice"))) is { } rechargeDie
+                    && Int(Property(rechargeJson, "min")) is { } rechargeMin and >= 1
+                    && rechargeMin <= rechargeDie
+                        ? new RechargeRoll(rechargeDie, rechargeMin)
+                        : null,
             };
         });
 
@@ -967,6 +1012,9 @@ public static class LevelChoiceJson
                     : [],
                 Firearms = Property(root, "firearms") is { ValueKind: JsonValueKind.True or JsonValueKind.False } firearms ? firearms.GetBoolean() : null,
                 RitualOnly = Property(root, "ritualOnly") is { ValueKind: JsonValueKind.True },
+                Tags = Property(root, "tags") is { ValueKind: JsonValueKind.Array } tags
+                    ? Strings(tags).Select(x => x.ToLowerInvariant()).Distinct(StringComparer.Ordinal).ToList()
+                    : [],
             };
         }) ?? ChoiceFilter.None;
 
