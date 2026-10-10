@@ -102,6 +102,7 @@ internal sealed partial class ContentPackValidator
             CreationOnly = creationOnly,
             Starter = starter,
             Repeatable = repeatable,
+            ItemEffectsJson = ItemEffectsOf($"{path}.itemEffects", option.ItemEffects),
             Source = _id,
         };
 

@@ -566,6 +566,7 @@ internal sealed partial class ContentPackValidator
             var featureResource = feature.Resource is not null ? Resource($"{featurePath}.resource", feature.Resource) : null;
             var featureCompanion = feature.Companion is not null ? Companion($"{featurePath}.companion", feature.Companion) : null;
             var featureModifiers = feature.Modifiers is not null ? ChoiceModifiers($"{featurePath}.modifiers", feature.Modifiers, "Un rasgo") : null;
+            var featureEnhancement = feature.ItemEnhancement is not null ? ItemEnhancement($"{featurePath}.itemEnhancement", feature.ItemEnhancement) : null;
             if (unlisted)
             {
                 level = RequiredInt($"{featurePath}.level", feature.Level, 1, MaxLevels);
@@ -592,6 +593,7 @@ internal sealed partial class ContentPackValidator
                 ResourceJson = featureResource,
                 CompanionJson = featureCompanion,
                 ModifiersJson = featureModifiers is null or "[]" ? null : featureModifiers,
+                ItemEnhancementJson = featureEnhancement,
                 Source = _id,
             });
         });

@@ -145,7 +145,7 @@ public class CompanionsPackTests(CompanionsPackApiFactory factory) : IClassFixtu
 
         // Level 6: budget 1, proficiency +3 and the second text.
         var sixth = await PatchAsync(s, hero.Id, 6);
-        Assert.Equal((1.0, 2), (sixth.CompanionFeature!.ChallengeBudget, sixth.CompanionFeature.Features.Count));
+        Assert.Equal((1.0, 2), (sixth.CompanionFeature!.ChallengeBudget, sixth.CompanionFeature!.Features.Count));
         var added = await AddOkAsync(s.Player.Client, hero.Id, Shade, "Sombra");
         Assert.Equal([Puppet, Shade], added.Companions.Select(c => c.BeastIndex));
         Assert.Equal(12 + 6 + 3, added.Companions[1].HitPointsMax);

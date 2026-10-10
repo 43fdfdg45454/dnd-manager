@@ -1773,6 +1773,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ItemEnhancementJson")
+                        .HasColumnType("text");
+
                     b.Property<int>("Level")
                         .HasColumnType("integer");
 
@@ -1914,6 +1917,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("GrantsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ItemEffectsJson")
                         .HasColumnType("text");
 
                     b.Property<string>("LevelChoicesJson")
@@ -2882,6 +2888,12 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
 
                     b.Property<bool>("Inspiration")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("ItemEnhancementsJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("{}");
 
                     b.Property<DateTimeOffset?>("LevelGrantedAt")
                         .HasColumnType("timestamp with time zone");

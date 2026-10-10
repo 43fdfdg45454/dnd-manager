@@ -38,6 +38,7 @@ internal sealed class Dnd5eCharacterConfiguration : IEntityTypeConfiguration<Dnd
         builder.Property(x => x.ConditionsJson).IsRequired();
         builder.Property(x => x.ConcentratingOnSpellIndex).HasMaxLength(Dnd5eCharacter.IndexMaxLength);
         builder.Property(x => x.HitDiceUsedJson).IsRequired();
+        builder.Property(x => x.ItemEnhancementsJson).IsRequired().HasDefaultValue("{}");
         builder.Property(x => x.BackgroundDetail).HasMaxLength(Dnd5eCharacter.BackgroundDetailMaxLength).IsRequired();
 
         // Shortcuts to the core character.

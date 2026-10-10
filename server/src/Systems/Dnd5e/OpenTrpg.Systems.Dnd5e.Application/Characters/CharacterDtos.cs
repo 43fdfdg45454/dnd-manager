@@ -352,6 +352,15 @@ public sealed record Dnd5eCharacterDetailDto
     /// <summary>Every companion of the character, oldest first (several when the feature's <c>maxCount</c> allows it).</summary>
     public IReadOnlyList<CharacterCompanionDto> Companions { get; init; } = [];
 
+    /// <summary>Inventory entries with enhancements (phase 35B3): their options, changed fields and breakdowns.</summary>
+    public IReadOnlyList<Items.CharacterItemEnhancementDto> ItemEnhancements { get; init; } = [];
+
+    /// <summary>The item enhancement feature the character has reached (options per item and which ones), or null.</summary>
+    public Items.ItemEnhancementFeatureDto? ItemEnhancementFeature { get; init; }
+
+    /// <summary>Grafts of the inventory (items with <c>graft.slot</c>), by slot.</summary>
+    public IReadOnlyList<Items.CharacterGraftDto> Grafts { get; init; } = [];
+
     /// <summary>The companion feature the character has reached (which beasts qualify); null when it has none.</summary>
     public CompanionFeatureDto? CompanionFeature { get; init; }
 

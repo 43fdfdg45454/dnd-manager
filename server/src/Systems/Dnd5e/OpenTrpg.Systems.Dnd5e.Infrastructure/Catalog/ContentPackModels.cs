@@ -626,6 +626,39 @@ internal sealed class PackFeatureJson
 
     /// <summary>Format 2: numeric modifiers on the sheet from the feature's level (same shape as an option's).</summary>
     public List<PackChoiceModifierJson?>? Modifiers { get; set; }
+
+    /// <summary>Phase 35B3: the character enhances concrete inventory entries with the options of some sets.</summary>
+    public PackItemEnhancementJson? ItemEnhancement { get; set; }
+}
+
+internal sealed class PackItemEnhancementJson
+{
+    public List<string?>? OptionSets { get; set; }
+
+    /// <summary>Options per item by class level: <c>{"2": 1, "6": 2}</c>.</summary>
+    public Dictionary<string, int?>? MaxPerItemByLevel { get; set; }
+}
+
+internal sealed class PackItemEffectsJson
+{
+    public List<string?>? AppliesTo { get; set; }
+
+    public int? AttackBonus { get; set; }
+
+    public int? DamageBonus { get; set; }
+
+    public int? ArmorClassBonus { get; set; }
+
+    public List<string?>? AddProperties { get; set; }
+
+    public int? DamageStep { get; set; }
+
+    public string? DamageType { get; set; }
+}
+
+internal sealed class PackGraftJson
+{
+    public string? Slot { get; set; }
 }
 
 internal sealed class PackCompanionJson
@@ -741,6 +774,9 @@ internal sealed class PackItemJson
 
     /// <summary>Class indexes that may attune to the item (with <see cref="RequiresAttunement"/>); none = any class.</summary>
     public List<string?>? AttunementClasses { get; set; }
+
+    /// <summary>Phase 35B3: the item is a graft that takes a body slot (one equipped graft per slot).</summary>
+    public PackGraftJson? Graft { get; set; }
 }
 
 internal sealed class PackWeaponJson
@@ -1255,6 +1291,9 @@ internal sealed class PackOptionJson
 
     /// <summary>Choices the option adds at later levels of the class of the pick (with level).</summary>
     public List<PackLevelChoiceJson?>? LevelChoices { get; set; }
+
+    /// <summary>Phase 35B3: what the option does to the inventory entry an item enhancement feature applies it to.</summary>
+    public PackItemEffectsJson? ItemEffects { get; set; }
 }
 
 internal sealed class PackOptionCostJson

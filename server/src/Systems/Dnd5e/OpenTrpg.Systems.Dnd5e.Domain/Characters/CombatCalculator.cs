@@ -17,6 +17,9 @@ public sealed record EquippedWeapon(Guid? ItemId, string? TemplateIndex, Effecti
 {
     /// <summary>Rules of the template's system data (content packs): ability to damage, requirements, second profile.</summary>
     public WeaponRules Rules { get; init; } = WeaponRules.None;
+
+    /// <summary>Bonuses of the enhancements of this inventory entry (attack and damage of this weapon), each with its label.</summary>
+    public IReadOnlyList<EnhancementBonus> EnhancementBonuses { get; init; } = [];
 }
 
 /// <summary>
@@ -199,6 +202,21 @@ public static class CombatCalculator
             if (ownDamage != 0)
             {
                 damageBonus.Add(BreakdownSources.Item, item.Name, ownDamage);
+            }
+
+            if (active)
+            {
+                foreach (var bonus in weapon.EnhancementBonuses.Where(b => b.Modifier.Target is null))
+                {
+                    if (bonus.Modifier.Kind == ItemModifierKind.AttackBonus)
+                    {
+                        attack.Add(BreakdownSources.Item, bonus.Label, bonus.Modifier.Value);
+                    }
+                    else if (bonus.Modifier.Kind == ItemModifierKind.DamageBonus)
+                    {
+                        damageBonus.Add(BreakdownSources.Item, bonus.Label, bonus.Modifier.Value);
+                    }
+                }
             }
 
             attack.AddAll(globalAttack).AddAll(FeatureParts(featureAttack, context, versatileGrip: false));

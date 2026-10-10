@@ -281,7 +281,7 @@ internal sealed class CatalogRepository(AppDbContext db, CatalogScopeContext sco
             ? []
             : await db.Set<FeatureDefinition>().AsNoTracking()
                 .Where(x => (x.SubclassIndex != null ? subclassIndexes.Contains(x.SubclassIndex) : classIndexes.Contains(x.ClassIndex))
-                    && (x.ResourceJson != null || x.CompanionJson != null || x.ModifiersJson != null))
+                    && (x.ResourceJson != null || x.CompanionJson != null || x.ModifiersJson != null || x.ItemEnhancementJson != null))
                 .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<SpellDefinition>> ListAllSpellsAsync(CancellationToken cancellationToken = default) =>

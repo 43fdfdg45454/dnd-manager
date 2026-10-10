@@ -68,6 +68,7 @@ public sealed class CharacterSheetService(
     IItemTemplateRepository itemTemplates,
     ICharacterCompanionRepository companions,
     CompanionPlanner companionPlanner,
+    Items.ItemEnhancementPlanner enhancementPlanner,
     CharacterViews views,
     CatalogScopeContext scope,
     IDateTimeProvider clock) : ICharacterSheetService
@@ -337,6 +338,24 @@ public sealed class CharacterSheetService(
             companionDtos.Add(await companionPlanner.BuildDtoAsync(each, companionGrant, sheet.ProficiencyBonus, cancellationToken, companionContext));
         }
 
+        var enhancementGrant = sheetCatalog.ItemEnhancement(character);
+        var enhancementsOf = sheetCatalog.Enhancements(character);
+        var enhancedItems = character.Items
+            .Select(i => (Entry: i, Enhanced: Dnd5eInventory.Enhance(i, templates, enhancementsOf)))
+            .Where(i => i.Enhanced.Enhancements.Count > 0)
+            .OrderBy(i => i.Entry.SortOrder)
+            .ThenBy(i => i.Entry.Id)
+            .Select(i => Items.CharacterItemEnhancementDto.From(i.Entry.Id, i.Enhanced))
+            .ToList();
+        var grafts = character.Items
+            .Select(i => (Entry: i, Template: InventoryView.TemplateOf(templates, i.TemplateId)))
+            .Select(i => (i.Entry, i.Template, Slot: WeaponRules.Parse(i.Template?.SystemDataJson).GraftSlot))
+            .Where(i => i.Slot is not null)
+            .OrderBy(i => i.Slot, StringComparer.Ordinal)
+            .ThenBy(i => i.Entry.SortOrder)
+            .Select(i => new Items.CharacterGraftDto(i.Entry.Id, InventoryView.Resolve(templates, i.Entry).Name, i.Slot!, i.Entry.Equipped))
+            .ToList();
+
         return new Dnd5eCharacterDetailDto
         {
             RaceIndex = character.RaceIndex,
@@ -383,6 +402,9 @@ public sealed class CharacterSheetService(
             Sheet = ToDto(sheet),
             Inventory = InventoryView.Build(character.Character, templates, Dnd5eInventory.CarryingCapacity(sheet.Abilities[Abilities.Str].Score)),
             Combat = CombatSummaryBuilder.Build(character, sheet, sheetCatalog, templates, resources),
+            ItemEnhancements = enhancedItems,
+            ItemEnhancementFeature = enhancementGrant is null ? null : await enhancementPlanner.FeatureDtoAsync(enhancementGrant, cancellationToken),
+            Grafts = grafts,
             PendingRest = pendingRest is null ? null : PendingRestDto.From(pendingRest),
             PendingLevelUpTo = character.PendingLevelUpTo,
             SpellPreparationPending = character.SpellPreparationPending,
@@ -417,7 +439,7 @@ public sealed class CharacterSheetService(
     {
         var equipped = character.Items.Where(i => i.Equipped).ToList();
         var templates = await InventoryView.LoadTemplatesAsync(itemTemplates, equipped.Select(i => i.TemplateId), cancellationToken);
-        return SheetCalculator.Calculate(sheetCatalog.InputFor(character, Dnd5eInventory.Gear(equipped, templates)));
+        return SheetCalculator.Calculate(sheetCatalog.InputFor(character, Dnd5eInventory.Gear(equipped, templates, sheetCatalog.Enhancements(character))));
     }
 
     /// <summary>Sheets of several characters with their inventories loaded, with one template query for all.</summary>
@@ -432,7 +454,7 @@ public sealed class CharacterSheetService(
             cancellationToken);
         return characters.ToDictionary(
             c => c.Id,
-            c => SheetCalculator.Calculate(sheetCatalog.InputFor(c, Dnd5eInventory.Gear(c.Items.Where(i => i.Equipped), templates))));
+            c => SheetCalculator.Calculate(sheetCatalog.InputFor(c, Dnd5eInventory.Gear(c.Items.Where(i => i.Equipped), templates, sheetCatalog.Enhancements(c)))));
     }
 
     /// <summary>Levels with slots (or spent ones), pact slots first as level 0.</summary>

@@ -29,6 +29,14 @@ public interface IItemSystem
     /// </summary>
     Task<string?> AttunementProblemAsync(CharacterRef character, ItemTemplate template, CancellationToken cancellationToken = default) =>
         Task.FromResult<string?>(null);
+
+    /// <summary>
+    /// Why the character may not equip the inventory entry <paramref name="item"/> (D&amp;D 5e: a graft in a body slot
+    /// another equipped graft already uses), as a user-facing message, or null when it may.
+    /// </summary>
+    /// <param name="templates">Templates of the character's inventory entries.</param>
+    Task<string?> EquipProblemAsync(CharacterRef character, CharacterItem item, IReadOnlyDictionary<Guid, ItemTemplate> templates, CancellationToken cancellationToken = default) =>
+        Task.FromResult<string?>(null);
 }
 
 /// <summary>A resolved item (template plus overrides) handed to the system.</summary>

@@ -322,6 +322,11 @@ public sealed class UpdateInventoryItemHandler(
             await hooks.EnsureCanAttuneAsync(character, template, cancellationToken);
         }
 
+        if (request.Equipped == true && character.FindItem(itemId) is { Equipped: false } toEquip)
+        {
+            await hooks.EnsureCanEquipAsync(character, toEquip, templates, cancellationToken);
+        }
+
         var item = character.UpdateItem(
             itemId,
             new ItemUpdate

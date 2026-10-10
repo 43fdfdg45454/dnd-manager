@@ -111,6 +111,9 @@ public sealed partial class Dnd5eCharacter
     /// <summary>Persisted form of <see cref="HitDiceUsed"/>: <c>{"fighter":2}</c>.</summary>
     public string HitDiceUsedJson { get; private set; } = "{}";
 
+    /// <summary>Persisted form of <see cref="ItemEnhancements"/>: <c>{"&lt;item id&gt;":["option-a","option-b"]}</c>.</summary>
+    public string ItemEnhancementsJson { get; private set; } = "{}";
+
     /// <summary>Result of the optional table of the background (specialty, scheme, origin...).</summary>
     public string BackgroundDetail { get; private set; } = string.Empty;
 
@@ -140,6 +143,52 @@ public sealed partial class Dnd5eCharacter
     /// <summary>Spent hit dice per class index.</summary>
     public IReadOnlyDictionary<string, int> HitDiceUsed =>
         JsonSerializer.Deserialize<Dictionary<string, int>>(HitDiceUsedJson, JsonOptions) ?? [];
+
+    /// <summary>Enhancement options applied to each inventory entry (phase 35B3), by item id.</summary>
+    public IReadOnlyDictionary<Guid, IReadOnlyList<string>> ItemEnhancements
+    {
+        get
+        {
+            try
+            {
+                return (JsonSerializer.Deserialize<Dictionary<Guid, List<string>>>(ItemEnhancementsJson, JsonOptions) ?? [])
+                    .Where(e => e.Value.Count > 0)
+                    .ToDictionary(e => e.Key, e => (IReadOnlyList<string>)e.Value);
+            }
+            catch (JsonException)
+            {
+                return new Dictionary<Guid, IReadOnlyList<string>>();
+            }
+        }
+    }
+
+    /// <summary>The enhancement options of an inventory entry (empty for none).</summary>
+    public IReadOnlyList<string> ItemEnhancementsOf(Guid itemId) => ItemEnhancements.GetValueOrDefault(itemId) ?? [];
+
+    /// <summary>
+    /// Replaces the enhancement options of the inventory entry <paramref name="itemId"/> (an empty list removes them); the
+    /// caller has checked the options. Entries of items no longer in the inventory are dropped.
+    /// </summary>
+    public void SetItemEnhancements(Guid itemId, IReadOnlyList<string> options, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        if (Character.Items.All(i => i.Id != itemId))
+        {
+            throw DomainException.NotFound("El objeto no está en el inventario del personaje.");
+        }
+
+        var all = ItemEnhancements
+            .Where(e => e.Key != itemId && Character.Items.Any(i => i.Id == e.Key))
+            .ToDictionary(e => e.Key, e => e.Value.ToList());
+        var cleaned = options.Select(o => o.Trim()).Where(o => o.Length > 0).Distinct(StringComparer.Ordinal).ToList();
+        if (cleaned.Count > 0)
+        {
+            all[itemId] = cleaned;
+        }
+
+        ItemEnhancementsJson = JsonSerializer.Serialize(all, JsonOptions);
+        Touch(now);
+    }
 
     /// <summary>The 5e part of a new draft: all base scores at 10, average hit points and racial bonuses on.</summary>
     public static Dnd5eCharacter Create(Character character)

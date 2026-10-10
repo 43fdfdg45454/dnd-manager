@@ -123,6 +123,18 @@ public static class Dnd5eCharacterEndpoints
             .WithName("DeleteCharacterCompanionById")
             .WithSummary("Despide un compañero: el dueño o un DM, sin aprobación.");
 
+        group.MapPut("/items/{itemId:guid}/enhancements", async Task<Results<Ok<CharacterDetailDto>, Accepted<ChangeRequestDto>>> (
+                Guid id, Guid itemId, Application.Items.SetItemEnhancementsRequest request, ClaimsPrincipal user, Application.Items.SetItemEnhancementsHandler handler, CancellationToken ct) =>
+            {
+                var result = await handler.HandleAsync(user.GetUserId(), id, itemId, request, ct);
+                return result.ChangeRequest is { } changeRequest
+                    ? TypedResults.Accepted($"/api/v1/change-requests/{changeRequest.Id}", changeRequest)
+                    : TypedResults.Ok(result.Character!);
+            })
+            .WithName("SetItemEnhancements")
+            .WithSummary("Mejoras de un objeto del inventario ({ options: [...] }, vacía para quitarlas). Con el rasgo de mejora, el dueño las aplica directamente dentro de sus límites; sin él, 202 con una solicitud para el DM. Un DM las aplica directamente.")
+            .ProducesValidationProblem();
+
         group.MapPost("/concentration",async (Guid id, ConcentrationRequest request, ClaimsPrincipal user, SetConcentrationHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, request, ct)))
             .WithName("SetCharacterConcentration")

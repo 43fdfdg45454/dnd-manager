@@ -45,6 +45,9 @@ public sealed record WeaponRules
     /// <summary>Era of a firearm ("renaissance"), informative.</summary>
     public string? FirearmEra { get; init; }
 
+    /// <summary>Body slot of a graft (<c>items[].graft.slot</c>): one equipped graft per slot; null for other items.</summary>
+    public string? GraftSlot { get; init; }
+
     /// <summary>Tolerant parsing of the system data JSON of an item; anything malformed is ignored.</summary>
     public static WeaponRules Parse(string? systemDataJson)
     {
@@ -98,6 +101,7 @@ public sealed record WeaponRules
                     ? classes.EnumerateArray().Where(c => c.ValueKind == JsonValueKind.String).Select(c => c.GetString()!).ToList()
                     : [],
                 FirearmEra = root.TryGetProperty("firearm", out var firearm) && firearm.ValueKind == JsonValueKind.Object ? Text(firearm, "era") : null,
+                GraftSlot = root.TryGetProperty("graft", out var graft) && graft.ValueKind == JsonValueKind.Object ? Text(graft, "slot") : null,
             };
         }
         catch (JsonException)

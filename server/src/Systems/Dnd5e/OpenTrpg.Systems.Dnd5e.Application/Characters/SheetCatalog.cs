@@ -1,6 +1,8 @@
 using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Domain.Catalog;
 using OpenTrpg.Core.Domain.Characters;
+using OpenTrpg.Core.Domain.Items;
+using OpenTrpg.Systems.Dnd5e.Application.Items;
 using OpenTrpg.Core.Application;
 using OpenTrpg.Core.Application.Characters;
 using OpenTrpg.Systems.Dnd5e.Application;
@@ -91,7 +93,10 @@ public sealed class SheetCatalog
         var raceExtensions = await catalog.ListRaceExtensionsAsync(raceIndexes, cancellationToken);
 
         // Options picked in level choices (fighting styles, invocations, feats...): their effects enter the sheet.
-        var options = await catalog.ListOptionsByIndexAsync(Distinct(characters.SelectMany(ChoiceEffects.OptionIndexes)), cancellationToken);
+        // Plus the enhancement options applied to inventory entries (phase 35B3).
+        var options = await catalog.ListOptionsByIndexAsync(
+            Distinct(characters.SelectMany(ChoiceEffects.OptionIndexes).Concat(characters.SelectMany(c => c.ItemEnhancements.Values.SelectMany(v => v)))),
+            cancellationToken);
 
         // Spells cast a number of times per long rest (races, options, subclass levels) name their resource after the spell.
         var grantedSpellIndexes = Distinct(races.Select(r => r.Grants)
@@ -134,6 +139,12 @@ public sealed class SheetCatalog
     public SpellDefinition? Spell(string index) => _spells.GetValueOrDefault(index);
 
     public OptionDefinition? Option(string index) => _options.GetValueOrDefault(index);
+
+    /// <summary>The enhancements of each inventory entry of the character, with the options of this catalog.</summary>
+    public Func<CharacterItem, IReadOnlyList<AppliedEnhancement>> Enhancements(Dnd5eCharacter character) => ItemEnhancementEffects.For(character, Option);
+
+    /// <summary>The item enhancement feature the character has reached (content packs), or null.</summary>
+    public ItemEnhancementGrant? ItemEnhancement(Dnd5eCharacter character) => ItemEnhancementGrants.Find(character, _featureResources);
 
     /// <summary>The companion feature the character has reached (content packs), or null.</summary>
     public CompanionGrant? Companion(Dnd5eCharacter character) => CompanionGrants.Find(character, _featureResources);
