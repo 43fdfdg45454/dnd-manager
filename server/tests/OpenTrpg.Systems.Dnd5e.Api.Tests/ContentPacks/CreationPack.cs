@@ -128,6 +128,13 @@ internal static class CreationPack
                 ["index"] = I("orden-llama"),
                 ["name"] = "Orden de la Llama",
                 ["description"] = new JsonArray("Subclase ficticia."),
+                // H11: the order grants a signal without spending a choice.
+                ["levels"] = new JsonArray(new JsonObject
+                {
+                    ["level"] = 3,
+                    ["features"] = new JsonArray(new JsonObject { ["index"] = I("llama-guia"), ["name"] = "Llama guía", ["description"] = new JsonArray("Texto de ejemplo.") }),
+                    ["grants"] = new JsonObject { ["options"] = new JsonArray(I("farolillo")) },
+                }),
             },
             new JsonObject
             {
@@ -145,7 +152,7 @@ internal static class CreationPack
         ["name"] = "Señales",
         ["options"] = new JsonArray(
             Option("senal-basica", "Señal básica", null),
-            Option("senal-doble", "Señal doble", new JsonObject { ["options"] = new JsonArray(I("senal-basica")) }),
+            Option("senal-doble", "Señal doble", new JsonObject { ["options"] = new JsonArray(I("senal-basica")) }, new JsonObject { ["options"] = new JsonArray(I("destello")) }),
             Option("faro-del-yunque", "Faro del yunque", new JsonObject { ["subclasses"] = new JsonArray(I("orden-yunque")) }),
             Option("luz-arcana", "Luz arcana", new JsonObject { ["classFeature"] = "spellcasting" }),
             Option("destello", "Destello", new JsonObject
@@ -160,12 +167,17 @@ internal static class CreationPack
             Option("del-heraldo", "Eco del heraldo", new JsonObject { ["classes"] = new JsonArray(I("heraldo")) })),
     };
 
-    private static JsonObject Option(string index, string name, JsonObject? prerequisites)
+    private static JsonObject Option(string index, string name, JsonObject? prerequisites, JsonObject? grants = null)
     {
         var option = new JsonObject { ["index"] = I(index), ["name"] = name, ["description"] = new JsonArray("Opción ficticia.") };
         if (prerequisites is not null)
         {
             option["prerequisites"] = prerequisites;
+        }
+
+        if (grants is not null)
+        {
+            option["grants"] = grants;
         }
 
         return option;

@@ -141,7 +141,7 @@ public sealed class ApplyLevelUpHandler(
             }
         }
 
-        await ChoiceGrants.ApplyAsync(catalog, character, replacedOptions, cancellationToken);
+        await ChoiceGrants.ApplyAsync(catalog, character, replacedOptions, now, cancellationToken);
         foreach (var (choice, selection) in resolved.Where(r => r.Choice.Rule.Kind == LevelChoiceKind.Expertise))
         {
             ApplyEffects(character, classIndex, choice, selection, replacedOptions, now);

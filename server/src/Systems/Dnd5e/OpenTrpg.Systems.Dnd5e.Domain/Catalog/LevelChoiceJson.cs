@@ -243,8 +243,14 @@ public sealed record OptionGrants(
     /// </summary>
     public string? SpellcastingAbility { get; init; }
 
+    /// <summary>
+    /// Option indexes (of any set) the character gets without spending a choice: recorded as picks of the class
+    /// (choices with the key <c>granted</c>) while the source is active.
+    /// </summary>
+    public IReadOnlyList<string> Options { get; init; } = [];
+
     public bool IsEmpty =>
-        Skills.Count + Cantrips.Count + Spells.Count + Armor.Count + Weapons.Count + Tools.Count + Languages.Count + SavingThrows.Count == 0;
+        Skills.Count + Cantrips.Count + Spells.Count + Armor.Count + Weapons.Count + Tools.Count + Languages.Count + SavingThrows.Count + Options.Count == 0;
 
     /// <summary>Whether it grants spells or cantrips.</summary>
     public bool HasSpells => Spells.Count + Cantrips.Count > 0;
@@ -274,6 +280,7 @@ public sealed record OptionGrants(
             Union(SavingThrows, other.SavingThrows))
         {
             SpellcastingAbility = SpellcastingAbility ?? other.SpellcastingAbility,
+            Options = Union(Options, other.Options),
         };
     }
 }
@@ -648,6 +655,7 @@ public static class LevelChoiceJson
                 List("savingThrows"))
             {
                 SpellcastingAbility = Text(Property(root, "spellcastingAbility")) is { } ability && Abilities.IsValid(ability) ? ability : null,
+                Options = List("options"),
             };
         }) ?? OptionGrants.None;
 

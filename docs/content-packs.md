@@ -1292,6 +1292,17 @@ conjuros y trucos deben existir en el SRD o en el paquete. En razas y subrazas (
 `minLevel` es el nivel total ([ver Race](#grants-de-raza-y-subraza)); fuera de ellas esos dos campos
 dan error.
 
+`grants.options` (opciones, dotes y `levels[].grants` de subclase; no en razas, subrazas ni
+trasfondos): índices de opciones de **cualquier** conjunto que el personaje recibe sin gastar una
+elección. Se registran como elecciones `granted` de la clase del origen (el nivel en que se eligió la
+opción o el de la subclase) mientras el origen siga activo, aplican sus efectos y concesiones, no
+se vuelven a ofrecer y no se invalidan por sus prerrequisitos. Una opción concedida puede conceder
+otras. Las clases no tienen `grants` por nivel: lo que una clase da a todos se modela como rasgo.
+
+```json
+{"index": "mipaquete-senal-doble", "name": "Señal doble", "grants": {"options": ["mipaquete-destello"]}}
+```
+
 **`Resource`**: recurso de usos limitados que la app crea como recurso automático del personaje.
 
 | Campo | Tipo | Reglas |
@@ -1533,7 +1544,8 @@ distinto del nivel del conjuro).
 ### `levels[].grants`
 
 Cada nivel de una subclase puede llevar `grants` (mismo formato): se aplican al alcanzar ese nivel de
-la clase con la subclase elegida (dominios con conjuros siempre preparados, competencias extra...).
+la clase con la subclase elegida (dominios con conjuros siempre preparados, competencias extra,
+opciones concedidas con `options`...).
 
 ### `levels[].features[].resource`
 

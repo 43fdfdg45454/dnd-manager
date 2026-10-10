@@ -198,7 +198,7 @@ public sealed class InvalidChoicesPlanner(ICatalogRepository catalog, CatalogSco
         }
 
         var replaced = resolved.Select(r => r.Invalid.Item.Index).ToList();
-        await ChoiceGrants.ApplyAsync(catalog, character, replaced, cancellationToken);
+        await ChoiceGrants.ApplyAsync(catalog, character, replaced, now, cancellationToken);
         return replaced;
     }
 

@@ -265,6 +265,61 @@ public class ContentPackCreationTests(ContentPackCreationApiFactory factory) : I
         Assert.True(errors.Any(e => e.StartsWith("classes[0].levelChoices[0].from[0]:", StringComparison.Ordinal)), all);
     }
 
+    // ---- H11: options granted without spending a choice -------------------------------------------------
+
+    [Fact]
+    public async Task Subclass_levels_and_options_grant_options_without_spending_a_choice()
+    {
+        var s = await ScenarioAsync();
+        var keeper = I("guardian");
+        var hero = await DraftAsync(s, keeper, 1, new { str = 14, dex = 12, con = 14, @int = 10, wis = 14, cha = 8 });
+        var choose = new Dictionary<string, string> { ["senales"] = I("senal-basica"), ["senales-5"] = I("senal-doble") };
+        object? Pick(LevelUpChoiceDto choice) =>
+            choice.Kind == "Subclass" ? new { key = choice.Key, selected = new[] { I("orden-llama") } }
+            : choose.TryGetValue(choice.Key, out var index) ? new { key = choice.Key, selected = new[] { index } }
+            : null;
+
+        for (var level = 2; level <= 5; level++)
+        {
+            await GrantAsync(s, hero.Id);
+            var plan = await PlanAsync(s.Player, hero.Id, keeper);
+            if (level == 4)
+            {
+                // The granted lantern is not offered again.
+                Assert.DoesNotContain(plan.Choices.Single(c => c.Key == "asi").Options, o => o.Index == I("farolillo"));
+            }
+
+            hero = await ApplyAsync(s.Player, hero.Id, new { classIndex = keeper, hitPointsRolled = 6, choices = Answers(plan, hero, Pick) });
+            var granted = hero.Choices.Where(c => c.Key == "granted").SelectMany(c => c.Selected).Select(i => i.Index).ToList();
+            Assert.Equal(level >= 3, granted.Contains(I("farolillo")));
+            Assert.Equal(level >= 5, granted.Contains(I("destello")));
+        }
+
+        Assert.Empty(hero.InvalidChoices);
+    }
+
+    [Fact]
+    public async Task Races_cannot_grant_options()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        var pack = Renamed(Build(), "vacio-malo-h11");
+        pack["races"] = new JsonArray(new JsonObject
+        {
+            ["index"] = "vacio-malo-h11-sombra",
+            ["name"] = "Sombra",
+            ["speed"] = 30,
+            ["size"] = "Medium",
+            ["grants"] = new JsonObject { ["options"] = new JsonArray("vacio-malo-h11-farolillo") },
+        });
+        pack["optionSets"]![0]!["options"]![0]!["grants"] = new JsonObject { ["options"] = new JsonArray("vacio-malo-h11-no-existe") };
+
+        var errors = await ImportErrorsAsync(admin, pack);
+        var all = string.Join("\n", errors);
+
+        Assert.True(errors.Any(e => e.StartsWith("races[0].grants.options[0]:", StringComparison.Ordinal)), all);
+        Assert.True(errors.Any(e => e.StartsWith("optionSets[0].options[0].grants.options[0]:", StringComparison.Ordinal)), all);
+    }
+
     // ---- Helpers ---------------------------------------------------------------------------------------
 
     /// <summary>Imports the pack once per database.</summary>

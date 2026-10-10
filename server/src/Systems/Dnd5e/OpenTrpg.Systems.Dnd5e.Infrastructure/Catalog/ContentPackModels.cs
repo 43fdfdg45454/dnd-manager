@@ -1203,6 +1203,9 @@ internal sealed class PackGrantsJson
 
     /// <summary>Races and subraces: ability the granted spells are cast with ("cha").</summary>
     public string? SpellcastingAbility { get; set; }
+
+    /// <summary>Options and feats: option indexes (any set) the character gets without spending a choice.</summary>
+    public List<string?>? Options { get; set; }
 }
 
 internal sealed class PackGrantedSpellJson

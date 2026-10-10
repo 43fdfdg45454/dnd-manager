@@ -443,11 +443,26 @@ internal sealed partial class ContentPackValidator
             }
         });
 
+        var options = new List<string>();
+        ForEachText($"{path}.options", grants.Options, (optionPath, value) =>
+        {
+            if (origin)
+            {
+                AddError(optionPath, "Las razas, subrazas y trasfondos no conceden opciones.");
+            }
+            else if (Reference(optionPath, value) is { } index && !options.Contains(index))
+            {
+                options.Add(index);
+                _optionReferences.Add((optionPath, null, index));
+            }
+        });
+
         return LevelChoiceJson.Serialize(new
         {
             skills,
             cantrips,
             spells,
+            options,
             armor = TextList($"{path}.armor", grants.Armor, 50, ShortTextMaxLength).Select(a => ProficiencyKeys.NormalizeArmor(a) ?? a).ToList(),
             weapons = TextList($"{path}.weapons", grants.Weapons, 50, ShortTextMaxLength).Select(ProficiencyKeys.NormalizeWeapon).ToList(),
             tools = TextList($"{path}.tools", grants.Tools, 50, ShortTextMaxLength),

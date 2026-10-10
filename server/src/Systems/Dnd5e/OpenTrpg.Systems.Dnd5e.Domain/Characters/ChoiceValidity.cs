@@ -51,7 +51,8 @@ public static class ChoiceValidity
 
         var picks = character.ActivePicks();
         var result = new List<InvalidChoice>();
-        foreach (var pick in picks.Where(p => p.SetId is not null))
+        // Granted options come with their source: their prerequisites are not checked.
+        foreach (var pick in picks.Where(p => p.SetId is not null && p.Key != CharacterChoice.GrantedKey))
         {
             if (findOption(pick.Item.Index) is not { } option)
             {
