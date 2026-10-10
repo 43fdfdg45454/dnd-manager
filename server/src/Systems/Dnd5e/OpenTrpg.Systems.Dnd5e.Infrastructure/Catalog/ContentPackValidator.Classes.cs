@@ -104,6 +104,7 @@ internal sealed partial class ContentPackValidator
         var flavor = OptionalText($"{path}.subclassFlavor", definition.SubclassFlavor, NameMaxLength);
         var subclassLevel = OptionalInt($"{path}.subclassLevel", definition.SubclassLevel, 1, MaxLevels);
         var spellcasting = definition.Spellcasting is { } casting ? ClassSpellcasting($"{path}.spellcasting", casting) : null;
+        var table = SpellcastingTable(path, definition);
 
         if (index is null)
         {
@@ -153,6 +154,7 @@ internal sealed partial class ContentPackValidator
                 asiSoFar++;
             }
 
+            var (tableSlots, tableCantrips, tableSpells) = LevelSpellcasting(levelPath, level, table is not null);
             rows.ClassLevels.Add(new ClassLevel
             {
                 Index = $"{index}-{number}",
@@ -162,12 +164,14 @@ internal sealed partial class ContentPackValidator
                 AbilityScoreBonuses = asiSoFar,
                 FeatureIndexes = features,
                 ClassSpecificJson = JsonSerializer.Serialize(specific),
-                CantripsKnown = spellcasting is null ? null : Domain.Catalog.SubclassSpellcasting.At(spellcasting.Value.Cantrips, number),
-                SpellsKnown = spellcasting is null ? null : Domain.Catalog.SubclassSpellcasting.At(spellcasting.Value.Spells, number),
-                SpellSlots = spellcasting is null ? new int[ClassLevel.SpellSlotLevels] : SlotsAt(spellcasting.Value, number),
+                CantripsKnown = spellcasting is null ? tableCantrips : Domain.Catalog.SubclassSpellcasting.At(spellcasting.Value.Cantrips, number),
+                SpellsKnown = spellcasting is null ? tableSpells : Domain.Catalog.SubclassSpellcasting.At(spellcasting.Value.Spells, number),
+                SpellSlots = spellcasting is null ? tableSlots : SlotsAt(spellcasting.Value, number),
                 Source = _id,
             });
         }
+
+        FeaturesWithLevel($"{path}.features", definition.Features, index, null, rows);
 
         var resources = new List<string>();
         ForEach($"{path}.resources", definition.Resources, (resourcePath, resource) =>
@@ -209,10 +213,11 @@ internal sealed partial class ContentPackValidator
             HitDie = hitDie ?? 8,
             SavingThrows = savingThrows,
             ProficiencyNames = proficiencies,
-            SpellcastingAbility = spellcasting?.Ability,
-            IsSpellcaster = spellcasting is not null,
-            SpellcastingLevel = spellcasting is null ? 0 : ClassSpellcastingInfo.SpellcastingLevelOf(spellcasting.Value.Info.Progression),
-            IsPactCaster = spellcasting?.Info.Progression == ClassSpellcastingInfo.Pact,
+            SpellcastingAbility = spellcasting?.Ability ?? table?.Ability,
+            IsSpellcaster = spellcasting is not null || table is not null,
+            SpellcastingLevel = spellcasting is not null ? ClassSpellcastingInfo.SpellcastingLevelOf(spellcasting.Value.Info.Progression)
+                : table is not null ? ClassSpellcastingInfo.SpellcastingLevelOf(table.Value.Multiclass) : 0,
+            IsPactCaster = (spellcasting?.Info.Progression ?? table?.Multiclass) == ClassSpellcastingInfo.Pact,
             SubclassFlavor = flavor.Length > 0 ? flavor : DefaultSubclassFlavor,
             SkillChoicesJson = skillChoices,
             StartingEquipmentText = OptionalText($"{path}.startingEquipmentText", definition.StartingEquipmentText, LongTextMaxLength),
@@ -227,6 +232,81 @@ internal sealed partial class ContentPackValidator
         });
 
         Subclasses($"{path}.subclasses", definition.Subclasses, index, flavor.Length > 0 ? flavor : DefaultSubclassFlavor, rows, packSubclasses);
+    }
+
+    /// <summary>Spellcasting given as tables in the levels (<c>spellcastingAbility</c>, as the SRD classes).</summary>
+    private readonly record struct SpellcastingTableInfo(string Ability, string Multiclass);
+
+    private static readonly IReadOnlyList<string> MulticlassSpellcastingValues =
+        [ClassSpellcastingInfo.Full, ClassSpellcastingInfo.Half, ClassSpellcastingInfo.Third, ClassSpellcastingInfo.Pact, "none"];
+
+    /// <summary><c>spellcastingAbility</c> and <c>multiclassSpellcasting</c> of a class; null when the class has none.</summary>
+    private SpellcastingTableInfo? SpellcastingTable(string path, PackClassJson definition)
+    {
+        if (definition.SpellcastingAbility is null)
+        {
+            if (definition.MulticlassSpellcasting is not null)
+            {
+                AddError($"{path}.multiclassSpellcasting", "Solo se admite con spellcastingAbility.");
+            }
+
+            return null;
+        }
+
+        if (definition.Spellcasting is not null)
+        {
+            AddError($"{path}.spellcastingAbility", "Usa spellcasting o spellcastingAbility con las tablas de los niveles, no ambos.");
+            return null;
+        }
+
+        var ability = definition.SpellcastingAbility.Trim().ToLowerInvariant();
+        if (!Abilities.IsValid(ability))
+        {
+            AddError($"{path}.spellcastingAbility", $"Característica desconocida. Valores admitidos: {string.Join(", ", Abilities.All)}.");
+            return null;
+        }
+
+        var multiclass = definition.MulticlassSpellcasting?.Trim().ToLowerInvariant() ?? ClassSpellcastingInfo.Full;
+        if (!MulticlassSpellcastingValues.Contains(multiclass))
+        {
+            AddError($"{path}.multiclassSpellcasting", $"Valores admitidos: {string.Join(", ", MulticlassSpellcastingValues)}.");
+            return null;
+        }
+
+        return new SpellcastingTableInfo(ability, multiclass);
+    }
+
+    /// <summary>The spellcasting tables of a class level (<c>spellSlots</c>, <c>cantripsKnown</c>, <c>spellsKnown</c>).</summary>
+    private (int[] Slots, int? Cantrips, int? Spells) LevelSpellcasting(string path, PackClassLevelJson level, bool allowed)
+    {
+        var slots = new int[ClassLevel.SpellSlotLevels];
+        if (level.SpellSlots is null && level.CantripsKnown is null && level.SpellsKnown is null)
+        {
+            return (slots, null, null);
+        }
+
+        if (!allowed)
+        {
+            AddError(path, "spellSlots, cantripsKnown y spellsKnown solo se admiten en las clases con spellcastingAbility.");
+            return (slots, null, null);
+        }
+
+        if (level.SpellSlots is { } row)
+        {
+            if (row.Count is < 1 or > ClassLevel.SpellSlotLevels)
+            {
+                AddError($"{path}.spellSlots", "Indica de 1 a 9 cantidades (espacios de nivel 1 a 9).");
+            }
+            else
+            {
+                for (var i = 0; i < row.Count; i++)
+                {
+                    slots[i] = RequiredInt($"{path}.spellSlots[{i}]", row[i], 0, 9) ?? 0;
+                }
+            }
+        }
+
+        return (slots, OptionalInt($"{path}.cantripsKnown", level.CantripsKnown, 0, 10), OptionalInt($"{path}.spellsKnown", level.SpellsKnown, 0, 30));
     }
 
     private readonly record struct ClassCasting(
@@ -343,8 +423,12 @@ internal sealed partial class ContentPackValidator
     {
         void Add(int level, string key, string name, LevelChoiceKind kind, int choose, string note, string? filter = null, bool replaces = false)
         {
+            // An explicit choice of the class replaces the generated one: the same key or kind at that level, or (the
+            // subclass) a subclass choice at any level.
             var id = LevelChoiceRule.IdFor(classIndex, null, level, key);
-            if (_seen.TryGetValue("levelChoiceRules", out var seen) && seen.Contains(id))
+            if ((_seen.TryGetValue("levelChoiceRules", out var seen) && seen.Contains(id))
+                || rows.LevelChoiceRules.Any(r => r.ClassIndex == classIndex && r.SubclassIndex is null && r.Kind == kind
+                    && (r.Level == level || kind == LevelChoiceKind.Subclass)))
             {
                 return;
             }
@@ -408,10 +492,10 @@ internal sealed partial class ContentPackValidator
         }
 
         var from = new List<string>();
-        ForEachText($"{path}.from", choices.From, (itemPath, value) =>
+        ForEachText($"{path}.from", choices.From?.Select(o => o?.Index).ToList(), (itemPath, value) =>
         {
             var key = value.ToLowerInvariant();
-            if (!_context.Skills.ContainsKey(key))
+            if (!_skills.ContainsKey(key))
             {
                 AddError(itemPath, $"La habilidad '{value}' no existe (usa índices como \"perception\").");
             }
@@ -422,7 +506,7 @@ internal sealed partial class ContentPackValidator
         });
         if (from.Count == 0)
         {
-            from.AddRange(_context.Skills.Keys.Order(StringComparer.Ordinal));
+            from.AddRange(_skills.Keys.Order(StringComparer.Ordinal));
         }
 
         var choose = RequiredInt($"{path}.choose", choices.Choose, 0, from.Count) ?? 0;
@@ -671,11 +755,11 @@ internal sealed partial class ContentPackValidator
             NullableText($"{path}.armorClassType", creature.ArmorClassType, ShortTextMaxLength),
             hitPoints,
             OptionalText($"{path}.hitDice", creature.HitDice, ShortTextMaxLength),
-            null,
+            NullableText($"{path}.hitPointsRoll", creature.HitPointsRoll, ShortTextMaxLength),
             speeds,
             abilities,
             Bonuses("savingThrows", creature.SavingThrows, Abilities.IsValid, "Característica desconocida (str, dex, con, int, wis o cha)."),
-            Bonuses("skills", creature.Skills, _context.Skills.ContainsKey, "Habilidad desconocida (usa índices como \"perception\")."),
+            Bonuses("skills", creature.Skills, _skills.ContainsKey, "Habilidad desconocida (usa índices como \"perception\")."),
             senses,
             OptionalInt($"{path}.passivePerception", creature.PassivePerception, 0, 40) ?? 10,
             OptionalText($"{path}.languages", creature.Languages, LongTextMaxLength),
@@ -777,6 +861,28 @@ internal sealed partial class ContentPackValidator
                 var index = Index($"{path}.index", $"reference.{kind}", entry.Index);
                 var name = RequiredText($"{path}.name", entry.Name, NameMaxLength);
                 var description = Paragraphs($"{path}.description", entry.Description);
+                var items = new List<string>();
+                if (kind == ReferenceEntry.EquipmentCategories)
+                {
+                    ForEachText($"{path}.items", entry.Items, (itemPath, item) =>
+                    {
+                        if (Reference(itemPath, item) is { } itemIndex && !items.Contains(itemIndex))
+                        {
+                            items.Add(itemIndex);
+                            _itemReferences.Add((itemPath, itemIndex));
+                        }
+                    });
+                }
+                else if (entry.Items is not null)
+                {
+                    AddError($"{path}.items", "Solo las categorías de equipo (equipmentCategories) tienen objetos.");
+                }
+
+                if (index is not null && kind == ReferenceEntry.EquipmentCategories)
+                {
+                    rows.EquipmentCategories.Add(new EquipmentCategory { Index = index, Name = name, ItemIndexes = items, Source = _id });
+                }
+
                 if (index is not null)
                 {
                     rows.ReferenceEntries.Add(new ReferenceEntry

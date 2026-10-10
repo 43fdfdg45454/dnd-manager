@@ -19,15 +19,15 @@ namespace OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
 
 /// <summary>
 /// The D&amp;D 5e catalog (<see cref="ICatalogSystem"/>): the SRD as base pack and the private content packs of the
-/// instance (<c>docs/content-packs.md</c>). A pack is validated as a whole (every error with its JSON path) and its
-/// definitions are written inside the transaction the core's <c>ContentPackRegistry</c> opened: the definitions with
-/// <c>Source</c> = pack id are replaced and item templates are upserted by index so their ids survive (items dropped
-/// from the pack are deleted unless an inventory, shop or stash uses them). Re-importing the same version replaces
-/// the content as well.
+/// instance (<c>docs/content-packs.md</c>), both in the pack format 3, the only way definitions reach the catalog. A pack
+/// is validated as a whole (every error with its JSON path) and its definitions are written inside the transaction the
+/// core's <c>ContentPackRegistry</c> opened (the base pack opens its own): the definitions with <c>Source</c> = pack id
+/// are replaced, its races and classes are updated in place (other packs extend them) and item templates are upserted
+/// by index so their ids survive (items dropped from the pack are deleted unless an inventory, shop or stash uses
+/// them). Re-importing the same version replaces the content as well.
 /// </summary>
 internal sealed partial class Dnd5eCatalogSystem(
     AppDbContext db,
-    ISrdSeeder seeder,
     IDateTimeProvider clock,
     ILogger<Dnd5eCatalogSystem> logger) : IDnd5eCatalogSystem
 {
@@ -51,18 +51,69 @@ internal sealed partial class Dnd5eCatalogSystem(
     public bool IsReservedSource(string id) => Dnd5eCatalogSources.IsReserved(id);
 
     public async Task LoadBasePackAsync(CancellationToken cancellationToken = default) =>
-        await seeder.SeedAsync(cancellationToken);
+        await ImportBasePackAsync(cancellationToken);
 
-    public async Task<PackImportResult> ImportPackAsync(Stream json, CancellationToken cancellationToken = default)
+    public async Task<bool> ImportBasePackAsync(CancellationToken cancellationToken = default)
     {
-        var pack = await DeserializeAsync(json, cancellationToken);
+        PackJson pack;
+        await using (var stream = SrdBasePack.Open())
+        {
+            pack = await DeserializeAsync(stream, cancellationToken);
+        }
 
+        var version = pack.Version?.Trim() ?? string.Empty;
+        if (await db.ContentPacks.AnyAsync(x => x.Id == Dnd5eCatalogSources.Srd && x.IsBase && x.Version == version, cancellationToken))
+        {
+            return false;
+        }
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        PackImportResult result;
+        await using (var transaction = await db.Database.BeginTransactionAsync(cancellationToken))
+        {
+            result = await ImportAsync(pack, Dnd5eCatalogSources.Srd, cancellationToken);
+            await db.ContentPacks.Where(x => x.Id == Dnd5eCatalogSources.Srd).ExecuteDeleteAsync(cancellationToken);
+            db.ContentPacks.Add(new ContentPack
+            {
+                Id = Dnd5eCatalogSources.Srd,
+                SystemId = Dnd5eCatalogSources.SystemId,
+                Name = result.Name,
+                Version = result.Version,
+                FormatVersion = result.FormatVersion,
+                IsBase = true,
+                ImportedAt = clock.UtcNow,
+                CountsJson = JsonSerializer.Serialize(result.Counts),
+            });
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+
+        db.ChangeTracker.Clear();
+        logger.LogInformation(
+            "SRD base pack {Version} imported in {ElapsedMs} ms: {Counts}",
+            result.Version,
+            stopwatch.ElapsedMilliseconds,
+            string.Join(", ", result.Counts.Select(c => $"{c.Key}={c.Value}")));
+        return true;
+    }
+
+    public async Task<PackImportResult> ImportPackAsync(Stream json, CancellationToken cancellationToken = default) =>
+        await ImportAsync(await DeserializeAsync(json, cancellationToken), null, cancellationToken);
+
+    /// <param name="baseId">The id of the base pack when <paramref name="pack"/> is that one (the SRD); null for a content pack.</param>
+    private async Task<PackImportResult> ImportAsync(PackJson pack, string? baseId, CancellationToken cancellationToken)
+    {
         // The pack sees the SRD, the packs it requires and (to replace them) its own definitions.
         var reach = new HashSet<string>(StringComparer.Ordinal) { Dnd5eCatalogSources.Srd };
         reach.UnionWith((pack.Requires ?? []).OfType<string>().Select(r => r.Trim()));
         var ownId = pack.Id?.Trim() ?? string.Empty;
         reach.Add(ownId);
-        var validator = new ContentPackValidator(await LoadContextAsync(reach, ownId, cancellationToken));
+        var context = await LoadContextAsync(reach, ownId, cancellationToken) with
+        {
+            BaseId = baseId,
+            ItemContents = baseId is null ? SrdBasePack.ItemContents : null,
+        };
+        var validator = new ContentPackValidator(context);
         var rows = validator.Validate(pack);
         if (validator.Id.Length > 0)
         {
@@ -78,11 +129,40 @@ internal sealed partial class Dnd5eCatalogSystem(
         var now = clock.UtcNow;
         var counts = rows.Counts();
 
+        // Bulk insert: change detection over thousands of tracked entities (the SRD) is the slow part.
+        var autoDetectChanges = db.ChangeTracker.AutoDetectChangesEnabled;
+        db.ChangeTracker.AutoDetectChangesEnabled = false;
+        try
+        {
+            await WriteAsync(id, rows, baseId is not null, now, cancellationToken);
+        }
+        finally
+        {
+            db.ChangeTracker.Clear();
+            db.ChangeTracker.AutoDetectChangesEnabled = autoDetectChanges;
+        }
+
+        return new PackImportResult(id, validator.Name, validator.Version, counts)
+        {
+            FormatVersion = ContentPackValidator.CurrentFormatVersion,
+            Requires = validator.Requires,
+        };
+    }
+
+    /// <summary>Replaces the definitions of the pack <paramref name="id"/> with <paramref name="rows"/>.</summary>
+    private async Task WriteAsync(string id, ContentPackRows rows, bool isBase, DateTimeOffset now, CancellationToken cancellationToken)
+    {
         // The pack's races are updated in place: other packs may have added subraces to them (races[].extends).
         var raceIndexes = rows.Races.Select(r => r.Index).ToList();
         // So are its classes: other packs may have added subclasses to them (classes[].extends).
         var classIndexes = rows.Classes.Select(c => c.Index).ToList();
         await DeleteDefinitionsAsync(id, raceIndexes, classIndexes, cancellationToken);
+        if (isBase)
+        {
+            // Only the base pack defines skills (they have no source).
+            await db.Set<SkillDefinition>().ExecuteDeleteAsync(cancellationToken);
+        }
+
         var existingRaces = (await db.Set<RaceDefinition>().AsNoTracking().Where(x => x.Source == id).Select(x => x.Index).ToListAsync(cancellationToken))
             .ToHashSet(StringComparer.Ordinal);
         var existingClasses = (await db.Set<ClassDefinition>().AsNoTracking().Where(x => x.Source == id).Select(x => x.Index).ToListAsync(cancellationToken))
@@ -113,16 +193,13 @@ internal sealed partial class Dnd5eCatalogSystem(
         db.Set<ConditionDefinition>().AddRange(rows.Conditions);
         db.Set<RuleDefinition>().AddRange(rows.Rules);
         db.Set<ReferenceEntry>().AddRange(rows.ReferenceEntries);
+        db.Set<EquipmentCategory>().AddRange(rows.EquipmentCategories);
+        db.Set<SkillDefinition>().AddRange(rows.Skills);
         await db.SaveChangesAsync(cancellationToken);
         db.ChangeTracker.Clear();
 
         await CatalogItems.UpsertAsync(db, id, rows.Items, now, cancellationToken);
         await CatalogItems.DeleteUnusedAsync(db, id, rows.Items.Select(i => i.Index).ToList(), cancellationToken);
-        return new PackImportResult(id, validator.Name, validator.Version, counts)
-        {
-            FormatVersion = ContentPackValidator.CurrentFormatVersion,
-            Requires = validator.Requires,
-        };
     }
 
     public async Task DeletePackAsync(string packId, CancellationToken cancellationToken = default)
@@ -377,6 +454,7 @@ internal sealed partial class Dnd5eCatalogSystem(
         await db.Set<ConditionDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<RuleDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<ReferenceEntry>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<EquipmentCategory>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<TrinketEntry>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<RollTable>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<LevelChoiceRule>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);

@@ -5,6 +5,7 @@ using OpenTrpg.Core.Domain.Items;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit.Abstractions;
+using OpenTrpg.Systems.Dnd5e.Application;
 using OpenTrpg.Systems.Dnd5e.Application.Abstractions;
 using OpenTrpg.Systems.Dnd5e.Domain.Catalog;
 using OpenTrpg.Core.Api.Tests;
@@ -62,8 +63,8 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
             Assert.True(await db.ItemTemplates.AnyAsync(x => x.CampaignId == null && x.Category == ItemCategory.Consumable));
 
             var import = await db.ContentPacks.SingleAsync();
-            Assert.Equal((Dnd5eCatalogSources.Srd, "dnd5e", "SRD 5.1", 0, true), (import.Id, import.SystemId, import.Name, import.FormatVersion, import.IsBase));
-            Assert.StartsWith("5.1-", import.Version);
+            Assert.Equal((Dnd5eCatalogSources.Srd, "dnd5e", "SRD 5.1", 3, true), (import.Id, import.SystemId, import.Name, import.FormatVersion, import.IsBase));
+            Assert.Matches(@"^5\.1\.\d+$", import.Version);
             Assert.True(import.Version.Length <= ContentPack.VersionMaxLength);
             Assert.Contains("\"spells\":319", import.CountsJson);
         });
@@ -85,7 +86,7 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
             var rule = await db.Set<LevelChoiceRule>().SingleAsync(x => x.Id == "warlock/-/2/eldritch-invocations");
             Assert.Equal((LevelChoiceKind.OptionSet, 2, true, true), (rule.Kind, rule.Choose, rule.Replaces, rule.Cumulative));
             Assert.True((await db.Set<LevelChoiceRule>().SingleAsync(x => x.Id == "wizard/-/2/spellbook")).Filter.MaxSpellLevelBySlots);
-            Assert.Contains("\"levelChoiceRules\":197", (await db.ContentPacks.SingleAsync()).CountsJson);
+            Assert.Contains("\"levelChoices\":197", (await db.ContentPacks.SingleAsync()).CountsJson);
         });
     }
 
@@ -117,9 +118,9 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
     {
         factory.CreateClient().Dispose();
         using var scope = factory.Services.CreateScope();
-        var seeder = scope.ServiceProvider.GetRequiredService<ISrdSeeder>();
+        var seeder = scope.ServiceProvider.GetRequiredService<IDnd5eCatalogSystem>();
 
-        Assert.False(await seeder.SeedAsync());
+        Assert.False(await seeder.ImportBasePackAsync());
 
         await factory.WithDbAsync(async db =>
         {
@@ -144,7 +145,7 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
 
         using var scope = factory.Services.CreateScope();
         var stopwatch = Stopwatch.StartNew();
-        Assert.True(await scope.ServiceProvider.GetRequiredService<ISrdSeeder>().SeedAsync());
+        Assert.True(await scope.ServiceProvider.GetRequiredService<IDnd5eCatalogSystem>().ImportBasePackAsync());
         output.WriteLine($"SRD re-import (SQLite in memory): {stopwatch.ElapsedMilliseconds} ms");
 
         await factory.WithDbAsync(async db =>
@@ -165,7 +166,7 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
         using var scope = fresh.Services.CreateScope();
 
         var stopwatch = Stopwatch.StartNew();
-        Assert.True(await scope.ServiceProvider.GetRequiredService<ISrdSeeder>().SeedAsync());
+        Assert.True(await scope.ServiceProvider.GetRequiredService<IDnd5eCatalogSystem>().ImportBasePackAsync());
         stopwatch.Stop();
         output.WriteLine($"SRD import (SQLite in memory): {stopwatch.ElapsedMilliseconds} ms");
 

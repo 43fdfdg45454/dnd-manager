@@ -41,8 +41,8 @@ public enum LevelChoiceKind
 
 /// <summary>
 /// A choice a class (or one of its subclasses) offers at one class level: the subclass, an Ability Score
-/// Improvement, fighting styles, invocations, new spells... Rows come from the SRD seed
-/// (<c>server/src/Systems/Dnd5e/seed/srd/level-choices.json</c>) and from content packs (format 2).
+/// Improvement, fighting styles, invocations, new spells... Rows come from content packs: the SRD base
+/// pack (generated from <c>server/src/Systems/Dnd5e/seed/srd/level-choices.json</c>) and the packs of the instance.
 /// </summary>
 public sealed class LevelChoiceRule
 {

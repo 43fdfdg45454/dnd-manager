@@ -1,9 +1,6 @@
 using OpenTrpg.Core.Domain.Items;
-using OpenTrpg.Core.Infrastructure;
-using OpenTrpg.Core.Infrastructure.Catalog;
-using OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
 
-namespace OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
+namespace OpenTrpg.Tools.SrdPack;
 
 /// <summary>
 /// Structured modifiers of the SRD items whose effect is a plain number (the dataset only has text).
