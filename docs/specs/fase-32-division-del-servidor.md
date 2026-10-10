@@ -2,16 +2,20 @@
 
 Fase mecánica (ADR 0009): mover, no reescribir. Parte del inventario y de los contratos de
 `docs/specs/fase-30-inventario-y-contrato.md` (§1 clasificación fichero a fichero con el reparto de
-cada Mixto, §3 `Character` del núcleo, §4 `IGameSystem`, §4.5 migraciones, §4.6 alias de rutas, §7
-lista de comprobación "Fase 32"). La API que ve la app instalada **no cambia** en ninguna entrega:
-mismas rutas (las antiguas como alias en B), mismo JSON, misma base de datos (sin migración de datos).
+cada Mixto, §3 `Character` del núcleo, §4 `IGameSystem`, §4.5 migraciones, §4.6 rutas del sistema, §7
+lista de comprobación "Fase 32").
+
+**Sin compatibilidad hacia atrás** (decisión del propietario, 2026-10-10): todavía nadie usa la app, así
+que no hay alias de rutas, ni nombres dobles de imagen, ni obligación de conservar la forma del JSON o
+los nombres de columna. Se elige la forma más limpia; cada migración debe aplicarse sobre una base de
+datos nueva y `master` queda desplegable desde cero. La app se adapta a las rutas nuevas en la fase 33.
 
 Se entrega en **tres partes**, cada una un PR que deja `master` desplegable con los tests verdes:
 
 | Parte | Qué | Resultado |
 |---|---|---|
-| **32A** | Proyectos nuevos, traslado de ficheros núcleo y 5e, reparto de los Mixtos, `IGameSystem` completo delegando en los servicios actuales | Solución con `OpenTrpg.Core.*` y `OpenTrpg.Systems.Dnd5e.*`; rutas y JSON idénticos; modelo EF idéntico |
-| **32B** | Endpoints 5e bajo `/api/v1/systems/dnd5e/...` con alias de las rutas actuales | Tabla de alias de la fase 30 §4.6 cumplida y probada |
+| **32A** | Proyectos nuevos, traslado de ficheros núcleo y 5e, reparto de los Mixtos, `IGameSystem` completo delegando en los servicios actuales | Solución con `OpenTrpg.Core.*` y `OpenTrpg.Systems.Dnd5e.*`; rutas sin cambio; JSON y columnas pueden cambiar si simplifican el reparto |
+| **32B** | Endpoints 5e bajo `/api/v1/systems/dnd5e/...` (sin alias); la app apunta a las rutas nuevas | Tabla de rutas de la fase 30 §4.6 cumplida y probada |
 | **32C** | Renombrado de imagen Docker, APK, nombres visibles de build, documentación; el propietario renombra el repositorio en GitHub | `ghcr.io/<owner>/opentrpg-api`, `opentrpg-X.Y.Z.apk` |
 
 ## 32A. Proyectos y traslado
@@ -52,8 +56,9 @@ EF mediante `IModelConfigurator` que `AppDbContext.OnModelCreating` recorre (DI)
    columna "Reparto" de cada fila. Puntos fijos:
    - `Character`: división de tabla (fase 30 §3.4): `Character` del núcleo con los campos de §3.1 y
      `Dnd5eCharacter` del módulo sobre la misma tabla `Characters`; sin cambios de columnas.
-   - `CharacterDetailDto`: JSON plano idéntico (fase 30 §3.2, decisión 2 de §7): el núcleo construye su
-     parte y `ISheetSystem.BuildDetailAsync` aporta los campos del sistema al mismo nivel.
+   - `CharacterDetailDto`: el núcleo construye su parte y `ISheetSystem.BuildDetailAsync` aporta los
+     campos del sistema; la forma (plana o anidada bajo `system`) se elige por claridad, no por
+     compatibilidad, y la app se adapta en la fase 33.
    - `ChangeRequestType`: cadena registrada; valores almacenados sin cambio; `EditSheet` y `Companion`
      los despacha el módulo (`IChangeRequestSystem`).
    - `RestRequests.HitDiceJson` → `PayloadJson` (decisión 8) con migración de renombrado de columna.
@@ -63,33 +68,27 @@ EF mediante `IModelConfigurator` que `AppDbContext.OnModelCreating` recorre (DI)
      (`IGameSystem.RealtimeEventKinds`).
 4. Completar `IGameSystem` según la fase 30 §4.1 con `Dnd5eSystem` delegando en los servicios actuales
    (§4.2); el núcleo llama al contrato solo donde §4.3 lo indica. Sin cambiar reglas ni cálculos.
-5. Comprobar el modelo: `dotnet ef migrations add Comprobacion -p src/Core/OpenTrpg.Core.Infrastructure
-   -s src/Core/OpenTrpg.Core.Api` debe generar `Up`/`Down` vacíos salvo el renombrado de
-   `HitDiceJson` (que va en su propia migración `RenameRestRequestPayload`); borrar la de comprobación.
-6. Prueba de regresión de API: un test que recorre las rutas de la tabla de la fase 30 §4.6 (todas las
-   actuales) más las del núcleo con un personaje de prueba y compara el JSON con la versión anterior
-   (capturar fixtures antes de empezar, en `tests/.../Fixtures/api-before-32.json`, y comparar al
-   final; los fixtures entran al repositorio).
+5. Migraciones: los cambios de esquema que el reparto necesite van en migraciones con nombre
+   descriptivo; `dotnet ef migrations add Comprobacion` no debe detectar cambios pendientes al terminar
+   (borrar la de comprobación). Las migraciones deben aplicarse sobre una base de datos vacía.
+6. Pruebas de integración existentes verdes; las de JSON idéntico son opcionales (sin compatibilidad).
 
 Entrega: `dotnet build -warnaserror`, `dotnet test` (todos los proyectos), `docker build` del
 Dockerfile actualizado, `flutter test` sin tocar la app (no debe cambiar nada en `app/`).
 
-## 32B. Rutas del sistema y alias
+## 32B. Rutas del sistema
 
 - `Systems.Dnd5e.Api` mapea sus endpoints bajo `/api/v1/systems/dnd5e` con un grupo que comprueba que
-  la campaña del personaje (o la campaña de la ruta) tiene `SystemId == "dnd5e"` (404 si no).
-- Las rutas actuales de la tabla de la fase 30 §4.6 quedan como alias del mismo handler con cabeceras
-  `Deprecation: true` y `Link: </api/v1/systems/dnd5e/...>; rel="successor-version"`; un único mapa
-  `RouteAliases` (ruta antigua → nueva) alimenta tanto el registro de alias como el test.
-- Test: recorre `RouteAliases`, llama a la ruta antigua y a la nueva con el mismo personaje y compara
-  estado y cuerpo; comprueba las dos cabeceras; comprueba que una campaña con otro `SystemId` recibe
-  404 en la ruta nueva.
-- Swagger agrupa por sistema. La app **no** cambia (sigue usando las rutas antiguas hasta la fase 33).
+  la campaña del personaje (o la campaña de la ruta) tiene `SystemId == "dnd5e"` (404 si no). Las rutas
+  antiguas desaparecen (sin alias).
+- La app cambia sus rutas en el mismo PR (`app/lib/features/{characters,catalog,...}/data/*repository*.dart`
+  y las claves de caché), para que `master` siga funcionando de punta a punta.
+- Test: recorre la tabla de la fase 30 §4.6 y comprueba que cada ruta nueva responde y la antigua da 404;
+  una campaña con otro `SystemId` recibe 404 en la ruta nueva. Swagger agrupa por sistema.
 
 ## 32C. Renombrado
 
-- CI (`.github/workflows/ci.yml`): imagen `ghcr.io/<owner>/opentrpg-api` (y, durante dos releases,
-  también `dnd-companion-api` con las mismas etiquetas para no romper despliegues); APK
+- CI (`.github/workflows/ci.yml`): imagen `ghcr.io/<owner>/opentrpg-api` (la antigua deja de publicarse); APK
   `opentrpg-X.Y.Z.apk`, artefacto `opentrpg-apk`; rutas de los proyectos nuevos.
 - `deploy/.env.sample`, `deploy/README.md`, `README.md`, `CLAUDE.md` (estructura y comandos),
   `docs/PLAN.md` (nombres), `Directory.Build.props` (`Authors`), `docker-compose.yml` (`name:

@@ -1,0 +1,23 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Core/">
+    <Project Path="src/Core/OpenTrpg.Core.Api/OpenTrpg.Core.Api.csproj" />
+    <Project Path="src/Core/OpenTrpg.Core.Api.Abstractions/OpenTrpg.Core.Api.Abstractions.csproj" />
+    <Project Path="src/Core/OpenTrpg.Core.Application/OpenTrpg.Core.Application.csproj" />
+    <Project Path="src/Core/OpenTrpg.Core.Domain/OpenTrpg.Core.Domain.csproj" />
+    <Project Path="src/Core/OpenTrpg.Core.Infrastructure/OpenTrpg.Core.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Systems/" />
+  <Folder Name="/src/Systems/Dnd5e/">
+    <Project Path="src/Systems/Dnd5e/OpenTrpg.Systems.Dnd5e.Api/OpenTrpg.Systems.Dnd5e.Api.csproj" />
+    <Project Path="src/Systems/Dnd5e/OpenTrpg.Systems.Dnd5e.Application/OpenTrpg.Systems.Dnd5e.Application.csproj" />
+    <Project Path="src/Systems/Dnd5e/OpenTrpg.Systems.Dnd5e.Domain/OpenTrpg.Systems.Dnd5e.Domain.csproj" />
+    <Project Path="src/Systems/Dnd5e/OpenTrpg.Systems.Dnd5e.Infrastructure/OpenTrpg.Systems.Dnd5e.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OpenTrpg.Core.Api.Tests/OpenTrpg.Core.Api.Tests.csproj" />
+    <Project Path="tests/OpenTrpg.Core.Domain.Tests/OpenTrpg.Core.Domain.Tests.csproj" />
+    <Project Path="tests/OpenTrpg.Systems.Dnd5e.Api.Tests/OpenTrpg.Systems.Dnd5e.Api.Tests.csproj" />
+    <Project Path="tests/OpenTrpg.Systems.Dnd5e.Domain.Tests/OpenTrpg.Systems.Dnd5e.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -12,6 +12,7 @@ server/**/obj/
 server/**/*.user
 server/.vs/
 server/TestResults/
+server/tests/**/Fixtures/*.actual.json
 
 # Flutter / Dart
 app/.dart_tool/
