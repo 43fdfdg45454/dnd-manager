@@ -12,7 +12,7 @@ namespace OpenTrpg.Core.Application.Characters;
 /// The level-up plan of a character for a class (<c>?classIndex=</c>, the main class by default). The owner
 /// needs a level granted by a DM (409 otherwise); DMs can always look. Other players get 403.
 /// </summary>
-public sealed class GetLevelUpPlanHandler(CharacterLoader characters, LevelUpPlanner planner)
+public sealed class GetLevelUpPlanHandler(Dnd5eCharacterLoader characters, LevelUpPlanner planner)
 {
     public async Task<LevelUpPlanDto> HandleAsync(Guid currentUserId, Guid characterId, string? classIndex, CancellationToken cancellationToken = default)
     {
@@ -30,7 +30,7 @@ public sealed class GetLevelUpPlanHandler(CharacterLoader characters, LevelUpPla
 /// hit points grow by the roll + Con, at least 1) and clears the pending level. Owner with a granted level, or DMs.
 /// </summary>
 public sealed class ApplyLevelUpHandler(
-    CharacterLoader characters,
+    Dnd5eCharacterLoader characters,
     LevelUpPlanner planner,
     InvalidChoicesPlanner invalidChoices,
     ICatalogRepository catalog,
@@ -311,9 +311,9 @@ public sealed class ApplyLevelUpHandler(
         {
             if (choice.FreeText)
             {
-                if (index.Length > Character.IndexMaxLength)
+                if (index.Length > Dnd5eCharacter.IndexMaxLength)
                 {
-                    throw AppException.Validation("choices", $"«{rule.Name}»: cada valor admite como máximo {Character.IndexMaxLength} caracteres.");
+                    throw AppException.Validation("choices", $"«{rule.Name}»: cada valor admite como máximo {Dnd5eCharacter.IndexMaxLength} caracteres.");
                 }
 
                 selected.Add(new ChoiceItem(index, index));
@@ -413,7 +413,7 @@ public sealed class ApplyLevelUpHandler(
     // ---- Effects -------------------------------------------------------------------------------------
 
     /// <summary>Immediate effects of a choice; option effects (modifiers, increases, resources) live in the sheet.</summary>
-    private static void ApplyEffects(Character character, string classIndex, PlannedChoice choice, ChoiceSelection selection, List<string> replacedOptions, DateTimeOffset now)
+    private static void ApplyEffects(Dnd5eCharacter character, string classIndex, PlannedChoice choice, ChoiceSelection selection, List<string> replacedOptions, DateTimeOffset now)
     {
         switch (choice.Rule.Kind)
         {
@@ -467,7 +467,7 @@ public sealed class ApplyLevelUpHandler(
 public static class LevelUpRules
 {
     /// <summary>The owner (with a level granted by a DM) and DMs; 403 for other players, 409 without a grant or at level 20.</summary>
-    public static void EnsureCanLevelUp(LoadedCharacter loaded, Guid actorUserId)
+    public static void EnsureCanLevelUp(LoadedDnd5eCharacter loaded, Guid actorUserId)
     {
         ArgumentNullException.ThrowIfNull(loaded);
         if (!loaded.Character.CanViewSheet(actorUserId, loaded.IsDm))

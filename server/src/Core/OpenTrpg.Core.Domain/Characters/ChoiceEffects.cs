@@ -54,7 +54,7 @@ public sealed record ChoiceEffects(
     /// Effects of the character's current picks (<see cref="Character.ActivePicks"/>) and feats, looking up the
     /// options with <paramref name="findOption"/> (missing ones are skipped).
     /// </summary>
-    public static ChoiceEffects Build(Character character, Func<string, OptionDefinition?> findOption)
+    public static ChoiceEffects Build(Dnd5eCharacter character, Func<string, OptionDefinition?> findOption)
     {
         ArgumentNullException.ThrowIfNull(character);
         ArgumentNullException.ThrowIfNull(findOption);
@@ -132,7 +132,7 @@ public sealed record ChoiceEffects(
     /// Resources of the subclass features the character has reached: features of one of its subclasses whose level is
     /// not above its level in that class.
     /// </summary>
-    public static IReadOnlyList<ChoiceResourceEffect> FeatureResources(Character character, IEnumerable<FeatureDefinition> features)
+    public static IReadOnlyList<ChoiceResourceEffect> FeatureResources(Dnd5eCharacter character, IEnumerable<FeatureDefinition> features)
     {
         ArgumentNullException.ThrowIfNull(character);
         ArgumentNullException.ThrowIfNull(features);
@@ -150,7 +150,7 @@ public sealed record ChoiceEffects(
     /// Sheet modifiers of the subclass features the character has reached (same rule as <see cref="FeatureResources"/>),
     /// labelled with the feature and its level ("Pies ligeros (nivel 3)").
     /// </summary>
-    public static IReadOnlyList<FeatureModifier> FeatureModifiers(Character character, IEnumerable<FeatureDefinition> features)
+    public static IReadOnlyList<FeatureModifier> FeatureModifiers(Dnd5eCharacter character, IEnumerable<FeatureDefinition> features)
     {
         ArgumentNullException.ThrowIfNull(character);
         ArgumentNullException.ThrowIfNull(features);
@@ -160,7 +160,7 @@ public sealed record ChoiceEffects(
     }
 
     /// <summary>Subclass features of one of the character's subclasses whose level is not above its level in that class.</summary>
-    private static IEnumerable<FeatureDefinition> ReachedFeatures(Character character, IEnumerable<FeatureDefinition> features) =>
+    private static IEnumerable<FeatureDefinition> ReachedFeatures(Dnd5eCharacter character, IEnumerable<FeatureDefinition> features) =>
         features
             .Where(f => f.SubclassIndex is not null
                 && character.Classes.Any(c => c.ClassIndex == f.ClassIndex && c.SubclassIndex == f.SubclassIndex && f.Level <= c.Level))
@@ -168,7 +168,7 @@ public sealed record ChoiceEffects(
             .ThenBy(f => f.Index, StringComparer.Ordinal);
 
     /// <summary>Option indexes the effects of <paramref name="character"/> may need (picks of option sets and feats).</summary>
-    public static IEnumerable<string> OptionIndexes(Character character)
+    public static IEnumerable<string> OptionIndexes(Dnd5eCharacter character)
     {
         ArgumentNullException.ThrowIfNull(character);
         return character.ActivePicks()

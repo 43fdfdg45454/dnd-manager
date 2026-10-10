@@ -74,7 +74,7 @@ public class DamageAndHealingTests
         Assert.Equal((3, 1), (character.HitPointsCurrent, character.DeathSaveFailures));
     }
 
-    private static Character ActiveFighter(out CharacterSheet sheet)
+    private static Dnd5eCharacter ActiveFighter(out CharacterSheet sheet)
     {
         var character = NewCharacter(Scores(con: 14), [new ClassEntry("fighter", null, 3)]);
         sheet = Sheet(character);

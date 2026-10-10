@@ -14,7 +14,7 @@ public sealed record SheetPatchResult(CharacterDetailDto? Character, ChangeReque
 /// effect, so they are always applied directly (only the rest of the patch goes to the DM).
 /// </summary>
 public sealed class UpdateSheetHandler(
-    CharacterLoader loader,
+    Dnd5eCharacterLoader loader,
     ICharacterSheetService sheets,
     IChangeRequestRepository changeRequests,
     IUnitOfWork unitOfWork,
@@ -42,7 +42,7 @@ public sealed class UpdateSheetHandler(
         var appliedHeightOrWeight = patch.HasHeightOrWeight;
         if (appliedHeightOrWeight)
         {
-            character.SetHeightAndWeight(edit.HeightInches, edit.WeightPounds, clock.UtcNow);
+            character.Character.SetHeightAndWeight(edit.HeightInches, edit.WeightPounds, clock.UtcNow);
             patch = patch.WithoutHeightAndWeight();
             if (patch.IsEmpty)
             {

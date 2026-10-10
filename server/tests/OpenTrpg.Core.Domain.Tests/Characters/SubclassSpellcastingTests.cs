@@ -15,7 +15,7 @@ public class SubclassSpellcastingTests
         new Dictionary<int, int> { [3] = 2, [10] = 3 },
         new Dictionary<int, int> { [3] = 3, [4] = 4, [7] = 5 });
 
-    private static CharacterSheet Sheet(Character character, SubclassSpellcasting? casting = null)
+    private static CharacterSheet Sheet(Dnd5eCharacter character, SubclassSpellcasting? casting = null)
     {
         var classes = Classes.Select(c => c.Index == "fighter" ? c.WithSubclassSpellcasting(casting ?? Runes) : c).ToList();
         return SheetCalculator.Calculate(new SheetInput(character, classes, null, null, Skills));

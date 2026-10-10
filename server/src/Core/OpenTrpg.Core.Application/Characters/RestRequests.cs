@@ -164,7 +164,7 @@ public sealed class RestRequestLoader(IRestRequestRepository requests, ICampaign
 /// request per character (409).
 /// </summary>
 public sealed class CreateRestRequestHandler(
-    CharacterLoader characters,
+    Dnd5eCharacterLoader characters,
     IRestRequestRepository requests,
     RestRequestLoader loader,
     IUnitOfWork unitOfWork,
@@ -290,7 +290,7 @@ public sealed class GetRestRequestHandler(IRestRequestRepository requests, ICamp
 /// </summary>
 public sealed class ApproveRestRequestHandler(
     RestRequestLoader loader,
-    ICharacterRepository characters,
+    IDnd5eCharacterRepository characters,
     ICharacterSheetService sheets,
     IDiceRoller dice,
     IUnitOfWork unitOfWork,

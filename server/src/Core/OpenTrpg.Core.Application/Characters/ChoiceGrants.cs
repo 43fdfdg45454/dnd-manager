@@ -11,7 +11,7 @@ public static class ChoiceGrants
     /// Class) and always-prepared spells, from the level in the class they require. Always-prepared spells granted
     /// by replaced options are removed first (and given back if another pick still grants them).
     /// </summary>
-    public static async Task ApplyAsync(ICatalogRepository catalog, Character character, IReadOnlyList<string> replacedOptions, CancellationToken cancellationToken)
+    public static async Task ApplyAsync(ICatalogRepository catalog, Dnd5eCharacter character, IReadOnlyList<string> replacedOptions, CancellationToken cancellationToken)
     {
         var levels = character.Classes.ToDictionary(c => c.ClassIndex, c => c.Level, StringComparer.Ordinal);
         var picks = character.ActivePicks().Where(p => p.SetId is not null).ToList();

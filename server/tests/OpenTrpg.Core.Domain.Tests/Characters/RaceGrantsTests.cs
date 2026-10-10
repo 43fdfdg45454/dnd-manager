@@ -18,7 +18,7 @@ public sealed class RaceGrantsTests
         string? ability = null) =>
         new(skills ?? [], cantrips ?? [], spells ?? [], [], weapons ?? [], [], [], savingThrows ?? []) { SpellcastingAbility = ability };
 
-    private static Character Fighter(int level, string race = "mountain-folk", string? subrace = null, int cha = 10)
+    private static Dnd5eCharacter Fighter(int level, string race = "mountain-folk", string? subrace = null, int cha = 10)
     {
         var character = NewCharacter(Scores(cha: cha), [new ClassEntry("fighter", null, level)]);
         character.ApplySheetEdit(new SheetEdit { RaceIndex = race, SubraceIndex = subrace }, Now);

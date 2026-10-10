@@ -53,7 +53,7 @@ public class InventoryRulesTests
     {
         var character = NewCharacter();
 
-        Assert.Throws<DomainException>(() => character.AddItem(null, ItemOverrides.None(), 1, Effective(null), Now));
+        Assert.Throws<DomainException>(() => character.Character.AddItem(null, ItemOverrides.None(), 1, Effective(null), Now));
     }
 
     [Fact]
@@ -109,10 +109,10 @@ public class InventoryRulesTests
 
         Assert.Equal(DomainErrorKind.Conflict, error.Kind);
         Assert.Equal(ItemLimits.AttunementLimitCode, error.Code);
-        Assert.Equal(3, character.AttunedCount);
+        Assert.Equal(3, character.Character.AttunedCount);
         Update(character, items[0], new ItemUpdate { Attuned = false });
         Update(character, items[3], new ItemUpdate { Attuned = true });
-        Assert.Equal(3, character.AttunedCount);
+        Assert.Equal(3, character.Character.AttunedCount);
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public class InventoryRulesTests
 
         Update(character, items[3], new ItemUpdate { Attuned = true, ReplaceAttunedItemId = items[1].Id });
 
-        Assert.Equal(3, character.AttunedCount);
+        Assert.Equal(3, character.Character.AttunedCount);
         Assert.False(items[1].Attuned);
         Assert.True(items[3].Attuned);
         Assert.Throws<DomainException>(() => Update(character, items[1], new ItemUpdate { Attuned = true, ReplaceAttunedItemId = items[1].Id }));
@@ -154,9 +154,9 @@ public class InventoryRulesTests
         var character = NewCharacter();
         var potion = Add(character, Healing, 2);
 
-        Assert.Same(potion, character.UseItem(potion.Id, 1, Effective(Healing), Now));
+        Assert.Same(potion, character.Character.UseItem(potion.Id, 1, Effective(Healing), Now));
         Assert.Equal(1, potion.Quantity);
-        Assert.Null(character.UseItem(potion.Id, 1, Effective(Healing), Now));
+        Assert.Null(character.Character.UseItem(potion.Id, 1, Effective(Healing), Now));
         Assert.Empty(character.Items);
     }
 
@@ -164,13 +164,13 @@ public class InventoryRulesTests
     public void Using_an_item_with_charges_spends_charges_and_keeps_it()
     {
         var character = NewCharacter();
-        var wand = character.AddItem(null, new ItemOverrides { Name = "Varita" }, 1, Effective(null, new ItemOverrides { Name = "Varita" }), Now);
+        var wand = character.Character.AddItem(null, new ItemOverrides { Name = "Varita" }, 1, Effective(null, new ItemOverrides { Name = "Varita" }), Now);
         Update(character, wand, new ItemUpdate { SetCharges = true, Charges = 3 });
 
-        character.UseItem(wand.Id, 2, Effective(null), Now);
+        character.Character.UseItem(wand.Id, 2, Effective(null), Now);
 
         Assert.Equal((1, 3), (wand.Charges, wand.ChargesMax));
-        Assert.Throws<DomainException>(() => character.UseItem(wand.Id, 2, Effective(null), Now));
+        Assert.Throws<DomainException>(() => character.Character.UseItem(wand.Id, 2, Effective(null), Now));
         Assert.Throws<DomainException>(() => Update(character, wand, new ItemUpdate { SetCharges = true, Charges = 4 }));
         Assert.Single(character.Items);
     }
@@ -181,7 +181,7 @@ public class InventoryRulesTests
         var character = NewCharacter();
         var sword = Add(character, Longsword);
 
-        Assert.Throws<DomainException>(() => character.UseItem(sword.Id, 1, Effective(Longsword), Now));
+        Assert.Throws<DomainException>(() => character.Character.UseItem(sword.Id, 1, Effective(Longsword), Now));
     }
 
     [Fact]
@@ -190,28 +190,28 @@ public class InventoryRulesTests
         var character = NewCharacter();
         var arrows = Add(character, Arrow, 20);
 
-        character.RemoveItem(arrows.Id, 5, Now);
+        character.Character.RemoveItem(arrows.Id, 5, Now);
         Assert.Equal(15, arrows.Quantity);
-        Assert.Throws<DomainException>(() => character.RemoveItem(arrows.Id, 16, Now));
-        character.RemoveItem(arrows.Id, null, Now);
+        Assert.Throws<DomainException>(() => character.Character.RemoveItem(arrows.Id, 16, Now));
+        character.Character.RemoveItem(arrows.Id, null, Now);
         Assert.Empty(character.Items);
-        Assert.Equal(DomainErrorKind.NotFound, Assert.Throws<DomainException>(() => character.RemoveItem(arrows.Id, null, Now)).Kind);
+        Assert.Equal(DomainErrorKind.NotFound, Assert.Throws<DomainException>(() => character.Character.RemoveItem(arrows.Id, null, Now)).Kind);
     }
 
     [Fact]
     public void Money_never_goes_below_zero_and_changes_bump_the_version()
     {
         var character = NewCharacter();
-        var version = character.Version;
+        var version = character.Character.Version;
 
-        character.AdjustMoney(500, Now);
-        character.AdjustMoney(-200, Now);
+        character.Character.AdjustMoney(500, Now);
+        character.Character.AdjustMoney(-200, Now);
 
-        Assert.Equal(300, character.CopperPieces);
-        Assert.Throws<DomainException>(() => character.AdjustMoney(-301, Now));
-        Assert.Equal(300, character.CopperPieces);
-        Assert.Throws<DomainException>(() => character.AdjustMoney(Character.MaxCopperPieces, Now));
-        Assert.Equal(version + 2, character.Version);
+        Assert.Equal(300, character.Character.Money);
+        Assert.Throws<DomainException>(() => character.Character.AdjustMoney(-301, Now));
+        Assert.Equal(300, character.Character.Money);
+        Assert.Throws<DomainException>(() => character.Character.AdjustMoney(Character.MaxMoney, Now));
+        Assert.Equal(version + 2, character.Character.Version);
     }
 
     [Fact]
@@ -232,12 +232,12 @@ public class InventoryRulesTests
     private EffectiveItem Resolve(CharacterItem item) =>
         EffectiveItem.Resolve(item.TemplateId is { } id ? _templates[id] : null, item.Overrides);
 
-    private static CharacterItem Add(Character character, ItemTemplate template, int quantity = 1, ItemOverrides? overrides = null)
+    private static CharacterItem Add(Dnd5eCharacter character, ItemTemplate template, int quantity = 1, ItemOverrides? overrides = null)
     {
         var o = overrides ?? ItemOverrides.None();
-        return character.AddItem(template.Id, o, quantity, Effective(template, o), Now);
+        return character.Character.AddItem(template.Id, o, quantity, Effective(template, o), Now);
     }
 
-    private CharacterItem Update(Character character, CharacterItem item, ItemUpdate update) =>
-        character.UpdateItem(item.Id, update, Resolve, Now);
+    private CharacterItem Update(Dnd5eCharacter character, CharacterItem item, ItemUpdate update) =>
+        character.Character.UpdateItem(item.Id, update, Resolve, Now);
 }

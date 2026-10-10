@@ -153,7 +153,7 @@ public sealed class SpellPreparationPlanner(ICatalogRepository catalog, ICharact
 
     public static bool UsesSpellbook(string classIndex) => SpellbookClasses.Contains(classIndex);
 
-    public async Task<PreparationPlan> BuildAsync(Character character, CancellationToken cancellationToken = default)
+    public async Task<PreparationPlan> BuildAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(character);
         var sheet = await sheets.CalculateAsync(character, cancellationToken);
@@ -202,7 +202,7 @@ public sealed class SpellPreparationPlanner(ICatalogRepository catalog, ICharact
     /// After activating a character: a character that prepares spells and has nothing prepared in some class
     /// must make its first preparation.
     /// </summary>
-    public async Task RequireInitialPreparationAsync(Character character, DateTimeOffset now, CancellationToken cancellationToken = default)
+    public async Task RequireInitialPreparationAsync(Dnd5eCharacter character, DateTimeOffset now, CancellationToken cancellationToken = default)
     {
         var plan = await BuildAsync(character, cancellationToken);
         if (plan.Classes.Any(c => c.Prepared.Count == 0 && c.Candidates.Count > 0))
@@ -220,7 +220,7 @@ public sealed class SpellPreparationPlanner(ICatalogRepository catalog, ICharact
 /// pending (409 otherwise; DMs always). The owner of a draft makes the initial preparation at any time.
 /// </summary>
 public sealed class SpellPreparationHandler(
-    CharacterLoader loader,
+    Dnd5eCharacterLoader loader,
     SpellPreparationPlanner planner,
     ICharacterSheetService sheets,
     IUnitOfWork unitOfWork,
@@ -334,7 +334,7 @@ public sealed class SpellPreparationHandler(
                 ? $"{spell.Name} es de nivel {spell.Level} y aún no tienes espacios de ese nivel como {prepClass.ClassName}."
                 : $"{spell.Name} no está en la lista de conjuros de {prepClass.ClassName}.";
 
-    private static void EnsureCanView(LoadedCharacter loaded, Guid currentUserId)
+    private static void EnsureCanView(LoadedDnd5eCharacter loaded, Guid currentUserId)
     {
         if (!loaded.Character.CanViewSheet(currentUserId, loaded.IsDm))
         {
@@ -342,7 +342,7 @@ public sealed class SpellPreparationHandler(
         }
     }
 
-    private async Task<Character> LoadForChangeAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken)
+    private async Task<Dnd5eCharacter> LoadForChangeAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken)
     {
         var loaded = await loader.LoadAsync(characterId, currentUserId, cancellationToken);
         EnsureCanView(loaded, currentUserId);
@@ -355,7 +355,7 @@ public sealed class SpellPreparationHandler(
         return character;
     }
 
-    private async Task<CharacterDetailDto> SaveAsync(Character character, DateTimeOffset now, CancellationToken cancellationToken)
+    private async Task<CharacterDetailDto> SaveAsync(Dnd5eCharacter character, DateTimeOffset now, CancellationToken cancellationToken)
     {
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, now, cancellationToken);

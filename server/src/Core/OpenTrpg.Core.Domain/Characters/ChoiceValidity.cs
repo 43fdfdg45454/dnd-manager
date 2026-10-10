@@ -20,7 +20,7 @@ public sealed record InvalidChoice(string? ClassIndex, string Key, int Level, st
 public static class ChoiceValidity
 {
     /// <summary>The picks whose prerequisites fail, using the calculated sheet and the catalog options (missing ones are skipped).</summary>
-    public static IReadOnlyList<InvalidChoice> Find(Character character, CharacterSheet sheet, Func<string, OptionDefinition?> findOption)
+    public static IReadOnlyList<InvalidChoice> Find(Dnd5eCharacter character, CharacterSheet sheet, Func<string, OptionDefinition?> findOption)
     {
         ArgumentNullException.ThrowIfNull(character);
         ArgumentNullException.ThrowIfNull(sheet);
@@ -53,7 +53,7 @@ public static class ChoiceValidity
     /// </summary>
     public static string? WhyNot(
         OptionDefinition option,
-        Character character,
+        Dnd5eCharacter character,
         CharacterSheet sheet,
         string? classIndex,
         IReadOnlySet<string> picks,

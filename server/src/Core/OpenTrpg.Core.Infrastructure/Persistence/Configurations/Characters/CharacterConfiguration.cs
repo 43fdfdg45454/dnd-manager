@@ -1,7 +1,6 @@
 using OpenTrpg.Core.Domain.Campaigns;
 using OpenTrpg.Core.Domain.Characters;
 using OpenTrpg.Core.Domain.Files;
-using OpenTrpg.Core.Domain.Items;
 using OpenTrpg.Core.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -18,37 +17,20 @@ internal sealed class CharacterConfiguration : IEntityTypeConfiguration<Characte
 
         builder.Property(x => x.Name).HasMaxLength(Character.NameMaxLength).IsRequired();
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
-        builder.Property(x => x.RaceIndex).HasMaxLength(Character.IndexMaxLength);
-        builder.Property(x => x.SubraceIndex).HasMaxLength(Character.IndexMaxLength);
-        builder.Property(x => x.BackgroundIndex).HasMaxLength(Character.IndexMaxLength);
-        builder.Property(x => x.Alignment).HasMaxLength(Character.AlignmentMaxLength);
-        builder.Property(x => x.HpMode).HasConversion<string>().HasMaxLength(16).IsRequired();
-        builder.Property(x => x.SpellPreparationReason).HasConversion<string>().HasMaxLength(16);
-        builder.Property(x => x.ConditionsJson).IsRequired();
-        builder.Property(x => x.ConcentratingOnSpellIndex).HasMaxLength(Character.IndexMaxLength);
-        builder.Property(x => x.HitDiceUsedJson).IsRequired();
+        builder.Property(x => x.Money).HasColumnName("CopperPieces");
         builder.Property(x => x.Notes).IsRequired();
         builder.Property(x => x.Backstory).IsRequired();
         builder.Property(x => x.PersonalityTraits).HasMaxLength(Character.PersonalityMaxLength).IsRequired();
         builder.Property(x => x.Ideals).HasMaxLength(Character.PersonalityMaxLength).IsRequired();
         builder.Property(x => x.Bonds).HasMaxLength(Character.PersonalityMaxLength).IsRequired();
         builder.Property(x => x.Flaws).HasMaxLength(Character.PersonalityMaxLength).IsRequired();
-        builder.Property(x => x.BackgroundDetail).HasMaxLength(Character.BackgroundDetailMaxLength).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.UpdatedAt).IsRequired();
 
         // Bumped by the domain on every change; portable optimistic concurrency (no provider row version).
         builder.Property(x => x.Version).IsConcurrencyToken();
 
-        // Calculated (read-only) views over the stored data.
-        builder.Ignore(x => x.OrderedClasses);
-        builder.Ignore(x => x.BaseAbilities);
-        builder.Ignore(x => x.TotalLevel);
-        builder.Ignore(x => x.Conditions);
-        builder.Ignore(x => x.HitDiceUsed);
         builder.Ignore(x => x.AttunedCount);
-        builder.Ignore(x => x.RestRollsPending);
-        builder.Ignore(x => x.OriginChoices);
 
         builder.HasOne<Campaign>().WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(x => x.CampaignId);
@@ -61,133 +43,14 @@ internal sealed class CharacterConfiguration : IEntityTypeConfiguration<Characte
         builder.HasOne<StoredFile>().WithMany().HasForeignKey(x => x.PortraitFileId).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
         builder.HasIndex(x => x.PortraitFileId);
 
-        // Level-up granted by a DM (phase 16b); the granting user is kept like the resolver of a request.
-        builder.HasOne<User>().WithMany().HasForeignKey(x => x.LevelGrantedByUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
-        builder.HasIndex(x => x.LevelGrantedByUserId);
-
-        ConfigureChildren<CharacterClassLevel>(builder, nameof(Character.Classes), "_classes");
-        ConfigureChildren<CharacterProficiency>(builder, nameof(Character.Proficiencies), "_proficiencies");
-        ConfigureChildren<CharacterSpell>(builder, nameof(Character.Spells), "_spells");
-        ConfigureChildren<SpellSlotState>(builder, nameof(Character.SpellSlots), "_spellSlots");
-        ConfigureChildren<CharacterResource>(builder, nameof(Character.Resources), "_resources");
-        ConfigureChildren<CharacterOverride>(builder, nameof(Character.Overrides), "_overrides");
-        ConfigureChildren<CharacterItem>(builder, nameof(Character.Items), "_items");
-        ConfigureChildren<CharacterChoice>(builder, nameof(Character.Choices), "_choices");
-    }
-
-    private static void ConfigureChildren<TChild>(EntityTypeBuilder<Character> builder, string navigationName, string fieldName)
-        where TChild : class
-    {
-        builder.HasMany<TChild>(navigationName)
+        builder.HasMany(x => x.Items)
             .WithOne()
-            .HasForeignKey("CharacterId")
+            .HasForeignKey(x => x.CharacterId)
             .IsRequired()
             .OnDelete(DeleteBehavior.Cascade);
-
-        var navigation = builder.Metadata.FindNavigation(navigationName)!;
-        navigation.SetField(fieldName);
+        var navigation = builder.Metadata.FindNavigation(nameof(Character.Items))!;
+        navigation.SetField("_items");
         navigation.SetPropertyAccessMode(PropertyAccessMode.Field);
-    }
-}
-
-internal sealed class CharacterClassLevelConfiguration : IEntityTypeConfiguration<CharacterClassLevel>
-{
-    public void Configure(EntityTypeBuilder<CharacterClassLevel> builder)
-    {
-        builder.ToTable("CharacterClassLevels");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.Property(x => x.ClassIndex).HasMaxLength(Character.IndexMaxLength).IsRequired();
-        builder.Property(x => x.SubclassIndex).HasMaxLength(Character.IndexMaxLength);
-        builder.HasIndex(x => new { x.CharacterId, x.ClassIndex }).IsUnique();
-    }
-}
-
-internal sealed class CharacterChoiceConfiguration : IEntityTypeConfiguration<CharacterChoice>
-{
-    public void Configure(EntityTypeBuilder<CharacterChoice> builder)
-    {
-        builder.ToTable("CharacterChoices");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).ValueGeneratedNever();
-        // Null for origin choices (race, background; level 0).
-        builder.Property(x => x.ClassIndex).HasMaxLength(Character.IndexMaxLength);
-        builder.Property(x => x.Key).HasMaxLength(Character.IndexMaxLength).IsRequired();
-        builder.Property(x => x.SelectedJson).IsRequired();
-        builder.Ignore(x => x.IsOrigin);
-        builder.Property(x => x.CreatedAt).IsRequired();
-        builder.Ignore(x => x.Selection);
-        builder.HasIndex(x => new { x.CharacterId, x.ClassIndex, x.Key });
-    }
-}
-
-internal sealed class CharacterProficiencyConfiguration : IEntityTypeConfiguration<CharacterProficiency>
-{
-    public void Configure(EntityTypeBuilder<CharacterProficiency> builder)
-    {
-        builder.ToTable("CharacterProficiencies");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.Property(x => x.Type).HasConversion<string>().HasMaxLength(16).IsRequired();
-        builder.Property(x => x.Key).HasMaxLength(Character.IndexMaxLength).IsRequired();
-        builder.Property(x => x.Source).HasConversion<string>().HasMaxLength(16).IsRequired();
-        builder.HasIndex(x => new { x.CharacterId, x.Type, x.Key }).IsUnique();
-    }
-}
-
-internal sealed class CharacterSpellConfiguration : IEntityTypeConfiguration<CharacterSpell>
-{
-    public void Configure(EntityTypeBuilder<CharacterSpell> builder)
-    {
-        builder.ToTable("CharacterSpells");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.Property(x => x.SpellIndex).HasMaxLength(Character.IndexMaxLength).IsRequired();
-        builder.Property(x => x.ClassIndex).HasMaxLength(Character.IndexMaxLength).IsRequired();
-        builder.HasIndex(x => new { x.CharacterId, x.SpellIndex, x.ClassIndex }).IsUnique();
-    }
-}
-
-internal sealed class SpellSlotStateConfiguration : IEntityTypeConfiguration<SpellSlotState>
-{
-    public void Configure(EntityTypeBuilder<SpellSlotState> builder)
-    {
-        builder.ToTable("CharacterSpellSlots");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.HasIndex(x => new { x.CharacterId, x.Level }).IsUnique();
-    }
-}
-
-internal sealed class CharacterResourceConfiguration : IEntityTypeConfiguration<CharacterResource>
-{
-    public void Configure(EntityTypeBuilder<CharacterResource> builder)
-    {
-        builder.ToTable("CharacterResources");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.Property(x => x.Key).HasMaxLength(Character.IndexMaxLength);
-        builder.Property(x => x.Name).HasMaxLength(CharacterResource.NameMaxLength).IsRequired();
-        builder.Property(x => x.Recharge).HasConversion<string>().HasMaxLength(16).IsRequired();
-        builder.Ignore(x => x.Remaining);
-        builder.Ignore(x => x.RollOnRest);
-        builder.Ignore(x => x.Rolls);
-        builder.Property(x => x.RollRest).HasConversion<string>().HasMaxLength(16);
-        builder.Property(x => x.RollsJson).IsRequired().HasDefaultValue("[]");
-        builder.HasIndex(x => x.CharacterId);
-    }
-}
-
-internal sealed class CharacterOverrideConfiguration : IEntityTypeConfiguration<CharacterOverride>
-{
-    public void Configure(EntityTypeBuilder<CharacterOverride> builder)
-    {
-        builder.ToTable("CharacterOverrides");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.Property(x => x.Field).HasMaxLength(Character.IndexMaxLength + 16).IsRequired();
-        builder.Property(x => x.Note).HasMaxLength(CharacterOverride.NoteMaxLength);
-        builder.HasIndex(x => new { x.CharacterId, x.Field }).IsUnique();
     }
 }
 
@@ -249,23 +112,5 @@ internal sealed class RestRequestConfiguration : IEntityTypeConfiguration<RestRe
         builder.HasIndex(x => x.RequestedByUserId);
         builder.HasOne<User>().WithMany().HasForeignKey(x => x.ResolvedByUserId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(x => x.ResolvedByUserId);
-    }
-}
-
-internal sealed class CharacterCompanionConfiguration : IEntityTypeConfiguration<CharacterCompanion>
-{
-    public void Configure(EntityTypeBuilder<CharacterCompanion> builder)
-    {
-        builder.ToTable("CharacterCompanions");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.Property(x => x.BeastIndex).HasMaxLength(CharacterCompanion.BeastIndexMaxLength).IsRequired();
-        builder.Property(x => x.Name).HasMaxLength(CharacterCompanion.NameMaxLength).IsRequired();
-        builder.Property(x => x.CreatedAt).IsRequired();
-        builder.Property(x => x.UpdatedAt).IsRequired();
-
-        // At most one companion per character.
-        builder.HasOne<Character>().WithMany().HasForeignKey(x => x.CharacterId).OnDelete(DeleteBehavior.Cascade);
-        builder.HasIndex(x => x.CharacterId).IsUnique();
     }
 }

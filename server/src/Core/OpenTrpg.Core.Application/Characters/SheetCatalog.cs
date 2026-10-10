@@ -58,7 +58,7 @@ public sealed class SheetCatalog
     /// <param name="includeSpells">Whether to load the spells known by the characters (only the detail shows them).</param>
     public static async Task<SheetCatalog> LoadAsync(
         ICatalogRepository catalog,
-        IReadOnlyCollection<Character> characters,
+        IReadOnlyCollection<Dnd5eCharacter> characters,
         bool includeSpells,
         CancellationToken cancellationToken)
     {
@@ -118,10 +118,10 @@ public sealed class SheetCatalog
     public OptionDefinition? Option(string index) => _options.GetValueOrDefault(index);
 
     /// <summary>The companion feature the character has reached (content packs), or null.</summary>
-    public CompanionGrant? Companion(Character character) => CompanionGrants.Find(character, _featureResources);
+    public CompanionGrant? Companion(Dnd5eCharacter character) => CompanionGrants.Find(character, _featureResources);
 
     /// <summary>Input of <see cref="SheetCalculator.Calculate"/> for a character covered by this catalog.</summary>
-    public SheetInput InputFor(Character character, EquippedGear gear)
+    public SheetInput InputFor(Dnd5eCharacter character, EquippedGear gear)
     {
         var classes = character.Classes
             .Select(c => (_classInfos.GetValueOrDefault(c.ClassIndex) ?? new ClassInfo { Index = c.ClassIndex, HitDie = FallbackHitDie })

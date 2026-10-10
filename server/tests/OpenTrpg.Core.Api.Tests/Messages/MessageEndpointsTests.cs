@@ -79,7 +79,7 @@ public sealed class MessageEndpointsTests(ApiFactory factory) : IClassFixture<Ap
         await factory.WithDbAsync(async db =>
         {
             var npc = OpenTrpg.Core.Domain.Characters.Character.Create(s.CampaignId, null, "PNJ", DateTimeOffset.UtcNow);
-            db.Characters.Add(npc);
+            db.Add(OpenTrpg.Core.Domain.Characters.Dnd5eCharacter.Create(npc));
             await db.SaveChangesAsync();
             npcId = npc.Id;
         });

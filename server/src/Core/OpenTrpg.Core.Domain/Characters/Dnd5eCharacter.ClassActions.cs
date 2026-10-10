@@ -6,7 +6,7 @@ namespace OpenTrpg.Core.Domain.Characters;
 /// Class actions of the combat view (combat tracking: owner and DMs, without approval). Each one
 /// checks that the character has the class feature, then spends the matching resource or slot.
 /// </summary>
-public sealed partial class Character
+public sealed partial class Dnd5eCharacter
 {
     private const string BarbarianClass = "barbarian";
     private const string PaladinClass = "paladin";

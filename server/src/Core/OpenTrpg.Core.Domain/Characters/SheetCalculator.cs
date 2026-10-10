@@ -339,7 +339,7 @@ public static class SheetCalculator
                 var key = $"{CharacterSpell.OriginClassIndex}.{spell.Index}";
                 var name = names?.GetValueOrDefault(spell.Index) ?? spell.Index;
                 yield return new ResourceTemplate(
-                    key.Length > Character.IndexMaxLength ? key[..Character.IndexMaxLength] : key,
+                    key.Length > Dnd5eCharacter.IndexMaxLength ? key[..Dnd5eCharacter.IndexMaxLength] : key,
                     name.Length > CharacterResource.NameMaxLength ? name[..CharacterResource.NameMaxLength] : name,
                     Math.Min(uses, CharacterResource.MaxUses),
                     ResourceRecharge.LongRest);
@@ -351,7 +351,7 @@ public static class SheetCalculator
     /// Resistances of the race and subrace and of the chosen trait options (key <c>race.trait.&lt;key&gt;</c> or
     /// <c>race.subrace.trait.&lt;key&gt;</c>), and the breath weapon of a chosen option that has one.
     /// </summary>
-    private static (List<ResistanceValue> Resistances, (TraitOption Option, string Source)? Breath) OriginTraits(Character character, RaceInfo? race, SubraceInfo? subrace)
+    private static (List<ResistanceValue> Resistances, (TraitOption Option, string Source)? Breath) OriginTraits(Dnd5eCharacter character, RaceInfo? race, SubraceInfo? subrace)
     {
         var resistances = new List<ResistanceValue>();
         (TraitOption, string)? breath = null;
@@ -430,7 +430,7 @@ public static class SheetCalculator
         return 0;
     }
 
-    private static List<ResolvedClass> ResolveClasses(Character character, IReadOnlyList<ClassInfo> infos)
+    private static List<ResolvedClass> ResolveClasses(Dnd5eCharacter character, IReadOnlyList<ClassInfo> infos)
     {
         var byIndex = infos.GroupBy(i => i.Index, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
         return character.OrderedClasses
@@ -447,7 +447,7 @@ public static class SheetCalculator
     /// <paramref name="appliedSets"/>). Before the override and the 1-30 limit.
     /// </summary>
     private static BreakdownBuilder AbilityScore(
-        Character character,
+        Dnd5eCharacter character,
         string ability,
         RaceInfo? race,
         SubraceInfo? subrace,
@@ -646,11 +646,11 @@ public static class SheetCalculator
 
     private static bool IsPact(ClassInfo info) => info.IsPactCaster || info.Index == Warlock;
 
-    private static bool HasProficiency(Character character, ProficiencyType type, string index, string datasetPrefix) =>
+    private static bool HasProficiency(Dnd5eCharacter character, ProficiencyType type, string index, string datasetPrefix) =>
         FindProficiency(character, type, index, datasetPrefix) is not null;
 
     /// <summary>Matches the plain index ("stealth") or the dataset proficiency index ("skill-stealth").</summary>
-    private static CharacterProficiency? FindProficiency(Character character, ProficiencyType type, string index, string datasetPrefix) =>
+    private static CharacterProficiency? FindProficiency(Dnd5eCharacter character, ProficiencyType type, string index, string datasetPrefix) =>
         character.Proficiencies
             .Where(p => p.Type == type && (p.Key == index || p.Key == datasetPrefix + index))
             .OrderByDescending(p => p.Expertise)

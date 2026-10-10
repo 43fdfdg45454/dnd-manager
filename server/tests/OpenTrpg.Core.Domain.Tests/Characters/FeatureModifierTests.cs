@@ -28,7 +28,7 @@ public class FeatureModifierTests
         ModifiersJson = """[{"kind":"ArmorClassBonus","target":null,"value":1,"condition":"wearingArmor"}]""",
     };
 
-    private static CharacterSheet SheetWith(Character character, EquippedGear gear)
+    private static CharacterSheet SheetWith(Dnd5eCharacter character, EquippedGear gear)
     {
         var modifiers = ChoiceEffects.FeatureModifiers(character, [Swift, Guarded]);
         return SheetCalculator.Calculate(new SheetInput(character, Classes, null, null, Skills, gear, ChoiceEffects.None with { Modifiers = modifiers }));

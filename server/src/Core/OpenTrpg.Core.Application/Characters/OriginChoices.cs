@@ -86,7 +86,7 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
 {
     public const string IncompleteCode = "origin-choices-incomplete";
 
-    public async Task<IReadOnlyList<PlannedOriginChoice>> PlanAsync(Character character, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PlannedOriginChoice>> PlanAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(character);
         var race = character.RaceIndex is null ? null : await catalog.GetRaceAsync(character.RaceIndex, cancellationToken);
@@ -131,7 +131,7 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
     }
 
     /// <summary>The required choices without a complete answer (names), empty when everything is answered.</summary>
-    public static IReadOnlyList<string> Missing(Character character, IReadOnlyList<PlannedOriginChoice> plan)
+    public static IReadOnlyList<string> Missing(Dnd5eCharacter character, IReadOnlyList<PlannedOriginChoice> plan)
     {
         ArgumentNullException.ThrowIfNull(character);
         ArgumentNullException.ThrowIfNull(plan);
@@ -142,7 +142,7 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
     }
 
     /// <summary>400 (code <see cref="IncompleteCode"/>) when a required race or background choice is not answered.</summary>
-    public async Task EnsureCompleteAsync(Character character, CancellationToken cancellationToken = default)
+    public async Task EnsureCompleteAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default)
     {
         var missing = Missing(character, await PlanAsync(character, cancellationToken));
         if (missing.Count > 0)
@@ -154,7 +154,7 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
         }
     }
 
-    public static OriginChoicesDto ToDto(Character character, IReadOnlyList<PlannedOriginChoice> plan) => new(
+    public static OriginChoicesDto ToDto(Dnd5eCharacter character, IReadOnlyList<PlannedOriginChoice> plan) => new(
         character.Id,
         Missing(character, plan).Count == 0,
         plan.Select(c =>
@@ -195,7 +195,7 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
         choice?.Selection is not { } selection ? 0 : selection.Feat is not null ? 1 : selection.Selected.Count;
 
     private static IEnumerable<PlannedOriginChoice> Plan(
-        Character character,
+        Dnd5eCharacter character,
         string prefix,
         string source,
         RaceChoices choices,
@@ -348,7 +348,7 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
 /// of an active character cannot change them (409).
 /// </summary>
 public sealed class OriginChoicesHandler(
-    CharacterLoader loader,
+    Dnd5eCharacterLoader loader,
     OriginChoicesPlanner planner,
     ICharacterSheetService sheets,
     IUnitOfWork unitOfWork,
@@ -473,9 +473,9 @@ public sealed class OriginChoicesHandler(
                     throw AppException.Validation("choices", $"«{pick}» no es una opción de «{choice.Name}».");
                 }
 
-                if (pick.Length > Character.IndexMaxLength)
+                if (pick.Length > Dnd5eCharacter.IndexMaxLength)
                 {
-                    throw AppException.Validation("choices", $"«{choice.Name}»: cada valor admite como máximo {Character.IndexMaxLength} caracteres.");
+                    throw AppException.Validation("choices", $"«{choice.Name}»: cada valor admite como máximo {Dnd5eCharacter.IndexMaxLength} caracteres.");
                 }
 
                 items.Add(new ChoiceItem(pick, pick));

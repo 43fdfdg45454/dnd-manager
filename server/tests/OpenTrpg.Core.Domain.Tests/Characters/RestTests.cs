@@ -129,7 +129,7 @@ public class RestTests
         Assert.Equal(2, character.HitDiceRemaining("fighter"));
     }
 
-    private static Character ActiveCharacter(IReadOnlyList<ClassEntry> classes, out CharacterSheet sheet, AbilityScores? abilities = null)
+    private static Dnd5eCharacter ActiveCharacter(IReadOnlyList<ClassEntry> classes, out CharacterSheet sheet, AbilityScores? abilities = null)
     {
         var character = NewCharacter(abilities ?? Scores(con: 12), classes);
         sheet = Sheet(character);

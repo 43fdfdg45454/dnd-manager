@@ -5,7 +5,7 @@ namespace OpenTrpg.Core.Domain.Characters;
 // Spell preparation (phase 18): clerics, druids, paladins and wizards choose their prepared spells every time
 // the rules let them change them (after each long rest, on gaining a level in the class and the first time).
 // The app forces the preparation screen while it is pending; the player may keep the previous preparation.
-public sealed partial class Character
+public sealed partial class Dnd5eCharacter
 {
     /// <summary>The player must (re)prepare spells before playing on (see <see cref="SpellPreparationReason"/>).</summary>
     public bool SpellPreparationPending { get; private set; }

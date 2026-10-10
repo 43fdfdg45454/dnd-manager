@@ -100,6 +100,7 @@ public static class DependencyInjection
         services.AddSingleton<IDiceRoller>(RandomDiceRoller.Instance);
         services.AddScoped<ICharacterSheetService, CharacterSheetService>();
         services.AddScoped<CharacterLoader>();
+        services.AddScoped<Dnd5eCharacterLoader>();
         services.AddScoped<CharacterTracker>();
         services.AddScoped<ListCharactersHandler>();
         services.AddScoped<CharacterOwnerRules>();
@@ -183,6 +184,7 @@ public static class DependencyInjection
         services.AddScoped<SplitStashGoldHandler>();
 
         services.AddScoped<PartyLoader>();
+        services.AddScoped<Dnd5ePartyLoader>();
         services.AddScoped<GetPartyHandler>();
         services.AddScoped<PartyRestHandler>();
         services.AddScoped<PartyAdjustHandler>();

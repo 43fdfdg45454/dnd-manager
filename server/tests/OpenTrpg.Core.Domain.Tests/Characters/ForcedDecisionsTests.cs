@@ -24,7 +24,7 @@ public class ForcedDecisionsTests
 
         Assert.Equal((dc, false), (result.ConcentrationCheckDc, result.ConcentrationEnded));
         Assert.Equal("bless", cleric.ConcentratingOnSpellIndex);
-        Assert.Equal(dc, Character.ConcentrationCheckDc(damage));
+        Assert.Equal(dc, Dnd5eCharacter.ConcentrationCheckDc(damage));
     }
 
     [Fact]
@@ -309,7 +309,7 @@ public class ForcedDecisionsTests
 
     // ---- Helpers ---------------------------------------------------------------------------------------
 
-    private static Character ActiveCleric(out CharacterSheet sheet)
+    private static Dnd5eCharacter ActiveCleric(out CharacterSheet sheet)
     {
         var character = NewCharacter(Scores(con: 16, wis: 16), [new ClassEntry("cleric", null, 10)]);
         sheet = Sheet(character);
@@ -317,12 +317,12 @@ public class ForcedDecisionsTests
         return character;
     }
 
-    private static Character WithResources(Character character)
+    private static Dnd5eCharacter WithResources(Dnd5eCharacter character)
     {
         character.SyncAutoResources(ClassResourceRules.ForClasses(character.Classes, Sheet(character).AbilityModifiers));
         return character;
     }
 
-    private static CharacterSheet SheetWithChoices(Character character, RaceInfo race) =>
+    private static CharacterSheet SheetWithChoices(Dnd5eCharacter character, RaceInfo race) =>
         SheetCalculator.Calculate(new SheetInput(character, Classes, race, null, Skills, null, ChoiceEffects.Build(character, _ => null)));
 }

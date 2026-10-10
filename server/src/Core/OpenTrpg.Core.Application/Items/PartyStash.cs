@@ -101,8 +101,8 @@ public sealed class StashGoldRequestValidator : AbstractValidator<StashGoldReque
     {
         RuleFor(x => x.DeltaCp)
             .NotEqual(0).WithMessage("Indica una cantidad de oro distinta de 0.")
-            .InclusiveBetween(-Character.MaxCopperPieces, Character.MaxCopperPieces)
-            .WithMessage($"La cantidad debe estar entre -{Character.MaxCopperPieces} y {Character.MaxCopperPieces} pc.");
+            .InclusiveBetween(-Character.MaxMoney, Character.MaxMoney)
+            .WithMessage($"La cantidad debe estar entre -{Character.MaxMoney} y {Character.MaxMoney} pc.");
     }
 }
 

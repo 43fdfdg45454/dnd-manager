@@ -78,7 +78,7 @@ public sealed record PlannedChoice(LevelChoiceRule Rule, int Required, bool Free
 /// <summary>The level-up of a character in one class, as computed by <see cref="LevelUpPlanner"/>.</summary>
 public sealed class LevelUpPlan
 {
-    public required Character Character { get; init; }
+    public required Dnd5eCharacter Character { get; init; }
 
     /// <summary>Sheet before the level-up.</summary>
     public required CharacterSheet Sheet { get; init; }
@@ -157,7 +157,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
     /// those skills are offered with <see cref="PlannedOption.Requires"/>.
     /// </param>
     public async Task<LevelUpPlan> BuildAsync(
-        Character character,
+        Dnd5eCharacter character,
         string? classIndex,
         IReadOnlySet<string> pendingPicks,
         CancellationToken cancellationToken = default,
@@ -400,7 +400,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
     /// The current classes (always allowed) and every other catalog class, allowed when the multiclassing
     /// prerequisites of the new class and of all current ones are met. The main class goes first.
     /// </summary>
-    private static List<LevelUpClassDto> ClassOptions(Character character, CharacterSheet sheet, IReadOnlyList<ClassDefinition> allClasses)
+    private static List<LevelUpClassDto> ClassOptions(Dnd5eCharacter character, CharacterSheet sheet, IReadOnlyList<ClassDefinition> allClasses)
     {
         int Score(string ability) => sheet.Abilities[ability].Score;
         var current = character.OrderedClasses;
@@ -528,7 +528,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         ];
     }
 
-    private static LevelUpSpellcastingDto? Spellcasting(Character character, ClassDefinition definition, ClassLevel? classLevel, int newLevel, IReadOnlyList<SpellDefinition> spells)
+    private static LevelUpSpellcastingDto? Spellcasting(Dnd5eCharacter character, ClassDefinition definition, ClassLevel? classLevel, int newLevel, IReadOnlyList<SpellDefinition> spells)
     {
         if (definition.SpellcastingAbility is null || classLevel is null)
         {
@@ -552,7 +552,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
 
     /// <summary>Spellcasting of the plan for a class that casts through its subclass (content packs); null when it does not.</summary>
     private static LevelUpSpellcastingDto? SubclassSpellcasting(
-        Character character,
+        Dnd5eCharacter character,
         ClassDefinition definition,
         SubclassSpellcasting? casting,
         int newLevel,
@@ -600,7 +600,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
 
     /// <summary>Evaluates the rules of one plan.</summary>
     private sealed class PlanContext(
-        Character character,
+        Dnd5eCharacter character,
         CharacterSheet sheet,
         ClassDefinition definition,
         int newLevel,

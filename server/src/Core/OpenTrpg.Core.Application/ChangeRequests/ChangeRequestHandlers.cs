@@ -94,7 +94,7 @@ public sealed class ApproveChangeRequestRequestValidator : AbstractValidator<App
 /// </summary>
 public sealed class ApproveChangeRequestHandler(
     ChangeRequestLoader loader,
-    ICharacterRepository characters,
+    IDnd5eCharacterRepository characters,
     ICharacterSheetService sheets,
     SpellPreparationPlanner preparation,
     OriginChoicesPlanner originChoices,
@@ -136,7 +136,7 @@ public sealed class ApproveChangeRequestHandler(
                 await ApplySheetPatchAsync(character, request.PayloadJson, now, cancellationToken);
                 break;
             case ChangeRequestTypes.AddItem or ChangeRequestTypes.CustomItem or ChangeRequestTypes.RemoveItem or ChangeRequestTypes.AdjustMoney:
-                await inventory.ApplyApprovedAsync(character, request, now, cancellationToken);
+                await inventory.ApplyApprovedAsync(character.Character, request, now, cancellationToken);
 
                 // Removing an equipped item can lower the sheet (item modifiers): cap the current hit points.
                 await sheets.RecalculateAsync(character, cancellationToken);
@@ -156,7 +156,7 @@ public sealed class ApproveChangeRequestHandler(
         return await loader.ToDtoAsync(request.Id, cancellationToken);
     }
 
-    private async Task ApplySheetPatchAsync(Character character, string payloadJson, DateTimeOffset now, CancellationToken cancellationToken)
+    private async Task ApplySheetPatchAsync(Dnd5eCharacter character, string payloadJson, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var patch = SheetPatchJson.TryDeserialize(payloadJson)
             ?? throw AppException.Validation("payload", "El contenido de la solicitud no es una edición de hoja válida.");

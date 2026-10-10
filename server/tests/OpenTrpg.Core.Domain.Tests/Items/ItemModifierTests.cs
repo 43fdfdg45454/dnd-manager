@@ -121,17 +121,17 @@ public class ItemModifierTests
         var character = NewCharacter();
         var ring = Template("Anillo", ItemCategory.MagicItem, [], requiresAttunement: true);
         var cloak = Template("Capa", ItemCategory.MagicItem, []);
-        var ringEntry = character.AddItem(ring.Id, ItemOverrides.None(), 1, TestItems.Effective(ring), Now);
-        var cloakEntry = character.AddItem(cloak.Id, ItemOverrides.None(), 1, TestItems.Effective(cloak), Now);
+        var ringEntry = character.Character.AddItem(ring.Id, ItemOverrides.None(), 1, TestItems.Effective(ring), Now);
+        var cloakEntry = character.Character.AddItem(cloak.Id, ItemOverrides.None(), 1, TestItems.Effective(cloak), Now);
         EffectiveItem Resolve(CharacterItem i) => i.TemplateId == ring.Id ? TestItems.Effective(ring) : TestItems.Effective(cloak);
 
         Assert.False(TestItems.Effective(cloak).IsActiveFor(cloakEntry));
-        character.UpdateItem(cloakEntry.Id, new ItemUpdate { Equipped = true }, Resolve, Now);
-        character.UpdateItem(ringEntry.Id, new ItemUpdate { Equipped = true }, Resolve, Now);
+        character.Character.UpdateItem(cloakEntry.Id, new ItemUpdate { Equipped = true }, Resolve, Now);
+        character.Character.UpdateItem(ringEntry.Id, new ItemUpdate { Equipped = true }, Resolve, Now);
         Assert.True(TestItems.Effective(cloak).IsActiveFor(cloakEntry));
         Assert.False(TestItems.Effective(ring).IsActiveFor(ringEntry));
 
-        character.UpdateItem(ringEntry.Id, new ItemUpdate { Attuned = true }, Resolve, Now);
+        character.Character.UpdateItem(ringEntry.Id, new ItemUpdate { Attuned = true }, Resolve, Now);
         Assert.True(TestItems.Effective(ring).IsActiveFor(ringEntry));
     }
 

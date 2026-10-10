@@ -31,17 +31,17 @@ public static class OptionCosts
     /// The name of a resource key: the character's resource with that key, a class resource of the SRD, a resource the
     /// given options declare, or the key itself.
     /// </summary>
-    public static string ResourceName(string key, Character? character, IEnumerable<OptionDefinition>? options = null) =>
+    public static string ResourceName(string key, Dnd5eCharacter? character, IEnumerable<OptionDefinition>? options = null) =>
         character?.Resources.FirstOrDefault(r => r.Key == key)?.Name
         ?? ClassResourceRules.NameOf(key)
         ?? options?.Select(o => o.Resource).FirstOrDefault(r => r?.Key == key)?.Name
         ?? key;
 
-    public static OptionCostDto? Of(OptionDefinition? option, Character? character, IEnumerable<OptionDefinition>? options = null) =>
+    public static OptionCostDto? Of(OptionDefinition? option, Dnd5eCharacter? character, IEnumerable<OptionDefinition>? options = null) =>
         option?.Cost is { } cost ? new OptionCostDto(cost.Resource, ResourceName(cost.Resource, character, options), cost.Amount) : null;
 
     /// <summary>The options the character has chosen (active picks and feats) that have a cost, in the order they were chosen.</summary>
-    public static List<CharacterOptionCostDto> ForCharacter(Character character, Func<string, OptionDefinition?> option)
+    public static List<CharacterOptionCostDto> ForCharacter(Dnd5eCharacter character, Func<string, OptionDefinition?> option)
     {
         ArgumentNullException.ThrowIfNull(character);
         ArgumentNullException.ThrowIfNull(option);

@@ -67,14 +67,14 @@ internal static class TestCatalog
 
     public static SubraceInfo HillDwarf { get; } = new([new AbilityBonus("wis", 1)]);
 
-    public static Character NewCharacter(
+    public static Dnd5eCharacter NewCharacter(
         AbilityScores? abilities = null,
         IReadOnlyList<ClassEntry>? classes = null,
         IReadOnlyList<ProficiencyEntry>? proficiencies = null,
         IReadOnlyList<OverrideEntry>? overrides = null,
         Guid? ownerUserId = null)
     {
-        var character = Character.Create(Guid.NewGuid(), ownerUserId ?? Guid.NewGuid(), "Test", Now);
+        var character = Dnd5eCharacter.Create(Character.Create(Guid.NewGuid(), ownerUserId ?? Guid.NewGuid(), "Test", Now));
         character.ApplySheetEdit(
             new SheetEdit
             {
@@ -87,7 +87,7 @@ internal static class TestCatalog
         return character;
     }
 
-    public static CharacterSheet Sheet(Character character, RaceInfo? race = null, SubraceInfo? subrace = null, EquippedGear? gear = null) =>
+    public static CharacterSheet Sheet(Dnd5eCharacter character, RaceInfo? race = null, SubraceInfo? subrace = null, EquippedGear? gear = null) =>
         SheetCalculator.Calculate(new SheetInput(character, Classes, race, subrace, Skills, gear));
 
     public static AbilityScores Scores(int str = 10, int dex = 10, int con = 10, int @int = 10, int wis = 10, int cha = 10) =>

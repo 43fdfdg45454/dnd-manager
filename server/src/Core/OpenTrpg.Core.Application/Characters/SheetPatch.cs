@@ -177,10 +177,10 @@ public sealed class SheetPatchValidator : AbstractValidator<SheetPatch>
             .MaximumLength(Character.NameMaxLength).WithMessage($"El nombre no puede superar los {Character.NameMaxLength} caracteres.")
             .When(x => x.Name is not null);
 
-        ClearableIndex(x => x.RaceIndex, "raceIndex", Character.IndexMaxLength, "La raza");
-        ClearableIndex(x => x.SubraceIndex, "subraceIndex", Character.IndexMaxLength, "La subraza");
-        ClearableIndex(x => x.BackgroundIndex, "backgroundIndex", Character.IndexMaxLength, "El trasfondo");
-        ClearableIndex(x => x.Alignment, "alignment", Character.AlignmentMaxLength, "El alineamiento");
+        ClearableIndex(x => x.RaceIndex, "raceIndex", Dnd5eCharacter.IndexMaxLength, "La raza");
+        ClearableIndex(x => x.SubraceIndex, "subraceIndex", Dnd5eCharacter.IndexMaxLength, "La subraza");
+        ClearableIndex(x => x.BackgroundIndex, "backgroundIndex", Dnd5eCharacter.IndexMaxLength, "El trasfondo");
+        ClearableIndex(x => x.Alignment, "alignment", Dnd5eCharacter.AlignmentMaxLength, "El alineamiento");
 
         RuleFor(x => x.HpMode)
             .Must(EnumNames.IsValid<HpMode>)
@@ -211,9 +211,9 @@ public sealed class SheetPatchValidator : AbstractValidator<SheetPatch>
                 .ChildRules(c =>
                 {
                     c.RuleFor(e => e.ClassIndex).NotEmpty().WithMessage("Indica la clase.")
-                        .MaximumLength(Character.IndexMaxLength).WithMessage($"El índice de clase no puede superar los {Character.IndexMaxLength} caracteres.");
-                    c.RuleFor(e => e.SubclassIndex).MaximumLength(Character.IndexMaxLength)
-                        .WithMessage($"El índice de subclase no puede superar los {Character.IndexMaxLength} caracteres.");
+                        .MaximumLength(Dnd5eCharacter.IndexMaxLength).WithMessage($"El índice de clase no puede superar los {Dnd5eCharacter.IndexMaxLength} caracteres.");
+                    c.RuleFor(e => e.SubclassIndex).MaximumLength(Dnd5eCharacter.IndexMaxLength)
+                        .WithMessage($"El índice de subclase no puede superar los {Dnd5eCharacter.IndexMaxLength} caracteres.");
                     c.RuleFor(e => e.Level).InclusiveBetween(AbilityRules.MinLevel, AbilityRules.MaxLevel)
                         .WithMessage($"El nivel de clase debe estar entre {AbilityRules.MinLevel} y {AbilityRules.MaxLevel}.");
                 })
@@ -234,7 +234,7 @@ public sealed class SheetPatchValidator : AbstractValidator<SheetPatch>
                     p.RuleFor(e => e.Type).Must(EnumNames.IsValid<ProficiencyType>)
                         .WithMessage($"El tipo de competencia debe ser {EnumNames.Describe<ProficiencyType>()}.");
                     p.RuleFor(e => e.Key).NotEmpty().WithMessage("Indica la competencia.")
-                        .MaximumLength(Character.IndexMaxLength).WithMessage($"La competencia no puede superar los {Character.IndexMaxLength} caracteres.");
+                        .MaximumLength(Dnd5eCharacter.IndexMaxLength).WithMessage($"La competencia no puede superar los {Dnd5eCharacter.IndexMaxLength} caracteres.");
                     p.RuleFor(e => e.Source).Must(EnumNames.IsValid<ProficiencySource>)
                         .WithMessage($"El origen de la competencia debe ser {EnumNames.Describe<ProficiencySource>()}.")
                         .When(e => e.Source is not null);
@@ -257,9 +257,9 @@ public sealed class SheetPatchValidator : AbstractValidator<SheetPatch>
                 .ChildRules(s =>
                 {
                     s.RuleFor(e => e.SpellIndex).NotEmpty().WithMessage("Indica el conjuro.")
-                        .MaximumLength(Character.IndexMaxLength).WithMessage($"El índice de conjuro no puede superar los {Character.IndexMaxLength} caracteres.");
+                        .MaximumLength(Dnd5eCharacter.IndexMaxLength).WithMessage($"El índice de conjuro no puede superar los {Dnd5eCharacter.IndexMaxLength} caracteres.");
                     s.RuleFor(e => e.ClassIndex).NotEmpty().WithMessage("Indica la clase del conjuro.")
-                        .MaximumLength(Character.IndexMaxLength).WithMessage($"El índice de clase no puede superar los {Character.IndexMaxLength} caracteres.");
+                        .MaximumLength(Dnd5eCharacter.IndexMaxLength).WithMessage($"El índice de clase no puede superar los {Dnd5eCharacter.IndexMaxLength} caracteres.");
                 })
                 .OverridePropertyName("spells");
         });
@@ -299,10 +299,10 @@ public sealed class SheetPatchValidator : AbstractValidator<SheetPatch>
             .WithMessage($"Los vínculos no pueden superar los {Character.PersonalityMaxLength} caracteres.");
         RuleFor(x => x.Flaws).MaximumLength(Character.PersonalityMaxLength)
             .WithMessage($"Los defectos no pueden superar los {Character.PersonalityMaxLength} caracteres.");
-        RuleFor(x => x.BackgroundDetail).MaximumLength(Character.BackgroundDetailMaxLength)
-            .WithMessage($"El detalle del trasfondo no puede superar los {Character.BackgroundDetailMaxLength} caracteres.");
-        RuleFor(x => x.CopperPieces).InclusiveBetween(0, Character.MaxCopperPieces)
-            .WithMessage($"El dinero debe estar entre 0 y {Character.MaxCopperPieces} pc.")
+        RuleFor(x => x.BackgroundDetail).MaximumLength(Dnd5eCharacter.BackgroundDetailMaxLength)
+            .WithMessage($"El detalle del trasfondo no puede superar los {Dnd5eCharacter.BackgroundDetailMaxLength} caracteres.");
+        RuleFor(x => x.CopperPieces).InclusiveBetween(0, Character.MaxMoney)
+            .WithMessage($"El dinero debe estar entre 0 y {Character.MaxMoney} pc.")
             .When(x => x.CopperPieces is not null);
         RuleFor(x => x.HeightInches)
             .Must(v => !v.IsSet || v.Value is null || v.Value is >= Character.MinHeightInches and <= Character.MaxHeightInches)

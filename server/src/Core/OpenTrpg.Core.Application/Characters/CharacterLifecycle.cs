@@ -8,7 +8,7 @@ namespace OpenTrpg.Core.Application.Characters;
 
 /// <summary>The owner of a draft asks the DMs to activate it (an Activate change request).</summary>
 public sealed class SubmitCharacterHandler(
-    CharacterLoader loader,
+    Dnd5eCharacterLoader loader,
     OriginChoicesPlanner originChoices,
     IChangeRequestRepository changeRequests,
     IUnitOfWork unitOfWork,
@@ -18,7 +18,7 @@ public sealed class SubmitCharacterHandler(
     public async Task<ChangeRequestDto> HandleAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken = default)
     {
         var character = (await loader.LoadAsync(characterId, currentUserId, cancellationToken)).Character;
-        character.EnsureCanSubmit(currentUserId);
+        character.Character.EnsureCanSubmit(currentUserId);
         await originChoices.EnsureCompleteAsync(character, cancellationToken);
 
         if ((await changeRequests.ListPendingAsync(character.Id, ChangeRequestTypes.Activate, cancellationToken)).Count > 0)
@@ -41,7 +41,7 @@ public sealed class SubmitCharacterHandler(
 /// them and has none prepared yet). Pending Activate requests of the character are marked approved by the same DM.
 /// </summary>
 public sealed class ActivateCharacterHandler(
-    CharacterLoader loader,
+    Dnd5eCharacterLoader loader,
     ICharacterSheetService sheets,
     SpellPreparationPlanner preparation,
     OriginChoicesPlanner originChoices,

@@ -79,7 +79,7 @@ public static class CombatCalculator
     /// damage of versatile ones; <c>twoWeaponFighting</c> is not calculated. Unconditional ones apply to every
     /// attack, the unarmed strike included.
     /// </summary>
-    public static IReadOnlyList<AttackValue> Attacks(Character character, CharacterSheet sheet, IEnumerable<EquippedWeapon> weapons)
+    public static IReadOnlyList<AttackValue> Attacks(Dnd5eCharacter character, CharacterSheet sheet, IEnumerable<EquippedWeapon> weapons)
     {
         ArgumentNullException.ThrowIfNull(character);
         ArgumentNullException.ThrowIfNull(sheet);
@@ -212,7 +212,7 @@ public static class CombatCalculator
         $"{Math.Clamp(slotLevel + 1, 2, DivineSmiteMaxDice).ToString(CultureInfo.InvariantCulture)}d8";
 
     /// <summary>Level of the character in a class (0 without it).</summary>
-    public static int ClassLevel(Character character, string classIndex)
+    public static int ClassLevel(Dnd5eCharacter character, string classIndex)
     {
         ArgumentNullException.ThrowIfNull(character);
         return character.Classes.FirstOrDefault(c => c.ClassIndex == classIndex)?.Level ?? 0;

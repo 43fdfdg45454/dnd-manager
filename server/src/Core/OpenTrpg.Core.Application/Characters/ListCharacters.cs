@@ -5,7 +5,7 @@ using OpenTrpg.Core.Domain.Campaigns;
 namespace OpenTrpg.Core.Application.Characters;
 
 /// <summary>Summaries of every character of the campaign, for any member. Hit points only for owner and DMs.</summary>
-public sealed class ListCharactersHandler(ICampaignAccess access, ICharacterRepository characters, ICharacterSheetService sheets)
+public sealed class ListCharactersHandler(ICampaignAccess access, IDnd5eCharacterRepository characters, ICharacterSheetService sheets)
 {
     public async Task<IReadOnlyList<CharacterSummaryDto>> HandleAsync(Guid currentUserId, Guid campaignId, CancellationToken cancellationToken = default)
     {

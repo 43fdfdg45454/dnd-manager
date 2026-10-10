@@ -18,36 +18,45 @@ namespace OpenTrpg.Core.Application.Characters;
 public interface ICharacterSheetService
 {
     /// <summary>Calculates the sheet of a character with all its child collections (inventory included) loaded.</summary>
-    Task<CharacterSheet> CalculateAsync(Character character, CancellationToken cancellationToken = default);
+    Task<CharacterSheet> CalculateAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Like <see cref="CalculateAsync"/> for several characters at once, loading the catalog and the item
     /// templates once for all of them. Sheets by character id.
     /// </summary>
-    Task<IReadOnlyDictionary<Guid, CharacterSheet>> CalculateManyAsync(IReadOnlyList<Character> characters, CancellationToken cancellationToken = default);
+    Task<IReadOnlyDictionary<Guid, CharacterSheet>> CalculateManyAsync(IReadOnlyList<Dnd5eCharacter> characters, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// After a sheet edit, an inventory change that can affect the sheet (equip, attune, remove), a level-up or on
     /// creation: calculates the sheet, regenerates the automatic resources (class and chosen options) and
     /// refreshes the current hit points (capped at the new maximum). Returns the new sheet.
     /// </summary>
-    Task<CharacterSheet> RecalculateAsync(Character character, CancellationToken cancellationToken = default);
+    Task<CharacterSheet> RecalculateAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Checks that the race, subrace, background, classes, subclasses and spells an edit would leave
     /// on the character exist in the catalog (and that subraces/subclasses belong to their parent).
     /// Throws a validation <see cref="AppException"/> otherwise.
     /// </summary>
-    Task EnsureCatalogReferencesAsync(Character character, SheetEdit edit, CancellationToken cancellationToken = default);
+    Task EnsureCatalogReferencesAsync(Dnd5eCharacter character, SheetEdit edit, CancellationToken cancellationToken = default);
 
+    Task<CharacterDetailDto> BuildDetailAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default);
+
+    /// <summary>Like <see cref="RecalculateAsync(Dnd5eCharacter, CancellationToken)"/> for a core character (loads its 5e part).</summary>
+    Task<CharacterSheet> RecalculateAsync(Character character, CancellationToken cancellationToken = default);
+
+    /// <summary>Like <see cref="CalculateAsync(Dnd5eCharacter, CancellationToken)"/> for a core character (loads its 5e part).</summary>
+    Task<CharacterSheet> CalculateAsync(Character character, CancellationToken cancellationToken = default);
+
+    /// <summary>Like <see cref="BuildDetailAsync(Dnd5eCharacter, CancellationToken)"/> for a core character (loads its 5e part).</summary>
     Task<CharacterDetailDto> BuildDetailAsync(Character character, CancellationToken cancellationToken = default);
 
     /// <summary>The DM's view of the given characters (loaded with every child collection), sorted by name.</summary>
-    Task<IReadOnlyList<PartyMemberDto>> BuildPartyAsync(IReadOnlyList<Character> characters, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PartyMemberDto>> BuildPartyAsync(IReadOnlyList<Dnd5eCharacter> characters, CancellationToken cancellationToken = default);
 
     /// <summary>Summaries sorted by name. Hit points only for characters the viewer owns, or all when a DM.</summary>
     Task<IReadOnlyList<CharacterSummaryDto>> BuildSummariesAsync(
-        IReadOnlyList<Character> characters,
+        IReadOnlyList<Dnd5eCharacter> characters,
         Guid viewerUserId,
         bool viewerIsDm,
         CancellationToken cancellationToken = default);
@@ -55,6 +64,7 @@ public interface ICharacterSheetService
 
 public sealed class CharacterSheetService(
     ICatalogRepository catalog,
+    IDnd5eCharacterRepository dnd5eCharacters,
     IEquippedGearProvider gearProvider,
     IUserRepository users,
     IChangeRequestRepository changeRequests,
@@ -64,19 +74,31 @@ public sealed class CharacterSheetService(
     CompanionPlanner companionPlanner,
     IDateTimeProvider clock) : ICharacterSheetService
 {
-    public async Task<CharacterSheet> CalculateAsync(Character character, CancellationToken cancellationToken = default)
+    public async Task<CharacterSheet> RecalculateAsync(Character character, CancellationToken cancellationToken = default) =>
+        await RecalculateAsync(await LoadDnd5eAsync(character, cancellationToken), cancellationToken);
+
+    public async Task<CharacterDetailDto> BuildDetailAsync(Character character, CancellationToken cancellationToken = default) =>
+        await BuildDetailAsync(await LoadDnd5eAsync(character, cancellationToken), cancellationToken);
+
+    public async Task<CharacterSheet> CalculateAsync(Character character, CancellationToken cancellationToken = default) =>
+        await CalculateAsync(await LoadDnd5eAsync(character, cancellationToken), cancellationToken);
+
+    private async Task<Dnd5eCharacter> LoadDnd5eAsync(Character character, CancellationToken cancellationToken) =>
+        await dnd5eCharacters.GetWithDetailsAsync(character.Id, cancellationToken) ?? throw CharacterErrors.CharacterNotFound();
+
+    public async Task<CharacterSheet> CalculateAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default)
     {
         var sheetCatalog = await SheetCatalog.LoadAsync(catalog, [character], includeSpells: false, cancellationToken);
         return await CalculateAsync(character, sheetCatalog, cancellationToken);
     }
 
-    public async Task<IReadOnlyDictionary<Guid, CharacterSheet>> CalculateManyAsync(IReadOnlyList<Character> characters, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyDictionary<Guid, CharacterSheet>> CalculateManyAsync(IReadOnlyList<Dnd5eCharacter> characters, CancellationToken cancellationToken = default)
     {
         var sheetCatalog = await SheetCatalog.LoadAsync(catalog, characters, includeSpells: false, cancellationToken);
         return await CalculateManyAsync(characters, sheetCatalog, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<PartyMemberDto>> BuildPartyAsync(IReadOnlyList<Character> characters, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PartyMemberDto>> BuildPartyAsync(IReadOnlyList<Dnd5eCharacter> characters, CancellationToken cancellationToken = default)
     {
         var sheetCatalog = await SheetCatalog.LoadAsync(catalog, characters, includeSpells: false, cancellationToken);
         var sheetsById = await CalculateManyAsync(characters, sheetCatalog, cancellationToken);
@@ -95,7 +117,7 @@ public sealed class CharacterSheetService(
                     c.Name,
                     c.OwnerUserId,
                     c.OwnerUserId is { } owner ? owners.GetValueOrDefault(owner) : null,
-                    FileUrls.For(c.PortraitFileId),
+                    FileUrls.For(c.Character.PortraitFileId),
                     c.OrderedClasses
                         .Select(k => new CharacterClassSummaryDto(
                             k.ClassIndex,
@@ -132,7 +154,7 @@ public sealed class CharacterSheetService(
             .ToList();
     }
 
-    public async Task<CharacterSheet> RecalculateAsync(Character character, CancellationToken cancellationToken = default)
+    public async Task<CharacterSheet> RecalculateAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default)
     {
         var sheetCatalog = await SheetCatalog.LoadAsync(catalog, [character], includeSpells: false, cancellationToken);
 
@@ -149,7 +171,7 @@ public sealed class CharacterSheetService(
         return sheet;
     }
 
-    public async Task EnsureCatalogReferencesAsync(Character character, SheetEdit edit, CancellationToken cancellationToken = default)
+    public async Task EnsureCatalogReferencesAsync(Dnd5eCharacter character, SheetEdit edit, CancellationToken cancellationToken = default)
     {
         static string? Effective(string? edited, string? current) =>
             edited is null ? current : edited.Trim() is { Length: > 0 } trimmed ? trimmed : null;
@@ -218,7 +240,7 @@ public sealed class CharacterSheetService(
         }
     }
 
-    public async Task<CharacterDetailDto> BuildDetailAsync(Character character, CancellationToken cancellationToken = default)
+    public async Task<CharacterDetailDto> BuildDetailAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default)
     {
         var sheetCatalog = await SheetCatalog.LoadAsync(catalog, [character], includeSpells: true, cancellationToken);
         var sheet = await CalculateAsync(character, sheetCatalog, cancellationToken);
@@ -308,21 +330,21 @@ public sealed class CharacterSheetService(
             Conditions = character.Conditions.Select(c => new CharacterConditionDto(c.Index, c.Note)).ToList(),
             ConcentratingOnSpellIndex = character.ConcentratingOnSpellIndex,
             Inspiration = character.Inspiration,
-            CopperPieces = character.CopperPieces,
+            CopperPieces = character.Character.Money,
             HitDiceUsed = character.HitDiceUsed,
-            Notes = character.Notes,
-            Backstory = character.Backstory,
-            PersonalityTraits = character.PersonalityTraits,
-            Ideals = character.Ideals,
-            Bonds = character.Bonds,
-            Flaws = character.Flaws,
+            Notes = character.Character.Notes,
+            Backstory = character.Character.Backstory,
+            PersonalityTraits = character.Character.PersonalityTraits,
+            Ideals = character.Character.Ideals,
+            Bonds = character.Character.Bonds,
+            Flaws = character.Character.Flaws,
             BackgroundDetail = character.BackgroundDetail,
-            HeightInches = character.HeightInches,
-            WeightPounds = character.WeightPounds,
-            PortraitFileId = character.PortraitFileId,
-            PortraitUrl = FileUrls.For(character.PortraitFileId),
+            HeightInches = character.Character.HeightInches,
+            WeightPounds = character.Character.WeightPounds,
+            PortraitFileId = character.Character.PortraitFileId,
+            PortraitUrl = FileUrls.For(character.Character.PortraitFileId),
             CreatedAt = character.CreatedAt,
-            UpdatedAt = character.UpdatedAt,
+            UpdatedAt = character.Character.UpdatedAt,
             Classes = classes,
             Proficiencies = character.Proficiencies
                 .OrderBy(p => p.Type)
@@ -338,7 +360,7 @@ public sealed class CharacterSheetService(
             SpellSlots = SpellSlots(character, sheet),
             Sheet = ToDto(sheet),
             PendingChangeRequests = pending.Select(ChangeRequestDto.From).ToList(),
-            Inventory = InventoryView.Build(character, templates, sheet.Abilities[Abilities.Str].Score),
+            Inventory = InventoryView.Build(character.Character, templates, sheet.Abilities[Abilities.Str].Score),
             Combat = CombatSummaryBuilder.Build(character, sheet, sheetCatalog, templates, resources),
             PendingRest = pendingRest is null ? null : PendingRestDto.From(pendingRest),
             PendingLevelUpTo = character.PendingLevelUpTo,
@@ -366,7 +388,7 @@ public sealed class CharacterSheetService(
     }
 
     public async Task<IReadOnlyList<CharacterSummaryDto>> BuildSummariesAsync(
-        IReadOnlyList<Character> characters,
+        IReadOnlyList<Dnd5eCharacter> characters,
         Guid viewerUserId,
         bool viewerIsDm,
         CancellationToken cancellationToken = default)
@@ -404,7 +426,7 @@ public sealed class CharacterSheetService(
                     c.TotalLevel,
                     showHp ? c.HitPointsCurrent : null,
                     hitPointsMax,
-                    FileUrls.For(c.PortraitFileId));
+                    FileUrls.For(c.Character.PortraitFileId));
             })
             .ToList();
     }
@@ -413,7 +435,7 @@ public sealed class CharacterSheetService(
     /// The gear comes from the loaded inventory (<see cref="Character.Items"/>), not from the database, so
     /// that unsaved changes (equip, attune, remove) are already reflected before saving.
     /// </summary>
-    private async Task<CharacterSheet> CalculateAsync(Character character, SheetCatalog sheetCatalog, CancellationToken cancellationToken)
+    private async Task<CharacterSheet> CalculateAsync(Dnd5eCharacter character, SheetCatalog sheetCatalog, CancellationToken cancellationToken)
     {
         var equipped = character.Items.Where(i => i.Equipped).ToList();
         var templates = await InventoryView.LoadTemplatesAsync(itemTemplates, equipped.Select(i => i.TemplateId), cancellationToken);
@@ -422,7 +444,7 @@ public sealed class CharacterSheetService(
 
     /// <summary>Sheets of several characters with their inventories loaded, with one template query for all.</summary>
     private async Task<IReadOnlyDictionary<Guid, CharacterSheet>> CalculateManyAsync(
-        IReadOnlyList<Character> characters,
+        IReadOnlyList<Dnd5eCharacter> characters,
         SheetCatalog sheetCatalog,
         CancellationToken cancellationToken)
     {
@@ -436,14 +458,14 @@ public sealed class CharacterSheetService(
     }
 
     /// <summary>Levels with slots (or spent ones), pact slots first as level 0.</summary>
-    private static List<SpellSlotDto> SpellSlots(Character character, CharacterSheet sheet) =>
+    private static List<SpellSlotDto> SpellSlots(Dnd5eCharacter character, CharacterSheet sheet) =>
         Enumerable.Range(SpellSlotState.PactLevel, 10)
             .Select(level => new SpellSlotDto(level, sheet.SpellSlotMax(level), character.SpellSlotsUsed(level)))
             .Where(s => s.Max > 0 || s.Used > 0)
             .ToList();
 
     /// <summary>Templates of the automatic resources: SRD class resources and those of chosen options and subclass features.</summary>
-    private static List<ResourceTemplate> AutoResourceTemplates(Character character, CharacterSheet sheet) =>
+    private static List<ResourceTemplate> AutoResourceTemplates(Dnd5eCharacter character, CharacterSheet sheet) =>
         [.. ClassResourceRules.ForClasses(character.Classes, sheet.AbilityModifiers), .. sheet.ChoiceResources];
 
     private static CharacterSheetDto ToDto(CharacterSheet sheet) => new(

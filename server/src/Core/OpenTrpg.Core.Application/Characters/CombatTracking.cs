@@ -26,17 +26,17 @@ public sealed class CombatUpdateRequestValidator : AbstractValidator<CombatUpdat
     public CombatUpdateRequestValidator()
     {
         RuleFor(x => x.HitPointsCurrent).GreaterThanOrEqualTo(0).WithMessage("Los puntos de golpe no pueden ser negativos.");
-        RuleFor(x => x.TemporaryHitPoints).InclusiveBetween(0, Character.MaxTemporaryHitPoints)
-            .WithMessage($"Los puntos de golpe temporales deben estar entre 0 y {Character.MaxTemporaryHitPoints}.");
-        RuleFor(x => x.DeathSaveSuccesses).InclusiveBetween(0, Character.MaxDeathSaves)
-            .WithMessage($"Las salvaciones contra muerte deben estar entre 0 y {Character.MaxDeathSaves}.");
-        RuleFor(x => x.DeathSaveFailures).InclusiveBetween(0, Character.MaxDeathSaves)
-            .WithMessage($"Las salvaciones contra muerte deben estar entre 0 y {Character.MaxDeathSaves}.");
-        RuleFor(x => x.ExhaustionLevel).InclusiveBetween(0, Character.MaxExhaustionLevel)
-            .WithMessage($"El nivel de agotamiento debe estar entre 0 y {Character.MaxExhaustionLevel}.");
+        RuleFor(x => x.TemporaryHitPoints).InclusiveBetween(0, Dnd5eCharacter.MaxTemporaryHitPoints)
+            .WithMessage($"Los puntos de golpe temporales deben estar entre 0 y {Dnd5eCharacter.MaxTemporaryHitPoints}.");
+        RuleFor(x => x.DeathSaveSuccesses).InclusiveBetween(0, Dnd5eCharacter.MaxDeathSaves)
+            .WithMessage($"Las salvaciones contra muerte deben estar entre 0 y {Dnd5eCharacter.MaxDeathSaves}.");
+        RuleFor(x => x.DeathSaveFailures).InclusiveBetween(0, Dnd5eCharacter.MaxDeathSaves)
+            .WithMessage($"Las salvaciones contra muerte deben estar entre 0 y {Dnd5eCharacter.MaxDeathSaves}.");
+        RuleFor(x => x.ExhaustionLevel).InclusiveBetween(0, Dnd5eCharacter.MaxExhaustionLevel)
+            .WithMessage($"El nivel de agotamiento debe estar entre 0 y {Dnd5eCharacter.MaxExhaustionLevel}.");
         RuleFor(x => x.Conditions!)
-            .Must(c => c.Count <= Character.MaxConditions)
-            .WithMessage($"Un personaje no puede tener más de {Character.MaxConditions} condiciones.")
+            .Must(c => c.Count <= Dnd5eCharacter.MaxConditions)
+            .WithMessage($"Un personaje no puede tener más de {Dnd5eCharacter.MaxConditions} condiciones.")
             .When(x => x.Conditions is not null)
             .OverridePropertyName("conditions");
         RuleForEach(x => x.Conditions)
@@ -44,9 +44,9 @@ public sealed class CombatUpdateRequestValidator : AbstractValidator<CombatUpdat
             .ChildRules(c =>
             {
                 c.RuleFor(e => e.Index).NotEmpty().WithMessage("Indica la condición.")
-                    .MaximumLength(Character.IndexMaxLength).WithMessage($"La condición no puede superar los {Character.IndexMaxLength} caracteres.");
-                c.RuleFor(e => e.Note).MaximumLength(Character.ConditionNoteMaxLength)
-                    .WithMessage($"La nota no puede superar los {Character.ConditionNoteMaxLength} caracteres.");
+                    .MaximumLength(Dnd5eCharacter.IndexMaxLength).WithMessage($"La condición no puede superar los {Dnd5eCharacter.IndexMaxLength} caracteres.");
+                c.RuleFor(e => e.Note).MaximumLength(Dnd5eCharacter.ConditionNoteMaxLength)
+                    .WithMessage($"La nota no puede superar los {Dnd5eCharacter.ConditionNoteMaxLength} caracteres.");
             });
     }
 }
@@ -58,8 +58,8 @@ public sealed class ConcentrationRequestValidator : AbstractValidator<Concentrat
 {
     public ConcentrationRequestValidator()
     {
-        RuleFor(x => x.SpellIndex).MaximumLength(Character.IndexMaxLength)
-            .WithMessage($"El índice de conjuro no puede superar los {Character.IndexMaxLength} caracteres.");
+        RuleFor(x => x.SpellIndex).MaximumLength(Dnd5eCharacter.IndexMaxLength)
+            .WithMessage($"El índice de conjuro no puede superar los {Dnd5eCharacter.IndexMaxLength} caracteres.");
     }
 }
 
@@ -159,27 +159,27 @@ public sealed class ShortRestRequestValidator : AbstractValidator<ShortRestReque
 /// <see cref="CampaignEventTypes.CharacterUpdated"/> after the save.
 /// </summary>
 public sealed class CharacterTracker(
-    CharacterLoader loader,
+    Dnd5eCharacterLoader loader,
     ICharacterSheetService sheets,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
     IDateTimeProvider clock)
 {
-    public async Task<Character> LoadAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken) =>
+    public async Task<Dnd5eCharacter> LoadAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken) =>
         (await LoadWithRoleAsync(currentUserId, characterId, cancellationToken)).Character;
 
     /// <summary>Like <see cref="LoadAsync"/>, keeping the actor's campaign role.</summary>
-    public async Task<LoadedCharacter> LoadWithRoleAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken)
+    public async Task<LoadedDnd5eCharacter> LoadWithRoleAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken)
     {
         var loaded = await loader.LoadAsync(characterId, currentUserId, cancellationToken);
         loaded.Character.EnsureCanTrack(currentUserId, loaded.IsDm);
         return loaded;
     }
 
-    public Task<CharacterSheet> SheetAsync(Character character, CancellationToken cancellationToken) =>
+    public Task<CharacterSheet> SheetAsync(Dnd5eCharacter character, CancellationToken cancellationToken) =>
         sheets.CalculateAsync(character, cancellationToken);
 
-    public async Task<CharacterDetailDto> SaveAsync(Character character, CancellationToken cancellationToken)
+    public async Task<CharacterDetailDto> SaveAsync(Dnd5eCharacter character, CancellationToken cancellationToken)
     {
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await NotifyAsync(character, cancellationToken);
@@ -187,7 +187,7 @@ public sealed class CharacterTracker(
     }
 
     /// <summary>Publishes <see cref="CampaignEventTypes.CharacterUpdated"/> (call after saving).</summary>
-    public Task NotifyAsync(Character character, CancellationToken cancellationToken) =>
+    public Task NotifyAsync(Dnd5eCharacter character, CancellationToken cancellationToken) =>
         notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, clock.UtcNow, cancellationToken);
 }
 
@@ -330,7 +330,7 @@ public sealed class ResourceHandler(CharacterTracker tracker, IUnitOfWork unitOf
 /// character's pending rest request, which it makes moot.
 /// </summary>
 public sealed class RestHandler(
-    CharacterLoader loader,
+    Dnd5eCharacterLoader loader,
     CharacterTracker tracker,
     RestRequestLoader restRequests,
     ICampaignNotifier notifier,
@@ -359,7 +359,7 @@ public sealed class RestHandler(
         return await SaveAsync(currentUserId, character, now, cancellationToken);
     }
 
-    private async Task<Character> LoadForDmAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken)
+    private async Task<Dnd5eCharacter> LoadForDmAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken)
     {
         var loaded = await loader.LoadAsync(characterId, currentUserId, cancellationToken);
         if (!loaded.IsDm)
@@ -370,7 +370,7 @@ public sealed class RestHandler(
         return loaded.Character;
     }
 
-    private async Task<CharacterDetailDto> SaveAsync(Guid currentUserId, Character character, DateTimeOffset now, CancellationToken cancellationToken)
+    private async Task<CharacterDetailDto> SaveAsync(Guid currentUserId, Dnd5eCharacter character, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var cancelled = await restRequests.CancelPendingAsync([character.Id], currentUserId, now, cancellationToken);
         var detail = await tracker.SaveAsync(character, cancellationToken);

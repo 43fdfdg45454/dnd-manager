@@ -102,8 +102,8 @@ public sealed class AdjustMoneyRequestValidator : AbstractValidator<AdjustMoneyR
     {
         RuleFor(x => x.DeltaCp)
             .NotEqual(0).WithMessage("Indica una cantidad de dinero distinta de 0.")
-            .InclusiveBetween(-Character.MaxCopperPieces, Character.MaxCopperPieces)
-            .WithMessage($"La cantidad debe estar entre -{Character.MaxCopperPieces} y {Character.MaxCopperPieces} pc.");
+            .InclusiveBetween(-Character.MaxMoney, Character.MaxMoney)
+            .WithMessage($"La cantidad debe estar entre -{Character.MaxMoney} y {Character.MaxMoney} pc.");
         RuleFor(x => x.Reason).MaximumLength(ReasonMaxLength)
             .WithMessage($"El motivo no puede superar los {ReasonMaxLength} caracteres.");
     }
@@ -428,13 +428,13 @@ public sealed class AdjustMoneyHandler(
             return new InventoryChangeResult(null, await reader.BuildAsync(character, cancellationToken), null);
         }
 
-        if (character.CopperPieces + (long)request.DeltaCp is < 0 or > Character.MaxCopperPieces)
+        if (character.Money + (long)request.DeltaCp is < 0 or > Character.MaxMoney)
         {
             throw AppException.Validation("deltaCp", "El dinero resultante quedaría fuera de rango.");
         }
 
         var trimmed = request with { Reason = string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim() };
-        var changeRequest = await operations.RequestAsync(character, currentUserId, ChangeRequestTypes.AdjustMoney, trimmed, cancellationToken, new { copperPieces = character.CopperPieces });
+        var changeRequest = await operations.RequestAsync(character, currentUserId, ChangeRequestTypes.AdjustMoney, trimmed, cancellationToken, new { copperPieces = character.Money });
         return new InventoryChangeResult(null, null, changeRequest);
     }
 }

@@ -12,7 +12,7 @@ public sealed record ActivePick(string? ClassIndex, string Key, int Level, strin
 
 // Level-ups granted by the DM (phase 16b): the DM grants the next level and the player completes it with the
 // level-up wizard (phase 16c), which records its choices (CharacterChoice) and applies their effects.
-public sealed partial class Character
+public sealed partial class Dnd5eCharacter
 {
     private readonly List<CharacterChoice> _choices = [];
 

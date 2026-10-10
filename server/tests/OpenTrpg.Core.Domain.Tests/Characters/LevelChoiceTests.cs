@@ -312,9 +312,9 @@ public class LevelChoiceTests
     private static OptionDefinition Option(string index, string name, string modifiers) =>
         new() { Index = index, SetId = OptionSets.FightingStyles, Name = name, ModifiersJson = modifiers };
 
-    private static Character Fighter(AbilityScores scores) => NewCharacter(scores, [new ClassEntry("fighter", null, 1)]);
+    private static Dnd5eCharacter Fighter(AbilityScores scores) => NewCharacter(scores, [new ClassEntry("fighter", null, 1)]);
 
-    private static void Pick(Character character, string key, string kind, string setId, OptionDefinition option, int level)
+    private static void Pick(Dnd5eCharacter character, string key, string kind, string setId, OptionDefinition option, int level)
     {
         var classIndex = character.OrderedClasses[0].ClassIndex;
         character.RecordChoice(level, classIndex, key, new ChoiceSelection
@@ -326,14 +326,14 @@ public class LevelChoiceTests
         }, Now);
     }
 
-    private static CharacterSheet SheetWith(Character character, EquippedGear gear, params OptionDefinition[] extra)
+    private static CharacterSheet SheetWith(Dnd5eCharacter character, EquippedGear gear, params OptionDefinition[] extra)
     {
         var options = new[] { Defense, Archery, Dueling }.Concat(extra).DistinctBy(o => o.Index).ToDictionary(o => o.Index);
         var effects = ChoiceEffects.Build(character, i => options.GetValueOrDefault(i));
         return SheetCalculator.Calculate(new SheetInput(character, Classes, null, null, Skills, gear, effects));
     }
 
-    private static IReadOnlyList<AttackValue> AttacksWith(Character character, OptionDefinition[] options, params ItemTemplate[] weapons)
+    private static IReadOnlyList<AttackValue> AttacksWith(Dnd5eCharacter character, OptionDefinition[] options, params ItemTemplate[] weapons)
     {
         var sheet = SheetWith(character, EquippedGear.None, options);
         return CombatCalculator.Attacks(character, sheet, weapons.Select(w => new EquippedWeapon(Guid.NewGuid(), w.Index, TestItems.Effective(w))));

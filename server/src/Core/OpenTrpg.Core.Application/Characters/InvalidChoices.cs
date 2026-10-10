@@ -53,7 +53,7 @@ public sealed class InvalidChoicesPlanner(ICatalogRepository catalog)
         KeyPrefix + invalid.Item.Index, invalid.ClassIndex, invalid.Key, invalid.Level, invalid.SetId, ChoiceItemDto.From(invalid.Item), invalid.Reason);
 
     /// <summary>The invalid picks of the character (catalog options of its picks loaded here).</summary>
-    public async Task<IReadOnlyList<InvalidChoice>> FindAsync(Character character, CharacterSheet sheet, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<InvalidChoice>> FindAsync(Dnd5eCharacter character, CharacterSheet sheet, CancellationToken cancellationToken = default)
     {
         var indexes = ChoiceEffects.OptionIndexes(character).Distinct(StringComparer.Ordinal).ToList();
         if (indexes.Count == 0)
@@ -65,7 +65,7 @@ public sealed class InvalidChoicesPlanner(ICatalogRepository catalog)
         return ChoiceValidity.Find(character, sheet, options.GetValueOrDefault);
     }
 
-    public async Task<IReadOnlyList<PlannedReplacement>> PlanAsync(Character character, CharacterSheet sheet, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PlannedReplacement>> PlanAsync(Dnd5eCharacter character, CharacterSheet sheet, CancellationToken cancellationToken = default)
     {
         var invalid = await FindAsync(character, sheet, cancellationToken);
         if (invalid.Count == 0)
@@ -114,7 +114,7 @@ public sealed class InvalidChoicesPlanner(ICatalogRepository catalog)
     /// Answers of other keys are ignored (the caller checks them). Returns the replaced option indexes.
     /// </summary>
     public async Task<IReadOnlyList<string>> ApplyAsync(
-        Character character,
+        Dnd5eCharacter character,
         IReadOnlyList<PlannedReplacement> replacements,
         IReadOnlyList<LevelUpChoiceAnswer> answers,
         DateTimeOffset now,
@@ -227,7 +227,7 @@ public sealed class InvalidChoicesPlanner(ICatalogRepository catalog)
 
 /// <summary>Forced replacement of invalid options and feats: owner or DM, without approval.</summary>
 public sealed class InvalidChoicesHandler(
-    CharacterLoader loader,
+    Dnd5eCharacterLoader loader,
     InvalidChoicesPlanner planner,
     ICharacterSheetService sheets,
     IUnitOfWork unitOfWork,

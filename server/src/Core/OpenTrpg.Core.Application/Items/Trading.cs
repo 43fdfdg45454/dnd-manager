@@ -85,7 +85,7 @@ public sealed class BuyHandler(
         var now = clock.UtcNow;
 
         var total = shop.SellToCharacter(shopItem.Id, request.Quantity, now);
-        if (total > character.CopperPieces)
+        if (total > character.Money)
         {
             throw AppException.Validation("quantity", "El personaje no tiene dinero suficiente.");
         }

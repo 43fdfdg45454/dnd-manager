@@ -251,12 +251,12 @@ public class CombatCalculatorTests
 
     // ---- Helpers -----------------------------------------------------------------------------------
 
-    private static IReadOnlyList<AttackValue> Attacks(Character character, params ItemTemplate[] equipped) =>
+    private static IReadOnlyList<AttackValue> Attacks(Dnd5eCharacter character, params ItemTemplate[] equipped) =>
         CombatCalculator.Attacks(character, Sheet(character), equipped.Select(t => new EquippedWeapon(Guid.NewGuid(), t.Index, TestItems.Effective(t))));
 
     private static ProficiencyEntry WeaponProficiency(string key) => new(ProficiencyType.Weapon, key, false, ProficiencySource.Class);
 
-    private static Character WithResources(Character character)
+    private static Dnd5eCharacter WithResources(Dnd5eCharacter character)
     {
         character.SyncAutoResources(ClassResourceRules.ForClasses(character.Classes, Sheet(character).AbilityModifiers));
         return character;

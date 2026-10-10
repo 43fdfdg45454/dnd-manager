@@ -5,7 +5,7 @@ namespace OpenTrpg.Core.Domain.Characters;
 
 // Phase 19: decisions of the race, subrace and background made at creation (half-elf ability bonuses and skills,
 // dragonborn ancestry, high elf cantrip...), stored as CharacterChoice of level 0 without class.
-public sealed partial class Character
+public sealed partial class Dnd5eCharacter
 {
     /// <summary>Origin choices (race, subrace, background), in the order they were made.</summary>
     public IReadOnlyList<CharacterChoice> OriginChoices => [.. _choices.Where(c => c.IsOrigin).OrderBy(c => c.CreatedAt)];

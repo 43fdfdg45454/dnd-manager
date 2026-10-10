@@ -82,23 +82,23 @@ public class HeightWeightTests
     [Fact]
     public void Height_and_weight_are_set_cleared_and_validated()
     {
-        var character = Character.Create(Guid.NewGuid(), Guid.NewGuid(), "Alto", Now);
-        Assert.Equal(((int?)null, (int?)null), (character.HeightInches, character.WeightPounds));
+        var character = Dnd5eCharacter.Create(Character.Create(Guid.NewGuid(), Guid.NewGuid(), "Alto", Now));
+        Assert.Equal(((int?)null, (int?)null), (character.Character.HeightInches, character.Character.WeightPounds));
 
-        character.SetHeightAndWeight(67, 165, Now);
-        Assert.Equal(((int?)67, (int?)165), (character.HeightInches, character.WeightPounds));
+        character.Character.SetHeightAndWeight(67, 165, Now);
+        Assert.Equal(((int?)67, (int?)165), (character.Character.HeightInches, character.Character.WeightPounds));
 
         // Null keeps; 0 clears.
-        character.SetHeightAndWeight(null, 0, Now);
-        Assert.Equal(((int?)67, (int?)null), (character.HeightInches, character.WeightPounds));
+        character.Character.SetHeightAndWeight(null, 0, Now);
+        Assert.Equal(((int?)67, (int?)null), (character.Character.HeightInches, character.Character.WeightPounds));
 
-        Assert.Throws<DomainException>(() => character.SetHeightAndWeight(201, null, Now));
-        Assert.Throws<DomainException>(() => character.SetHeightAndWeight(null, 2001, Now));
-        Assert.Throws<DomainException>(() => character.SetHeightAndWeight(-1, null, Now));
+        Assert.Throws<DomainException>(() => character.Character.SetHeightAndWeight(201, null, Now));
+        Assert.Throws<DomainException>(() => character.Character.SetHeightAndWeight(null, 2001, Now));
+        Assert.Throws<DomainException>(() => character.Character.SetHeightAndWeight(-1, null, Now));
 
         character.ApplySheetEdit(new SheetEdit { HeightInches = 70, WeightPounds = 180 }, Now);
-        Assert.Equal(((int?)70, (int?)180), (character.HeightInches, character.WeightPounds));
+        Assert.Equal(((int?)70, (int?)180), (character.Character.HeightInches, character.Character.WeightPounds));
         character.ApplySheetEdit(new SheetEdit { Notes = "Sin cambios de talla." }, Now);
-        Assert.Equal(((int?)70, (int?)180), (character.HeightInches, character.WeightPounds));
+        Assert.Equal(((int?)70, (int?)180), (character.Character.HeightInches, character.Character.WeightPounds));
     }
 }

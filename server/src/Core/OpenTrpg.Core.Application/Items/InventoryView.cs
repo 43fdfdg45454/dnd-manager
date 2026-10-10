@@ -52,7 +52,7 @@ public static class InventoryView
             .ToList();
         var totalWeight = items.Sum(i => (i.Effective.WeightLb ?? 0m) * i.Quantity);
 
-        return new InventoryDto(items, character.CopperPieces, totalWeight, strengthScore * CarryCapacityPerStrength, character.AttunedCount);
+        return new InventoryDto(items, character.Money, totalWeight, strengthScore * CarryCapacityPerStrength, character.AttunedCount);
     }
 }
 

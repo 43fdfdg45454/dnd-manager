@@ -1,6 +1,6 @@
 namespace OpenTrpg.Core.Domain.Catalog;
 
-/// <summary>Character class from the rules catalog (SRD). <see cref="Index"/> is the primary key.</summary>
+/// <summary>Dnd5eCharacter class from the rules catalog (SRD). <see cref="Index"/> is the primary key.</summary>
 public sealed class ClassDefinition
 {
     public required string Index { get; init; }

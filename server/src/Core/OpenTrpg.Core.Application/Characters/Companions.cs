@@ -64,7 +64,7 @@ public sealed class CompanionPlanner(ICatalogRepository catalog, IBeastCatalog b
     public static AppException NoCompanion() => AppException.NotFound("El personaje no tiene compañero animal.");
 
     /// <summary>The companion feature the character has reached, or null.</summary>
-    public async Task<CompanionGrant?> GrantAsync(Character character, CancellationToken cancellationToken)
+    public async Task<CompanionGrant?> GrantAsync(Dnd5eCharacter character, CancellationToken cancellationToken)
     {
         var subclasses = character.Classes.Select(c => c.SubclassIndex).OfType<string>().Distinct(StringComparer.Ordinal).ToList();
         var features = await catalog.ListSubclassFeatureResourcesAsync(subclasses, cancellationToken);
@@ -101,7 +101,7 @@ public sealed class CompanionPlanner(ICatalogRepository catalog, IBeastCatalog b
     /// Creates the companion, renames it or changes its beast (back to full hit points). The caller has checked who may do it;
     /// the beast is checked here against the feature the character has reached.
     /// </summary>
-    public async Task<CharacterCompanion> ApplyAsync(Character character, string beastIndex, string name, DateTimeOffset now, CancellationToken cancellationToken)
+    public async Task<CharacterCompanion> ApplyAsync(Dnd5eCharacter character, string beastIndex, string name, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var grant = await GrantAsync(character, cancellationToken) ?? throw NoCompanionFeature();
         var beast = RequireBeast(grant.Rule, beastIndex);
@@ -126,7 +126,7 @@ public sealed class CompanionPlanner(ICatalogRepository catalog, IBeastCatalog b
     }
 
     /// <summary>Applies an approved <see cref="Dnd5eChangeRequestTypes.Companion"/> request.</summary>
-    public Task ApplyApprovedAsync(Character character, string payloadJson, DateTimeOffset now, CancellationToken cancellationToken)
+    public Task ApplyApprovedAsync(Dnd5eCharacter character, string payloadJson, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var payload = CompanionPayload.Parse(payloadJson)
             ?? throw AppException.Validation("payload", "El contenido de la solicitud no es un compañero válido.");
@@ -134,7 +134,7 @@ public sealed class CompanionPlanner(ICatalogRepository catalog, IBeastCatalog b
     }
 
     /// <summary>A long rest brings the companions of the given characters back to full hit points.</summary>
-    public async Task RestoreAfterLongRestAsync(IReadOnlyList<Character> characters, DateTimeOffset now, CancellationToken cancellationToken)
+    public async Task RestoreAfterLongRestAsync(IReadOnlyList<Dnd5eCharacter> characters, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var list = await companions.ListByCharactersAsync(characters.Select(c => c.Id).ToList(), cancellationToken);
         foreach (var companion in list)
@@ -271,7 +271,7 @@ public sealed record CompanionPayload(string BeastIndex, string BeastName, strin
 /// (and the owner of a draft) skip.
 /// </summary>
 public sealed class SetCompanionHandler(
-    CharacterLoader loader,
+    Dnd5eCharacterLoader loader,
     CompanionPlanner planner,
     ICharacterCompanionRepository companions,
     ICharacterSheetService sheets,

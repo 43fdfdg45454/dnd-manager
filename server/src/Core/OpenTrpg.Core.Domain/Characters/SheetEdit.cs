@@ -10,7 +10,7 @@ public sealed record SpellEntry(string SpellIndex, string ClassIndex, bool IsPre
 public sealed record OverrideEntry(string Field, int Value, string? Note = null);
 
 /// <summary>
-/// A sheet edit (the domain side of <c>SheetPatch</c>), applied by <see cref="Character.ApplySheetEdit"/>
+/// A sheet edit (the domain side of <c>SheetPatch</c>), applied by <see cref="Dnd5eCharacter.ApplySheetEdit"/>
 /// directly or when a change request is approved. Null means "unchanged". For the optional indexes
 /// (race, subrace, background, alignment) an empty string clears the value. Every list given replaces
 /// the existing one completely.
@@ -70,4 +70,19 @@ public sealed record SheetEdit
 
     /// <summary>Weight in pounds; 0 clears it.</summary>
     public int? WeightPounds { get; init; }
+
+    /// <summary>The part of the edit kept by the core character: name, texts, money, height and weight.</summary>
+    public CharacterProfileEdit Profile => new()
+    {
+        Name = Name,
+        Notes = Notes,
+        Backstory = Backstory,
+        PersonalityTraits = PersonalityTraits,
+        Ideals = Ideals,
+        Bonds = Bonds,
+        Flaws = Flaws,
+        Money = CopperPieces,
+        HeightInches = HeightInches,
+        WeightPounds = WeightPounds,
+    };
 }

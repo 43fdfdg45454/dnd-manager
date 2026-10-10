@@ -79,13 +79,13 @@ public sealed class PartyAdjustmentValidator : AbstractValidator<PartyAdjustment
         RuleFor(x => x.CharacterId).NotEmpty().WithMessage("Indica el personaje.");
         RuleFor(x => x.HitPointsDelta).InclusiveBetween(-MaxHitPointsDelta, MaxHitPointsDelta)
             .WithMessage($"El cambio de puntos de golpe debe estar entre -{MaxHitPointsDelta} y {MaxHitPointsDelta}.");
-        RuleFor(x => x.TemporaryHitPoints).InclusiveBetween(0, Character.MaxTemporaryHitPoints)
-            .WithMessage($"Los puntos de golpe temporales deben estar entre 0 y {Character.MaxTemporaryHitPoints}.");
+        RuleFor(x => x.TemporaryHitPoints).InclusiveBetween(0, Dnd5eCharacter.MaxTemporaryHitPoints)
+            .WithMessage($"Los puntos de golpe temporales deben estar entre 0 y {Dnd5eCharacter.MaxTemporaryHitPoints}.");
         RuleFor(x => x.HitPointsMax).InclusiveBetween(0, OverrideFields.MaxValue)
             .WithMessage($"Los puntos de golpe máximos deben estar entre 0 y {OverrideFields.MaxValue} (0 quita el valor sobrescrito).");
         RuleFor(x => x.AddConditions!)
-            .Must(c => c.Count <= Character.MaxConditions)
-            .WithMessage($"Un personaje no puede tener más de {Character.MaxConditions} condiciones.")
+            .Must(c => c.Count <= Dnd5eCharacter.MaxConditions)
+            .WithMessage($"Un personaje no puede tener más de {Dnd5eCharacter.MaxConditions} condiciones.")
             .When(x => x.AddConditions is not null)
             .OverridePropertyName("addConditions");
         RuleForEach(x => x.AddConditions)
@@ -94,13 +94,13 @@ public sealed class PartyAdjustmentValidator : AbstractValidator<PartyAdjustment
             {
                 c.RuleFor(e => e.Index)
                     .Must(i => !string.IsNullOrWhiteSpace(i)).WithMessage("Indica la condición.")
-                    .MaximumLength(Character.IndexMaxLength).WithMessage($"La condición no puede superar los {Character.IndexMaxLength} caracteres.");
-                c.RuleFor(e => e.Note).MaximumLength(Character.ConditionNoteMaxLength)
-                    .WithMessage($"La nota no puede superar los {Character.ConditionNoteMaxLength} caracteres.");
+                    .MaximumLength(Dnd5eCharacter.IndexMaxLength).WithMessage($"La condición no puede superar los {Dnd5eCharacter.IndexMaxLength} caracteres.");
+                c.RuleFor(e => e.Note).MaximumLength(Dnd5eCharacter.ConditionNoteMaxLength)
+                    .WithMessage($"La nota no puede superar los {Dnd5eCharacter.ConditionNoteMaxLength} caracteres.");
             });
         RuleFor(x => x.RemoveConditions!)
-            .Must(c => c.Count <= Character.MaxConditions)
-            .WithMessage($"No se pueden quitar más de {Character.MaxConditions} condiciones a la vez.")
+            .Must(c => c.Count <= Dnd5eCharacter.MaxConditions)
+            .WithMessage($"No se pueden quitar más de {Dnd5eCharacter.MaxConditions} condiciones a la vez.")
             .Must(c => c.All(i => !string.IsNullOrWhiteSpace(i)))
             .WithMessage("Indica la condición que quieres quitar.")
             .When(x => x.RemoveConditions is not null)
@@ -128,31 +128,23 @@ public sealed class PartyAdjustmentsValidator : AbstractValidator<List<PartyAdju
     }
 }
 
-/// <summary>Loads the party of a campaign for a DM (403 for players, 404 for non-members).</summary>
-public sealed class PartyLoader(ICampaignAccess access, ICharacterRepository characters)
+/// <summary>Loads the D&amp;D 5e party of a campaign for a DM (see <see cref="PartyLoader"/>).</summary>
+public sealed class Dnd5ePartyLoader(PartyLoader party, IDnd5eCharacterRepository characters)
 {
     /// <summary>Tracked active characters with every child collection.</summary>
-    public async Task<IReadOnlyList<Character>> LoadAsync(Guid campaignId, Guid actorUserId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<Dnd5eCharacter>> LoadAsync(Guid campaignId, Guid actorUserId, CancellationToken cancellationToken)
     {
-        await access.RequireAsync(campaignId, actorUserId, CampaignRole.DM, cancellationToken);
+        await party.RequireDmAsync(campaignId, actorUserId, cancellationToken);
         return await characters.ListActiveWithDetailsAsync(campaignId, cancellationToken);
     }
 
     /// <summary>The characters of <paramref name="party"/> with the given ids (all when empty); 404 when one is not in it.</summary>
-    public static IReadOnlyList<Character> Select(IReadOnlyList<Character> party, IReadOnlyCollection<Guid>? ids)
-    {
-        if (ids is null || ids.Count == 0)
-        {
-            return party;
-        }
-
-        var byId = party.ToDictionary(c => c.Id);
-        return ids.Distinct().Select(id => byId.GetValueOrDefault(id) ?? throw CharacterErrors.CharacterNotFound()).ToList();
-    }
+    public static IReadOnlyList<Dnd5eCharacter> Select(IReadOnlyList<Dnd5eCharacter> party, IReadOnlyCollection<Guid>? ids) =>
+        PartyLoader.Select(party, ids, c => c.Id);
 }
 
 /// <summary>The active characters of the campaign with their vitals. DMs only.</summary>
-public sealed class GetPartyHandler(PartyLoader loader, ICharacterSheetService sheets)
+public sealed class GetPartyHandler(Dnd5ePartyLoader loader, ICharacterSheetService sheets)
 {
     public async Task<PartyDto> HandleAsync(Guid currentUserId, Guid campaignId, CancellationToken cancellationToken = default)
     {
@@ -166,7 +158,7 @@ public sealed class GetPartyHandler(PartyLoader loader, ICharacterSheetService s
 /// rest spends no hit dice. The pending rest requests of those characters are cancelled.
 /// </summary>
 public sealed class PartyRestHandler(
-    PartyLoader loader,
+    Dnd5ePartyLoader loader,
     ICharacterSheetService sheets,
     CompanionPlanner companions,
     RestRequestLoader restRequests,
@@ -178,7 +170,7 @@ public sealed class PartyRestHandler(
     public async Task<PartyDto> HandleAsync(Guid currentUserId, Guid campaignId, PartyRestRequest request, CancellationToken cancellationToken = default)
     {
         var party = await loader.LoadAsync(campaignId, currentUserId, cancellationToken);
-        var targets = PartyLoader.Select(party, request.CharacterIds);
+        var targets = Dnd5ePartyLoader.Select(party, request.CharacterIds);
         var sheetsById = await sheets.CalculateManyAsync(targets, cancellationToken);
         var now = clock.UtcNow;
         var noHitDice = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -224,7 +216,7 @@ public sealed class PartyRestHandler(
 /// current hit points), temporary hit points, damage or healing, and conditions.
 /// </summary>
 public sealed class PartyAdjustHandler(
-    PartyLoader loader,
+    Dnd5ePartyLoader loader,
     ICharacterSheetService sheets,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
@@ -233,7 +225,7 @@ public sealed class PartyAdjustHandler(
     public async Task<PartyDto> HandleAsync(Guid currentUserId, Guid campaignId, IReadOnlyList<PartyAdjustment> adjustments, CancellationToken cancellationToken = default)
     {
         var party = await loader.LoadAsync(campaignId, currentUserId, cancellationToken);
-        var targets = PartyLoader.Select(party, adjustments.Select(a => a.CharacterId).ToList());
+        var targets = Dnd5ePartyLoader.Select(party, adjustments.Select(a => a.CharacterId).ToList());
         var sheetsById = (await sheets.CalculateManyAsync(targets, cancellationToken)).ToDictionary();
         var byId = targets.ToDictionary(c => c.Id);
         var now = clock.UtcNow;
@@ -280,7 +272,7 @@ public sealed class PartyAdjustHandler(
     }
 
     /// <summary>The character's overrides with <c>hitPointsMax</c> set to <paramref name="value"/> (0 removes it).</summary>
-    private static List<OverrideEntry> WithHitPointsMax(Character character, int value)
+    private static List<OverrideEntry> WithHitPointsMax(Dnd5eCharacter character, int value)
     {
         var current = character.Overrides.FirstOrDefault(o => o.Field == OverrideFields.HitPointsMax);
         var overrides = character.Overrides
@@ -296,7 +288,7 @@ public sealed class PartyAdjustHandler(
     }
 
     /// <summary>Current conditions minus the removed indexes, plus the added ones whose index is not present yet.</summary>
-    private static List<CharacterCondition> MergeConditions(Character character, PartyAdjustment adjustment)
+    private static List<CharacterCondition> MergeConditions(Dnd5eCharacter character, PartyAdjustment adjustment)
     {
         var removed = (adjustment.RemoveConditions ?? []).Select(i => i.Trim()).ToHashSet(StringComparer.Ordinal);
         var result = character.Conditions.Where(c => !removed.Contains(c.Index)).ToList();
@@ -319,7 +311,7 @@ public sealed class PartyAdjustHandler(
 /// accumulated and characters at level 20 are left as they are. The grant can be withdrawn.
 /// </summary>
 public sealed class PartyLevelHandler(
-    PartyLoader loader,
+    Dnd5ePartyLoader loader,
     ICharacterSheetService sheets,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
@@ -328,7 +320,7 @@ public sealed class PartyLevelHandler(
     public async Task<PartyDto> GrantAsync(Guid currentUserId, Guid campaignId, PartyLevelRequest? request, CancellationToken cancellationToken = default)
     {
         var party = await loader.LoadAsync(campaignId, currentUserId, cancellationToken);
-        var targets = PartyLoader.Select(party, request?.CharacterIds);
+        var targets = Dnd5ePartyLoader.Select(party, request?.CharacterIds);
         var now = clock.UtcNow;
         var granted = targets.Where(c => c.GrantLevelUp(currentUserId, now)).ToList();
 
@@ -349,7 +341,7 @@ public sealed class PartyLevelHandler(
     public async Task<PartyDto> RevokeAsync(Guid currentUserId, Guid campaignId, PartyLevelRequest? request, CancellationToken cancellationToken = default)
     {
         var party = await loader.LoadAsync(campaignId, currentUserId, cancellationToken);
-        var targets = PartyLoader.Select(party, request?.CharacterIds);
+        var targets = Dnd5ePartyLoader.Select(party, request?.CharacterIds);
         var now = clock.UtcNow;
         var revoked = targets.Where(c => c.RevokeLevelUp(now)).ToList();
 

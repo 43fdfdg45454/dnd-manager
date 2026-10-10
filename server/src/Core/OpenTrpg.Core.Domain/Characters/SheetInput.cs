@@ -16,7 +16,7 @@ namespace OpenTrpg.Core.Domain.Characters;
 /// <param name="Gear">Equipped armor, shield and active item modifiers; null means nothing equipped.</param>
 /// <param name="Choices">Effects of the level choices (<see cref="ChoiceEffects.Build"/>); null means none.</param>
 public sealed record SheetInput(
-    Character Character,
+    Dnd5eCharacter Character,
     IReadOnlyList<ClassInfo> Classes,
     RaceInfo? Race,
     SubraceInfo? Subrace,

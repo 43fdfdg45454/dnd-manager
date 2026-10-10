@@ -19,7 +19,7 @@ public static class CombatSummaryBuilder
     /// <param name="catalog">Catalog with the character's spells loaded (spell levels for the wizard panel).</param>
     /// <param name="templates">Templates of the character's inventory entries.</param>
     public static CombatSummaryDto Build(
-        Character character,
+        Dnd5eCharacter character,
         CharacterSheet sheet,
         SheetCatalog catalog,
         IReadOnlyDictionary<Guid, ItemTemplate> templates,
@@ -72,7 +72,7 @@ public static class CombatSummaryBuilder
     }
 
     private static ClassPanelDto? Panel(
-        Character character,
+        Dnd5eCharacter character,
         CharacterSheet sheet,
         SheetCatalog catalog,
         CharacterClassLevel characterClass,
@@ -98,7 +98,7 @@ public static class CombatSummaryBuilder
         return data is null ? null : new ClassPanelDto(characterClass.ClassIndex, level, data);
     }
 
-    private static WizardPanelData WizardPanel(Character character, CharacterSheet sheet, SheetCatalog catalog, int level)
+    private static WizardPanelData WizardPanel(Dnd5eCharacter character, CharacterSheet sheet, SheetCatalog catalog, int level)
     {
         // Cantrips are not part of the spellbook nor count as prepared spells.
         var spells = character.Spells
@@ -116,7 +116,7 @@ public static class CombatSummaryBuilder
     }
 
     /// <summary>Circle of the Land druids: Natural Recovery (null for other druids).</summary>
-    private static DruidPanelData? DruidPanel(Character character, int level)
+    private static DruidPanelData? DruidPanel(Dnd5eCharacter character, int level)
     {
         var naturalRecovery = character.Resources.FirstOrDefault(r => r.IsAuto && r.Key == ClassResourceRules.NaturalRecovery);
         return naturalRecovery is null
@@ -124,10 +124,10 @@ public static class CombatSummaryBuilder
             : new DruidPanelData(new ArcaneRecoveryPanelDto(naturalRecovery.Used >= naturalRecovery.Max, CombatCalculator.ArcaneRecoveryLevels(level)));
     }
 
-    private static PaladinPanelData PaladinPanel(Character character, IReadOnlyList<SpellSlotDto> spellSlots, int level)
+    private static PaladinPanelData PaladinPanel(Dnd5eCharacter character, IReadOnlyList<SpellSlotDto> spellSlots, int level)
     {
         var pool = Uses(character, ClassResourceRules.LayOnHands);
-        var smiteSlots = level >= Character.DivineSmiteMinLevel
+        var smiteSlots = level >= Dnd5eCharacter.DivineSmiteMinLevel
             ? spellSlots
                 .Where(s => s.Max > 0)
                 .Select(s => new SmiteSlotDto(s.Level, Math.Max(0, s.Max - s.Used), CombatCalculator.DivineSmiteDice(s.Level)))
@@ -141,7 +141,7 @@ public static class CombatSummaryBuilder
             CombatCalculator.AuraRange(level));
     }
 
-    private static UsesDto Uses(Character character, string key) =>
+    private static UsesDto Uses(Dnd5eCharacter character, string key) =>
         character.Resources.FirstOrDefault(r => r.IsAuto && r.Key == key) is { } resource
             ? new UsesDto(resource.Max, resource.Used)
             : new UsesDto(0, 0);

@@ -14,14 +14,14 @@ public class CharacterTests
     {
         var campaignId = Guid.NewGuid();
 
-        var character = Character.Create(campaignId, _owner, "  Thorin  ", Now);
+        var character = Dnd5eCharacter.Create(Character.Create(campaignId, _owner, "  Thorin  ", Now));
 
         Assert.Equal((campaignId, (Guid?)_owner, "Thorin", CharacterStatus.Draft, HpMode.Average, true), (character.CampaignId, character.OwnerUserId, character.Name, character.Status, character.HpMode, character.ApplyRacialBonuses));
         Assert.Equal(AbilityScores.Default, character.BaseAbilities);
         Assert.Equal(0, character.TotalLevel);
         Assert.Empty(character.Conditions);
         Assert.Empty(character.HitDiceUsed);
-        Assert.Equal(Now, character.UpdatedAt);
+        Assert.Equal(Now, character.Character.UpdatedAt);
     }
 
     [Theory]
@@ -39,9 +39,9 @@ public class CharacterTests
         var later = Now.AddHours(1);
         character.ApplySheetEdit(new SheetEdit { Alignment = "Lawful Good", BaseAbilities = Scores(str: 15) }, later);
 
-        Assert.Equal(("dwarf", "hill-dwarf", "Lawful Good", "n", 150), (character.RaceIndex, character.SubraceIndex, character.Alignment, character.Notes, character.CopperPieces));
+        Assert.Equal(("dwarf", "hill-dwarf", "Lawful Good", "n", 150), (character.RaceIndex, character.SubraceIndex, character.Alignment, character.Character.Notes, character.Character.Money));
         Assert.Equal(15, character.BaseStr);
-        Assert.Equal(later, character.UpdatedAt);
+        Assert.Equal(later, character.Character.UpdatedAt);
     }
 
     [Fact]
@@ -231,21 +231,21 @@ public class CharacterTests
     {
         var character = NewCharacter(ownerUserId: _owner);
 
-        character.EnsureCanDelete(_owner, false);
-        character.EnsureCanSubmit(_owner);
+        character.Character.EnsureCanDelete(_owner, false);
+        character.Character.EnsureCanSubmit(_owner);
         character.EnsureCanTrack(_owner, false);
         character.EnsureCanTrack(_other, true);
         Assert.True(character.CanViewSheet(_owner, false));
         Assert.False(character.CanViewSheet(_other, false));
-        Assert.Throws<DomainException>(() => character.EnsureCanSubmit(_other));
+        Assert.Throws<DomainException>(() => character.Character.EnsureCanSubmit(_other));
         Assert.Throws<DomainException>(() => character.EnsureCanTrack(_other, false));
-        Assert.Throws<DomainException>(() => character.EnsureCanDelete(_other, false));
+        Assert.Throws<DomainException>(() => character.Character.EnsureCanDelete(_other, false));
 
         character.Activate(10, Now);
 
-        Assert.Equal(DomainErrorKind.Forbidden, Assert.Throws<DomainException>(() => character.EnsureCanDelete(_owner, false)).Kind);
-        character.EnsureCanDelete(_other, true);
-        Assert.Equal(DomainErrorKind.Conflict, Assert.Throws<DomainException>(() => character.EnsureCanSubmit(_owner)).Kind);
+        Assert.Equal(DomainErrorKind.Forbidden, Assert.Throws<DomainException>(() => character.Character.EnsureCanDelete(_owner, false)).Kind);
+        character.Character.EnsureCanDelete(_other, true);
+        Assert.Equal(DomainErrorKind.Conflict, Assert.Throws<DomainException>(() => character.Character.EnsureCanSubmit(_owner)).Kind);
     }
 
     [Fact]

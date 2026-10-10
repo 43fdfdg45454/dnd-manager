@@ -184,7 +184,7 @@ public static class CompanionGrants
     /// The companion feature of one of the character's subclasses whose level the character has reached in that class
     /// (the highest one when several apply); null when none.
     /// </summary>
-    public static CompanionGrant? Find(Character character, IEnumerable<FeatureDefinition> features)
+    public static CompanionGrant? Find(Dnd5eCharacter character, IEnumerable<FeatureDefinition> features)
     {
         ArgumentNullException.ThrowIfNull(character);
         ArgumentNullException.ThrowIfNull(features);

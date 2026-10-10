@@ -9,9 +9,9 @@ namespace OpenTrpg.Core.Application.Characters;
 /// </summary>
 public static class SheetPatchSnapshot
 {
-    public static SheetPatch Before(Character character, SheetPatch patch) => new()
+    public static SheetPatch Before(Dnd5eCharacter character, SheetPatch patch) => new()
     {
-        Name = patch.Name is null ? null : character.Name,
+        Name = patch.Name is null ? null : character.Character.Name,
         RaceIndex = patch.RaceIndex.IsSet ? new Optional<string?>(character.RaceIndex) : default,
         SubraceIndex = patch.SubraceIndex.IsSet ? new Optional<string?>(character.SubraceIndex) : default,
         BackgroundIndex = patch.BackgroundIndex.IsSet ? new Optional<string?>(character.BackgroundIndex) : default,
@@ -33,15 +33,15 @@ public static class SheetPatchSnapshot
         Overrides = patch.Overrides is null
             ? null
             : character.Overrides.Select(o => new OverridePatch(o.Field, o.Value, o.Note)).ToList(),
-        Notes = patch.Notes is null ? null : character.Notes,
-        Backstory = patch.Backstory is null ? null : character.Backstory,
-        PersonalityTraits = patch.PersonalityTraits is null ? null : character.PersonalityTraits,
-        Ideals = patch.Ideals is null ? null : character.Ideals,
-        Bonds = patch.Bonds is null ? null : character.Bonds,
-        Flaws = patch.Flaws is null ? null : character.Flaws,
+        Notes = patch.Notes is null ? null : character.Character.Notes,
+        Backstory = patch.Backstory is null ? null : character.Character.Backstory,
+        PersonalityTraits = patch.PersonalityTraits is null ? null : character.Character.PersonalityTraits,
+        Ideals = patch.Ideals is null ? null : character.Character.Ideals,
+        Bonds = patch.Bonds is null ? null : character.Character.Bonds,
+        Flaws = patch.Flaws is null ? null : character.Character.Flaws,
         BackgroundDetail = patch.BackgroundDetail is null ? null : character.BackgroundDetail,
-        CopperPieces = patch.CopperPieces is null ? null : character.CopperPieces,
-        HeightInches = patch.HeightInches.IsSet ? new Optional<int?>(character.HeightInches) : default,
-        WeightPounds = patch.WeightPounds.IsSet ? new Optional<int?>(character.WeightPounds) : default,
+        CopperPieces = patch.CopperPieces is null ? null : character.Character.Money,
+        HeightInches = patch.HeightInches.IsSet ? new Optional<int?>(character.Character.HeightInches) : default,
+        WeightPounds = patch.WeightPounds.IsSet ? new Optional<int?>(character.Character.WeightPounds) : default,
     };
 }

@@ -48,7 +48,7 @@ public sealed class CreateCharacterRequestValidator : AbstractValidator<CreateCh
 public sealed class CreateCharacterHandler(
     ICampaignAccess access,
     CharacterOwnerRules ownerRules,
-    ICharacterRepository characters,
+    IDnd5eCharacterRepository characters,
     ICharacterSheetService sheets,
     IUnitOfWork unitOfWork,
     IDateTimeProvider clock)
@@ -87,10 +87,11 @@ public sealed class CreateCharacterHandler(
             character.SetHeightAndWeight(request.HeightInches, request.WeightPounds, clock.UtcNow);
         }
 
-        await sheets.RecalculateAsync(character, cancellationToken);
-        characters.Add(character);
+        var dnd5e = Dnd5eCharacter.Create(character);
+        await sheets.RecalculateAsync(dnd5e, cancellationToken);
+        characters.Add(dnd5e);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return await sheets.BuildDetailAsync(character, cancellationToken);
+        return await sheets.BuildDetailAsync(dnd5e, cancellationToken);
     }
 }
