@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'core/config/app_config.dart';
-import 'core/motion/motion_settings.dart';
-import 'core/router/app_router.dart';
-import 'core/theme/app_theme.dart';
-import 'core/update/update_ui.dart';
-import 'features/settings/data/appearance_controller.dart';
+import 'package:opentrpg_core/core/config/app_config.dart';
+import 'package:opentrpg_core/core/motion/motion_settings.dart';
+import 'package:opentrpg_core/core/router/app_router.dart';
+import 'package:opentrpg_core/core/theme/app_theme.dart';
+import 'package:opentrpg_core/core/update/update_ui.dart';
+import 'package:opentrpg_core/features/settings/data/appearance_controller.dart';
 
 class OpenTrpgApp extends ConsumerWidget {
   const OpenTrpgApp({super.key});

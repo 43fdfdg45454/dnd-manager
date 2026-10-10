@@ -57,6 +57,8 @@ jobs:
         with:
           channel: stable
           cache: true
+      # app/ is the pub workspace root: one pub get resolves the host and packages/core and
+      # packages/dnd5e, and flutter analyze run here also walks both packages.
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test

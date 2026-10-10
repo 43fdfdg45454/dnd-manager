@@ -1,12 +1,12 @@
-import 'package:opentrpg/core/realtime/realtime_events.dart';
-import 'package:opentrpg/systems/dnd5e/dnd5e_events.dart';
-import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
-import 'package:opentrpg/features/characters/data/models.dart';
-import 'package:opentrpg/features/characters/ui/combat/rest_section.dart'
-    show expectedShortRestHealing;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:opentrpg_core/core/realtime/realtime_events.dart';
+import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg_dnd5e/characters/models.dart';
+import 'package:opentrpg_dnd5e/characters/ui/combat/rest_section.dart'
+    show expectedShortRestHealing;
+import 'package:opentrpg_dnd5e/dnd5e_events.dart';
 
 import 'helpers/app_pump.dart';
 import 'helpers/character_fakes.dart';

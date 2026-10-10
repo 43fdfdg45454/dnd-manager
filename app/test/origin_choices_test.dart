@@ -1,14 +1,14 @@
-import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
-import 'package:opentrpg/features/catalog/data/models.dart';
-import 'package:opentrpg/core/theme/app_theme.dart';
-import 'package:opentrpg/features/characters/data/character_wizard_controller.dart';
-import 'package:opentrpg/features/characters/data/models.dart';
-import 'package:opentrpg/features/characters/ui/character_tabs.dart';
-import 'package:opentrpg/features/characters/ui/level_up/character_choices_section.dart';
-import 'package:opentrpg/features/characters/ui/wizard/character_wizard_page.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/core/theme/app_theme.dart';
+import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg_dnd5e/catalog/data/models.dart';
+import 'package:opentrpg_dnd5e/characters/data/character_wizard_controller.dart';
+import 'package:opentrpg_dnd5e/characters/models.dart';
+import 'package:opentrpg_dnd5e/characters/ui/character_tabs.dart';
+import 'package:opentrpg_dnd5e/characters/ui/level_up/character_choices_section.dart';
+import 'package:opentrpg_dnd5e/characters/ui/wizard/character_wizard_page.dart';
 
 import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';

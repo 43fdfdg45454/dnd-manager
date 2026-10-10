@@ -1,17 +1,17 @@
-import 'package:opentrpg/core/motion/flames.dart';
-import 'package:opentrpg/core/motion/flash.dart';
-import 'package:opentrpg/core/motion/level_up_celebration.dart';
-import 'package:opentrpg/core/motion/motion_settings.dart';
-import 'package:opentrpg/core/motion/page_transitions.dart';
-import 'package:opentrpg/core/motion/pulse.dart';
-import 'package:opentrpg/core/motion/rest_animations.dart';
-import 'package:opentrpg/core/motion/shake.dart';
-import 'package:opentrpg/core/motion/vignette.dart';
-import 'package:opentrpg/core/motion/wax_seal.dart';
-import 'package:opentrpg/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:opentrpg_core/core/motion/flames.dart';
+import 'package:opentrpg_core/core/motion/flash.dart';
+import 'package:opentrpg_core/core/motion/level_up_celebration.dart';
+import 'package:opentrpg_core/core/motion/motion_settings.dart';
+import 'package:opentrpg_core/core/motion/page_transitions.dart';
+import 'package:opentrpg_core/core/motion/pulse.dart';
+import 'package:opentrpg_core/core/motion/rest_animations.dart';
+import 'package:opentrpg_core/core/motion/shake.dart';
+import 'package:opentrpg_core/core/motion/vignette.dart';
+import 'package:opentrpg_core/core/motion/wax_seal.dart';
+import 'package:opentrpg_core/core/theme/app_theme.dart';
 
 /// [builder] inside the dark theme and a [MotionScope], rebuilt whenever
 /// [value] changes.

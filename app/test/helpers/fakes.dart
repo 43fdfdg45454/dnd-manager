@@ -1,24 +1,24 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
-import 'package:opentrpg/core/auth/auth_controller.dart';
-import 'package:opentrpg/core/auth/auth_repository.dart';
-import 'package:opentrpg/core/auth/auth_response.dart';
-import 'package:opentrpg/core/auth/auth_state.dart';
-import 'package:opentrpg/core/auth/token_storage.dart';
-import 'package:opentrpg/core/auth/user_dto.dart';
-import 'package:opentrpg/core/server/server_config.dart';
-import 'package:opentrpg/core/server/server_config_repository.dart';
-import 'package:opentrpg/core/server/server_probe.dart';
-import 'package:opentrpg/core/systems/system_registry.dart';
-import 'package:opentrpg/features/admin/data/admin_users_repository.dart';
-import 'package:opentrpg/features/admin/domain/paged_users.dart';
-import 'package:opentrpg/features/campaigns/data/campaigns_repository.dart';
-import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
-import 'package:opentrpg/features/home/data/server_info.dart';
-import 'package:opentrpg/features/home/data/server_info_repository.dart';
-import 'package:opentrpg/features/systems/data/systems_repository.dart';
-import 'package:opentrpg/features/systems/domain/game_system.dart';
-import 'package:opentrpg/systems/dnd5e/dnd5e_ui.dart';
+import 'package:opentrpg_core/core/auth/auth_controller.dart';
+import 'package:opentrpg_core/core/auth/auth_repository.dart';
+import 'package:opentrpg_core/core/auth/auth_response.dart';
+import 'package:opentrpg_core/core/auth/auth_state.dart';
+import 'package:opentrpg_core/core/auth/token_storage.dart';
+import 'package:opentrpg_core/core/auth/user_dto.dart';
+import 'package:opentrpg_core/core/server/server_config.dart';
+import 'package:opentrpg_core/core/server/server_config_repository.dart';
+import 'package:opentrpg_core/core/server/server_probe.dart';
+import 'package:opentrpg_core/core/systems/system_registry.dart';
+import 'package:opentrpg_core/features/admin/data/admin_users_repository.dart';
+import 'package:opentrpg_core/features/admin/domain/paged_users.dart';
+import 'package:opentrpg_core/features/campaigns/data/campaigns_repository.dart';
+import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg_core/features/home/data/server_info.dart';
+import 'package:opentrpg_core/features/home/data/server_info_repository.dart';
+import 'package:opentrpg_core/features/systems/data/systems_repository.dart';
+import 'package:opentrpg_core/features/systems/domain/game_system.dart';
+import 'package:opentrpg_dnd5e/dnd5e_ui.dart';
 
 UserDto makeUser({
   String id = 'u1',
@@ -431,7 +431,11 @@ class FakeCampaignsRepository implements CampaignsRepository {
   final List<MyInvitation> pendingInvitations = [];
 
   @override
-  Future<CampaignInvitation> invite(String id, {required String userId, required CampaignRole role}) async {
+  Future<CampaignInvitation> invite(
+    String id, {
+    required String userId,
+    required CampaignRole role,
+  }) async {
     _fail();
     final campaign = _byId(id);
     if (campaign.members.any((m) => m.userId == userId)) throw dioError(409);

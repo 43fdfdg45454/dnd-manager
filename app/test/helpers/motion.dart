@@ -1,5 +1,5 @@
-import 'package:opentrpg/core/motion/motion_settings.dart';
 import 'package:flutter/widgets.dart';
+import 'package:opentrpg_core/core/motion/motion_settings.dart';
 
 /// `MaterialApp.builder` that reduces motion, so the looping animations (the
 /// live seal, the flames of a rage, the level-up seal) do not keep

@@ -1,13 +1,13 @@
-import 'package:opentrpg/core/auth/auth_controller.dart';
-import 'package:opentrpg/core/auth/auth_state.dart';
-import 'package:opentrpg/features/campaigns/data/campaigns_repository.dart';
-import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
-import 'package:opentrpg/features/campaigns/ui/campaigns_page.dart';
-import 'package:opentrpg/features/systems/domain/game_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:opentrpg_core/core/auth/auth_controller.dart';
+import 'package:opentrpg_core/core/auth/auth_state.dart';
+import 'package:opentrpg_core/features/campaigns/data/campaigns_repository.dart';
+import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg_core/features/campaigns/ui/campaigns_page.dart';
+import 'package:opentrpg_core/features/systems/domain/game_system.dart';
 
 import 'helpers/app_pump.dart';
 import 'helpers/character_fakes.dart';

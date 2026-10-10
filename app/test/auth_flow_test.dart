@@ -1,12 +1,12 @@
-import 'package:opentrpg/app.dart';
-import 'package:opentrpg/core/auth/auth_repository.dart';
-import 'package:opentrpg/core/auth/auth_state.dart';
-import 'package:opentrpg/core/auth/token_storage.dart';
-import 'package:opentrpg/core/auth/user_dto.dart';
-import 'package:opentrpg/core/router/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg/app.dart';
+import 'package:opentrpg_core/core/auth/auth_repository.dart';
+import 'package:opentrpg_core/core/auth/auth_state.dart';
+import 'package:opentrpg_core/core/auth/token_storage.dart';
+import 'package:opentrpg_core/core/auth/user_dto.dart';
+import 'package:opentrpg_core/core/router/app_router.dart';
 
 import 'helpers/app_pump.dart';
 import 'helpers/fakes.dart';

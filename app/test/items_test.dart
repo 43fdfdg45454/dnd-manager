@@ -1,29 +1,30 @@
-import 'package:opentrpg/core/auth/auth_controller.dart';
-import 'package:opentrpg/core/auth/auth_state.dart';
-import 'package:opentrpg/core/network/api_error.dart';
-import 'package:opentrpg/core/router/app_router.dart';
-import 'package:opentrpg/features/campaigns/data/campaigns_repository.dart';
-import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
-import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
-import 'package:opentrpg/features/catalog/data/models.dart' hide Page;
-import 'package:opentrpg/features/catalog/domain/item_modifier_format.dart';
-import 'package:opentrpg/features/characters/ui/character_page.dart';
-import 'package:opentrpg/features/items/data/campaign_items_repository.dart';
-import 'package:opentrpg/features/items/data/inventory_repository.dart';
-import 'package:opentrpg/features/items/data/models.dart';
-import 'package:opentrpg/features/items/data/shops_repository.dart';
-import 'package:opentrpg/features/items/domain/item_form_data.dart';
-import 'package:opentrpg/features/items/domain/items_format.dart';
-import 'package:opentrpg/features/items/ui/attunement_dialog.dart' show isAttunementLimit;
-import 'package:opentrpg/features/items/ui/shop_catalog_page.dart';
-import 'package:opentrpg/features/items/ui/shop_page.dart';
-import 'package:opentrpg/features/items/ui/transactions_page.dart';
-import 'package:opentrpg/features/session/data/messages_repository.dart';
-import 'package:opentrpg/systems/dnd5e/items/dnd5e_item.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:opentrpg_core/core/auth/auth_controller.dart';
+import 'package:opentrpg_core/core/auth/auth_state.dart';
+import 'package:opentrpg_core/core/network/api_error.dart';
+import 'package:opentrpg_core/core/router/app_router.dart';
+import 'package:opentrpg_core/features/campaigns/data/campaigns_repository.dart';
+import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg_core/features/characters/ui/character_page.dart';
+import 'package:opentrpg_core/features/items/data/campaign_items_repository.dart';
+import 'package:opentrpg_core/features/items/data/inventory_repository.dart';
+import 'package:opentrpg_core/features/items/data/models.dart';
+import 'package:opentrpg_core/features/items/data/shops_repository.dart';
+import 'package:opentrpg_core/features/items/domain/items_format.dart';
+import 'package:opentrpg_core/features/items/ui/shop_catalog_page.dart';
+import 'package:opentrpg_core/features/items/ui/shop_page.dart';
+import 'package:opentrpg_core/features/items/ui/transactions_page.dart';
+import 'package:opentrpg_core/features/session/data/messages_repository.dart';
+import 'package:opentrpg_dnd5e/catalog/data/catalog_repository.dart';
+import 'package:opentrpg_dnd5e/catalog/data/models.dart' hide Page;
+import 'package:opentrpg_dnd5e/catalog/domain/item_modifier_format.dart';
+import 'package:opentrpg_dnd5e/items/dnd5e_item.dart';
+import 'package:opentrpg_dnd5e/items/domain/item_form_data.dart';
+import 'package:opentrpg_dnd5e/items/money_format.dart';
+import 'package:opentrpg_dnd5e/items/ui/attunement_dialog.dart' show isAttunementLimit;
 
 import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';
@@ -120,6 +121,7 @@ Future<void> _pumpApp(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        dnd5eSystemsOverride(),
         messagesRepositoryProvider.overrideWithValue(FakeMessagesRepository()),
         fakeRealtimeOverride(),
         authControllerProvider.overrideWith(() => FixedAuthController(AuthSignedIn(makeUser()))),
@@ -872,8 +874,8 @@ void main() {
       await tester.enterText(find.byKey(const Key('modifier-value-0')), '21');
       await _tapVisible(tester, find.byKey(const Key('homebrew-save')));
 
-      expect(items.created.single.modifiers, [
-        const ItemModifier(kind: 'AbilitySet', target: 'str', value: 21),
+      expect(items.created.single['modifiers'], [
+        const ItemModifier(kind: 'AbilitySet', target: 'str', value: 21).toJson(),
       ]);
     });
 
@@ -1469,8 +1471,8 @@ void main() {
       await tester.enterText(find.byKey(const Key('item-form-cost')), '25');
       await _tapVisible(tester, find.byKey(const Key('homebrew-save')));
 
-      expect(items.created.single.name, 'Espada de la mina');
-      expect(items.created.single.costCp, 2500);
+      expect(items.created.single['name'], 'Espada de la mina');
+      expect(items.created.single['costCp'], 2500);
       expect(find.text('Objeto creado.'), findsOneWidget);
       expect(find.text('Espada de la mina'), findsOneWidget);
     });

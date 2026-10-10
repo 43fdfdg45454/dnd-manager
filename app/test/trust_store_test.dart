@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:opentrpg/core/network/trust_store.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/core/network/trust_store.dart';
 
 // Throwaway self-signed CA generated only for this test.
 const _validPem = '''

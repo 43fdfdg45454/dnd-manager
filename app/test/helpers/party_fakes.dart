@@ -1,11 +1,11 @@
-import 'package:opentrpg/features/characters/data/models.dart';
-import 'package:opentrpg/features/items/data/models.dart';
-import 'package:opentrpg/features/session/data/messages_repository.dart';
-import 'package:opentrpg/features/session/data/models.dart';
-import 'package:opentrpg/systems/dnd5e/session/party_models.dart';
-import 'package:opentrpg/features/session/data/party_repository.dart';
-import 'package:opentrpg/features/session/data/rest_requests_repository.dart';
-import 'package:opentrpg/features/session/data/stash_repository.dart';
+import 'package:opentrpg_core/features/items/data/models.dart';
+import 'package:opentrpg_core/features/session/data/messages_repository.dart';
+import 'package:opentrpg_core/features/session/data/models.dart';
+import 'package:opentrpg_core/features/session/data/rest_requests_repository.dart';
+import 'package:opentrpg_core/features/session/data/stash_repository.dart';
+import 'package:opentrpg_dnd5e/characters/models.dart';
+import 'package:opentrpg_dnd5e/session/data/party_repository.dart';
+import 'package:opentrpg_dnd5e/session/party_models.dart';
 
 import 'fakes.dart';
 import 'item_fakes.dart';

@@ -1,16 +1,16 @@
-import 'package:opentrpg/app.dart';
-import 'package:opentrpg/core/auth/auth_controller.dart';
-import 'package:opentrpg/core/auth/auth_state.dart';
-import 'package:opentrpg/core/motion/motion_settings.dart';
-import 'package:opentrpg/core/router/app_router.dart';
-import 'package:opentrpg/core/storage/local_preferences.dart';
-import 'package:opentrpg/core/theme/app_theme.dart';
-import 'package:opentrpg/features/characters/domain/class_theme.dart';
-import 'package:opentrpg/features/settings/data/appearance_controller.dart';
-import 'package:opentrpg/features/settings/ui/appearance_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg/app.dart';
+import 'package:opentrpg_core/core/auth/auth_controller.dart';
+import 'package:opentrpg_core/core/auth/auth_state.dart';
+import 'package:opentrpg_core/core/motion/motion_settings.dart';
+import 'package:opentrpg_core/core/router/app_router.dart';
+import 'package:opentrpg_core/core/storage/local_preferences.dart';
+import 'package:opentrpg_core/core/theme/app_theme.dart';
+import 'package:opentrpg_core/features/settings/data/appearance_controller.dart';
+import 'package:opentrpg_core/features/settings/ui/appearance_page.dart';
+import 'package:opentrpg_dnd5e/characters/domain/class_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'helpers/app_pump.dart';
@@ -28,7 +28,7 @@ Future<void> _pumpPage(WidgetTester tester, SharedPreferences? prefs) async {
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [localPreferencesProvider.overrideWithValue(prefs)],
+      overrides: [dnd5eSystemsOverride(), localPreferencesProvider.overrideWithValue(prefs)],
       child: MaterialApp(theme: AppTheme.dark(), home: const AppearancePage()),
     ),
   );
@@ -70,7 +70,10 @@ void main() {
   group('ajustes de apariencia', () {
     test('por defecto: tema oscuro, texto normal y todas las animaciones', () async {
       final container = ProviderContainer(
-        overrides: [localPreferencesProvider.overrideWithValue(await _prefs())],
+        overrides: [
+          dnd5eSystemsOverride(),
+          localPreferencesProvider.overrideWithValue(await _prefs()),
+        ],
       );
       addTearDown(container.dispose);
 
@@ -87,7 +90,7 @@ void main() {
         motionPreferenceKey: 'reduced',
       });
       final container = ProviderContainer(
-        overrides: [localPreferencesProvider.overrideWithValue(prefs)],
+        overrides: [dnd5eSystemsOverride(), localPreferencesProvider.overrideWithValue(prefs)],
       );
       addTearDown(container.dispose);
 
@@ -162,7 +165,7 @@ void main() {
 
       // A fresh start reads the stored choices.
       final container = ProviderContainer(
-        overrides: [localPreferencesProvider.overrideWithValue(prefs)],
+        overrides: [dnd5eSystemsOverride(), localPreferencesProvider.overrideWithValue(prefs)],
       );
       addTearDown(container.dispose);
       expect(
@@ -205,6 +208,7 @@ void main() {
     test('lee lo guardado e ignora claves desconocidas o de otro tipo', () async {
       final known = ProviderContainer(
         overrides: [
+          dnd5eSystemsOverride(),
           localPreferencesProvider.overrideWithValue(
             await _prefs({
               paletteKey: 'graphite',
@@ -232,6 +236,7 @@ void main() {
 
       final unknown = ProviderContainer(
         overrides: [
+          dnd5eSystemsOverride(),
           localPreferencesProvider.overrideWithValue(
             await _prefs({
               paletteKey: 'neon',
@@ -278,7 +283,7 @@ void main() {
 
       // A fresh start reads every stored choice.
       final restarted = ProviderContainer(
-        overrides: [localPreferencesProvider.overrideWithValue(prefs)],
+        overrides: [dnd5eSystemsOverride(), localPreferencesProvider.overrideWithValue(prefs)],
       );
       addTearDown(restarted.dispose);
       expect(
@@ -302,7 +307,7 @@ void main() {
         expect(prefs.containsKey(key), isFalse, reason: key);
       }
       final afterReset = ProviderContainer(
-        overrides: [localPreferencesProvider.overrideWithValue(prefs)],
+        overrides: [dnd5eSystemsOverride(), localPreferencesProvider.overrideWithValue(prefs)],
       );
       addTearDown(afterReset.dispose);
       expect(afterReset.read(appearanceProvider), const AppearanceSettings());
@@ -374,6 +379,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            dnd5eSystemsOverride(),
             localPreferencesProvider.overrideWithValue(prefs),
             fakeServerConfigOverride(),
             authControllerProvider.overrideWith(

@@ -2,24 +2,24 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:opentrpg/core/network/api_client.dart';
-import 'package:opentrpg/core/theme/components.dart';
-import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
-import 'package:opentrpg/features/catalog/data/models.dart';
-import 'package:opentrpg/features/characters/data/characters_repository.dart';
-import 'package:opentrpg/features/characters/data/models.dart';
-import 'package:opentrpg/systems/dnd5e/characters/character_tab.dart';
-import 'package:opentrpg/features/characters/domain/character_format.dart';
-import 'package:opentrpg/features/characters/domain/change_details.dart';
-import 'package:opentrpg/features/characters/domain/payload_format.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/core/network/api_client.dart';
+import 'package:opentrpg_core/core/theme/components.dart';
+import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg_core/features/characters/data/characters_repository.dart';
+import 'package:opentrpg_dnd5e/catalog/data/models.dart';
+import 'package:opentrpg_dnd5e/characters/character_tab.dart';
+import 'package:opentrpg_dnd5e/characters/dnd5e_characters_repository.dart';
+import 'package:opentrpg_dnd5e/characters/domain/change_details.dart';
+import 'package:opentrpg_dnd5e/characters/domain/character_format.dart';
+import 'package:opentrpg_dnd5e/characters/domain/payload_format.dart';
+import 'package:opentrpg_dnd5e/characters/models.dart';
 
 import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
-import 'package:opentrpg/systems/dnd5e/characters/dnd5e_characters_repository.dart';
 
 FakeCatalogRepository _catalog() => FakeCatalogRepository(
   classList: [

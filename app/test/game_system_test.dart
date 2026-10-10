@@ -3,17 +3,20 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:opentrpg/core/characters/models.dart' as core;
-import 'package:opentrpg/core/realtime/realtime_events.dart';
-import 'package:opentrpg/core/systems/game_system_ui.dart';
-import 'package:opentrpg/core/systems/system_registry.dart';
-import 'package:opentrpg/core/systems/unsupported_system_ui.dart';
-import 'package:opentrpg/features/dice/domain/dice_expression.dart';
-import 'package:opentrpg/systems/dnd5e/characters/models.dart';
-import 'package:opentrpg/systems/dnd5e/dnd5e_events.dart';
-import 'package:opentrpg/systems/dnd5e/dnd5e_ui.dart';
+import 'package:opentrpg_core/core/characters/models.dart' as core;
+import 'package:opentrpg_core/core/realtime/realtime_events.dart';
+import 'package:opentrpg_core/core/systems/game_system_ui.dart';
+import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg_core/core/systems/system_registry.dart';
+import 'package:opentrpg_core/core/systems/unsupported_system_ui.dart';
+import 'package:opentrpg_core/features/dice/domain/dice_expression.dart';
+import 'package:opentrpg_dnd5e/characters/models.dart';
+import 'package:opentrpg_dnd5e/dnd5e_events.dart';
+import 'package:opentrpg_dnd5e/dnd5e_ui.dart';
 
+import 'helpers/app_pump.dart';
 import 'helpers/character_fakes.dart';
+import 'helpers/fakes.dart';
 
 /// Every die shows [face].
 class _Always implements Random {
@@ -76,7 +79,9 @@ void main() {
   group('registro de sistemas', () {
     test('resuelve el sistema registrado o UnsupportedSystemUi', () {
       final container = ProviderContainer(
-        overrides: [gameSystemsProvider.overrideWithValue(const [Dnd5eUi()])],
+        overrides: [
+          gameSystemsProvider.overrideWithValue(const [Dnd5eUi()]),
+        ],
       );
       addTearDown(container.dispose);
       expect(container.read(gameSystemUiProvider('dnd5e')), isA<Dnd5eUi>());
@@ -109,14 +114,30 @@ void main() {
       expect(system.detailTabs(character, canEdit: true), hasLength(1));
       expect(system.routes(GlobalKey<NavigatorState>()), isEmpty);
     });
+    testWidgets('la ficha de una campaña de otro sistema muestra el aviso', (tester) async {
+      await pumpRealApp(
+        tester,
+        location: '/characters/ch1',
+        fakes: AppFakes(
+          campaigns: FakeCampaignsRepository(
+            campaigns: [makeCampaign(myRole: CampaignRole.player, systemId: 'otro')],
+          ),
+          characters: FakeCharactersRepository(
+            characters: [makeCharacterJson(status: 'Active', ownerUserId: 'u1')],
+          ),
+        ),
+      );
+      expect(find.byKey(const Key('unsupported-system')), findsWidgets);
+      expect(find.text('Esta app no incluye el sistema otro.'), findsWidgets);
+      expect(find.text('Thorin'), findsWidgets);
+    });
   });
 
   group('Dnd5eUi', () {
     const ui = Dnd5eUi();
 
     test('clasifica las tiradas naturales', () {
-      DiceResult roll(int value) =>
-          DiceExpression.parse('1d20').roll(_Always(value));
+      DiceResult roll(int value) => DiceExpression.parse('1d20').roll(_Always(value));
       expect(ui.classifyRoll(roll(20)), RollClass.critical);
       expect(ui.classifyRoll(roll(1)), RollClass.fumble);
       expect(ui.classifyRoll(roll(10)), RollClass.normal);
@@ -135,7 +156,10 @@ void main() {
         ui.breakdownIcon(const BreakdownPart(source: 'class', label: 'Guerrero', value: 2)),
         isNotNull,
       );
-      expect(ui.breakdownIcon(const BreakdownPart(source: 'item', label: 'Anillo', value: 1)), isNull);
+      expect(
+        ui.breakdownIcon(const BreakdownPart(source: 'item', label: 'Anillo', value: 1)),
+        isNull,
+      );
     });
 
     test('reconstruye los eventos 5e de tiempo real', () {
