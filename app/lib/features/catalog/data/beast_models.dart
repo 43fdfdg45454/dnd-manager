@@ -1,4 +1,4 @@
-// Beasts of the SRD (`/api/v1/catalog/beasts`): the wild shapes of a druid.
+// Beasts of the SRD (`/api/v1/systems/dnd5e/catalog/beasts`): the wild shapes of a druid.
 
 Map<String, dynamic> _map(Object? value) =>
     value is Map ? Map<String, dynamic>.from(value) : const {};

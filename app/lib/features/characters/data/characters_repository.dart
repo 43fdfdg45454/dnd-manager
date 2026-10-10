@@ -5,13 +5,17 @@ import '../../../core/cache/cached_result.dart';
 import '../../../core/network/api_client.dart';
 import 'models.dart';
 
-/// Character and change-request endpoints under `/api/v1`.
+/// Character and change-request endpoints under `/api/v1`, and the D&D 5e
+/// character routes under `/api/v1/systems/dnd5e`.
 class CharactersRepository {
   CharactersRepository(this._client);
 
   final ApiClient _client;
 
   static const _api = '/api/v1';
+
+  /// Prefix of the D&D 5e routes of the server (`/api/v1/systems/dnd5e`).
+  static const _dnd5e = '$_api/systems/dnd5e';
 
   Future<Map<String, dynamic>> _json(String method, String path, {Object? data}) async {
     final response = await _client.dio.request<Map<String, dynamic>>(
@@ -57,7 +61,7 @@ class CharactersRepository {
   /// change request the DM must approve.
   Future<SheetSaveResult> patchSheet(String id, SheetPatch patch) async {
     final response = await _client.dio.patch<Map<String, dynamic>>(
-      '$_api/characters/$id/sheet',
+      '$_dnd5e/characters/$id/sheet',
       data: patch.toJson(),
     );
     if (response.statusCode == 202) {
@@ -95,7 +99,7 @@ class CharactersRepository {
   /// `GET /characters/{id}/origin-choices`: the decisions of the race,
   /// subrace and background of the character with their current answers.
   Future<OriginChoices> originChoices(String id) async =>
-      OriginChoices.fromJson(await _json('GET', '$_api/characters/$id/origin-choices'));
+      OriginChoices.fromJson(await _json('GET', '$_dnd5e/characters/$id/origin-choices'));
 
   /// `PUT /characters/{id}/origin-choices`: answers some choices (the others
   /// keep theirs). A feat answer is `LevelUpChoiceAnswer.feat`.
@@ -103,7 +107,7 @@ class CharactersRepository {
       OriginChoices.fromJson(
         await _json(
           'PUT',
-          '$_api/characters/$id/origin-choices',
+          '$_dnd5e/characters/$id/origin-choices',
           data: {
             'choices': [for (final a in answers) a.toJson()],
           },
@@ -114,7 +118,7 @@ class CharactersRepository {
 
   /// `GET /characters/{id}/invalid-choices`.
   Future<InvalidChoices> invalidChoices(String id) async =>
-      InvalidChoices.fromJson(await _json('GET', '$_api/characters/$id/invalid-choices'));
+      InvalidChoices.fromJson(await _json('GET', '$_dnd5e/characters/$id/invalid-choices'));
 
   /// `POST /characters/{id}/invalid-choices`: one answer per replacement
   /// (key `replace.<index>`). Responds with the updated character.
@@ -124,7 +128,7 @@ class CharactersRepository {
   ) async => CharacterDetail.fromJson(
     await _json(
       'POST',
-      '$_api/characters/$id/invalid-choices',
+      '$_dnd5e/characters/$id/invalid-choices',
       data: {
         'choices': [for (final a in answers) a.toJson()],
       },
@@ -136,7 +140,7 @@ class CharactersRepository {
   /// `POST /characters/{id}/damage`: applies [amount] of damage (temporary
   /// hit points first) and says what it meant for the concentration.
   Future<DamageResult> applyDamage(String id, int amount) async {
-    final json = await _json('POST', '$_api/characters/$id/damage', data: {'amount': amount});
+    final json = await _json('POST', '$_dnd5e/characters/$id/damage', data: {'amount': amount});
     final character = json['character'];
     final outcome = json['outcome'];
     return DamageResult(
@@ -153,7 +157,7 @@ class CharactersRepository {
       CharacterDetail.fromJson(
         await _json(
           'POST',
-          '$_api/characters/$id/resources/$resourceId/rolls',
+          '$_dnd5e/characters/$id/resources/$resourceId/rolls',
           data: {'values': values},
         ),
       );
@@ -168,7 +172,7 @@ class CharactersRepository {
     required String name,
   }) async {
     final response = await _client.dio.put<Map<String, dynamic>>(
-      '$_api/characters/$id/companion',
+      '$_dnd5e/characters/$id/companion',
       data: {'beastIndex': beastIndex, 'name': name},
     );
     if (response.statusCode == 202) {
@@ -183,52 +187,52 @@ class CharactersRepository {
       CharacterDetail.fromJson(
         await _json(
           'POST',
-          '$_api/characters/$id/companion/hp',
+          '$_dnd5e/characters/$id/companion/hp',
           data: {'delta': ?delta, 'current': ?current},
         ),
       );
 
   /// `DELETE /characters/{id}/companion` (DM only).
   Future<void> deleteCompanion(String id) async {
-    await _client.dio.delete<void>('$_api/characters/$id/companion');
+    await _client.dio.delete<void>('$_dnd5e/characters/$id/companion');
   }
 
   Future<CharacterDetail> patchCombat(String id, CombatPatch patch) async =>
       CharacterDetail.fromJson(
-        await _json('PATCH', '$_api/characters/$id/combat', data: patch.toJson()),
+        await _json('PATCH', '$_dnd5e/characters/$id/combat', data: patch.toJson()),
       );
 
   Future<void> setConcentration(String id, String? spellIndex) async {
     await _client.dio.post<void>(
-      '$_api/characters/$id/concentration',
+      '$_dnd5e/characters/$id/concentration',
       data: {'spellIndex': spellIndex},
     );
   }
 
   Future<void> spendSpellSlot(String id, int level, {int amount = 1}) async {
     await _client.dio.post<void>(
-      '$_api/characters/$id/spell-slots/$level/spend',
+      '$_dnd5e/characters/$id/spell-slots/$level/spend',
       data: {'amount': amount},
     );
   }
 
   Future<void> restoreSpellSlot(String id, int level, {int amount = 1}) async {
     await _client.dio.post<void>(
-      '$_api/characters/$id/spell-slots/$level/restore',
+      '$_dnd5e/characters/$id/spell-slots/$level/restore',
       data: {'amount': amount},
     );
   }
 
   Future<void> spendResource(String id, String resourceId, {int amount = 1}) async {
     await _client.dio.post<void>(
-      '$_api/characters/$id/resources/$resourceId/spend',
+      '$_dnd5e/characters/$id/resources/$resourceId/spend',
       data: {'amount': amount},
     );
   }
 
   Future<void> restoreResource(String id, String resourceId, {int amount = 1}) async {
     await _client.dio.post<void>(
-      '$_api/characters/$id/resources/$resourceId/restore',
+      '$_dnd5e/characters/$id/resources/$resourceId/restore',
       data: {'amount': amount},
     );
   }
@@ -241,23 +245,23 @@ class CharactersRepository {
   }) async => CharacterResource.fromJson(
     await _json(
       'POST',
-      '$_api/characters/$id/resources',
+      '$_dnd5e/characters/$id/resources',
       data: {'name': name, 'max': max, 'recharge': recharge.apiValue},
     ),
   );
 
   Future<void> deleteResource(String id, String resourceId) async {
-    await _client.dio.delete<void>('$_api/characters/$id/resources/$resourceId');
+    await _client.dio.delete<void>('$_dnd5e/characters/$id/resources/$resourceId');
   }
 
   /// [hitDice] maps a class index to the number of hit dice spent.
   Future<CharacterDetail> shortRest(String id, {Map<String, int> hitDice = const {}}) async =>
       CharacterDetail.fromJson(
-        await _json('POST', '$_api/characters/$id/rest/short', data: {'hitDice': hitDice}),
+        await _json('POST', '$_dnd5e/characters/$id/rest/short', data: {'hitDice': hitDice}),
       );
 
   Future<CharacterDetail> longRest(String id) async =>
-      CharacterDetail.fromJson(await _json('POST', '$_api/characters/$id/rest/long'));
+      CharacterDetail.fromJson(await _json('POST', '$_dnd5e/characters/$id/rest/long'));
 
   /// The owner asks the DM for a rest (`POST /characters/{id}/rest-requests`).
   /// [hitDice] maps a class index to the hit dice to spend (short rest only).
@@ -288,14 +292,14 @@ class CharactersRepository {
     String action, [
     Map<String, dynamic> body = const {},
   ]) async => CharacterDetail.fromJson(
-    await _json('POST', '$_api/characters/$id/class-actions/$action', data: body),
+    await _json('POST', '$_dnd5e/characters/$id/class-actions/$action', data: body),
   );
 
   /// `divine-smite`: spends the slot and answers with the extra damage dice.
   Future<DivineSmiteResult> divineSmite(String id, int slotLevel) async {
     final json = await _json(
       'POST',
-      '$_api/characters/$id/class-actions/divine-smite',
+      '$_dnd5e/characters/$id/class-actions/divine-smite',
       data: {'slotLevel': slotLevel},
     );
     final character = json['character'];
@@ -313,7 +317,7 @@ class CharactersRepository {
   /// (the main class when null) brings. 409 when no level was granted.
   Future<LevelUpPlan> levelUpPlan(String id, {String? classIndex}) async {
     final response = await _client.dio.get<Map<String, dynamic>>(
-      '$_api/characters/$id/level-up',
+      '$_dnd5e/characters/$id/level-up',
       queryParameters: {'classIndex': ?classIndex},
     );
     return LevelUpPlan.fromJson(response.data!);
@@ -323,7 +327,7 @@ class CharactersRepository {
   /// updated character. 400 with a Spanish message on an invalid answer.
   Future<CharacterDetail> applyLevelUp(String id, LevelUpRequest request) async =>
       CharacterDetail.fromJson(
-        await _json('POST', '$_api/characters/$id/level-up', data: request.toJson()),
+        await _json('POST', '$_dnd5e/characters/$id/level-up', data: request.toJson()),
       );
 
   // -- Spell preparation (phase 18, no approval) -----------------------------
@@ -331,7 +335,7 @@ class CharactersRepository {
   /// `GET /characters/{id}/spell-preparation`: what each preparing class can
   /// prepare and whether the preparation is pending.
   Future<SpellPreparation> spellPreparation(String id) async =>
-      SpellPreparation.fromJson(await _json('GET', '$_api/characters/$id/spell-preparation'));
+      SpellPreparation.fromJson(await _json('GET', '$_dnd5e/characters/$id/spell-preparation'));
 
   /// `POST /characters/{id}/spell-preparation`: [classes] maps each preparing
   /// class index to the spells prepared (always every class that prepares).
@@ -339,7 +343,7 @@ class CharactersRepository {
       CharacterDetail.fromJson(
         await _json(
           'POST',
-          '$_api/characters/$id/spell-preparation',
+          '$_dnd5e/characters/$id/spell-preparation',
           data: {
             'classes': [
               for (final e in classes.entries) {'classIndex': e.key, 'spells': e.value},
@@ -349,8 +353,9 @@ class CharactersRepository {
       );
 
   /// `POST /characters/{id}/spell-preparation/keep`: keeps the current ones.
-  Future<CharacterDetail> keepSpellPreparation(String id) async =>
-      CharacterDetail.fromJson(await _json('POST', '$_api/characters/$id/spell-preparation/keep'));
+  Future<CharacterDetail> keepSpellPreparation(String id) async => CharacterDetail.fromJson(
+    await _json('POST', '$_dnd5e/characters/$id/spell-preparation/keep'),
+  );
 
   // -- Change requests ------------------------------------------------------
 

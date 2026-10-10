@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-// Hand-written catalog models for `/api/v1/catalog`. Every parser is tolerant:
+// Hand-written catalog models for `/api/v1/systems/dnd5e/catalog`. Every parser is tolerant:
 // missing or null fields fall back to empty values and a few fields accept more
 // than one wire shape (for example a string or an object with a `name`).
 

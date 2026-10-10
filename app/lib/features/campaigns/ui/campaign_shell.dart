@@ -21,6 +21,7 @@ import '../../../core/ui/offline_widgets.dart';
 import '../../characters/data/characters_controller.dart';
 import '../../characters/data/characters_repository.dart';
 import '../../characters/data/models.dart';
+import '../../session/data/party_repository.dart';
 import '../../session/data/session_controllers.dart';
 import '../data/campaigns_controller.dart';
 import '../data/campaigns_repository.dart';
@@ -325,7 +326,10 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
               ConnectionBanner(campaignId: campaignId),
               Expanded(
                 child: OfflineBannerLayout(
-                  scopes: [staleTree(CampaignsRepository.campaignPath(campaignId))],
+                  scopes: [
+                    staleTree(CampaignsRepository.campaignPath(campaignId)),
+                    staleTree(PartyRepository.partyPath(campaignId)),
+                  ],
                   child: detail.when(
                     skipLoadingOnReload: true,
                     loading: () => const Center(child: CircularProgressIndicator()),
