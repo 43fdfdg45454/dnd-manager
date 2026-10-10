@@ -81,8 +81,11 @@ public interface ICatalogRepository
 
     Task<IReadOnlyList<FeatureDefinition>> ListFeaturesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default);
 
-    /// <summary>Features of the given subclasses that grant a limited-use resource, an animal companion or sheet modifiers (content packs).</summary>
-    Task<IReadOnlyList<FeatureDefinition>> ListSubclassFeatureResourcesAsync(IReadOnlyCollection<string> subclassIndexes, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Features that grant a limited-use resource, an animal companion or sheet modifiers (content packs): the class
+    /// features of <paramref name="classIndexes"/> and the subclass features of <paramref name="subclassIndexes"/>.
+    /// </summary>
+    Task<IReadOnlyList<FeatureDefinition>> ListFeatureEffectsAsync(IReadOnlyCollection<string> classIndexes, IReadOnlyCollection<string> subclassIndexes, CancellationToken cancellationToken = default);
 
     // Level choices (phase 16c).
 
@@ -117,4 +120,14 @@ public interface ICatalogRepository
 
     /// <summary>Effective roll tables ordered by name: one per key, from the most recently imported pack.</summary>
     Task<IReadOnlyList<RollTable>> ListRollTablesAsync(CancellationToken cancellationToken = default);
+
+    // Rules documents and vocabularies (phase 34).
+
+    /// <summary>Rules documents of the content packs, ordered by title.</summary>
+    Task<IReadOnlyList<RuleDefinition>> ListRulesAsync(CancellationToken cancellationToken = default);
+
+    Task<RuleDefinition?> GetRuleAsync(string index, CancellationToken cancellationToken = default);
+
+    /// <summary>Entries of one vocabulary (<see cref="ReferenceEntry.Kinds"/>), ordered by name.</summary>
+    Task<IReadOnlyList<ReferenceEntry>> ListReferenceEntriesAsync(string kind, CancellationToken cancellationToken = default);
 }

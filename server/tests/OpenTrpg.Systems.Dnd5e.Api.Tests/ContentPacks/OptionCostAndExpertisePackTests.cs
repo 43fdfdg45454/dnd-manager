@@ -31,7 +31,7 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
 
     private static JsonObject Pack() => JsonSerializer.SerializeToNode(new
     {
-        formatVersion = 2,
+        formatVersion = 3,
         id = "artes-ejemplo",
         name = "Artes de Ejemplo",
         version = "1.0.0",
@@ -56,11 +56,11 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
                 },
             },
         },
-        classesExtended = new object[]
+        classes = new object[]
         {
             new
             {
-                classIndex = "monk",
+                extends = "monk",
                 levelChoices = new[]
                 {
                     new { level = 2, key = "tecnica-ejemplo", name = "Técnica", kind = "OptionSet", setId = Techniques, choose = 1 },
@@ -68,7 +68,7 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
             },
             new
             {
-                classIndex = "cleric",
+                extends = "cleric",
                 subclasses = new[]
                 {
                     new
@@ -86,7 +86,7 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
             },
             new
             {
-                classIndex = "fighter",
+                extends = "fighter",
                 subclasses = new[]
                 {
                     new
@@ -123,6 +123,7 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var monk = await LevelAsync(s, "monk", null, 1, "Monja serena");
 
         var choice = Assert.Single((await PlanAsync(s.Player, monk.Id)).Choices, c => c.Key == "tecnica-ejemplo");
@@ -156,6 +157,7 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var cleric = await LevelAsync(s, "cleric", null, 1, "Clériga sabia");
 
         var plan = await PlanAsync(s.Player, cleric.Id);
@@ -183,6 +185,7 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var cleric = await LevelAsync(s, "cleric", Domain, 1, "Clérigo erudito");
 
         var expertise = Assert.Single((await PlanAsync(s.Player, cleric.Id)).Choices, c => c.Key == "pericia-dominio");
@@ -198,6 +201,7 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var fighter = await LevelAsync(s, "fighter", null, 2, "Guerrera letrada");
 
         var plan = await PlanAsync(s.Player, fighter.Id);
@@ -251,11 +255,11 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
     {
         var admin = await factory.CreateAdminClientAsync();
         var pack = Renamed("artes-orden");
-        pack["classesExtended"]![2]!["subclasses"]![0]!["levelChoices"]![0]!["after"] = after;
+        pack["classes"]![2]!["subclasses"]![0]!["levelChoices"]![0]!["after"] = after;
 
         var errors = await ImportErrorsAsync(admin, pack);
 
-        Assert.Contains(errors, e => e.StartsWith("classesExtended[2].subclasses[0].levelChoices[0].after:", StringComparison.Ordinal) && e.Contains(message, StringComparison.Ordinal));
+        Assert.Contains(errors, e => e.StartsWith("classes[2].subclasses[0].levelChoices[0].after:", StringComparison.Ordinal) && e.Contains(message, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -263,7 +267,7 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
     {
         var admin = await factory.CreateAdminClientAsync();
         var pack = Renamed("artes-ciclo");
-        pack["classesExtended"]![2]!["subclasses"]![0]!["levelChoices"]![2]!["after"] = "idioma-erudito";
+        pack["classes"]![2]!["subclasses"]![0]!["levelChoices"]![2]!["after"] = "idioma-erudito";
 
         var errors = await ImportErrorsAsync(admin, pack);
 
@@ -275,7 +279,7 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
     {
         var text = Pack().ToJsonString().Replace("artes-ejemplo", id, StringComparison.Ordinal);
         var pack = JsonNode.Parse(text)!.AsObject();
-        pack["classesExtended"]![0]!["levelChoices"]![0]!["key"] = $"tecnica-{id}";
+        pack["classes"]![0]!["levelChoices"]![0]!["key"] = $"tecnica-{id}";
         return pack;
     }
 

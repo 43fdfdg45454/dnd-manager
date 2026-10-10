@@ -78,7 +78,7 @@ internal sealed partial class ContentPackValidator
         ForEach($"{path}.options", set.Options, (optionPath, option) => Option(optionPath, option, setId, rows));
     }
 
-    private void Option(string path, PackOptionJson option, string setId, ContentPackRows rows)
+    private void Option(string path, PackOptionJson option, string setId, ContentPackRows rows, string? category = null)
     {
         var index = Index($"{path}.index", "options", option.Index);
         var definition = new OptionDefinition
@@ -94,6 +94,7 @@ internal sealed partial class ContentPackValidator
             GrantsJson = option.Grants is null ? null : Grants($"{path}.grants", option.Grants),
             ResourceJson = Resource($"{path}.resource", option.Resource),
             CostJson = Cost($"{path}.cost", option.Cost, setId),
+            Category = category,
             Source = _id,
         };
 
@@ -595,7 +596,7 @@ internal sealed partial class ContentPackValidator
     private SubclassSpellcasting? SubclassSpellcasting(string path, PackSubclassSpellcastingJson spellcasting, string classIndex)
     {
         var valid = true;
-        if (_context.CasterClasses?.Contains(classIndex) == true)
+        if (_casterClasses.Contains(classIndex))
         {
             AddError(path, $"La clase '{classIndex}' ya lanza conjuros: spellcasting solo vale en subclases de clases que no lanzan conjuros.");
             valid = false;
@@ -628,7 +629,7 @@ internal sealed partial class ContentPackValidator
         {
             AddError($"{path}.spellList", "Campo obligatorio.");
         }
-        else if (!_context.Classes.ContainsKey(spellList))
+        else if (!_classes.ContainsKey(spellList))
         {
             AddError($"{path}.spellList", "Debe ser una clase del catálogo.");
             spellList = null;
@@ -781,7 +782,7 @@ internal sealed partial class ContentPackValidator
         }
 
         var spellList = NullableText($"{path}.spellList", filter.SpellList, IndexMaxLength)?.ToLowerInvariant();
-        if (spellList is not null && spellList != ChoiceFilter.AnyList && !_context.Classes.ContainsKey(spellList))
+        if (spellList is not null && spellList != ChoiceFilter.AnyList && !_classes.ContainsKey(spellList))
         {
             AddError($"{path}.spellList", "Debe ser una clase del catálogo o \"any\".");
         }

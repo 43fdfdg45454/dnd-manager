@@ -33,7 +33,7 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
 
     private static readonly object Pack = new
     {
-        formatVersion = 2,
+        formatVersion = 3,
         id = PackId,
         name = "Pueblos de ejemplo",
         version = "1.0.0",
@@ -88,6 +88,8 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
         Assert.Equal((1, 1, 1), (result.Counts["races"], result.Counts["subraces"], result.Counts["raceExtensions"]));
 
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
+
         var dwarf = (await s.Player.Client.GetFromJsonAsync<RaceDetailDto>("/api/v1/systems/dnd5e/catalog/races/dwarf"))!;
         Assert.Equal("srd", dwarf.Source);
         var deepFolk = Assert.Single(dwarf.Subraces, r => r.Index == "folk-ejemplo-deep-folk");
@@ -160,6 +162,8 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
         Assert.True(import.StatusCode == HttpStatusCode.Created, await import.Content.ReadAsStringAsync());
 
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
+
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Montañesa");
         var url = $"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet";
         await s.Player.Client.PatchAsJsonAsync(url, new { raceIndex = "folk-ejemplo-mountain-folk", classes = new[] { new { classIndex = "wizard", level = 1 } } });
@@ -184,7 +188,7 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
         var admin = await factory.CreateAdminClientAsync();
         Assert.Equal(HttpStatusCode.Created, (await admin.PostAsync(PacksUrl, Json(Pack))).StatusCode);
         await factory.WithDbAsync(async db =>
-            await db.CatalogImports.Where(x => x.Ruleset == Dnd5eCatalogSources.SrdRuleset).ExecuteDeleteAsync());
+            await db.ContentPacks.Where(x => x.Id == Dnd5eCatalogSources.Srd).ExecuteDeleteAsync());
 
         using (var scope = factory.Services.CreateScope())
         {
@@ -205,7 +209,7 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
         var admin = await factory.CreateAdminClientAsync();
         var invalid = new
         {
-            formatVersion = 2,
+            formatVersion = 3,
             id = "folk-erroneo",
             name = "Pueblos erróneos",
             version = "1.0.0",
@@ -250,7 +254,7 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
         // Outside races, the racial fields are rejected.
         var option = new
         {
-            formatVersion = 2,
+            formatVersion = 3,
             id = "folk-opcion",
             name = "Opción",
             version = "1.0.0",

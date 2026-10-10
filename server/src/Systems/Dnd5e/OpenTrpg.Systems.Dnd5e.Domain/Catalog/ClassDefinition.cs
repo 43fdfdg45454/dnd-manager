@@ -44,4 +44,45 @@ public sealed class ClassDefinition
     public string? StartingEquipmentJson { get; init; }
 
     public StartingEquipment? StartingEquipment => Catalog.StartingEquipment.Parse(StartingEquipmentJson);
+
+    /// <summary>"srd" or the id of the content pack that defines the class (format 3 <c>classes[]</c>).</summary>
+    public string Source { get; init; } = Dnd5eCatalogSources.Srd;
+
+    /// <summary>Description paragraphs (content packs; empty for the SRD classes).</summary>
+    public IReadOnlyList<string> Description { get; init; } = [];
+
+    /// <summary>Class level at which the subclass is chosen (content packs); 0 when the level choices say it.</summary>
+    public int SubclassLevel { get; init; }
+
+    /// <summary>
+    /// Spellcasting details of a pack class as a JSON object (<see cref="ClassSpellcastingInfo"/>: progression,
+    /// preparation, ritual casting and focus); null for the SRD classes and the classes that do not cast.
+    /// </summary>
+    public string? SpellcastingJson { get; init; }
+
+    public ClassSpellcastingInfo? Spellcasting => ClassSpellcastingInfo.Parse(SpellcastingJson);
+
+    /// <summary>Multiclassing of a pack class (<see cref="ClassMulticlassing"/>); null for the SRD classes (fixed tables).</summary>
+    public string? MulticlassJson { get; init; }
+
+    public ClassMulticlassing? Multiclassing => ClassMulticlassing.Parse(MulticlassJson);
+
+    /// <summary>
+    /// Limited-use resources of a pack class as a JSON array of resources (same shape as an option's, the
+    /// <c>classSpecific:</c> maxima already turned into <c>byLevel</c> tables); null when it has none.
+    /// </summary>
+    public string? ResourcesJson { get; init; }
+
+    public IReadOnlyList<OptionResource> Resources => LevelChoiceJson.ParseResources(ResourcesJson);
+
+    /// <summary>
+    /// Spell list of a pack class beyond the spells that name it: <c>{"spells": ["fireball"], "classes": ["wizard"]}</c>
+    /// (spell indexes, and classes whose whole list it inherits); null when the spells themselves list it.
+    /// </summary>
+    public string? SpellListJson { get; init; }
+
+    public ClassSpellList? SpellList => ClassSpellList.Parse(SpellListJson);
+
+    /// <summary>Whether the class prepares its spells from its whole list (cleric, druid, paladin, wizard and pack classes with <c>"preparation": "prepared"</c>).</summary>
+    public bool PreparesSpells => Index is "cleric" or "druid" or "paladin" or "wizard" || Spellcasting?.Preparation == ClassSpellcastingInfo.Prepared;
 }

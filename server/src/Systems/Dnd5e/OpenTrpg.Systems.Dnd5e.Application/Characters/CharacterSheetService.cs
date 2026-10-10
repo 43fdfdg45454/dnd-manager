@@ -10,6 +10,7 @@ using OpenTrpg.Core.Domain.Catalog;
 using OpenTrpg.Core.Domain.Characters;
 using OpenTrpg.Core.Application;
 using OpenTrpg.Core.Application.Characters;
+using OpenTrpg.Core.Application.ContentPacks;
 using OpenTrpg.Systems.Dnd5e.Application;
 using OpenTrpg.Systems.Dnd5e.Application.Abstractions;
 using OpenTrpg.Systems.Dnd5e.Application.Abstractions.Persistence;
@@ -68,8 +69,11 @@ public sealed class CharacterSheetService(
     ICharacterCompanionRepository companions,
     CompanionPlanner companionPlanner,
     CharacterViews views,
+    CatalogScopeContext scope,
     IDateTimeProvider clock) : ICharacterSheetService
 {
+    private const string DisabledPack = "pertenece a un paquete desactivado en la campaña";
+
     public async Task<CharacterSheet> CalculateAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default)
     {
         var sheetCatalog = await SheetCatalog.LoadAsync(catalog, [character], includeSpells: false, cancellationToken);
@@ -160,10 +164,16 @@ public sealed class CharacterSheetService(
         static string? Effective(string? edited, string? current) =>
             edited is null ? current : edited.Trim() is { Length: > 0 } trimmed ? trimmed : null;
 
+        // New values must be in the catalog scope of the campaign; what the character already has stays valid.
         var race = Effective(edit.RaceIndex, character.RaceIndex);
-        if (race is not null && race != character.RaceIndex && await catalog.GetRaceAsync(race, cancellationToken) is null)
+        if (race is not null && race != character.RaceIndex)
         {
-            throw AppException.Validation("raceIndex", $"La raza '{race}' no existe en el catálogo.");
+            var definition = await catalog.GetRaceAsync(race, cancellationToken)
+                ?? throw AppException.Validation("raceIndex", $"La raza '{race}' no existe en el catálogo.");
+            if (!scope.Allows(definition.Source))
+            {
+                throw AppException.Validation("raceIndex", $"La raza '{race}' {DisabledPack}.");
+            }
         }
 
         // Changing the race without a subrace clears the subrace (see Character.ApplySheetEdit).
@@ -177,22 +187,41 @@ public sealed class CharacterSheetService(
             {
                 throw AppException.Validation("subraceIndex", $"La subraza '{subrace}' no existe para la raza elegida.");
             }
+
+            if (subrace != character.SubraceIndex && !scope.Allows(subraces[0].Source))
+            {
+                throw AppException.Validation("subraceIndex", $"La subraza '{subrace}' {DisabledPack}.");
+            }
         }
 
         var background = Effective(edit.BackgroundIndex, character.BackgroundIndex);
-        if (background is not null && background != character.BackgroundIndex
-            && (await catalog.ListBackgroundsByIndexAsync([background], cancellationToken)).Count == 0)
+        if (background is not null && background != character.BackgroundIndex)
         {
-            throw AppException.Validation("backgroundIndex", $"El trasfondo '{background}' no existe en el catálogo.");
+            var backgrounds = await catalog.ListBackgroundsByIndexAsync([background], cancellationToken);
+            if (backgrounds.Count == 0)
+            {
+                throw AppException.Validation("backgroundIndex", $"El trasfondo '{background}' no existe en el catálogo.");
+            }
+
+            if (!scope.Allows(backgrounds[0].Source))
+            {
+                throw AppException.Validation("backgroundIndex", $"El trasfondo '{background}' {DisabledPack}.");
+            }
         }
 
         if (edit.Classes is { Count: > 0 } classes)
         {
             var classIndexes = classes.Select(c => c.ClassIndex.Trim()).Distinct(StringComparer.Ordinal).ToList();
-            var known = (await catalog.ListClassesByIndexAsync(classIndexes, cancellationToken)).Select(c => c.Index).ToHashSet(StringComparer.Ordinal);
-            if (classIndexes.FirstOrDefault(c => !known.Contains(c)) is { } unknownClass)
+            var definitions = (await catalog.ListClassesByIndexAsync(classIndexes, cancellationToken)).ToDictionary(c => c.Index, StringComparer.Ordinal);
+            if (classIndexes.FirstOrDefault(c => !definitions.ContainsKey(c)) is { } unknownClass)
             {
                 throw AppException.Validation("classes", $"La clase '{unknownClass}' no existe en el catálogo.");
+            }
+
+            var currentClasses = character.Classes.Select(c => c.ClassIndex).ToHashSet(StringComparer.Ordinal);
+            if (classIndexes.FirstOrDefault(c => !currentClasses.Contains(c) && !scope.Allows(definitions[c].Source)) is { } disabledClass)
+            {
+                throw AppException.Validation("classes", $"La clase '{disabledClass}' {DisabledPack}.");
             }
 
             var subclassIndexes = classes
@@ -210,16 +239,29 @@ public sealed class CharacterSheetService(
                 {
                     throw AppException.Validation("classes", $"La subclase '{subclass}' no existe para la clase '{entry.ClassIndex.Trim()}'.");
                 }
+
+                if (!string.IsNullOrEmpty(subclass)
+                    && !character.Classes.Any(c => c.SubclassIndex == subclass)
+                    && !scope.Allows(subclasses[subclass].Source))
+                {
+                    throw AppException.Validation("classes", $"La subclase '{subclass}' {DisabledPack}.");
+                }
             }
         }
 
         if (edit.Spells is { Count: > 0 } spells)
         {
             var spellIndexes = spells.Select(s => s.SpellIndex.Trim()).Distinct(StringComparer.Ordinal).ToList();
-            var known = (await catalog.ListSpellsByIndexAsync(spellIndexes, cancellationToken)).Select(s => s.Index).ToHashSet(StringComparer.Ordinal);
-            if (spellIndexes.FirstOrDefault(s => !known.Contains(s)) is { } unknownSpell)
+            var definitions = (await catalog.ListSpellsByIndexAsync(spellIndexes, cancellationToken)).ToDictionary(s => s.Index, StringComparer.Ordinal);
+            if (spellIndexes.FirstOrDefault(s => !definitions.ContainsKey(s)) is { } unknownSpell)
             {
                 throw AppException.Validation("spells", $"El conjuro '{unknownSpell}' no existe en el catálogo.");
+            }
+
+            var currentSpells = character.Spells.Select(s => s.SpellIndex).ToHashSet(StringComparer.Ordinal);
+            if (spellIndexes.FirstOrDefault(s => !currentSpells.Contains(s) && !scope.Allows(definitions[s].Source)) is { } disabledSpell)
+            {
+                throw AppException.Validation("spells", $"El conjuro '{disabledSpell}' {DisabledPack}.");
             }
         }
     }
@@ -229,6 +271,7 @@ public sealed class CharacterSheetService(
 
     public async Task<Dnd5eCharacterDetailDto> BuildSystemDetailAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default)
     {
+        await scope.UseCampaignAsync(character.CampaignId, cancellationToken);
         var sheetCatalog = await SheetCatalog.LoadAsync(catalog, [character], includeSpells: true, cancellationToken);
         var sheet = await CalculateAsync(character, sheetCatalog, cancellationToken);
         var pendingRest = (await restRequests.ListPendingAsync([character.Id], cancellationToken)).FirstOrDefault();
@@ -328,7 +371,7 @@ public sealed class CharacterSheetService(
             SpellPreparationPending = character.SpellPreparationPending,
             SpellPreparationReason = character.SpellPreparationReason?.ToString(),
             RestRollsPending = character.RestRollsPending,
-            InvalidChoices = ChoiceValidity.Find(character, sheet, sheetCatalog.Option).Select(InvalidChoicesPlanner.ToDto).ToList(),
+            InvalidChoices = ChoiceValidity.Find(character, sheet, sheetCatalog.Option, scope.Allows).Select(InvalidChoicesPlanner.ToDto).ToList(),
             Choices = character.Choices
                 .Where(c => c.Key != CharacterChoice.HitPointsKey && !(c.IsOrigin && OriginChoiceKeys.IsGrant(c.Key)))
                 .OrderBy(c => c.CreatedAt)
@@ -342,7 +385,7 @@ public sealed class CharacterSheetService(
                 .Select(c => CharacterFeatDto.From(c, sheetCatalog.Option(c.Selection.Feat!.Index)))
                 .ToList(),
             OptionCosts = optionCosts,
-            Companion = companion is null ? null : companionPlanner.BuildDto(companion, companionGrant, sheet.ProficiencyBonus),
+            Companion = companion is null ? null : await companionPlanner.BuildDtoAsync(companion, companionGrant, sheet.ProficiencyBonus, cancellationToken),
             CompanionFeature = companionGrant is null ? null : CompanionPlanner.FeatureDto(companionGrant),
             CompanionPending = companionGrant is not null && companion is null,
         };

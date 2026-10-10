@@ -26,15 +26,15 @@ public class FeatureModifierPackTests(FeatureModifierPackApiFactory factory) : I
 
     private static object Pack(object level3Modifiers) => new
     {
-        formatVersion = 2,
+        formatVersion = 3,
         id = "chispas-ejemplo",
         name = "Chispas de Ejemplo",
         version = "1.0.0",
-        classesExtended = new[]
+        classes = new[]
         {
             new
             {
-                classIndex = "sorcerer",
+                extends = "sorcerer",
                 subclasses = new object[]
                 {
                     new
@@ -91,6 +91,7 @@ public class FeatureModifierPackTests(FeatureModifierPackApiFactory factory) : I
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Chispa");
 
         var second = await PatchAsync(s, hero.Id, level: 2, subclass: Subclass);
@@ -114,6 +115,7 @@ public class FeatureModifierPackTests(FeatureModifierPackApiFactory factory) : I
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Marea");
         var detail = await PatchAsync(s, hero.Id, level: 3, subclass: Subclass);
         var tides = Assert.Single(detail.Resources, r => r.Key == "chispas-ejemplo-tides-of-chaos");
@@ -141,19 +143,6 @@ public class FeatureModifierPackTests(FeatureModifierPackApiFactory factory) : I
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains($"levels[1].features[0].{path}", await response.Content.ReadAsStringAsync());
-    }
-
-    [Fact]
-    public async Task Feature_modifiers_require_format_2()
-    {
-        var admin = await factory.CreateAdminClientAsync();
-        var pack = JsonSerializer.SerializeToNode(Pack(Swift))!;
-        pack["formatVersion"] = 1;
-
-        var response = await admin.PostAsync(PacksUrl, new StringContent(pack.ToJsonString(), Encoding.UTF8, "application/json"));
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains("levels[1].features[0].modifiers", await response.Content.ReadAsStringAsync());
     }
 
     private static StringContent Json(object pack) => new(JsonSerializer.Serialize(pack), Encoding.UTF8, "application/json");

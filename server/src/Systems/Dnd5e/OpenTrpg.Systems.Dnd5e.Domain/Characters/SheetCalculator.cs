@@ -213,7 +213,7 @@ public static class SheetCalculator
                             .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus)
                             .Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), Mod(ability)),
                         OverrideFields.SpellAttackBonus));
-                return new SpellcastingValue(classIndex, ability, saveDc, attackBonus, PreparedMax(classIndex, c.Level.Level, Mod(ability)))
+                return new SpellcastingValue(classIndex, ability, saveDc, attackBonus, PreparedMax(c.Info, c.Level.Level, Mod(ability)))
                 {
                     MaxSpellLevel = MaxSpellLevel(c.Info.SlotsByLevel(c.Level.Level)),
                     SpellsKnownMax = c.Info.SubclassSpellcasting?.SpellsKnownAt(c.Level.Level),
@@ -419,6 +419,17 @@ public static class SheetCalculator
         _ => null,
     };
 
+    /// <summary>
+    /// Preparable spells of a class: the SRD rule of its index or, for a pack class that prepares its spells, the
+    /// spellcasting modifier plus the class level divided by its progression (full 1, half 2, third 3). Minimum 1.
+    /// </summary>
+    public static int? PreparedMax(ClassInfo info, int classLevel, int abilityModifier)
+    {
+        ArgumentNullException.ThrowIfNull(info);
+        return PreparedMax(info.Index, classLevel, abilityModifier)
+            ?? (info.PreparesSpells ? Math.Max(1, abilityModifier + classLevel / Math.Max(1, info.SpellcastingLevel)) : null);
+    }
+
     /// <summary>Highest spell level (1-9) with at least one slot in a slots row; 0 when there are none.</summary>
     public static int MaxSpellLevel(IReadOnlyList<int> slots)
     {
@@ -610,11 +621,15 @@ public static class SheetCalculator
 
     /// <summary>
     /// One non-pact caster class: its own table. Several: spellcaster level = Σ floor(level / SpellcastingLevel)
-    /// and the multiclass table.
+    /// and the multiclass table; a class with its own slot table and no multiclass contribution (content packs,
+    /// <c>"progression": "table"</c>) adds its own slots on top.
     /// </summary>
     private static (IReadOnlyList<int> Slots, int CasterLevel) CalculateSpellSlots(List<ResolvedClass> classes)
     {
-        var casters = classes.Where(c => c.Info.SpellcastingLevel > 0 && !IsPact(c.Info) && c.Level.Level >= c.Info.SpellcastingFromLevel).ToList();
+        var casters = classes
+            .Where(c => !IsPact(c.Info) && c.Level.Level >= c.Info.SpellcastingFromLevel
+                && (c.Info.SpellcastingLevel > 0 || (c.Info.SpellcastingAbility is not null && c.Info.SlotsByLevel(c.Level.Level).Any(s => s > 0))))
+            .ToList();
         switch (casters.Count)
         {
             case 0:
@@ -622,8 +637,18 @@ public static class SheetCalculator
             case 1:
                 return ([.. casters[0].Info.SlotsByLevel(casters[0].Level.Level)], 0);
             default:
-                var casterLevel = casters.Sum(c => c.Level.Level / c.Info.SpellcastingLevel);
-                return (SpellSlotTables.MulticlassSlots(Math.Min(casterLevel, AbilityRules.MaxLevel)), casterLevel);
+                var casterLevel = casters.Where(c => c.Info.SpellcastingLevel > 0).Sum(c => c.Level.Level / c.Info.SpellcastingLevel);
+                var slots = SpellSlotTables.MulticlassSlots(Math.Min(casterLevel, AbilityRules.MaxLevel)).ToArray();
+                foreach (var own in casters.Where(c => c.Info.SpellcastingLevel == 0))
+                {
+                    var table = own.Info.SlotsByLevel(own.Level.Level);
+                    for (var i = 0; i < slots.Length && i < table.Count; i++)
+                    {
+                        slots[i] += table[i];
+                    }
+                }
+
+                return (slots, casterLevel);
         }
     }
 

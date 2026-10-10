@@ -44,11 +44,33 @@ internal sealed record ContentPackContext(
     IReadOnlyDictionary<string, int>? SpellLevels = null,
     IReadOnlyList<(string Key, string Source)>? ResourceKeys = null,
     IReadOnlyList<(string SetId, string ClassIndex, string Source)>? SetClasses = null,
-    IReadOnlyList<(string ClassIndex, int Level, string Key, string Source)>? LevelChoiceKeys = null);
+    IReadOnlyList<(string ClassIndex, int Level, string Key, string Source)>? LevelChoiceKeys = null)
+{
+    /// <summary>Content packs already imported (not base packs): id → system, for <c>requires</c>.</summary>
+    public IReadOnlyDictionary<string, string>? Packs { get; init; }
+
+    /// <summary>Extra vocabulary entries (kind → indexes) of the SRD and the required packs (languages, damage types...).</summary>
+    public IReadOnlyDictionary<string, IReadOnlySet<string>>? Vocabularies { get; init; }
+}
 
 /// <summary>Catalog rows of a valid content pack, every one with <c>Source</c> = the pack id.</summary>
 internal sealed class ContentPackRows
 {
+    public List<ClassDefinition> Classes { get; } = [];
+
+    public List<ClassLevel> ClassLevels { get; } = [];
+
+    public List<CreatureDefinition> Creatures { get; } = [];
+
+    public List<ConditionDefinition> Conditions { get; } = [];
+
+    public List<RuleDefinition> Rules { get; } = [];
+
+    public List<ReferenceEntry> ReferenceEntries { get; } = [];
+
+    /// <summary>How many of <see cref="Options"/> come from <c>feats[]</c>.</summary>
+    public int Feats { get; set; }
+
     public List<SubclassDefinition> Subclasses { get; } = [];
 
     public List<SubclassLevel> SubclassLevels { get; } = [];
@@ -81,6 +103,12 @@ internal sealed class ContentPackRows
 
     public Dictionary<string, int> Counts() => new()
     {
+        ["classes"] = Classes.Count,
+        ["feats"] = Feats,
+        ["creatures"] = Creatures.Count,
+        ["conditions"] = Conditions.Count,
+        ["rules"] = Rules.Count,
+        ["reference"] = ReferenceEntries.Count,
         ["optionSets"] = OptionSets.Count,
         ["options"] = Options.Count,
         ["levelChoices"] = LevelChoiceRules.Count,
@@ -106,9 +134,10 @@ internal sealed class ContentPackRows
 /// </summary>
 internal sealed partial class ContentPackValidator
 {
-    public const int CurrentFormatVersion = 2;
+    /// <summary>The only format the importer accepts (docs/content-packs.md).</summary>
+    public const int CurrentFormatVersion = 3;
 
-    /// <summary>First format with option sets, level choices and grants.</summary>
+    /// <summary>First format with option sets, level choices and grants (every accepted pack has them).</summary>
     public const int LevelChoicesFormatVersion = 2;
     public const int MaxListEntries = 500;
     public const int MaxParagraphs = 200;
@@ -130,9 +159,26 @@ internal sealed partial class ContentPackValidator
     private readonly List<string> _errors = [];
     private readonly Dictionary<string, HashSet<string>> _seen = new(StringComparer.Ordinal);
     private string _id = string.Empty;
-    private int _formatVersion = 1;
+    private int _formatVersion = CurrentFormatVersion;
 
-    public ContentPackValidator(ContentPackContext context) => _context = context;
+    /// <summary>Classes that can be referenced: those of the catalog in reach (SRD and required packs) and the pack's own (index → subclass flavor).</summary>
+    private readonly Dictionary<string, string> _classes;
+
+    /// <summary>Classes that cast spells on their own (catalog in reach and the pack's own).</summary>
+    private readonly HashSet<string> _casterClasses;
+
+    /// <summary>Full classes defined by this pack.</summary>
+    private readonly HashSet<string> _packClasses = new(StringComparer.Ordinal);
+
+    public ContentPackValidator(ContentPackContext context)
+    {
+        _context = context;
+        _classes = new Dictionary<string, string>(context.Classes, StringComparer.Ordinal);
+        _casterClasses = new HashSet<string>(context.CasterClasses ?? new HashSet<string>(), StringComparer.Ordinal);
+    }
+
+    /// <summary>The packs of <c>requires</c> (valid ones).</summary>
+    public IReadOnlyList<string> Requires { get; private set; } = [];
 
     public IReadOnlyList<string> Errors => _errors;
 
@@ -157,12 +203,19 @@ internal sealed partial class ContentPackValidator
     {
         var rows = new ContentPackRows();
 
-        if (pack.FormatVersion is { } format && format is < 1 or > CurrentFormatVersion)
+        if (pack.FormatVersion is null)
         {
-            AddError("formatVersion", $"Versión de formato no admitida; se admiten 1 y {CurrentFormatVersion}.");
+            AddError("formatVersion", $"Campo obligatorio: los paquetes usan \"formatVersion\": {CurrentFormatVersion}.");
+        }
+        else if (pack.FormatVersion != CurrentFormatVersion)
+        {
+            AddError("formatVersion", $"Versión de formato no admitida; solo se admite {CurrentFormatVersion} (convierte el paquete al formato actual).");
         }
 
-        _formatVersion = pack.FormatVersion ?? 1;
+        if (pack.System is { } system && system.Trim() != Dnd5eCatalogSources.SystemId)
+        {
+            AddError("system", $"Este importador es del sistema \"{Dnd5eCatalogSources.SystemId}\".");
+        }
 
         var id = pack.Id?.Trim();
         if (string.IsNullOrEmpty(id))
@@ -191,20 +244,56 @@ internal sealed partial class ContentPackValidator
             return rows;
         }
 
-        var packSubclasses = new Dictionary<string, string>(StringComparer.Ordinal);
-        if (RequireLevelChoicesFormat("optionSets", pack.OptionSets))
+        RequiresOf(pack.Requires);
+        foreach (var damageType in pack.Reference?.DamageTypes ?? [])
         {
-            ForEach("optionSets", pack.OptionSets, (path, set) => OptionSet(path, set, rows));
+            if (damageType?.Index?.Trim() is { Length: > 0 } damageIndex)
+            {
+                _packDamageTypes.Add(damageIndex);
+            }
         }
 
-        ForEach("classesExtended", pack.ClassesExtended, (path, extension) => ClassExtension(path, extension, rows, packSubclasses));
+        // The pack's own classes can be referenced by its spells, subclasses, filters and level choices.
+        foreach (var definition in pack.Classes ?? [])
+        {
+            if (definition is { Extends: null, Index: { } classIndex } && classIndex.Trim().StartsWith($"{_id}-", StringComparison.Ordinal))
+            {
+                var trimmed = classIndex.Trim();
+                _packClasses.Add(trimmed);
+                _classes[trimmed] = definition.SubclassFlavor?.Trim() is { Length: > 0 } flavor ? flavor : DefaultSubclassFlavor;
+                if (definition.Spellcasting is not null)
+                {
+                    _casterClasses.Add(trimmed);
+                }
+            }
+        }
+
+        var packSubclasses = new Dictionary<string, string>(StringComparer.Ordinal);
+        ForEach("optionSets", pack.OptionSets, (path, set) => OptionSet(path, set, rows));
+        Feats(pack.Feats, rows);
+        ForEach("classes", pack.Classes, (path, definition) =>
+        {
+            if (definition.Extends is not null)
+            {
+                ClassExtension(path, definition, rows, packSubclasses);
+            }
+            else
+            {
+                Class(path, definition, rows, packSubclasses);
+            }
+        });
         ForEach("items", pack.Items, (path, item) => Item(path, item, rows));
         ForEach("spells", pack.Spells, (path, spell) => Spell(path, spell, rows, packSubclasses));
         ForEach("races", pack.Races, (path, race) => Race(path, race, rows));
         ForEach("backgrounds", pack.Backgrounds, (path, background) => Background(path, background, rows));
         Trinkets(pack.Trinkets, rows);
         RollTables(pack.RollTables, rows, packSubclasses);
+        ForEach("creatures", pack.Creatures, (path, creature) => Creature(path, creature, rows));
+        ForEach("conditions", pack.Conditions, (path, condition) => Condition(path, condition, rows));
+        ForEach("rules", pack.Rules, (path, rule) => Rule(path, rule, rows));
+        Reference(pack.Reference, rows);
         CheckLevelChoiceReferences(rows);
+        CheckClassSpellListReferences(rows);
         CheckCostReferences(rows);
         CheckAfterReferences(rows);
         CheckExpandedSpellReferences(rows);
@@ -214,31 +303,73 @@ internal sealed partial class ContentPackValidator
 
     // ---- Definitions -----------------------------------------------------------------------------
 
-    private void ClassExtension(string path, PackClassExtensionJson extension, ContentPackRows rows, Dictionary<string, string> packSubclasses)
+    /// <summary>
+    /// <c>classes[]</c> with <c>extends</c>: subclasses and level choices added to a class of the SRD or of a required pack.
+    /// Only those fields are read.
+    /// </summary>
+    private void ClassExtension(string path, PackClassJson extension, ContentPackRows rows, Dictionary<string, string> packSubclasses)
     {
-        var classIndex = extension.ClassIndex?.Trim();
+        var classIndex = extension.Extends?.Trim();
         string? flavor = null;
         if (string.IsNullOrEmpty(classIndex))
         {
-            AddError($"{path}.classIndex", "Campo obligatorio.");
+            AddError($"{path}.extends", "Indica el índice de la clase que amplías.");
+            classIndex = null;
         }
-        else if (!_context.Classes.TryGetValue(classIndex, out flavor))
+        else if (!_classes.TryGetValue(classIndex, out flavor))
         {
-            AddError($"{path}.classIndex", $"La clase '{classIndex}' no existe en el catálogo (los paquetes no añaden clases).");
+            AddError($"{path}.extends", $"La clase '{classIndex}' no existe en el catálogo (debe ser del SRD o de un paquete de \"requires\").");
+        }
+        else if (_packClasses.Contains(classIndex))
+        {
+            AddError($"{path}.extends", $"La clase '{classIndex}' es de este mismo paquete: añade las subclases en su definición.");
+            flavor = null;
         }
 
-        if (RequireLevelChoicesFormat($"{path}.levelChoices", extension.LevelChoices) && classIndex is not null && flavor is not null)
+        foreach (var (field, present) in new[]
+                 {
+                     ("index", extension.Index is not null),
+                     ("name", extension.Name is not null),
+                     ("hitDie", extension.HitDie is not null),
+                     ("savingThrows", extension.SavingThrows is not null),
+                     ("proficiencies", extension.Proficiencies is not null),
+                     ("skillChoices", extension.SkillChoices is not null),
+                     ("startingEquipment", extension.StartingEquipment is not null),
+                     ("startingEquipmentText", extension.StartingEquipmentText is not null),
+                     ("multiclassing", extension.Multiclassing is not null),
+                     ("spellcasting", extension.Spellcasting is not null),
+                     ("subclassFlavor", extension.SubclassFlavor is not null),
+                     ("subclassLevel", extension.SubclassLevel is not null),
+                     ("description", extension.Description is not null),
+                     ("levels", extension.Levels is not null),
+                     ("resources", extension.Resources is not null),
+                     ("spellList", extension.SpellList is { ValueKind: not JsonValueKind.Null }),
+                 })
+        {
+            if (present)
+            {
+                AddError($"{path}.{field}", "No se admite en una clase con extends (la clase base ya lo define).");
+            }
+        }
+
+        if (classIndex is not null && flavor is not null)
         {
             ForEach($"{path}.levelChoices", extension.LevelChoices, (rulePath, rule) => LevelChoice(rulePath, rule, classIndex, null, rows));
         }
 
-        ForEach($"{path}.subclasses", extension.Subclasses, (subclassPath, subclass) =>
+        Subclasses($"{path}.subclasses", extension.Subclasses, flavor is null ? null : classIndex, flavor ?? string.Empty, rows, packSubclasses);
+    }
+
+    /// <summary>The subclasses of a class (extended or defined by the pack) as rows of the pack.</summary>
+    private void Subclasses(string path, List<PackSubclassJson?>? subclasses, string? classIndex, string flavor, ContentPackRows rows, Dictionary<string, string> packSubclasses)
+    {
+        ForEach(path, subclasses, (subclassPath, subclass) =>
         {
             var index = Index($"{subclassPath}.index", "subclasses", subclass.Index);
             var name = RequiredText($"{subclassPath}.name", subclass.Name, NameMaxLength);
             var subclassFlavor = OptionalText($"{subclassPath}.flavor", subclass.Flavor, NameMaxLength);
             var description = Paragraphs($"{subclassPath}.description", subclass.Description);
-            if (index is null || classIndex is null || flavor is null)
+            if (index is null || classIndex is null)
             {
                 return;
             }
@@ -250,10 +381,7 @@ internal sealed partial class ContentPackValidator
             var expandedSpellList = subclass.ExpandedSpellList is not null && RequireLevelChoicesFormat($"{subclassPath}.expandedSpellList", subclass.ExpandedSpellList)
                 ? ExpandedSpellList($"{subclassPath}.expandedSpellList", subclass.ExpandedSpellList)
                 : null;
-            if (RequireLevelChoicesFormat($"{subclassPath}.levelChoices", subclass.LevelChoices))
-            {
-                ForEach($"{subclassPath}.levelChoices", subclass.LevelChoices, (rulePath, rule) => LevelChoice(rulePath, rule, classIndex, index, rows, spellcasting));
-            }
+            ForEach($"{subclassPath}.levelChoices", subclass.LevelChoices, (rulePath, rule) => LevelChoice(rulePath, rule, classIndex, index, rows, spellcasting));
 
             rows.Subclasses.Add(new SubclassDefinition
             {
@@ -276,45 +404,8 @@ internal sealed partial class ContentPackValidator
                     AddError($"{levelPath}.level", "Nivel duplicado en la subclase.");
                 }
 
-                var featureIndexes = new List<string>();
-                ForEach($"{levelPath}.features", level.Features, (featurePath, feature) =>
-                {
-                    var featureIndex = Index($"{featurePath}.index", "features", feature.Index);
-                    var featureName = RequiredText($"{featurePath}.name", feature.Name, NameMaxLength);
-                    var featureDescription = Paragraphs($"{featurePath}.description", feature.Description);
-                    var featureResource = feature.Resource is not null && RequireLevelChoicesFormat($"{featurePath}.resource", feature.Resource)
-                        ? Resource($"{featurePath}.resource", feature.Resource)
-                        : null;
-                    var featureCompanion = feature.Companion is not null && RequireLevelChoicesFormat($"{featurePath}.companion", feature.Companion)
-                        ? Companion($"{featurePath}.companion", feature.Companion)
-                        : null;
-                    var featureModifiers = feature.Modifiers is not null && RequireLevelChoicesFormat($"{featurePath}.modifiers", feature.Modifiers)
-                        ? ChoiceModifiers($"{featurePath}.modifiers", feature.Modifiers, "Un rasgo")
-                        : null;
-                    if (featureIndex is null || number is null)
-                    {
-                        return;
-                    }
-
-                    featureIndexes.Add(featureIndex);
-                    rows.Features.Add(new FeatureDefinition
-                    {
-                        Index = featureIndex,
-                        Name = featureName,
-                        ClassIndex = classIndex,
-                        SubclassIndex = index,
-                        Level = number.Value,
-                        Description = featureDescription,
-                        ResourceJson = featureResource,
-                        CompanionJson = featureCompanion,
-                        ModifiersJson = featureModifiers is null or "[]" ? null : featureModifiers,
-                        Source = _id,
-                    });
-                });
-
-                var grants = level.Grants is not null && RequireLevelChoicesFormat($"{levelPath}.grants", level.Grants)
-                    ? Grants($"{levelPath}.grants", level.Grants)
-                    : null;
+                var featureIndexes = Features($"{levelPath}.features", level.Features, classIndex, index, number, rows);
+                var grants = level.Grants is not null ? Grants($"{levelPath}.grants", level.Grants) : null;
                 if (number is { } levelNumber)
                 {
                     var levelIndex = $"{index}-{levelNumber}";
@@ -333,13 +424,52 @@ internal sealed partial class ContentPackValidator
         });
     }
 
+    /// <summary>The features of a class or subclass level as rows of the pack; their indexes.</summary>
+    private List<string> Features(string path, List<PackFeatureJson?>? features, string classIndex, string? subclassIndex, int? level, ContentPackRows rows)
+    {
+        var featureIndexes = new List<string>();
+        ForEach(path, features, (featurePath, feature) =>
+        {
+            var featureIndex = Index($"{featurePath}.index", "features", feature.Index);
+            var featureName = RequiredText($"{featurePath}.name", feature.Name, NameMaxLength);
+            var featureDescription = Paragraphs($"{featurePath}.description", feature.Description);
+            var featureResource = feature.Resource is not null ? Resource($"{featurePath}.resource", feature.Resource) : null;
+            var featureCompanion = feature.Companion is not null ? Companion($"{featurePath}.companion", feature.Companion) : null;
+            var featureModifiers = feature.Modifiers is not null ? ChoiceModifiers($"{featurePath}.modifiers", feature.Modifiers, "Un rasgo") : null;
+            if (featureIndex is null || level is null)
+            {
+                return;
+            }
+
+            featureIndexes.Add(featureIndex);
+            rows.Features.Add(new FeatureDefinition
+            {
+                Index = featureIndex,
+                Name = featureName,
+                ClassIndex = classIndex,
+                SubclassIndex = subclassIndex,
+                Level = level.Value,
+                Description = featureDescription,
+                ResourceJson = featureResource,
+                CompanionJson = featureCompanion,
+                ModifiersJson = featureModifiers is null or "[]" ? null : featureModifiers,
+                Source = _id,
+            });
+        });
+        return featureIndexes;
+    }
+
     private void Item(string path, PackItemJson item, ContentPackRows rows)
     {
         var index = Index($"{path}.index", "items", item.Index);
         var name = RequiredText($"{path}.name", item.Name, NameMaxLength);
 
         ItemCategory category = default;
-        if (string.IsNullOrWhiteSpace(item.Category))
+        if (string.IsNullOrWhiteSpace(item.Category) && ImpliedCategory(item) is { } implied)
+        {
+            category = implied;
+        }
+        else if (string.IsNullOrWhiteSpace(item.Category))
         {
             AddError($"{path}.category", "Campo obligatorio.");
         }
@@ -423,6 +553,7 @@ internal sealed partial class ContentPackValidator
             Effects = TextList($"{path}.effects", item.Effects, ItemLimits.MaxListEntries, ItemLimits.EffectMaxLength),
             Modifiers = modifiers,
         };
+        data = WithItemSections(path, item, data);
 
         if (index is not null)
         {
@@ -457,9 +588,9 @@ internal sealed partial class ContentPackValidator
         });
 
         var classes = new List<string>();
-        ForEachText($"{path}.classes", spell.Classes, (classPath, classIndex) =>
+        void AddClass(string classPath, string classIndex)
         {
-            if (!_context.Classes.ContainsKey(classIndex))
+            if (!_classes.ContainsKey(classIndex))
             {
                 AddError(classPath, $"La clase '{classIndex}' no existe en el catálogo.");
             }
@@ -467,7 +598,10 @@ internal sealed partial class ContentPackValidator
             {
                 classes.Add(classIndex);
             }
-        });
+        }
+
+        ForEachText($"{path}.classes", spell.Classes, AddClass);
+        ForEachText($"{path}.lists", spell.Lists, AddClass);
 
         var subclasses = new List<string>();
         ForEachText($"{path}.subclasses", spell.Subclasses, (subclassPath, subclassIndex) =>

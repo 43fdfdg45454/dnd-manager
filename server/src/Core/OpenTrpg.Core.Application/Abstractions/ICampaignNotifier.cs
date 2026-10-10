@@ -48,6 +48,9 @@ public static class CampaignEventTypes
 
     /// <summary>Someone accepted or declined an invitation, or an invitation was cancelled.</summary>
     public const string MembersUpdated = "members.updated";
+
+    /// <summary>The campaign changed in a way every member must reload: today, the content packs it enables.</summary>
+    public const string CampaignUpdated = "campaign.updated";
 }
 
 /// <summary>

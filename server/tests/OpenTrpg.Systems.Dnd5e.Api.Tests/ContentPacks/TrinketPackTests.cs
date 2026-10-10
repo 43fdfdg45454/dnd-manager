@@ -53,6 +53,7 @@ public class TrinketPackTests(TrinketPackApiFactory factory) : IClassFixture<Tri
         Assert.Equal(["baratijas-uno-canica", "dagger"], table.Select(t => t.Index));
 
         // The trinket of a draft goes to its inventory: the catalog item, or a custom "Baratija" without a table entry.
+        await s.EnablePacksAsync("baratijas-uno", "baratijas-dos");
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId);
         var marble = await s.Player.AddItemAsync(hero.Id, new { templateId = table[0].TemplateId, quantity = 1 });
         Assert.Equal("Canica de ejemplo", marble.Effective.Name);
@@ -71,6 +72,7 @@ public class TrinketPackTests(TrinketPackApiFactory factory) : IClassFixture<Tri
         var admin = await factory.CreateAdminClientAsync();
         var pack = new
         {
+            formatVersion = 3,
             id = "baratijas-malas",
             name = "Baratijas malas",
             version = "1",
@@ -102,6 +104,7 @@ public class TrinketPackTests(TrinketPackApiFactory factory) : IClassFixture<Tri
 
     private static object Pack(string id, string itemIndex, string itemName, params object[] trinkets) => new
     {
+        formatVersion = 3,
         id,
         name = $"Pack {id}",
         version = "1",

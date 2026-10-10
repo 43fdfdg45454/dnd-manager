@@ -41,6 +41,7 @@ internal sealed class OptionDefinitionConfiguration : IEntityTypeConfiguration<O
         builder.Property(x => x.ModifiersJson).IsRequired();
         builder.Property(x => x.Source).HasMaxLength(CatalogSources.MaxLength).IsRequired();
         builder.HasIndex(x => x.Source);
+        builder.Property(x => x.Category).HasMaxLength(OptionDefinition.CategoryMaxLength);
 
         builder.Ignore(x => x.Prerequisites);
         builder.Ignore(x => x.Modifiers);

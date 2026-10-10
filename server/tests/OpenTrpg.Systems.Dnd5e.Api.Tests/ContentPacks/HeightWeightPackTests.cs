@@ -28,7 +28,7 @@ public class HeightWeightPackTests(HeightWeightPackApiFactory factory) : IClassF
 
     private static readonly object Pack = new
     {
-        formatVersion = 2,
+        formatVersion = 3,
         id = PackId,
         name = "Tallas de ejemplo",
         version = "1.0.0",
@@ -89,7 +89,7 @@ public class HeightWeightPackTests(HeightWeightPackApiFactory factory) : IClassF
         var admin = await factory.CreateAdminClientAsync();
         var invalid = new
         {
-            formatVersion = 2,
+            formatVersion = 3,
             id = "talla-erronea",
             name = "Tallas erróneas",
             version = "1.0.0",
@@ -118,26 +118,6 @@ public class HeightWeightPackTests(HeightWeightPackApiFactory factory) : IClassF
         Assert.Contains(errors, e => e.StartsWith("races[0].heightWeight.weightModifier: Expresión no válida", StringComparison.Ordinal));
         Assert.Contains(errors, e => e.StartsWith("races[0].subraces[0].heightWeight.heightModifier: Expresión no válida", StringComparison.Ordinal));
         Assert.Contains("races[0].subraces[0].heightWeight.weightModifier: Campo obligatorio.", errors);
-
-        // Format 1 does not admit the table.
-        var formatOne = new
-        {
-            id = "talla-formato-uno",
-            name = "Formato uno",
-            version = "1.0.0",
-            races = new object[]
-            {
-                new
-                {
-                    index = "talla-formato-uno-folk",
-                    name = "Old Folk",
-                    speed = 30,
-                    size = "Medium",
-                    heightWeight = new { baseHeightInches = 50, heightModifier = "2d4", baseWeightPounds = 100, weightModifier = "1" },
-                },
-            },
-        };
-        Assert.Contains("races[0].heightWeight: Requiere \"formatVersion\": 2.", await ReadErrorsAsync(await admin.PostAsync(PacksUrl, Json(formatOne))));
     }
 
     [Fact]

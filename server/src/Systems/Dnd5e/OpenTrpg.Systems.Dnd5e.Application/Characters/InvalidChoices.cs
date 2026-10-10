@@ -7,6 +7,7 @@ using OpenTrpg.Core.Domain.Characters;
 using FluentValidation;
 using OpenTrpg.Core.Application;
 using OpenTrpg.Core.Application.Characters;
+using OpenTrpg.Core.Application.ContentPacks;
 using OpenTrpg.Systems.Dnd5e.Application;
 using OpenTrpg.Systems.Dnd5e.Application.Abstractions;
 using OpenTrpg.Systems.Dnd5e.Application.Abstractions.Persistence;
@@ -22,7 +23,8 @@ namespace OpenTrpg.Systems.Dnd5e.Application.Characters;
 /// <summary>An option or feat that no longer meets its prerequisites (also in the character detail, <c>invalidChoices</c>).</summary>
 /// <param name="ReplaceKey">Key to answer in the replacement (<c>replace.&lt;index&gt;</c>).</param>
 /// <param name="ClassIndex">Class of the choice that picked it; null for an origin feat.</param>
-public sealed record InvalidChoiceDto(string ReplaceKey, string? ClassIndex, string Key, int Level, string SetId, ChoiceItemDto Item, string Reason);
+/// <param name="Code">"prerequisites" or "pack-disabled" (its content pack is disabled in the campaign).</param>
+public sealed record InvalidChoiceDto(string ReplaceKey, string? ClassIndex, string Key, int Level, string SetId, ChoiceItemDto Item, string Reason, string Code);
 
 /// <summary>The forced replacements of a character: one choice per invalid pick (same shape as the level-up choices).</summary>
 public sealed record InvalidChoicesDto(Guid CharacterId, IReadOnlyList<InvalidChoiceDto> Invalid, IReadOnlyList<LevelUpChoiceDto> Choices);
@@ -51,14 +53,14 @@ public sealed class ReplaceInvalidChoicesRequestValidator : AbstractValidator<Re
 public sealed record PlannedReplacement(InvalidChoice Invalid, PlannedChoice Choice);
 
 /// <summary>Finds the invalid picks of a character and plans their replacements; validates and applies the answers.</summary>
-public sealed class InvalidChoicesPlanner(ICatalogRepository catalog)
+public sealed class InvalidChoicesPlanner(ICatalogRepository catalog, CatalogScopeContext scope)
 {
     public const string KeyPrefix = "replace.";
 
     public static bool IsReplacement(string key) => key.StartsWith(KeyPrefix, StringComparison.Ordinal);
 
     public static InvalidChoiceDto ToDto(InvalidChoice invalid) => new(
-        KeyPrefix + invalid.Item.Index, invalid.ClassIndex, invalid.Key, invalid.Level, invalid.SetId, ChoiceItemDto.From(invalid.Item), invalid.Reason);
+        KeyPrefix + invalid.Item.Index, invalid.ClassIndex, invalid.Key, invalid.Level, invalid.SetId, ChoiceItemDto.From(invalid.Item), invalid.Reason, invalid.Code);
 
     /// <summary>The invalid picks of the character (catalog options of its picks loaded here).</summary>
     public async Task<IReadOnlyList<InvalidChoice>> FindAsync(Dnd5eCharacter character, CharacterSheet sheet, CancellationToken cancellationToken = default)
@@ -70,7 +72,7 @@ public sealed class InvalidChoicesPlanner(ICatalogRepository catalog)
         }
 
         var options = (await catalog.ListOptionsByIndexAsync(indexes, cancellationToken)).ToDictionary(o => o.Index, StringComparer.Ordinal);
-        return ChoiceValidity.Find(character, sheet, options.GetValueOrDefault);
+        return ChoiceValidity.Find(character, sheet, options.GetValueOrDefault, scope.Current is null ? null : scope.Allows);
     }
 
     public async Task<IReadOnlyList<PlannedReplacement>> PlanAsync(Dnd5eCharacter character, CharacterSheet sheet, CancellationToken cancellationToken = default)
@@ -109,7 +111,9 @@ public sealed class InvalidChoicesPlanner(ICatalogRepository catalog)
                     SetId = i.SetId,
                     Choose = 1,
                     Replaces = true,
-                    Note = $"Ya no cumples sus requisitos: {i.Reason} Elige otra opción.",
+                    Note = i.Code == InvalidChoiceCodes.PackDisabled
+                        ? $"{i.Reason} Elige otra opción."
+                        : $"Ya no cumples sus requisitos: {i.Reason} Elige otra opción.",
                 };
                 return new PlannedReplacement(i, new PlannedChoice(rule, options.Any(o => o.Eligible) ? 1 : 0, false, options, [i.Item]));
             })

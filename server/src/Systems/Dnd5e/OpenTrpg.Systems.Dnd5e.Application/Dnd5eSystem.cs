@@ -22,6 +22,9 @@ public sealed class Dnd5eSystem(IServiceProvider services) : IGameSystem
 
     public const string SrdLicense = "CC-BY-4.0";
 
+    /// <summary>Id of the attributed ruleset in <see cref="AttributionInfo.Ruleset"/>.</summary>
+    public const string SrdRuleset = "srd-5.1";
+
     /// <summary>Mandatory CC-BY 4.0 attribution of the SRD 5.1 content (kept in English, as published by its licensor).</summary>
     public const string SrdAttributionText =
         "This work includes material taken from the System Reference Document 5.1 (“SRD 5.1”) by Wizards of the Coast LLC "
@@ -37,7 +40,7 @@ public sealed class Dnd5eSystem(IServiceProvider services) : IGameSystem
     public static GameSystemInfo SystemInfo { get; } = new(
         Name,
         SrdVersion,
-        [new AttributionInfo(Dnd5eCatalogSources.SrdRuleset, SrdLicense, SrdAttributionText)],
+        [new AttributionInfo(SrdRuleset, SrdLicense, SrdAttributionText)],
         [new SystemDocumentInfo(SrdFileName, SrdTitle, SrdDescription)])
     {
         BaseCatalogSources = [Dnd5eCatalogSources.Srd],

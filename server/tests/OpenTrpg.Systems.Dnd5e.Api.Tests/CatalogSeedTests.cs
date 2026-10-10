@@ -36,6 +36,17 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
             Assert.Equal(18, await db.Set<SkillDefinition>().CountAsync());
             Assert.Equal(1, await db.Set<BackgroundDefinition>().CountAsync());
 
+            // Phase 34: the SRD beasts, its vocabularies and no rules document live in tables of their own.
+            Assert.Equal(87, await db.Set<CreatureDefinition>().CountAsync());
+            Assert.Equal(0, await db.Set<RuleDefinition>().CountAsync());
+            Assert.Equal(16 + 11 + 39 + 13 + 8 + 31, await db.Set<ReferenceEntry>().CountAsync());
+            Assert.Equal(
+                [(ReferenceEntry.DamageTypes, 13), (ReferenceEntry.EquipmentCategories, 39), (ReferenceEntry.Languages, 16), (ReferenceEntry.MagicSchools, 8), (ReferenceEntry.Tools, 31), (ReferenceEntry.WeaponProperties, 11)],
+                (await db.Set<ReferenceEntry>().GroupBy(e => e.Kind).Select(g => new { g.Key, Count = g.Count() }).ToListAsync())
+                    .OrderBy(g => g.Key, StringComparer.Ordinal)
+                    .Select(g => (g.Key, g.Count)));
+            Assert.True(await db.Set<CreatureDefinition>().AllAsync(c => c.Source == Dnd5eCatalogSources.Srd));
+
             var srdItems = await db.ItemTemplates.CountAsync(x => x.CampaignId == null);
             Assert.True(srdItems >= 590, $"Expected at least 590 SRD items, got {srdItems}.");
             Assert.Equal(237 + 362, srdItems);
@@ -50,12 +61,10 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
             Assert.Equal(ItemCategory.MagicItem, (await db.ItemTemplates.SingleAsync(x => x.CampaignId == null && x.Index == "wand-of-lightning-bolts")).Category);
             Assert.True(await db.ItemTemplates.AnyAsync(x => x.CampaignId == null && x.Category == ItemCategory.Consumable));
 
-            var import = await db.CatalogImports.SingleAsync();
-            Assert.Equal(Dnd5eCatalogSources.SrdRuleset, import.Ruleset);
-            Assert.Contains("a6212beb", import.DatasetVersion);
-            Assert.Contains("skill choices", import.DatasetVersion);
-            Assert.Contains("personality", import.DatasetVersion);
-            Assert.Contains("race grants", import.DatasetVersion);
+            var import = await db.ContentPacks.SingleAsync();
+            Assert.Equal((Dnd5eCatalogSources.Srd, "dnd5e", "SRD 5.1", 0, true), (import.Id, import.SystemId, import.Name, import.FormatVersion, import.IsBase));
+            Assert.StartsWith("5.1-", import.Version);
+            Assert.True(import.Version.Length <= ContentPack.VersionMaxLength);
             Assert.Contains("\"spells\":319", import.CountsJson);
         });
     }
@@ -76,7 +85,7 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
             var rule = await db.Set<LevelChoiceRule>().SingleAsync(x => x.Id == "warlock/-/2/eldritch-invocations");
             Assert.Equal((LevelChoiceKind.OptionSet, 2, true, true), (rule.Kind, rule.Choose, rule.Replaces, rule.Cumulative));
             Assert.True((await db.Set<LevelChoiceRule>().SingleAsync(x => x.Id == "wizard/-/2/spellbook")).Filter.MaxSpellLevelBySlots);
-            Assert.Contains("\"levelChoiceRules\":197", (await db.CatalogImports.SingleAsync()).CountsJson);
+            Assert.Contains("\"levelChoiceRules\":197", (await db.ContentPacks.SingleAsync()).CountsJson);
         });
     }
 
@@ -114,7 +123,7 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
 
         await factory.WithDbAsync(async db =>
         {
-            Assert.Equal(1, await db.CatalogImports.CountAsync());
+            Assert.Equal(1, await db.ContentPacks.CountAsync());
             Assert.Equal(319, await db.Set<SpellDefinition>().CountAsync());
             Assert.Equal(599, await db.ItemTemplates.CountAsync(x => x.CampaignId == null));
         });
@@ -130,7 +139,7 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
             idsBefore = await db.ItemTemplates.Where(x => x.Index != null).ToDictionaryAsync(x => x.Index!, x => x.Id);
 
             // Simulates a dataset version that was never imported.
-            await db.CatalogImports.ExecuteDeleteAsync();
+            await db.ContentPacks.ExecuteDeleteAsync();
         });
 
         using var scope = factory.Services.CreateScope();
@@ -140,7 +149,7 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
 
         await factory.WithDbAsync(async db =>
         {
-            Assert.Equal(1, await db.CatalogImports.CountAsync());
+            Assert.Equal(1, await db.ContentPacks.CountAsync());
             Assert.Equal(12, await db.Set<ClassDefinition>().CountAsync());
             Assert.Equal(319, await db.Set<SpellDefinition>().CountAsync());
             var idsAfter = await db.ItemTemplates.Where(x => x.Index != null).ToDictionaryAsync(x => x.Index!, x => x.Id);

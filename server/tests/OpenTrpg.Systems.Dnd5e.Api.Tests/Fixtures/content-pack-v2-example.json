@@ -1,5 +1,5 @@
 {
-  "formatVersion": 2,
+  "formatVersion": 3,
   "id": "tierras-ejemplo",
   "name": "Tierras de Ejemplo",
   "version": "2.0.0",
@@ -38,9 +38,9 @@
       ]
     }
   ],
-  "classesExtended": [
+  "classes": [
     {
-      "classIndex": "fighter",
+      "extends": "fighter",
       "subclasses": [
         {
           "index": "tierras-ejemplo-guardia",

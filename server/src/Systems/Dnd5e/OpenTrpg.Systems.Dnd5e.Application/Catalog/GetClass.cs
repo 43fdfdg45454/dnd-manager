@@ -57,7 +57,15 @@ public sealed class GetClassHandler(ICatalogRepository catalog)
                         .Select(l => new SubclassLevelDto(l.Level, Features(l.FeatureIndexes, features)))
                         .ToList(),
                     s.Source))
-                .ToList());
+                .ToList())
+        {
+            Source = definition.Source,
+            Description = definition.Description,
+            SubclassLevel = definition.SubclassLevel,
+            Spellcasting = definition.Spellcasting is { } spellcasting ? ClassSpellcastingDto.From(spellcasting) : null,
+            Multiclassing = definition.Multiclassing is { } multiclassing ? ClassMulticlassingDto.From(multiclassing) : null,
+            Resources = definition.Resources.Select(ClassResourceDto.From).ToList(),
+        };
     }
 
     private static List<FeatureDto> Features(IEnumerable<string> indexes, IReadOnlyDictionary<string, FeatureDefinition> features) =>

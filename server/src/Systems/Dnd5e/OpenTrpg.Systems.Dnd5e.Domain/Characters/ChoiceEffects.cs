@@ -132,16 +132,34 @@ public sealed record ChoiceEffects(
     }
 
     /// <summary>
-    /// Resources of the subclass features the character has reached: features of one of its subclasses whose level is
-    /// not above its level in that class.
+    /// Resources of the classes of the character defined by content packs (<see cref="ClassDefinition.Resources"/>),
+    /// labelled with the class name; <paramref name="findClass"/> returns null for unknown classes.
+    /// </summary>
+    public static IReadOnlyList<ChoiceResourceEffect> ClassResources(Dnd5eCharacter character, Func<string, ClassDefinition?> findClass)
+    {
+        ArgumentNullException.ThrowIfNull(character);
+        ArgumentNullException.ThrowIfNull(findClass);
+        return character.Classes
+            .Select(c => findClass(c.ClassIndex))
+            .OfType<ClassDefinition>()
+            .SelectMany(d => d.Resources.Select(r => new ChoiceResourceEffect(d.Index, r) { Label = d.Name }))
+            .ToList();
+    }
+
+    /// <summary>Whether a class (or subclass) feature belongs to a class entry of the character.</summary>
+    private static bool Owns(CharacterClassLevel entry, FeatureDefinition feature) =>
+        entry.ClassIndex == feature.ClassIndex && (feature.SubclassIndex is null || entry.SubclassIndex == feature.SubclassIndex);
+
+    /// <summary>
+    /// Resources of the class and subclass features the character has reached: features of one of its classes (or of
+    /// its subclass in that class) whose level is not above its level in that class.
     /// </summary>
     public static IReadOnlyList<ChoiceResourceEffect> FeatureResources(Dnd5eCharacter character, IEnumerable<FeatureDefinition> features)
     {
         ArgumentNullException.ThrowIfNull(character);
         ArgumentNullException.ThrowIfNull(features);
         return features
-            .Where(f => f.SubclassIndex is not null)
-            .Select(f => (Feature: f, Owner: character.Classes.FirstOrDefault(c => c.ClassIndex == f.ClassIndex && c.SubclassIndex == f.SubclassIndex)))
+            .Select(f => (Feature: f, Owner: character.Classes.FirstOrDefault(c => Owns(c, f))))
             .Where(f => f.Owner is not null && f.Feature.Level <= f.Owner.Level && f.Feature.Resource is not null)
             .OrderBy(f => f.Feature.Level)
             .ThenBy(f => f.Feature.Index, StringComparer.Ordinal)
@@ -162,11 +180,10 @@ public sealed record ChoiceEffects(
             .ToList();
     }
 
-    /// <summary>Subclass features of one of the character's subclasses whose level is not above its level in that class.</summary>
+    /// <summary>Class and subclass features of the character whose level is not above its level in that class.</summary>
     private static IEnumerable<FeatureDefinition> ReachedFeatures(Dnd5eCharacter character, IEnumerable<FeatureDefinition> features) =>
         features
-            .Where(f => f.SubclassIndex is not null
-                && character.Classes.Any(c => c.ClassIndex == f.ClassIndex && c.SubclassIndex == f.SubclassIndex && f.Level <= c.Level))
+            .Where(f => character.Classes.Any(c => Owns(c, f) && f.Level <= c.Level))
             .OrderBy(f => f.Level)
             .ThenBy(f => f.Index, StringComparer.Ordinal);
 

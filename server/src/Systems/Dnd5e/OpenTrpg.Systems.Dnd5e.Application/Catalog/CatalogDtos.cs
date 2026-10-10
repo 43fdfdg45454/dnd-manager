@@ -21,10 +21,11 @@ public sealed record ClassSummaryDto(
     bool IsSpellcaster,
     int SpellcastingLevel,
     bool IsPactCaster,
-    string SubclassFlavor)
+    string SubclassFlavor,
+    string Source)
 {
     public static ClassSummaryDto From(ClassDefinition c) => new(
-        c.Index, c.Name, c.HitDie, c.SavingThrows, c.SpellcastingAbility, c.IsSpellcaster, c.SpellcastingLevel, c.IsPactCaster, c.SubclassFlavor);
+        c.Index, c.Name, c.HitDie, c.SavingThrows, c.SpellcastingAbility, c.IsSpellcaster, c.SpellcastingLevel, c.IsPactCaster, c.SubclassFlavor, c.Source);
 }
 
 public sealed record FeatureDto(
@@ -77,7 +78,52 @@ public sealed record ClassDetailDto(
     StartingEquipmentDto? StartingEquipment,
     SkillChoicesDto SkillChoices,
     IReadOnlyList<ClassLevelDto> Levels,
-    IReadOnlyList<SubclassDto> Subclasses);
+    IReadOnlyList<SubclassDto> Subclasses)
+{
+    /// <summary>"srd" or the id of the content pack that added it.</summary>
+    public string Source { get; init; } = "srd";
+
+    /// <summary>Description paragraphs (classes of content packs; empty for the SRD ones).</summary>
+    public IReadOnlyList<string> Description { get; init; } = [];
+
+    /// <summary>Level at which the subclass is chosen (0 when the class does not say: the SRD ones).</summary>
+    public int SubclassLevel { get; init; }
+
+    /// <summary>Spellcasting of a content pack class, or null (the SRD classes use fixed tables).</summary>
+    public ClassSpellcastingDto? Spellcasting { get; init; }
+
+    /// <summary>Multiclassing of a content pack class, or null (the SRD classes use the fixed SRD table).</summary>
+    public ClassMulticlassingDto? Multiclassing { get; init; }
+
+    /// <summary>Resources of a content pack class (their maximum by level is in <see cref="ClassLevelDto.ClassSpecific"/> or the resource itself).</summary>
+    public IReadOnlyList<ClassResourceDto> Resources { get; init; } = [];
+}
+
+/// <param name="Progression">"full", "half", "third", "pact" or "table" (own slots table: see the levels).</param>
+/// <param name="Preparation">"prepared" or "known".</param>
+public sealed record ClassSpellcastingDto(string Progression, string Preparation, bool Ritual, string? Focus)
+{
+    public static ClassSpellcastingDto From(ClassSpellcastingInfo info) => new(info.Progression, info.Preparation, info.Ritual, info.Focus);
+}
+
+/// <param name="Prerequisites">Minimum ability scores by ability ("int": 13).</param>
+/// <param name="Skills">Skills of the class list gained when multiclassing into it.</param>
+public sealed record ClassMulticlassingDto(
+    IReadOnlyDictionary<string, int> Prerequisites,
+    IReadOnlyList<string> Armor,
+    IReadOnlyList<string> Weapons,
+    IReadOnlyList<string> Tools,
+    int Skills)
+{
+    public static ClassMulticlassingDto From(ClassMulticlassing m) => new(m.Prerequisites, m.Armor, m.Weapons, m.Tools, m.Skills);
+}
+
+/// <param name="MaxByLevel">Maximum by class level when it comes from a table, else null (see <paramref name="Max"/>).</param>
+/// <param name="Max">Formula of the maximum ("proficiencyBonus", "mod:wis"...) when it is not a table.</param>
+public sealed record ClassResourceDto(string Key, string Name, string Max, IReadOnlyDictionary<int, int>? MaxByLevel, string Recharge)
+{
+    public static ClassResourceDto From(OptionResource r) => new(r.Key, r.Name, r.Max, r.MaxByLevel, r.Recharge.ToString());
+}
 
 /// <summary>Level-1 skill proficiency choice: pick <paramref name="Choose"/> of <paramref name="From"/> (skill indexes such as "arcana").</summary>
 public sealed record SkillChoicesDto(int Choose, IReadOnlyList<string> From);
@@ -334,7 +380,28 @@ public sealed record SpellDetailDto(
 
 public sealed record ConditionDto(string Index, string Name, IReadOnlyList<string> Description)
 {
-    public static ConditionDto From(ConditionDefinition c) => new(c.Index, c.Name, c.Description);
+    /// <summary>"srd" or the content pack of the condition.</summary>
+    public string Source { get; init; } = Dnd5eCatalogSources.Srd;
+
+    public static ConditionDto From(ConditionDefinition c) => new(c.Index, c.Name, c.Description) { Source = c.Source };
+}
+
+/// <summary>A rules document of a content pack in the list (no body).</summary>
+public sealed record RuleSummaryDto(string Index, string Title, string Category, IReadOnlyList<string> Tags, string Source)
+{
+    public static RuleSummaryDto From(RuleDefinition r) => new(r.Index, r.Title, r.Category, r.Tags, r.Source);
+}
+
+/// <summary>A rules document of a content pack: paragraphs in light Markdown, no mechanical effect.</summary>
+public sealed record RuleDto(string Index, string Title, string Category, IReadOnlyList<string> Body, IReadOnlyList<string> Tags, string Source)
+{
+    public static RuleDto From(RuleDefinition r) => new(r.Index, r.Title, r.Category, r.Body, r.Tags, r.Source);
+}
+
+/// <summary>An entry of a vocabulary (language, weapon property, equipment category, damage type, magic school or tool).</summary>
+public sealed record ReferenceEntryDto(string Kind, string Index, string Name, IReadOnlyList<string> Description, string Source)
+{
+    public static ReferenceEntryDto From(ReferenceEntry e) => new(e.Kind, e.Index, e.Name, CatalogJson.StringList(e.DescriptionJson), e.Source);
 }
 
 public sealed record SkillDto(string Index, string Name, string AbilityIndex, IReadOnlyList<string> Description)

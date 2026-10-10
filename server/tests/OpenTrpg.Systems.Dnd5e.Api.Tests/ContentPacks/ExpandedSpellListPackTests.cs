@@ -31,15 +31,15 @@ public class ExpandedSpellListPackTests(ExpandedSpellListPackApiFactory factory)
 
     private static JsonObject Pack() => JsonSerializer.SerializeToNode(new
     {
-        formatVersion = 2,
+        formatVersion = 3,
         id = "pactos-ejemplo",
         name = "Pactos de Ejemplo",
         version = "1.0.0",
-        classesExtended = new object[]
+        classes = new object[]
         {
             new
             {
-                classIndex = "warlock",
+                extends = "warlock",
                 subclasses = new[]
                 {
                     new
@@ -53,7 +53,7 @@ public class ExpandedSpellListPackTests(ExpandedSpellListPackApiFactory factory)
             },
             new
             {
-                classIndex = "cleric",
+                extends = "cleric",
                 subclasses = new[]
                 {
                     new
@@ -86,6 +86,7 @@ public class ExpandedSpellListPackTests(ExpandedSpellListPackApiFactory factory)
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
 
         var withPatron = await LevelOneAsync(s, "warlock", Patron, "Brujo del bosque");
         var plan = await PlanAsync(s.Player, withPatron.Id);
@@ -124,6 +125,7 @@ public class ExpandedSpellListPackTests(ExpandedSpellListPackApiFactory factory)
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
 
         var withDomain = await LevelOneAsync(s, "cleric", Domain, "Clériga de ejemplo");
         var candidates = Assert.Single((await PreparationAsync(s.Player, withDomain.Id)).Classes).Candidates;
@@ -164,8 +166,8 @@ public class ExpandedSpellListPackTests(ExpandedSpellListPackApiFactory factory)
         var admin = await factory.CreateAdminClientAsync();
         var pack = Pack();
         pack["id"] = "pactos-malos";
-        pack["classesExtended"]![0]!["subclasses"]![0]!["index"] = "pactos-malos-x";
-        pack["classesExtended"]![0]!["subclasses"]![0]!["expandedSpellList"] = JsonNode.Parse("""
+        pack["classes"]![0]!["subclasses"]![0]!["index"] = "pactos-malos-x";
+        pack["classes"]![0]!["subclasses"]![0]!["expandedSpellList"] = JsonNode.Parse("""
             [
               {"index":"faerie-fire","level":2},
               {"index":"conjuro-inexistente","level":1},
@@ -174,24 +176,17 @@ public class ExpandedSpellListPackTests(ExpandedSpellListPackApiFactory factory)
               {"index":"blur","level":10}
             ]
             """);
-        pack["classesExtended"]![1]!["subclasses"]![0]!["index"] = "pactos-malos-y";
+        pack["classes"]![1]!["subclasses"]![0]!["index"] = "pactos-malos-y";
 
         var errors = await ImportErrorsAsync(admin, pack);
 
-        var prefix = "classesExtended[0].subclasses[0].expandedSpellList";
+        var prefix = "classes[0].subclasses[0].expandedSpellList";
         Assert.Contains(errors, e => e.StartsWith($"{prefix}[0].level:", StringComparison.Ordinal) && e.Contains("nivel 1", StringComparison.Ordinal));
         Assert.Contains(errors, e => e.StartsWith($"{prefix}[1].index:", StringComparison.Ordinal) && e.Contains("no existe", StringComparison.Ordinal));
         Assert.Contains(errors, e => e.StartsWith($"{prefix}[3].index:", StringComparison.Ordinal) && e.Contains("repetido", StringComparison.Ordinal));
         Assert.Contains(errors, e => e.StartsWith($"{prefix}[4].level:", StringComparison.Ordinal));
         Assert.DoesNotContain(errors, e => e.StartsWith($"{prefix}[2]", StringComparison.Ordinal));
 
-        // Format 1 packs cannot use it.
-        var old = Pack();
-        old["formatVersion"] = 1;
-        old["id"] = "pactos-viejos";
-        old["classesExtended"]![0]!["subclasses"]![0]!["index"] = "pactos-viejos-x";
-        old["classesExtended"]![1]!["subclasses"]![0]!["index"] = "pactos-viejos-y";
-        Assert.Contains(await ImportErrorsAsync(admin, old), e => e.StartsWith("classesExtended[0].subclasses[0].expandedSpellList:", StringComparison.Ordinal));
     }
 
     private static StringContent Json(JsonNode pack) => new(pack.ToJsonString(), Encoding.UTF8, "application/json");

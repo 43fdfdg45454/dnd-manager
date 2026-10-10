@@ -32,15 +32,15 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
 
     private static object Pack(object companion) => new
     {
-        formatVersion = 2,
+        formatVersion = 3,
         id = "compas-ejemplo",
         name = "Compañeros de Ejemplo",
         version = "1.0.0",
-        classesExtended = new[]
+        classes = new[]
         {
             new
             {
-                classIndex = "ranger",
+                extends = "ranger",
                 subclasses = new[]
                 {
                     new
@@ -83,6 +83,7 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Rastreadora");
 
         // Level 2: no feature yet.
@@ -133,6 +134,7 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var hero = await ActiveRangerWithWolfAsync(s);
 
         var hurt = await HpAsync(s.Player.Client, hero, new { delta = -5 });
@@ -158,6 +160,7 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var hero = await ActiveRangerWithWolfAsync(s);
 
         var renamed = await PutAsync(s.Player.Client, hero, "wolf", "Brasa");
@@ -209,19 +212,6 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains($"features[0].{path}", await response.Content.ReadAsStringAsync());
-    }
-
-    [Fact]
-    public async Task Companions_require_format_2()
-    {
-        var admin = await factory.CreateAdminClientAsync();
-        var pack = JsonSerializer.SerializeToNode(Pack(Companion))!;
-        pack["formatVersion"] = 1;
-
-        var response = await admin.PostAsync(PacksUrl, new StringContent(pack.ToJsonString(), Encoding.UTF8, "application/json"));
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains("features[0].companion", await response.Content.ReadAsStringAsync());
     }
 
     /// <summary>An active ranger 3 of the pack's subclass with a wolf named "Ceniza" (12 HP).</summary>

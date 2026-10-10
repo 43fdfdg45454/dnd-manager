@@ -1,3 +1,4 @@
+using OpenTrpg.Core.Application.ContentPacks;
 using OpenTrpg.Core.Application.Abstractions;
 using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Application.Characters;
@@ -137,12 +138,13 @@ public sealed class PartyAdjustmentsValidator : AbstractValidator<List<PartyAdju
 }
 
 /// <summary>Loads the D&amp;D 5e party of a campaign for a DM (see <see cref="PartyLoader"/>).</summary>
-public sealed class Dnd5ePartyLoader(PartyLoader party, IDnd5eCharacterRepository characters)
+public sealed class Dnd5ePartyLoader(PartyLoader party, IDnd5eCharacterRepository characters, CatalogScopeContext scope)
 {
     /// <summary>Tracked active characters with every child collection.</summary>
     public async Task<IReadOnlyList<Dnd5eCharacter>> LoadAsync(Guid campaignId, Guid actorUserId, CancellationToken cancellationToken)
     {
         await party.RequireDmAsync(campaignId, actorUserId, cancellationToken);
+        await scope.UseCampaignAsync(campaignId, cancellationToken);
         return await characters.ListActiveWithDetailsAsync(campaignId, cancellationToken);
     }
 

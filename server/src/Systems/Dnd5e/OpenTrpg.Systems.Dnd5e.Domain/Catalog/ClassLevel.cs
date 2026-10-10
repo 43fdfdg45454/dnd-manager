@@ -29,4 +29,7 @@ public sealed class ClassLevel
 
     /// <summary>Spell slots per spell level 1..9 (always 9 entries; zeros for non-casters).</summary>
     public IReadOnlyList<int> SpellSlots { get; init; } = new int[SpellSlotLevels];
+
+    /// <summary>"srd" or the id of the content pack of the class.</summary>
+    public string Source { get; init; } = Dnd5eCatalogSources.Srd;
 }

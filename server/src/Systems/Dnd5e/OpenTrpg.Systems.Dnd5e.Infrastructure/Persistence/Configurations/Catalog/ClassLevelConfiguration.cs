@@ -24,5 +24,7 @@ internal sealed class ClassLevelConfiguration : IEntityTypeConfiguration<ClassLe
         builder.Property(x => x.FeatureIndexes).HasJsonListConversion();
         builder.Property(x => x.SpellSlots).HasJsonListConversion();
         builder.Property(x => x.ClassSpecificJson).IsRequired();
+        builder.Property(x => x.Source).HasMaxLength(CatalogSources.MaxLength).IsRequired();
+        builder.HasIndex(x => x.Source);
     }
 }
