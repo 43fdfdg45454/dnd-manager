@@ -2655,8 +2655,7 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CharacterId")
-                        .IsUnique();
+                    b.HasIndex("CharacterId");
 
                     b.ToTable("CharacterCompanions", (string)null);
                 });

@@ -329,7 +329,13 @@ public sealed class CharacterSheetService(
             || (character.SubraceIndex is not null && sheetCatalog.Subrace(character.SubraceIndex) is null);
         var backgroundMissing = character.BackgroundIndex is not null && sheetCatalog.Background(character.BackgroundIndex) is null;
         var companionGrant = sheetCatalog.Companion(character);
-        var companion = await companions.GetByCharacterAsync(character.Id, cancellationToken);
+        var companionList = await companions.ListByCharacterAsync(character.Id, cancellationToken);
+        var companionContext = CompanionPlanner.Context(character, sheet);
+        var companionDtos = new List<CharacterCompanionDto>();
+        foreach (var each in companionList)
+        {
+            companionDtos.Add(await companionPlanner.BuildDtoAsync(each, companionGrant, sheet.ProficiencyBonus, cancellationToken, companionContext));
+        }
 
         return new Dnd5eCharacterDetailDto
         {
@@ -396,9 +402,10 @@ public sealed class CharacterSheetService(
                 .Select(c => CharacterFeatDto.From(c, sheetCatalog.Option(c.Selection.Feat!.Index)))
                 .ToList(),
             OptionCosts = optionCosts,
-            Companion = companion is null ? null : await companionPlanner.BuildDtoAsync(companion, companionGrant, sheet.ProficiencyBonus, cancellationToken),
-            CompanionFeature = companionGrant is null ? null : CompanionPlanner.FeatureDto(companionGrant),
-            CompanionPending = companionGrant is not null && companion is null,
+            Companion = companionDtos.FirstOrDefault(),
+            Companions = companionDtos,
+            CompanionFeature = companionGrant is null ? null : await companionPlanner.FeatureDtoAsync(companionGrant, sheet.ProficiencyBonus, cancellationToken),
+            CompanionPending = companionGrant is not null && companionDtos.Count == 0,
         };
     }
 

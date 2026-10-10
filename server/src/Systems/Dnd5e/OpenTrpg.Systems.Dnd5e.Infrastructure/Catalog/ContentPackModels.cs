@@ -632,12 +632,38 @@ internal sealed class PackCompanionJson
 {
     public PackBeastFilterJson? BeastFilter { get; set; }
 
-    /// <summary>"beast" or "max(beast, N*classLevel)".</summary>
+    /// <summary>"beast", "max(beast, N*classLevel)" or a sum of terms ("beast+2*classLevel", "5*characterLevel+mod:con").</summary>
     public string? HitPoints { get; set; }
 
     public bool? ProficiencyBonusFromCharacter { get; set; }
 
     public bool? AttackBonusFromCharacter { get; set; }
+
+    /// <summary>Closed list of creatures of any type (instead of, or besides, the beast filter).</summary>
+    public List<string?>? CreatureIndexes { get; set; }
+
+    /// <summary>How many companions at once: an integer (1-20) or "proficiencyBonus".</summary>
+    public JsonElement? MaxCount { get; set; }
+
+    /// <summary>Total challenge rating of the companions by class level: <c>{"3": 0.5, "6": 1}</c>.</summary>
+    public Dictionary<string, double?>? CrBudgetByLevel { get; set; }
+
+    /// <summary>Bonuses to the companions: numbers or "proficiencyBonus".</summary>
+    public PackCompanionBonusesJson? Bonuses { get; set; }
+
+    /// <summary>What the companions gain by class level (texts).</summary>
+    public Dictionary<string, string?>? FeaturesByLevel { get; set; }
+}
+
+internal sealed class PackCompanionBonusesJson
+{
+    public JsonElement? ArmorClass { get; set; }
+
+    public JsonElement? SavingThrows { get; set; }
+
+    public JsonElement? Attack { get; set; }
+
+    public JsonElement? Damage { get; set; }
 }
 
 internal sealed class PackBeastFilterJson

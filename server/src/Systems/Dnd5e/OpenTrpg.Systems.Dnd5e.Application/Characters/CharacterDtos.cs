@@ -346,8 +346,11 @@ public sealed record Dnd5eCharacterDetailDto
     /// <summary>Chosen options (and feats) whose use spends a resource ("2 Ki"), in the order they were chosen.</summary>
     public IReadOnlyList<CharacterOptionCostDto> OptionCosts { get; init; } = [];
 
-    /// <summary>The animal companion with its recalculated statblock; null when the character has none.</summary>
+    /// <summary>The first (oldest) companion with its recalculated statblock; null when the character has none.</summary>
     public CharacterCompanionDto? Companion { get; init; }
+
+    /// <summary>Every companion of the character, oldest first (several when the feature's <c>maxCount</c> allows it).</summary>
+    public IReadOnlyList<CharacterCompanionDto> Companions { get; init; } = [];
 
     /// <summary>The companion feature the character has reached (which beasts qualify); null when it has none.</summary>
     public CompanionFeatureDto? CompanionFeature { get; init; }
@@ -371,7 +374,38 @@ public sealed record CompanionFeatureDto(
     IReadOnlyList<string> Sizes,
     string HitPoints,
     bool ProficiencyBonusFromCharacter,
-    bool AttackBonusFromCharacter);
+    bool AttackBonusFromCharacter)
+{
+    /// <summary>Closed list of creatures (any type) of the feature; empty when the companion is a beast of the filter.</summary>
+    public IReadOnlyList<string> CreatureIndexes { get; init; } = [];
+
+    /// <summary>The creatures of <see cref="CreatureIndexes"/> found in the catalog, for the chooser.</summary>
+    public IReadOnlyList<CompanionCreatureDto> Creatures { get; init; } = [];
+
+    /// <summary>How many companions the character may have at its level (1 by default).</summary>
+    public int MaxCount { get; init; } = 1;
+
+    /// <summary>Highest total challenge rating of all the companions at the class level, or null when the feature has no budget.</summary>
+    public double? ChallengeBudget { get; init; }
+
+    /// <summary><see cref="ChallengeBudget"/> as text ("1/2"), or null.</summary>
+    public string? ChallengeBudgetText { get; init; }
+
+    /// <summary>Bonuses the character gives to its companions, or null.</summary>
+    public CompanionBonusesDto? Bonuses { get; init; }
+
+    /// <summary>What the companions gain up to the class level (texts of <c>featuresByLevel</c>).</summary>
+    public IReadOnlyList<CompanionFeatureTextDto> Features { get; init; } = [];
+}
+
+/// <summary>A creature of a companion feature's closed list.</summary>
+public sealed record CompanionCreatureDto(string Index, string Name, string Type, string Size, double ChallengeRating, string ChallengeRatingText);
+
+/// <summary>Bonuses to the companions: each a number ("2") or "proficiencyBonus"; null when none.</summary>
+public sealed record CompanionBonusesDto(string? ArmorClass, string? SavingThrows, string? Attack, string? Damage);
+
+/// <summary>A text of what the companions gain at a level of the feature's class.</summary>
+public sealed record CompanionFeatureTextDto(int Level, string Text);
 
 /// <summary>A damage component of a companion attack, with the character's bonus already folded into the dice ("2d4+4").</summary>
 public sealed record CompanionDamageDto(string Dice, string? Type);
@@ -414,7 +448,14 @@ public sealed record CharacterCompanionDto(
     IReadOnlyList<Catalog.BeastTraitDto> Traits,
     IReadOnlyList<CompanionAttackDto> Attacks,
     IReadOnlyDictionary<string, ValueBreakdownDto> Breakdowns,
-    bool BeastMissing);
+    bool BeastMissing)
+{
+    /// <summary>Creature type ("beast", "undead"...).</summary>
+    public string Type { get; init; } = Catalog.BeastDto.BeastType;
+
+    /// <summary>What the companion has gained up to the class level of the feature (texts).</summary>
+    public IReadOnlyList<CompanionFeatureTextDto> Features { get; init; } = [];
+}
 
 /// <summary>
 /// A feat of the character, for the "Rasgos" tab of the sheet: the catalog description, the literal prerequisite

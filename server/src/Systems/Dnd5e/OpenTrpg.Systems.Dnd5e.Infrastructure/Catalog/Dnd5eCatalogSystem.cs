@@ -326,6 +326,10 @@ internal sealed partial class Dnd5eCatalogSystem(
             .Where(x => x.ResourceJson != null && reach.Contains(x.Source))
             .Select(x => new { x.ResourceJson, x.Source })
             .ToListAsync(cancellationToken));
+        var creatures = await db.Set<CreatureDefinition>().AsNoTracking()
+            .Where(x => reach.Contains(x.Source) && x.Source != ownId)
+            .Select(x => x.Index)
+            .ToListAsync(cancellationToken);
         var conditions = await db.Set<ConditionDefinition>().AsNoTracking()
             .Where(x => reach.Contains(x.Source) && x.Source != ownId)
             .Select(x => x.Index)
@@ -375,6 +379,7 @@ internal sealed partial class Dnd5eCatalogSystem(
             Packs = packs,
             Vocabularies = vocabularies,
             Conditions = conditions.ToHashSet(StringComparer.Ordinal),
+            Creatures = creatures.ToHashSet(StringComparer.Ordinal),
         };
     }
 

@@ -203,7 +203,7 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
     [InlineData("{\"beastFilter\":{\"sizes\":[\"Medium\"]}}", "companion.beastFilter.maxChallengeRating")]
     [InlineData("{\"beastFilter\":{\"maxChallengeRating\":1,\"sizes\":[\"Enorme\"]}}", "companion.beastFilter.sizes[0]")]
     [InlineData("{\"beastFilter\":{\"maxChallengeRating\":1},\"hitPoints\":\"max(beast, 21*classLevel)\"}", "companion.hitPoints")]
-    [InlineData("{\"beastFilter\":{\"maxChallengeRating\":1},\"hitPoints\":\"4*classLevel\"}", "companion.hitPoints")]
+    [InlineData("{\"beastFilter\":{\"maxChallengeRating\":1},\"hitPoints\":\"4*nivel\"}", "companion.hitPoints")]
     public async Task Invalid_companions_are_reported_with_their_path(string companion, string path)
     {
         var admin = await factory.CreateAdminClientAsync();

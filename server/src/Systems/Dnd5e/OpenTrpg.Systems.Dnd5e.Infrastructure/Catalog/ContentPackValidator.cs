@@ -57,6 +57,9 @@ internal sealed record ContentPackContext(
     /// <summary>Conditions of the required packs (<c>conditions[]</c>), for condition immunities.</summary>
     public IReadOnlySet<string>? Conditions { get; init; }
 
+    /// <summary>Creatures of the SRD and the required packs, for the closed lists of companions.</summary>
+    public IReadOnlySet<string>? Creatures { get; init; }
+
     /// <summary>Contents of the equipment packs of the base pack by item index ("explorers-pack" → backpack, bedroll...).</summary>
     public IReadOnlyDictionary<string, IReadOnlyList<StartingItem>>? ItemContents { get; init; }
 
@@ -403,6 +406,7 @@ internal sealed partial class ContentPackValidator
         CheckAfterReferences(rows);
         CheckExpandedSpellReferences(rows);
         CheckTaggedSpellReferences(rows);
+        CheckCompanionCreatureReferences(rows);
         CheckStartingEquipmentReferences(rows);
         CheckSharedTraitReferences(rows);
         return rows;

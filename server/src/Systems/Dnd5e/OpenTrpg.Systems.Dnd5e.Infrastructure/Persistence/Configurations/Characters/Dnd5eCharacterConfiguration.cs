@@ -198,8 +198,8 @@ internal sealed class CharacterCompanionConfiguration : IEntityTypeConfiguration
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.UpdatedAt).IsRequired();
 
-        // At most one companion per character.
+        // Several companions per character since phase 35B3 (the feature's maxCount).
         builder.HasOne<Dnd5eCharacter>().WithMany().HasForeignKey(x => x.CharacterId).OnDelete(DeleteBehavior.Cascade);
-        builder.HasIndex(x => x.CharacterId).IsUnique();
+        builder.HasIndex(x => x.CharacterId);
     }
 }
