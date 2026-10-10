@@ -404,12 +404,6 @@ class StatsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = character;
     final sheet = c.sheet;
-    final concentrating = c.concentratingOnSpellIndex;
-    final spellName = concentrating == null
-        ? null
-        : ref.watch(spellInfoProvider(spellInfoKey([concentrating]))).value?[concentrating]?.name ??
-              titleFromSpellIndex(concentrating);
-
     final tokens = context.tokens;
     return CombatCard(
       child: Column(
@@ -495,33 +489,6 @@ class StatsCard extends ConsumerWidget {
               ),
             ],
           ),
-          if (concentrating != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Row(
-                children: [
-                  Flexible(
-                    child: Chip(
-                      key: const Key('concentration-chip'),
-                      avatar: const AppIcon(AppIcons.anchor, size: 18),
-                      label: Text('Concentración: $spellName', overflow: TextOverflow.ellipsis),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    key: const Key('concentration-lose'),
-                    onPressed: canEdit
-                        ? () => runCombat(
-                            context,
-                            () => _controller(ref, c).setConcentration(null),
-                            success: 'Concentración perdida.',
-                          )
-                        : null,
-                    child: const Text('Perder'),
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
     );
@@ -725,52 +692,93 @@ class ConditionsCard extends ConsumerWidget {
       for (final cond in ref.watch(conditionsProvider).value ?? const <Condition>[])
         cond.index: cond.name,
     };
-    return CombatCard(
-      title: 'Condiciones',
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 4,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          for (final cond in c.conditions)
-            InputChip(
-              key: Key('condition-${cond.index}'),
-              label: Text(names[cond.index] ?? titleFromSpellIndex(cond.index)),
-              deleteButtonTooltipMessage: 'Quitar',
-              onDeleted: canEdit
-                  ? () => runCombat(
-                      context,
-                      () => _controller(ref, c).patchCombat(
-                        CombatPatch(
-                          conditions: [
-                            for (final other in c.conditions)
-                              if (other.index != cond.index) other,
-                          ],
-                        ),
+    // Concentration is a state of the character too: it goes first, as a chip.
+    final concentrating = c.concentratingOnSpellIndex;
+    final spellName = concentrating == null
+        ? null
+        : ref.watch(spellInfoProvider(spellInfoKey([concentrating]))).value?[concentrating]?.name ??
+              titleFromSpellIndex(concentrating);
+    final conditions = Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        for (final cond in c.conditions)
+          InputChip(
+            key: Key('condition-${cond.index}'),
+            label: Text(names[cond.index] ?? titleFromSpellIndex(cond.index)),
+            deleteButtonTooltipMessage: 'Quitar',
+            onDeleted: canEdit
+                ? () => runCombat(
+                    context,
+                    () => _controller(ref, c).patchCombat(
+                      CombatPatch(
+                        conditions: [
+                          for (final other in c.conditions)
+                            if (other.index != cond.index) other,
+                        ],
                       ),
-                    )
-                  : null,
-            ),
-          if (c.exhaustionLevel > 0)
-            InputChip(
-              key: const Key('condition-exhaustion'),
-              label: Text('${names['exhaustion'] ?? 'Exhaustion'} ${c.exhaustionLevel}'),
-              deleteButtonTooltipMessage: 'Quitar',
-              onPressed: canEdit ? () => _setExhaustion(context, ref) : null,
-              onDeleted: canEdit
-                  ? () => runCombat(
-                      context,
-                      () => _controller(ref, c).patchCombat(const CombatPatch(exhaustionLevel: 0)),
-                    )
-                  : null,
-            ),
-          if (c.conditions.isEmpty && c.exhaustionLevel == 0) const Text('Sin condiciones.'),
-          ActionChip(
-            key: const Key('condition-add'),
-            avatar: const Icon(Icons.add, size: 18),
-            label: const Text('Añadir'),
-            onPressed: canEdit ? () => _add(context, ref) : null,
+                    ),
+                  )
+                : null,
           ),
+        if (c.exhaustionLevel > 0)
+          InputChip(
+            key: const Key('condition-exhaustion'),
+            label: Text('${names['exhaustion'] ?? 'Exhaustion'} ${c.exhaustionLevel}'),
+            deleteButtonTooltipMessage: 'Quitar',
+            onPressed: canEdit ? () => _setExhaustion(context, ref) : null,
+            onDeleted: canEdit
+                ? () => runCombat(
+                    context,
+                    () => _controller(ref, c).patchCombat(const CombatPatch(exhaustionLevel: 0)),
+                  )
+                : null,
+          ),
+        if (c.conditions.isEmpty && c.exhaustionLevel == 0 && concentrating == null)
+          const Text('Sin condiciones.'),
+        ActionChip(
+          key: const Key('condition-add'),
+          avatar: const Icon(Icons.add, size: 18),
+          label: const Text('Añadir'),
+          onPressed: canEdit ? () => _add(context, ref) : null,
+        ),
+      ],
+    );
+    return CombatCard(
+      key: const Key('conditions-card'),
+      title: 'Condiciones',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (concentrating != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Chip(
+                      key: const Key('concentration-chip'),
+                      avatar: const AppIcon(AppIcons.anchor, size: 18),
+                      label: Text('Concentración: $spellName', overflow: TextOverflow.ellipsis),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    key: const Key('concentration-lose'),
+                    onPressed: canEdit
+                        ? () => runCombat(
+                            context,
+                            () => _controller(ref, c).setConcentration(null),
+                            success: 'Concentración perdida.',
+                          )
+                        : null,
+                    child: const Text('Perder'),
+                  ),
+                ],
+              ),
+            ),
+          conditions,
         ],
       ),
     );
