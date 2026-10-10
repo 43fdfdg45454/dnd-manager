@@ -33,7 +33,7 @@ public sealed record SpellcastingValue(string ClassIndex, string Ability, int Sa
     public string? Progression { get; init; }
 
     /// <summary>"hitPoints": hit points lost by spell level (index 0 = 1st level), up to <see cref="MaxSpellLevel"/>.</summary>
-    public IReadOnlyList<int> HitPointCost { get; init; } = [];
+    public IReadOnlyList<int> HitPointCost { get; init; } = Array.Empty<int>();
 
     /// <summary>"hitPoints": key of the class resource each spell spends.</summary>
     public string? UsesResource { get; init; }

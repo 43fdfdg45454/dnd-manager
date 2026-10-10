@@ -214,13 +214,14 @@ public static class SheetCalculator
                             .Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), Mod(ability)),
                         OverrideFields.SpellAttackBonus));
                 var maxSpellLevel = c.Info.Casting?.MaxSpellLevelAt(c.Level.Level) ?? MaxSpellLevel(c.Info.SlotsByLevel(c.Level.Level));
+                IReadOnlyList<int> noCost = Array.Empty<int>();
                 return new SpellcastingValue(classIndex, ability, saveDc, attackBonus, PreparedMax(c.Info, c.Level.Level, Mod))
                 {
                     MaxSpellLevel = maxSpellLevel,
                     SpellsKnownMax = c.Info.SubclassSpellcasting?.SpellsKnownAt(c.Level.Level),
                     CantripsKnownMax = c.Info.SubclassSpellcasting?.CantripsKnownAt(c.Level.Level),
                     Progression = c.Info.Casting?.Progression ?? c.Info.SubclassSpellcasting?.Progression,
-                    HitPointCost = c.Info.Casting?.HitPointCost?.Take(maxSpellLevel).ToList() ?? [],
+                    HitPointCost = c.Info.Casting?.HitPointCost is { } cost ? cost.Take(maxSpellLevel).ToList() : noCost,
                     UsesResource = c.Info.Casting?.UsesResource,
                 };
             })

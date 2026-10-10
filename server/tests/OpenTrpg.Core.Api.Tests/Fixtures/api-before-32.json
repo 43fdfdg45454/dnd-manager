@@ -186,7 +186,8 @@
         "spellcastingLevel": 0,
         "isPactCaster": false,
         "subclassFlavor": "Primal Path",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "bard",
@@ -201,7 +202,8 @@
         "spellcastingLevel": 1,
         "isPactCaster": false,
         "subclassFlavor": "Bard College",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "cleric",
@@ -216,7 +218,8 @@
         "spellcastingLevel": 1,
         "isPactCaster": false,
         "subclassFlavor": "Divine Domain",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "druid",
@@ -231,7 +234,8 @@
         "spellcastingLevel": 1,
         "isPactCaster": false,
         "subclassFlavor": "Druid Circle",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "fighter",
@@ -246,7 +250,8 @@
         "spellcastingLevel": 0,
         "isPactCaster": false,
         "subclassFlavor": "Martial Archetype",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "monk",
@@ -261,7 +266,8 @@
         "spellcastingLevel": 0,
         "isPactCaster": false,
         "subclassFlavor": "Monastic Tradition",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "paladin",
@@ -276,7 +282,8 @@
         "spellcastingLevel": 2,
         "isPactCaster": false,
         "subclassFlavor": "Sacred Oath",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "ranger",
@@ -291,7 +298,8 @@
         "spellcastingLevel": 2,
         "isPactCaster": false,
         "subclassFlavor": "Ranger Archetype",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "rogue",
@@ -306,7 +314,8 @@
         "spellcastingLevel": 0,
         "isPactCaster": false,
         "subclassFlavor": "Roguish Archetype",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "sorcerer",
@@ -321,7 +330,8 @@
         "spellcastingLevel": 1,
         "isPactCaster": false,
         "subclassFlavor": "Sorcerous Origin",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "warlock",
@@ -336,7 +346,8 @@
         "spellcastingLevel": 1,
         "isPactCaster": true,
         "subclassFlavor": "Otherworldly Patron",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "wizard",
@@ -351,7 +362,8 @@
         "spellcastingLevel": 1,
         "isPactCaster": false,
         "subclassFlavor": "Arcane Tradition",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       }
     ]
   },
@@ -1282,13 +1294,17 @@
               ]
             }
           ],
-          "source": "srd"
+          "source": "srd",
+          "prerequisitesText": null
         }
       ],
       "source": "srd",
       "description": [],
       "subclassLevel": 0,
       "spellcasting": null,
+      "auxiliary": false,
+      "prerequisitesText": null,
+      "countsAsCasterLevel": false,
       "multiclassing": null,
       "resources": []
     }
@@ -1815,7 +1831,8 @@
       "dcAbility": null,
       "source": "srd",
       "category": "Damage",
-      "expandedBy": []
+      "expandedBy": [],
+      "ritualForClasses": []
     }
   },
   {
@@ -3728,7 +3745,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -4316,6 +4337,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4333,6 +4355,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4350,6 +4373,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             }
@@ -4383,6 +4407,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4401,6 +4426,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4419,6 +4445,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4436,6 +4463,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4454,6 +4482,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4471,6 +4500,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4489,6 +4519,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4507,6 +4538,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4524,6 +4556,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4541,6 +4574,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4559,6 +4593,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4576,6 +4611,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4593,6 +4629,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4610,6 +4647,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4627,6 +4665,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4644,6 +4683,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             }
@@ -4688,6 +4728,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4705,6 +4746,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4722,6 +4764,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             }
@@ -4760,6 +4803,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4778,6 +4822,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4796,6 +4841,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4813,6 +4859,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4831,6 +4878,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4848,6 +4896,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4866,6 +4915,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4884,6 +4934,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4901,6 +4952,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4918,6 +4970,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4936,6 +4989,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4953,6 +5007,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4970,6 +5025,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -4987,6 +5043,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -5004,6 +5061,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -5021,6 +5079,7 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             }
@@ -5538,7 +5597,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -6695,7 +6758,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -7888,7 +7955,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -8917,7 +8988,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -9946,7 +10021,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -10976,7 +11055,11 @@
               "attackBonus": 4,
               "preparedMax": 3,
               "spellsKnownMax": null,
-              "cantripsKnownMax": null
+              "cantripsKnownMax": null,
+              "maxSpellLevel": 1,
+              "progression": null,
+              "hitPointCost": [],
+              "usesResource": null
             }
           ],
           "pactSlotLevel": null,
@@ -12014,7 +12097,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -13043,7 +13130,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -14072,7 +14163,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -15101,7 +15196,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -16130,7 +16229,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -17218,7 +17321,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -18279,7 +18386,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -19354,7 +19465,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -20383,7 +20498,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -21536,7 +21655,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -22565,7 +22688,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -23594,7 +23721,11 @@
             "attackBonus": 4,
             "preparedMax": 3,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -24609,7 +24740,9 @@
           "hitDie": 6,
           "isNew": false,
           "currentLevel": 1,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "barbarian",
@@ -24619,7 +24752,9 @@
           "hitDie": 12,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "bard",
@@ -24629,7 +24764,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "cleric",
@@ -24639,7 +24776,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "druid",
@@ -24649,7 +24788,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "fighter",
@@ -24659,7 +24800,9 @@
           "hitDie": 10,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "monk",
@@ -24669,7 +24812,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "paladin",
@@ -24679,7 +24824,9 @@
           "hitDie": 10,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "ranger",
@@ -24689,7 +24836,9 @@
           "hitDie": 10,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "rogue",
@@ -24699,7 +24848,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "sorcerer",
@@ -24709,7 +24860,9 @@
           "hitDie": 6,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "warlock",
@@ -24719,7 +24872,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         }
       ],
       "automaticFeatures": [
@@ -24789,12 +24944,15 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             }
           ],
           "known": [],
-          "warning": null
+          "warning": null,
+          "alsoFrom": [],
+          "requires": null
         },
         {
           "key": "spellbook",
@@ -24823,6 +24981,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -24840,6 +24999,7 @@
               "abilityIncrease": null,
               "spellCategory": "Damage",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -24857,6 +25017,7 @@
               "abilityIncrease": null,
               "spellCategory": "Control",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -24874,6 +25035,7 @@
               "abilityIncrease": null,
               "spellCategory": "Control",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -24891,6 +25053,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -24908,6 +25071,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -24925,6 +25089,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -24942,6 +25107,7 @@
               "abilityIncrease": null,
               "spellCategory": "Buff",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -24959,6 +25125,7 @@
               "abilityIncrease": null,
               "spellCategory": "Defense",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -24976,6 +25143,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -24993,6 +25161,7 @@
               "abilityIncrease": null,
               "spellCategory": "Summoning",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25010,6 +25179,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25027,6 +25197,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25044,6 +25215,7 @@
               "abilityIncrease": null,
               "spellCategory": "Control",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25061,6 +25233,7 @@
               "abilityIncrease": null,
               "spellCategory": "Control",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25078,6 +25251,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25095,6 +25269,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25112,6 +25287,7 @@
               "abilityIncrease": null,
               "spellCategory": "Buff",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25129,6 +25305,7 @@
               "abilityIncrease": null,
               "spellCategory": "Buff",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25146,6 +25323,7 @@
               "abilityIncrease": null,
               "spellCategory": "Defense",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25163,6 +25341,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25180,6 +25359,7 @@
               "abilityIncrease": null,
               "spellCategory": "Damage",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25197,12 +25377,15 @@
               "abilityIncrease": null,
               "spellCategory": "Summoning",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             }
           ],
           "known": [],
-          "warning": null
+          "warning": null,
+          "alsoFrom": [],
+          "requires": null
         }
       ],
       "spellcasting": {
@@ -25274,7 +25457,9 @@
           "hitDie": 6,
           "isNew": false,
           "currentLevel": 1,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "barbarian",
@@ -25284,7 +25469,9 @@
           "hitDie": 12,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "bard",
@@ -25294,7 +25481,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "cleric",
@@ -25304,7 +25493,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "druid",
@@ -25314,7 +25505,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "fighter",
@@ -25324,7 +25517,9 @@
           "hitDie": 10,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "monk",
@@ -25334,7 +25529,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "paladin",
@@ -25344,7 +25541,9 @@
           "hitDie": 10,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "ranger",
@@ -25354,7 +25553,9 @@
           "hitDie": 10,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "rogue",
@@ -25364,7 +25565,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "sorcerer",
@@ -25374,7 +25577,9 @@
           "hitDie": 6,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "warlock",
@@ -25384,7 +25589,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         }
       ],
       "automaticFeatures": [
@@ -25454,12 +25661,15 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             }
           ],
           "known": [],
-          "warning": null
+          "warning": null,
+          "alsoFrom": [],
+          "requires": null
         },
         {
           "key": "spellbook",
@@ -25488,6 +25698,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25505,6 +25716,7 @@
               "abilityIncrease": null,
               "spellCategory": "Damage",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25522,6 +25734,7 @@
               "abilityIncrease": null,
               "spellCategory": "Control",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25539,6 +25752,7 @@
               "abilityIncrease": null,
               "spellCategory": "Control",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25556,6 +25770,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25573,6 +25788,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25590,6 +25806,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25607,6 +25824,7 @@
               "abilityIncrease": null,
               "spellCategory": "Buff",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25624,6 +25842,7 @@
               "abilityIncrease": null,
               "spellCategory": "Defense",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25641,6 +25860,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25658,6 +25878,7 @@
               "abilityIncrease": null,
               "spellCategory": "Summoning",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25675,6 +25896,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25692,6 +25914,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25709,6 +25932,7 @@
               "abilityIncrease": null,
               "spellCategory": "Control",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25726,6 +25950,7 @@
               "abilityIncrease": null,
               "spellCategory": "Control",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25743,6 +25968,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25760,6 +25986,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25777,6 +26004,7 @@
               "abilityIncrease": null,
               "spellCategory": "Buff",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25794,6 +26022,7 @@
               "abilityIncrease": null,
               "spellCategory": "Buff",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25811,6 +26040,7 @@
               "abilityIncrease": null,
               "spellCategory": "Defense",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25828,6 +26058,7 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25845,6 +26076,7 @@
               "abilityIncrease": null,
               "spellCategory": "Damage",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             },
@@ -25862,12 +26094,15 @@
               "abilityIncrease": null,
               "spellCategory": "Summoning",
               "damageType": null,
+              "setId": null,
               "cost": null,
               "requires": null
             }
           ],
           "known": [],
-          "warning": null
+          "warning": null,
+          "alsoFrom": [],
+          "requires": null
         }
       ],
       "spellcasting": {
@@ -26387,7 +26622,11 @@
             "attackBonus": 4,
             "preparedMax": 4,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -27482,7 +27721,11 @@
             "attackBonus": 4,
             "preparedMax": 4,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -29345,7 +29588,11 @@
             "attackBonus": 4,
             "preparedMax": 4,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -30787,7 +31034,11 @@
             "attackBonus": 4,
             "preparedMax": 4,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -33320,7 +33571,11 @@
             "attackBonus": 4,
             "preparedMax": 4,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -35308,7 +35563,11 @@
             "attackBonus": 4,
             "preparedMax": 4,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -36628,7 +36887,11 @@
             "attackBonus": 4,
             "preparedMax": 4,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -37948,7 +38211,11 @@
             "attackBonus": 4,
             "preparedMax": 4,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
@@ -39296,7 +39563,11 @@
             "attackBonus": 4,
             "preparedMax": 4,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null
           }
         ],
         "pactSlotLevel": null,
