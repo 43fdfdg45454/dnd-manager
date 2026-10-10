@@ -1,10 +1,7 @@
 using OpenTrpg.Core.Domain.Catalog;
-using OpenTrpg.Core.Infrastructure;
-using OpenTrpg.Core.Infrastructure.Catalog;
 using OpenTrpg.Systems.Dnd5e.Domain.Catalog;
-using OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
 
-namespace OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
+namespace OpenTrpg.Tools.SrdPack;
 
 /// <summary>
 /// Category of the SRD spells: derived from the dataset (<see cref="SpellCategories.Derive"/>: healing at slot level,

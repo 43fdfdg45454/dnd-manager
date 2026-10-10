@@ -11,6 +11,7 @@ using OpenTrpg.Core.Domain.Catalog;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTrpg.Core.Application.Items;
+using OpenTrpg.Systems.Dnd5e.Application;
 using OpenTrpg.Systems.Dnd5e.Application.Abstractions;
 using OpenTrpg.Systems.Dnd5e.Application.Catalog;
 using OpenTrpg.Systems.Dnd5e.Application.Characters;
@@ -281,7 +282,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
 
         using (var scope = factory.Services.CreateScope())
         {
-            Assert.True(await scope.ServiceProvider.GetRequiredService<ISrdSeeder>().SeedAsync());
+            Assert.True(await scope.ServiceProvider.GetRequiredService<IDnd5eCatalogSystem>().ImportBasePackAsync());
         }
 
         var fighter = await GetAsync<ClassDetailDto>(admin, "/api/v1/systems/dnd5e/catalog/classes/fighter");

@@ -25,7 +25,8 @@ public sealed class SrdOnlyApiFactory : ApiFactory
 /// with its 20 levels, features and level choices, a subclass, a race with its subrace and traits, a spell, items, a
 /// background, a creature, a condition, vocabularies, an option set and a skill) and a digest of every SRD row. JSON
 /// columns are compared by meaning: keys sorted, and null, false, empty arrays and empty objects left out (the parsers
-/// read them as absent). Set <c>UPDATE_API_FIXTURES=1</c> to rewrite the fixture.
+/// read them as absent). The few rows the pack changes on purpose are listed, with the reason, in
+/// <c>SrdSnapshot.AcceptedDifferences</c>. Set <c>UPDATE_API_FIXTURES=1</c> to rewrite the fixture.
 /// </summary>
 public sealed class SrdPackEquivalenceTests(SrdOnlyApiFactory factory) : IClassFixture<SrdOnlyApiFactory>
 {
@@ -73,6 +74,52 @@ internal static class SrdSnapshot
     /// <summary>Columns of the item templates that change with every import (or are not part of the catalog data).</summary>
     private static readonly HashSet<string> ItemColumnsLeftOut = ["Id", "CreatedAt", "UpdatedAt", "CampaignId"];
 
+    // Differences accepted on purpose when the SRD became a pack (phase 34C): row -> (digest before, digest now, why).
+    private const string AsiRogue = "The rogue gets an ability score improvement at levels 4, 8, 10, 12, 16 and 19: the old "
+        + "dataset counted them wrong from level 11 on; the pack takes them from the AsiOrFeat rules of level-choices.json.";
+
+    private const string SupremeHealing = "Supreme Healing is a feature of the Life Domain (life-17 lists it); the old dataset "
+        + "left it without subclass.";
+
+    private const string ResourceMax = "The pack importer writes the maximum of a resource as the formula text (\"1\" "
+        + "instead of 1); LevelChoiceJson.ParseResource reads both the same.";
+
+    private const string Trimmed = "The pack importer trims the paragraphs and drops the empty ones (trailing spaces "
+        + "and an empty paragraph of the old dataset).";
+
+    private static readonly Dictionary<string, (string Before, string Now, string Why)> AcceptedDifferences = new(StringComparer.Ordinal)
+    {
+        ["ClassLevel/rogue-11"] = ("412dfa31598b8990", "b6e7c4543134a5cf", AsiRogue),
+        ["ClassLevel/rogue-13"] = ("82444e86bb4b6c4c", "b9a2d2574ff3cd88", AsiRogue),
+        ["ClassLevel/rogue-14"] = ("0f2ad91859fbf11a", "37a08c09b57d5b9b", AsiRogue),
+        ["ClassLevel/rogue-15"] = ("c84d394459c8bd50", "055ba142e48a5768", AsiRogue),
+        ["ClassLevel/rogue-17"] = ("455f4a7407ccfa84", "c464f079a80ea9e5", AsiRogue),
+        ["ClassLevel/rogue-18"] = ("98a69d1ec8cc59ad", "b71dbdd2d315d222", AsiRogue),
+        ["ClassLevel/rogue-20"] = ("8f147a1fb346ec67", "ab8e9f1511308a55", AsiRogue),
+        ["FeatureDefinition/bardic-inspiration-d10"] = ("43750690a5c29858", "d01500e159a2fa16", Trimmed),
+        ["FeatureDefinition/bardic-inspiration-d12"] = ("0757ecc66882d78f", "c0998a7f4ee31046", Trimmed),
+        ["FeatureDefinition/bardic-inspiration-d6"] = ("0891df495c19fb3f", "897be92ce2a99255", Trimmed),
+        ["FeatureDefinition/bardic-inspiration-d8"] = ("b59b2b0dccc47886", "552f1fd52582f78a", Trimmed),
+        ["FeatureDefinition/flexible-casting-creating-spell-slots"] = ("92125fa78fc81f2f", "5471163a11e32a74", Trimmed),
+        ["FeatureDefinition/intimidating-presence"] = ("178aecebbad423cd", "a6a0233c2b2896f3", Trimmed),
+        ["FeatureDefinition/magical-secrets-1"] = ("5b1cf43d49d76383", "470aa58db6403adf", Trimmed),
+        ["FeatureDefinition/magical-secrets-2"] = ("e7d4e32c5ac5b082", "804265cea83a2c0a", Trimmed),
+        ["FeatureDefinition/magical-secrets-3"] = ("332acbcf20f930a4", "7fbafa3a1f93cb70", Trimmed),
+        ["FeatureDefinition/song-of-rest-d10"] = ("5789c12925eea353", "e6247c4b83abf551", Trimmed),
+        ["FeatureDefinition/song-of-rest-d12"] = ("9d9c3ee7669daf51", "7366e00d5dc5fe5d", Trimmed),
+        ["FeatureDefinition/song-of-rest-d6"] = ("e1a28386dfdd23a8", "b2fcd6c607d6f24f", Trimmed),
+        ["FeatureDefinition/song-of-rest-d8"] = ("aad7427f4754980d", "ae4d217e753cbe17", Trimmed),
+        ["FeatureDefinition/supreme-healing"] = ("d69ee3e64b85b7e6", "bba5d716b3881205", SupremeHealing),
+        ["OptionDefinition/eldritch-invocation-bewitching-whispers"] = ("76195246c17475f2", "bd0c90d2272b6449", ResourceMax),
+        ["OptionDefinition/eldritch-invocation-dreadful-word"] = ("3d3a909099786764", "73df5bd6b38eb745", ResourceMax),
+        ["OptionDefinition/eldritch-invocation-minions-of-chaos"] = ("ea57901d45d1a1fc", "b397d1ece6c2d3a1", ResourceMax),
+        ["OptionDefinition/eldritch-invocation-mire-the-mind"] = ("43c06089067b77ee", "267a4a28b6eb088e", ResourceMax),
+        ["OptionDefinition/eldritch-invocation-sculptor-of-flesh"] = ("8718f0e6ffe7c170", "53c1341e247c633c", ResourceMax),
+        ["OptionDefinition/eldritch-invocation-sign-of-ill-omen"] = ("454aff1a8e46dc8c", "f4bbbd87ae4f2ed3", ResourceMax),
+        ["OptionDefinition/eldritch-invocation-thief-of-five-fates"] = ("1c44cd80db01c0ef", "7891aa84039d0f4f", ResourceMax),
+        ["SpellDefinition/scrying"] = ("b30724c548a8ad23", "ab0b46e8742b4776", Trimmed),
+    };
+
     /// <summary>Complete definitions kept in the fixture, by table.</summary>
     private static readonly Dictionary<string, Func<JsonObject, bool>> Samples = new(StringComparer.Ordinal)
     {
@@ -102,6 +149,7 @@ internal static class SrdSnapshot
         var counts = new JsonObject();
         var samples = new JsonObject();
         var digests = new JsonObject();
+        var dump = new JsonObject();
         foreach (var entityType in db.Model.GetEntityTypes()
                      .Where(t => t.ClrType.Namespace == typeof(ClassDefinition).Namespace || t.ClrType == typeof(ItemTemplate))
                      .OrderBy(t => t.ClrType.Name, StringComparer.Ordinal))
@@ -121,6 +169,13 @@ internal static class SrdSnapshot
             }
 
             digests[table] = tableDigests;
+            dump[table] = new JsonObject(rows.Select(r => KeyValuePair.Create(r.Key, Canonical(r.Row))));
+        }
+
+        // Diagnostics: SRD_SNAPSHOT_DUMP=<file> writes every row in full, to diff two captures.
+        if (Environment.GetEnvironmentVariable("SRD_SNAPSHOT_DUMP") is { Length: > 0 } dumpPath)
+        {
+            File.WriteAllText(dumpPath, dump.ToJsonString(Indented));
         }
 
         return new JsonObject { ["counts"] = counts, ["samples"] = samples, ["rows"] = digests };
@@ -168,7 +223,7 @@ internal static class SrdSnapshot
             {
                 var b = before[key]?.GetValue<string>();
                 var a = after[key]?.GetValue<string>();
-                if (b != a)
+                if (b != a && !(AcceptedDifferences.TryGetValue($"{table}/{key}", out var accepted) && accepted.Before == b && accepted.Now == a))
                 {
                     differences.Add($"row {table}/{key}: {(b is null ? "new" : a is null ? "missing" : "changed")}");
                 }

@@ -51,6 +51,15 @@ internal sealed record ContentPackContext(
 
     /// <summary>Extra vocabulary entries (kind → indexes) of the SRD and the required packs (languages, damage types...).</summary>
     public IReadOnlyDictionary<string, IReadOnlySet<string>>? Vocabularies { get; init; }
+
+    /// <summary>Contents of the equipment packs of the base pack by item index ("explorers-pack" → backpack, bedroll...).</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<StartingItem>>? ItemContents { get; init; }
+
+    /// <summary>
+    /// Id of the base pack of the system when the pack validated is that one (the SRD): its id is reserved, its indexes
+    /// have no prefix, it requires nothing and it may define the skills.
+    /// </summary>
+    public string? BaseId { get; init; }
 }
 
 /// <summary>Catalog rows of a valid content pack, every one with <c>Source</c> = the pack id.</summary>
@@ -101,6 +110,12 @@ internal sealed class ContentPackRows
 
     public List<RollTable> RollTables { get; } = [];
 
+    /// <summary>Skills (base pack only).</summary>
+    public List<SkillDefinition> Skills { get; } = [];
+
+    /// <summary>Equipment categories with their items (<c>reference.equipmentCategories</c>).</summary>
+    public List<EquipmentCategory> EquipmentCategories { get; } = [];
+
     public Dictionary<string, int> Counts() => new()
     {
         ["classes"] = Classes.Count,
@@ -123,6 +138,8 @@ internal sealed class ContentPackRows
         ["backgrounds"] = Backgrounds.Count,
         ["trinkets"] = Trinkets.Count,
         ["rollTables"] = RollTables.Count,
+        ["skills"] = Skills.Count,
+        ["equipmentCategories"] = EquipmentCategories.Count,
     };
 }
 
@@ -139,7 +156,7 @@ internal sealed partial class ContentPackValidator
 
     /// <summary>First format with option sets, level choices and grants (every accepted pack has them).</summary>
     public const int LevelChoicesFormatVersion = 2;
-    public const int MaxListEntries = 500;
+    public const int MaxListEntries = 1000;
     public const int MaxParagraphs = 200;
     public const int ParagraphMaxLength = 10_000;
     public const int NameMaxLength = 200;
@@ -170,12 +187,28 @@ internal sealed partial class ContentPackValidator
     /// <summary>Full classes defined by this pack.</summary>
     private readonly HashSet<string> _packClasses = new(StringComparer.Ordinal);
 
+    /// <summary>Skills that can be referenced: those of the catalog and (base pack) the pack's own (index → name).</summary>
+    private readonly Dictionary<string, string> _skills;
+
+    /// <summary>Equipment categories that can be referenced: those of the catalog and the pack's own.</summary>
+    private readonly HashSet<string> _equipmentCategories;
+
+    /// <summary>Contents of the equipment packs: the base pack's and the pack's own (<c>items[].contents</c>).</summary>
+    private readonly Dictionary<string, IReadOnlyList<StartingItem>> _itemContents;
+
     public ContentPackValidator(ContentPackContext context)
     {
         _context = context;
         _classes = new Dictionary<string, string>(context.Classes, StringComparer.Ordinal);
         _casterClasses = new HashSet<string>(context.CasterClasses ?? new HashSet<string>(), StringComparer.Ordinal);
+        _skills = new Dictionary<string, string>(context.Skills, StringComparer.Ordinal);
+        _equipmentCategories = new HashSet<string>(context.EquipmentCategories ?? new HashSet<string>(), StringComparer.Ordinal);
+        _itemContents = new Dictionary<string, IReadOnlyList<StartingItem>>(
+            context.ItemContents ?? new Dictionary<string, IReadOnlyList<StartingItem>>(), StringComparer.Ordinal);
     }
+
+    /// <summary>True when validating the base pack of the system (<see cref="ContentPackContext.BaseId"/>).</summary>
+    private bool IsBasePack => _context.BaseId is not null;
 
     /// <summary>The packs of <c>requires</c> (valid ones).</summary>
     public IReadOnlyList<string> Requires { get; private set; } = [];
@@ -226,6 +259,17 @@ internal sealed partial class ContentPackValidator
         {
             AddError("id", "Debe tener entre 3 y 40 caracteres: minúsculas, números y guiones.");
         }
+        else if (_context.BaseId is { } baseId)
+        {
+            if (id == baseId)
+            {
+                _id = id;
+            }
+            else
+            {
+                AddError("id", $"El paquete base del sistema debe tener el id \"{baseId}\".");
+            }
+        }
         else if (Dnd5eCatalogSources.IsReserved(id))
         {
             AddError("id", $"\"{id}\" está reservado; elige otro identificador.");
@@ -244,7 +288,16 @@ internal sealed partial class ContentPackValidator
             return rows;
         }
 
-        RequiresOf(pack.Requires);
+        if (IsBasePack && pack.Requires is { Count: > 0 })
+        {
+            AddError("requires", "El paquete base del sistema no requiere otros paquetes.");
+        }
+        else
+        {
+            RequiresOf(pack.Requires);
+        }
+
+        NullableText("attribution", pack.Attribution, LongTextMaxLength);
         foreach (var damageType in pack.Reference?.DamageTypes ?? [])
         {
             if (damageType?.Index?.Trim() is { Length: > 0 } damageIndex)
@@ -253,21 +306,44 @@ internal sealed partial class ContentPackValidator
             }
         }
 
+        // The pack's own equipment categories and equipment pack contents are used by the starting equipment of its
+        // classes and backgrounds (validated with their sections).
+        foreach (var category in pack.Reference?.EquipmentCategories ?? [])
+        {
+            if (category?.Index?.Trim() is { Length: > 0 } categoryIndex)
+            {
+                _equipmentCategories.Add(categoryIndex);
+            }
+        }
+
+        foreach (var item in pack.Items ?? [])
+        {
+            if (item is { Index: { } itemIndex, Contents: { Count: > 0 } contents })
+            {
+                _itemContents[itemIndex.Trim()] = contents
+                    .Where(c => c?.Item?.Trim() is { Length: > 0 })
+                    .Select(c => new StartingItem(c!.Item!.Trim(), Math.Max(1, c.Quantity ?? 1), c.Name?.Trim() is { Length: > 0 } name ? name : null))
+                    .ToList();
+            }
+        }
+
         // The pack's own classes can be referenced by its spells, subclasses, filters and level choices.
         foreach (var definition in pack.Classes ?? [])
         {
-            if (definition is { Extends: null, Index: { } classIndex } && classIndex.Trim().StartsWith($"{_id}-", StringComparison.Ordinal))
+            if (definition is { Extends: null, Index: { } classIndex }
+                && (IsBasePack || classIndex.Trim().StartsWith($"{_id}-", StringComparison.Ordinal)))
             {
                 var trimmed = classIndex.Trim();
                 _packClasses.Add(trimmed);
                 _classes[trimmed] = definition.SubclassFlavor?.Trim() is { Length: > 0 } flavor ? flavor : DefaultSubclassFlavor;
-                if (definition.Spellcasting is not null)
+                if (definition.Spellcasting is not null || definition.SpellcastingAbility is not null)
                 {
                     _casterClasses.Add(trimmed);
                 }
             }
         }
 
+        Skills(pack.Skills, rows);
         var packSubclasses = new Dictionary<string, string>(StringComparer.Ordinal);
         ForEach("optionSets", pack.OptionSets, (path, set) => OptionSet(path, set, rows));
         Feats(pack.Feats, rows);
@@ -284,6 +360,7 @@ internal sealed partial class ContentPackValidator
         });
         ForEach("items", pack.Items, (path, item) => Item(path, item, rows));
         ForEach("spells", pack.Spells, (path, spell) => Spell(path, spell, rows, packSubclasses));
+        SharedTraits(pack.Traits, rows);
         ForEach("races", pack.Races, (path, race) => Race(path, race, rows));
         ForEach("backgrounds", pack.Backgrounds, (path, background) => Background(path, background, rows));
         Trinkets(pack.Trinkets, rows);
@@ -298,6 +375,7 @@ internal sealed partial class ContentPackValidator
         CheckAfterReferences(rows);
         CheckExpandedSpellReferences(rows);
         CheckStartingEquipmentReferences(rows);
+        CheckSharedTraitReferences(rows);
         return rows;
     }
 
@@ -338,6 +416,9 @@ internal sealed partial class ContentPackValidator
                      ("startingEquipmentText", extension.StartingEquipmentText is not null),
                      ("multiclassing", extension.Multiclassing is not null),
                      ("spellcasting", extension.Spellcasting is not null),
+                     ("spellcastingAbility", extension.SpellcastingAbility is not null),
+                     ("multiclassSpellcasting", extension.MulticlassSpellcasting is not null),
+                     ("features", extension.Features is not null),
                      ("subclassFlavor", extension.SubclassFlavor is not null),
                      ("subclassLevel", extension.SubclassLevel is not null),
                      ("description", extension.Description is not null),
@@ -375,6 +456,7 @@ internal sealed partial class ContentPackValidator
             }
 
             packSubclasses[index] = classIndex;
+            FeaturesWithLevel($"{subclassPath}.features", subclass.Features, classIndex, index, rows);
             var spellcasting = subclass.Spellcasting is not null && RequireLevelChoicesFormat($"{subclassPath}.spellcasting", subclass.Spellcasting)
                 ? SubclassSpellcasting($"{subclassPath}.spellcasting", subclass.Spellcasting, classIndex)
                 : null;
@@ -424,18 +506,35 @@ internal sealed partial class ContentPackValidator
         });
     }
 
+    /// <summary>
+    /// The features of a class or subclass no level lists (options and parts of other features), each with its
+    /// <c>level</c>, as rows of the pack.
+    /// </summary>
+    private void FeaturesWithLevel(string path, List<PackFeatureJson?>? features, string classIndex, string? subclassIndex, ContentPackRows rows) =>
+        Features(path, features, classIndex, subclassIndex, null, rows, unlisted: true);
+
     /// <summary>The features of a class or subclass level as rows of the pack; their indexes.</summary>
-    private List<string> Features(string path, List<PackFeatureJson?>? features, string classIndex, string? subclassIndex, int? level, ContentPackRows rows)
+    private List<string> Features(string path, List<PackFeatureJson?>? features, string classIndex, string? subclassIndex, int? levelNumber, ContentPackRows rows, bool unlisted = false)
     {
         var featureIndexes = new List<string>();
         ForEach(path, features, (featurePath, feature) =>
         {
+            var level = levelNumber;
             var featureIndex = Index($"{featurePath}.index", "features", feature.Index);
             var featureName = RequiredText($"{featurePath}.name", feature.Name, NameMaxLength);
             var featureDescription = Paragraphs($"{featurePath}.description", feature.Description);
             var featureResource = feature.Resource is not null ? Resource($"{featurePath}.resource", feature.Resource) : null;
             var featureCompanion = feature.Companion is not null ? Companion($"{featurePath}.companion", feature.Companion) : null;
             var featureModifiers = feature.Modifiers is not null ? ChoiceModifiers($"{featurePath}.modifiers", feature.Modifiers, "Un rasgo") : null;
+            if (unlisted)
+            {
+                level = RequiredInt($"{featurePath}.level", feature.Level, 1, MaxLevels);
+            }
+            else if (feature.Level is not null)
+            {
+                AddError($"{featurePath}.level", "Solo en los rasgos sueltos (features de la clase o la subclase); aquí manda el nivel que los lista.");
+            }
+
             if (featureIndex is null || level is null)
             {
                 return;
@@ -629,7 +728,8 @@ internal sealed partial class ContentPackValidator
         }
 
         var damageJson = SpellDamage($"{path}.damage", spell.Damage);
-        var category = SpellCategories.Derive(heals: false, dealsDamage: damageJson is not null, hasSavingThrow: dcAbility is not null);
+        var heal = LevelMap($"{path}.healAtSlotLevel", spell.HealAtSlotLevel, 1, 9);
+        var category = SpellCategories.Derive(heals: heal is not null, dealsDamage: damageJson is not null, hasSavingThrow: dcAbility is not null);
         if (spell.Category is not null)
         {
             if (SpellCategories.TryParse(spell.Category) is { } parsed)
@@ -661,6 +761,7 @@ internal sealed partial class ContentPackValidator
             SubclassIndexes = subclasses,
             AttackType = attackType,
             DamageJson = damageJson,
+            HealJson = heal is null ? null : JsonSerializer.Serialize(heal, CamelCase),
             DcAbility = dcAbility,
             Category = category,
             Source = _id,
@@ -672,23 +773,38 @@ internal sealed partial class ContentPackValidator
         }
     }
 
-    private string? SpellDamage(string path, PackSpellDamageJson? damage)
+    /// <summary>The damage parts of a spell (one object, or an array of parts); null when it deals no damage.</summary>
+    private string? SpellDamage(string path, List<PackSpellDamageJson?>? damage)
     {
         if (damage is null)
         {
             return null;
         }
 
-        var type = NullableText($"{path}.type", damage.Type, 32);
-        var atSlotLevel = LevelMap($"{path}.atSlotLevel", damage.AtSlotLevel, 1, 9);
-        var atCharacterLevel = LevelMap($"{path}.atCharacterLevel", damage.AtCharacterLevel, 1, 20);
-        if (atSlotLevel is null && atCharacterLevel is null)
+        var parts = new List<object>();
+        var single = damage.Count == 1;
+        for (var i = 0; i < damage.Count; i++)
         {
-            AddError(path, "Indica atSlotLevel o atCharacterLevel (o usa null si el conjuro no hace daño).");
-            return null;
+            var partPath = single ? path : $"{path}[{i}]";
+            if (damage[i] is not { } part)
+            {
+                AddError(partPath, "La entrada no puede ser null.");
+                continue;
+            }
+
+            var type = NullableText($"{partPath}.type", part.Type, 32);
+            var atSlotLevel = LevelMap($"{partPath}.atSlotLevel", part.AtSlotLevel, 1, 9);
+            var atCharacterLevel = LevelMap($"{partPath}.atCharacterLevel", part.AtCharacterLevel, 1, 20);
+            if (atSlotLevel is null && atCharacterLevel is null)
+            {
+                AddError(partPath, "Indica atSlotLevel o atCharacterLevel (o usa null si el conjuro no hace daño).");
+                continue;
+            }
+
+            parts.Add(new { type, atSlotLevel, atCharacterLevel });
         }
 
-        return JsonSerializer.Serialize(new[] { new { type, atSlotLevel, atCharacterLevel } }, CamelCase);
+        return parts.Count == 0 ? null : JsonSerializer.Serialize(parts, CamelCase);
     }
 
     private SortedDictionary<int, string>? LevelMap(string path, Dictionary<string, string?>? source, int min, int max)
@@ -921,6 +1037,22 @@ internal sealed partial class ContentPackValidator
         var indexes = new List<string>();
         ForEach(path, traits, (traitPath, trait) =>
         {
+            if (trait.IsReference)
+            {
+                // A trait of traits[]: it lists its races and subraces itself.
+                if (Reference(traitPath, trait.Index) is { } reference)
+                {
+                    indexes.Add(reference);
+                    _sharedTraitReferences.Add((traitPath, reference));
+                }
+                else
+                {
+                    AddError(traitPath, "Indica el índice de un rasgo de traits[] o el rasgo completo.");
+                }
+
+                return;
+            }
+
             var index = Index($"{traitPath}.index", "traits", trait.Index);
             var name = RequiredText($"{traitPath}.name", trait.Name, NameMaxLength);
             var description = Paragraphs($"{traitPath}.description", trait.Description);
@@ -973,7 +1105,7 @@ internal sealed partial class ContentPackValidator
         ForEachText($"{path}.skillProficiencies", background.SkillProficiencies, (skillPath, skill) =>
         {
             var key = skill.ToLowerInvariant();
-            if (_context.Skills.TryGetValue(key, out var skillName))
+            if (_skills.TryGetValue(key, out var skillName))
             {
                 skills.Add(skillName);
             }
@@ -1086,7 +1218,7 @@ internal sealed partial class ContentPackValidator
             return null;
         }
 
-        if (!index.StartsWith($"{_id}-", StringComparison.Ordinal) || index.Length == _id.Length + 1)
+        if (!IsBasePack && (!index.StartsWith($"{_id}-", StringComparison.Ordinal) || index.Length == _id.Length + 1))
         {
             AddError(path, $"Debe empezar por \"{_id}-\" (el id del paquete).");
             return null;

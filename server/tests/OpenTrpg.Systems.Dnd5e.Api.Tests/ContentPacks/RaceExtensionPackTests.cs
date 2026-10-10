@@ -7,6 +7,7 @@ using OpenTrpg.Core.Application.Characters;
 using OpenTrpg.Core.Domain.Catalog;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTrpg.Systems.Dnd5e.Application;
 using OpenTrpg.Systems.Dnd5e.Application.Abstractions;
 using OpenTrpg.Systems.Dnd5e.Application.Catalog;
 using OpenTrpg.Systems.Dnd5e.Application.Characters;
@@ -192,7 +193,7 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
 
         using (var scope = factory.Services.CreateScope())
         {
-            Assert.True(await scope.ServiceProvider.GetRequiredService<ISrdSeeder>().SeedAsync());
+            Assert.True(await scope.ServiceProvider.GetRequiredService<IDnd5eCatalogSystem>().ImportBasePackAsync());
         }
 
         await factory.WithDbAsync(async db =>

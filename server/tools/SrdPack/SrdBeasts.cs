@@ -1,17 +1,13 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using OpenTrpg.Core.Infrastructure;
-using OpenTrpg.Core.Infrastructure.Catalog;
 using OpenTrpg.Systems.Dnd5e.Application.Catalog;
-using OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
 
-namespace OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
+namespace OpenTrpg.Tools.SrdPack;
 
 /// <summary>
 /// Reads <c>server/src/Systems/Dnd5e/seed/srd/5e-SRD-Beasts.json</c>, the beast subset (<c>type == "beast"</c>) of
-/// <c>5e-SRD-Monsters.json</c> from the same 5e-database snapshot as the rest of the SRD dataset
-/// (<see cref="SrdDataset.Version"/>), embedded in this assembly. The seeder stores them in <c>Dnd5eCreatures</c>.
+/// <c>5e-SRD-Monsters.json</c> from the same 5e-database snapshot as the rest of the SRD dataset.
 /// </summary>
 internal static partial class SrdBeasts
 {
@@ -19,10 +15,7 @@ internal static partial class SrdBeasts
 
     public static IReadOnlyList<BeastDto> Load()
     {
-        var assembly = typeof(SrdBeasts).Assembly;
-        var resource = assembly.GetManifestResourceNames().SingleOrDefault(n => n.EndsWith($".{FileName}", StringComparison.Ordinal))
-            ?? throw new InvalidOperationException($"SRD dataset file '{FileName}' is not embedded in {assembly.GetName().Name}.");
-        using var stream = assembly.GetManifestResourceStream(resource)!;
+        using var stream = File.OpenRead(Path.Combine(SrdDataset.Directory, FileName));
         using var document = JsonDocument.Parse(stream);
         return document.RootElement.EnumerateArray()
             .Select(Map)

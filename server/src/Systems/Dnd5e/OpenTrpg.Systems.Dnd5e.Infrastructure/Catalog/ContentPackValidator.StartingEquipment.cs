@@ -103,7 +103,8 @@ internal sealed partial class ContentPackValidator
             }
 
             _itemReferences.Add(($"{itemPath}.item", index));
-            result.Add(new StartingItem(index, quantity, null, SrdDataset.PackContents.GetValueOrDefault(index)));
+            var name = NullableText($"{itemPath}.name", item.Name, NameMaxLength);
+            result.Add(new StartingItem(index, quantity, name, _itemContents.GetValueOrDefault(index)));
         });
         return result;
     }
@@ -117,7 +118,7 @@ internal sealed partial class ContentPackValidator
             return null;
         }
 
-        if (_context.EquipmentCategories is not { } categories || !categories.Contains(index))
+        if (!_equipmentCategories.Contains(index))
         {
             AddError(categoryPath, $"La categoría de equipo '{index}' no existe (usa índices como \"martial-weapons\" o \"holy-symbols\").");
             return null;

@@ -6,13 +6,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- SRD 5.1 dataset (5e-database), embedded so it ships inside the assembly and the Docker image. -->
-    <EmbeddedResource Include="../seed/srd/*.json" LinkBase="Seed/Srd" />
+    <!--
+      The SRD 5.1 as base content pack (format 3), embedded so it ships inside the assembly and the Docker image. It is
+      generated from seed/srd (5e-database, CC-BY 4.0) with tools/SrdPack.
+    -->
+    <EmbeddedResource Include="../seed/srd-5.1.pack.json" LogicalName="OpenTrpg.Systems.Dnd5e.srd-5.1.pack.json" />
   </ItemGroup>
 
-  <Target Name="EnsureSrdDatasetEmbedded" BeforeTargets="BeforeBuild">
-    <Error Condition="'@(EmbeddedResource->WithMetadataValue('Extension', '.json')->Count())' == '0'"
-           Text="The SRD dataset (server/src/Systems/Dnd5e/seed/srd/*.json) was not found. It must be next to the module projects when building." />
+  <Target Name="EnsureSrdPackEmbedded" BeforeTargets="BeforeBuild">
+    <Error Condition="!Exists('../seed/srd-5.1.pack.json')"
+           Text="The SRD base pack (server/src/Systems/Dnd5e/seed/srd-5.1.pack.json) was not found. Generate it with: dotnet run --project tools/SrdPack (from server/)." />
   </Target>
 
   <PropertyGroup>

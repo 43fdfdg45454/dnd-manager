@@ -8,7 +8,7 @@ using OpenTrpg.Systems.Dnd5e.Domain.Catalog;
 namespace OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
 
 /// <summary>
-/// <see cref="IBeastCatalog"/> over the table <c>Dnd5eCreatures</c> (the SRD beasts the seeder loads and the creatures of
+/// <see cref="IBeastCatalog"/> over the table <c>Dnd5eCreatures</c> (the SRD beasts of the base pack and the creatures of
 /// content packs). The list follows the catalog scope of the request; a lookup by index does not, so a companion keeps
 /// its statblock when its pack is disabled. Loaded once per request scope.
 /// </summary>

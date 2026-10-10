@@ -2,12 +2,9 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using OpenTrpg.Core.Domain.Catalog;
-using OpenTrpg.Core.Infrastructure;
-using OpenTrpg.Core.Infrastructure.Catalog;
 using OpenTrpg.Systems.Dnd5e.Domain.Catalog;
-using OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
 
-namespace OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
+namespace OpenTrpg.Tools.SrdPack;
 
 /// <summary>Every catalog row produced from the SRD dataset, ready to be inserted.</summary>
 internal sealed record SrdCatalog(
@@ -31,24 +28,15 @@ internal sealed record SrdCatalog(
 }
 
 /// <summary>
-/// Reads the SRD 5.1 JSON files of the 5e-database project (embedded in this assembly from
-/// <c>server/src/Systems/Dnd5e/seed/srd</c>) and maps them to catalog entities. The read models are private and
+/// Reads the SRD 5.1 JSON files of the 5e-database project (<c>server/src/Systems/Dnd5e/seed/srd</c>, snapshot
+/// 5e-database@a6212beb of 2026-10-02) and maps them to catalog entities, as the SRD seeder did before the SRD became a
+/// content pack; <see cref="PackWriter"/> writes them in the pack format. The read models are private and
 /// tolerant: missing fields become null/empty instead of failing.
 /// </summary>
 internal static class SrdDataset
 {
-    /// <summary>
-    /// Commit and date of the 5e-database snapshot in <c>server/src/Systems/Dnd5e/seed/srd</c>, plus the revision of the mapping (bumped
-    /// whenever the import derives new data, so that existing instances re-seed). Stored in a 200-character column.
-    /// </summary>
-    public const string Version = "5e-database@a6212beb (2026-10-02); mapping 2026-10-10: consumables, modifiers, skill choices, level choices, starting gear, spell categories, healing, origins, resistances, personality, race grants, creatures, vocabularies";
-
-    /// <summary>
-    /// Short form of <see cref="Version"/> stored as the version of the base <c>ContentPack</c> (40 characters at most):
-    /// "5.1-" and the first eight hexadecimal digits of the SHA-256 of <see cref="Version"/>.
-    /// </summary>
-    public static readonly string PackVersion =
-        "5.1-" + Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Version)))[..8];
+    /// <summary>Directory of the dataset files (<c>src/Systems/Dnd5e/seed/srd</c>).</summary>
+    public static string Directory { get; set; } = string.Empty;
 
     private const string ResourcePrefix = "5e-SRD-";
 
@@ -188,12 +176,8 @@ internal static class SrdDataset
 
     private static List<T> Read<T>(string name)
     {
-        var assembly = typeof(SrdDataset).Assembly;
-        var suffix = $".{ResourcePrefix}{name}.json";
-        var resource = assembly.GetManifestResourceNames().SingleOrDefault(n => n.EndsWith(suffix, StringComparison.Ordinal))
-            ?? throw new InvalidOperationException($"SRD dataset file '{ResourcePrefix}{name}.json' is not embedded in {assembly.GetName().Name}.");
-
-        using var stream = assembly.GetManifestResourceStream(resource)!;
+        var path = Path.Combine(Directory, $"{ResourcePrefix}{name}.json");
+        using var stream = File.OpenRead(path);
         return JsonSerializer.Deserialize<List<T>>(stream, JsonOptions) ?? [];
     }
 
