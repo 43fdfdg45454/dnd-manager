@@ -62,6 +62,9 @@ public sealed record ClassInfo
     /// <summary>Auxiliary level that counts as one more level of the caster class for spell slots.</summary>
     public bool CountsAsCasterLevel { get; init; }
 
+    /// <summary>Save DCs of the class besides the spell one (content packs).</summary>
+    public IReadOnlyList<ClassSaveDc> SaveDcs { get; init; } = [];
+
     /// <summary>Whether the class casts spells at a class level.</summary>
     public bool CastsAt(int classLevel) => SpellcastingAbility is not null && classLevel >= SpellcastingFromLevel;
 
@@ -110,6 +113,7 @@ public sealed record ClassInfo
             PreparesSpells = definition.PreparesSpells,
             Casting = definition.Spellcasting,
             CountsAsCasterLevel = definition.IsAuxiliary && definition.CountsAsCasterLevel,
+            SaveDcs = definition.SaveDcs,
             SpellSlotsByLevel = levels
                 .Where(l => l.ClassIndex == definition.Index)
                 .GroupBy(l => l.Level)
@@ -122,6 +126,9 @@ public sealed record ClassInfo
 public sealed record RaceInfo(int Speed, IReadOnlyList<AbilityBonus> AbilityBonuses)
 {
     public string Name { get; init; } = string.Empty;
+
+    /// <summary>Size of the race ("Medium"); empty when unknown.</summary>
+    public string Size { get; init; } = string.Empty;
 
     /// <summary>Decisions of the race (trait options give resistances and the breath weapon).</summary>
     public RaceChoices Choices { get; init; } = RaceChoices.None;
@@ -141,6 +148,7 @@ public sealed record RaceInfo(int Speed, IReadOnlyList<AbilityBonus> AbilityBonu
         return new RaceInfo(definition.Speed, AbilityBonusJson.Parse(definition.AbilityBonusesJson))
         {
             Name = definition.Name,
+            Size = definition.Size,
             Choices = definition.Choices,
             Resistances = definition.Resistances,
             Grants = (extensions ?? []).Aggregate(definition.Grants, (grants, extension) => grants.Merge(extension.Grants)),

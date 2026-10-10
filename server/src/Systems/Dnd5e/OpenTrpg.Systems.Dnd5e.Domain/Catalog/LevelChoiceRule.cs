@@ -44,6 +44,9 @@ public enum LevelChoiceKind
 
     /// <summary>Proficiency with specific weapons of the catalog (narrowed by the weapon filter or <c>from</c>).</summary>
     Weapon,
+
+    /// <summary>Resistance to a damage type (of <c>from</c>, or any): shown in the defenses of the sheet.</summary>
+    Resistance,
 }
 
 /// <summary>

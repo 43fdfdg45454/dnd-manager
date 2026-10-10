@@ -113,6 +113,56 @@ public sealed class ClassDefinition
     public bool MayGainSubclassSpellcasting =>
         SpellcastingLevel == 0 && !IsPactCaster && Spellcasting?.Progression is null or ClassSpellcastingInfo.HitPoints or ClassSpellcastingInfo.RitualsOnly;
 
+    /// <summary>
+    /// Class save DCs of a pack class (8 + proficiency + ability) as a JSON array of <c>{"name", "ability"}</c>
+    /// (<see cref="ClassSaveDc"/>); null when it has none.
+    /// </summary>
+    public string? SaveDcsJson { get; init; }
+
+    public IReadOnlyList<ClassSaveDc> SaveDcs => ClassSaveDc.ParseAll(SaveDcsJson);
+
     /// <summary>Whether the class prepares its spells from its whole list (cleric, druid, paladin, wizard and pack classes with <c>"preparation": "prepared"</c>).</summary>
     public bool PreparesSpells => Index is "cleric" or "druid" or "paladin" or "wizard" || Spellcasting?.Preparation == ClassSpellcastingInfo.Prepared;
+}
+
+/// <summary>A save DC of a class other than the spell one ("CD de bombas"): 8 + proficiency bonus + <see cref="Ability"/>.</summary>
+public sealed record ClassSaveDc(string Name, string Ability)
+{
+    public const int NameMaxLength = 100;
+
+    /// <summary>Tolerant: malformed JSON or entries give an empty list.</summary>
+    public static IReadOnlyList<ClassSaveDc> ParseAll(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            var result = new List<ClassSaveDc>();
+            foreach (var entry in document.RootElement.EnumerateArray())
+            {
+                if (entry.ValueKind == System.Text.Json.JsonValueKind.Object
+                    && entry.TryGetProperty("name", out var name) && name.ValueKind == System.Text.Json.JsonValueKind.String
+                    && entry.TryGetProperty("ability", out var ability) && ability.ValueKind == System.Text.Json.JsonValueKind.String
+                    && OpenTrpg.Core.Domain.Characters.Abilities.IsValid(ability.GetString()!))
+                {
+                    result.Add(new ClassSaveDc(name.GetString()!, ability.GetString()!));
+                }
+            }
+
+            return result;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return [];
+        }
+    }
 }

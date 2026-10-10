@@ -28,7 +28,10 @@ public static class ResourceFormula
     public sealed record Term(int Factor, string? Symbol);
 
     /// <summary>The terms of <paramref name="formula"/>, or null when it does not follow the grammar.</summary>
-    public static IReadOnlyList<Term>? Parse(string? formula)
+    public static IReadOnlyList<Term>? Parse(string? formula) => Parse(formula, IsSymbol);
+
+    /// <summary>The terms of <paramref name="formula"/> with the symbols <paramref name="isSymbol"/> accepts, or null.</summary>
+    internal static IReadOnlyList<Term>? Parse(string? formula, Func<string, bool> isSymbol)
     {
         if (string.IsNullOrWhiteSpace(formula))
         {
@@ -73,7 +76,7 @@ public static class ResourceFormula
                 text = text[(star + 1)..].Trim();
             }
 
-            if (!IsSymbol(text))
+            if (!isSymbol(text))
             {
                 return null;
             }

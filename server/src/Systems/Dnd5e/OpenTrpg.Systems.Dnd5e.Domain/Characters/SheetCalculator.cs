@@ -29,6 +29,28 @@ public static class SheetCalculator
     /// <summary>Breakdown key of the breath weapon DC.</summary>
     public const string BreathWeaponDcKey = "breathWeapon.dc";
 
+    /// <summary>Lowest d20 roll of a critical hit without features.</summary>
+    public const int DefaultCriticalRange = 20;
+
+    /// <summary>Failed death saving throws that kill a character without features.</summary>
+    public const int DefaultDeathSaveFailures = 3;
+
+    /// <summary>Breakdown key prefix of the class save DCs ("classSaveDc.alchemist").</summary>
+    public const string ClassSaveDcPrefix = "classSaveDc.";
+
+    /// <summary>Breakdown keys of the passive Investigation and Insight.</summary>
+    public const string PassiveInvestigationKey = "passiveInvestigation";
+    public const string PassiveInsightKey = "passiveInsight";
+
+    /// <summary>Breakdown key of a movement ("speed.swim").</summary>
+    public static string SpeedKey(string mode) => $"{OverrideFields.Speed}.{mode}";
+
+    /// <summary>Breakdown key suffix of the cantrip save DC and attack ("spellSaveDc.wizard.cantrip").</summary>
+    public const string CantripSuffix = ".cantrip";
+
+    private const string InvestigationSkill = "investigation";
+    private const string InsightSkill = "insight";
+
     private const string Barbarian = "barbarian";
     private const string Monk = "monk";
     private const string Warlock = "warlock";
@@ -70,16 +92,21 @@ public static class SheetCalculator
             return builder;
         }
 
-        // Modifiers of chosen options: unconditional ones, and "wearingArmor" ones while armor is worn. Attack and
-        // damage bonuses go to the attacks (CombatCalculator).
+        // Modifiers of chosen options: unconditional ones, "wearingArmor" ones while armor is worn and "noArmor" ones
+        // without it. Attack and damage bonuses go to the attacks (CombatCalculator). Formulas are resolved once the
+        // abilities and the proficiency bonus are known (see Resolve below).
         bool FeatureApplies(FeatureModifier m) =>
-            m.Condition is null || (m.Condition == ModifierConditions.WearingArmor && gear.WearsArmor);
+            m.Condition is null
+            || (m.Condition == ModifierConditions.WearingArmor && gear.WearsArmor)
+            || (m.Condition == ModifierConditions.NoArmor && !gear.WearsArmor);
+
+        IReadOnlyList<FeatureModifier> featureModifiers = choices.Modifiers;
 
         BreakdownBuilder Bonuses(BreakdownBuilder builder, ItemModifierKind kind, string? target = null)
         {
-            foreach (var m in choices.Modifiers.Where(m => m.Kind == kind && (m.Target is null || m.Target == target) && FeatureApplies(m)))
+            foreach (var m in featureModifiers.Where(m => m.Kind == kind && (m.Target is null || m.Target == target) && FeatureApplies(m)))
             {
-                builder.Add(BreakdownSources.Feature, m.Label, m.Value);
+                builder.AddAll(m.ValueParts);
             }
 
             return Items(builder, kind, target);
@@ -116,11 +143,27 @@ public static class SheetCalculator
                 new BreakdownBuilder().Add(BreakdownSources.Base, BreakdownLabels.Level(level), AbilityRules.ProficiencyBonus(level)),
                 OverrideFields.ProficiencyBonus));
 
+        // Formulas of the modifiers ("characterLevel", "mod:wis"): one breakdown part per term naming the origin.
+        FeatureModifier Resolve(FeatureModifier m, int walkingSpeed)
+        {
+            if (m.Formula is not { } formula)
+            {
+                return m;
+            }
+
+            var classLevel = m.ClassIndex is null ? level : classes.FirstOrDefault(c => c.Level.ClassIndex == m.ClassIndex)?.Level.Level ?? level;
+            var parts = ModifierFormula.Parts(formula, m.Label, new ModifierFormula.Context(proficiencyBonus, classLevel, level, Mod, walkingSpeed));
+            return parts is null ? m with { Formula = null, Value = 0 } : m with { Value = parts.Sum(p => p.Value), Parts = parts };
+        }
+
+        featureModifiers = [.. choices.Modifiers.Where(m => m.Kind != ItemModifierKind.Speed).Select(m => Resolve(m, 0))];
+        var lostSaves = LostSavingThrows(input.Race, input.Subrace, choices);
+
         var savingThrows = Abilities.All.ToDictionary(
             a => a,
             a =>
             {
-                var proficient = HasProficiency(character, ProficiencyType.SavingThrow, a, SavingThrowProficiencyPrefix);
+                var proficient = HasProficiency(character, ProficiencyType.SavingThrow, a, SavingThrowProficiencyPrefix) && lostSaves.All(l => l.Value != a);
                 var field = OverrideFields.Save(a);
                 var builder = FromAbility(a);
                 if (proficient)
@@ -158,10 +201,26 @@ public static class SheetCalculator
         var passivePerception = Record(
             OverrideFields.PassivePerception,
             WithOverride(
-                new BreakdownBuilder()
-                    .Add(BreakdownSources.Base, BreakdownLabels.Base, 10)
-                    .AddAll(breakdowns[OverrideFields.Skill(PerceptionSkill)].Parts),
+                Bonuses(
+                    new BreakdownBuilder()
+                        .Add(BreakdownSources.Base, BreakdownLabels.Base, 10)
+                        .AddAll(breakdowns[OverrideFields.Skill(PerceptionSkill)].Parts),
+                    ItemModifierKind.PassiveBonus,
+                    ModifierTargets.Perception),
                 OverrideFields.PassivePerception));
+
+        int Passive(string key, string skillIndex, string ability)
+        {
+            var skillParts = breakdowns.TryGetValue(OverrideFields.Skill(skillIndex), out var skillBreakdown)
+                ? skillBreakdown.Parts
+                : FromAbility(ability).Build().Parts;
+            return Record(
+                key,
+                Bonuses(new BreakdownBuilder().Add(BreakdownSources.Base, BreakdownLabels.Base, 10).AddAll(skillParts), ItemModifierKind.PassiveBonus, skillIndex));
+        }
+
+        var passiveInvestigation = Passive(PassiveInvestigationKey, InvestigationSkill, Abilities.Int);
+        var passiveInsight = Passive(PassiveInsightKey, InsightSkill, Abilities.Wis);
 
         var initiative = Record(
             OverrideFields.Initiative,
@@ -169,7 +228,9 @@ public static class SheetCalculator
 
         var armorClass = Record(
             OverrideFields.ArmorClass,
-            WithOverride(Bonuses(ArmorClass(classes, gear, Mod), ItemModifierKind.ArmorClassBonus), OverrideFields.ArmorClass));
+            WithOverride(
+                Bonuses(ArmorClass(classes, gear, Mod, featureModifiers.Where(m => m.Kind == ItemModifierKind.ArmorClassFormula && FeatureApplies(m))), ItemModifierKind.ArmorClassBonus),
+                OverrideFields.ArmorClass));
 
         var speedBuilder = input.Race is { } race
             ? new BreakdownBuilder().Add(BreakdownSources.Race, BreakdownLabels.Race, race.Speed)
@@ -184,6 +245,18 @@ public static class SheetCalculator
             OverrideFields.Speed,
             WithOverride(Bonuses(speedBuilder, ItemModifierKind.SpeedBonus).Clamp(0, int.MaxValue, BreakdownLabels.Minimum), OverrideFields.Speed));
 
+        // Swimming, climbing and flying: the highest modifier of each mode ("walk" = the walking speed).
+        var speedModifiers = choices.Modifiers.Where(m => m.Kind == ItemModifierKind.Speed && m.Target is not null && FeatureApplies(m)).Select(m => Resolve(m, speed)).ToList();
+        featureModifiers = [.. featureModifiers, .. speedModifiers];
+        var speeds = new List<SpeedValue>();
+        foreach (var mode in ModifierTargets.Speeds)
+        {
+            if (speedModifiers.Where(m => m.Target == mode).OrderByDescending(m => m.Value).FirstOrDefault() is { } best)
+            {
+                speeds.Add(new SpeedValue(mode, Record(SpeedKey(mode), new BreakdownBuilder().AddAll(best.ValueParts).Clamp(0, int.MaxValue, BreakdownLabels.Minimum))));
+            }
+        }
+
         var hitPointsBuilder = character.HpMode == HpMode.Average
             ? AverageHitPoints(classes, Mod(Abilities.Con), character.HitPointRolls())
             : new BreakdownBuilder();
@@ -192,27 +265,52 @@ public static class SheetCalculator
             Bonuses(WithOverride(hitPointsBuilder, OverrideFields.HitPointsMax), ItemModifierKind.HitPointsMaxBonus)
                 .Clamp(0, int.MaxValue, BreakdownLabels.Minimum));
 
+        // Spell save DC and attack bonus with their bonuses; cantrip-only bonuses give a separate cantrip value.
+        (int SaveDc, int AttackBonus, int? CantripSaveDc, int? CantripAttack) SpellNumbers(string classIndex, string ability)
+        {
+            BreakdownBuilder DcBase() => new BreakdownBuilder()
+                .Add(BreakdownSources.Base, BreakdownLabels.Base, 8)
+                .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus)
+                .Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), Mod(ability));
+            BreakdownBuilder AttackBase() => new BreakdownBuilder()
+                .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus)
+                .Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), Mod(ability));
+            List<BreakdownPart> CantripParts(ItemModifierKind kind) => featureModifiers
+                .Where(m => m.Kind == kind && m.Condition == ModifierConditions.Cantrip && (m.Target is null || m.Target == classIndex))
+                .SelectMany(m => m.ValueParts)
+                .ToList();
+
+            var dcKey = $"{OverrideFields.SpellSaveDc}.{classIndex}";
+            var attackKey = $"{OverrideFields.SpellAttackBonus}.{classIndex}";
+            var dc = Record(dcKey, WithOverride(Bonuses(DcBase(), ItemModifierKind.SpellSaveDcBonus, classIndex), OverrideFields.SpellSaveDc));
+            var attack = Record(attackKey, WithOverride(Bonuses(AttackBase(), ItemModifierKind.SpellAttackBonus, classIndex), OverrideFields.SpellAttackBonus));
+            int? cantripDc = null;
+            int? cantripAttack = null;
+            if (CantripParts(ItemModifierKind.SpellSaveDcBonus) is { Count: > 0 } dcParts)
+            {
+                cantripDc = Record(dcKey + CantripSuffix, WithOverride(new BreakdownBuilder().AddAll(breakdowns[dcKey].Parts).AddAll(dcParts), OverrideFields.SpellSaveDc));
+            }
+
+            if (CantripParts(ItemModifierKind.SpellAttackBonus) is { Count: > 0 } attackParts)
+            {
+                cantripAttack = Record(attackKey + CantripSuffix, WithOverride(new BreakdownBuilder().AddAll(breakdowns[attackKey].Parts).AddAll(attackParts), OverrideFields.SpellAttackBonus));
+            }
+
+            return (dc, attack, cantripDc, cantripAttack);
+        }
+
+        var spellCritical = featureModifiers
+            .Where(m => m.Kind == ItemModifierKind.CriticalRange && (m.Target is null or ModifierTargets.Spell) && m.Condition is null && m.Value is >= 2 and < DefaultCriticalRange)
+            .OrderBy(m => m.Value)
+            .FirstOrDefault();
+
         var spellcasting = classes
             .Where(c => c.Info.SpellcastingAbility is { } ability && Abilities.IsValid(ability) && c.Info.CastsAt(c.Level.Level))
             .Select(c =>
             {
                 var ability = c.Info.SpellcastingAbility!;
                 var classIndex = c.Level.ClassIndex;
-                var saveDc = Record(
-                    $"{OverrideFields.SpellSaveDc}.{classIndex}",
-                    WithOverride(
-                        new BreakdownBuilder()
-                            .Add(BreakdownSources.Base, BreakdownLabels.Base, 8)
-                            .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus)
-                            .Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), Mod(ability)),
-                        OverrideFields.SpellSaveDc));
-                var attackBonus = Record(
-                    $"{OverrideFields.SpellAttackBonus}.{classIndex}",
-                    WithOverride(
-                        new BreakdownBuilder()
-                            .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus)
-                            .Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), Mod(ability)),
-                        OverrideFields.SpellAttackBonus));
+                var (saveDc, attackBonus, cantripDc, cantripAttack) = SpellNumbers(classIndex, ability);
                 var maxSpellLevel = c.Info.Casting?.MaxSpellLevelAt(c.Level.Level) ?? MaxSpellLevel(c.Info.SlotsByLevel(c.Level.Level));
                 IReadOnlyList<int> noCost = Array.Empty<int>();
                 return new SpellcastingValue(classIndex, ability, saveDc, attackBonus, PreparedMax(c.Info, c.Level.Level, Mod))
@@ -223,6 +321,10 @@ public static class SheetCalculator
                     Progression = c.Info.Casting?.Progression ?? c.Info.SubclassSpellcasting?.Progression,
                     HitPointCost = c.Info.Casting?.HitPointCost is { } cost ? cost.Take(maxSpellLevel).ToList() : noCost,
                     UsesResource = c.Info.Casting?.UsesResource,
+                    CantripSaveDc = cantripDc,
+                    CantripAttackBonus = cantripAttack,
+                    CriticalRange = spellCritical?.Value ?? DefaultCriticalRange,
+                    CriticalRangeSource = spellCritical?.Label,
                 };
             })
             .ToList();
@@ -230,22 +332,14 @@ public static class SheetCalculator
         if (RacialSpellcastingAbility(input.Race, input.Subrace) is { } racialAbility)
         {
             const string raceIndex = CharacterSpell.OriginClassIndex;
-            var saveDc = Record(
-                $"{OverrideFields.SpellSaveDc}.{raceIndex}",
-                WithOverride(
-                    new BreakdownBuilder()
-                        .Add(BreakdownSources.Base, BreakdownLabels.Base, 8)
-                        .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus)
-                        .Add(BreakdownSources.Ability, BreakdownLabels.Ability(racialAbility), Mod(racialAbility)),
-                    OverrideFields.SpellSaveDc));
-            var attackBonus = Record(
-                $"{OverrideFields.SpellAttackBonus}.{raceIndex}",
-                WithOverride(
-                    new BreakdownBuilder()
-                        .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus)
-                        .Add(BreakdownSources.Ability, BreakdownLabels.Ability(racialAbility), Mod(racialAbility)),
-                    OverrideFields.SpellAttackBonus));
-            spellcasting.Add(new SpellcastingValue(raceIndex, racialAbility, saveDc, attackBonus, null));
+            var (saveDc, attackBonus, cantripDc, cantripAttack) = SpellNumbers(raceIndex, racialAbility);
+            spellcasting.Add(new SpellcastingValue(raceIndex, racialAbility, saveDc, attackBonus, null)
+            {
+                CantripSaveDc = cantripDc,
+                CantripAttackBonus = cantripAttack,
+                CriticalRange = spellCritical?.Value ?? DefaultCriticalRange,
+                CriticalRangeSource = spellCritical?.Label,
+            });
         }
 
         var (spellSlots, casterLevel) = CalculateSpellSlots(classes);
@@ -265,6 +359,31 @@ public static class SheetCalculator
         choiceResources.AddRange(RacialSpellResources(input.Race, input.Subrace, level));
 
         var (resistances, breath) = OriginTraits(character, input.Race, input.Subrace);
+        var defenses = Defenses(input.Race, input.Subrace, choices, resistances);
+
+        var classSaveDcs = new List<ClassSaveDcValue>();
+        foreach (var c in classes)
+        {
+            for (var i = 0; i < c.Info.SaveDcs.Count; i++)
+            {
+                var saveDc = c.Info.SaveDcs[i];
+                var key = i == 0 ? $"{ClassSaveDcPrefix}{c.Level.ClassIndex}" : $"{ClassSaveDcPrefix}{c.Level.ClassIndex}.{i + 1}";
+                var dc = Record(
+                    key,
+                    new BreakdownBuilder()
+                        .Add(BreakdownSources.Base, BreakdownLabels.Base, 8)
+                        .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus)
+                        .Add(BreakdownSources.Ability, BreakdownLabels.Ability(saveDc.Ability), Mod(saveDc.Ability)));
+                classSaveDcs.Add(new ClassSaveDcValue(c.Level.ClassIndex, saveDc.Name, saveDc.Ability, dc, key));
+            }
+        }
+
+        var deathSaves = featureModifiers
+            .Where(m => m.Kind == ItemModifierKind.DeathSaveFailures && FeatureApplies(m) && m.Value > DefaultDeathSaveFailures)
+            .OrderByDescending(m => m.Value)
+            .FirstOrDefault();
+        var hitDiceRecovery = featureModifiers.FirstOrDefault(m => m.Kind == ItemModifierKind.HitDiceRecovery && m.Target == ModifierTargets.All && FeatureApplies(m));
+        var (size, sizeSource) = SizeOf(input.Race, input.Subrace, choices);
         BreathWeaponValue? breathWeapon = null;
         if (breath is { } chosen && chosen.Option.BreathWeapon is { } weapon)
         {
@@ -309,12 +428,146 @@ public static class SheetCalculator
                 .Select(m => new AppliedItemEffect(m.ItemName, m.Modifier.Kind, m.Modifier.Target, m.Modifier.Value))
                 .ToList(),
             Breakdowns = breakdowns,
-            FeatureModifiers = choices.Modifiers,
+            FeatureModifiers = featureModifiers,
             ChoiceResources = choiceResources,
             WearsArmor = gear.WearsArmor,
             Resistances = resistances,
             BreathWeapon = breathWeapon,
+            Immunities = defenses.Immunities,
+            ConditionImmunities = defenses.ConditionImmunities,
+            LostSavingThrows = lostSaves,
+            ClassSaveDcs = classSaveDcs,
+            PassiveInvestigation = passiveInvestigation,
+            PassiveInsight = passiveInsight,
+            AbilityMaxScores = Abilities.All.ToDictionary(a => a, a => AbilityCap(a, choices).Max),
+            Size = size,
+            SizeSource = sizeSource,
+            Speeds = speeds,
+            NaturalWeapons = defenses.NaturalWeapons,
+            DeathSaveFailuresToDie = deathSaves?.Value ?? DefaultDeathSaveFailures,
+            DeathSaveFailuresSource = deathSaves?.Label,
+            RecoversAllHitDice = hitDiceRecovery is not null,
+            HitDiceRecoverySource = hitDiceRecovery?.Label,
         };
+    }
+
+    /// <summary>
+    /// The highest score of an ability: the lowest <c>AbilityMax</c> modifier for it (with its origin), or 20 (null label).
+    /// The 20 only limits Ability Score Improvements and feats; an <c>AbilityMax</c> limits the whole natural score.
+    /// </summary>
+    private static (int Max, string? Label) AbilityCap(string ability, ChoiceEffects choices)
+    {
+        var cap = choices.Modifiers
+            .Where(m => m.Kind == ItemModifierKind.AbilityMax && m.Target == ability && m.Condition is null && m.Formula is null && m.Value is >= AbilityRules.MinScore and <= AbilityRules.MaxScore)
+            .OrderBy(m => m.Value)
+            .FirstOrDefault();
+        return cap is null ? (ImprovementMaxScore, null) : (cap.Value, cap.Label);
+    }
+
+    /// <summary>Saving throw proficiencies lost by origin feats: the abilities the player chose, or the fixed ones.</summary>
+    private static List<SourcedValue> LostSavingThrows(RaceInfo? race, SubraceInfo? subrace, ChoiceEffects choices)
+    {
+        var sources = new List<(string Source, string Label, IReadOnlyList<string> Lost)>();
+        if (race?.Grants.RemoveSavingThrows is { } raceLost)
+        {
+            sources.Add((BreakdownSources.Race, race.Name.Length > 0 ? race.Name : BreakdownLabels.Race, raceLost.Fixed));
+        }
+
+        if (subrace?.Grants.RemoveSavingThrows is { } subraceLost)
+        {
+            sources.Add((BreakdownSources.Subrace, subrace.Name.Length > 0 ? subrace.Name : BreakdownLabels.Subrace, subraceLost.Fixed));
+        }
+
+        sources.AddRange(choices.Grants
+            .Where(g => g.Grants.RemoveSavingThrows is not null)
+            .Select(g => (g.Source, g.Label, g.RemovedSavingThrows.Count > 0 ? g.RemovedSavingThrows : g.Grants.RemoveSavingThrows!.Fixed)));
+
+        var result = new List<SourcedValue>();
+        foreach (var (source, label, lost) in sources)
+        {
+            foreach (var ability in lost.Where(a => Abilities.IsValid(a) && result.All(r => r.Value != a)))
+            {
+                result.Add(new SourcedValue(ability, source, label));
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// The race size ("medium"), replaced by the last size granted by the race, the subrace, an option or a feat (with
+    /// its origin as source).
+    /// </summary>
+    private static (string Size, string? Source) SizeOf(RaceInfo? race, SubraceInfo? subrace, ChoiceEffects choices)
+    {
+        var size = (race?.Size ?? string.Empty).Trim().ToLowerInvariant();
+        string? source = race is null ? null : race.Name.Length > 0 ? race.Name : BreakdownLabels.Race;
+        if (race?.Grants.Size is { } raceSize)
+        {
+            size = raceSize;
+        }
+
+        if (subrace?.Grants.Size is { } subraceSize)
+        {
+            (size, source) = (subraceSize, subrace.Name.Length > 0 ? subrace.Name : BreakdownLabels.Subrace);
+        }
+
+        foreach (var grant in choices.Grants.Where(g => g.Grants.Size is not null))
+        {
+            (size, source) = (grant.Grants.Size!, grant.Label);
+        }
+
+        return (size, source);
+    }
+
+    private sealed record DefenseLists(List<SourcedValue> Immunities, List<SourcedValue> ConditionImmunities, List<NaturalWeaponValue> NaturalWeapons);
+
+    /// <summary>
+    /// Adds the fixed resistances of the race, subrace, options and feats (and those chosen in <c>Resistance</c> choices)
+    /// to <paramref name="resistances"/>, and collects the immunities, condition immunities and natural weapons.
+    /// </summary>
+    private static DefenseLists Defenses(RaceInfo? race, SubraceInfo? subrace, ChoiceEffects choices, List<ResistanceValue> resistances)
+    {
+        var sources = new List<(string Source, string Label, OptionGrants Grants)>();
+        if (race is not null)
+        {
+            sources.Add((BreakdownSources.Race, race.Name.Length > 0 ? race.Name : BreakdownLabels.Race, race.Grants));
+        }
+
+        if (subrace is not null)
+        {
+            sources.Add((BreakdownSources.Subrace, subrace.Name.Length > 0 ? subrace.Name : BreakdownLabels.Subrace, subrace.Grants));
+        }
+
+        sources.AddRange(choices.Grants.Select(g => (g.Source, g.Label, g.Grants)));
+
+        var lists = new DefenseLists([], [], []);
+        foreach (var (source, label, grants) in sources)
+        {
+            foreach (var type in grants.Resistances.Where(t => resistances.All(r => r.DamageType != t)))
+            {
+                resistances.Add(new ResistanceValue(type, source, label));
+            }
+
+            foreach (var type in grants.Immunities.Where(t => lists.Immunities.All(r => r.Value != t)))
+            {
+                lists.Immunities.Add(new SourcedValue(type, source, label));
+            }
+
+            foreach (var condition in grants.ConditionImmunities.Where(t => lists.ConditionImmunities.All(r => r.Value != t)))
+            {
+                lists.ConditionImmunities.Add(new SourcedValue(condition, source, label));
+            }
+
+            lists.NaturalWeapons.AddRange(grants.NaturalWeapons.Select(w => new NaturalWeaponValue(w, label)));
+        }
+
+        foreach (var chosen in choices.ChosenResistances.Where(c => resistances.All(r => r.DamageType != c.DamageType)))
+        {
+            resistances.Add(new ResistanceValue(chosen.DamageType, BreakdownSources.Feature, chosen.Label));
+        }
+
+        return lists;
     }
 
     /// <summary>
@@ -517,12 +770,21 @@ public static class SheetCalculator
             builder.Add(increase.Source, increase.Label, increase.Amount);
         }
 
-        foreach (var m in choices.Modifiers.Where(m => m.Kind == ItemModifierKind.AbilityBonus && m.Target == ability && m.Condition is null))
+        foreach (var m in choices.Modifiers.Where(m => m.Kind == ItemModifierKind.AbilityBonus && m.Target == ability && m.Condition is null && m.Formula is null))
         {
             builder.Add(BreakdownSources.Feature, m.Label, m.Value);
         }
 
-        if (builder.Total > ImprovementMaxScore && builder.Total > natural)
+        var (cap, capLabel) = AbilityCap(ability, choices);
+        if (capLabel is not null)
+        {
+            // A feature sets the highest score (Mutated: 22; Child: 16, also for the natural score).
+            if (builder.Total > cap)
+            {
+                builder.SetTo(BreakdownSources.Feature, BreakdownLabels.AbilityMax(cap, capLabel), cap);
+            }
+        }
+        else if (builder.Total > ImprovementMaxScore && builder.Total > natural)
         {
             builder.SetTo(BreakdownSources.Feature, BreakdownLabels.ImprovementLimit, Math.Max(ImprovementMaxScore, natural));
         }
@@ -549,7 +811,35 @@ public static class SheetCalculator
     /// Armor: its base, Dex (capped) when it adds it, and the shield. Without armor: 10 + Dex + shield, or
     /// Unarmored Defense when higher (barbarian: + Con, shield allowed; monk: + Wis, without shield).
     /// </summary>
-    private static BreakdownBuilder ArmorClass(List<ResolvedClass> classes, EquippedGear gear, Func<string, int> mod)
+    private static BreakdownBuilder ArmorClass(List<ResolvedClass> classes, EquippedGear gear, Func<string, int> mod, IEnumerable<FeatureModifier> formulas)
+    {
+        var standard = StandardArmorClass(classes, gear, mod);
+
+        // "base + abilities" of options, feats and features compete with the armor and Unarmored Defense: the highest
+        // wins (ties keep the armor), and its parts name the feature.
+        foreach (var formula in formulas)
+        {
+            var candidate = new BreakdownBuilder().Add(BreakdownSources.Feature, formula.Label, formula.Value);
+            foreach (var ability in formula.Abilities)
+            {
+                candidate.Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), mod(ability));
+            }
+
+            if (gear.HasShield && formula.AllowShield)
+            {
+                candidate.Add(BreakdownSources.Shield, gear.ShieldName ?? BreakdownLabels.Shield, gear.ShieldArmorClass);
+            }
+
+            if (candidate.Total > standard.Total)
+            {
+                standard = candidate;
+            }
+        }
+
+        return standard;
+    }
+
+    private static BreakdownBuilder StandardArmorClass(List<ResolvedClass> classes, EquippedGear gear, Func<string, int> mod)
     {
         var dex = mod(Abilities.Dex);
         var shield = gear.HasShield ? gear.ShieldArmorClass : 0;

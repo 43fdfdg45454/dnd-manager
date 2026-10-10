@@ -42,6 +42,16 @@ public static class BreakdownLabels
     public const string ClassLevel = "Nivel de clase";
     public const string HalfClassLevel = "Mitad del nivel de clase";
     public const string UsesLimit = "Límite de usos (999)";
+    public const string CharacterLevel = "nivel de personaje";
+    public const string HalfCharacterLevel = "mitad del nivel de personaje";
+    public const string WalkingSpeed = "velocidad caminando";
+    public const string Size = "Tamaño";
+
+    /// <summary>"Máximo 16 (Infancia (dote inicial))": the limit an <c>AbilityMax</c> modifier sets on a score.</summary>
+    public static string AbilityMax(int max, string origin) => $"Máximo {max} ({origin})";
+
+    /// <summary>"Límite de las mejoras (22)" when a feature raises the usual 20.</summary>
+    public static string ImprovementLimitOf(int max) => $"Límite de las mejoras ({max})";
 
     /// <summary>"Mínimo 1": part that raises a resource maximum to its minimum.</summary>
     public static string MinimumOf(int minimum) => $"Mínimo {minimum}";
