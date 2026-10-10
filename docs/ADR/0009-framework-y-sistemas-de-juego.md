@@ -1,6 +1,6 @@
 # ADR 0009 — Framework de tabletop y sistemas de juego como módulos
 
-**Estado**: propuesto (pendiente de confirmación del propietario).
+**Estado**: aceptado (2026-10-10). Nombre del producto: **OpenTRPG**.
 
 ## Contexto
 
@@ -46,10 +46,12 @@ de paquetes es admitir clases completas, dotes y mecánicas propias de esas clas
    traslada tal cual: mismas reglas, mismos endpoints bajo el prefijo del sistema, mismas pantallas.
    El SRD 5.1 deja de ser un seed incrustado y pasa a ser el **paquete base** del módulo (CC-BY,
    empaquetado con él); el PHB sigue siendo un paquete privado de la instancia (ADR 0007).
-5. **Los paquetes de contenido pertenecen a un sistema.** El formato 5e (ADR 0007,
-   `docs/content-packs.md`) crece hasta cubrir todo lo que trae un manual: clases completas con sus
-   tablas y recursos, dotes, condiciones, reglas opcionales y tablas. Valda's Spire of Secrets se
-   integra como paquete privado del sistema 5e, igual que el PHB.
+5. **Los paquetes de contenido pertenecen a un sistema y se activan por campaña.** El formato 5e
+   (ADR 0007, `docs/content-packs.md`) crece hasta cubrir todo lo que trae un manual: clases
+   completas con sus tablas y recursos, dotes, condiciones, reglas opcionales y tablas. Cada campaña
+   elige qué paquetes importados en la instancia están activos (el paquete base del sistema siempre
+   lo está): una campaña puede jugar con Valda's y otra sin él. Valda's Spire of Secrets se integra
+   como paquete privado del sistema 5e, igual que el PHB.
 6. **Sin reglas inventadas.** El módulo 5e implementa lo que dicen el SRD, el PHB y, en su paquete,
    Valda's; lo que un paquete no puede expresar se documenta como límite, no se improvisa.
 
@@ -57,9 +59,12 @@ de paquetes es admitir clases completas, dotes y mecánicas propias de esas clas
 
 - Reestructuración grande pero mecánica: mover, no reescribir. Cada fase deja `master` desplegable y
   los tests verdes; la app sigue funcionando para 5e en todo momento.
-- Nombres: la solución, los paquetes y la imagen dejan de llamarse `Dnd.*` cuando el núcleo quede
-  separado (fase 31); el nombre de producto lo decide el propietario.
-- Un segundo sistema real valida el contrato; hasta entonces el contrato se diseña a partir de lo que
-  5e necesita y de un sistema mínimo de prueba ("hoja libre": atributos, recursos y notas definidos
-  en el paquete) que sirve para partidas de otros juegos sin automatización.
+- Nombres: la solución, los paquetes y la imagen pasan a `OpenTrpg.*` cuando el núcleo quede
+  separado (fase 32); el repositorio se renombra a `OpenTRPG` en ese momento (GitHub redirige el
+  nombre anterior).
+- Un segundo sistema real validará el contrato cuando exista un juego concreto; hasta entonces el
+  contrato se diseña a partir de lo que 5e necesita.
+- Un solo repositorio (monorepo: `server/`, `app/`, `docs/`) sigue bastando. Los paquetes privados
+  (PHB, Valda's) no pueden entrar en él (ADR 0007); si se quieren versionar, van en un repositorio
+  privado aparte del propietario.
 - Las migraciones de EF del catálogo y la ficha pasan a ser del módulo 5e; las del núcleo, del núcleo.
