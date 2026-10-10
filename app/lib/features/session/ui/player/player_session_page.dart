@@ -18,8 +18,9 @@ import '../../../campaigns/domain/campaign_models.dart';
 import '../../../characters/data/characters_controller.dart';
 import '../../../characters/data/models.dart';
 import '../../../characters/domain/class_theme.dart';
+import '../../../characters/domain/character_format.dart';
 import '../../../characters/ui/character_avatar.dart';
-import '../../../characters/ui/character_tabs.dart';
+import '../../../characters/ui/character_detail_tabs.dart';
 import '../../../characters/ui/combat/attacks_section.dart';
 import '../../../characters/ui/combat/class_panels.dart';
 import '../../../characters/ui/combat/resources_section.dart';
@@ -27,15 +28,14 @@ import '../../../characters/ui/combat/rest_section.dart';
 import '../../../characters/ui/combat/spells_section.dart';
 import '../../../characters/ui/combat/vitals_section.dart';
 import '../../../items/data/items_controllers.dart';
-import '../../../items/ui/inventory_tab.dart';
 import '../stash_card.dart';
 import 'combat_items_section.dart';
 import 'messages_inbox.dart';
 
-/// The two halves of "Mi sesión".
+/// The two halves of "Mi sesión", the same main views as the character page.
 enum PlayerSubview {
   combat('Combate'),
-  outside('Fuera de combate');
+  detail('Detalle');
 
   const PlayerSubview(this.label);
 
@@ -44,8 +44,8 @@ enum PlayerSubview {
 
 /// "Mi sesión": the view of a Player at the table. Finds their active
 /// character in the campaign (with a selector when there are several) and
-/// shows it split in "Combate" and "Fuera de combate". It never links to the
-/// sheets of other players.
+/// shows it split in "Combate" and "Detalle" (the sub-tabs of the sheet with a
+/// first "Sesión" sub-tab). It never links to the sheets of other players.
 class PlayerSessionPage extends ConsumerStatefulWidget {
   const PlayerSessionPage({super.key, required this.campaignId});
 
@@ -306,7 +306,7 @@ class _CharacterSessionState extends ConsumerState<_CharacterSession> {
         active: character.hitPointsCurrent == 0,
         child: switch (widget.subview) {
           PlayerSubview.combat => _CombatSubview(character: character),
-          PlayerSubview.outside => _OutsideSubview(campaign: widget.campaign, character: character),
+          PlayerSubview.detail => _DetailSubview(campaign: widget.campaign, character: character),
         },
       ),
     );
@@ -448,93 +448,49 @@ class _PlayerHeader extends StatelessWidget {
   }
 }
 
-class _OutsideSubview extends ConsumerWidget {
-  const _OutsideSubview({required this.campaign, required this.character});
+/// "Detalle": the player's header over the sub-tabs of the sheet
+/// ([CharacterDetailTabs]) with a first "Sesión" sub-tab: the level-up card,
+/// the rests, the open shops, the party stash and the DM's messages.
+class _DetailSubview extends ConsumerWidget {
+  const _DetailSubview({required this.campaign, required this.character});
 
   final CampaignDetail campaign;
   final CharacterDetail character;
 
-  void _open(BuildContext context, String title, Widget Function(CharacterDetail) builder) {
-    Navigator.of(context, rootNavigator: true).push<void>(
-      MaterialPageRoute(
-        builder: (_) =>
-            _CharacterSectionPage(title: title, characterId: character.id, builder: builder),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = character;
-    final tiles = <(String, String, AppIcons, Widget Function(CharacterDetail))>[
-      ('spells', 'Preparar hechizos', AppIcons.spellbook, (ch) => SpellsTab(character: ch)),
-      ('traits', 'Rasgos', AppIcons.rune, (ch) => TraitsTab(character: ch)),
-      ('notes', 'Trasfondo y notas', AppIcons.quill, (ch) => NotesTab(character: ch)),
-      ('inventory', 'Inventario', AppIcons.backpack, (ch) => InventoryTab(character: ch)),
-    ];
-    final gold = context.tokens.gold;
-    return ListView(
-      key: const Key('player-outside'),
-      padding: _listPadding(context),
+    final auth = ref.watch(authControllerProvider);
+    final permissions = CharacterPermissions(
+      character: c,
+      myUserId: auth is AuthSignedIn ? auth.user.id : '',
+      myRole: campaign.myRole,
+    );
+    return Column(
+      key: const Key('player-detail'),
       children: [
-        if (c.pendingLevelUpTo != null) _LevelUpCard(character: c),
-        RestSection(character: c, canEdit: true),
-        ParchmentCard(
-          margin: const EdgeInsets.symmetric(vertical: 6),
-          child: Column(
-            children: [
-              for (final (key, title, icon, builder) in tiles)
-                ListTile(
-                  key: Key('player-open-$key'),
-                  leading: AppIcon(icon, color: gold),
-                  title: Text(title),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _open(context, title, builder),
-                ),
-              ListTile(
-                key: const Key('player-open-sheet'),
-                leading: AppIcon(AppIcons.scroll, color: gold),
-                title: const Text('Hoja completa'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push(AppRoutes.character(c.id)),
-              ),
-            ],
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: _PlayerHeader(character: c),
+        ),
+        Expanded(
+          child: CharacterDetailTabs(
+            character: c,
+            permissions: permissions,
+            session: ListView(
+              key: const Key('player-session'),
+              padding: _listPadding(context),
+              children: [
+                if (c.pendingLevelUpTo != null) _LevelUpCard(character: c),
+                RestSection(character: c, canEdit: true),
+                _OpenShopsCard(campaignId: campaign.id),
+                PartyStashCard(campaign: campaign, takerCharacterId: c.id),
+                MessagesInbox(campaignId: campaign.id),
+              ],
+            ),
           ),
         ),
-        _OpenShopsCard(campaignId: campaign.id),
-        PartyStashCard(campaign: campaign, takerCharacterId: c.id),
-        MessagesInbox(campaignId: campaign.id),
       ],
-    );
-  }
-}
-
-/// A part of the sheet of the player's character as a full page.
-class _CharacterSectionPage extends ConsumerWidget {
-  const _CharacterSectionPage({
-    required this.title,
-    required this.characterId,
-    required this.builder,
-  });
-
-  final String title;
-  final String characterId;
-  final Widget Function(CharacterDetail character) builder;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final detail = ref.watch(characterControllerProvider(characterId));
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: detail.when(
-        skipLoadingOnReload: true,
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _ErrorView(
-          message: describeCharacterError(error),
-          onRetry: () => ref.invalidate(characterControllerProvider(characterId)),
-        ),
-        data: builder,
-      ),
     );
   }
 }

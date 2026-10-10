@@ -102,7 +102,7 @@ void main() {
   group('Mi sesión · descansos', () {
     testWidgets('pide un descanso corto con 2 dados y espera al DM', (tester) async {
       final (fakes: _, :characters, hub: _, router: _) = await _pumpPlayer(tester);
-      await _tapKey(tester, 'player-subview-outside');
+      await _tapKey(tester, 'player-subview-detail');
 
       expect(find.byKey(const Key('rest-short')), findsNothing);
       await _tapKey(tester, 'rest-request-short');
@@ -133,7 +133,7 @@ void main() {
 
     testWidgets('pide un descanso largo con confirmación', (tester) async {
       final (fakes: _, :characters, hub: _, router: _) = await _pumpPlayer(tester);
-      await _tapKey(tester, 'player-subview-outside');
+      await _tapKey(tester, 'player-subview-detail');
 
       await _tapKey(tester, 'rest-request-long');
       expect(characters.restRequests, isEmpty);
@@ -147,7 +147,7 @@ void main() {
 
     testWidgets('al aprobarse el descanso avisa con "Descanso aprobado"', (tester) async {
       final (fakes: _, :characters, :hub, router: _) = await _pumpPlayer(tester);
-      await _tapKey(tester, 'player-subview-outside');
+      await _tapKey(tester, 'player-subview-detail');
       await _tapKey(tester, 'rest-request-long');
       await _tapKey(tester, 'confirm-action');
       expect(find.byKey(const Key('rest-pending')), findsOneWidget);
@@ -176,7 +176,7 @@ void main() {
           },
         ),
       );
-      await _tapKey(tester, 'player-subview-outside');
+      await _tapKey(tester, 'player-subview-detail');
       expect(find.text('Esperando al DM · descanso corto (1 dado)'), findsOneWidget);
     });
   });
