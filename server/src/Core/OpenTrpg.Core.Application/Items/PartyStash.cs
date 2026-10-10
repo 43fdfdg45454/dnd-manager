@@ -115,8 +115,8 @@ public sealed class SplitStashGoldRequestValidator : AbstractValidator<SplitStas
     public SplitStashGoldRequestValidator()
     {
         RuleFor(x => x.CharacterIds!)
-            .Must(ids => ids.Count <= PartyRestRequestValidator.MaxCharacters)
-            .WithMessage($"No se admiten más de {PartyRestRequestValidator.MaxCharacters} personajes.")
+            .Must(ids => ids.Count <= PartyLoader.MaxCharacters)
+            .WithMessage($"No se admiten más de {PartyLoader.MaxCharacters} personajes.")
             .Must(ids => ids.All(id => id != Guid.Empty)).WithMessage("Indica personajes válidos.")
             .When(x => x.CharacterIds is not null)
             .OverridePropertyName("characterIds");

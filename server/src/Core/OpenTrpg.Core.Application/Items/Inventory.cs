@@ -3,7 +3,6 @@ using System.Text.Json.Serialization;
 using OpenTrpg.Core.Application.Abstractions;
 using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Application.ChangeRequests;
-using OpenTrpg.Core.Application.Catalog;
 using OpenTrpg.Core.Application.Characters;
 using OpenTrpg.Core.Application.Common;
 using OpenTrpg.Core.Domain.Catalog;

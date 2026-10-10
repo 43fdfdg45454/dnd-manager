@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using OpenTrpg.Core.Api.Endpoints;
+using OpenTrpg.Systems.Dnd5e.Api.Endpoints;
 
 namespace OpenTrpg.Core.Api.Tests;
 

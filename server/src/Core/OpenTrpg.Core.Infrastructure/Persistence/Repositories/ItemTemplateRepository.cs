@@ -1,12 +1,12 @@
 using OpenTrpg.Core.Application.Abstractions.Persistence;
-using OpenTrpg.Core.Application.Catalog;
 using OpenTrpg.Core.Domain.Catalog;
 using Microsoft.EntityFrameworkCore;
 using OpenTrpg.Core.Application.Items;
+using OpenTrpg.Core.Application.Systems;
 
 namespace OpenTrpg.Core.Infrastructure.Persistence.Repositories;
 
-internal sealed class ItemTemplateRepository(AppDbContext db) : IItemTemplateRepository
+internal sealed class ItemTemplateRepository(AppDbContext db, IGameSystemRegistry systems) : IItemTemplateRepository
 {
     public async Task<(IReadOnlyList<ItemTemplate> Items, int Total)> SearchAsync(
         Guid campaignId,
@@ -22,7 +22,7 @@ internal sealed class ItemTemplateRepository(AppDbContext db) : IItemTemplateRep
             ItemSource.Homebrew => db.ItemTemplates.AsNoTracking().Where(x => x.CampaignId == campaignId),
             _ => db.ItemTemplates.AsNoTracking().Where(x => x.CampaignId == null || x.CampaignId == campaignId),
         };
-        query = query.WhereListed(db);
+        query = query.WhereListed(db, systems.All.SelectMany(s => s.Info.BaseCatalogSources).ToList());
 
         if (filter.Search is { } search)
         {

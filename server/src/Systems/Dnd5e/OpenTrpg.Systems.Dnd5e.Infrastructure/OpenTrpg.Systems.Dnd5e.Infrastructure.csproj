@@ -5,6 +5,16 @@
     <ProjectReference Include="..\..\..\Core\OpenTrpg.Core.Infrastructure\OpenTrpg.Core.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- SRD 5.1 dataset (5e-database), embedded so it ships inside the assembly and the Docker image. -->
+    <EmbeddedResource Include="../seed/srd/*.json" LinkBase="Seed/Srd" />
+  </ItemGroup>
+
+  <Target Name="EnsureSrdDatasetEmbedded" BeforeTargets="BeforeBuild">
+    <Error Condition="'@(EmbeddedResource->WithMetadataValue('Extension', '.json')->Count())' == '0'"
+           Text="The SRD dataset (server/src/Systems/Dnd5e/seed/srd/*.json) was not found. It must be next to the module projects when building." />
+  </Target>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

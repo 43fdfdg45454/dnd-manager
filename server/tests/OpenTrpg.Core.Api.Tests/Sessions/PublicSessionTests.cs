@@ -4,6 +4,7 @@ using OpenTrpg.Core.Application.Abstractions;
 using OpenTrpg.Core.Application.Sessions;
 using Microsoft.Extensions.DependencyInjection;
 using static OpenTrpg.Core.Api.Tests.Sessions.SessionTestHelpers;
+using OpenTrpg.Systems.Dnd5e.Application.Abstractions;
 
 namespace OpenTrpg.Core.Api.Tests.Sessions;
 

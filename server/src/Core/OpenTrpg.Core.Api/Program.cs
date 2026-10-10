@@ -7,7 +7,6 @@ using OpenTrpg.Core.Application;
 using OpenTrpg.Core.Application.Abstractions;
 using OpenTrpg.Core.Application.Common;
 using OpenTrpg.Core.Application.Systems;
-using OpenTrpg.Core.Application.Systems.Dnd5e;
 using OpenTrpg.Core.Infrastructure;
 using OpenTrpg.Core.Infrastructure.Files;
 using Microsoft.AspNetCore.DataProtection;
@@ -17,8 +16,8 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
+using OpenTrpg.Systems.Dnd5e.Api;
 using Serilog;
-using OpenTrpg.Core.Infrastructure.Catalog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,9 +30,8 @@ builder.Host.UseSerilog((context, _, logger) => LoggingSetup.Configure(context, 
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddGameSystem<Dnd5eSystem>();
-builder.Services.AddDnd5eApplication();
-builder.Services.AddDnd5eInfrastructure();
+// Game system modules (the core never references them; only the host registers them).
+builder.Services.AddDnd5eSystem();
 
 // Realtime campaign events (ADR 0006): the SignalR hub replaces the no-op notifier of the application layer.
 builder.Services.AddSignalR(options =>
@@ -166,10 +164,9 @@ app.MapAdminContentPackEndpoints();
 app.MapUserEndpoints();
 app.MapCampaignEndpoints();
 app.MapInvitationEndpoints();
-app.MapCatalogEndpoints();
+app.MapDnd5eEndpoints();
 app.MapSystemEndpoints();
 app.MapCharacterEndpoints();
-app.MapDnd5eCharacterEndpoints();
 app.MapChangeRequestEndpoints();
 app.MapItemEndpoints();
 app.MapInventoryEndpoints();
@@ -181,11 +178,9 @@ app.MapLibraryEndpoints();
 app.MapSessionEndpoints();
 app.MapPublicSessionEndpoints();
 app.MapPageEndpoints();
-app.MapPartyEndpoints();
 app.MapPartyStashEndpoints();
 app.MapMessageEndpoints();
 app.MapRestRequestEndpoints();
-app.MapLevelUpEndpoints();
 app.MapRealtimeEndpoints();
 app.MapHub<CampaignHub>(CampaignHub.Path).RequireRateLimiting(RateLimitingSetup.HubPolicy);
 

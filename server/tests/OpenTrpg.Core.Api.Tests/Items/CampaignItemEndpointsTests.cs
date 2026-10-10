@@ -1,8 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
-using OpenTrpg.Core.Application.Catalog;
 using OpenTrpg.Core.Application.Common;
 using OpenTrpg.Core.Application.Items;
+using OpenTrpg.Systems.Dnd5e.Application.Catalog;
+using OpenTrpg.Systems.Dnd5e.Application.Items;
 
 namespace OpenTrpg.Core.Api.Tests.Items;
 

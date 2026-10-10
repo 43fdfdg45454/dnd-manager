@@ -11,7 +11,7 @@ namespace OpenTrpg.Core.Infrastructure.Persistence;
 /// Stores a list as a JSON array in a text column. Used instead of provider-specific array or
 /// JSON types so the same model works on PostgreSQL and SQLite. Enums are stored by name.
 /// </summary>
-internal static class JsonListConversion
+public static class JsonListConversion
 {
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.General)
     {

@@ -6,7 +6,8 @@ using OpenTrpg.Core.Application.Abstractions;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
-using OpenTrpg.Core.Application.Systems.Dnd5e;
+using OpenTrpg.Systems.Dnd5e.Application;
+using OpenTrpg.Systems.Dnd5e.Application.Abstractions;
 
 namespace OpenTrpg.Core.Api.Tests.Realtime;
 

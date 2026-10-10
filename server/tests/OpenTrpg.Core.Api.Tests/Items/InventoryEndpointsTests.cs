@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using OpenTrpg.Core.Application.ChangeRequests;
 using OpenTrpg.Core.Application.Items;
+using OpenTrpg.Systems.Dnd5e.Application.Items;
 
 namespace OpenTrpg.Core.Api.Tests.Items;
 

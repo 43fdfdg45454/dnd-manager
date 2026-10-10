@@ -1,6 +1,5 @@
 using OpenTrpg.Core.Application.Abstractions;
 using OpenTrpg.Core.Application.Abstractions.Persistence;
-using OpenTrpg.Core.Application.Catalog;
 using OpenTrpg.Core.Infrastructure.Auth;
 using OpenTrpg.Core.Infrastructure.Campaigns;
 using OpenTrpg.Core.Infrastructure.Catalog;
@@ -15,7 +14,6 @@ using OpenTrpg.Core.Domain.Sessions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using OpenTrpg.Core.Application.Systems.Dnd5e;
 
 namespace OpenTrpg.Core.Infrastructure;
 

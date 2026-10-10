@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OpenTrpg.Core.Domain.Rules;
+using OpenTrpg.Systems.Dnd5e.Domain.Characters;
+using OpenTrpg.Systems.Dnd5e.Domain.Rules;
 
 namespace OpenTrpg.Core.Api.Tests.Regression;
 

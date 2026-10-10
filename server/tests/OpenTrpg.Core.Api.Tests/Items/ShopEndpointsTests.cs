@@ -6,6 +6,7 @@ using OpenTrpg.Core.Domain.Items;
 using OpenTrpg.Core.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTrpg.Systems.Dnd5e.Application.Items;
 
 namespace OpenTrpg.Core.Api.Tests.Items;
 

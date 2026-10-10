@@ -24,6 +24,7 @@
   <ItemGroup>
     <!-- The test host and helpers are shared with the core API tests. -->
     <Compile Include="..\OpenTrpg.Core.Api.Tests\Infrastructure\**\*.cs" LinkBase="Infrastructure" />
+    <Compile Include="..\OpenTrpg.Core.Api.Tests\Items\ItemTestHelpers.cs" Link="Items\ItemTestHelpers.cs" />
     <None Update="Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

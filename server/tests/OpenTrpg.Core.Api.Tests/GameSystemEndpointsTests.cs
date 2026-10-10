@@ -118,7 +118,7 @@ public class GameSystemEndpointsTests(ApiFactory factory) : IClassFixture<ApiFac
         var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
 
         // A campaign saved, then the schema taken back to before the migration (Campaigns without SystemId).
-        await using (var db = new AppDbContext(options))
+        await using (var db = new AppDbContext(options, ApiFactory.ModelConfigurators))
         {
             await db.Database.EnsureCreatedAsync();
             var now = DateTimeOffset.UtcNow;
@@ -137,7 +137,7 @@ public class GameSystemEndpointsTests(ApiFactory factory) : IClassFixture<ApiFac
             }
         }
 
-        await using (var db = new AppDbContext(options))
+        await using (var db = new AppDbContext(options, ApiFactory.ModelConfigurators))
         {
             var campaign = await db.Campaigns.SingleAsync();
             Assert.Equal("Antigua", campaign.Name);

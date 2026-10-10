@@ -1,10 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
-using OpenTrpg.Core.Application.Catalog;
 using OpenTrpg.Core.Application.ChangeRequests;
 using OpenTrpg.Core.Application.Characters;
 using OpenTrpg.Core.Application.Common;
 using OpenTrpg.Core.Application.Items;
+using OpenTrpg.Systems.Dnd5e.Application.Catalog;
+using OpenTrpg.Systems.Dnd5e.Application.Characters;
+using OpenTrpg.Systems.Dnd5e.Application.Items;
 
 namespace OpenTrpg.Core.Api.Tests.Items;
 
@@ -122,5 +124,21 @@ internal static class ItemTestHelpers
     {
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         return (await response.Content.ReadFromJsonAsync<TradeResultDto>())!;
+    }
+
+    /// <summary>An active level 3 fighter of <paramref name="owner"/>, activated by <paramref name="dm"/>.</summary>
+    public static async Task<CharacterDetailDto> ActiveFighterAsync(SignedInUser owner, SignedInUser dm, Guid campaignId, string name)
+    {
+        var character = await owner.CreateCharacterAsync(campaignId, name);
+        var patch = await owner.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/sheet", new
+        {
+            classes = new[] { new { classIndex = "fighter", level = 3 } },
+            baseAbilities = new { str = 16, dex = 12, con = 14, @int = 10, wis = 10, cha = 10 },
+            applyRacialBonuses = false,
+        });
+        Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
+        var activate = await dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/activate", null);
+        Assert.Equal(HttpStatusCode.OK, activate.StatusCode);
+        return (await activate.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
     }
 }

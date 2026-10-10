@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using OpenTrpg.Core.Api.Tests.Items;
 using OpenTrpg.Core.Application.Messages;
+using OpenTrpg.Systems.Dnd5e.Domain.Characters;
 
 namespace OpenTrpg.Core.Api.Tests.Messages;
 
@@ -79,7 +80,7 @@ public sealed class MessageEndpointsTests(ApiFactory factory) : IClassFixture<Ap
         await factory.WithDbAsync(async db =>
         {
             var npc = OpenTrpg.Core.Domain.Characters.Character.Create(s.CampaignId, null, "PNJ", DateTimeOffset.UtcNow);
-            db.Add(OpenTrpg.Core.Domain.Characters.Dnd5eCharacter.Create(npc));
+            db.Add(OpenTrpg.Systems.Dnd5e.Domain.Characters.Dnd5eCharacter.Create(npc));
             await db.SaveChangesAsync();
             npcId = npc.Id;
         });

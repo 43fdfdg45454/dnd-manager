@@ -1,4 +1,3 @@
-using OpenTrpg.Core.Application.Catalog;
 using OpenTrpg.Core.Domain.Catalog;
 using OpenTrpg.Core.Application.Items;
 

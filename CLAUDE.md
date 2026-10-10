@@ -19,7 +19,8 @@ en `.gitignore`.
 ## Estructura
 
 ```
-server/   solución .NET (Dnd.Domain, Dnd.Application, Dnd.Infrastructure, Dnd.Api, tests/)
+server/   solución .NET: núcleo en src/Core (OpenTrpg.Core.*), módulo 5e en src/Systems/Dnd5e
+          (OpenTrpg.Systems.Dnd5e.*, con seed/srd) y tests/
 app/      proyecto Flutter (lib/core, lib/features/<feature>)
 deploy/   docker-compose.yml, .env.sample, backup.sh, README.md (reverse proxy del operador)
 docs/     PLAN.md (plan maestro) y ADR/ (decisiones de arquitectura)
@@ -100,8 +101,8 @@ cd deploy && cp .env.sample .env && docker compose pull && docker compose up -d
   DTOs y validación (FluentValidation); `Infrastructure` con EF Core/Npgsql, SMTP y ficheros;
   `Api` solo con endpoints, auth y hosting. Nunca exponer entidades EF en la API.
 - Migraciones EF con nombre descriptivo en PascalCase. Seed del SRD idempotente.
-- Tests: xUnit. Cálculos de hoja en `Dnd.Domain.Tests`; integración con SQLite en memoria en
-  `Dnd.Api.Tests`.
+- Tests: xUnit. Cálculos de hoja en `OpenTrpg.Systems.Dnd5e.Domain.Tests`; integración con SQLite en
+  memoria en `OpenTrpg.Core.Api.Tests` (y `OpenTrpg.Systems.Dnd5e.Api.Tests` para las rutas del módulo).
 - Flutter: `lib/core` (http, auth, caché, tema, i18n) y `lib/features/<feature>/{data,domain,ui}`.
   Riverpod para estado, `dio` para HTTP, `drift` para caché. Textos de UI en `lib/l10n`.
 - Nombres de código, entidades y endpoints en inglés; textos visibles al usuario en español.

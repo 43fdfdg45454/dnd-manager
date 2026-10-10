@@ -4,6 +4,7 @@ using OpenTrpg.Core.Application.Campaigns;
 using OpenTrpg.Core.Application.Characters;
 using OpenTrpg.Core.Domain.Campaigns;
 using Microsoft.EntityFrameworkCore;
+using OpenTrpg.Systems.Dnd5e.Application.Characters;
 
 namespace OpenTrpg.Core.Api.Tests;
 

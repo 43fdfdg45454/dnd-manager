@@ -16,7 +16,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace OpenTrpg.Core.Infrastructure.Persistence;
 
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options), IUnitOfWork
+/// <summary>
+/// The database of the instance: the core entities plus those of the game system modules
+/// (<see cref="IModelConfigurator"/>).
+/// </summary>
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IEnumerable<IModelConfigurator> configurators)
+    : DbContext(options), IUnitOfWork
 {
     public DbSet<User> Users => Set<User>();
 
@@ -79,5 +84,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        foreach (var configurator in configurators)
+        {
+            configurator.Configure(modelBuilder);
+        }
     }
 }

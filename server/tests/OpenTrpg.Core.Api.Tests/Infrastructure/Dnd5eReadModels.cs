@@ -4,6 +4,8 @@ using System.Text.Json.Nodes;
 using OpenTrpg.Core.Application.Characters;
 using OpenTrpg.Core.Application.Items;
 using OpenTrpg.Core.Application.Systems;
+using OpenTrpg.Systems.Dnd5e.Application.Characters;
+using OpenTrpg.Systems.Dnd5e.Application.Items;
 
 namespace OpenTrpg.Core.Api.Tests;
 

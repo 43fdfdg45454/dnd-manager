@@ -9,6 +9,9 @@ namespace OpenTrpg.Core.Application.Party;
 /// <summary>Loads the party (active characters) of a campaign for a DM (403 for players, 404 for non-members).</summary>
 public sealed class PartyLoader(ICampaignAccess access, ICharacterRepository characters)
 {
+    /// <summary>Most characters a group action may name.</summary>
+    public const int MaxCharacters = 100;
+
     /// <summary>403 unless the actor is at least DM of the campaign (404 for non-members).</summary>
     public Task RequireDmAsync(Guid campaignId, Guid actorUserId, CancellationToken cancellationToken) =>
         access.RequireAsync(campaignId, actorUserId, CampaignRole.DM, cancellationToken);

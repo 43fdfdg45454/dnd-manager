@@ -1,3 +1,4 @@
+using OpenTrpg.Systems.Dnd5e.Infrastructure.Persistence;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -14,6 +15,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using OpenTrpg.Systems.Dnd5e.Application.Abstractions;
 
 namespace OpenTrpg.Core.Api.Tests;
 
@@ -31,6 +33,9 @@ public class ApiFactory : WebApplicationFactory<Program>
     /// <summary>Default <c>App:PublicUrl</c> of the test host: the origin of every link in the emails.</summary>
     public const string DefaultPublicUrl = "https://dnd.example.com";
 
+    /// <summary>The model configurators of the game system modules the host registers (for contexts built by hand).</summary>
+    public static IReadOnlyList<IModelConfigurator> ModelConfigurators { get; } = [new Dnd5eModelConfigurator()];
+
     private readonly SqliteConnection _connection;
     private readonly string _filesRoot = Path.Combine(Path.GetTempPath(), $"dnd-tests-{Guid.NewGuid():N}");
     private readonly SemaphoreSlim _adminLock = new(1, 1);
@@ -41,7 +46,7 @@ public class ApiFactory : WebApplicationFactory<Program>
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
 
-        using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(_connection).Options);
+        using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(_connection).Options, ModelConfigurators);
         db.Database.EnsureCreated();
     }
 

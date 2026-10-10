@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using OpenTrpg.Core.Application.ChangeRequests;
 using OpenTrpg.Core.Application.Characters;
+using OpenTrpg.Systems.Dnd5e.Application.Characters;
 
 namespace OpenTrpg.Core.Api.Tests;
 

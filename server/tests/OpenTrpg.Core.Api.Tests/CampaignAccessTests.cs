@@ -2,6 +2,7 @@ using OpenTrpg.Core.Application.Abstractions;
 using OpenTrpg.Core.Application.Common;
 using OpenTrpg.Core.Domain.Campaigns;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTrpg.Systems.Dnd5e.Application.Abstractions;
 
 namespace OpenTrpg.Core.Api.Tests;
 

@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
-using OpenTrpg.Core.Api.Tests.Party;
 using OpenTrpg.Core.Application.Campaigns;
 using OpenTrpg.Core.Application.Common;
 using OpenTrpg.Core.Application.Items;
+using OpenTrpg.Systems.Dnd5e.Application.Items;
 
 namespace OpenTrpg.Core.Api.Tests.Items;
 
@@ -150,9 +150,9 @@ public class PartyStashEndpointsTests(CatalogApiFactory factory)
         var s = await factory.CreateCampaignScenarioAsync();
         var characters = new[]
         {
-            await PartyEndpointsTests.ActiveFighterAsync(s.Player, s.Dm, s.CampaignId, "A"),
-            await PartyEndpointsTests.ActiveFighterAsync(s.Player, s.Dm, s.CampaignId, "B"),
-            await PartyEndpointsTests.ActiveFighterAsync(s.Player, s.Dm, s.CampaignId, "C"),
+            await ItemTestHelpers.ActiveFighterAsync(s.Player, s.Dm, s.CampaignId, "A"),
+            await ItemTestHelpers.ActiveFighterAsync(s.Player, s.Dm, s.CampaignId, "B"),
+            await ItemTestHelpers.ActiveFighterAsync(s.Player, s.Dm, s.CampaignId, "C"),
         };
         await s.Player.CreateCharacterAsync(s.CampaignId, "Borrador sin parte");
         await GoldAsync(s.Dm, s.CampaignId, 1000);
@@ -175,8 +175,8 @@ public class PartyStashEndpointsTests(CatalogApiFactory factory)
     public async Task Splitting_among_some_characters_only_pays_them()
     {
         var s = await factory.CreateCampaignScenarioAsync();
-        var a = await PartyEndpointsTests.ActiveFighterAsync(s.Player, s.Dm, s.CampaignId, "A");
-        var b = await PartyEndpointsTests.ActiveFighterAsync(s.Player, s.Dm, s.CampaignId, "B");
+        var a = await ItemTestHelpers.ActiveFighterAsync(s.Player, s.Dm, s.CampaignId, "A");
+        var b = await ItemTestHelpers.ActiveFighterAsync(s.Player, s.Dm, s.CampaignId, "B");
         await GoldAsync(s.Dm, s.CampaignId, 101);
 
         var response = await s.Dm.Client.PostAsJsonAsync($"{StashUrl(s.CampaignId)}/gold/split", new { characterIds = new[] { a.Id } });

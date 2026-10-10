@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using static OpenTrpg.Core.Api.Tests.Content.ContentTestHelpers;
+using OpenTrpg.Systems.Dnd5e.Application.Characters;
 
 namespace OpenTrpg.Core.Api.Tests.Content;
 

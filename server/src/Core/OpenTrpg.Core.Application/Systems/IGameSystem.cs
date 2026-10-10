@@ -49,7 +49,11 @@ public sealed record GameSystemInfo(
     string Name,
     string Version,
     IReadOnlyList<AttributionInfo> Attributions,
-    IReadOnlyList<SystemDocumentInfo> SystemDocuments);
+    IReadOnlyList<SystemDocumentInfo> SystemDocuments)
+{
+    /// <summary>Catalog sources of the system's base content (for example <c>srd</c>), always listed.</summary>
+    public IReadOnlyList<string> BaseCatalogSources { get; init; } = [];
+}
 
 /// <summary>License attribution of a body of content (kept in the language its licensor publishes it).</summary>
 /// <param name="Ruleset">Id of the attributed ruleset (for example <c>srd-5.1</c>).</param>

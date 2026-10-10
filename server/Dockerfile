@@ -13,8 +13,7 @@ COPY src/Systems/Dnd5e/OpenTrpg.Systems.Dnd5e.Infrastructure/OpenTrpg.Systems.Dn
 COPY src/Systems/Dnd5e/OpenTrpg.Systems.Dnd5e.Api/OpenTrpg.Systems.Dnd5e.Api.csproj src/Systems/Dnd5e/OpenTrpg.Systems.Dnd5e.Api/
 RUN dotnet restore src/Core/OpenTrpg.Core.Api/OpenTrpg.Core.Api.csproj
 
-# The SRD dataset is embedded into OpenTrpg.Core.Infrastructure from ../../../seed/srd.
-COPY seed/ seed/
+# The SRD dataset (src/Systems/Dnd5e/seed/srd) is embedded into OpenTrpg.Systems.Dnd5e.Infrastructure.
 COPY src/ src/
 # Version reported by GET /api/v1/app/info and the admin stats (release builds pass the release version).
 ARG VERSION=0.1.0

@@ -1,6 +1,5 @@
 using OpenTrpg.Core.Application.Abstractions;
 using OpenTrpg.Core.Application.Abstractions.Persistence;
-using OpenTrpg.Core.Application.Catalog;
 using OpenTrpg.Core.Application.Common;
 using OpenTrpg.Core.Domain.Campaigns;
 using OpenTrpg.Core.Domain.Catalog;

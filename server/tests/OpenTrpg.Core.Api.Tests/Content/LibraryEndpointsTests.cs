@@ -15,7 +15,7 @@ public sealed class SrdApiFactory : ApiFactory
     public SrdApiFactory()
     {
         Directory.CreateDirectory(Path.Combine(FilesRoot, "system"));
-        File.WriteAllBytes(Path.Combine(FilesRoot, "system", OpenTrpg.Core.Application.Systems.Dnd5e.Dnd5eSystem.SrdFileName), Pdf());
+        File.WriteAllBytes(Path.Combine(FilesRoot, "system", OpenTrpg.Systems.Dnd5e.Application.Dnd5eSystem.SrdFileName), Pdf());
     }
 }
 
@@ -35,7 +35,7 @@ public sealed class LibraryEndpointsTests(SrdApiFactory factory) : IClassFixture
         var srd = Assert.Single(documents!);
         Assert.True(srd.IsSystem);
         Assert.Equal("Rules", srd.Category);
-        Assert.Equal(OpenTrpg.Core.Application.Systems.Dnd5e.Dnd5eSystem.SrdFileName, srd.FileName);
+        Assert.Equal(OpenTrpg.Systems.Dnd5e.Application.Dnd5eSystem.SrdFileName, srd.FileName);
         Assert.Contains("CC-BY 4.0", srd.Description);
 
         var download = await user.Client.GetAsync(srd.Url);
