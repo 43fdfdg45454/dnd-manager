@@ -18,13 +18,22 @@ internal sealed partial class ContentPackValidator
     private static readonly string[] DamageTypeIndexes =
         ["acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"];
 
+    /// <summary>Damage types of the pack's own vocabulary (<c>reference.damageTypes</c>).</summary>
+    private readonly HashSet<string> _packDamageTypes = new(StringComparer.Ordinal);
+
+    /// <summary>A damage type of the SRD, of a required pack or of this pack.</summary>
+    private bool KnownDamageType(string type) =>
+        DamageTypeIndexes.Contains(type, StringComparer.Ordinal)
+        || _packDamageTypes.Contains(type)
+        || (_context.Vocabularies?.TryGetValue(ReferenceEntry.DamageTypes, out var known) == true && known.Contains(type));
+
     private List<string> DamageTypes(string path, List<string?>? values)
     {
         var result = new List<string>();
         ForEachText(path, values, (itemPath, value) =>
         {
             var type = value.ToLowerInvariant();
-            if (DamageTypeIndexes.Contains(type, StringComparer.Ordinal))
+            if (KnownDamageType(type))
             {
                 result.Add(type);
             }
@@ -144,7 +153,7 @@ internal sealed partial class ContentPackValidator
                 if (!string.IsNullOrWhiteSpace(option.DamageType))
                 {
                     damageType = option.DamageType.Trim().ToLowerInvariant();
-                    if (!DamageTypeIndexes.Contains(damageType, StringComparer.Ordinal))
+                    if (!KnownDamageType(damageType))
                     {
                         AddError($"{optionPath}.damageType", $"Tipo de daño desconocido. Valores admitidos: {string.Join(", ", DamageTypeIndexes)}.");
                     }

@@ -98,7 +98,7 @@ public sealed class ApplyLevelUpHandler(
         var entry = character.AdvanceClass(classIndex, now);
         if (plan.IsNew)
         {
-            foreach (var (type, key) in MulticlassRules.ProficienciesFor(classIndex))
+            foreach (var (type, key) in MulticlassRules.ProficienciesFor(classIndex, plan.Class.Multiclassing))
             {
                 character.AddProficiency(type, key, ProficiencySource.Class);
             }

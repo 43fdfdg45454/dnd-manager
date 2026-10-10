@@ -180,7 +180,9 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             throw AppException.Validation("classIndex", "Indica la clase en la que sube de nivel.");
         }
 
+        // A class the character already has stays available when its pack is no longer enabled in the campaign.
         var definition = allClasses.FirstOrDefault(c => c.Index == index)
+            ?? (character.Classes.Any(c => c.ClassIndex == index) ? await catalog.GetClassAsync(index, cancellationToken) : null)
             ?? throw AppException.Validation("classIndex", $"La clase '{index}' no existe en el catálogo.");
         var sheet = await sheets.CalculateAsync(character, cancellationToken);
         var entry = character.Classes.FirstOrDefault(c => c.ClassIndex == definition.Index);
@@ -304,7 +306,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
     /// </summary>
     private static LevelChoiceRule? MulticlassSkillRule(ClassDefinition definition)
     {
-        if (MulticlassRules.SkillsFor(definition.Index) is not { } skills)
+        if (MulticlassRules.SkillsFor(definition.Index, definition.Multiclassing) is not { } skills)
         {
             return null;
         }
@@ -428,7 +430,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
 
         foreach (var definition in allClasses.Where(c => current.All(e => e.ClassIndex != c.Index)))
         {
-            var reason = current.Count == 0 ? null : MulticlassRules.WhyNot(definition.Index, current.Select(c => c.ClassIndex), Score);
+            var reason = current.Count == 0 ? null : MulticlassRules.WhyNot(definition.Index, current.Select(c => c.ClassIndex), Score, index => allClasses.FirstOrDefault(c => c.Index == index)?.Multiclassing);
             result.Add(new LevelUpClassDto(definition.Index, definition.Name, reason is null, reason, definition.HitDie, true, 0, null));
         }
 
@@ -554,7 +556,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             own.Count(s => levels.GetValueOrDefault(s.SpellIndex, -1) == 0),
             own.Count(s => levels.GetValueOrDefault(s.SpellIndex, -1) > 0),
             classLevel.SpellSlots,
-            SheetCalculator.PreparedMax(definition.Index, newLevel, 0) is not null && MaxSpellLevel(classLevel) > 0);
+            definition.PreparesSpells && MaxSpellLevel(classLevel) > 0);
     }
 
     /// <summary>Spellcasting of the plan for a class that casts through its subclass (content packs); null when it does not.</summary>

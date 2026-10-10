@@ -44,8 +44,8 @@ internal sealed partial class Dnd5eCatalogSystem(
 
     public IReadOnlyList<string> DefinitionTypes { get; } =
     [
-        "classes", "subclasses", "subclassLevels", "features", "races", "subraces", "traits", "spells", "backgrounds",
-        "items", "optionSets", "options", "levelChoiceRules", "trinkets", "rollTables", "beasts", "conditions",
+        "classes", "classLevels", "subclasses", "subclassLevels", "features", "races", "subraces", "traits", "spells", "backgrounds",
+        "items", "optionSets", "options", "levelChoiceRules", "trinkets", "rollTables", "creatures", "conditions", "rules", "reference",
     ];
 
     public bool IsReservedSource(string id) => Dnd5eCatalogSources.IsReserved(id);
@@ -56,7 +56,13 @@ internal sealed partial class Dnd5eCatalogSystem(
     public async Task<PackImportResult> ImportPackAsync(Stream json, CancellationToken cancellationToken = default)
     {
         var pack = await DeserializeAsync(json, cancellationToken);
-        var validator = new ContentPackValidator(await LoadContextAsync(cancellationToken));
+
+        // The pack sees the SRD, the packs it requires and (to replace them) its own definitions.
+        var reach = new HashSet<string>(StringComparer.Ordinal) { Dnd5eCatalogSources.Srd };
+        reach.UnionWith((pack.Requires ?? []).OfType<string>().Select(r => r.Trim()));
+        var ownId = pack.Id?.Trim() ?? string.Empty;
+        reach.Add(ownId);
+        var validator = new ContentPackValidator(await LoadContextAsync(reach, ownId, cancellationToken));
         var rows = validator.Validate(pack);
         if (validator.Id.Length > 0)
         {
@@ -74,9 +80,19 @@ internal sealed partial class Dnd5eCatalogSystem(
 
         // The pack's races are updated in place: other packs may have added subraces to them (races[].extends).
         var raceIndexes = rows.Races.Select(r => r.Index).ToList();
-        await DeleteDefinitionsAsync(id, raceIndexes, cancellationToken);
+        // So are its classes: other packs may have added subclasses to them (classes[].extends).
+        var classIndexes = rows.Classes.Select(c => c.Index).ToList();
+        await DeleteDefinitionsAsync(id, raceIndexes, classIndexes, cancellationToken);
         var existingRaces = (await db.Set<RaceDefinition>().AsNoTracking().Where(x => x.Source == id).Select(x => x.Index).ToListAsync(cancellationToken))
             .ToHashSet(StringComparer.Ordinal);
+        var existingClasses = (await db.Set<ClassDefinition>().AsNoTracking().Where(x => x.Source == id).Select(x => x.Index).ToListAsync(cancellationToken))
+            .ToHashSet(StringComparer.Ordinal);
+
+        db.Set<ClassDefinition>().UpdateRange(rows.Classes.Where(c => existingClasses.Contains(c.Index)));
+        db.Set<ClassDefinition>().AddRange(rows.Classes.Where(c => !existingClasses.Contains(c.Index)));
+        await db.SaveChangesAsync(cancellationToken);
+        db.ChangeTracker.Clear();
+        db.Set<ClassLevel>().AddRange(rows.ClassLevels);
 
         db.Set<SubclassDefinition>().AddRange(rows.Subclasses);
         db.Set<SubclassLevel>().AddRange(rows.SubclassLevels);
@@ -93,17 +109,25 @@ internal sealed partial class Dnd5eCatalogSystem(
         db.Set<LevelChoiceRule>().AddRange(rows.LevelChoiceRules);
         db.Set<TrinketEntry>().AddRange(rows.Trinkets);
         db.Set<RollTable>().AddRange(rows.RollTables);
+        db.Set<CreatureDefinition>().AddRange(rows.Creatures);
+        db.Set<ConditionDefinition>().AddRange(rows.Conditions);
+        db.Set<RuleDefinition>().AddRange(rows.Rules);
+        db.Set<ReferenceEntry>().AddRange(rows.ReferenceEntries);
         await db.SaveChangesAsync(cancellationToken);
         db.ChangeTracker.Clear();
 
         await CatalogItems.UpsertAsync(db, id, rows.Items, now, cancellationToken);
         await CatalogItems.DeleteUnusedAsync(db, id, rows.Items.Select(i => i.Index).ToList(), cancellationToken);
-        return new PackImportResult(id, validator.Name, validator.Version, counts);
+        return new PackImportResult(id, validator.Name, validator.Version, counts)
+        {
+            FormatVersion = ContentPackValidator.CurrentFormatVersion,
+            Requires = validator.Requires,
+        };
     }
 
     public async Task DeletePackAsync(string packId, CancellationToken cancellationToken = default)
     {
-        await DeleteDefinitionsAsync(packId, [], cancellationToken);
+        await DeleteDefinitionsAsync(packId, [], [], cancellationToken);
         var kept = await CatalogItems.DeleteUnusedAsync(db, packId, [], cancellationToken);
         logger.LogInformation("Content pack {PackId}: {KeptItems} items kept because they are in use", packId, kept);
     }
@@ -154,13 +178,19 @@ internal sealed partial class Dnd5eCatalogSystem(
     [GeneratedRegex("JSON property '([^']+)'")]
     private static partial Regex UnmappedPropertyPattern();
 
-    private async Task<ContentPackContext> LoadContextAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// What the pack can reference: the definitions of <paramref name="reach"/> (the SRD, the packs it requires and its
+    /// own, which the validator tells apart by source). The pack's own classes are left out: it defines them again.
+    /// </summary>
+    private async Task<ContentPackContext> LoadContextAsync(IReadOnlySet<string> reachSet, string ownId, CancellationToken cancellationToken)
     {
+        var reach = reachSet.ToList();
         var classes = await db.Set<ClassDefinition>().AsNoTracking()
+            .Where(x => reach.Contains(x.Source) && x.Source != ownId)
             .Select(x => new { x.Index, x.SubclassFlavor })
             .ToDictionaryAsync(x => x.Index, x => x.SubclassFlavor, StringComparer.Ordinal, cancellationToken);
         var subclasses = await db.Set<SubclassDefinition>().AsNoTracking()
-            .Where(x => x.Source == Dnd5eCatalogSources.Srd)
+            .Where(x => reach.Contains(x.Source) && x.Source != ownId)
             .Select(x => new { x.Index, x.ClassIndex })
             .ToDictionaryAsync(x => x.Index, x => x.ClassIndex, StringComparer.Ordinal, cancellationToken);
         var packSubclasses = await db.Set<SubclassDefinition>().AsNoTracking()
@@ -171,38 +201,59 @@ internal sealed partial class Dnd5eCatalogSystem(
             .Select(x => new { x.Index, x.Name })
             .ToDictionaryAsync(x => x.Index, x => x.Name, StringComparer.Ordinal, cancellationToken);
         var optionSets = await db.Set<OptionSetDefinition>().AsNoTracking()
+            .Where(x => reach.Contains(x.Source))
             .Select(x => new { x.SetId, x.Source })
             .ToDictionaryAsync(x => x.SetId, x => x.Source, StringComparer.Ordinal, cancellationToken);
         var options = await db.Set<OptionDefinition>().AsNoTracking()
+            .Where(x => reach.Contains(x.Source))
             .Select(x => new { x.Index, x.SetId, x.Source })
             .ToDictionaryAsync(x => x.Index, x => (x.SetId, x.Source), StringComparer.Ordinal, cancellationToken);
         var spellRows = await db.Set<SpellDefinition>().AsNoTracking()
+            .Where(x => reach.Contains(x.Source))
             .Select(x => new { x.Index, x.Source, x.Level })
             .ToListAsync(cancellationToken);
         var spells = spellRows.ToDictionary(x => x.Index, x => x.Source, StringComparer.Ordinal);
-        var srdItems = await db.ItemTemplates.AsNoTracking()
-            .Where(x => x.CampaignId == null && x.Source == Dnd5eCatalogSources.Srd && x.Index != null)
+        var items = await db.ItemTemplates.AsNoTracking()
+            .Where(x => x.CampaignId == null && reach.Contains(x.Source) && x.Source != ownId && x.Index != null)
             .Select(x => x.Index!)
             .ToListAsync(cancellationToken);
         var categories = await db.Set<EquipmentCategory>().AsNoTracking().Select(x => x.Index).ToListAsync(cancellationToken);
         var casterClasses = await db.Set<ClassDefinition>().AsNoTracking()
-            .Where(x => x.SpellcastingAbility != null || x.SpellcastingLevel > 0)
+            .Where(x => reach.Contains(x.Source) && x.Source != ownId && (x.SpellcastingAbility != null || x.SpellcastingLevel > 0))
             .Select(x => x.Index)
             .ToListAsync(cancellationToken);
         var races = await db.Set<RaceDefinition>().AsNoTracking()
+            .Where(x => reach.Contains(x.Source))
             .Select(x => new { x.Index, x.Source })
             .ToDictionaryAsync(x => x.Index, x => x.Source, StringComparer.Ordinal, cancellationToken);
         var resourceRows = await db.Set<OptionDefinition>().AsNoTracking()
-            .Where(x => x.ResourceJson != null)
+            .Where(x => x.ResourceJson != null && reach.Contains(x.Source))
             .Select(x => new { x.ResourceJson, x.Source })
             .ToListAsync(cancellationToken);
         resourceRows.AddRange(await db.Set<FeatureDefinition>().AsNoTracking()
-            .Where(x => x.ResourceJson != null)
+            .Where(x => x.ResourceJson != null && reach.Contains(x.Source))
             .Select(x => new { x.ResourceJson, x.Source })
             .ToListAsync(cancellationToken));
+        var classResources = (await db.Set<ClassDefinition>().AsNoTracking()
+                .Where(x => x.ResourcesJson != null && reach.Contains(x.Source))
+                .Select(x => new { x.ResourcesJson, x.Source })
+                .ToListAsync(cancellationToken))
+            .SelectMany(x => LevelChoiceJson.ParseResources(x.ResourcesJson).Select(r => (r.Key, x.Source)))
+            .ToList();
         var ruleRows = await db.Set<LevelChoiceRule>().AsNoTracking()
+            .Where(x => reach.Contains(x.Source))
             .Select(x => new { x.ClassIndex, x.Level, x.Key, x.SetId, x.Source })
             .ToListAsync(cancellationToken);
+        var packs = await db.ContentPacks.AsNoTracking()
+            .Where(x => !x.IsBase)
+            .Select(x => new { x.Id, x.SystemId })
+            .ToDictionaryAsync(x => x.Id, x => x.SystemId, StringComparer.Ordinal, cancellationToken);
+        var vocabularies = (await db.Set<ReferenceEntry>().AsNoTracking()
+                .Where(x => reach.Contains(x.Source) && x.Source != ownId)
+                .Select(x => new { x.Kind, x.Index })
+                .ToListAsync(cancellationToken))
+            .GroupBy(x => x.Kind, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => (IReadOnlySet<string>)g.Select(x => x.Index).ToHashSet(StringComparer.Ordinal), StringComparer.Ordinal);
         return new ContentPackContext(
             classes,
             subclasses,
@@ -210,7 +261,7 @@ internal sealed partial class Dnd5eCatalogSystem(
             optionSets,
             options,
             spells,
-            srdItems.ToHashSet(StringComparer.Ordinal),
+            items.ToHashSet(StringComparer.Ordinal),
             categories.ToHashSet(StringComparer.Ordinal),
             packSubclasses,
             races,
@@ -219,9 +270,14 @@ internal sealed partial class Dnd5eCatalogSystem(
             resourceRows.Select(x => (Key: LevelChoiceJson.ParseResource(x.ResourceJson)?.Key, x.Source))
                 .Where(x => x.Key is not null)
                 .Select(x => (x.Key!, x.Source))
+                .Concat(classResources)
                 .ToList(),
             ruleRows.Where(x => x.SetId != null).Select(x => (x.SetId!, x.ClassIndex, x.Source)).ToList(),
-            ruleRows.Select(x => (x.ClassIndex, x.Level, x.Key, x.Source)).ToList());
+            ruleRows.Select(x => (x.ClassIndex, x.Level, x.Key, x.Source)).ToList())
+        {
+            Packs = packs,
+            Vocabularies = vocabularies,
+        };
     }
 
     /// <summary>Reports the indexes of the pack already used by another source (the SRD or another pack).</summary>
@@ -282,19 +338,45 @@ internal sealed partial class Dnd5eCatalogSystem(
             await db.Set<LevelChoiceRule>().AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Id)).Select(x => new { x.Id, x.Source }).ToListAsync(cancellationToken),
             x => (x.Id, x.Source)));
 
-        // Classes are not extended by packs, but a subclass or feature must not hide a class index either.
+        await CheckAsync("classes", async keys => Pairs(
+            await db.Set<ClassDefinition>().AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
+            x => (x.Index, x.Source)));
+        await CheckAsync("creatures", async keys => Pairs(
+            await db.Set<CreatureDefinition>().AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
+            x => (x.Index, x.Source)));
+        await CheckAsync("conditions", async keys => Pairs(
+            await db.Set<ConditionDefinition>().AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
+            x => (x.Index, x.Source)));
+        await CheckAsync("rules", async keys => Pairs(
+            await db.Set<RuleDefinition>().AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
+            x => (x.Index, x.Source)));
+        foreach (var kind in ReferenceEntry.Kinds)
+        {
+            await CheckAsync($"reference.{kind}", async keys => Pairs(
+                await db.Set<ReferenceEntry>().AsNoTracking().Where(x => x.Kind == kind && x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
+                x => (x.Index, x.Source)));
+        }
+
+        // A subclass must not hide a class index either (nor a class a subclass).
         await CheckAsync("subclasses", async keys => Pairs(
-            await db.Set<ClassDefinition>().AsNoTracking().Where(x => keys.Contains(x.Index)).Select(x => x.Index).ToListAsync(cancellationToken),
-            x => (x, Dnd5eCatalogSources.Srd)));
+            await db.Set<ClassDefinition>().AsNoTracking().Where(x => keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
+            x => (x.Index, x.Source)));
+        await CheckAsync("classes", async keys => Pairs(
+            await db.Set<SubclassDefinition>().AsNoTracking().Where(x => keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
+            x => (x.Index, x.Source)));
     }
 
     /// <summary>
-    /// Deletes every definition of the pack except item templates (dependents first) and the races in
-    /// <paramref name="keptRaces"/>, which the import updates in place (deleting a race cascades over the subraces and
-    /// extensions other packs added to it).
+    /// Deletes every definition of the pack except item templates (dependents first) and the races and classes in
+    /// <paramref name="keptRaces"/> and <paramref name="keptClasses"/>, which the import updates in place (deleting a
+    /// race or a class cascades over the subraces, extensions and subclasses other packs added to it).
     /// </summary>
-    private async Task DeleteDefinitionsAsync(string id, IReadOnlyCollection<string> keptRaces, CancellationToken cancellationToken)
+    private async Task DeleteDefinitionsAsync(string id, IReadOnlyCollection<string> keptRaces, IReadOnlyCollection<string> keptClasses, CancellationToken cancellationToken)
     {
+        await db.Set<CreatureDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<ConditionDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<RuleDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<ReferenceEntry>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<TrinketEntry>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<RollTable>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<LevelChoiceRule>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
@@ -309,5 +391,7 @@ internal sealed partial class Dnd5eCatalogSystem(
         await db.Set<TraitDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<SpellDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<BackgroundDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<ClassLevel>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<ClassDefinition>().Where(x => x.Source == id && !keptClasses.Contains(x.Index)).ExecuteDeleteAsync(cancellationToken);
     }
 }
