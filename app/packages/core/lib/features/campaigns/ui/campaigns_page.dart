@@ -22,14 +22,22 @@ class CampaignsPage extends ConsumerWidget {
       builder: (_) => const CampaignFormDialog(title: 'Nueva campaña', submitLabel: 'Crear'),
     );
     if (data == null || !context.mounted) return;
-    await runAction(
+    String? createdId;
+    final created = await runAction(
       context,
-      () => ref
-          .read(campaignsControllerProvider.notifier)
-          .create(name: data.name, description: data.description, systemId: data.systemId),
+      () async {
+        final campaign = await ref
+            .read(campaignsControllerProvider.notifier)
+            .create(name: data.name, description: data.description, systemId: data.systemId);
+        createdId = campaign.id;
+      },
       success: 'Campaña creada.',
       errors: const {400: 'Datos no válidos. Revisa el nombre y la descripción.'},
     );
+    // Straight to its content packs and rules, then on to the campaign.
+    if (created && createdId != null && context.mounted) {
+      await GoRouter.maybeOf(context)?.push(AppRoutes.campaignContentSetup(createdId!));
+    }
   }
 
   Future<void> _reload(WidgetRef ref) {
@@ -73,7 +81,8 @@ class CampaignsPage extends ConsumerWidget {
           ),
         ),
         data: (items) {
-          final invitations = ref.watch(myInvitationsControllerProvider).value ?? const <MyInvitation>[];
+          final invitations =
+              ref.watch(myInvitationsControllerProvider).value ?? const <MyInvitation>[];
           if (items.isEmpty && invitations.isEmpty) {
             return RefreshIndicator(
               onRefresh: () => _reload(ref),

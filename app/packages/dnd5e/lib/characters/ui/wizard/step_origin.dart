@@ -44,7 +44,7 @@ class OriginStep extends ConsumerWidget {
     if (state.originLoading || state.originPlan == null) {
       return const Center(child: CircularProgressIndicator(key: Key('origin-loading')));
     }
-    final choices = state.originChoices;
+    final choices = state.raceAndBackgroundChoices;
     return ListView(
       key: const Key('step-origin'),
       padding: stepPadding,

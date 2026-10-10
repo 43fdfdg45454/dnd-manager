@@ -6,6 +6,7 @@ import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
 import 'package:opentrpg_core/features/content_packs/domain/campaign_content_pack.dart';
 import 'package:opentrpg_dnd5e/catalog/data/beast_models.dart';
 import 'package:opentrpg_dnd5e/catalog/data/models.dart';
+import 'package:opentrpg_dnd5e/session/campaign_rules.dart';
 
 import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';
@@ -391,6 +392,33 @@ void main() {
       expect(tester.widget<SwitchListTile>(tile).value, isTrue);
     });
 
+    testWidgets('sin dotes iniciales en los paquetes no hay interruptor', (tester) async {
+      await _pump(tester, location: '/campaigns/c1/general/settings');
+
+      expect(find.text('Contenido y reglas'), findsOneWidget);
+      expect(find.byKey(const Key('campaign-rules-starter-feats')), findsNothing);
+    });
+
+    testWidgets('el interruptor de dotes iniciales se guarda con PUT', (tester) async {
+      final characters = FakeCharactersRepository()
+        ..campaignRulesById['c1'] = const CampaignRules(starterFeatsAvailable: true);
+      await _pump(
+        tester,
+        location: '/campaigns/c1/general/settings',
+        enabled: {_packId},
+        characters: characters,
+      );
+
+      final toggle = find.byKey(const Key('campaign-rules-starter-feats'));
+      expect(find.text('Dotes iniciales'), findsOneWidget);
+      expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
+
+      await _tap(tester, toggle);
+      expect(characters.rulesSaves.single, (campaignId: 'c1', starterFeatsEnabled: true));
+      expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
+      expect(find.text('Dotes iniciales activadas.'), findsOneWidget);
+    });
+
     testWidgets('avisa de un paquete requerido y lo activa con un toque', (tester) async {
       final (:packs, catalog: _, router: _) = await _pump(
         tester,
@@ -714,6 +742,38 @@ void main() {
       await _tapKey(tester, 'class-${_alchemist.index}');
       await _tapKey(tester, 'wizard-next');
       expect(find.byKey(const Key('step-class')), findsNothing);
+    });
+  });
+
+  group('crear una campaña', () {
+    testWidgets('tras crearla abre Contenido y continúa al detalle', (tester) async {
+      final campaigns = FakeCampaignsRepository();
+      final contentPacks = FakeCampaignContentPacksRepository(
+        packs: const [srdCampaignPack, _pack],
+      );
+      final router = await pumpRealApp(
+        tester,
+        location: '/',
+        fakes: AppFakes(campaigns: campaigns, contentPacks: contentPacks),
+      );
+
+      await _tapKey(tester, 'campaigns-new');
+      await tester.enterText(find.byKey(const Key('campaign-name')), 'Campaña de ejemplo');
+      await _tapKey(tester, 'campaign-form-submit');
+
+      // The "Contenido" step reuses the "Contenido y reglas" section.
+      expect(find.byKey(const Key('campaign-content-setup')), findsOneWidget);
+      expect(locationOf(router), '/campaigns/c1/content-setup');
+      expect(find.text('Contenido y reglas'), findsOneWidget);
+      await _tapKey(tester, 'campaign-pack-$_packId');
+      await _tapKey(tester, 'campaign-packs-save');
+      expect(contentPacks.saved.single.campaignId, 'c1');
+      expect(contentPacks.saved.single.packIds, {_packId});
+
+      await _tapKey(tester, 'campaign-content-setup-continue');
+      expect(find.byKey(const Key('campaign-content-setup')), findsNothing);
+      expect(locationOf(router), startsWith('/campaigns/c1'));
+      expect(locationOf(router), isNot('/campaigns/c1/content-setup'));
     });
   });
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:opentrpg_core/core/network/api_client.dart';
 
+import '../session/campaign_rules.dart';
 import 'models.dart';
 
 /// D&D 5e character routes under `/api/v1/systems/dnd5e`: the sheet, origin
@@ -235,6 +236,43 @@ class Dnd5eCharactersRepository {
       damageDice: json['damageDice'] is String ? json['damageDice'] as String : '',
     );
   }
+
+  /// `hit-point-cast`: casts a spell of [spellLevel] of the class at
+  /// [classIndex] paying hit points instead of a slot. Answers with the
+  /// updated character and the hit points lost.
+  Future<HitPointCastResult> hitPointCast(
+    String id, {
+    required int classIndex,
+    required int spellLevel,
+  }) async {
+    final json = await _json(
+      'POST',
+      '$_dnd5e/characters/$id/class-actions/hit-point-cast',
+      data: {'classIndex': classIndex, 'spellLevel': spellLevel},
+    );
+    return HitPointCastResult(
+      character: CharacterDetail.fromJson(Map<String, dynamic>.from(json['character'] as Map)),
+      hitPointsLost: (json['hitPointsLost'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  // -- Campaign rules (phase 35) ----------------------------------------------
+
+  /// `GET /campaigns/{id}/rules`: the D&D 5e rules of the campaign.
+  Future<CampaignRules> campaignRules(String campaignId) async =>
+      CampaignRules.fromJson(await _json('GET', '$_dnd5e/campaigns/$campaignId/rules'));
+
+  /// `PUT /campaigns/{id}/rules` (Owner or DM).
+  Future<CampaignRules> saveCampaignRules(
+    String campaignId, {
+    required bool starterFeatsEnabled,
+  }) async => CampaignRules.fromJson(
+    await _json(
+      'PUT',
+      '$_dnd5e/campaigns/$campaignId/rules',
+      data: {'starterFeatsEnabled': starterFeatsEnabled},
+    ),
+  );
 
   // -- Level-up wizard (phase 16c) -------------------------------------------
 

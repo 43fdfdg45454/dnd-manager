@@ -173,6 +173,9 @@ class UnsupportedSystemUi extends GameSystemUi {
   Widget partyPanel(BuildContext context, String campaignId) => _notice();
 
   @override
+  Widget? campaignRulesSection(String campaignId) => null;
+
+  @override
   ProviderListenable<List<TableCharacter>> tableCharacters(String campaignId) => _noTableCharacters;
 
   @override

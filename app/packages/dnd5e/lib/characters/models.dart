@@ -878,6 +878,14 @@ class DivineSmiteResult {
   final String damageDice;
 }
 
+/// Result of a spell cast with hit points instead of a slot.
+class HitPointCastResult {
+  const HitPointCastResult({required this.character, required this.hitPointsLost});
+
+  final CharacterDetail character;
+  final int hitPointsLost;
+}
+
 /// The D&D 5e part of a character detail: the sheet fields the server sends
 /// next to the core ones in the same flat JSON (`CharacterDetail.raw`).
 /// [fromDetail] builds it once per detail and caches it; the
@@ -2172,6 +2180,10 @@ enum OriginChoiceKind {
   static OriginChoiceKind fromApi(Object? value) =>
       _enumFromApi(values, (e) => e.apiValue, value, OriginChoiceKind.traitOption);
 }
+
+/// Key of the optional "Dote inicial" a campaign may offer at creation
+/// (`campaign.starterFeat`).
+const starterFeatChoiceKey = 'campaign.starterFeat';
 
 /// A decision of the race, subrace or background (`OriginChoiceDto`).
 /// [required] picks block the activation; optional ones (languages) have 0.

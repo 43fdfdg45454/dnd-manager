@@ -570,6 +570,10 @@ demás. Se responde como cualquier dote de origen (`{ "feat": "...", "ability": 
 ajuste apagado, la API la rechaza (400, `code: starter-feat-not-allowed`); una respuesta ya dada se conserva y se
 puede quitar.
 
+En la app, el interruptor "Dotes iniciales" está en Ajustes de la campaña → "Contenido y reglas" (la misma sección se
+abre como paso "Contenido" justo después de crear una campaña), y el asistente de creación añade el paso opcional
+"Dote inicial" tras las elecciones de raza y trasfondo cuando la campaña la ofrece.
+
 ```json
 "feats": [
   { "index": "reinos-ejemplo-chispa-temprana", "name": "Chispa temprana", "starter": true,
