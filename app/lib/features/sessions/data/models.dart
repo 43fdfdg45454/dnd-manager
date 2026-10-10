@@ -149,7 +149,9 @@ DateTime wallClockOf(String startsAtLocal, DateTime startsAt) {
   );
 }
 
-/// Minutes assumed for a session without duration (same as the server).
+/// Minutes assumed for a session without duration: mirrors
+/// `GameSession.AssumedDurationMinutes` on the server, which uses it to decide
+/// whether a session is still upcoming or in progress.
 const assumedSessionMinutes = 240;
 
 class Session {
