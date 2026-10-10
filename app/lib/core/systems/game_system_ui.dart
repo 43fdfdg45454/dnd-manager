@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 import 'package:go_router/go_router.dart';
 
 import '../../features/dice/domain/dice_expression.dart';
@@ -50,17 +51,30 @@ enum RollClass { normal, critical, fumble }
 @immutable
 class SystemAttribution {
   const SystemAttribution({
+    required this.id,
     required this.ruleset,
     required this.text,
+    required this.licenseId,
     required this.licenseTitle,
     required this.licenseAsset,
+    this.serverText,
   });
+
+  /// Stable id of the credit (`srd`): the text has the key `attributions-<id>`.
+  final String id;
 
   /// "SRD 5.1".
   final String ruleset;
 
   /// Attribution text shown when the server does not send its own.
   final String text;
+
+  /// The text the server sends, when it has one (it wins over [text]).
+  final ProviderListenable<AsyncValue<String>>? serverText;
+
+  /// Stable id of the license (`cc-by-4`): its tile has the key
+  /// `attributions-license-<licenseId>`.
+  final String licenseId;
 
   /// "Licencia CC-BY 4.0".
   final String licenseTitle;

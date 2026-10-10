@@ -49,7 +49,7 @@ const _dnd5eFiles = {
 
 /// Core files inside the 5e folders: the compendium is a core page that shows
 /// the tabs of the system (`GameSystemUi.compendiumTabs`).
-const _coreInDnd5eFolders = {'features/catalog/ui/compendium_page.dart'};
+const _coreInDnd5eFolders = <String>{};
 
 /// The host: registers the systems (`gameSystemsProvider`).
 const _host = {'main.dart'};
@@ -57,21 +57,17 @@ const _host = {'main.dart'};
 /// Core files that still import 5e files: the mixed UI pages that 33B moves
 /// to the contract, and the data that depends on them. Pendiente de 33B.
 const _pending33B = {
-  // pendiente de 33B: invalida los catálogos 5e al importar un paquete.
-  'features/admin/data/content_packs_controller.dart',
   // pendiente de 33B: plantillas de objeto (homebrew) con campos 5e.
   'features/items/data/campaign_items_repository.dart',
   'features/items/data/items_controllers.dart',
   // pendiente de 33B: páginas mixtas de UI.
   'features/campaigns/ui/campaign_shell.dart',
-  'features/catalog/ui/compendium_page.dart',
   'features/change_requests/ui/change_requests_page.dart',
   'features/characters/ui/character_detail_tabs.dart',
   'features/characters/ui/character_page.dart',
   'features/characters/ui/characters_tab.dart',
   'features/characters/ui/height_weight_fields.dart',
   'features/characters/ui/sheet_editor_page.dart',
-  'features/home/ui/attribution_page.dart',
   'features/items/ui/add_item_page.dart',
   'features/items/ui/effective_item_page.dart',
   'features/items/ui/homebrew_tab.dart',

@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/server/app_session_epoch.dart';
-import '../../catalog/data/catalog_controllers.dart';
+import '../../../core/catalog/catalog_sources.dart';
 import '../domain/content_pack.dart';
 import 'content_packs_repository.dart';
 
@@ -43,11 +43,7 @@ class ContentPacksController extends AsyncNotifier<List<ContentPack>> {
   }
 
   Future<void> _refresh() async {
-    ref
-      ..invalidate(catalogSourcesProvider)
-      ..invalidate(classesProvider)
-      ..invalidate(racesProvider)
-      ..invalidate(backgroundsProvider);
+    ref.read(catalogRevisionProvider.notifier).bump();
     await reload();
   }
 }

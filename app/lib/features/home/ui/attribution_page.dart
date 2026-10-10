@@ -2,48 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/systems/game_system_ui.dart';
+import '../../../core/systems/system_registry.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../catalog/data/catalog_controllers.dart';
 
-const _srdFallback =
-    'Contenido del System Reference Document 5.1, bajo licencia Creative Commons '
-    'Attribution 4.0 International (CC-BY 4.0).';
-
-/// Credits of the third-party material bundled with the app: the SRD 5.1
-/// (CC-BY 4.0) and the OFL fonts. The icons are original work of the project.
+/// Credits of the third-party material bundled with the app: the rules
+/// content of each game system (D&D 5e: the SRD 5.1 under CC-BY 4.0) and the
+/// OFL fonts. The icons are original work of the project.
 class AttributionPage extends ConsumerWidget {
   const AttributionPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final srdText = ref.watch(attributionProvider).value?.text;
     final theme = Theme.of(context);
+    final credits = [
+      for (final system in ref.watch(gameSystemsProvider)) ...system.attributions,
+    ];
     return Scaffold(
       appBar: AppBar(title: const Text('Atribuciones')),
       body: ListView(
         key: const Key('attributions-list'),
         padding: const EdgeInsets.only(bottom: 24),
         children: [
-          const SectionHeader('Reglas'),
-          ParchmentCard(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  srdText == null || srdText.isEmpty ? _srdFallback : srdText,
-                  key: const Key('attributions-srd'),
-                  style: theme.textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 8),
-                const _LicenseTile(
-                  key: Key('attributions-license-cc-by-4'),
-                  title: 'Licencia CC-BY 4.0',
-                  asset: 'assets/licenses/CC-BY-4.0.txt',
-                ),
-              ],
-            ),
-          ),
+          if (credits.isNotEmpty) ...[
+            const SectionHeader('Reglas'),
+            for (final credit in credits) _RulesCredit(credit: credit),
+          ],
           const SectionHeader('Tipografías'),
           ParchmentCard(
             padding: const EdgeInsets.all(16),
@@ -89,6 +73,38 @@ class AttributionPage extends ConsumerWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The credit of the rules content of a game system and its license.
+class _RulesCredit extends ConsumerWidget {
+  const _RulesCredit({required this.credit});
+
+  final SystemAttribution credit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final serverText = credit.serverText;
+    final text = serverText == null ? null : ref.watch(serverText).value;
+    return ParchmentCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            text == null || text.isEmpty ? credit.text : text,
+            key: Key('attributions-${credit.id}'),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 8),
+          _LicenseTile(
+            key: Key('attributions-license-${credit.licenseId}'),
+            title: credit.licenseTitle,
+            asset: credit.licenseAsset,
           ),
         ],
       ),

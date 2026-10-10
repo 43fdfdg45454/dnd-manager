@@ -7,9 +7,10 @@ import '../../core/characters/change_detail.dart';
 import '../../core/realtime/realtime_events.dart';
 import '../../core/systems/game_system_ui.dart';
 import '../../core/theme/icons.dart';
+import '../../features/catalog/data/catalog_controllers.dart' show attributionTextProvider;
 import '../../features/catalog/data/catalog_repository.dart';
 import '../../features/catalog/data/models.dart' show ItemDetail;
-import '../../features/catalog/ui/compendium_page.dart';
+import '../../features/catalog/ui/compendium_tabs.dart';
 import '../../features/characters/domain/change_details.dart' show describeDnd5eChange;
 import '../../features/characters/domain/character_format.dart' show copperToGoldText;
 import '../../features/characters/domain/class_theme.dart' show classThemes;
@@ -51,10 +52,13 @@ class Dnd5eUi extends GameSystemUi {
   String get name => 'D&D 5e (SRD 5.1)';
 
   @override
-  List<SystemAttribution> get attributions => const [
+  List<SystemAttribution> get attributions => [
     SystemAttribution(
+      id: 'srd',
       ruleset: 'SRD 5.1',
       text: dnd5eSrdAttribution,
+      serverText: attributionTextProvider,
+      licenseId: 'cc-by-4',
       licenseTitle: 'Licencia CC-BY 4.0',
       licenseAsset: 'assets/licenses/CC-BY-4.0.txt',
     ),

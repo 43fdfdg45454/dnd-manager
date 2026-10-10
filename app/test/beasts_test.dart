@@ -2,7 +2,7 @@ import 'package:opentrpg/core/storage/local_preferences.dart';
 import 'package:opentrpg/features/catalog/data/beast_models.dart';
 import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
 import 'package:opentrpg/features/catalog/ui/beast_page.dart';
-import 'package:opentrpg/features/catalog/ui/compendium_page.dart';
+import 'package:opentrpg/features/compendium/ui/compendium_page.dart';
 import 'package:opentrpg/features/characters/ui/combat/panels/druid.dart';
 import 'package:opentrpg/features/dice/data/dice_controller.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dice_test.dart' show SequenceRandom;
 import 'helpers/catalog_fakes.dart';
+import 'helpers/fakes.dart' show dnd5eSystemsOverride;
 import 'helpers/motion.dart';
 
 import 'package:opentrpg/systems/dnd5e/dnd5e_routes.dart';
@@ -94,6 +95,7 @@ Future<void> _pump(WidgetTester tester, Widget home, FakeCatalogRepository catal
         catalogRepositoryProvider.overrideWithValue(catalog),
         diceRandomProvider.overrideWithValue(SequenceRandom.always(5)),
         localPreferencesProvider.overrideWithValue(prefs),
+        dnd5eSystemsOverride(),
       ],
       child: MaterialApp.router(routerConfig: router, builder: reducedMotionBuilder),
     ),

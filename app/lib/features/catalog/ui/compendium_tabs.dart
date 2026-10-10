@@ -1,17 +1,13 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/cache/stale_data.dart';
 import '../../../core/ui/infinite_scroll_list.dart';
-import '../../../core/ui/offline_widgets.dart';
 import '../../../core/ui/source_chip.dart';
 import '../../../systems/dnd5e/ui/spell_category.dart';
 import '../data/beast_models.dart';
 import '../data/catalog_controllers.dart';
-import '../data/catalog_repository.dart';
 import '../data/models.dart';
 import '../domain/catalog_format.dart';
 import 'beast_page.dart';
@@ -19,160 +15,6 @@ import 'condition_sheet.dart';
 import 'detail_widgets.dart';
 import 'roll_table_widgets.dart';
 import '../../../systems/dnd5e/dnd5e_routes.dart';
-
-const searchDebounce = Duration(milliseconds: 300);
-
-const _fallbackAttribution =
-    'Contenido del System Reference Document 5.1, bajo licencia Creative Commons '
-    'Attribution 4.0 International (CC-BY 4.0).';
-
-/// Compendium of SRD content: spells, items, classes, races and conditions
-/// behind one search box in the app bar.
-class CompendiumPage extends ConsumerStatefulWidget {
-  const CompendiumPage({super.key});
-
-  @override
-  ConsumerState<CompendiumPage> createState() => _CompendiumPageState();
-}
-
-class _CompendiumPageState extends ConsumerState<CompendiumPage> {
-  final _searchController = TextEditingController();
-  Timer? _debounce;
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _onSearchChanged(String value) {
-    setState(() {}); // Refreshes the clear button.
-    _debounce?.cancel();
-    _debounce = Timer(searchDebounce, () {
-      ref.read(compendiumSearchProvider.notifier).set(value);
-    });
-  }
-
-  void _clearSearch() {
-    _debounce?.cancel();
-    _searchController.clear();
-    ref.read(compendiumSearchProvider.notifier).set('');
-    setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 7,
-      child: Scaffold(
-        appBar: AppBar(
-          title: TextField(
-            key: const Key('compendium-search'),
-            controller: _searchController,
-            onChanged: _onSearchChanged,
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              hintText: 'Buscar en el compendio',
-              border: InputBorder.none,
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.isEmpty
-                  ? null
-                  : IconButton(
-                      key: const Key('compendium-search-clear'),
-                      tooltip: 'Borrar búsqueda',
-                      icon: const Icon(Icons.close),
-                      onPressed: _clearSearch,
-                    ),
-            ),
-          ),
-          bottom: const TabBar(
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            tabs: [
-              Tab(key: Key('tab-spells'), text: 'Hechizos'),
-              Tab(key: Key('tab-items'), text: 'Objetos'),
-              Tab(key: Key('tab-classes'), text: 'Clases'),
-              Tab(key: Key('tab-races'), text: 'Razas'),
-              Tab(key: Key('tab-beasts'), text: 'Bestias'),
-              Tab(key: Key('tab-conditions'), text: 'Condiciones'),
-              Tab(key: Key('tab-tables'), text: 'Tablas'),
-            ],
-          ),
-        ),
-        body: Column(
-          children: [
-            OfflineBanner(scopes: [staleTree(CatalogRepository.rootPath)]),
-            const Expanded(
-              child: TabBarView(
-                children: [
-                  _KeepAlive(child: CompendiumSpellsTab()),
-                  _KeepAlive(child: CompendiumItemsTab()),
-                  _KeepAlive(child: CompendiumClassesTab()),
-                  _KeepAlive(child: CompendiumRacesTab()),
-                  _KeepAlive(child: CompendiumBeastsTab()),
-                  _KeepAlive(child: CompendiumConditionsTab()),
-                  _KeepAlive(child: CompendiumTablesTab()),
-                ],
-              ),
-            ),
-            const _AttributionFooter(),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Keeps a tab (and its scroll position and loaded pages) alive while another
-/// tab is shown.
-class _KeepAlive extends StatefulWidget {
-  const _KeepAlive({required this.child});
-
-  final Widget child;
-
-  @override
-  State<_KeepAlive> createState() => _KeepAliveState();
-}
-
-class _KeepAliveState extends State<_KeepAlive> with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    return widget.child;
-  }
-}
-
-class _AttributionFooter extends ConsumerWidget {
-  const _AttributionFooter();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final text = ref.watch(attributionProvider).value?.text;
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surfaceContainer,
-      child: SafeArea(
-        top: false,
-        child: Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(maxHeight: 96),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: SingleChildScrollView(
-            child: Text(
-              text == null || text.isEmpty ? _fallbackAttribution : text,
-              key: const Key('compendium-attribution'),
-              style: theme.textTheme.bodySmall,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Paged tabs (spells, items)

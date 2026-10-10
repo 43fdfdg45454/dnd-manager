@@ -16,7 +16,7 @@ import '../../features/campaigns/ui/general/campaign_section_page.dart';
 import '../../features/change_requests/ui/change_requests_page.dart';
 import '../../features/characters/ui/character_page.dart';
 import '../../features/characters/ui/sheet_editor_page.dart';
-import '../../features/catalog/ui/compendium_page.dart';
+import '../../features/compendium/ui/compendium_page.dart';
 import '../../features/home/ui/attribution_page.dart';
 import '../../features/home/ui/app_shell.dart';
 import '../../features/home/ui/home_page.dart';

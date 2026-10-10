@@ -4,7 +4,7 @@ import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
 import 'package:opentrpg/features/catalog/data/models.dart';
 import 'package:opentrpg/features/catalog/domain/catalog_format.dart';
 import 'package:opentrpg/features/catalog/ui/class_detail_page.dart';
-import 'package:opentrpg/features/catalog/ui/compendium_page.dart';
+import 'package:opentrpg/features/compendium/ui/compendium_page.dart';
 import 'package:opentrpg/features/catalog/ui/item_detail_page.dart';
 import 'package:opentrpg/features/catalog/ui/spell_detail_page.dart';
 import 'package:flutter/material.dart' hide Page;

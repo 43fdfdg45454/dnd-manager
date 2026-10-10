@@ -1,27 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/catalog/catalog_sources.dart';
+import '../../../core/catalog/compendium_search.dart';
 import 'beast_models.dart';
 import 'catalog_repository.dart';
 import 'models.dart';
 
 export '../../../core/catalog/catalog_sources.dart';
+export '../../../core/catalog/compendium_search.dart';
 
 const catalogPageSize = 50;
 
 /// Never retry silently: errors are shown with a retry button.
 Duration? _noRetry(int retryCount, Object error) => null;
-
-/// Search text shared by every tab of the compendium (already debounced by the UI).
-class CompendiumSearch extends Notifier<String> {
-  @override
-  String build() => '';
-
-  void set(String value) => state = value.trim();
-}
-
-final compendiumSearchProvider = NotifierProvider.autoDispose<CompendiumSearch, String>(
-  CompendiumSearch.new,
-);
 
 class SpellFilters {
   const SpellFilters({this.level, this.classIndex});
@@ -135,20 +126,22 @@ final itemsControllerProvider =
 
 // Small reference lists: loaded once and filtered locally.
 
-final classesProvider = FutureProvider.autoDispose<List<ClassSummary>>(
-  (ref) => ref.watch(catalogRepositoryProvider).classes(),
-  retry: _noRetry,
-);
+// They depend on the content packs: a new revision of the catalog reloads them.
 
-final racesProvider = FutureProvider.autoDispose<List<RaceSummary>>(
-  (ref) => ref.watch(catalogRepositoryProvider).races(),
-  retry: _noRetry,
-);
+final classesProvider = FutureProvider.autoDispose<List<ClassSummary>>((ref) {
+  ref.watch(catalogRevisionProvider);
+  return ref.watch(catalogRepositoryProvider).classes();
+}, retry: _noRetry);
 
-final backgroundsProvider = FutureProvider.autoDispose<List<Background>>(
-  (ref) => ref.watch(catalogRepositoryProvider).backgrounds(),
-  retry: _noRetry,
-);
+final racesProvider = FutureProvider.autoDispose<List<RaceSummary>>((ref) {
+  ref.watch(catalogRevisionProvider);
+  return ref.watch(catalogRepositoryProvider).races();
+}, retry: _noRetry);
+
+final backgroundsProvider = FutureProvider.autoDispose<List<Background>>((ref) {
+  ref.watch(catalogRevisionProvider);
+  return ref.watch(catalogRepositoryProvider).backgrounds();
+}, retry: _noRetry);
 
 /// Items of an equipment category (starting equipment picker).
 final equipmentCategoryProvider = FutureProvider.autoDispose.family<EquipmentCategory, String>(
@@ -181,6 +174,13 @@ final conditionsProvider = FutureProvider.autoDispose<List<Condition>>(
 
 final attributionProvider = FutureProvider.autoDispose<Attribution>(
   (ref) => ref.watch(catalogRepositoryProvider).attribution(),
+  retry: _noRetry,
+);
+
+/// The attribution text the server sends (empty when it sends none), for the
+/// attributions page (`SystemAttribution.serverText`).
+final attributionTextProvider = FutureProvider.autoDispose<String>(
+  (ref) async => (await ref.watch(attributionProvider.future)).text,
   retry: _noRetry,
 );
 
