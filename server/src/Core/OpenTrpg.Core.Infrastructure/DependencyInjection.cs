@@ -12,8 +12,10 @@ using OpenTrpg.Core.Infrastructure.Sessions;
 using OpenTrpg.Core.Infrastructure.Time;
 using OpenTrpg.Core.Domain.Sessions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace OpenTrpg.Core.Infrastructure;
 
@@ -26,8 +28,13 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString(DefaultConnectionName)
             ?? throw new InvalidOperationException($"Connection string '{DefaultConnectionName}' is not configured.");
 
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
+        // The Characters table is shared by the core character and each system's required dependent (table splitting).
+        // The migrations snapshot cannot express a required dependent, so it keeps the dependent's columns nullable while
+        // the model (and the database, created by the migrations) has them NOT NULL. That difference is not a pending
+        // change, so the warning is logged instead of failing the migration at startup.
+        services.AddDbContext<AppDbContext>(options => options
+            .UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName))
+            .ConfigureWarnings(w => w.Log((RelationalEventId.PendingModelChangesWarning, LogLevel.Warning))));
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
