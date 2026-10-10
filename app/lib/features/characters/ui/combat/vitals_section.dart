@@ -10,6 +10,8 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/stat_tiles.dart';
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/data/models.dart' show Condition;
+import '../../../catalog/ui/catalog_detail_links.dart' show DetailInfoButton;
+import '../../../catalog/ui/condition_sheet.dart';
 import '../../../dice/domain/dice_expression.dart';
 import '../../../dice/ui/dice_sheet.dart';
 import '../../data/characters_controller.dart';
@@ -670,9 +672,9 @@ class ConditionsCard extends ConsumerWidget {
   final bool canEdit;
 
   Future<void> _add(BuildContext context, WidgetRef ref) async {
-    final picked = await showDialog<Condition>(
-      context: context,
-      builder: (_) => ConditionPickerDialog(taken: {for (final k in character.conditions) k.index}),
+    final picked = await showConditionPicker(
+      context,
+      taken: {for (final k in character.conditions) k.index},
     );
     if (picked == null || !context.mounted) return;
     if (picked.index == 'exhaustion') {
@@ -775,55 +777,99 @@ class ConditionsCard extends ConsumerWidget {
   }
 }
 
-/// Picks one condition of the SRD list that is not in [taken].
-class ConditionPickerDialog extends ConsumerWidget {
-  const ConditionPickerDialog({super.key, required this.taken});
+/// Opens the [ConditionPicker] in a draggable bottom sheet (like the other long
+/// pickers of the app) and returns the picked condition, or null.
+Future<Condition?> showConditionPicker(BuildContext context, {required Set<String> taken}) {
+  return showModalBottomSheet<Condition>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.7,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      builder: (_, controller) => ConditionPicker(taken: taken, scrollController: controller),
+    ),
+  );
+}
+
+/// Picks one condition of the SRD list that is not in [taken]; every row has a
+/// [DetailInfoButton] with the rules of the condition (the picker stays open).
+class ConditionPicker extends ConsumerWidget {
+  const ConditionPicker({super.key, required this.taken, this.scrollController});
 
   final Set<String> taken;
+  final ScrollController? scrollController;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final conditions = ref.watch(conditionsProvider);
-    return AlertDialog(
-      title: const Text('Añadir condición'),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: conditions.when(
-          loading: () =>
-              const SizedBox(height: 80, child: Center(child: CircularProgressIndicator())),
-          error: (_, _) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('No se pudo cargar la lista de condiciones.'),
-              TextButton(
-                onPressed: () => ref.invalidate(conditionsProvider),
-                child: const Text('Reintentar'),
-              ),
-            ],
+    final theme = Theme.of(context);
+    final Widget body = conditions.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, _) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('No se pudo cargar la lista de condiciones.'),
+          TextButton(
+            onPressed: () => ref.invalidate(conditionsProvider),
+            child: const Text('Reintentar'),
           ),
-          data: (list) {
-            final available = [
-              for (final cond in list)
-                if (!taken.contains(cond.index)) cond,
-            ];
-            if (available.isEmpty) return const Text('No hay más condiciones disponibles.');
-            return ListView(
-              shrinkWrap: true,
-              children: [
-                for (final cond in available)
-                  ListTile(
-                    key: Key('pick-condition-${cond.index}'),
-                    title: Text(cond.name),
-                    onTap: () => Navigator.of(context).pop(cond),
-                  ),
-              ],
+        ],
+      ),
+      data: (list) {
+        final available = [
+          for (final cond in list)
+            if (!taken.contains(cond.index)) cond,
+        ];
+        if (available.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('No hay más condiciones disponibles.'),
+          );
+        }
+        return ListView.builder(
+          key: const Key('condition-picker-list'),
+          controller: scrollController,
+          itemCount: available.length,
+          itemBuilder: (context, i) {
+            final cond = available[i];
+            return ListTile(
+              key: Key('pick-condition-${cond.index}'),
+              title: Text(cond.name),
+              trailing: DetailInfoButton(
+                key: Key('condition-info-${cond.index}'),
+                tooltip: 'Ver descripción',
+                onPressed: () => showConditionSheet(context, cond),
+              ),
+              onTap: () => Navigator.of(context).pop(cond),
             );
           },
-        ),
+        );
+      },
+    );
+    return SafeArea(
+      top: false,
+      child: Column(
+        key: const Key('condition-picker'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
+            child: Row(
+              children: [
+                Expanded(child: Text('Añadir condición', style: theme.textTheme.titleLarge)),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+              ],
+            ),
+          ),
+          Expanded(child: body),
+        ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
-      ],
     );
   }
 }
