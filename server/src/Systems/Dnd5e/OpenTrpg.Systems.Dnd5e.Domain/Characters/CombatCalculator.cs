@@ -236,9 +236,7 @@ public static class CombatCalculator
             return false;
         }
 
-        var subcategory = weapon.Item.Subcategory ?? string.Empty;
-        if ((subcategory.StartsWith("Simple", StringComparison.OrdinalIgnoreCase) && weaponKeys.Contains(SimpleWeapons))
-            || (subcategory.StartsWith("Martial", StringComparison.OrdinalIgnoreCase) && weaponKeys.Contains(MartialWeapons)))
+        if (ProficiencyKeys.WeaponGroups(weapon.Item.Subcategory, weapon.Item.Properties).Any(weaponKeys.Contains))
         {
             return true;
         }

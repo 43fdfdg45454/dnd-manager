@@ -521,8 +521,8 @@ deduce de ellas si falta (`Weapon`, `Armor` o `Shield`, `Tool`, `Consumable` par
 
 | Sección | Campos |
 | --- | --- |
-| `weapon` | `category` (**obligatorio**: `simple` o `martial`), `range` (**obligatorio**: `melee` o `ranged`), `damage` (**obligatorio**, dados), `damageType` (**obligatorio**), `versatileDamage`, `properties` (`string[]`), `rangeNormal`, `rangeLong` y `special` (texto de una propiedad especial, ≤ 10 000). La subcategoría por defecto es "Martial Ranged", "Simple Melee"... |
-| `armor` | `category` (**obligatorio**: `light`, `medium`, `heavy` o `shield`), `baseAc` (**obligatorio**), `dexBonus` (por defecto, sí salvo las pesadas), `maxDexBonus` (por defecto 2 en las intermedias), `strMin` y `stealthDisadvantage`. |
+| `weapon` | `category` (**obligatorio**: `simple`, `martial` o `exotic`), `range` (**obligatorio**: `melee` o `ranged`), `damage` (**obligatorio**, dados), `damageType` (**obligatorio**), `versatileDamage`, `properties` (`string[]`), `rangeNormal`, `rangeLong` y `special` (texto de una propiedad especial, ≤ 10 000). La subcategoría por defecto es "Martial Ranged", "Simple Melee"... |
+| `armor` | `category` (**obligatorio**: `light`, `medium`, `heavy` o `shield`), `baseAc` (**obligatorio**), `dexBonus` (por defecto, sí salvo las pesadas), `maxDexBonus` (por defecto 2 en las intermedias), `strMin`, `stealthDisadvantage` y `exotic` (`true`: armadura exótica; conserva su categoría de peso y añade la propiedad `exotic`; no admitido en escudos). |
 | `tool` | `true`: el objeto es una herramienta. |
 | `ammunition` | `true`: el objeto es munición (subcategoría "Ammunition"). |
 | `firearm` | `{ "reload": 1-100?, "misfire": 1-20 }`: arma de fuego con su recarga (disparos entre recargas) y su fallo (resultado del d20 igual o inferior con el que se encasquilla). Son informativos: la app los muestra en el detalle del arma y no los tira. Necesita `weapon` y añade la propiedad `firearm`. |
@@ -532,6 +532,27 @@ deduce de ellas si falta (`Weapon`, `Armor` o `Shield`, `Tool`, `Consumable` par
 (`special`, `tool`, `ammunition`, `firearm`) llega a la app en `systemData` del detalle del objeto
 (`GET /api/v1/systems/dnd5e/catalog/items/{id}`):
 `{ "special": "...", "firearm": { "reload": 1, "misfire": 2 } }`.
+
+**Competencias de arma y armadura.** Además de `simple-weapons`, `martial-weapons`, las armaduras
+(`light-armor`, `medium-armor`, `heavy-armor`, `shields`) y el índice de un arma, el formato reconoce
+estas claves en `grants`, en `prerequisites.proficiency`, en `multiclassing.proficiencies` y en las
+competencias de la hoja:
+
+| Clave (alias) | Cubre |
+| --- | --- |
+| `exotic-weapons` (`exotic`) | Armas con `weapon.category: "exotic"` que no son de fuego ni bombas. |
+| `simple-firearms`, `martial-firearms`, `exotic-firearms` | Armas con sección `firearm` de esa categoría. Las armas de fuego **no** las cubren `simple-weapons` ni `martial-weapons`. |
+| `bombs` (`bomb`) | Armas con la propiedad `bomb` en `weapon.properties`, sea cual sea su categoría. |
+| `exotic-armor` (`exotic`) | Armaduras con `armor.exotic: true` (`all-armor` no las cubre). |
+
+```json
+{"index": "mipaquete-guadana-doble", "name": "Guadaña doble", "weapon": {"category": "exotic", "range": "melee", "damage": "1d10", "damageType": "slashing"}},
+{"index": "mipaquete-petardo", "name": "Petardo", "weapon": {"category": "simple", "range": "ranged", "damage": "2d6", "damageType": "fire", "properties": ["thrown", "bomb"]}},
+{"index": "mipaquete-coraza-de-runas", "name": "Coraza de runas", "armor": {"category": "medium", "baseAc": 15, "exotic": true}}
+```
+
+El tipo de arma de fuego es la propia `weapon.category` (un trabuco `exotic` con `firearm` pide
+`exotic-firearms`).
 
 ### `Spell`
 
@@ -1202,7 +1223,7 @@ si se elige, también el "Juramento"; al subir a nivel 4, la dote aparece junto 
 | `cantrip` | Índice de un truco que el personaje conozca. |
 | `abilities` | Puntuaciones mínimas: `{ "str": 13 }` (1–30). Varias características = todas. |
 | `races` | Índices de raza (del SRD o de un paquete); basta con ser **una** de ellas: `["elf", "half-elf"]`. |
-| `proficiency` | `{ "armor": ["heavy"], "weapon": ["martial"] }`. Competencias que el personaje debe tener, **todas**. Armadura: `light`, `medium`, `heavy` o `shields` (`all-armor` del guerrero y el paladín cubre las tres armaduras, no los escudos). Arma: `simple`, `martial` o el índice de un arma (`longswords`). |
+| `proficiency` | `{ "armor": ["heavy"], "weapon": ["martial"] }`. Competencias que el personaje debe tener, **todas**. Armadura: `light`, `medium`, `heavy`, `shields` o `exotic` (`all-armor` del guerrero y el paladín cubre las tres armaduras, no los escudos ni las exóticas). Arma: `simple`, `martial`, `exotic`, `bombs`, `simple-firearms`, `martial-firearms`, `exotic-firearms` o el índice de un arma (`longswords`). |
 | `spellcasting` | `true`: poder lanzar al menos un conjuro (una clase lanzadora con espacios o un conjuro de cualquier origen, trucos raciales incluidos). |
 
 Las opciones sin cumplir aparecen en el asistente como no elegibles, con el motivo, que dice qué

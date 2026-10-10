@@ -626,7 +626,7 @@ internal sealed class PackItemJson
 
 internal sealed class PackWeaponJson
 {
-    /// <summary>"simple" or "martial".</summary>
+    /// <summary>"simple", "martial" or "exotic" (also the firearm group of a weapon with a <c>firearm</c> section).</summary>
     public string? Category { get; set; }
 
     /// <summary>"melee" or "ranged".</summary>
@@ -660,6 +660,9 @@ internal sealed class PackArmorJson
     public int? MaxDexBonus { get; set; }
 
     public int? StrMin { get; set; }
+
+    /// <summary>Exotic armor: keeps its weight category and needs the "exotic-armor" proficiency.</summary>
+    public bool? Exotic { get; set; }
 
     public bool? StealthDisadvantage { get; set; }
 }

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using OpenTrpg.Core.Domain.Catalog;
 using OpenTrpg.Core.Domain.Items;
+using OpenTrpg.Systems.Dnd5e.Domain.Catalog;
 
 namespace OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
 
@@ -8,7 +9,7 @@ namespace OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
 // template (the same ones the SRD items use) and, for what has no column, its system data.
 internal sealed partial class ContentPackValidator
 {
-    public static readonly IReadOnlyList<string> WeaponCategories = ["simple", "martial"];
+    public static readonly IReadOnlyList<string> WeaponCategories = ["simple", "martial", "exotic"];
     public static readonly IReadOnlyList<string> WeaponRanges = ["melee", "ranged"];
     public static readonly IReadOnlyList<string> ArmorCategories = ["light", "medium", "heavy", "shield"];
 
@@ -43,7 +44,7 @@ internal sealed partial class ContentPackValidator
             var category = weapon.Category?.Trim().ToLowerInvariant();
             if (category is null || !WeaponCategories.Contains(category))
             {
-                AddError($"{path}.weapon.category", "Debe ser \"simple\" o \"martial\".");
+                AddError($"{path}.weapon.category", "Debe ser \"simple\", \"martial\" o \"exotic\".");
                 category = "simple";
             }
 
@@ -109,6 +110,17 @@ internal sealed partial class ContentPackValidator
                 StrengthMinimum = OptionalInt($"{path}.armor.strMin", armor.StrMin, 0, ItemLimits.MaxStrengthMinimum),
                 StealthDisadvantage = armor.StealthDisadvantage ?? false,
             };
+            if (armor.Exotic == true)
+            {
+                if (shield)
+                {
+                    AddError($"{path}.armor.exotic", "Un escudo no puede ser exótico.");
+                }
+                else if (!data.Properties.Contains(ProficiencyKeys.ExoticProperty))
+                {
+                    data = data with { Properties = [.. data.Properties, ProficiencyKeys.ExoticProperty] };
+                }
+            }
         }
 
         if (item.Tool == true)

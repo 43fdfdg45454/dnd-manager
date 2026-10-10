@@ -160,7 +160,7 @@ internal sealed partial class ContentPackValidator
             }
             else
             {
-                AddError(armorPath, "Armadura desconocida. Valores admitidos: light, medium, heavy, shields.");
+                AddError(armorPath, "Armadura desconocida. Valores admitidos: light, medium, heavy, shields, exotic.");
             }
         });
 
@@ -354,8 +354,8 @@ internal sealed partial class ContentPackValidator
             skills,
             cantrips,
             spells,
-            armor = TextList($"{path}.armor", grants.Armor, 50, ShortTextMaxLength),
-            weapons = TextList($"{path}.weapons", grants.Weapons, 50, ShortTextMaxLength),
+            armor = TextList($"{path}.armor", grants.Armor, 50, ShortTextMaxLength).Select(a => ProficiencyKeys.NormalizeArmor(a) ?? a).ToList(),
+            weapons = TextList($"{path}.weapons", grants.Weapons, 50, ShortTextMaxLength).Select(ProficiencyKeys.NormalizeWeapon).ToList(),
             tools = TextList($"{path}.tools", grants.Tools, 50, ShortTextMaxLength),
             languages = TextList($"{path}.languages", grants.Languages, 50, ShortTextMaxLength),
             savingThrows,

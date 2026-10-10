@@ -120,23 +120,11 @@ public static class MulticlassRules
             .. custom.Tools.Select(t => (ProficiencyType.Tool, t.Trim())),
         ];
 
-    /// <summary>"light" → "light-armor", "shield" → "shields"; other keys as they are.</summary>
-    private static string ArmorKey(string key) => key.Trim().ToLowerInvariant() switch
-    {
-        "light" => "light-armor",
-        "medium" => "medium-armor",
-        "heavy" => "heavy-armor",
-        "shield" => "shields",
-        var other => other,
-    };
+    /// <summary>"light" → "light-armor", "shield" → "shields", "exotic" → "exotic-armor"; other keys as they are.</summary>
+    private static string ArmorKey(string key) => ProficiencyKeys.NormalizeArmor(key) ?? key.Trim().ToLowerInvariant();
 
-    /// <summary>"simple" → "simple-weapons", "martial" → "martial-weapons"; other keys as they are.</summary>
-    private static string WeaponKey(string key) => key.Trim().ToLowerInvariant() switch
-    {
-        "simple" => "simple-weapons",
-        "martial" => "martial-weapons",
-        var other => other,
-    };
+    /// <summary>"simple" → "simple-weapons", "exotic" → "exotic-weapons", "bomb" → "bombs"; other keys as they are.</summary>
+    private static string WeaponKey(string key) => ProficiencyKeys.NormalizeWeapon(key);
 
     /// <summary>
     /// Skills gained when the class is taken as a new class (PHB multiclassing): bard one skill of any kind, ranger

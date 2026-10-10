@@ -42,16 +42,32 @@ public static class ProficiencyKeys
     public const string HeavyArmor = "heavy-armor";
     public const string AllArmor = "all-armor";
     public const string Shields = "shields";
+    public const string ExoticArmor = "exotic-armor";
     public const string SimpleWeapons = "simple-weapons";
     public const string MartialWeapons = "martial-weapons";
+    public const string ExoticWeapons = "exotic-weapons";
+    public const string SimpleFirearms = "simple-firearms";
+    public const string MartialFirearms = "martial-firearms";
+    public const string ExoticFirearms = "exotic-firearms";
+    public const string Bombs = "bombs";
+
+    /// <summary>Weapon property of the bombs (a pack writes it in <c>weapon.properties</c>).</summary>
+    public const string BombProperty = "bomb";
+
+    /// <summary>Weapon property of the firearms (added by the <c>firearm</c> section).</summary>
+    public const string FirearmProperty = "firearm";
+
+    /// <summary>Armor property of the exotic armors (<c>armor.exotic: true</c>); they keep their weight category.</summary>
+    public const string ExoticProperty = "exotic";
 
     /// <summary>Armor keys a prerequisite may name ("heavy" and "heavy-armor" both normalize to <see cref="HeavyArmor"/>).</summary>
-    public static IReadOnlyList<string> Armor { get; } = [LightArmor, MediumArmor, HeavyArmor, Shields];
+    public static IReadOnlyList<string> Armor { get; } = [LightArmor, MediumArmor, HeavyArmor, Shields, ExoticArmor];
 
     /// <summary>Weapon group keys ("simple" and "simple-weapons" both normalize to <see cref="SimpleWeapons"/>); any other value is a weapon index.</summary>
-    public static IReadOnlyList<string> Weapons { get; } = [SimpleWeapons, MartialWeapons];
+    public static IReadOnlyList<string> Weapons { get; } =
+        [SimpleWeapons, MartialWeapons, ExoticWeapons, SimpleFirearms, MartialFirearms, ExoticFirearms, Bombs];
 
-    /// <summary>"heavy" → "heavy-armor", "shield" → "shields"; null when the value is not an armor key.</summary>
+    /// <summary>"heavy" → "heavy-armor", "shield" → "shields", "exotic" → "exotic-armor"; null when the value is not an armor key.</summary>
     public static string? NormalizeArmor(string value)
     {
         var key = value.Trim().ToLowerInvariant();
@@ -61,11 +77,16 @@ public static class ProficiencyKeys
             "medium" or MediumArmor => MediumArmor,
             "heavy" or HeavyArmor => HeavyArmor,
             "shield" or Shields => Shields,
+            "exotic" or ExoticArmor => ExoticArmor,
+            "all" or AllArmor => AllArmor,
             _ => null,
         };
     }
 
-    /// <summary>"simple" → "simple-weapons", "martial" → "martial-weapons"; other values (a weapon index) are kept lowercase.</summary>
+    /// <summary>
+    /// "simple" → "simple-weapons", "martial" → "martial-weapons", "exotic" → "exotic-weapons", "bomb" → "bombs";
+    /// other values (a weapon index or a firearm group such as "martial-firearms") are kept lowercase.
+    /// </summary>
     public static string NormalizeWeapon(string value)
     {
         var key = value.Trim().ToLowerInvariant();
@@ -73,16 +94,40 @@ public static class ProficiencyKeys
         {
             "simple" or SimpleWeapons => SimpleWeapons,
             "martial" or MartialWeapons => MartialWeapons,
+            "exotic" or ExoticWeapons => ExoticWeapons,
+            "bomb" or Bombs => Bombs,
             _ => key,
         };
     }
 
-    /// <summary>True when the proficiency keys the character has (any type) cover <paramref name="armor"/>: "all-armor" covers every armor.</summary>
+    /// <summary>True when the proficiency keys the character has (any type) cover <paramref name="armor"/>: "all-armor" covers every armor but shields and exotic armor.</summary>
     public static bool HasArmor(IEnumerable<string> keys, string armor)
     {
         ArgumentNullException.ThrowIfNull(keys);
         var list = keys.ToList();
-        return list.Contains(armor, StringComparer.Ordinal) || (armor != Shields && list.Contains(AllArmor, StringComparer.Ordinal));
+        return list.Contains(armor, StringComparer.Ordinal)
+            || (armor != Shields && armor != ExoticArmor && list.Contains(AllArmor, StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// The group keys that make a weapon proficient: its category ("Simple Melee" → simple-weapons, "Exotic Ranged" →
+    /// exotic-weapons); a firearm needs the firearm group of its category ("martial-firearms") instead, and a bomb "bombs".
+    /// </summary>
+    public static IReadOnlyList<string> WeaponGroups(string? subcategory, IEnumerable<string>? properties)
+    {
+        var props = (properties ?? []).Select(p => p.Trim().ToLowerInvariant()).ToHashSet(StringComparer.Ordinal);
+        if (props.Contains(BombProperty))
+        {
+            return [Bombs];
+        }
+
+        var category = (subcategory ?? string.Empty).Trim().Split(' ', 2)[0].ToLowerInvariant();
+        if (category is not ("simple" or "martial" or "exotic"))
+        {
+            return [];
+        }
+
+        return props.Contains(FirearmProperty) ? [$"{category}-firearms"] : [$"{category}-weapons"];
     }
 
     /// <summary>Spanish label: "armadura pesada", "escudos", "armas marciales", or the key itself.</summary>
@@ -93,8 +138,14 @@ public static class ProficiencyKeys
         HeavyArmor => "armadura pesada",
         AllArmor => "todas las armaduras",
         Shields => "escudos",
+        ExoticArmor => "armaduras exóticas",
         SimpleWeapons => "armas sencillas",
         MartialWeapons => "armas marciales",
+        ExoticWeapons => "armas exóticas",
+        SimpleFirearms => "armas de fuego sencillas",
+        MartialFirearms => "armas de fuego marciales",
+        ExoticFirearms => "armas de fuego exóticas",
+        Bombs => "bombas",
         _ => key,
     };
 }
