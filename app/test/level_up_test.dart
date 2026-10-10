@@ -911,6 +911,58 @@ void main() {
       });
     });
 
+    testWidgets('una dote que quita una salvación a elegir la pide y la envía', (tester) async {
+      final (:characters, router: _) = await _pump(
+        tester,
+        plan: _plan(
+          targetLevel: 4,
+          classLevel: 4,
+          choices: [
+            _choice(
+              'asi',
+              'Ability Score Improvement',
+              'AsiOrFeat',
+              options: [
+                {
+                  ..._option('brio-ejemplo-renuncia', 'Renuncia de ejemplo'),
+                  'removeSavingThrows': {
+                    'choose': 1,
+                    'from': ['str', 'con'],
+                  },
+                },
+              ],
+            ),
+          ],
+        ),
+        character: _character(pendingLevelUpTo: 4),
+      );
+      await _next(tester);
+      await _writeHp(tester, '5');
+      await _next(tester);
+
+      await _tapKey(tester, 'levelup-tab-feat');
+      await _tapKey(tester, 'levelup-option-asi-brio-ejemplo-renuncia');
+      expect(find.byKey(const Key('levelup-removed-saves-title')), findsOneWidget);
+      expect(find.byKey(const Key('levelup-removed-save-dex')), findsNothing);
+      await _next(tester);
+      expect(_error('Elige la salvación que pierdes con Renuncia de ejemplo'), findsOneWidget);
+
+      await _tapKey(tester, 'levelup-removed-save-con');
+      // Only one: a second tap on another one is ignored.
+      await _tapKey(tester, 'levelup-removed-save-str');
+      await _next(tester);
+      await _tapKey(tester, 'levelup-confirm');
+      expect(characters.levelUpBodies.single['choices'], [
+        {
+          'key': 'asi',
+          'selected': {
+            'feat': 'brio-ejemplo-renuncia',
+            'removedSavingThrows': ['con'],
+          },
+        },
+      ]);
+    });
+
     testWidgets('envía el cuerpo esperado, celebra y vuelve a Mi sesión', (tester) async {
       final (:characters, :router) = await _pump(
         tester,

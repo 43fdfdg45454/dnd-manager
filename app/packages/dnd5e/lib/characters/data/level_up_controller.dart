@@ -59,6 +59,7 @@ class LevelUpSelection {
     this.asi = const {},
     this.feat,
     this.featAbility,
+    this.removedSavingThrows = const [],
   });
 
   /// Option indexes (or texts for free-text choices), in pick order.
@@ -75,6 +76,10 @@ class LevelUpSelection {
   /// Ability the [feat] raises, when the feat lets the player pick it.
   final String? featAbility;
 
+  /// Saving throw proficiencies given up with a [feat] that asks which
+  /// (`removeSavingThrows`).
+  final List<String> removedSavingThrows;
+
   int get asiTotal => asi.values.fold(0, (sum, v) => sum + v);
 
   bool get isEmpty =>
@@ -87,7 +92,9 @@ class LevelUpSelection {
     Map<String, int>? asi,
     Object? feat = _unset,
     Object? featAbility = _unset,
+    List<String>? removedSavingThrows,
   }) => LevelUpSelection(
+    removedSavingThrows: removedSavingThrows ?? this.removedSavingThrows,
     selected: selected ?? this.selected,
     replaced: replaced == _unset ? this.replaced : replaced as String?,
     mode: mode ?? this.mode,
@@ -357,6 +364,12 @@ class LevelUpState {
             '${maxScore(ability)}';
       }
     }
+    final remove = feat.removeSavingThrows;
+    if (remove != null && remove.asks && selection.removedSavingThrows.length != remove.choose) {
+      return remove.choose == 1
+          ? 'Elige la salvación que pierdes con ${feat.name}'
+          : 'Elige las ${remove.choose} salvaciones que pierdes con ${feat.name}';
+    }
     return null;
   }
 
@@ -415,6 +428,9 @@ class LevelUpState {
               ability: increase == null
                   ? null
                   : selection.featAbility ?? (increase.needsPick ? null : increase.options.first),
+              removedSavingThrows: feat?.removeSavingThrows?.asks ?? false
+                  ? selection.removedSavingThrows
+                  : const [],
             ),
           );
         }
@@ -643,6 +659,7 @@ class LevelUpController extends Notifier<LevelUpState> {
       (s) => s.copyWith(
         feat: s.feat == index ? null : index,
         featAbility: null,
+        removedSavingThrows: const [],
         mode: ImprovementMode.feat,
       ),
     );
@@ -651,6 +668,20 @@ class LevelUpController extends Notifier<LevelUpState> {
 
   void setFeatAbility(LevelUpChoice choice, String ability) =>
       _update(choice.key, (s) => s.copyWith(featAbility: ability));
+
+  /// Toggles a saving throw given up with the chosen feat, up to the number
+  /// the feat takes away.
+  void toggleRemovedSave(LevelUpChoice choice, String ability) => _update(choice.key, (s) {
+    final feat = s.feat == null ? null : choice.option(s.feat!);
+    final remove = feat?.removeSavingThrows;
+    if (remove == null) return s;
+    final current = [...s.removedSavingThrows];
+    if (!current.remove(ability)) {
+      if (current.length >= remove.choose) return s;
+      current.add(ability);
+    }
+    return s.copyWith(removedSavingThrows: current);
+  });
 
   // -- Submission ------------------------------------------------------------------
 
