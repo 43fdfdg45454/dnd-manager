@@ -521,17 +521,65 @@ internal sealed partial class ContentPackValidator
         }
 
         var prerequisites = new Dictionary<string, int>(StringComparer.Ordinal);
+        var anyOf = new List<IReadOnlyDictionary<string, int>>();
         foreach (var (key, value) in multiclassing.Prerequisites ?? [])
         {
+            if (key == "anyOf")
+            {
+                if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() < 2)
+                {
+                    AddError($"{path}.prerequisites.anyOf", "Debe ser una lista de al menos dos alternativas ({\"str\": 13}).");
+                    continue;
+                }
+
+                var position = 0;
+                foreach (var alternative in value.EnumerateArray())
+                {
+                    var group = AbilityScores($"{path}.prerequisites.anyOf[{position++}]", alternative);
+                    if (group.Count > 0)
+                    {
+                        anyOf.Add(group);
+                    }
+                }
+
+                continue;
+            }
+
             var ability = key.Trim().ToLowerInvariant();
             if (!Abilities.IsValid(ability))
             {
-                AddError($"{path}.prerequisites.{key}", "Característica desconocida (str, dex, con, int, wis o cha).");
+                AddError($"{path}.prerequisites.{key}", "Característica desconocida (str, dex, con, int, wis o cha), o \"anyOf\".");
             }
-            else if (RequiredInt($"{path}.prerequisites.{key}", value, 1, 30) is { } score)
+            else if (value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out var score) || score is < 1 or > 30)
+            {
+                AddError($"{path}.prerequisites.{key}", "Debe ser un entero entre 1 y 30.");
+            }
+            else
             {
                 prerequisites[ability] = score;
             }
+        }
+
+        var byLevel = new Dictionary<int, MulticlassLevelProficiencies>();
+        foreach (var (key, value) in multiclassing.ProficienciesByLevel ?? [])
+        {
+            var levelPath = $"{path}.proficienciesByLevel.{key}";
+            if (!int.TryParse(key, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var level) || level is < 2 or > MaxLevels)
+            {
+                AddError(levelPath, "La clave es un nivel de la clase entre 2 y 20 (el nivel 1 usa \"proficiencies\").");
+                continue;
+            }
+
+            if (value is null)
+            {
+                AddError(levelPath, "Campo obligatorio.");
+                continue;
+            }
+
+            byLevel[level] = new MulticlassLevelProficiencies(
+                TextList($"{levelPath}.armor", value.Armor, 50, ShortTextMaxLength).Select(a => ProficiencyKeys.NormalizeArmor(a) ?? a).ToList(),
+                TextList($"{levelPath}.weapons", value.Weapons, 50, ShortTextMaxLength).Select(ProficiencyKeys.NormalizeWeapon).ToList(),
+                TextList($"{levelPath}.tools", value.Tools, 50, ShortTextMaxLength));
         }
 
         var proficiencies = multiclassing.Proficiencies;
@@ -540,7 +588,46 @@ internal sealed partial class ContentPackValidator
             TextList($"{path}.proficiencies.armor", proficiencies?.Armor, 50, ShortTextMaxLength),
             TextList($"{path}.proficiencies.weapons", proficiencies?.Weapons, 50, ShortTextMaxLength),
             TextList($"{path}.proficiencies.tools", proficiencies?.Tools, 50, ShortTextMaxLength),
-            OptionalInt($"{path}.proficiencies.skills", proficiencies?.Skills, 0, 4) ?? 0);
+            OptionalInt($"{path}.proficiencies.skills", proficiencies?.Skills, 0, 4) ?? 0)
+        {
+            AnyOf = anyOf,
+            ProficienciesByLevel = byLevel,
+        };
+    }
+
+    /// <summary>A map of minimum scores (<c>{"str": 13, "cha": 13}</c>) with valid abilities and scores 1-30.</summary>
+    private Dictionary<string, int> AbilityScores(string path, JsonElement value)
+    {
+        var result = new Dictionary<string, int>(StringComparer.Ordinal);
+        if (value.ValueKind != JsonValueKind.Object)
+        {
+            AddError(path, "Debe ser un objeto de puntuaciones mínimas ({\"str\": 13}).");
+            return result;
+        }
+
+        foreach (var property in value.EnumerateObject())
+        {
+            var ability = property.Name.Trim().ToLowerInvariant();
+            if (!Abilities.IsValid(ability))
+            {
+                AddError($"{path}.{property.Name}", "Característica desconocida (str, dex, con, int, wis o cha).");
+            }
+            else if (property.Value.ValueKind != JsonValueKind.Number || !property.Value.TryGetInt32(out var score) || score is < 1 or > 30)
+            {
+                AddError($"{path}.{property.Name}", "Debe ser un entero entre 1 y 30.");
+            }
+            else
+            {
+                result[ability] = score;
+            }
+        }
+
+        if (result.Count == 0 && value.ValueKind == JsonValueKind.Object && !value.EnumerateObject().Any())
+        {
+            AddError(path, "No puede estar vacío.");
+        }
+
+        return result;
     }
 
     private Dictionary<string, JsonElement> ClassSpecific(string path, Dictionary<string, JsonElement>? values)

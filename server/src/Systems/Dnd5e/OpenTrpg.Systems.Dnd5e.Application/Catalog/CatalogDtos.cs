@@ -6,6 +6,8 @@ using OpenTrpg.Systems.Dnd5e.Application;
 using OpenTrpg.Systems.Dnd5e.Application.Items;
 using OpenTrpg.Systems.Dnd5e.Domain.Catalog;
 
+using OpenTrpg.Systems.Dnd5e.Domain.Characters;
+
 namespace OpenTrpg.Systems.Dnd5e.Application.Catalog;
 
 public sealed record AttributionDto(string Ruleset, string License, string Text);
@@ -115,7 +117,21 @@ public sealed record ClassMulticlassingDto(
     IReadOnlyList<string> Tools,
     int Skills)
 {
-    public static ClassMulticlassingDto From(ClassMulticlassing m) => new(m.Prerequisites, m.Armor, m.Weapons, m.Tools, m.Skills);
+    /// <summary>Alternatives: one of the maps must be met entirely, besides <see cref="Prerequisites"/>.</summary>
+    public IReadOnlyList<IReadOnlyDictionary<string, int>> AnyOf { get; init; } = [];
+
+    /// <summary>Proficiencies gained at a level of the class when it was taken as a new class.</summary>
+    public IReadOnlyDictionary<int, MulticlassLevelProficiencies> ProficienciesByLevel { get; init; } = new Dictionary<int, MulticlassLevelProficiencies>();
+
+    /// <summary>The prerequisites in Spanish ("Fuerza 13 o Destreza 13 y Carisma 13"), or null without them.</summary>
+    public string? PrerequisitesText { get; init; }
+
+    public static ClassMulticlassingDto From(ClassMulticlassing m, string classIndex = "") => new(m.Prerequisites, m.Armor, m.Weapons, m.Tools, m.Skills)
+    {
+        AnyOf = m.AnyOf,
+        ProficienciesByLevel = m.ProficienciesByLevel,
+        PrerequisitesText = MulticlassRules.Missing(classIndex, _ => 0, m),
+    };
 }
 
 /// <param name="MaxByLevel">Maximum by class level when it comes from a table, else null (see <paramref name="Max"/>).</param>

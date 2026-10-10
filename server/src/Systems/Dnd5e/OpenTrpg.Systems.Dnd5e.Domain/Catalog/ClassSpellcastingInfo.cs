@@ -76,6 +76,19 @@ public sealed record ClassMulticlassing(
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    /// <summary>
+    /// Alternatives on top of <see cref="Prerequisites"/>: one of the maps must be met entirely
+    /// (<c>[{"str": 13}, {"dex": 13}]</c> reads "Fuerza 13 o Destreza 13").
+    /// </summary>
+    public IReadOnlyList<IReadOnlyDictionary<string, int>> AnyOf { get; init; } = [];
+
+    /// <summary>
+    /// Proficiencies a character that took the class as a new class gains on reaching a level of it
+    /// (<c>{2: {armor: [heavy-armor]}}</c>); the first class of the character never gains them.
+    /// </summary>
+    public IReadOnlyDictionary<int, MulticlassLevelProficiencies> ProficienciesByLevel { get; init; } =
+        new Dictionary<int, MulticlassLevelProficiencies>();
+
     public string ToJson() => JsonSerializer.Serialize(this, JsonOptions);
 
     public static ClassMulticlassing? Parse(string? json)
@@ -96,6 +109,8 @@ public sealed record ClassMulticlassing(
                     Armor = parsed.Armor ?? [],
                     Weapons = parsed.Weapons ?? [],
                     Tools = parsed.Tools ?? [],
+                    AnyOf = parsed.AnyOf ?? [],
+                    ProficienciesByLevel = parsed.ProficienciesByLevel ?? new Dictionary<int, MulticlassLevelProficiencies>(),
                 };
         }
         catch (JsonException)
@@ -104,6 +119,9 @@ public sealed record ClassMulticlassing(
         }
     }
 }
+
+/// <summary>Armor, weapon and tool proficiencies gained at one level of a class taken as a new class (normalized keys).</summary>
+public sealed record MulticlassLevelProficiencies(IReadOnlyList<string> Armor, IReadOnlyList<string> Weapons, IReadOnlyList<string> Tools);
 
 /// <summary>
 /// Spell list of a class defined by a content pack beyond the spells that name it in their <c>classes</c>/<c>lists</c>:

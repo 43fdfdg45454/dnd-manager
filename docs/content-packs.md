@@ -418,6 +418,22 @@ SRD); `pact` y `table` no suman al nivel de lanzador conjunto: aportan sus propi
 deben cumplirse) y `proficiencies` (`armor`, `weapons`, `tools` como en la clase y `skills`: número
 de habilidades de la lista de la clase que se eligen, 0–4).
 
+- `prerequisites.anyOf` (opcional): lista de **al menos dos** alternativas, cada una un mapa de
+  puntuaciones mínimas; basta con cumplir una entera, además de las claves fijas. El servidor genera
+  el texto ("Fuerza 13 o Destreza 13 y Carisma 13") en `multiclassing.prerequisitesText` del detalle
+  de la clase y en el motivo de la subida de nivel.
+- `proficienciesByLevel` (opcional): competencias (`armor`, `weapons`, `tools`) que se ganan al
+  alcanzar un nivel (2–20) de la clase **tomada como multiclase**; la clase con la que empezó el
+  personaje no las recibe.
+
+```json
+"multiclassing": {
+  "prerequisites": {"anyOf": [{"str": 13}, {"dex": 13}], "cha": 13},
+  "proficiencies": {"armor": ["light", "medium"]},
+  "proficienciesByLevel": {"2": {"armor": ["heavy"]}, "3": {"armor": ["exotic"]}}
+}
+```
+
 **Recurso desde `classSpecific`.** Un recurso de la clase con `"max": "classSpecific:ecos"` toma su
 máximo del valor numérico `ecos` de `classSpecific` en cada nivel (equivale a un `byLevel` con esos
 valores); es un error si ningún nivel lo tiene.

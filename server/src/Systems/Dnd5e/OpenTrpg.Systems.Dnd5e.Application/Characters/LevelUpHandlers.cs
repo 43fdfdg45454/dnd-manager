@@ -104,6 +104,21 @@ public sealed class ApplyLevelUpHandler(
             }
         }
 
+        // Proficiencies that grow with the levels of a class taken as a new class (never the first class).
+        if (entry.Order > 0 && plan.Class.Multiclassing is { ProficienciesByLevel.Count: > 0 } growing)
+        {
+            foreach (var (_, gained) in growing.ProficienciesByLevel.Where(p => p.Key <= entry.Level))
+            {
+                foreach (var (list, type) in new[] { (gained.Armor, ProficiencyType.Armor), (gained.Weapons, ProficiencyType.Weapon), (gained.Tools, ProficiencyType.Tool) })
+                {
+                    foreach (var key in list)
+                    {
+                        character.AddProficiency(type, key, ProficiencySource.Class);
+                    }
+                }
+            }
+        }
+
         character.RecordChoice(
             entry.Level,
             classIndex,

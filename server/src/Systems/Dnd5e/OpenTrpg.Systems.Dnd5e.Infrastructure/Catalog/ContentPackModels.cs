@@ -198,10 +198,22 @@ internal sealed class PackClassProficienciesJson
 
 internal sealed class PackMulticlassingJson
 {
-    /// <summary>Minimum score by ability ("int": 13).</summary>
-    public Dictionary<string, int?>? Prerequisites { get; set; }
+    /// <summary>Minimum score by ability ("int": 13), plus an optional "anyOf" list of such maps (one must be met).</summary>
+    public Dictionary<string, JsonElement>? Prerequisites { get; set; }
 
     public PackMulticlassProficienciesJson? Proficiencies { get; set; }
+
+    /// <summary>Proficiencies gained on reaching a level of the class taken as a new class ("2": {"armor": ["heavy"]}).</summary>
+    public Dictionary<string, PackLevelProficienciesJson?>? ProficienciesByLevel { get; set; }
+}
+
+internal sealed class PackLevelProficienciesJson
+{
+    public List<string?>? Armor { get; set; }
+
+    public List<string?>? Weapons { get; set; }
+
+    public List<string?>? Tools { get; set; }
 }
 
 internal sealed class PackMulticlassProficienciesJson

@@ -63,7 +63,7 @@ public sealed class GetClassHandler(ICatalogRepository catalog)
             Description = definition.Description,
             SubclassLevel = definition.SubclassLevel,
             Spellcasting = definition.Spellcasting is { } spellcasting ? ClassSpellcastingDto.From(spellcasting) : null,
-            Multiclassing = definition.Multiclassing is { } multiclassing ? ClassMulticlassingDto.From(multiclassing) : null,
+            Multiclassing = definition.Multiclassing is { } multiclassing ? ClassMulticlassingDto.From(multiclassing, definition.Index) : null,
             Resources = definition.Resources.Select(ClassResourceDto.From).ToList(),
         };
     }

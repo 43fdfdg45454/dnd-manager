@@ -21,7 +21,7 @@ internal static class CreationPack
         ["id"] = Id,
         ["name"] = "Crónicas del vacío (prueba)",
         ["version"] = "1.0.0",
-        ["classes"] = new JsonArray(),
+        ["classes"] = new JsonArray(Herald()),
         ["items"] = Items(),
     };
 
@@ -44,6 +44,50 @@ internal static class CreationPack
 
         return levels;
     }
+
+    /// <summary>A class with the fields every class needs; <paramref name="extra"/> adds or replaces fields.</summary>
+    public static JsonObject Class(string index, string name, int hitDie, JsonObject? extra = null)
+    {
+        var result = new JsonObject
+        {
+            ["index"] = I(index),
+            ["name"] = name,
+            ["hitDie"] = hitDie,
+            ["savingThrows"] = new JsonArray("str", "cha"),
+            ["proficiencies"] = new JsonObject { ["armor"] = new JsonArray("Light Armor"), ["weapons"] = new JsonArray("Simple Weapons") },
+            ["skillChoices"] = new JsonObject { ["choose"] = 2, ["from"] = new JsonArray("athletics", "history", "insight", "persuasion") },
+            ["description"] = new JsonArray("Clase ficticia de prueba."),
+            ["levels"] = Levels(),
+        };
+        foreach (var (key, value) in extra ?? [])
+        {
+            result[key] = value?.DeepClone();
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// H05/H06: "Heraldo de bruma", whose multiclass prerequisites are (Str 13 or Dex 13) and Cha 13, and whose
+    /// multiclass proficiencies grow with its levels (heavy armor at 2, exotic armor at 3).
+    /// </summary>
+    private static JsonObject Herald() => Class("heraldo", "Heraldo de bruma", 10, new JsonObject
+    {
+        ["multiclassing"] = new JsonObject
+        {
+            ["prerequisites"] = new JsonObject
+            {
+                ["anyOf"] = new JsonArray(new JsonObject { ["str"] = 13 }, new JsonObject { ["dex"] = 13 }),
+                ["cha"] = 13,
+            },
+            ["proficiencies"] = new JsonObject { ["armor"] = new JsonArray("light", "medium") },
+            ["proficienciesByLevel"] = new JsonObject
+            {
+                ["2"] = new JsonObject { ["armor"] = new JsonArray("heavy") },
+                ["3"] = new JsonObject { ["armor"] = new JsonArray("exotic") },
+            },
+        },
+    });
 
     private static JsonArray Items() =>
     [

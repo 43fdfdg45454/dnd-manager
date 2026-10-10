@@ -65,15 +65,20 @@ public static class MulticlassRules
         ArgumentNullException.ThrowIfNull(score);
         if (!Prerequisites.TryGetValue(classIndex, out var groups))
         {
-            if (custom is not { Prerequisites.Count: > 0 })
+            if (custom is null || (custom.Prerequisites.Count == 0 && custom.AnyOf.Count == 0))
             {
                 return null;
             }
 
-            var unmet = custom.Prerequisites
+            var unmet = new List<string>();
+            if (custom.AnyOf.Count > 0 && !custom.AnyOf.Any(group => group.All(p => score(p.Key) >= p.Value)))
+            {
+                unmet.Add(string.Join(" o ", custom.AnyOf.Select(group => string.Join(" y ", group.Select(p => $"{BreakdownLabels.Ability(p.Key)} {p.Value}")))));
+            }
+
+            unmet.AddRange(custom.Prerequisites
                 .Where(p => score(p.Key) < p.Value)
-                .Select(p => $"{BreakdownLabels.Ability(p.Key)} {p.Value}")
-                .ToList();
+                .Select(p => $"{BreakdownLabels.Ability(p.Key)} {p.Value}"));
             return unmet.Count == 0 ? null : string.Join(" y ", unmet);
         }
 
