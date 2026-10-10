@@ -67,6 +67,7 @@ public sealed class GetClassHandler(ICatalogRepository catalog)
             Source = definition.Source,
             Description = definition.Description,
             SubclassLevel = definition.SubclassLevel,
+            HasLevelOneChoices = (await catalog.ListLevelChoiceRulesAsync(definition.Index, cancellationToken)).Any(Characters.LevelUpPlanner.IsInitialClassRule),
             Spellcasting = definition.Spellcasting is { } spellcasting ? ClassSpellcastingDto.From(spellcasting) : null,
             Multiclassing = definition.Multiclassing is { } multiclassing ? ClassMulticlassingDto.From(multiclassing, definition.Index) : null,
             Resources = definition.Resources.Select(ClassResourceDto.From).ToList(),

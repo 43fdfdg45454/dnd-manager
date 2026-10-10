@@ -482,7 +482,7 @@ public class ContentPackCreationTests(ContentPackCreationApiFactory factory) : I
         Assert.Equal(new CampaignRulesDto(false, true), rules);
         Assert.Equal(HttpStatusCode.Forbidden, (await s.Player.Client.PutAsJsonAsync(rulesUrl, new { starterFeatsEnabled = true })).StatusCode);
 
-        var draft = await OriginDraftAsync(s, "human", null, "fighter", 1);
+        var draft = await OriginDraftAsync(s, "human", null, "barbarian", 1);
         var starter = new { key = "campaign.starterFeat", selected = new { feat = I("chispa-temprana") } };
         Assert.DoesNotContain((await GetAsync<OriginChoicesDto>(s.Player.Client, OriginUrl(draft.Id))).Choices, c => c.Key == "campaign.starterFeat");
         var refused = await s.Player.Client.PutAsJsonAsync(OriginUrl(draft.Id), new { choices = new object[] { starter } });
@@ -505,7 +505,7 @@ public class ContentPackCreationTests(ContentPackCreationApiFactory factory) : I
         Assert.Contains(hero.Feats, f => f.Index == I("chispa-temprana"));
 
         // Only at level 1.
-        var veteran = await OriginDraftAsync(s, "human", null, "fighter", 2);
+        var veteran = await OriginDraftAsync(s, "human", null, "barbarian", 2);
         Assert.DoesNotContain((await GetAsync<OriginChoicesDto>(s.Player.Client, OriginUrl(veteran.Id))).Choices, c => c.Key == "campaign.starterFeat");
         var late = await s.Player.Client.PutAsJsonAsync(OriginUrl(veteran.Id), new { choices = new object[] { starter } });
         Assert.Equal("starter-feat-not-allowed", (await late.ReadProblemAsync()).GetProperty("code").GetString());
@@ -559,7 +559,10 @@ public class ContentPackCreationTests(ContentPackCreationApiFactory factory) : I
 
         await GrantAsync(s, hero.Id);
         var plan = await PlanAsync(s.Player, hero.Id, scribe);
-        var rituals = plan.Choices.Single(c => c.Key == "rituales-2").Options.Select(o => o.Index).ToList();
+        // The level-1 rituals were answered at activation (origin choices): offered now, or already in the book.
+        var rituals = plan.Choices.Single(c => c.Key == "rituales-2").Options.Select(o => o.Index)
+            .Concat((await s.Player.GetCharacterAsync(hero.Id)).Spells.Where(sp => sp.ClassIndex == scribe).Select(sp => sp.SpellIndex))
+            .ToList();
         Assert.Contains("detect-magic", rituals);
         Assert.Contains("mage-armor", rituals);
         Assert.DoesNotContain("magic-missile", rituals);
@@ -795,7 +798,7 @@ public class ContentPackCreationTests(ContentPackCreationApiFactory factory) : I
             applyRacialBonuses = false,
         });
         Assert.True(patch.StatusCode == HttpStatusCode.OK, await patch.Content.ReadAsStringAsync());
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(character.Id)).StatusCode);
         return await s.Player.GetCharacterAsync(character.Id);
     }
 

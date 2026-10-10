@@ -151,7 +151,11 @@ void main() {
       final early = characters.patches.single;
       expect(early.raceIndex, 'half-elf');
       expect(early.classes!.single.classIndex, 'fighter');
-      expect(early.proficiencies, isNull);
+      // The skills too: the level-1 choices of a class (expertise) are planned from them.
+      expect(
+        early.proficiencies!.where((p) => p.type == ProficiencyType.skill).map((p) => p.key),
+        containsAll(['athletics', 'survival']),
+      );
 
       expect(find.text('Mejora de característica (raza)'), findsOneWidget);
       expect(find.text('+1 a 2 características distintas.'), findsOneWidget);

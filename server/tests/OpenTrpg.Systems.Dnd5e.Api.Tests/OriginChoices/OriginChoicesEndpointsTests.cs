@@ -54,7 +54,7 @@ public class OriginChoicesEndpointsTests(CatalogApiFactory factory)
     public async Task A_half_elf_asks_for_two_ability_bonuses_and_two_skills_before_activation()
     {
         var s = await factory.CreateCampaignScenarioAsync();
-        var hero = await DraftAsync(s, "half-elf", null, "rogue");
+        var hero = await DraftAsync(s, "half-elf", null, "barbarian");
 
         var plan = await OriginAsync(s.Player, hero.Id);
         Assert.False(plan.Complete);
@@ -105,7 +105,7 @@ public class OriginChoicesEndpointsTests(CatalogApiFactory factory)
     public async Task A_dragonborn_asks_for_its_ancestry_and_gets_the_resistance_and_breath_weapon()
     {
         var s = await factory.CreateCampaignScenarioAsync();
-        var hero = await DraftAsync(s, "dragonborn", null, "fighter");
+        var hero = await DraftAsync(s, "dragonborn", null, "barbarian");
 
         var plan = await OriginAsync(s.Player, hero.Id);
         var ancestry = Assert.Single(plan.Choices, c => c.Required > 0);
@@ -128,7 +128,7 @@ public class OriginChoicesEndpointsTests(CatalogApiFactory factory)
     public async Task A_high_elf_asks_for_a_wizard_cantrip_that_is_always_prepared()
     {
         var s = await factory.CreateCampaignScenarioAsync();
-        var hero = await DraftAsync(s, "elf", "high-elf", "fighter");
+        var hero = await DraftAsync(s, "elf", "high-elf", "barbarian");
 
         var plan = await OriginAsync(s.Player, hero.Id);
         var cantrip = Assert.Single(plan.Choices, c => c.Key == "race.subrace.cantrip");
@@ -155,7 +155,7 @@ public class OriginChoicesEndpointsTests(CatalogApiFactory factory)
     public async Task A_human_asks_for_nothing_and_can_be_activated()
     {
         var s = await factory.CreateCampaignScenarioAsync();
-        var hero = await DraftAsync(s, "human", null, "fighter");
+        var hero = await DraftAsync(s, "human", null, "barbarian");
 
         var plan = await OriginAsync(s.Player, hero.Id);
 
@@ -168,7 +168,7 @@ public class OriginChoicesEndpointsTests(CatalogApiFactory factory)
     public async Task Only_the_owner_of_a_draft_or_a_dm_change_the_choices()
     {
         var s = await factory.CreateCampaignScenarioAsync();
-        var hero = await DraftAsync(s, "dwarf", "hill-dwarf", "fighter");
+        var hero = await DraftAsync(s, "dwarf", "hill-dwarf", "barbarian");
         var tools = Assert.Single((await OriginAsync(s.Player, hero.Id)).Choices, c => c.Key == "race.tools");
         Assert.Equal(1, tools.Required);
 
@@ -239,9 +239,11 @@ public class OriginChoicesEndpointsTests(CatalogApiFactory factory)
         var hero = await DraftAsync(s, race, subrace, classIndex);
         await PatchSheetAsync(s.Player, hero.Id, new { backgroundIndex = "acolyte" });
 
+        // The level-1 choices of the class (rogue expertise, fighter style) are level choices: their options are the
+        // ones of the level-up (skills the character has, catalog options).
         var plan = await OriginAsync(s.Player, hero.Id);
         Assert.NotEmpty(plan.Choices);
-        foreach (var choice in plan.Choices)
+        foreach (var choice in plan.Choices.Where(c => c.Source != OriginChoicesPlanner.ClassSource))
         {
             Assert.NotEmpty(choice.Options);
             Assert.All(choice.Options, o => Assert.True(
@@ -267,7 +269,7 @@ public class OriginChoicesEndpointsTests(CatalogApiFactory factory)
         var cantrip = Assert.Single(plan.Choices, c => c.Key == "race.subrace.cantrip");
         Assert.Single(Assert.Single(cantrip.Options, o => o.Index == "mage-hand").Description);
 
-        var dwarf = await DraftAsync(s, "dwarf", "hill-dwarf", "fighter");
+        var dwarf = await DraftAsync(s, "dwarf", "hill-dwarf", "barbarian");
         var tools = Assert.Single((await OriginAsync(s.Player, dwarf.Id)).Choices, c => c.Key == "race.tools");
         Assert.Contains("artisan's tools", Assert.Single(tools.Options, o => o.Index == "smiths-tools").Description[0], StringComparison.OrdinalIgnoreCase);
     }

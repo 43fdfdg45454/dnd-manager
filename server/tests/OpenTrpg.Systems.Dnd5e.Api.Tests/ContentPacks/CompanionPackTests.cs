@@ -219,7 +219,7 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
     {
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Guardiana");
         await PatchAsync(s, hero.Id, level: 3, subclass: Subclass, client: s.Player.Client);
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(hero.Id)).StatusCode);
         var chosen = await PutAsync(s.Player.Client, hero.Id, "wolf", "Ceniza");
         Assert.True(chosen.StatusCode == HttpStatusCode.OK, await chosen.Content.ReadAsStringAsync());
         return hero.Id;

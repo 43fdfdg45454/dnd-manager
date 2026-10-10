@@ -267,7 +267,7 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
             applyRacialBonuses = false,
         });
         Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(character.Id)).StatusCode);
         await GrantAsync(s, character.Id);
         return character;
     }

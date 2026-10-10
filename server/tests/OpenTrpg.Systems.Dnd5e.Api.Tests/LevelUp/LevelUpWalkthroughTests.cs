@@ -232,7 +232,7 @@ public class LevelUpWalkthroughTests(CatalogApiFactory factory)
             applyRacialBonuses = false,
         });
         Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(character.Id)).StatusCode);
         await GrantAsync(s, character.Id);
         var hero = await s.Player.GetCharacterAsync(character.Id);
 
@@ -259,8 +259,9 @@ public class LevelUpWalkthroughTests(CatalogApiFactory factory)
 
         var plan = await PlanAsync(s.Player, hero.Id);
 
+        // The level-1 expertise, never answered (nothing to choose at creation either), is caught up: 2 + 2.
         var expertise = Assert.Single(plan.Choices, c => c.Key == "expertise");
-        Assert.Equal((2, 0), (expertise.Choose, expertise.Required));
+        Assert.Equal((4, 0), (expertise.Choose, expertise.Required));
         Assert.Empty(expertise.Options);
         Assert.NotNull(expertise.Warning);
         Assert.Contains("ninguna", expertise.Warning, StringComparison.OrdinalIgnoreCase);
@@ -306,7 +307,7 @@ public class LevelUpWalkthroughTests(CatalogApiFactory factory)
             proficiencies = (skills ?? Skills).Select(key => new { type = "Skill", key, expertise = false }).ToArray(),
         });
         Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(character.Id)).StatusCode);
         return await s.Player.GetCharacterAsync(character.Id);
     }
 

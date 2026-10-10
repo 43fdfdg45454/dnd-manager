@@ -51,14 +51,14 @@ public static class CharacterEndpoints
                 return TypedResults.Created($"/api/v1/change-requests/{request.Id}", request);
             })
             .WithName("SubmitCharacter")
-            .WithSummary("El dueño de un borrador pide al DM que lo active (solicitud Activate). 400 (code origin-choices-incomplete) si faltan elecciones de raza o trasfondo.")
+            .WithSummary("El dueño de un borrador pide al DM que lo active (solicitud Activate). 400 (code origin-choices-incomplete) si faltan elecciones de raza, trasfondo o de nivel 1 de la clase.")
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapPost("/activate", async (Guid id, ClaimsPrincipal user, ActivateCharacterHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, ct)))
             .WithName("ActivateCharacter")
-            .WithSummary("Un DM activa el personaje directamente; entra en juego con los PG al máximo. 400 (code origin-choices-incomplete) si faltan elecciones de raza o trasfondo.")
+            .WithSummary("Un DM activa el personaje directamente; entra en juego con los PG al máximo. 400 (code origin-choices-incomplete) si faltan elecciones de raza, trasfondo o de nivel 1 de la clase.")
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status409Conflict);
 

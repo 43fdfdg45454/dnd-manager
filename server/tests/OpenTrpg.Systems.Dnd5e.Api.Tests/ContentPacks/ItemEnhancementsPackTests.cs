@@ -300,7 +300,7 @@ public class ItemEnhancementsPackTests(ItemEnhancementsPackApiFactory factory) :
         var shield = await s.Player.AddItemAsync(hero.Id, new { templateId = await s.Player.SrdItemIdAsync("Shield"), quantity = 1 });
         Assert.Equal(HttpStatusCode.OK, (await s.Player.PatchItemAsync(hero.Id, sword.Id, new { equipped = true })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await s.Player.PatchItemAsync(hero.Id, shield.Id, new { equipped = true })).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(hero.Id)).StatusCode);
         return (await s.Player.GetCharacterAsync(hero.Id), sword.Id, shield.Id);
     }
 

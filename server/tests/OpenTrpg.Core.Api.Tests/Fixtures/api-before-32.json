@@ -1301,6 +1301,7 @@
       "source": "srd",
       "description": [],
       "subclassLevel": 0,
+      "hasLevelOneChoices": false,
       "spellcasting": null,
       "auxiliary": false,
       "prerequisitesText": null,
@@ -4523,7 +4524,12 @@
           "selected": [],
           "feat": null,
           "ability": null,
-          "removedSavingThrows": []
+          "removedSavingThrows": [],
+          "classIndex": null,
+          "level": null,
+          "setId": null,
+          "requires": null,
+          "warning": null
         },
         {
           "key": "background.languages",
@@ -4866,7 +4872,12 @@
           "selected": [],
           "feat": null,
           "ability": null,
-          "removedSavingThrows": []
+          "removedSavingThrows": [],
+          "classIndex": null,
+          "level": null,
+          "setId": null,
+          "requires": null,
+          "warning": null
         }
       ]
     }
@@ -4959,7 +4970,12 @@
           ],
           "feat": null,
           "ability": null,
-          "removedSavingThrows": []
+          "removedSavingThrows": [],
+          "classIndex": null,
+          "level": null,
+          "setId": null,
+          "requires": null,
+          "warning": null
         },
         {
           "key": "background.languages",
@@ -5302,7 +5318,12 @@
           "selected": [],
           "feat": null,
           "ability": null,
-          "removedSavingThrows": []
+          "removedSavingThrows": [],
+          "classIndex": null,
+          "level": null,
+          "setId": null,
+          "requires": null,
+          "warning": null
         }
       ]
     }

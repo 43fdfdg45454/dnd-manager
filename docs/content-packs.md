@@ -927,6 +927,11 @@ Decisiones de una raza, subraza o trasfondo (todas opcionales). El SRD las impor
 obligatoria sin responder (400, `code: origin-choices-incomplete`). Los idiomas son opcionales (el
 asistente ya los pide en su propio paso).
 
+La misma ruta devuelve también las **elecciones de nivel 1 de la clase inicial** (ver
+[`levelChoices`](#levelchoices)), detrás de las de origen, con `source: "class"`, `key: "class.<key>"`,
+`classIndex`, `level: 1` y, según el tipo, `setId`, `requires` (con `choiceKey` también prefijado) y
+`warning`. Se responden en el mismo `PUT` y cuentan para la activación.
+
 | Campo | Forma | Efecto |
 | --- | --- | --- |
 | `abilityBonuses` | `{ "choose": 1-6, "amount": 1-2, "from": ["str", "dex"] }` | +`amount` a `choose` características distintas de `from` (sin `from`, las seis). Desglose con origen "race"/"subrace" ("Raza (elección)"). |
@@ -1646,6 +1651,18 @@ En `classes[].levelChoices` (elecciones de la clase, completa o ampliada con `ex
 | `note` | `string?` | ≤ 2000. Aclaración para la interfaz. |
 | `filter` | `Filter?` | Conjuros: `spellList` (clase o `any`), `spellLevels` (`[1, 2]`), `maxSpellLevelBySlots`, `source` (`list`, `spellbook` o `known`), `cantripsOnly`, `schools`, `schoolsExceptAt`, `ritualOnly` (solo rituales y los `treatAsRitual` de la clase). |
 | `after` | `string?` | Key de otra elección de la misma clase y nivel (del paquete, de la clase base o de la misma subclase, o del catálogo) que se resuelve **antes** que esta. Ver "Orden de las elecciones". |
+
+**Elecciones de nivel 1 de la clase inicial.** Las `levelChoices` de `level: 1` de la clase (no las
+de una subclase ni las de tipo `Subclass`) no pasan por la subida de nivel: el personaje las responde
+al crearse en `GET`/`PUT /api/v1/systems/dnd5e/characters/{id}/origin-choices` con la key
+`class.<key>` y el mismo formato de respuesta que en `.../level-up` (`{ "class.estilo": { "options":
+["fighting-style-defense"] } }`). Se guardan como elecciones de nivel 1 de la clase, cuentan para la
+hoja (modificadores, competencias, pericia, conjuros) y para las elecciones inválidas, y no se puede
+activar un personaje con alguna sin responder (400, `code: origin-choices-incomplete`). Una vez activo,
+solo el DM puede cambiarlas. `GET .../catalog/classes/{index}` indica con `hasLevelOneChoices` si la
+clase tiene alguna, y el asistente de creación añade entonces el paso de elecciones de clase. Un
+personaje existente que nunca las respondió las recibe en su siguiente subida de nivel: si en el nuevo
+nivel hay una elección con la misma key, se suman sus `choose`; si no, se añade al plan.
 
 `AsiOrFeat` ofrece siempre la mejora de característica y las dotes del conjunto `feats` (más las
 opciones de `alsoFrom`; cada opción del plan lleva su `setId` para que la app las agrupe). Las

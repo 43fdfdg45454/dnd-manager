@@ -210,7 +210,7 @@ public class ExpandedSpellListPackTests(ExpandedSpellListPackApiFactory factory)
             applyRacialBonuses = false,
         });
         Assert.True(patch.StatusCode == HttpStatusCode.OK, await patch.Content.ReadAsStringAsync());
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(hero.Id)).StatusCode);
         var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { hero.Id } });
         Assert.Equal(HttpStatusCode.OK, granted.StatusCode);
         return await s.Player.GetCharacterAsync(hero.Id);

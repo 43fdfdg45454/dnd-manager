@@ -57,7 +57,8 @@ int? parseRollScore(String text) {
 }
 
 /// Steps of the creation wizard in order. [origin] only exists when the race,
-/// subrace or background ask for decisions, [starterFeat] when the campaign
+/// subrace or background ask for decisions or the class has level-1 choices
+/// (fighting style, expertise...), [starterFeat] when the campaign
 /// offers a starter feat and [spells] only for classes that cast at level 1.
 enum WizardStep {
   name,
@@ -489,23 +490,66 @@ class WizardState {
 
   /// True when the race, subrace or background ask for something besides
   /// languages (which have their own step).
-  bool get needsOriginStep =>
+  bool get originAsks =>
       (race?.choices.asksBesidesLanguages ?? false) ||
       (subrace?.choices.asksBesidesLanguages ?? false) ||
       (background?.choices.asksBesidesLanguages ?? false);
 
-  /// Choices of the plan the wizard asks for (languages have their own step).
+  /// True when the class asks for choices at level 1 (fighting style,
+  /// expertise...), answered in the origin step.
+  bool get classAsks => classDetail?.hasLevelOneChoices ?? false;
+
+  /// The origin step is shown for the race, subrace and background decisions
+  /// and for the level-1 choices of the class.
+  bool get needsOriginStep => originAsks || classAsks;
+
+  /// Name of the origin step in the wizard's header and review.
+  String get originStepLabel => switch ((originAsks, classAsks)) {
+    (true, true) => 'Elecciones de origen y clase',
+    (false, true) => 'Elecciones de clase',
+    _ => 'Elecciones de raza y trasfondo',
+  };
+
+  /// Title of the origin step, after what it asks.
+  String get originStepTitle => switch ((originAsks, classAsks)) {
+    (true, true) => 'Tu origen y tu clase',
+    (false, true) => 'Tu clase',
+    _ => 'Tu origen',
+  };
+
+  /// Subtitle of the origin step.
+  String get originStepSubtitle => switch ((originAsks, classAsks)) {
+    (true, true) => 'Tu raza, tu trasfondo y tu clase te piden decidir lo siguiente.',
+    (false, true) => 'Tu clase te pide decidir lo siguiente desde el nivel 1.',
+    _ => 'Tu raza y tu trasfondo te piden decidir lo siguiente.',
+  };
+
+  /// Choices of the plan the wizard asks for (the languages of the race and
+  /// background have their own step; a language of the class is asked here).
   List<OriginChoice> get originChoices => [
     for (final c in originPlan?.choices ?? const <OriginChoice>[])
-      if (c.kind != OriginChoiceKind.language) c,
+      if (c.kind != OriginChoiceKind.language || c.isClassChoice) c,
   ];
 
-  /// The choices of the race, subrace and background ([originChoices] but the
-  /// starter feat, which has its own step).
+  /// The choices of the race, subrace, background and class ([originChoices]
+  /// but the starter feat, which has its own step).
   List<OriginChoice> get raceAndBackgroundChoices => [
     for (final c in originChoices)
       if (c.key != starterFeatChoiceKey) c,
   ];
+
+  /// The choices the origin step shows: a choice of an option only once that
+  /// option is picked in its parent choice.
+  List<OriginChoice> get visibleOriginChoices => [
+    for (final c in raceAndBackgroundChoices)
+      if (originRequirementMet(c.requires)) c,
+  ];
+
+  /// True when [requires] is null or its option is picked in its choice.
+  bool originRequirementMet(({String choiceKey, String index})? requires) =>
+      requires == null ||
+      (originAnswers[requires.choiceKey]?.picks.contains(requires.index) ?? false) ||
+      originAnswers[requires.choiceKey]?.feat == requires.index;
 
   /// The optional "Dote inicial" of the plan, or null when the server does
   /// not offer it.
@@ -585,7 +629,7 @@ class WizardState {
     if (originLoading) return 'Cargando las elecciones…';
     if (originError != null) return originError;
     if (originPlan == null) return 'Cargando las elecciones…';
-    for (final c in raceAndBackgroundChoices) {
+    for (final c in visibleOriginChoices) {
       final error = originChoiceError(c);
       if (error != null) return error;
     }
@@ -1102,10 +1146,49 @@ class WizardState {
 
   // -- Request -------------------------------------------------------------------
 
+  /// Proficiencies of the sheet: saving throws of the class, class and
+  /// background skills and the fixed languages. The draft gets them before the
+  /// origin step too, so the class choices that depend on them (expertise)
+  /// offer the skills chosen.
+  List<CharacterProficiency> get sheetProficiencies {
+    final bgSkills = backgroundSkills;
+    return [
+      // Saving throws of the class, as the full sheet editor marks them.
+      for (final a
+          in (classDetail?.savingThrows ?? const <String>[])
+              .map(abilityKeyOf)
+              .where(abilityKeys.contains))
+        CharacterProficiency(
+          type: ProficiencyType.savingThrow,
+          key: a,
+          source: ProficiencySource.classSource,
+        ),
+      for (final s in skills)
+        CharacterProficiency(
+          type: ProficiencyType.skill,
+          key: s,
+          source: ProficiencySource.classSource,
+        ),
+      for (final s in bgSkills)
+        if (!skills.contains(s))
+          CharacterProficiency(
+            type: ProficiencyType.skill,
+            key: s,
+            source: ProficiencySource.background,
+          ),
+      // Chosen languages travel as origin choices (see [toOriginAnswers]).
+      for (final l in fixedLanguages)
+        CharacterProficiency(
+          type: ProficiencyType.language,
+          key: l,
+          source: ProficiencySource.race,
+        ),
+    ];
+  }
+
   /// The single sheet patch that fills in the new character.
   SheetPatch toPatch() {
     final classKey = classIndex!;
-    final bgSkills = backgroundSkills;
     return SheetPatch(
       name: name.trim(),
       raceIndex: raceIndex,
@@ -1115,38 +1198,7 @@ class WizardState {
       applyRacialBonuses: applyRacialBonuses,
       baseAbilities: {for (final k in abilityKeys) k: abilities[k] ?? 10},
       classes: [SheetPatchClass(classIndex: classKey, subclassIndex: subclassIndex, level: 1)],
-      proficiencies: [
-        // Saving throws of the class, as the full sheet editor marks them.
-        for (final a
-            in (classDetail?.savingThrows ?? const <String>[])
-                .map(abilityKeyOf)
-                .where(abilityKeys.contains))
-          CharacterProficiency(
-            type: ProficiencyType.savingThrow,
-            key: a,
-            source: ProficiencySource.classSource,
-          ),
-        for (final s in skills)
-          CharacterProficiency(
-            type: ProficiencyType.skill,
-            key: s,
-            source: ProficiencySource.classSource,
-          ),
-        for (final s in bgSkills)
-          if (!skills.contains(s))
-            CharacterProficiency(
-              type: ProficiencyType.skill,
-              key: s,
-              source: ProficiencySource.background,
-            ),
-        // Chosen languages travel as origin choices (see [toOriginAnswers]).
-        for (final l in fixedLanguages)
-          CharacterProficiency(
-            type: ProficiencyType.language,
-            key: l,
-            source: ProficiencySource.race,
-          ),
-      ],
+      proficiencies: sheetProficiencies,
       spells: [
         for (final s in cantrips)
           CharacterSpell(spellIndex: s.spellIndex, classIndex: classKey, isPrepared: true),
@@ -1184,7 +1236,10 @@ class WizardState {
   List<LevelUpChoiceAnswer> toOriginAnswers() {
     final answers = <LevelUpChoiceAnswer>[];
     for (final choice in originChoices) {
-      final answer = originAnswerOf(choice);
+      // A choice of an option that is not picked (any more) is cleared.
+      final answer = originRequirementMet(choice.requires)
+          ? originAnswerOf(choice)
+          : const OriginAnswer();
       if (choice.kind == OriginChoiceKind.feat) {
         final feat = answer.feat;
         if (feat == null) {
@@ -1769,6 +1824,8 @@ class CharacterWizardController extends Notifier<WizardState> {
                   level: 1,
                 ),
               ],
+        // The class choices of level 1 (expertise) are planned from the skills.
+        proficiencies: s.classDetail == null ? null : s.sheetProficiencies,
         clear: {
           if (s.subraceIndex == null) 'subraceIndex',
           if (s.backgroundIndex == null) 'backgroundIndex',
@@ -1824,6 +1881,7 @@ class CharacterWizardController extends Notifier<WizardState> {
   /// replaced and further ones are ignored.
   void toggleOriginOption(OriginChoice choice, String index) {
     final option = choice.option(index);
+    if (option != null && !state.originRequirementMet(option.requires)) return;
     _setAnswer(choice, (a) {
       final picks = [...a.picks];
       if (picks.remove(index)) return a.copyWith(picks: picks);

@@ -167,7 +167,7 @@ public class ForcedDecisionsEndpointsTests(CatalogApiFactory factory)
             applyRacialBonuses = false,
         });
         Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(character.Id)).StatusCode);
         if (grant)
         {
             Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { character.Id } })).StatusCode);

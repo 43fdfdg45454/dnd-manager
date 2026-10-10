@@ -130,7 +130,7 @@ public class SubclassSpellcastingPackTests(SubclassSpellcastingPackApiFactory fa
         await s.EnablePacksAsync();
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Aprendiz");
         await PatchAsync(s, hero.Id, [("fighter", null, 2)], player: true);
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(hero.Id)).StatusCode);
         await GrantAsync(s, hero.Id);
 
         // Level 3: the subclass is chosen now; its choices come without "choose" and take the table values. Level 3
@@ -147,7 +147,7 @@ public class SubclassSpellcastingPackTests(SubclassSpellcastingPackApiFactory fa
         // Level 4 with the subclass: one more spell, only abjuration or evocation.
         var veteran = await s.Player.CreateCharacterAsync(s.CampaignId, "Veterano");
         await PatchAsync(s, veteran.Id, [("fighter", Subclass, 3)], player: true);
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(veteran.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(veteran.Id)).StatusCode);
         await GrantAsync(s, veteran.Id);
         var plan4 = await PlanAsync(s.Player, veteran.Id);
         var spells4 = Assert.Single(plan4.Choices, c => c.Kind == "SpellsKnown");

@@ -97,6 +97,9 @@ public sealed record PlannedChoice(LevelChoiceRule Rule, int Required, bool Free
     };
 }
 
+/// <summary>The level-1 choices of the first class of a character (<see cref="LevelUpPlanner.BuildInitialClassAsync"/>).</summary>
+public sealed record InitialClassPlan(ClassDefinition Class, CharacterSheet Sheet, IReadOnlyList<PlannedChoice> Choices);
+
 /// <summary>The level-up of a character in one class, as computed by <see cref="LevelUpPlanner"/>.</summary>
 public sealed class LevelUpPlan
 {
@@ -216,7 +219,8 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         var subclasses = await catalog.ListSubclassesAsync(definition.Index, cancellationToken);
         var answered = character.Choices.Where(c => c.ClassIndex == definition.Index).Select(c => c.Key).ToHashSet(StringComparer.Ordinal);
         var allRules = WithKnownSpellCounts(await catalog.ListLevelChoiceRulesAsync(definition.Index, cancellationToken), definition, subclasses);
-        var rules = SelectRules(allRules, entry?.SubclassIndex, newLevel, answered);
+        var firstClass = entry is not null && character.OrderedClasses.FirstOrDefault()?.ClassIndex == entry.ClassIndex;
+        var rules = SelectRules(allRules, entry?.SubclassIndex, newLevel, answered, firstClass);
 
         // Choices that the options of this class the character has add at this level (options[].levelChoices).
         var classPicks = character.ActivePicks().Where(p => p.ClassIndex == definition.Index && p.SetId is not null).Select(p => p.Item.Index).Distinct(StringComparer.Ordinal).ToList();
@@ -238,9 +242,59 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             }
         }
 
-        // Skills (picked, or granted by the subclass or an option) are resolved before the expertise of the same level.
         rules = LevelChoiceOrder.Sort(rules);
+        var (choices, spells) = await PlanChoicesAsync(
+            new ChoicesInput(character, sheet, definition, entry?.SubclassIndex, newLevel, character.TotalLevel + 1, rules, classLevel, subclasses, allClasses, pendingPicks, pendingChoices),
+            cancellationToken);
 
+        var replacements = await invalidChoices.PlanAsync(character, sheet, cancellationToken);
+        choices.AddRange(replacements.Select(r => r.Choice));
+
+        return new LevelUpPlan
+        {
+            Character = character,
+            Sheet = sheet,
+            Class = definition,
+            Entry = entry,
+            NewClassLevel = newLevel,
+            Classes = classes,
+            AutomaticFeatures = await AutomaticFeaturesAsync(definition.Index, entry?.SubclassIndex, newLevel, classLevel, rules, subclasses, cancellationToken),
+            Choices = choices,
+            Spellcasting = SubclassSpellcasting(character, definition, SubclassCasting(definition, subclasses, entry?.SubclassIndex), classLevel, newLevel, spells)
+                ?? Spellcasting(character, definition, classLevel, newLevel, spells),
+            Replacements = replacements,
+        };
+    }
+
+    /// <summary>What <see cref="PlanChoicesAsync"/> evaluates: the rules of one class level against the character.</summary>
+    /// <param name="CharacterLevel">Total level the prerequisites are checked at (the level reached).</param>
+    /// <param name="Own">
+    /// Picks already recorded for the rules being planned, by rule key (re-answering the level-1 choices of the first
+    /// class): they stay offered and eligible instead of counting as already had.
+    /// </param>
+    private sealed record ChoicesInput(
+        Dnd5eCharacter Character,
+        CharacterSheet Sheet,
+        ClassDefinition Definition,
+        string? CurrentSubclass,
+        int NewLevel,
+        int CharacterLevel,
+        List<LevelChoiceRule> Rules,
+        ClassLevel? ClassLevel,
+        IReadOnlyList<SubclassDefinition> Subclasses,
+        IReadOnlyList<ClassDefinition> AllClasses,
+        IReadOnlySet<string> PendingPicks,
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? PendingChoices,
+        IReadOnlyDictionary<string, IReadOnlySet<string>>? Own = null);
+
+    /// <summary>
+    /// Plans the rules of a class level (sorted: skills before the expertise of the same level) with their options and
+    /// eligibility, plus the choices of the options offered (<c>options[].choices</c>, flagged with what they require).
+    /// Shared by the level-up and by the level-1 choices of the first class (<see cref="BuildInitialClassAsync"/>).
+    /// </summary>
+    private async Task<(List<PlannedChoice> Choices, IReadOnlyList<SpellDefinition> Spells)> PlanChoicesAsync(ChoicesInput input, CancellationToken cancellationToken)
+    {
+        var (character, sheet, definition, currentSubclass, newLevel, _, rules, classLevel, subclasses, allClasses, pendingPicks, pendingChoices, _) = input;
         var setIds = rules.Select(r => r.Kind == LevelChoiceKind.AsiOrFeat ? OptionSets.Feats : r.SetId).OfType<string>()
             .Concat(rules.SelectMany(r => r.AlsoFrom))
             .ToHashSet(StringComparer.Ordinal);
@@ -304,7 +358,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         // Subclass levels whose skill grants an expertise of this level may double (the current subclass, or every
         // subclass when it is chosen now).
         var expertiseSubclasses = !rules.Any(r => r.Kind == LevelChoiceKind.Expertise) ? []
-            : entry?.SubclassIndex is { } currentSubclass ? [currentSubclass]
+            : currentSubclass is { } current ? [current]
             : rules.Any(r => r.Kind == LevelChoiceKind.Subclass) ? subclasses.Select(s => s.Index).ToList()
             : new List<string>();
         var subclassLevels = expertiseSubclasses.Count > 0
@@ -315,11 +369,13 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         {
             PendingChoices = pendingChoices,
             SubclassLevels = subclassLevels,
-            CurrentSubclass = entry?.SubclassIndex,
+            CurrentSubclass = currentSubclass,
             Names = names,
             Size = size,
             Weapons = weapons,
             IsPactClass = c => allClasses.FirstOrDefault(d => d.Index == c)?.IsPactCaster ?? c == "warlock",
+            CharacterLevel = input.CharacterLevel,
+            Own = input.Own ?? new Dictionary<string, IReadOnlySet<string>>(StringComparer.Ordinal),
         };
         var choices = rules.Select(context.Plan).ToList();
 
@@ -336,23 +392,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             }
         }
 
-        var replacements = await invalidChoices.PlanAsync(character, sheet, cancellationToken);
-        choices.AddRange(replacements.Select(r => r.Choice));
-
-        return new LevelUpPlan
-        {
-            Character = character,
-            Sheet = sheet,
-            Class = definition,
-            Entry = entry,
-            NewClassLevel = newLevel,
-            Classes = classes,
-            AutomaticFeatures = await AutomaticFeaturesAsync(definition.Index, entry?.SubclassIndex, newLevel, classLevel, rules, subclasses, cancellationToken),
-            Choices = choices,
-            Spellcasting = SubclassSpellcasting(character, definition, SubclassCasting(definition, subclasses, entry?.SubclassIndex), classLevel, newLevel, spells)
-                ?? Spellcasting(character, definition, classLevel, newLevel, spells),
-            Replacements = replacements,
-        };
+        return (choices, spells);
     }
 
     /// <summary>Names of the classes and of the subclasses and options outside the plan that the prerequisites name.</summary>
@@ -595,9 +635,11 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
     /// from the subclass level on; with a subclass already set (a draconic sorcerer created at level 1), those
     /// of that subclass without a recorded choice of their key (<paramref name="answered"/>). Rules that allow
     /// replacements from an earlier level and have no rule at this level appear with <c>choose</c> 0 (only
-    /// replacements).
+    /// replacements). The level-1 choices of the first class (<see cref="IsInitialClassRule"/>) that were never answered
+    /// (a character created before they were asked with the origin choices, or by a full sheet edit) are caught up too
+    /// when <paramref name="firstClass"/>, with their <c>choose</c> added to the rule of the same key at this level.
     /// </summary>
-    private static List<LevelChoiceRule> SelectRules(IReadOnlyList<LevelChoiceRule> all, string? subclass, int newLevel, IReadOnlySet<string> answered)
+    private static List<LevelChoiceRule> SelectRules(IReadOnlyList<LevelChoiceRule> all, string? subclass, int newLevel, IReadOnlySet<string> answered, bool firstClass)
     {
         var subclassRule = all.Where(r => r.Kind == LevelChoiceKind.Subclass && r.SubclassIndex is null).OrderBy(r => r.Level).FirstOrDefault();
         var choosingSubclass = subclass is null && subclassRule is not null && subclassRule.Level <= newLevel;
@@ -627,6 +669,23 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             .Select(group => AtLevel(group[0], newLevel, group.Sum(r => r.Choose)));
         result.AddRange(caughtUp);
 
+        if (firstClass && newLevel > 1)
+        {
+            foreach (var group in all.Where(r => IsInitialClassRule(r) && !answered.Contains(r.Key)).GroupBy(r => r.Key, StringComparer.Ordinal))
+            {
+                var missedChoose = group.Sum(r => r.Choose);
+                var current = result.FindIndex(r => r.SubclassIndex is null && r.Key == group.Key);
+                if (current >= 0)
+                {
+                    result[current] = AtLevel(result[current], newLevel, result[current].Choose + missedChoose);
+                }
+                else
+                {
+                    result.Add(AtLevel(group.First(), newLevel, missedChoose));
+                }
+            }
+        }
+
         var replaceable = all
             .Where(r => r.Replaces && r.Level < newLevel && (r.SubclassIndex is null || r.SubclassIndex == subclass))
             .GroupBy(r => r.Key, StringComparer.Ordinal)
@@ -653,8 +712,80 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         Cumulative = rule.Cumulative,
         Note = rule.Note,
         After = rule.After,
+        AlsoFromJson = rule.AlsoFromJson,
         Source = rule.Source,
     };
+
+    /// <summary>
+    /// The recorded answer of a level-1 choice of the first class: the one of class level 1 or, for a character that got
+    /// it caught up by a later level-up, the earliest one of that key.
+    /// </summary>
+    public static CharacterChoice? InitialClassChoice(Dnd5eCharacter character, string classIndex, string key) =>
+        character.LevelChoice(classIndex, 1, key)
+        ?? character.Choices.Where(c => c.ClassIndex == classIndex && c.Key == key).OrderBy(c => c.Level).ThenBy(c => c.CreatedAt).FirstOrDefault();
+
+    /// <summary>The options, spells, skills or feat a selection picked.</summary>
+    public static IEnumerable<string> PickedIndexes(ChoiceSelection selection) =>
+        selection.Feat is { } feat ? [.. selection.Selected.Select(i => i.Index), feat.Index] : selection.Selected.Select(i => i.Index);
+
+    /// <summary>
+    /// A choice of level 1 of the class itself (not of a subclass, not the subclass): asked for the first class with the
+    /// origin choices (<see cref="BuildInitialClassAsync"/>) and, for a class taken by multiclassing, by its level-up.
+    /// </summary>
+    public static bool IsInitialClassRule(LevelChoiceRule rule) =>
+        rule.Level == 1 && rule.SubclassIndex is null && rule.Kind != LevelChoiceKind.Subclass;
+
+    /// <summary>
+    /// The level-1 choices of the first class of the character (fighting style, expertise, favored enemy...), planned as
+    /// the level-up plans them (options, prerequisites, choices of the options) at class level 1, or null when the class
+    /// has none. The picks already recorded for them stay offered (<paramref name="pendingPicks"/> and
+    /// <paramref name="pendingChoices"/> are the answers being saved, as in <see cref="BuildAsync"/>).
+    /// </summary>
+    public async Task<InitialClassPlan?> BuildInitialClassAsync(
+        Dnd5eCharacter character,
+        IReadOnlySet<string> pendingPicks,
+        CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? pendingChoices = null)
+    {
+        ArgumentNullException.ThrowIfNull(character);
+        ArgumentNullException.ThrowIfNull(pendingPicks);
+        if (character.OrderedClasses.FirstOrDefault() is not { } entry)
+        {
+            return null;
+        }
+
+        var rules = (await catalog.ListLevelChoiceRulesAsync(entry.ClassIndex, cancellationToken)).Where(IsInitialClassRule).ToList();
+        if (rules.Count == 0)
+        {
+            return null;
+        }
+
+        var allClasses = await catalog.ListClassesAsync(cancellationToken);
+        var definition = allClasses.FirstOrDefault(c => c.Index == entry.ClassIndex) ?? await catalog.GetClassAsync(entry.ClassIndex, cancellationToken);
+        if (definition is null)
+        {
+            return null;
+        }
+
+        var sheet = await sheets.CalculateAsync(character, cancellationToken);
+        var classLevel = (await catalog.ListClassLevelsAsync(definition.Index, cancellationToken)).FirstOrDefault(l => l.Level == 1);
+        var subclasses = await catalog.ListSubclassesAsync(definition.Index, cancellationToken);
+        // What is recorded for these rules (and for the choices of their options) stays offered when answering again.
+        var own = character.Choices
+            .Where(c => c.ClassIndex == definition.Index && c.Key != CharacterChoice.HitPointsKey)
+            .Select(c => c.Key)
+            .Distinct(StringComparer.Ordinal)
+            .Select(k => (Key: k, Choice: InitialClassChoice(character, definition.Index, k)))
+            .Where(k => k.Choice is not null)
+            .ToDictionary(
+                k => k.Key,
+                k => (IReadOnlySet<string>)PickedIndexes(k.Choice!.Selection).ToHashSet(StringComparer.Ordinal),
+                StringComparer.Ordinal);
+        var (choices, _) = await PlanChoicesAsync(
+            new ChoicesInput(character, sheet, definition, entry.SubclassIndex, 1, character.TotalLevel, LevelChoiceOrder.Sort(rules), classLevel, subclasses, allClasses, pendingPicks, pendingChoices, own),
+            cancellationToken);
+        return new InitialClassPlan(definition, sheet, choices);
+    }
 
     /// <summary>
     /// Features of the class level (and of the subclass level: the current subclass, or every subclass when it is
@@ -805,6 +936,14 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
 
         public string? CurrentSubclass { get; init; }
 
+        /// <summary>Total level the prerequisites are checked at (the level reached by the level-up).</summary>
+        public int? CharacterLevel { get; init; }
+
+        /// <summary>Picks already recorded for the rules being planned, by rule key: offered and eligible again.</summary>
+        public IReadOnlyDictionary<string, IReadOnlySet<string>> Own { get; init; } = new Dictionary<string, IReadOnlySet<string>>(StringComparer.Ordinal);
+
+        private bool IsOwn(LevelChoiceRule rule, string index) => Own.TryGetValue(rule.Key, out var own) && own.Contains(index);
+
         public PlannedChoice Plan(LevelChoiceRule rule)
         {
             var planned = PlanRule(rule);
@@ -823,13 +962,13 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                     list = subclasses.Select(SubclassOption).ToList();
                     break;
                 case LevelChoiceKind.AsiOrFeat:
-                    list = SetOptions(OptionSets.Feats, null, rule.AlsoFrom, rule.SubclassIndex);
+                    list = SetOptions(rule, OptionSets.Feats, null, rule.AlsoFrom, rule.SubclassIndex);
                     break;
                 case LevelChoiceKind.OptionSet:
-                    list = rule.SetId is null ? [] : SetOptions(rule.SetId, rule.From, rule.AlsoFrom, rule.SubclassIndex);
+                    list = rule.SetId is null ? [] : SetOptions(rule, rule.SetId, rule.From, rule.AlsoFrom, rule.SubclassIndex);
                     break;
                 case LevelChoiceKind.Custom when rule.SetId is not null:
-                    list = SetOptions(rule.SetId, rule.From, [], rule.SubclassIndex);
+                    list = SetOptions(rule, rule.SetId, rule.From, [], rule.SubclassIndex);
                     break;
                 case LevelChoiceKind.Custom when filter.Source is ChoiceFilter.SpellbookSource or ChoiceFilter.KnownSource:
                     list = character.Spells
@@ -850,8 +989,9 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                         .Where(a => rule.From is null || rule.From.Contains(a, StringComparer.Ordinal))
                         .Select(a =>
                         {
-                            var has = character.FindProficiency(ProficiencyType.SavingThrow, a) is not null
-                                || (sheet.SavingThrows.TryGetValue(a, out var save) && save.Proficient && !save.Overridden);
+                            var has = !IsOwn(rule, a)
+                                && (character.FindProficiency(ProficiencyType.SavingThrow, a) is not null
+                                    || (sheet.SavingThrows.TryGetValue(a, out var save) && save.Proficient && !save.Overridden));
                             return new PlannedOption(a, BreakdownLabels.Ability(a), [], null, !has, has ? "Ya tienes esta competencia." : null, null, null, []);
                         })
                         .ToList();
@@ -863,14 +1003,14 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                     list = (rule.From is { Count: > 0 } types ? types.Select(t => t.ToLowerInvariant()) : DamageTypes.All)
                         .Select(t =>
                         {
-                            var has = sheet.Resistances.Any(r => r.DamageType == t);
+                            var has = !IsOwn(rule, t) && sheet.Resistances.Any(r => r.DamageType == t);
                             return new PlannedOption(t, DamageTypes.Spanish(t), [], null, !has, has ? "Ya tienes esta resistencia." : null, null, null, []);
                         })
                         .ToList();
                     break;
                 case LevelChoiceKind.Skill:
                     list = skills
-                        .Where(s => character.FindProficiency(ProficiencyType.Skill, s.Index) is null)
+                        .Where(s => character.FindProficiency(ProficiencyType.Skill, s.Index) is null || IsOwn(rule, s.Index))
                         .Where(s => rule.From is null || rule.From.Contains(s.Index, StringComparer.Ordinal))
                         .Select(s => Simple(s.Index, s.Name, s.Description))
                         .ToList();
@@ -899,13 +1039,13 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         /// <paramref name="subclass"/> only applies with it, so its options are checked as if it were chosen (it may be
         /// picked at this same level).
         /// </summary>
-        private List<PlannedOption> SetOptions(string setId, IReadOnlyList<string>? from, IReadOnlyList<string> alsoFrom, string? subclass = null)
+        private List<PlannedOption> SetOptions(LevelChoiceRule rule, string setId, IReadOnlyList<string>? from, IReadOnlyList<string> alsoFrom, string? subclass = null)
         {
             var facts = subclass is null || Facts.Pending.Contains(subclass) || character.Classes.Any(c => c.SubclassIndex == subclass)
                 ? Facts
                 : Facts with { Pending = Facts.Pending.Append(subclass).ToHashSet(StringComparer.Ordinal) };
             var allowed = from?.Select(NormalizeIndex).ToHashSet(StringComparer.Ordinal);
-            var taken = _active.Select(p => p.Item.Index).ToHashSet(StringComparer.Ordinal);
+            var taken = _active.Select(p => p.Item.Index).Where(i => !IsOwn(rule, i)).ToHashSet(StringComparer.Ordinal);
             return options
                 .Where(o => (allowed is null ? o.SetId == setId : allowed.Contains(o.Index)) || alsoFrom.Contains(o.SetId, StringComparer.Ordinal))
                 .Where(o => (!taken.Contains(o.Index) || o.Repeatable) && !o.CreationOnly)
@@ -935,7 +1075,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                 .Where(w => filter.Firearms is null || w.Properties.Contains(ProficiencyKeys.FirearmProperty, StringComparer.OrdinalIgnoreCase) == filter.Firearms)
                 .Select(w =>
                 {
-                    var has = keys.Contains(w.Index!) || ProficiencyKeys.WeaponGroups(w.Subcategory, w.Properties).Any(keys.Contains);
+                    var has = !IsOwn(rule, w.Index!) && (keys.Contains(w.Index!) || ProficiencyKeys.WeaponGroups(w.Subcategory, w.Properties).Any(keys.Contains));
                     return new PlannedOption(w.Index!, w.Name, [w.Subcategory ?? string.Empty], null, !has, has ? "Ya tienes competencia con esta arma." : null, null, null, []);
                 })
                 .ToList();
@@ -960,7 +1100,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             Sheet = sheet,
             ClassIndex = definition.Index,
             ClassLevel = newLevel,
-            CharacterLevel = character.TotalLevel + 1,
+            CharacterLevel = CharacterLevel ?? character.TotalLevel + 1,
             Picks = _active.Select(p => p.Item.Index).Concat(pendingPicks).ToHashSet(StringComparer.Ordinal),
             Pending = pendingPicks,
             Size = Size,
@@ -999,7 +1139,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         {
             var names = skills.ToDictionary(s => s.Index, s => s.Name, StringComparer.Ordinal);
             var result = character.Proficiencies
-                .Where(p => p.Type == ProficiencyType.Skill && !p.Expertise)
+                .Where(p => p.Type == ProficiencyType.Skill && (!p.Expertise || IsOwn(rule, SkillKey(p.Key))))
                 .Select(p => SkillKey(p.Key))
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(k => k, StringComparer.Ordinal)
@@ -1023,7 +1163,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                 }
             }
 
-            if (definition.Index == "rogue" && character.FindProficiency(ProficiencyType.Tool, ThievesTools) is { Expertise: false })
+            if (definition.Index == "rogue" && character.FindProficiency(ProficiencyType.Tool, ThievesTools) is { } tools && (!tools.Expertise || IsOwn(rule, ThievesTools)))
             {
                 result.Add(Simple(ThievesTools, "Thieves' Tools", []));
             }
@@ -1106,7 +1246,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                 : filter.SpellLevels.Count > 0
                     ? filter.SpellLevels
                     : Enumerable.Range(1, Math.Max(0, maxSpellLevel)).ToList();
-            var known = character.Spells.Where(s => s.ClassIndex == definition.Index).Select(s => s.SpellIndex).ToHashSet(StringComparer.Ordinal);
+            var known = character.Spells.Where(s => s.ClassIndex == definition.Index && !IsOwn(rule, s.SpellIndex)).Select(s => s.SpellIndex).ToHashSet(StringComparer.Ordinal);
             var schoolsReason = filter.Schools.Count > 0 ? filter.SchoolsReason() : null;
             return spells
                 .Where(s => levels.Contains(s.Level) && !known.Contains(s.Index))

@@ -481,6 +481,7 @@ class ClassDetail extends ClassSummary {
     super.auxiliary,
     this.prerequisitesText,
     this.countsAsCasterLevel = false,
+    this.hasLevelOneChoices = false,
   });
 
   factory ClassDetail.fromJson(Map<String, dynamic> json) {
@@ -525,8 +526,14 @@ class ClassDetail extends ClassSummary {
       auxiliary: summary.auxiliary,
       prerequisitesText: _strOrNull(json['prerequisitesText']),
       countsAsCasterLevel: _bool(json['countsAsCasterLevel']),
+      hasLevelOneChoices: _bool(json['hasLevelOneChoices']),
     );
   }
+
+  /// The class asks for choices at level 1 besides the subclass (fighting
+  /// style, expertise...): the creation wizard asks them in its origin step
+  /// (`class.*` keys of `origin-choices`).
+  final bool hasLevelOneChoices;
 
   /// Prerequisites of an auxiliary level as text.
   final String? prerequisitesText;

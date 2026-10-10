@@ -63,7 +63,7 @@ class _ReviewStepState extends ConsumerState<ReviewStep> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(step.title, style: Theme.of(context).textTheme.titleSmall),
+                  Text(step.titleIn(state), style: Theme.of(context).textTheme.titleSmall),
                   for (final line in lines) Text(line),
                 ],
               ),
