@@ -11,11 +11,11 @@ contrato en `docs/specs/` y se fusiona en `master` con la CI en verde, como hast
 | 32 | **División del servidor.** `Core.Domain/Application/Infrastructure/Api` y `Systems.Dnd5e.*`; los endpoints de 5e quedan bajo `/api/v1/systems/dnd5e/...` con alias temporales de las rutas actuales. Renombrado de la solución, la imagen y el repositorio a OpenTRPG. | API idéntica para el cliente actual; solución nueva. |
 | 33 | **División de la app.** `packages/core` y `packages/dnd5e`; el núcleo monta la ficha, el asistente, el combate y el catálogo del sistema de la campaña a través de `GameSystemUi`. | App idéntica para el usuario. |
 | 34 | **SRD como paquete base, formato 5e completo y paquetes activables por campaña.** El SRD se carga como paquete empaquetado con el módulo; el formato admite clases completas (tabla, recursos, conjuros, opciones por nivel), dotes, condiciones y reglas opcionales. Reimportar el PHB privado con lo que antes no cabía; cada campaña elige sus paquetes activos. | Catálogo igual o mayor; `content-packs.md` v3. |
-| 35 | **Valda's Spire of Secrets** como paquete privado del sistema 5e (clases, subclases, dotes, conjuros, objetos) con las mecánicas nuevas que necesite el módulo. | Campañas 5e con contenido de Valda's. |
+| 35 | **Suplementos completos de terceros** como paquetes privados del sistema 5e (clases, subclases, dotes, conjuros, objetos) con las mecánicas nuevas que necesite el módulo. | Campañas 5e con contenido de un suplemento. |
 
 ## Decisiones del propietario (2026-10-10)
 
 1. Nombre del producto y del repositorio: **OpenTRPG**.
-2. Valda's es un paquete del sistema 5e, **activable por campaña**.
+2. Cada suplemento es un paquete del sistema 5e, **activable por campaña**.
 3. Separación primero (30 → 33), después contenido (34 → 35).
 4. El sistema mínimo "hoja libre" queda fuera hasta que haya un segundo juego concreto.

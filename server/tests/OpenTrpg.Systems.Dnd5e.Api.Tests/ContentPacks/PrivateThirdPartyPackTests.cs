@@ -16,13 +16,13 @@ using Xunit.Abstractions;
 namespace OpenTrpg.Systems.Dnd5e.Api.Tests.ContentPacks;
 
 /// <summary>Own database: the private third-party pack walkthrough (one import, one SRD baseline taken before it).</summary>
-public sealed class PrivateValdasPackApiFactory : ApiFactory
+public sealed class PrivateThirdPartyPackApiFactory : ApiFactory
 {
     protected override bool SeedCatalog => true;
 }
 
 /// <summary>
-/// Validates the operator's private third-party pack <c>content-packs/valdas-spire.json</c> (repository root, never
+/// Validates the operator's private third-party pack <c>content-packs/private-third-party.json</c> (repository root, never
 /// committed: see <c>docs/content-packs.md</c>) when it exists on this machine. Without the file the test passes without
 /// checking anything.
 /// <para>
@@ -36,14 +36,14 @@ public sealed class PrivateValdasPackApiFactory : ApiFactory
 /// </para>
 /// The classes and races come from the pack itself: this file names none of them (the pack's content is private).
 /// </summary>
-public class PrivateValdasPackTests(PrivateValdasPackApiFactory factory, ITestOutputHelper output) : IClassFixture<PrivateValdasPackApiFactory>
+public class PrivateThirdPartyPackTests(PrivateThirdPartyPackApiFactory factory, ITestOutputHelper output) : IClassFixture<PrivateThirdPartyPackApiFactory>
 {
     private const string PacksUrl = "/api/v1/admin/content-packs";
 
     /// <summary>What the walkthrough notices without failing (choices left without options because they are already had...).</summary>
     private readonly List<string> _notes = [];
     private const string CatalogUrl = "/api/v1/systems/dnd5e/catalog";
-    private const string PackId = "valdas-spire";
+    private const string PackFile = "private-third-party";
 
     private static readonly string[] Abilities = ["str", "dex", "con", "int", "wis", "cha"];
 
@@ -53,7 +53,7 @@ public class PrivateValdasPackTests(PrivateValdasPackApiFactory factory, ITestOu
     private static readonly HashSet<string> Volatile = ["id", "campaignId", "characterId", "createdAt", "updatedAt", "ownerUserId", "ownerDisplayName", "at"];
 
     [Fact]
-    public async Task The_private_valdas_pack_creates_and_levels_every_new_class_and_race_to_20()
+    public async Task The_private_third_party_pack_creates_and_levels_every_new_class_and_race_to_20()
     {
         if (FindPack() is not { } path)
         {
@@ -86,7 +86,8 @@ public class PrivateValdasPackTests(PrivateValdasPackApiFactory factory, ITestOu
         var response = await admin.PostAsync(PacksUrl, new StringContent(json, Encoding.UTF8, "application/json"));
         Assert.True(response.StatusCode == HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
         var result = (await response.Content.ReadFromJsonAsync<ContentPackImportResultDto>())!;
-        Assert.Equal((PackId, 3, "dnd5e"), (result.Id, result.FormatVersion, result.SystemId));
+        var packId = pack["id"]!.GetValue<string>();
+        Assert.Equal((packId, 3, "dnd5e"), (result.Id, result.FormatVersion, result.SystemId));
         output.WriteLine($"Importado en {clock.Elapsed.TotalSeconds:F1} s");
 
         // The pack does not change SRD characters of campaigns that do not enable it: the same character, and a new one.
@@ -95,7 +96,7 @@ public class PrivateValdasPackTests(PrivateValdasPackApiFactory factory, ITestOu
         Assert.Equal(before, Normalized(await RawDetailAsync(other.Player, await SrdFighterAsync(other))));
 
         var s = await factory.CreateCampaignScenarioAsync();
-        await s.EnablePacksAsync(PackId);
+        await s.EnablePacksAsync(packId);
         var problems = new List<string>();
         var walked = 0;
 
@@ -756,7 +757,7 @@ public class PrivateValdasPackTests(PrivateValdasPackApiFactory factory, ITestOu
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
         {
-            var candidate = Path.Combine(directory.FullName, "content-packs", $"{PackId}.json");
+            var candidate = Path.Combine(directory.FullName, "content-packs", $"{PackFile}.json");
             if (File.Exists(candidate))
             {
                 return candidate;
