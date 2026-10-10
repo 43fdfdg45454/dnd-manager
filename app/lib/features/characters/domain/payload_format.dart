@@ -24,6 +24,8 @@ const _fieldLabels = <String, String>{
   'bonds': 'Vínculo',
   'flaws': 'Defecto',
   'backgroundDetail': 'Detalle del trasfondo',
+  'heightInches': 'Altura (pulgadas)',
+  'weightPounds': 'Peso (libras)',
   'copperPieces': 'Dinero',
 };
 

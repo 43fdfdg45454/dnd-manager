@@ -490,6 +490,46 @@ class Trait {
   final List<String> description;
 }
 
+/// Random height and weight table of a race or subrace (`HeightWeightDto`,
+/// PHB chapter 4): height = base + height roll (inches); weight = base +
+/// height roll × weight roll (pounds). The modifiers are dice expressions
+/// ("2d10") or a whole number ("1"). No mechanical effect.
+class HeightWeightTable {
+  const HeightWeightTable({
+    required this.baseHeightInches,
+    required this.heightModifier,
+    required this.baseWeightPounds,
+    required this.weightModifier,
+  });
+
+  /// Null when [json] is missing or incomplete.
+  static HeightWeightTable? fromJson(Object? json) {
+    final map = _map(json);
+    if (map == null) return null;
+    final baseHeight = _int(map['baseHeightInches']);
+    final baseWeight = _int(map['baseWeightPounds']);
+    final heightModifier = _strOrNull(map['heightModifier']);
+    final weightModifier = _strOrNull(map['weightModifier']);
+    if (baseHeight == null ||
+        baseWeight == null ||
+        heightModifier == null ||
+        weightModifier == null) {
+      return null;
+    }
+    return HeightWeightTable(
+      baseHeightInches: baseHeight,
+      heightModifier: heightModifier,
+      baseWeightPounds: baseWeight,
+      weightModifier: weightModifier,
+    );
+  }
+
+  final int baseHeightInches;
+  final String heightModifier;
+  final int baseWeightPounds;
+  final String weightModifier;
+}
+
 class Subrace {
   const Subrace({
     required this.index,
@@ -500,6 +540,7 @@ class Subrace {
     this.choices = const OriginChoiceSpec(),
     this.resistances = const [],
     this.languages = const [],
+    this.heightWeight,
   });
 
   factory Subrace.fromJson(Map<String, dynamic> json) => Subrace(
@@ -511,6 +552,7 @@ class Subrace {
     choices: OriginChoiceSpec.fromJson(json['choices']),
     resistances: _strList(json['resistances']),
     languages: _nameList(json['languages']),
+    heightWeight: HeightWeightTable.fromJson(json['heightWeight']),
   );
 
   final String index;
@@ -527,6 +569,9 @@ class Subrace {
 
   /// Damage types the subrace always resists.
   final List<String> resistances;
+
+  /// The subrace's own height and weight table (it replaces the race's), or null.
+  final HeightWeightTable? heightWeight;
 }
 
 /// Which decisions a race, subrace or background asks for at creation
@@ -607,6 +652,7 @@ class RaceDetail extends RaceSummary {
     this.subraces = const [],
     this.choices = const OriginChoiceSpec(),
     this.resistances = const [],
+    this.heightWeight,
   });
 
   factory RaceDetail.fromJson(Map<String, dynamic> json) {
@@ -626,6 +672,7 @@ class RaceDetail extends RaceSummary {
       subraces: _objects(json['subraces'], Subrace.fromJson),
       choices: OriginChoiceSpec.fromJson(json['choices']),
       resistances: _strList(json['resistances']),
+      heightWeight: HeightWeightTable.fromJson(json['heightWeight']),
     );
   }
 
@@ -641,6 +688,19 @@ class RaceDetail extends RaceSummary {
 
   /// Damage types the race always resists.
   final List<String> resistances;
+
+  /// Height and weight table of the race (null when none, as in the SRD).
+  final HeightWeightTable? heightWeight;
+
+  /// The table that applies to [subraceIndex]: the subrace's own, or the race's.
+  HeightWeightTable? heightWeightFor(String? subraceIndex) {
+    for (final subrace in subraces) {
+      if (subrace.index == subraceIndex && subrace.heightWeight != null) {
+        return subrace.heightWeight;
+      }
+    }
+    return heightWeight;
+  }
 }
 
 // ---------------------------------------------------------------------------
