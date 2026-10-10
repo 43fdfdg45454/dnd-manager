@@ -1,5 +1,5 @@
 name: opentrpg
-description: Companion app para campañas de D&D 5e en sesiones presenciales.
+description: OpenTRPG, companion app para campañas de rol de mesa en sesiones presenciales.
 publish_to: 'none'
 # La versión real la calcula GitVersion (GitVersion.yml) y la CI la pasa con --build-name y
 # --build-number; este valor solo se usa en compilaciones locales.
