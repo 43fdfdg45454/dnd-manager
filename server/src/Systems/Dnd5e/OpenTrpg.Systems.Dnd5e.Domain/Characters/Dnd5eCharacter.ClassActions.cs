@@ -27,6 +27,33 @@ public sealed partial class Dnd5eCharacter
     }
 
     /// <summary>
+    /// Casts a spell of a pack class without slots that pays with hit points (<c>"progression": "hitPoints"</c>): spends
+    /// one use of the class resource <paramref name="resourceKey"/> and loses <paramref name="hitPointCost"/> hit points
+    /// (temporary hit points do not pay). The caller checks the class, the spell level and the cost. Returns the hit
+    /// points lost.
+    /// </summary>
+    public int CastWithHitPoints(string resourceKey, string resourceName, int hitPointCost, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(resourceKey);
+        var uses = FindAutoResource(resourceKey, resourceName);
+        if (uses.Remaining == 0)
+        {
+            throw DomainException.RuleViolation($"No quedan usos de {resourceName}.");
+        }
+
+        var cost = Math.Max(0, hitPointCost);
+        if (cost > HitPointsCurrent)
+        {
+            throw DomainException.RuleViolation($"Hacen falta {cost} PG y solo tienes {HitPointsCurrent}.");
+        }
+
+        uses.SetUsed(uses.Used + 1);
+        HitPointsCurrent -= cost;
+        Touch(now);
+        return cost;
+    }
+
+    /// <summary>
     /// Paladin Lay on Hands: spends <paramref name="amount"/> points of the pool. With
     /// <paramref name="targetSelf"/> the character heals that amount, never above <paramref name="maxHp"/>;
     /// otherwise another creature is healed and only the pool changes. Returns the hit points healed.

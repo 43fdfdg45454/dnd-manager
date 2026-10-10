@@ -11,6 +11,10 @@ public sealed class GetSpellHandler(ICatalogRepository catalog)
     {
         var s = await catalog.GetSpellAsync(index, cancellationToken) ?? throw CatalogErrors.SpellNotFound();
         var expansions = SpellExpansionDto.Lookup(await catalog.ListSubclassesWithExpandedSpellsAsync(cancellationToken));
+        var ritualFor = (await catalog.ListClassesAsync(cancellationToken))
+            .Where(c => c.Spellcasting?.TreatAsRitual?.Contains(s.Index, StringComparer.Ordinal) ?? false)
+            .Select(c => c.Index)
+            .ToList();
         return new SpellDetailDto(
             s.Index,
             s.Name,
@@ -33,6 +37,9 @@ public sealed class GetSpellHandler(ICatalogRepository catalog)
             s.DcAbility,
             s.Source,
             s.Category.ToString(),
-            expansions[s.Index].ToList());
+            expansions[s.Index].ToList())
+        {
+            RitualForClasses = ritualFor,
+        };
     }
 }

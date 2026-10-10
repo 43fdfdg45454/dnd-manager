@@ -83,6 +83,14 @@ public sealed class ClassDefinition
 
     public ClassSpellList? SpellList => ClassSpellList.Parse(SpellListJson);
 
+    /// <summary>
+    /// A subclass may give the class spellcasting (<see cref="SubclassDefinition.Spellcasting"/>): the class adds nothing
+    /// to the multiclass spellcaster level, has no Pact Magic and no table of its own (it does not cast, or only knows
+    /// cantrips; the importer checks that its levels have no slots).
+    /// </summary>
+    public bool MayGainSubclassSpellcasting =>
+        SpellcastingLevel == 0 && !IsPactCaster && Spellcasting?.Progression is null or ClassSpellcastingInfo.HitPoints or ClassSpellcastingInfo.RitualsOnly;
+
     /// <summary>Whether the class prepares its spells from its whole list (cleric, druid, paladin, wizard and pack classes with <c>"preparation": "prepared"</c>).</summary>
     public bool PreparesSpells => Index is "cleric" or "druid" or "paladin" or "wizard" || Spellcasting?.Preparation == ClassSpellcastingInfo.Prepared;
 }

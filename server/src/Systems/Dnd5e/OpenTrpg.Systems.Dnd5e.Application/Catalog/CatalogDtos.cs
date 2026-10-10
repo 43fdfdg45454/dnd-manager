@@ -109,7 +109,25 @@ public sealed record ClassDetailDto(
 /// <param name="Preparation">"prepared" or "known".</param>
 public sealed record ClassSpellcastingDto(string Progression, string Preparation, bool Ritual, string? Focus)
 {
-    public static ClassSpellcastingDto From(ClassSpellcastingInfo info) => new(info.Progression, info.Preparation, info.Ritual, info.Focus);
+    /// <summary>"hitPoints"/"ritualsOnly": highest spell level by class level (entries where it changes); null otherwise.</summary>
+    public IReadOnlyDictionary<int, int>? MaxSpellLevel { get; init; }
+
+    /// <summary>"hitPoints": hit points lost by spell level (index 0 = 1st level).</summary>
+    public IReadOnlyList<int>? HitPointCost { get; init; }
+
+    /// <summary>"hitPoints": key of the class resource each spell spends.</summary>
+    public string? UsesResource { get; init; }
+
+    /// <summary>Spells the class casts as rituals although they are not.</summary>
+    public IReadOnlyList<string> TreatAsRitual { get; init; } = [];
+
+    public static ClassSpellcastingDto From(ClassSpellcastingInfo info) => new(info.Progression, info.Preparation, info.Ritual, info.Focus)
+    {
+        MaxSpellLevel = info.MaxSpellLevels,
+        HitPointCost = info.HitPointCost,
+        UsesResource = info.UsesResource,
+        TreatAsRitual = info.TreatAsRitual ?? [],
+    };
 }
 
 /// <param name="Prerequisites">Minimum ability scores by ability ("int": 13).</param>
@@ -397,7 +415,11 @@ public sealed record SpellDetailDto(
     string? DcAbility,
     string Source,
     string Category,
-    IReadOnlyList<SpellExpansionDto> ExpandedBy);
+    IReadOnlyList<SpellExpansionDto> ExpandedBy)
+{
+    /// <summary>Classes of content packs that cast this spell as a ritual although it is not one (<c>treatAsRitual</c>).</summary>
+    public IReadOnlyList<string> RitualForClasses { get; init; } = [];
+}
 
 public sealed record ConditionDto(string Index, string Name, IReadOnlyList<string> Description)
 {

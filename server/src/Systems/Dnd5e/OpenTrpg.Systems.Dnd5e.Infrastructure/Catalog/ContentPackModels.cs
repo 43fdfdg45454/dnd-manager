@@ -248,6 +248,21 @@ internal sealed class PackClassSpellcastingJson
     public bool? Ritual { get; set; }
 
     public string? Focus { get; set; }
+
+    /// <summary>"hitPoints"/"ritualsOnly": highest spell level by class level.</summary>
+    public Dictionary<string, int?>? MaxSpellLevel { get; set; }
+
+    /// <summary>"hitPoints": key of the class resource spent by each spell.</summary>
+    public string? UsesResource { get; set; }
+
+    /// <summary>"hitPoints": hit points lost by spell level (1st, 2nd...).</summary>
+    public List<int?>? HitPointCost { get; set; }
+
+    /// <summary>Spells prepared ("mod:wis+halfClassLevel").</summary>
+    public string? PreparedFormula { get; set; }
+
+    /// <summary>Spells the class casts as rituals.</summary>
+    public List<string?>? TreatAsRitual { get; set; }
 }
 
 internal sealed class PackClassLevelJson
@@ -520,8 +535,11 @@ internal sealed class PackExpandedSpellJson
 
 internal sealed class PackSubclassSpellcastingJson
 {
-    /// <summary>"third", "half" or "full".</summary>
+    /// <summary>"third", "half", "full", "pact" or "table".</summary>
     public string? Progression { get; set; }
+
+    /// <summary>"table" (required) and "pact" (optional): slots of the spell levels 1-9 by class level.</summary>
+    public Dictionary<string, List<int?>?>? Slots { get; set; }
 
     public string? Ability { get; set; }
 
@@ -1325,6 +1343,9 @@ internal sealed class PackChoiceFilterJson
 
     /// <summary>Weapon choices: true = only firearms, false = no firearms.</summary>
     public bool? Firearms { get; set; }
+
+    /// <summary>Spell choices: only rituals (or spells the class casts as rituals).</summary>
+    public bool? RitualOnly { get; set; }
 }
 
 // ---- Converters ------------------------------------------------------------------------------------

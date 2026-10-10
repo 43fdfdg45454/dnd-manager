@@ -515,6 +515,116 @@ public class ContentPackCreationTests(ContentPackCreationApiFactory factory) : I
         Assert.Equal(new CampaignRulesDto(false, false), await GetAsync<CampaignRulesDto>(other.Dm.Client, $"/api/v1/systems/dnd5e/campaigns/{other.CampaignId}/rules"));
     }
 
+    // ---- H01-H04: casting without slots, rituals only, subclass pact or table, subclass on a cantrip caster -------
+
+    [Fact]
+    public async Task A_hit_point_caster_has_no_slots_and_pays_each_spell_with_a_use_and_hit_points()
+    {
+        var s = await ScenarioAsync();
+        var penitent = I("penitente");
+        var hero = await DraftAsync(s, penitent, 1, new { str = 10, dex = 12, con = 14, @int = 10, wis = 16, cha = 8 });
+        var casting = hero.Sheet.Spellcasting.Single(c => c.ClassIndex == penitent);
+        Assert.Equal(("hitPoints", 1, 3, I("plegarias")), (casting.Progression, casting.MaxSpellLevel, casting.PreparedMax, casting.UsesResource));
+        Assert.Equal([5], casting.HitPointCost);
+        Assert.All(hero.SpellSlots, slot => Assert.Equal(0, slot.Max));
+        Assert.Equal(2, hero.Resources.Single(r => r.Key == I("plegarias")).Max);
+        Assert.Equal(10, hero.HitPointsCurrent);
+
+        var url = $"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/class-actions/hit-point-cast";
+        Assert.Equal(HttpStatusCode.BadRequest, (await s.Player.Client.PostAsJsonAsync(url, new { classIndex = penitent, spellLevel = 2 })).StatusCode);
+        var cast = await s.Player.Client.PostAsJsonAsync(url, new { classIndex = penitent, spellLevel = 1 });
+        Assert.True(cast.StatusCode == HttpStatusCode.OK, await cast.Content.ReadAsStringAsync());
+        var result = (await cast.Content.ReadFromJsonAsync<HitPointCastResultDto>())!;
+        Assert.Equal(5, result.HitPointsLost);
+        Assert.Equal(5, result.Character.HitPointsCurrent);
+        Assert.Equal(1, result.Character.Resources.Single(r => r.Key == I("plegarias")).Used);
+        Assert.Equal(HttpStatusCode.OK, (await s.Player.Client.PostAsJsonAsync(url, new { classIndex = penitent, spellLevel = 1 })).StatusCode);
+        // No uses left (and no hit points either).
+        Assert.Equal(HttpStatusCode.BadRequest, (await s.Player.Client.PostAsJsonAsync(url, new { classIndex = penitent, spellLevel = 1 })).StatusCode);
+
+        var veteran = await DraftAsync(s, penitent, 9, new { str = 10, dex = 12, con = 14, @int = 10, wis = 16, cha = 8 });
+        var later = veteran.Sheet.Spellcasting.Single(c => c.ClassIndex == penitent);
+        Assert.Equal((3, 7), (later.MaxSpellLevel, later.PreparedMax));
+        Assert.Equal([5, 10, 20], later.HitPointCost);
+    }
+
+    [Fact]
+    public async Task A_ritual_caster_learns_only_rituals_up_to_its_table_and_spells_it_treats_as_rituals()
+    {
+        var s = await ScenarioAsync();
+        var scribe = I("escriba");
+        var hero = await DraftAsync(s, scribe, 1, new { str = 10, dex = 12, con = 14, @int = 16, wis = 12, cha = 8 });
+        var casting = hero.Sheet.Spellcasting.Single(c => c.ClassIndex == scribe);
+        Assert.Equal(("ritualsOnly", 1, (int?)null), (casting.Progression, casting.MaxSpellLevel, casting.PreparedMax));
+
+        await GrantAsync(s, hero.Id);
+        var plan = await PlanAsync(s.Player, hero.Id, scribe);
+        var rituals = plan.Choices.Single(c => c.Key == "rituales-2").Options.Select(o => o.Index).ToList();
+        Assert.Contains("detect-magic", rituals);
+        Assert.Contains("mage-armor", rituals);
+        Assert.DoesNotContain("magic-missile", rituals);
+        Assert.DoesNotContain("gentle-repose", rituals);
+
+        var spell = await GetAsync<SpellDetailDto>(s.Player.Client, $"{CatalogUrl}/spells/mage-armor");
+        Assert.Equal([scribe], spell.RitualForClasses);
+    }
+
+    [Fact]
+    public async Task A_subclass_may_cast_with_pact_magic_or_its_own_table()
+    {
+        var s = await ScenarioAsync();
+        var smith = I("forjador");
+        var scores = new { str = 14, dex = 12, con = 14, @int = 16, wis = 10, cha = 8 };
+        var pact = await DraftAsync(s, smith, 3, scores, I("taller-pacto"));
+        Assert.Equal(2, pact.Sheet.PactSlotLevel);
+        Assert.Equal("pact", pact.Sheet.Spellcasting.Single(c => c.ClassIndex == smith).Progression);
+        Assert.All(pact.SpellSlots.Where(slot => slot.Level > 0), slot => Assert.Equal(0, slot.Max));
+
+        var table = await DraftAsync(s, smith, 3, scores, I("taller-tabla"));
+        Assert.Null(table.Sheet.PactSlotLevel);
+        Assert.Equal(2, table.SpellSlots.Single(slot => slot.Level == 1).Max);
+        var seventh = await DraftAsync(s, smith, 7, scores, I("taller-tabla"));
+        Assert.Equal((0, 3), (seventh.SpellSlots.FirstOrDefault(slot => slot.Level == 1)?.Max ?? 0, seventh.SpellSlots.Single(slot => slot.Level == 2).Max));
+    }
+
+    [Fact]
+    public async Task A_subclass_adds_slots_to_a_class_that_only_knows_cantrips()
+    {
+        var s = await ScenarioAsync();
+        var lookout = I("vigia");
+        var scores = new { str = 10, dex = 14, con = 14, @int = 16, wis = 10, cha = 8 };
+        var novice = await DraftAsync(s, lookout, 1, scores);
+        Assert.Equal(0, novice.Sheet.Spellcasting.Single(c => c.ClassIndex == lookout).MaxSpellLevel);
+
+        var tower = await DraftAsync(s, lookout, 3, scores, I("torre-tercio"));
+        var casting = tower.Sheet.Spellcasting.Single(c => c.ClassIndex == lookout);
+        Assert.Equal(("int", 1, 3), (casting.Ability, casting.MaxSpellLevel, casting.SpellsKnownMax));
+        Assert.Equal(2, tower.SpellSlots.Single(slot => slot.Level == 1).Max);
+    }
+
+    [Fact]
+    public async Task Casting_without_slots_and_subclass_tables_are_validated()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        var pack = Renamed(Build(), "vacio-malo-h01");
+        var classes = pack["classes"]!.AsArray();
+        var penitent = classes.Single(c => c!["index"]!.GetValue<string>() == "vacio-malo-h01-penitente")!;
+        penitent["spellcasting"]!.AsObject().Remove("maxSpellLevel");
+        penitent["spellcasting"]!["usesResource"] = "vacio-malo-h01-inexistente";
+        penitent["spellcasting"]!["preparedFormula"] = "mod:wis+suerte";
+        var smith = classes.Single(c => c!["index"]!.GetValue<string>() == "vacio-malo-h01-forjador")!;
+        smith["subclasses"]![1]!["spellcasting"]!.AsObject().Remove("slots");
+        var penitentIndex = classes.IndexOf(penitent);
+        var smithIndex = classes.IndexOf(smith);
+
+        var errors = await ImportErrorsAsync(admin, pack);
+
+        Assert.Contains(errors, e => e.StartsWith($"classes[{penitentIndex}].spellcasting.maxSpellLevel:", StringComparison.Ordinal));
+        Assert.Contains(errors, e => e.StartsWith($"classes[{penitentIndex}].spellcasting.usesResource:", StringComparison.Ordinal));
+        Assert.Contains(errors, e => e.StartsWith($"classes[{penitentIndex}].spellcasting.preparedFormula:", StringComparison.Ordinal));
+        Assert.Contains(errors, e => e.StartsWith($"classes[{smithIndex}].subclasses[1].spellcasting.slots:", StringComparison.Ordinal));
+    }
+
     private static string OriginUrl(Guid id) => $"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/origin-choices";
 
     /// <summary>A draft (origin choices still open) of <paramref name="race"/> and <paramref name="classIndex"/> at <paramref name="level"/>.</summary>

@@ -21,7 +21,7 @@ internal static class CreationPack
         ["id"] = Id,
         ["name"] = "Crónicas del vacío (prueba)",
         ["version"] = "1.0.0",
-        ["classes"] = new JsonArray(Herald(), Keeper()),
+        ["classes"] = new JsonArray(Herald(), Keeper(), Penitent(), Scribe(), Smith(), Lookout()),
         ["optionSets"] = new JsonArray(Signals(), Tactics(), Heritages()),
         ["feats"] = Feats(),
         ["races"] = Races(),
@@ -100,6 +100,119 @@ internal static class CreationPack
             ["setId"] = I("tacticas"),
             ["choose"] = 1,
             ["from"] = new JsonArray(I("tactica-niebla"), "fighting-style-defense", I("senal-basica")),
+        }),
+    });
+
+    /// <summary>
+    /// H01: "Penitente de ceniza" casts without slots: each spell spends a use of "Plegarias" and the hit points of
+    /// its level, up to a maximum spell level by class level; it prepares Wis + half its level.
+    /// </summary>
+    private static JsonObject Penitent() => Class("penitente", "Penitente de ceniza", 8, new JsonObject
+    {
+        ["savingThrows"] = new JsonArray("wis", "con"),
+        ["multiclassing"] = new JsonObject { ["prerequisites"] = new JsonObject { ["wis"] = 13 } },
+        ["spellcasting"] = new JsonObject
+        {
+            ["ability"] = "wis",
+            ["progression"] = "hitPoints",
+            ["preparation"] = "prepared",
+            ["preparedFormula"] = "mod:wis+halfClassLevel",
+            ["maxSpellLevel"] = new JsonObject { ["1"] = 1, ["5"] = 2, ["9"] = 3, ["13"] = 4, ["17"] = 5 },
+            ["usesResource"] = I("plegarias"),
+            ["hitPointCost"] = new JsonArray(5, 10, 20, 30, 45),
+            ["cantripsKnown"] = new JsonObject { ["1"] = 2, ["10"] = 3 },
+        },
+        ["spellList"] = new JsonArray(new JsonObject { ["class"] = "cleric" }),
+        ["resources"] = new JsonArray(new JsonObject
+        {
+            ["key"] = I("plegarias"),
+            ["name"] = "Plegarias",
+            ["max"] = new JsonObject { ["byLevel"] = new JsonObject { ["1"] = 2, ["5"] = 5, ["10"] = 8, ["20"] = 15 } },
+            ["recharge"] = "LongRest",
+        }),
+    });
+
+    /// <summary>
+    /// H02: "Escriba de rituales" casts only rituals of its book: four rituals of any list at level 1 and one wizard
+    /// ritual per level, treating one non-ritual spell as a ritual.
+    /// </summary>
+    private static JsonObject Scribe() => Class("escriba", "Escriba de rituales", 8, new JsonObject
+    {
+        ["savingThrows"] = new JsonArray("int", "wis"),
+        ["spellcasting"] = new JsonObject
+        {
+            ["ability"] = "int",
+            ["progression"] = "ritualsOnly",
+            ["ritual"] = true,
+            ["maxSpellLevel"] = new JsonObject { ["1"] = 1, ["5"] = 2, ["9"] = 3 },
+            ["treatAsRitual"] = new JsonArray("mage-armor"),
+        },
+        ["levelChoices"] = new JsonArray(
+            new JsonObject
+            {
+                ["level"] = 1,
+                ["key"] = "rituales",
+                ["name"] = "Rituales",
+                ["kind"] = "SpellbookSpells",
+                ["choose"] = 4,
+                ["filter"] = new JsonObject { ["spellList"] = "any", ["ritualOnly"] = true, ["spellLevels"] = new JsonArray(1) },
+            },
+            new JsonObject
+            {
+                ["level"] = 2,
+                ["key"] = "rituales-2",
+                ["name"] = "Rituales",
+                ["kind"] = "SpellbookSpells",
+                ["choose"] = 1,
+                ["filter"] = new JsonObject { ["spellList"] = "wizard", ["ritualOnly"] = true, ["maxSpellLevelBySlots"] = true },
+            }),
+    });
+
+    /// <summary>H03: "Forjador", a non-caster with a Pact Magic order and an order with its own slot table.</summary>
+    private static JsonObject Smith() => Class("forjador", "Forjador", 10, new JsonObject
+    {
+        ["subclassFlavor"] = "Taller",
+        ["subclassLevel"] = 3,
+        ["subclasses"] = new JsonArray(
+            new JsonObject
+            {
+                ["index"] = I("taller-pacto"),
+                ["name"] = "Taller del pacto",
+                ["description"] = new JsonArray("Subclase ficticia."),
+                ["spellcasting"] = new JsonObject { ["progression"] = "pact", ["ability"] = "int", ["fromLevel"] = 3, ["spellList"] = "warlock", ["spellsKnown"] = new JsonObject { ["3"] = 2 } },
+            },
+            new JsonObject
+            {
+                ["index"] = I("taller-tabla"),
+                ["name"] = "Taller de la tabla",
+                ["description"] = new JsonArray("Subclase ficticia."),
+                ["spellcasting"] = new JsonObject
+                {
+                    ["progression"] = "table",
+                    ["ability"] = "int",
+                    ["fromLevel"] = 3,
+                    ["spellList"] = "wizard",
+                    ["spellsKnown"] = new JsonObject { ["3"] = 2 },
+                    ["slots"] = new JsonObject { ["3"] = new JsonArray(2), ["7"] = new JsonArray(0, 3) },
+                },
+            }),
+    });
+
+    /// <summary>H04: "Vigía arcano" only knows cantrips; its order adds third-caster slots from level 3.</summary>
+    private static JsonObject Lookout() => Class("vigia", "Vigía arcano", 8, new JsonObject
+    {
+        ["spellcastingAbility"] = "int",
+        ["multiclassSpellcasting"] = "none",
+        ["spellList"] = new JsonArray(new JsonObject { ["class"] = "wizard" }),
+        ["levels"] = Levels(n => new JsonObject { ["level"] = n, ["cantripsKnown"] = n < 10 ? 2 : 3 }),
+        ["subclassFlavor"] = "Torre",
+        ["subclassLevel"] = 3,
+        ["subclasses"] = new JsonArray(new JsonObject
+        {
+            ["index"] = I("torre-tercio"),
+            ["name"] = "Torre del tercio",
+            ["description"] = new JsonArray("Subclase ficticia."),
+            ["spellcasting"] = new JsonObject { ["progression"] = "third", ["ability"] = "int", ["fromLevel"] = 3, ["spellList"] = "wizard", ["spellsKnown"] = new JsonObject { ["3"] = 3, ["4"] = 4 } },
         }),
     });
 

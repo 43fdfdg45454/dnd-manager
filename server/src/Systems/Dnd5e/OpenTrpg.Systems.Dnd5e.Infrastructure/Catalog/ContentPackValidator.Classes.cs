@@ -27,14 +27,7 @@ internal sealed partial class ContentPackValidator
     public static int StandardProficiencyBonus(int level) => 2 + ((Math.Clamp(level, 1, 20) - 1) / 4);
 
     /// <summary>Pact Magic table (warlock): slots and their level by class level, as a 9-entry slots row.</summary>
-    public static int[] PactSlots(int classLevel)
-    {
-        var slots = new int[ClassLevel.SpellSlotLevels];
-        var count = classLevel switch { 1 => 1, <= 10 => 2, <= 16 => 3, _ => 4 };
-        var slotLevel = Math.Min(5, (classLevel + 1) / 2);
-        slots[slotLevel - 1] = count;
-        return slots;
-    }
+    public static int[] PactSlots(int classLevel) => SpellSlotTables.PactSlots(classLevel);
 
     private void RequiresOf(List<string?>? requires)
     {
@@ -199,6 +192,12 @@ internal sealed partial class ContentPackValidator
             }
         });
 
+        if (spellcasting?.Info.UsesResource is { } usesKey
+            && !LevelChoiceJson.ParseResources($"[{string.Join(",", resources)}]").Any(r => r.Key == usesKey))
+        {
+            AddError($"{path}.spellcasting.usesResource", $"La clase no tiene el recurso '{usesKey}' en resources.");
+        }
+
         var spellList = ClassSpellListOf($"{path}.spellList", definition.SpellList);
 
         // Explicit level choices first: a generated one with the same level and key is left out.
@@ -230,6 +229,13 @@ internal sealed partial class ContentPackValidator
             ResourcesJson = resources.Count == 0 ? null : $"[{string.Join(",", resources)}]",
             SpellListJson = spellList?.ToJson(),
         });
+
+        // A class that only knows cantrips (or casts without slots) may get spellcasting from a subclass (H04).
+        var added = rows.Classes[^1];
+        if (added.MayGainSubclassSpellcasting && rows.ClassLevels.Where(l => l.ClassIndex == index).All(l => l.SpellSlots.All(s => s == 0)))
+        {
+            _cantripOnlyClasses.Add(index);
+        }
 
         Subclasses($"{path}.subclasses", definition.Subclasses, index, flavor.Length > 0 ? flavor : DefaultSubclassFlavor, rows, packSubclasses);
     }
@@ -326,6 +332,39 @@ internal sealed partial class ContentPackValidator
             ?? new int[ClassLevel.SpellSlotLevels],
     };
 
+    /// <summary>A <c>{"3": [2, 1]}</c> table of slots (spell levels 1-9) by class level.</summary>
+    private Dictionary<int, IReadOnlyList<int>> SlotTable(string path, Dictionary<string, List<int?>?> table)
+    {
+        var slots = new Dictionary<int, IReadOnlyList<int>>();
+        foreach (var (key, row) in table)
+        {
+            if (!int.TryParse(key, NumberStyles.None, CultureInfo.InvariantCulture, out var level) || level is < 1 or > MaxLevels)
+            {
+                AddError($"{path}.{key}", "La clave debe ser un nivel de clase entre 1 y 20.");
+                continue;
+            }
+
+            if (row is not { Count: >= 1 and <= ClassLevel.SpellSlotLevels })
+            {
+                AddError($"{path}.{key}", "Indica de 1 a 9 cantidades (espacios de nivel 1 a 9).");
+                continue;
+            }
+
+            var values = new int[ClassLevel.SpellSlotLevels];
+            for (var i = 0; i < row.Count; i++)
+            {
+                if (RequiredInt($"{path}.{key}[{i}]", row[i], 0, 9) is { } count)
+                {
+                    values[i] = count;
+                }
+            }
+
+            slots[level] = values;
+        }
+
+        return slots;
+    }
+
     private ClassCasting? ClassSpellcasting(string path, PackClassSpellcastingJson spellcasting)
     {
         var ability = spellcasting.Ability?.Trim().ToLowerInvariant();
@@ -345,7 +384,11 @@ internal sealed partial class ContentPackValidator
             AddError($"{path}.progression", "Campo obligatorio.");
             progression = null;
         }
-        else if (!ClassSpellcastingInfo.Progressions.Contains(progression))
+        else if (ClassSpellcastingInfo.Progressions.FirstOrDefault(p => string.Equals(p, progression, StringComparison.OrdinalIgnoreCase)) is { } canonical)
+        {
+            progression = canonical;
+        }
+        else
         {
             AddError($"{path}.progression", $"Valores admitidos: {string.Join(", ", ClassSpellcastingInfo.Progressions)}.");
             progression = null;
@@ -359,31 +402,7 @@ internal sealed partial class ContentPackValidator
                 AddError($"{path}.slots", "Solo se admite con \"progression\": \"table\" (o \"pact\"); las demás progresiones calculan los espacios.");
             }
 
-            foreach (var (key, row) in table)
-            {
-                if (!int.TryParse(key, NumberStyles.None, CultureInfo.InvariantCulture, out var level) || level is < 1 or > MaxLevels)
-                {
-                    AddError($"{path}.slots.{key}", "La clave debe ser un nivel de clase entre 1 y 20.");
-                    continue;
-                }
-
-                if (row is not { Count: >= 1 and <= ClassLevel.SpellSlotLevels })
-                {
-                    AddError($"{path}.slots.{key}", "Indica de 1 a 9 cantidades (espacios de nivel 1 a 9).");
-                    continue;
-                }
-
-                var values = new int[ClassLevel.SpellSlotLevels];
-                for (var i = 0; i < row.Count; i++)
-                {
-                    if (RequiredInt($"{path}.slots.{key}[{i}]", row[i], 0, 9) is { } count)
-                    {
-                        values[i] = count;
-                    }
-                }
-
-                slots[level] = values;
-            }
+            slots = SlotTable($"{path}.slots", table);
         }
         else if (progression == ClassSpellcastingInfo.Table)
         {
@@ -399,16 +418,102 @@ internal sealed partial class ContentPackValidator
 
         var cantrips = KnownTable($"{path}.cantripsKnown", spellcasting.CantripsKnown, 10);
         var spells = KnownTable($"{path}.spellsKnown", spellcasting.SpellsKnown, 30);
-        preparation ??= spells is { Count: > 0 } ? ClassSpellcastingInfo.Known : ClassSpellcastingInfo.Prepared;
-        if (preparation == ClassSpellcastingInfo.Known && spells is { Count: 0 })
+        var ritualsOnly = progression == ClassSpellcastingInfo.RitualsOnly;
+        if (ritualsOnly && preparation == ClassSpellcastingInfo.Prepared)
+        {
+            AddError($"{path}.preparation", "Un lanzador \"ritualsOnly\" no prepara conjuros: lanza como ritual los de su libro.");
+        }
+
+        preparation ??= spells is { Count: > 0 } || ritualsOnly ? ClassSpellcastingInfo.Known : ClassSpellcastingInfo.Prepared;
+        if (preparation == ClassSpellcastingInfo.Known && spells is { Count: 0 } && !ritualsOnly)
         {
             AddError($"{path}.spellsKnown", "Un lanzador \"known\" necesita su tabla de conjuros conocidos.");
         }
 
+        // Progressions without slots (H01/H02): highest spell level by class level; hitPoints also its resource and cost.
+        var withoutSlots = progression is ClassSpellcastingInfo.HitPoints or ClassSpellcastingInfo.RitualsOnly;
+        Dictionary<int, int>? maxSpellLevels = null;
+        if (spellcasting.MaxSpellLevel is { Count: > 0 } maxTable)
+        {
+            if (!withoutSlots)
+            {
+                AddError($"{path}.maxSpellLevel", "Solo se admite con \"progression\": \"hitPoints\" o \"ritualsOnly\"; las demás lo sacan de los espacios.");
+            }
+
+            maxSpellLevels = KnownTable($"{path}.maxSpellLevel", maxTable, ClassLevel.SpellSlotLevels);
+        }
+        else if (withoutSlots)
+        {
+            AddError($"{path}.maxSpellLevel", "Obligatorio con \"hitPoints\" y \"ritualsOnly\" (nivel máximo de conjuro por nivel de clase).");
+        }
+
+        string? usesResource = null;
+        List<int>? hitPointCost = null;
+        if (progression == ClassSpellcastingInfo.HitPoints)
+        {
+            usesResource = Reference($"{path}.usesResource", spellcasting.UsesResource);
+            if (usesResource is null && string.IsNullOrWhiteSpace(spellcasting.UsesResource))
+            {
+                AddError($"{path}.usesResource", "Obligatorio con \"hitPoints\": clave de un recurso de la clase.");
+            }
+
+            if (spellcasting.HitPointCost is not { Count: >= 1 and <= ClassLevel.SpellSlotLevels } cost)
+            {
+                AddError($"{path}.hitPointCost", "Obligatorio con \"hitPoints\": de 1 a 9 cantidades (PG por nivel de conjuro).");
+            }
+            else
+            {
+                hitPointCost = cost.Select((value, i) => RequiredInt($"{path}.hitPointCost[{i}]", value, 0, 999) ?? 0).ToList();
+            }
+        }
+        else
+        {
+            if (spellcasting.UsesResource is not null)
+            {
+                AddError($"{path}.usesResource", "Solo se admite con \"progression\": \"hitPoints\".");
+            }
+
+            if (spellcasting.HitPointCost is not null)
+            {
+                AddError($"{path}.hitPointCost", "Solo se admite con \"progression\": \"hitPoints\".");
+            }
+        }
+
+        string? preparedFormula = null;
+        if (spellcasting.PreparedFormula is { } formula)
+        {
+            preparedFormula = formula.Trim();
+            if (PreparedFormula.Problem(preparedFormula) is { } problem)
+            {
+                AddError($"{path}.preparedFormula", problem);
+            }
+            else if (preparation != ClassSpellcastingInfo.Prepared)
+            {
+                AddError($"{path}.preparedFormula", "Solo se admite con \"preparation\": \"prepared\".");
+            }
+        }
+
+        var treatAsRitual = new List<string>();
+        ForEachText($"{path}.treatAsRitual", spellcasting.TreatAsRitual, (itemPath, value) =>
+        {
+            if (Reference(itemPath, value) is { } spell && !treatAsRitual.Contains(spell))
+            {
+                treatAsRitual.Add(spell);
+                _spellReferences.Add((itemPath, spell));
+            }
+        });
+
         var focus = NullableText($"{path}.focus", spellcasting.Focus, ShortTextMaxLength);
         return ability is null || progression is null || cantrips is null || spells is null
             ? null
-            : new ClassCasting(ability, new ClassSpellcastingInfo(progression, preparation, spellcasting.Ritual ?? false, focus), slots, cantrips, spells);
+            : new ClassCasting(ability, new ClassSpellcastingInfo(progression, preparation, spellcasting.Ritual ?? false, focus)
+            {
+                MaxSpellLevels = maxSpellLevels is { Count: > 0 } ? maxSpellLevels : null,
+                UsesResource = usesResource,
+                HitPointCost = hitPointCost,
+                PreparedFormulaText = preparedFormula,
+                TreatAsRitual = treatAsRitual.Count > 0 ? treatAsRitual : null,
+            }, slots, cantrips, spells);
     }
 
     /// <summary>Subclass, Ability Score Improvement, cantrips and spells known choices from the class definition.</summary>

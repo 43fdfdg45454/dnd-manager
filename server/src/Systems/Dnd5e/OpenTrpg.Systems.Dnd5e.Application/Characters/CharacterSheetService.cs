@@ -440,7 +440,15 @@ public sealed class CharacterSheetService(
         sheet.Speed,
         sheet.HitPointsMax,
         sheet.HitDice.Select(h => new HitDiceDto(h.ClassIndex, h.Die, h.Total, h.Remaining)).ToList(),
-        sheet.Spellcasting.Select(s => new SpellcastingDto(s.ClassIndex, s.Ability, s.SaveDc, s.AttackBonus, s.PreparedMax) { SpellsKnownMax = s.SpellsKnownMax, CantripsKnownMax = s.CantripsKnownMax }).ToList(),
+        sheet.Spellcasting.Select(s => new SpellcastingDto(s.ClassIndex, s.Ability, s.SaveDc, s.AttackBonus, s.PreparedMax)
+        {
+            SpellsKnownMax = s.SpellsKnownMax,
+            CantripsKnownMax = s.CantripsKnownMax,
+            MaxSpellLevel = s.MaxSpellLevel,
+            Progression = s.Progression,
+            HitPointCost = s.HitPointCost,
+            UsesResource = s.UsesResource,
+        }).ToList(),
         sheet.PactMagic?.SlotLevel,
         sheet.OverriddenFields,
         sheet.ItemEffects.Select(e => new ItemEffectDto(e.ItemName, e.Kind.ToString(), e.Target, e.Value)).ToList(),

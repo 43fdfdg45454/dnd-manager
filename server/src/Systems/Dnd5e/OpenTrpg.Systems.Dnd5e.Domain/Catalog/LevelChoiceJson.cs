@@ -425,6 +425,9 @@ public sealed record ChoiceFilter(string? SpellList, IReadOnlyList<int> SpellLev
     /// <summary>Weapon choices: true = only firearms, false = no firearms, null = any.</summary>
     public bool? Firearms { get; init; }
 
+    /// <summary>Spell choices: only rituals, or spells the class casts as rituals (<see cref="ClassSpellcastingInfo.TreatAsRitual"/>).</summary>
+    public bool RitualOnly { get; init; }
+
     /// <summary>Whether a spell of <paramref name="school"/> ("Evocation" or "evocation") is allowed at the class level.</summary>
     public bool AllowsSchool(string school, int classLevel) =>
         Schools.Count == 0
@@ -779,6 +782,7 @@ public static class LevelChoiceJson
                     ? Strings(categories).Select(x => x.ToLowerInvariant()).Distinct(StringComparer.Ordinal).ToList()
                     : [],
                 Firearms = Property(root, "firearms") is { ValueKind: JsonValueKind.True or JsonValueKind.False } firearms ? firearms.GetBoolean() : null,
+                RitualOnly = Property(root, "ritualOnly") is { ValueKind: JsonValueKind.True },
             };
         }) ?? ChoiceFilter.None;
 

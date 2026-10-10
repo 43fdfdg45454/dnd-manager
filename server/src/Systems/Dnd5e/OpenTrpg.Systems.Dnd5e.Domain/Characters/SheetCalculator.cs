@@ -213,11 +213,15 @@ public static class SheetCalculator
                             .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, proficiencyBonus)
                             .Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), Mod(ability)),
                         OverrideFields.SpellAttackBonus));
-                return new SpellcastingValue(classIndex, ability, saveDc, attackBonus, PreparedMax(c.Info, c.Level.Level, Mod(ability)))
+                var maxSpellLevel = c.Info.Casting?.MaxSpellLevelAt(c.Level.Level) ?? MaxSpellLevel(c.Info.SlotsByLevel(c.Level.Level));
+                return new SpellcastingValue(classIndex, ability, saveDc, attackBonus, PreparedMax(c.Info, c.Level.Level, Mod))
                 {
-                    MaxSpellLevel = MaxSpellLevel(c.Info.SlotsByLevel(c.Level.Level)),
+                    MaxSpellLevel = maxSpellLevel,
                     SpellsKnownMax = c.Info.SubclassSpellcasting?.SpellsKnownAt(c.Level.Level),
                     CantripsKnownMax = c.Info.SubclassSpellcasting?.CantripsKnownAt(c.Level.Level),
+                    Progression = c.Info.Casting?.Progression ?? c.Info.SubclassSpellcasting?.Progression,
+                    HitPointCost = c.Info.Casting?.HitPointCost?.Take(maxSpellLevel).ToList() ?? [],
+                    UsesResource = c.Info.Casting?.UsesResource,
                 };
             })
             .ToList();
@@ -423,9 +427,23 @@ public static class SheetCalculator
     /// Preparable spells of a class: the SRD rule of its index or, for a pack class that prepares its spells, the
     /// spellcasting modifier plus the class level divided by its progression (full 1, half 2, third 3). Minimum 1.
     /// </summary>
-    public static int? PreparedMax(ClassInfo info, int classLevel, int abilityModifier)
+    public static int? PreparedMax(ClassInfo info, int classLevel, int abilityModifier) =>
+        PreparedMax(info, classLevel, _ => abilityModifier);
+
+    /// <summary>
+    /// As <see cref="PreparedMax(ClassInfo, int, int)"/>, with the class's <c>preparedFormula</c> when it has one
+    /// (<paramref name="modifier"/> gives the modifier of each ability; the spellcasting one for the standard rule).
+    /// </summary>
+    public static int? PreparedMax(ClassInfo info, int classLevel, Func<string, int> modifier)
     {
         ArgumentNullException.ThrowIfNull(info);
+        ArgumentNullException.ThrowIfNull(modifier);
+        if (info.PreparesSpells && info.Casting?.PreparedFormulaText is { } formula && PreparedFormula.Evaluate(formula, classLevel, modifier) is { } prepared)
+        {
+            return prepared;
+        }
+
+        var abilityModifier = info.SpellcastingAbility is { } ability ? modifier(ability) : 0;
         return PreparedMax(info.Index, classLevel, abilityModifier)
             ?? (info.PreparesSpells ? Math.Max(1, abilityModifier + classLevel / Math.Max(1, info.SpellcastingLevel)) : null);
     }

@@ -403,13 +403,45 @@ subclase explícita sustituye a la generada en cualquier nivel.
 | Campo | Tipo | Reglas |
 | --- | --- | --- |
 | `ability` | `string` | **Obligatorio**: `int`, `wis`, `cha`... |
-| `progression` | `string` | **Obligatorio**: `full` (como el mago), `half` (paladín), `third` (caballero arcano), `pact` (brujo) o `table` (tabla propia en `slots`). |
+| `progression` | `string` | **Obligatorio**: `full` (como el mago), `half` (paladín), `third` (caballero arcano), `pact` (brujo), `table` (tabla propia en `slots`), `hitPoints` (sin espacios: cada conjuro gasta un uso y puntos de golpe) o `ritualsOnly` (sin espacios: solo lanza como ritual los conjuros de su libro). |
 | `slots` | `{ "<nivel>": int[] }?` | **Obligatorio** con `table`; admitido con `pact`. Claves: nivel de clase; valor: espacios de nivel 1 a 9 (de 1 a 9 cantidades). Cada nivel usa la fila de la clave más alta que no lo supere. Con `pact` sin `slots`, la tabla del brujo. |
 | `cantripsKnown` | `{ "<nivel>": int }?` | Trucos conocidos desde ese nivel de clase. |
 | `spellsKnown` | `{ "<nivel>": int }?` | Conjuros conocidos desde ese nivel (lanzadores `known`). |
 | `preparation` | `string?` | `prepared` (prepara cada día: modificador + nivel de clase, o su mitad en `half` y su tercio en `third`; mínimo 1) o `known` (conoce una cantidad fija). Por defecto `known` si hay `spellsKnown` y `prepared` si no. |
 | `ritual` | `bool?` | Puede lanzar rituales. |
 | `focus` | `string?` | ≤ 100. Foco de lanzamiento (texto). |
+| `maxSpellLevel` | `{ "<nivel>": int }?` | **Obligatorio** con `hitPoints` y `ritualsOnly`, y solo con ellas: nivel máximo de conjuro (0–9) desde ese nivel de clase. |
+| `usesResource` | `string?` | **Obligatorio** con `hitPoints`, y solo con ella: clave de un recurso de `resources` de la clase; cada conjuro gasta un uso. |
+| `hitPointCost` | `int[]?` | **Obligatorio** con `hitPoints`, y solo con ella: PG que cuesta un conjuro de nivel 1, 2... (1 a 9 cantidades, 0–999). |
+| `preparedFormula` | `string?` | Solo con `preparation: prepared`: conjuros preparados como suma de `mod:<característica>`, `classLevel`, `halfClassLevel`, `thirdClassLevel` y números (`"mod:wis+halfClassLevel"`); mínimo 1. |
+| `treatAsRitual` | `string[]?` | Conjuros (del SRD o de paquetes) que la clase lanza como rituales aunque no lo sean. El detalle del conjuro en el catálogo lo indica en `ritualForClasses`. |
+
+**Sin espacios (`hitPoints`, `ritualsOnly`).** La clase no tiene espacios ni suma al nivel de lanzador
+multiclase; los espacios de otras clases siguen funcionando aparte. El nivel máximo de conjuro sale de
+`maxSpellLevel` (en la hoja, `sheet.spellcasting[].maxSpellLevel`, y en los filtros `maxSpellLevelBySlots` del
+asistente). Con `hitPoints` la hoja devuelve además `progression`, `usesResource` y `hitPointCost` (hasta el nivel
+máximo) y el personaje lanza con
+`POST /api/v1/systems/dnd5e/characters/{id}/class-actions/hit-point-cast` (`{ "classIndex", "spellLevel" }`): gasta un
+uso del recurso y los PG del nivel (los PG temporales no pagan), sin aprobación; 400 si no quedan usos, si no tiene
+esos PG o si el nivel supera el máximo. Devuelve `{ character, hitPointsLost }`. Con `ritualsOnly` no prepara
+conjuros: aprende los de su libro con elecciones `SpellbookSpells` cuyo filtro lleve `ritualOnly: true` (solo
+rituales y los de `treatAsRitual`; `spellList: "any"` para cualquier lista).
+
+```json
+"spellcasting": {
+  "ability": "wis", "progression": "hitPoints", "preparation": "prepared",
+  "preparedFormula": "mod:wis+halfClassLevel",
+  "maxSpellLevel": { "1": 1, "5": 2, "9": 3, "13": 4, "17": 5 },
+  "usesResource": "reinos-ejemplo-plegarias",
+  "hitPointCost": [5, 10, 20, 30, 45]
+},
+"resources": [
+  { "key": "reinos-ejemplo-plegarias", "name": "Plegarias", "max": { "byLevel": { "1": 2, "5": 5, "10": 8 } }, "recharge": "LongRest" }
+]
+```
+
+Una clase con `spellcastingAbility` sin `spellSlots` en ningún nivel (solo trucos) es válida; con
+`multiclassSpellcasting: "none"` no suma al nivel de lanzador.
 
 Para el multiclase, `full` cuenta el nivel completo, `half` la mitad y `third` un tercio (como en el
 SRD); `pact` y `table` no suman al nivel de lanzador conjunto: aportan sus propios espacios.
@@ -1465,7 +1497,7 @@ En `classes[].levelChoices` (elecciones de la clase, completa o ampliada con `ex
 | `replaces` | `bool?` | Desde este nivel, en cada nivel de la clase se puede sustituir una elección ya hecha. |
 | `cumulative` | `bool?` | Se suma a lo elegido en niveles anteriores. |
 | `note` | `string?` | ≤ 2000. Aclaración para la interfaz. |
-| `filter` | `Filter?` | Conjuros: `spellList` (clase o `any`), `spellLevels` (`[1, 2]`), `maxSpellLevelBySlots`, `source` (`list`, `spellbook` o `known`), `cantripsOnly`, `schools`, `schoolsExceptAt`. |
+| `filter` | `Filter?` | Conjuros: `spellList` (clase o `any`), `spellLevels` (`[1, 2]`), `maxSpellLevelBySlots`, `source` (`list`, `spellbook` o `known`), `cantripsOnly`, `schools`, `schoolsExceptAt`, `ritualOnly` (solo rituales y los `treatAsRitual` de la clase). |
 | `after` | `string?` | Key de otra elección de la misma clase y nivel (del paquete, de la clase base o de la misma subclase, o del catálogo) que se resuelve **antes** que esta. Ver "Orden de las elecciones". |
 
 `AsiOrFeat` ofrece siempre la mejora de característica y las dotes del conjunto `feats` (más las
@@ -1527,8 +1559,10 @@ elegidos son de otra escuela. Errores: `...filter.schools[0]` (escuela desconoci
 
 ### `subclasses[].spellcasting`
 
-Una subclase de una clase que **no** lanza conjuros (guerrero, pícaro, bárbaro, monje) puede darle
-lanzamiento de conjuros:
+Una subclase de una clase que **no** lanza conjuros (guerrero, pícaro, bárbaro, monje), o que solo conoce trucos
+(`spellcastingAbility` sin `spellSlots` en ningún nivel y `multiclassSpellcasting: "none"`, o una progresión sin
+espacios), puede darle lanzamiento de conjuros. En una clase que ya conoce trucos, la clase conserva su característica
+y sus trucos (desde el nivel 1) y la subclase añade los espacios y los conjuros conocidos:
 
 ```json
 "spellcasting": {
@@ -1543,7 +1577,8 @@ lanzamiento de conjuros:
 
 | Campo | Tipo | Reglas |
 | --- | --- | --- |
-| `progression` | `string` | **Obligatorio**: `third` (tercio), `half` (medio) o `full` (completo). |
+| `progression` | `string` | **Obligatorio**: `third` (tercio), `half` (medio), `full` (completo), `pact` (magia de pacto: espacios de un solo nivel que vuelven con un descanso corto; sin `slots`, la tabla del brujo por nivel de clase) o `table` (tabla propia en `slots`). `pact` y `table` no suman al nivel de lanzador multiclase. |
+| `slots` | `{ "<nivel>": int[] }?` | **Obligatorio** con `table`, admitido con `pact`: espacios de nivel 1 a 9 por nivel de clase (vale la clave más alta no superior al nivel). |
 | `ability` | `string` | **Obligatorio**: `str`, `dex`, `con`, `int`, `wis` o `cha`. Característica de la CD y del ataque de conjuros. |
 | `fromLevel` | `int?` | 1–20, por defecto 1: nivel de la clase desde el que lanza conjuros. |
 | `spellList` | `string` | **Obligatorio**: clase del catálogo cuya lista de conjuros usa (`wizard`). |
@@ -1562,7 +1597,7 @@ Con esa subclase, la clase pasa a ser lanzadora para el personaje desde `fromLev
   aumento de la tabla; `spellList` es la lista por defecto de sus filtros y `maxSpellLevelBySlots` usa
   los espacios de la progresión.
 
-Errores: `...spellcasting` (la clase base ya lanza conjuros), `...spellcasting.progression`,
+Errores: `...spellcasting` (la clase base ya lanza conjuros con espacios), `...spellcasting.progression`, `...spellcasting.slots`,
 `...spellcasting.ability`, `...spellcasting.fromLevel`, `...spellcasting.spellList`,
 `...spellcasting.spellsKnown.3` (clave que no es un nivel 1–20 o valor fuera de rango) y
 `...levelChoices[0].choose` cuando falta y la subclase no tiene la tabla correspondiente.

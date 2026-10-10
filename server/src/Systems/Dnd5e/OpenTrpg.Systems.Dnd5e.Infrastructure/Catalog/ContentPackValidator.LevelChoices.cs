@@ -709,9 +709,9 @@ internal sealed partial class ContentPackValidator
     private SubclassSpellcasting? SubclassSpellcasting(string path, PackSubclassSpellcastingJson spellcasting, string classIndex)
     {
         var valid = true;
-        if (_casterClasses.Contains(classIndex))
+        if (_casterClasses.Contains(classIndex) && !_cantripOnlyClasses.Contains(classIndex))
         {
-            AddError(path, $"La clase '{classIndex}' ya lanza conjuros: spellcasting solo vale en subclases de clases que no lanzan conjuros.");
+            AddError(path, $"La clase '{classIndex}' ya lanza conjuros con espacios: spellcasting solo vale en subclases de clases que no lanzan conjuros o solo conocen trucos.");
             valid = false;
         }
 
@@ -750,9 +750,30 @@ internal sealed partial class ContentPackValidator
 
         var cantrips = KnownTable($"{path}.cantripsKnown", spellcasting.CantripsKnown, 10);
         var spells = KnownTable($"{path}.spellsKnown", spellcasting.SpellsKnown, 30);
+        var progression = spellcasting.Progression?.Trim().ToLowerInvariant();
+        IReadOnlyDictionary<int, IReadOnlyList<int>> slots = new Dictionary<int, IReadOnlyList<int>>();
+        if (spellcasting.Slots is { Count: > 0 } table)
+        {
+            if (progression is not (Domain.Catalog.SubclassSpellcasting.Table or Domain.Catalog.SubclassSpellcasting.Pact))
+            {
+                AddError($"{path}.slots", "Solo se admite con \"progression\": \"table\" o \"pact\"; las demás progresiones calculan los espacios.");
+            }
+
+            slots = SlotTable($"{path}.slots", table);
+        }
+        else if (progression == Domain.Catalog.SubclassSpellcasting.Table)
+        {
+            AddError($"{path}.slots", "Obligatorio con \"progression\": \"table\".");
+            valid = false;
+        }
+
         return valid && level is not null && !string.IsNullOrEmpty(ability) && !string.IsNullOrEmpty(spellList) && cantrips is not null && spells is not null
             && (spellcasting.FromLevel is null || fromLevel is not null)
             ? new SubclassSpellcasting(level.Value, ability, fromLevel ?? 1, spellList, cantrips, spells)
+            {
+                IsPact = progression == Domain.Catalog.SubclassSpellcasting.Pact,
+                Slots = slots,
+            }
             : null;
     }
 
@@ -1086,6 +1107,7 @@ internal sealed partial class ContentPackValidator
             schoolsExceptAt = exceptAt.Count > 0 ? exceptAt.Order().ToList() : null,
             weaponCategories = weaponCategories.Count > 0 ? weaponCategories : null,
             firearms = filter.Firearms,
+            ritualOnly = filter.RitualOnly == true ? true : (bool?)null,
         });
     }
 

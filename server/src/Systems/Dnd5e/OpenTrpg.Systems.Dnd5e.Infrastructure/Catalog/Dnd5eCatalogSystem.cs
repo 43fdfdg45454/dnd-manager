@@ -299,6 +299,16 @@ internal sealed partial class Dnd5eCatalogSystem(
             .Where(x => reach.Contains(x.Source) && x.Source != ownId && (x.SpellcastingAbility != null || x.SpellcastingLevel > 0))
             .Select(x => x.Index)
             .ToListAsync(cancellationToken);
+        // Casters without slots (cantrips only) may still get spellcasting from a subclass of another pack.
+        var slotless = await db.Set<ClassDefinition>().AsNoTracking()
+            .Where(x => casterClasses.Contains(x.Index) && x.SpellcastingLevel == 0 && !x.IsPactCaster)
+            .ToListAsync(cancellationToken);
+        var slotlessIndexes = slotless.Where(c => c.MayGainSubclassSpellcasting).Select(c => c.Index).ToList();
+        var withSlots = (await db.Set<ClassLevel>().AsNoTracking().Where(l => slotlessIndexes.Contains(l.ClassIndex)).ToListAsync(cancellationToken))
+            .Where(l => l.SpellSlots.Any(s => s > 0))
+            .Select(l => l.ClassIndex)
+            .ToHashSet(StringComparer.Ordinal);
+        var cantripOnlyClasses = slotlessIndexes.Where(i => !withSlots.Contains(i)).ToHashSet(StringComparer.Ordinal);
         var races = await db.Set<RaceDefinition>().AsNoTracking()
             .Where(x => reach.Contains(x.Source))
             .Select(x => new { x.Index, x.Source })
@@ -343,6 +353,7 @@ internal sealed partial class Dnd5eCatalogSystem(
             packSubclasses,
             races,
             casterClasses.ToHashSet(StringComparer.Ordinal),
+            cantripOnlyClasses,
             spellRows.ToDictionary(x => x.Index, x => x.Level, StringComparer.Ordinal),
             resourceRows.Select(x => (Key: LevelChoiceJson.ParseResource(x.ResourceJson)?.Key, x.Source))
                 .Where(x => x.Key is not null)

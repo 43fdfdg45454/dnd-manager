@@ -346,8 +346,8 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             Classes = classes,
             AutomaticFeatures = await AutomaticFeaturesAsync(definition.Index, entry?.SubclassIndex, newLevel, classLevel, rules, subclasses, cancellationToken),
             Choices = choices,
-            Spellcasting = Spellcasting(character, definition, classLevel, newLevel, spells)
-                ?? SubclassSpellcasting(character, definition, subclasses.FirstOrDefault(s => s.Index == entry?.SubclassIndex)?.Spellcasting, newLevel, spells),
+            Spellcasting = SubclassSpellcasting(character, definition, SubclassCasting(definition, subclasses, entry?.SubclassIndex), classLevel, newLevel, spells)
+                ?? Spellcasting(character, definition, classLevel, newLevel, spells),
             Replacements = replacements,
         };
     }
@@ -392,7 +392,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
     /// casts by itself, or <paramref name="subclass"/> is not a subclass of it with <c>spellcasting</c>.
     /// </summary>
     private static SubclassSpellcasting? SubclassCasting(ClassDefinition definition, IReadOnlyList<SubclassDefinition> subclasses, string? subclass) =>
-        definition.SpellcastingAbility is null && definition.SpellcastingLevel == 0 && subclass is not null
+        definition.MayGainSubclassSpellcasting && subclass is not null
             ? subclasses.FirstOrDefault(s => s.Index == subclass)?.Spellcasting
             : null;
 
@@ -671,11 +671,11 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             definition.IsPactCaster,
             classLevel.CantripsKnown,
             classLevel.SpellsKnown,
-            MaxSpellLevel(classLevel),
+            ClassMaxSpellLevel(definition, classLevel),
             own.Count(s => levels.GetValueOrDefault(s.SpellIndex, -1) == 0),
             own.Count(s => levels.GetValueOrDefault(s.SpellIndex, -1) > 0),
             classLevel.SpellSlots,
-            definition.PreparesSpells && MaxSpellLevel(classLevel) > 0);
+            definition.PreparesSpells && ClassMaxSpellLevel(definition, classLevel) > 0);
     }
 
     /// <summary>Spellcasting of the plan for a class that casts through its subclass (content packs); null when it does not.</summary>
@@ -683,22 +683,24 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         Dnd5eCharacter character,
         ClassDefinition definition,
         SubclassSpellcasting? casting,
+        ClassLevel? classLevel,
         int newLevel,
         IReadOnlyList<SpellDefinition> spells)
     {
-        if (casting is null || definition.SpellcastingAbility is not null || definition.SpellcastingLevel > 0 || newLevel < casting.FromLevel)
+        if (casting is null || newLevel < casting.FromLevel)
         {
             return null;
         }
 
+        // A class that only knows cantrips keeps its ability and its cantrips table when the subclass has none.
         var levels = spells.ToDictionary(s => s.Index, s => s.Level, StringComparer.Ordinal);
         var own = character.Spells.Where(s => s.ClassIndex == definition.Index && !s.AlwaysPrepared).ToList();
         var slots = casting.SlotsAt(newLevel);
         return new LevelUpSpellcastingDto(
             definition.Index,
-            casting.Ability,
-            false,
-            casting.CantripsKnownAt(newLevel),
+            definition.SpellcastingAbility ?? casting.Ability,
+            casting.IsPact,
+            casting.CantripsKnown.Count > 0 ? casting.CantripsKnownAt(newLevel) : classLevel?.CantripsKnown,
             casting.SpellsKnownAt(newLevel),
             SheetCalculator.MaxSpellLevel(slots),
             own.Count(s => levels.GetValueOrDefault(s.SpellIndex, -1) == 0),
@@ -706,6 +708,13 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             slots,
             false);
     }
+
+    /// <summary>
+    /// Highest spell level of a class at a level: its <c>maxSpellLevel</c> table for the progressions without slots
+    /// ("hitPoints", "ritualsOnly"), the slots of the level otherwise.
+    /// </summary>
+    public static int ClassMaxSpellLevel(ClassDefinition definition, ClassLevel? classLevel) =>
+        classLevel is not null && definition.Spellcasting?.MaxSpellLevelAt(classLevel.Level) is { } max ? max : MaxSpellLevel(classLevel);
 
     /// <summary>Highest spell level with slots in the class table at that level (pact slots included); 0 without slots.</summary>
     public static int MaxSpellLevel(ClassLevel? classLevel)
@@ -1051,7 +1060,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             var expanded = list == classList
                 ? subclasses.FirstOrDefault(s => s.Index == subclassIndex)?.ExpandedSpellIndexes ?? new HashSet<string>()
                 : new HashSet<string>();
-            var maxSpellLevel = casting is not null ? SheetCalculator.MaxSpellLevel(casting.SlotsAt(newLevel)) : MaxSpellLevel(classLevel);
+            var maxSpellLevel = casting is not null ? SheetCalculator.MaxSpellLevel(casting.SlotsAt(newLevel)) : ClassMaxSpellLevel(definition, classLevel);
             IReadOnlyList<int> levels = rule.Kind == LevelChoiceKind.CantripsKnown || filter.CantripsOnly
                 ? [0]
                 : filter.SpellLevels.Count > 0
@@ -1062,6 +1071,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             return spells
                 .Where(s => levels.Contains(s.Level) && !known.Contains(s.Index))
                 .Where(s => list == ChoiceFilter.AnyList || s.ClassIndexes.Contains(list, StringComparer.Ordinal) || expanded.Contains(s.Index))
+                .Where(s => !filter.RitualOnly || (definition.Spellcasting?.CastsAsRitual(s.Index, s.Ritual) ?? s.Ritual))
                 .Select(s => filter.AllowsSchool(s.School, newLevel) ? SpellOption(s) : SpellOption(s) with { Eligible = false, Reason = schoolsReason })
                 .OrderBy(o => o.Eligible ? 0 : 1)
                 .ToList();
