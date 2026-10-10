@@ -161,12 +161,14 @@ class RaceStep extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(characterWizardControllerProvider(args));
     final controller = ref.read(characterWizardControllerProvider(args).notifier);
-    final races = ref.watch(racesProvider);
+    final races = ref.watch(racesProvider(args.campaignId));
 
     return races.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) =>
-          WizardLoadError(error: error, onRetry: () => ref.invalidate(racesProvider)),
+      error: (error, _) => WizardLoadError(
+        error: error,
+        onRetry: () => ref.invalidate(racesProvider(args.campaignId)),
+      ),
       data: (list) => ListView(
         key: const Key('step-race'),
         padding: stepPadding,
@@ -250,12 +252,14 @@ class ClassStep extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(characterWizardControllerProvider(args));
     final controller = ref.read(characterWizardControllerProvider(args).notifier);
-    final classes = ref.watch(classesProvider);
+    final classes = ref.watch(classesProvider(args.campaignId));
 
     return classes.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) =>
-          WizardLoadError(error: error, onRetry: () => ref.invalidate(classesProvider)),
+      error: (error, _) => WizardLoadError(
+        error: error,
+        onRetry: () => ref.invalidate(classesProvider(args.campaignId)),
+      ),
       data: (list) => ListView(
         key: const Key('step-class'),
         padding: stepPadding,

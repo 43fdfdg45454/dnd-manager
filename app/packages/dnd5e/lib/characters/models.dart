@@ -2092,6 +2092,7 @@ class InvalidChoice {
     this.setId = '',
     required this.item,
     this.reason = '',
+    this.code = '',
   });
 
   factory InvalidChoice.fromJson(Map<String, dynamic> json) => InvalidChoice(
@@ -2102,7 +2103,16 @@ class InvalidChoice {
     setId: _str(json['setId']),
     item: ChoiceItem.fromJson(_map(json['item']) ?? const {}),
     reason: _str(json['reason']),
+    code: _str(json['code']),
   );
+
+  /// Code of [packDisabled] picks.
+  static const packDisabledCode = 'pack-disabled';
+
+  /// The reason the app shows for a pick of a disabled pack when the server
+  /// sends none.
+  static const packDisabledReason =
+      'Este contenido pertenece a un paquete desactivado en la campaña.';
 
   /// Key to answer in the replacement (`replace.<index>`).
   final String replaceKey;
@@ -2114,6 +2124,19 @@ class InvalidChoice {
   final String setId;
   final ChoiceItem item;
   final String reason;
+
+  /// "prerequisites" or "pack-disabled" (its content pack is disabled in the
+  /// campaign).
+  final String code;
+
+  bool get packDisabled => code == packDisabledCode;
+
+  /// [reason], or the standard text of [code] when the server sent none.
+  String get displayReason => reason.isNotEmpty
+      ? reason
+      : packDisabled
+      ? packDisabledReason
+      : 'Ya no cumples sus requisitos.';
 }
 
 /// `GET /characters/{id}/invalid-choices`: the invalid picks and one

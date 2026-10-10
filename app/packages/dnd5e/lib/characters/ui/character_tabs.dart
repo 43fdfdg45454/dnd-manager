@@ -250,7 +250,9 @@ class _InvalidChoicesNotice extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Hay elecciones que ya no cumplen sus requisitos',
+                    character.invalidChoices.every((i) => i.packDisabled)
+                        ? 'Hay elecciones de un paquete desactivado'
+                        : 'Hay elecciones que ya no cumplen sus requisitos',
                     style: theme.textTheme.titleSmall?.copyWith(color: scheme.onErrorContainer),
                   ),
                 ),
@@ -259,7 +261,7 @@ class _InvalidChoicesNotice extends StatelessWidget {
             const SizedBox(height: 4),
             for (final invalid in character.invalidChoices)
               Text(
-                '${invalid.item.name}: ${invalid.reason}',
+                '${invalid.item.name}: ${invalid.displayReason}',
                 key: Key('invalid-choice-${invalid.item.index}'),
                 style: theme.textTheme.bodySmall?.copyWith(color: scheme.onErrorContainer),
               ),
