@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// features dataset of the server (never an invented index).
 void main() {
   test('los índices de rasgo de los paneles existen en el SRD', () {
-    final dataset = File('../server/seed/srd/5e-SRD-Features.json');
+    final dataset = File('../server/src/Systems/Dnd5e/seed/srd/5e-SRD-Features.json');
     expect(dataset.existsSync(), isTrue, reason: 'Falta ${dataset.path}');
     final known = {
       for (final f in jsonDecode(dataset.readAsStringSync()) as List) (f as Map)['index'] as String,
