@@ -9,6 +9,7 @@ import 'package:opentrpg_dnd5e/characters/models.dart';
 import 'package:opentrpg_dnd5e/characters/ui/character_tabs.dart';
 import 'package:opentrpg_dnd5e/characters/ui/level_up/character_choices_section.dart';
 import 'package:opentrpg_dnd5e/characters/ui/wizard/character_wizard_page.dart';
+import 'package:opentrpg_dnd5e/session/campaign_rules.dart';
 
 import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';
@@ -101,9 +102,11 @@ Future<FakeCharactersRepository> _toBackground(
   List<Map<String, dynamic>>? choices,
   String race = 'half-elf',
   bool pushed = false,
+  CampaignRules? rules,
 }) async {
   final characters = FakeCharactersRepository()
     ..originPlan = makeOriginChoicesJson(choices ?? _halfElfChoices());
+  if (rules != null) characters.campaignRulesById['c1'] = rules;
   final router = await pumpRealApp(
     tester,
     location: pushed ? '/campaigns/c1' : '/campaigns/c1/characters/new',
@@ -399,6 +402,82 @@ void main() {
       expect(find.byKey(const Key('step-origin')), findsNothing);
       expect(find.byKey(const Key('step-equipment')), findsOneWidget);
       expect(characters.created, isEmpty);
+    });
+  });
+
+  group('dote inicial de la campaña', () {
+    // A fictitious starter feat of an enabled pack, offered by the server as
+    // the optional choice `campaign.starterFeat`.
+    Map<String, dynamic> starterChoice() => makeOriginChoiceJson(
+      key: 'campaign.starterFeat',
+      name: 'Dote inicial',
+      kind: 'Feat',
+      source: 'campaign',
+      required: 0,
+      options: [
+        {
+          'index': 'ejemplo-chispa',
+          'name': 'Chispa de ejemplo',
+          'eligible': true,
+          'description': ['Una dote inicial ficticia.'],
+        },
+      ],
+    );
+
+    const enabled = CampaignRules(starterFeatsEnabled: true, starterFeatsAvailable: true);
+
+    testWidgets('con el ajuste activo aparece el paso opcional y guarda la dote', (tester) async {
+      final characters = await _toBackground(
+        tester,
+        choices: [..._halfElfChoices(withLanguages: false), starterChoice()],
+        rules: enabled,
+      );
+      await _next(tester);
+      expect(find.byKey(const Key('step-origin')), findsOneWidget);
+      expect(find.text('Paso 7 de 10 · Elecciones de raza y trasfondo'), findsOneWidget);
+      // The starter feat is not asked with the race and background.
+      expect(find.text('Chispa de ejemplo'), findsNothing);
+      await _tap(tester, find.byKey(const Key('origin-option-race.abilityBonuses-str')));
+      await _tap(tester, find.byKey(const Key('origin-option-race.abilityBonuses-wis')));
+      await _tap(tester, find.byKey(const Key('origin-option-race.skills-perception')));
+      await _next(tester);
+
+      expect(find.byKey(const Key('step-starter-feat')), findsOneWidget);
+      expect(find.text('Paso 8 de 10 · Dote inicial'), findsOneWidget);
+      expect(find.text('Campaña · opcional'), findsOneWidget);
+      await _tap(
+        tester,
+        find.byKey(const Key('origin-option-campaign.starterFeat-ejemplo-chispa')),
+      );
+      await _next(tester);
+
+      expect(find.byKey(const Key('step-equipment')), findsOneWidget);
+      expect(characters.originSaves.last.last, {
+        'key': 'campaign.starterFeat',
+        'selected': {'feat': 'ejemplo-chispa'},
+      });
+    });
+
+    testWidgets('es opcional: se sigue sin elegir ninguna', (tester) async {
+      await _toBackground(tester, race: 'human', choices: [starterChoice()], rules: enabled);
+      await _next(tester);
+      // A race without choices: straight to the starter feat.
+      expect(find.byKey(const Key('step-origin')), findsNothing);
+      expect(find.byKey(const Key('step-starter-feat')), findsOneWidget);
+      await _next(tester);
+      expect(find.byKey(const Key('step-equipment')), findsOneWidget);
+    });
+
+    testWidgets('sin el ajuste activo no hay paso', (tester) async {
+      await _toBackground(
+        tester,
+        race: 'human',
+        choices: [starterChoice()],
+        rules: const CampaignRules(starterFeatsAvailable: true),
+      );
+      await _next(tester);
+      expect(find.byKey(const Key('step-starter-feat')), findsNothing);
+      expect(find.byKey(const Key('step-equipment')), findsOneWidget);
     });
   });
 

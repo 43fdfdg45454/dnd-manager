@@ -59,7 +59,7 @@ public class SubclassSpellcastingTests
         var sheet = Sheet(character);
 
         var casting = Assert.Single(sheet.Spellcasting);
-        Assert.Equal(new SpellcastingValue("fighter", "int", 8 + 3 + 3, 3 + 3, null) { MaxSpellLevel = 1, SpellsKnownMax = 4, CantripsKnownMax = 2 }, casting);
+        Assert.Equal(new SpellcastingValue("fighter", "int", 8 + 3 + 3, 3 + 3, null) { MaxSpellLevel = 1, SpellsKnownMax = 4, CantripsKnownMax = 2, Progression = "third" }, casting);
         Assert.Equal(
             [("base", 8), ("proficiency", 3), ("ability", 3)],
             sheet.Breakdowns["spellSaveDc.fighter"].Parts.Select(p => (p.Source, p.Value)));

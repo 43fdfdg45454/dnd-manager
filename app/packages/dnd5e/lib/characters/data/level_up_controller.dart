@@ -185,15 +185,23 @@ class LevelUpState {
     return p.selectedClass?.subclassIndex;
   }
 
-  /// Choices that apply: the general ones and those of the chosen subclass.
+  /// Choices that apply: the general ones and those of the chosen subclass,
+  /// and the choices of an option or feat only while it is picked.
   List<LevelUpChoice> get visibleChoices {
     final p = plan;
     if (p == null) return const [];
     final subclass = subclassIndex;
     return [
       for (final c in p.choices)
-        if (c.subclassIndex == null || c.subclassIndex == subclass) c,
+        if ((c.subclassIndex == null || c.subclassIndex == subclass) && _requirementMet(c.requires))
+          c,
     ];
+  }
+
+  bool _requirementMet(({String choiceKey, String index})? requires) {
+    if (requires == null) return true;
+    final selection = selectionOf(requires.choiceKey);
+    return selection.selected.contains(requires.index) || selection.feat == requires.index;
   }
 
   /// Automatic features of the class level and of the chosen subclass.
@@ -265,12 +273,7 @@ class LevelUpState {
 
   /// Whether [option] applies with the current answers: options that depend
   /// on another pick of this level-up (`requires`) only when it is picked.
-  bool isAvailable(LevelUpOption option) {
-    final requires = option.requires;
-    if (requires == null) return true;
-    final selection = selectionOf(requires.choiceKey);
-    return selection.selected.contains(requires.index) || selection.feat == requires.index;
-  }
+  bool isAvailable(LevelUpOption option) => _requirementMet(option.requires);
 
   /// Options of [choice] that apply with the current answers.
   List<LevelUpOption> availableOptions(LevelUpChoice choice) => [

@@ -224,6 +224,17 @@ public sealed class CharacterSheetService(
                 throw AppException.Validation("classes", $"La clase '{disabledClass}' {DisabledPack}.");
             }
 
+            // Auxiliary levels (content packs): one level, never the starting class.
+            if (classes.FirstOrDefault(c => definitions[c.ClassIndex.Trim()].IsAuxiliary && c.Level > 1) is { } longAuxiliary)
+            {
+                throw AppException.Validation("classes", $"'{definitions[longAuxiliary.ClassIndex.Trim()].Name}' es un nivel auxiliar: solo tiene un nivel.");
+            }
+
+            if (definitions[classes[0].ClassIndex.Trim()].IsAuxiliary)
+            {
+                throw AppException.Validation("classes", $"'{definitions[classes[0].ClassIndex.Trim()].Name}' es un nivel auxiliar: no puede ser la clase inicial.");
+            }
+
             var subclassIndexes = classes
                 .Select(c => c.SubclassIndex?.Trim())
                 .Where(s => !string.IsNullOrEmpty(s))
@@ -440,7 +451,15 @@ public sealed class CharacterSheetService(
         sheet.Speed,
         sheet.HitPointsMax,
         sheet.HitDice.Select(h => new HitDiceDto(h.ClassIndex, h.Die, h.Total, h.Remaining)).ToList(),
-        sheet.Spellcasting.Select(s => new SpellcastingDto(s.ClassIndex, s.Ability, s.SaveDc, s.AttackBonus, s.PreparedMax) { SpellsKnownMax = s.SpellsKnownMax, CantripsKnownMax = s.CantripsKnownMax }).ToList(),
+        sheet.Spellcasting.Select(s => new SpellcastingDto(s.ClassIndex, s.Ability, s.SaveDc, s.AttackBonus, s.PreparedMax)
+        {
+            SpellsKnownMax = s.SpellsKnownMax,
+            CantripsKnownMax = s.CantripsKnownMax,
+            MaxSpellLevel = s.MaxSpellLevel,
+            Progression = s.Progression,
+            HitPointCost = s.HitPointCost,
+            UsesResource = s.UsesResource,
+        }).ToList(),
         sheet.PactMagic?.SlotLevel,
         sheet.OverriddenFields,
         sheet.ItemEffects.Select(e => new ItemEffectDto(e.ItemName, e.Kind.ToString(), e.Target, e.Value)).ToList(),

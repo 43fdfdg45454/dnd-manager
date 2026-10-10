@@ -29,6 +29,15 @@ public sealed record SpellcastingValue(string ClassIndex, string Ability, int Sa
     /// <summary>Cantrips known at the class level when the class learns a fixed number (subclass casters); null otherwise.</summary>
     public int? CantripsKnownMax { get; init; }
 
+    /// <summary>Progression of a pack class ("hitPoints", "ritualsOnly"...); null for the SRD classes and subclass casters.</summary>
+    public string? Progression { get; init; }
+
+    /// <summary>"hitPoints": hit points lost by spell level (index 0 = 1st level), up to <see cref="MaxSpellLevel"/>.</summary>
+    public IReadOnlyList<int> HitPointCost { get; init; } = Array.Empty<int>();
+
+    /// <summary>"hitPoints": key of the class resource each spell spends.</summary>
+    public string? UsesResource { get; init; }
+
     /// <summary>The class prepares spells (cleric, druid, paladin, wizard) and can already cast leveled spells.</summary>
     public bool PreparesSpells => PreparedMax is not null && MaxSpellLevel > 0;
 }

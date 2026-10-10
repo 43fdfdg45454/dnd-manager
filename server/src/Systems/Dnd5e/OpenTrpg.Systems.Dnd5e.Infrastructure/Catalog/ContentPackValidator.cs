@@ -25,6 +25,7 @@ namespace OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
 /// <param name="PackSubclasses">Subclasses of the packs already imported: index → (class index, pack id).</param>
 /// <param name="Races">Race index → source (the SRD or a pack), for race prerequisites.</param>
 /// <param name="CasterClasses">Classes that cast spells on their own (a subclass <c>spellcasting</c> is only for the others).</param>
+/// <param name="CantripOnlyClasses">Caster classes without slots (cantrips only), which a subclass <c>spellcasting</c> may still extend.</param>
 /// <param name="SpellLevels">Spell index → level, to check the levels of the expanded spell lists.</param>
 /// <param name="ResourceKeys">Keys of the resources of the catalog options and features, with their source (option costs).</param>
 /// <param name="SetClasses">Option sets used by the level choices of the catalog: set id, class and source (option costs).</param>
@@ -41,6 +42,7 @@ internal sealed record ContentPackContext(
     IReadOnlyDictionary<string, (string ClassIndex, string Source)>? PackSubclasses = null,
     IReadOnlyDictionary<string, string>? Races = null,
     IReadOnlySet<string>? CasterClasses = null,
+    IReadOnlySet<string>? CantripOnlyClasses = null,
     IReadOnlyDictionary<string, int>? SpellLevels = null,
     IReadOnlyList<(string Key, string Source)>? ResourceKeys = null,
     IReadOnlyList<(string SetId, string ClassIndex, string Source)>? SetClasses = null,
@@ -184,6 +186,9 @@ internal sealed partial class ContentPackValidator
     /// <summary>Classes that cast spells on their own (catalog in reach and the pack's own).</summary>
     private readonly HashSet<string> _casterClasses;
 
+    /// <summary>Caster classes without slots (cantrips only): a subclass may still give them spellcasting.</summary>
+    private readonly HashSet<string> _cantripOnlyClasses;
+
     /// <summary>Full classes defined by this pack.</summary>
     private readonly HashSet<string> _packClasses = new(StringComparer.Ordinal);
 
@@ -201,6 +206,7 @@ internal sealed partial class ContentPackValidator
         _context = context;
         _classes = new Dictionary<string, string>(context.Classes, StringComparer.Ordinal);
         _casterClasses = new HashSet<string>(context.CasterClasses ?? new HashSet<string>(), StringComparer.Ordinal);
+        _cantripOnlyClasses = new HashSet<string>(context.CantripOnlyClasses ?? new HashSet<string>(), StringComparer.Ordinal);
         _skills = new Dictionary<string, string>(context.Skills, StringComparer.Ordinal);
         _equipmentCategories = new HashSet<string>(context.EquipmentCategories ?? new HashSet<string>(), StringComparer.Ordinal);
         _itemContents = new Dictionary<string, IReadOnlyList<StartingItem>>(
@@ -425,6 +431,10 @@ internal sealed partial class ContentPackValidator
                      ("levels", extension.Levels is not null),
                      ("resources", extension.Resources is not null),
                      ("spellList", extension.SpellList is { ValueKind: not JsonValueKind.Null }),
+                     ("auxiliary", extension.Auxiliary is not null),
+                     ("prerequisites", extension.Prerequisites is not null),
+                     ("prerequisitesText", extension.PrerequisitesText is not null),
+                     ("countsAsCasterLevel", extension.CountsAsCasterLevel is not null),
                  })
         {
             if (present)
@@ -474,6 +484,8 @@ internal sealed partial class ContentPackValidator
                 Description = description,
                 SpellcastingJson = spellcasting?.ToJson(),
                 ExpandedSpellListJson = expandedSpellList,
+                PrerequisitesJson = Prerequisites($"{subclassPath}.prerequisites", subclass.Prerequisites),
+                PrerequisitesText = NullableText($"{subclassPath}.prerequisitesText", subclass.PrerequisitesText, LevelChoiceRule.NoteMaxLength),
                 Source = _id,
             });
 

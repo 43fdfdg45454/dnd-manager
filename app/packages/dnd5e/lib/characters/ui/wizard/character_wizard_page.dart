@@ -17,6 +17,7 @@ import 'step_personality.dart';
 import 'step_proficiencies.dart';
 import 'step_review.dart';
 import 'step_spells.dart';
+import 'step_starter_feat.dart';
 
 /// Title and icon of each wizard step.
 extension WizardStepInfo on WizardStep {
@@ -28,6 +29,7 @@ extension WizardStepInfo on WizardStep {
     WizardStep.background => 'Trasfondo',
     WizardStep.personality => 'Personalidad',
     WizardStep.origin => 'Elecciones de raza y trasfondo',
+    WizardStep.starterFeat => 'Dote inicial',
     WizardStep.equipment => 'Equipo',
     WizardStep.spells => 'Hechizos',
     WizardStep.review => 'Revisión',
@@ -41,6 +43,7 @@ extension WizardStepInfo on WizardStep {
     WizardStep.background => AppIcons.book,
     WizardStep.personality => AppIcons.quill,
     WizardStep.origin => AppIcons.hood,
+    WizardStep.starterFeat => AppIcons.sparkles,
     WizardStep.equipment => AppIcons.backpack,
     WizardStep.spells => AppIcons.spellbook,
     WizardStep.review => AppIcons.scroll,
@@ -294,6 +297,7 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
     WizardStep.background => BackgroundStep(args: _args),
     WizardStep.personality => PersonalityStep(args: _args),
     WizardStep.origin => OriginStep(args: _args),
+    WizardStep.starterFeat => StarterFeatStep(args: _args),
     WizardStep.equipment => EquipmentStep(args: _args),
     WizardStep.spells => SpellsStep(args: _args),
     WizardStep.review => ReviewStep(args: _args),

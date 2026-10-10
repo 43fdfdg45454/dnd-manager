@@ -50,7 +50,14 @@ public sealed record LevelUpClassDto(
     int HitDie,
     bool IsNew,
     int CurrentLevel,
-    string? SubclassIndex);
+    string? SubclassIndex)
+{
+    /// <summary>Auxiliary level (content packs): one level only, offered apart ("Nivel auxiliar").</summary>
+    public bool Auxiliary { get; init; }
+
+    /// <summary>Literal prerequisites of an auxiliary level (narrative ones included), or null.</summary>
+    public string? PrerequisitesText { get; init; }
+}
 
 /// <summary>A feature gained automatically at the new level. <see cref="SubclassIndex"/> is set for subclass features.</summary>
 public sealed record LevelUpFeatureDto(string ClassIndex, string? SubclassIndex, int Level, LevelUpFeatureInfoDto Feature);
@@ -80,7 +87,17 @@ public sealed record LevelUpChoiceDto(
     bool FreeText,
     IReadOnlyList<LevelUpOptionDto> Options,
     IReadOnlyList<ChoiceItemDto> Known,
-    string? Warning = null);
+    string? Warning = null)
+{
+    /// <summary>Other option sets whose options are offered too (an ability improvement that also offers class options).</summary>
+    public IReadOnlyList<string> AlsoFrom { get; init; } = [];
+
+    /// <summary>
+    /// Choice of an option or feat (<c>options[].choices</c>): it is only asked, and only required, when <c>index</c> is
+    /// picked in the choice <c>choiceKey</c> (also as the feat of an ability improvement). Null for the class choices.
+    /// </summary>
+    public OptionRequirementDto? Requires { get; init; }
+}
 
 /// <summary>
 /// An option of a choice. Not <see cref="Eligible"/> when its prerequisites are not met (<see cref="Reason"/>).
@@ -101,6 +118,9 @@ public sealed record LevelUpOptionDto(
 {
     /// <summary>Damage type resisted with a trait option (origin choices: draconic ancestry), or null.</summary>
     public string? DamageType { get; init; }
+
+    /// <summary>Option set of the option ("feats", or another set offered with <c>alsoFrom</c>), or null for non-options.</summary>
+    public string? SetId { get; init; }
 
     /// <summary>What using the option costs ("2 Ki"), or null when it is free.</summary>
     public OptionCostDto? Cost { get; init; }

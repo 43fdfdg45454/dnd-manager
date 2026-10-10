@@ -95,6 +95,22 @@ public sealed record SpellcastingDto(string ClassIndex, string Ability, int Save
 
     /// <summary>Cantrips known allowed at the class level (subclass casters); null when the class has no fixed number.</summary>
     public int? CantripsKnownMax { get; init; }
+
+    /// <summary>Highest spell level the class can cast now (by its slots, or its table without slots); 0 for cantrips only.</summary>
+    public int MaxSpellLevel { get; init; }
+
+    /// <summary>
+    /// Progression of a pack class: "hitPoints" (no slots: each spell spends a use of <see cref="UsesResource"/> and the
+    /// hit points of <see cref="HitPointCost"/>) or "ritualsOnly" (no slots: only rituals of its book); "full", "half",
+    /// "third", "pact" or "table" otherwise; null for the SRD classes.
+    /// </summary>
+    public string? Progression { get; init; }
+
+    /// <summary>"hitPoints": hit points lost by spell level (index 0 = 1st level), up to <see cref="MaxSpellLevel"/>.</summary>
+    public IReadOnlyList<int> HitPointCost { get; init; } = [];
+
+    /// <summary>"hitPoints": key of the class resource each spell spends.</summary>
+    public string? UsesResource { get; init; }
 }
 
 /// <param name="PactSlotLevel">Spell level of the Pact Magic slots (null without them).</param>

@@ -57,8 +57,8 @@ int? parseRollScore(String text) {
 }
 
 /// Steps of the creation wizard in order. [origin] only exists when the race,
-/// subrace or background ask for decisions and [spells] only for classes that
-/// cast at level 1.
+/// subrace or background ask for decisions, [starterFeat] when the campaign
+/// offers a starter feat and [spells] only for classes that cast at level 1.
 enum WizardStep {
   name,
   race,
@@ -67,6 +67,7 @@ enum WizardStep {
   background,
   personality,
   origin,
+  starterFeat,
   equipment,
   spells,
   review,
@@ -220,6 +221,7 @@ class WizardState {
     this.originAnswers = const {},
     this.originLoading = false,
     this.originError,
+    this.offersStarterFeat = false,
     this.trinketTable,
     this.trinketRoll,
     this.trinketText = '',
@@ -313,6 +315,10 @@ class WizardState {
 
   /// Spanish error of the last failed load of [originPlan].
   final String? originError;
+
+  /// The campaign allows an optional starter feat (its rules enable them and
+  /// an enabled pack brings some): the "Dote inicial" step is shown.
+  final bool offersStarterFeat;
 
   /// Trinket table of the content packs (null until loaded; empty without one).
   final List<Trinket>? trinketTable;
@@ -481,6 +487,22 @@ class WizardState {
       if (c.kind != OriginChoiceKind.language) c,
   ];
 
+  /// The choices of the race, subrace and background ([originChoices] but the
+  /// starter feat, which has its own step).
+  List<OriginChoice> get raceAndBackgroundChoices => [
+    for (final c in originChoices)
+      if (c.key != starterFeatChoiceKey) c,
+  ];
+
+  /// The optional "Dote inicial" of the plan, or null when the server does
+  /// not offer it.
+  OriginChoice? get starterFeatChoice {
+    for (final c in originChoices) {
+      if (c.key == starterFeatChoiceKey) return c;
+    }
+    return null;
+  }
+
   OriginAnswer originAnswerOf(OriginChoice choice) =>
       originAnswers[choice.key] ?? const OriginAnswer();
 
@@ -512,7 +534,7 @@ class WizardState {
     if (originLoading) return 'Cargando las elecciones…';
     if (originError != null) return originError;
     if (originPlan == null) return 'Cargando las elecciones…';
-    for (final c in originChoices) {
+    for (final c in raceAndBackgroundChoices) {
       final error = originChoiceError(c);
       if (error != null) return error;
     }
@@ -821,7 +843,9 @@ class WizardState {
   /// asked, "Hechizos" only when the class casts).
   List<WizardStep> get steps => [
     for (final s in WizardStep.values)
-      if ((s != WizardStep.spells || hasSpellStep) && (s != WizardStep.origin || needsOriginStep))
+      if ((s != WizardStep.spells || hasSpellStep) &&
+          (s != WizardStep.origin || needsOriginStep) &&
+          (s != WizardStep.starterFeat || offersStarterFeat))
         s,
   ];
 
@@ -864,6 +888,7 @@ class WizardState {
     Map<String, OriginAnswer>? originAnswers,
     bool? originLoading,
     Object? originError = _unset,
+    bool? offersStarterFeat,
     Object? trinketTable = _unset,
     Object? trinketRoll = _unset,
     String? trinketText,
@@ -910,6 +935,7 @@ class WizardState {
     originAnswers: originAnswers ?? this.originAnswers,
     originLoading: originLoading ?? this.originLoading,
     originError: identical(originError, _unset) ? this.originError : originError as String?,
+    offersStarterFeat: offersStarterFeat ?? this.offersStarterFeat,
     trinketTable: identical(trinketTable, _unset)
         ? this.trinketTable
         : trinketTable as List<Trinket>?,
@@ -971,6 +997,13 @@ class WizardState {
         return null;
       case WizardStep.origin:
         return originValidation;
+      case WizardStep.starterFeat:
+        if (originLoading || (originPlan == null && originError == null)) {
+          return 'Cargando las elecciones…';
+        }
+        if (originError != null) return originError;
+        final starter = starterFeatChoice;
+        return starter == null ? null : originChoiceError(starter);
       case WizardStep.equipment:
         return equipmentError ?? trinketError;
       case WizardStep.spells:
@@ -1163,7 +1196,20 @@ class CharacterWizardController extends Notifier<WizardState> {
   WizardState build() {
     // Kept alive for [_ownerToSend]: whether the user is a DM decides the owner.
     ref.listen(campaignDetailControllerProvider(campaignId), (_, _) {});
+    unawaited(Future.microtask(_loadRules));
     return WizardState(owner: args.ownerUserId == null ? null : (userId: args.ownerUserId));
+  }
+
+  /// Whether the campaign offers a starter feat. Without its rules (an error,
+  /// an older server) the step is simply not shown.
+  Future<void> _loadRules() async {
+    try {
+      final rules = await ref.read(dnd5eCharactersRepositoryProvider).campaignRules(campaignId);
+      if (!ref.mounted || !rules.offersStarterFeat) return;
+      state = state.copyWith(offersStarterFeat: true);
+    } catch (_) {
+      // No step.
+    }
   }
 
   CatalogRepository get _catalog => ref.read(catalogRepositoryProvider);
@@ -1177,7 +1223,9 @@ class CharacterWizardController extends Notifier<WizardState> {
   void goTo(int step) {
     final last = state.steps.length - 1;
     state = state.copyWith(step: step.clamp(0, last));
-    if (state.currentStep == WizardStep.origin) unawaited(loadOrigin());
+    if (state.currentStep == WizardStep.origin || state.currentStep == WizardStep.starterFeat) {
+      unawaited(loadOrigin());
+    }
     if (state.currentStep == WizardStep.equipment && state.trinketTable == null) {
       unawaited(loadTrinkets());
     }
@@ -1193,10 +1241,13 @@ class CharacterWizardController extends Notifier<WizardState> {
     return null;
   }
 
-  /// Like [next], but leaving the origin step first saves its answers on the
-  /// server. Returns the error that blocks the step, or null once moved on.
+  /// Like [next], but leaving the origin or the starter feat step first saves
+  /// its answers on the server. Returns the error that blocks the step, or
+  /// null once moved on.
   Future<String?> advance() async {
-    if (state.currentStep != WizardStep.origin) return next();
+    if (state.currentStep != WizardStep.origin && state.currentStep != WizardStep.starterFeat) {
+      return next();
+    }
     final error = state.validate(state.step);
     if (error != null) return error;
     try {

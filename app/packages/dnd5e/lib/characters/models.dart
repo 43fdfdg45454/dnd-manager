@@ -524,6 +524,10 @@ class Spellcasting {
     this.preparedMax,
     this.spellsKnownMax,
     this.cantripsKnownMax,
+    this.maxSpellLevel = 0,
+    this.progression,
+    this.hitPointCost = const [],
+    this.usesResource,
   });
 
   factory Spellcasting.fromJson(Map<String, dynamic> json) => Spellcasting(
@@ -534,6 +538,13 @@ class Spellcasting {
     preparedMax: _int(json['preparedMax']),
     spellsKnownMax: _int(json['spellsKnownMax']),
     cantripsKnownMax: _int(json['cantripsKnownMax']),
+    maxSpellLevel: _int(json['maxSpellLevel']) ?? 0,
+    progression: _strOrNull(json['progression']),
+    hitPointCost: [
+      for (final v in (json['hitPointCost'] as List?) ?? const [])
+        if (_int(v) case final int cost) cost,
+    ],
+    usesResource: _strOrNull(json['usesResource']),
   );
 
   final String classIndex;
@@ -548,6 +559,25 @@ class Spellcasting {
 
   /// Cantrips known allowed at the class level, like [spellsKnownMax].
   final int? cantripsKnownMax;
+
+  /// Highest spell level the class casts now (0: cantrips only).
+  final int maxSpellLevel;
+
+  /// Progression of a class of a content pack ("hitPoints", "ritualsOnly",
+  /// "full"...); null for the SRD classes.
+  final String? progression;
+
+  /// "hitPoints": hit points lost by spell level (index 0 = 1st level).
+  final List<int> hitPointCost;
+
+  /// "hitPoints": key of the class resource each spell spends.
+  final String? usesResource;
+
+  /// The class casts without slots, paying hit points.
+  bool get castsWithHitPoints => progression == 'hitPoints';
+
+  /// The class casts only rituals, without slots.
+  bool get ritualsOnly => progression == 'ritualsOnly';
 }
 
 /// An item modifier applied to the sheet (`ItemEffectDto`).
@@ -876,6 +906,14 @@ class DivineSmiteResult {
 
   /// "2d8".
   final String damageDice;
+}
+
+/// Result of a spell cast with hit points instead of a slot.
+class HitPointCastResult {
+  const HitPointCastResult({required this.character, required this.hitPointsLost});
+
+  final CharacterDetail character;
+  final int hitPointsLost;
 }
 
 /// The D&D 5e part of a character detail: the sheet fields the server sends
@@ -1492,6 +1530,8 @@ class LevelUpClassOption {
     this.isNew = false,
     this.currentLevel = 0,
     this.subclassIndex,
+    this.auxiliary = false,
+    this.prerequisitesText,
   });
 
   factory LevelUpClassOption.fromJson(Map<String, dynamic> json) {
@@ -1505,11 +1545,21 @@ class LevelUpClassOption {
       isNew: _bool(json['isNew']),
       currentLevel: _int(json['currentLevel']) ?? 0,
       subclassIndex: _strOrNull(json['subclassIndex']),
+      auxiliary: _bool(json['auxiliary']),
+      prerequisitesText: _strOrNull(json['prerequisitesText']),
     );
   }
 
   final String classIndex;
   final String name;
+
+  /// An auxiliary level of a content pack: a single level, taken once and
+  /// offered apart ("Nivel auxiliar").
+  final bool auxiliary;
+
+  /// The literal prerequisites of an auxiliary level (narrative ones
+  /// included), or null.
+  final String? prerequisitesText;
 
   /// False when a new class does not meet the multiclassing prerequisites ([reason]).
   final bool allowed;
@@ -1636,6 +1686,7 @@ class LevelUpOption {
     this.damageType,
     this.cost,
     this.requires,
+    this.setId,
   });
 
   factory LevelUpOption.fromJson(Map<String, dynamic> json) {
@@ -1659,8 +1710,13 @@ class LevelUpOption {
       requires: requires == null
           ? null
           : (choiceKey: _str(requires['choiceKey']), index: _str(requires['index'])),
+      setId: _strOrNull(json['setId']),
     );
   }
+
+  /// Option set of the option ("feats", or a set offered with
+  /// [LevelUpChoice.alsoFrom]); null for non-options.
+  final String? setId;
 
   final String index;
   final String name;
@@ -1714,6 +1770,8 @@ class LevelUpChoice {
     this.options = const [],
     this.known = const [],
     this.warning,
+    this.alsoFrom = const [],
+    this.requires,
   });
 
   factory LevelUpChoice.fromJson(Map<String, dynamic> json) => LevelUpChoice(
@@ -1731,11 +1789,24 @@ class LevelUpChoice {
     options: _objects(json['options'], LevelUpOption.fromJson),
     known: _objects(json['known'], ChoiceItem.fromJson),
     warning: _strOrNull(json['warning']),
+    alsoFrom: _strings(json['alsoFrom']),
+    requires: switch (_map(json['requires'])) {
+      final r? => (choiceKey: _str(r['choiceKey']), index: _str(r['index'])),
+      null => null,
+    },
   );
 
   final String key;
   final String name;
   final LevelChoiceKind kind;
+
+  /// Other option sets offered too (an improvement that also offers class
+  /// options); each option says its own [LevelUpOption.setId].
+  final List<String> alsoFrom;
+
+  /// A choice of an option or a feat: only asked (and only required) when
+  /// [index] is picked in the choice [choiceKey] (also as its feat).
+  final ({String choiceKey, String index})? requires;
   final int choose;
 
   /// Picks needed (fewer than [choose] when not enough options are eligible).
@@ -2172,6 +2243,10 @@ enum OriginChoiceKind {
   static OriginChoiceKind fromApi(Object? value) =>
       _enumFromApi(values, (e) => e.apiValue, value, OriginChoiceKind.traitOption);
 }
+
+/// Key of the optional "Dote inicial" a campaign may offer at creation
+/// (`campaign.starterFeat`).
+const starterFeatChoiceKey = 'campaign.starterFeat';
 
 /// A decision of the race, subrace or background (`OriginChoiceDto`).
 /// [required] picks block the activation; optional ones (languages) have 0.

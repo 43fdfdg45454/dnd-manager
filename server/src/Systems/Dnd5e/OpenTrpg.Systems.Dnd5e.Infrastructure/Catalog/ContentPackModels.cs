@@ -185,6 +185,18 @@ internal sealed class PackClassJson
 
     /// <summary>Level choices of the class (on top of those generated from the levels and the spellcasting tables).</summary>
     public List<PackLevelChoiceJson?>? LevelChoices { get; set; }
+
+    /// <summary>Auxiliary level: a one-level class taken after level 1 instead of a class level.</summary>
+    public bool? Auxiliary { get; set; }
+
+    /// <summary>Auxiliary classes: structured prerequisites.</summary>
+    public PackPrerequisitesJson? Prerequisites { get; set; }
+
+    /// <summary>Auxiliary classes: literal or narrative prerequisites.</summary>
+    public string? PrerequisitesText { get; set; }
+
+    /// <summary>Auxiliary classes: counts as one level of the caster class for its slots.</summary>
+    public bool? CountsAsCasterLevel { get; set; }
 }
 
 internal sealed class PackClassProficienciesJson
@@ -198,10 +210,22 @@ internal sealed class PackClassProficienciesJson
 
 internal sealed class PackMulticlassingJson
 {
-    /// <summary>Minimum score by ability ("int": 13).</summary>
-    public Dictionary<string, int?>? Prerequisites { get; set; }
+    /// <summary>Minimum score by ability ("int": 13), plus an optional "anyOf" list of such maps (one must be met).</summary>
+    public Dictionary<string, JsonElement>? Prerequisites { get; set; }
 
     public PackMulticlassProficienciesJson? Proficiencies { get; set; }
+
+    /// <summary>Proficiencies gained on reaching a level of the class taken as a new class ("2": {"armor": ["heavy"]}).</summary>
+    public Dictionary<string, PackLevelProficienciesJson?>? ProficienciesByLevel { get; set; }
+}
+
+internal sealed class PackLevelProficienciesJson
+{
+    public List<string?>? Armor { get; set; }
+
+    public List<string?>? Weapons { get; set; }
+
+    public List<string?>? Tools { get; set; }
 }
 
 internal sealed class PackMulticlassProficienciesJson
@@ -236,6 +260,21 @@ internal sealed class PackClassSpellcastingJson
     public bool? Ritual { get; set; }
 
     public string? Focus { get; set; }
+
+    /// <summary>"hitPoints"/"ritualsOnly": highest spell level by class level.</summary>
+    public Dictionary<string, int?>? MaxSpellLevel { get; set; }
+
+    /// <summary>"hitPoints": key of the class resource spent by each spell.</summary>
+    public string? UsesResource { get; set; }
+
+    /// <summary>"hitPoints": hit points lost by spell level (1st, 2nd...).</summary>
+    public List<int?>? HitPointCost { get; set; }
+
+    /// <summary>Spells prepared ("mod:wis+halfClassLevel").</summary>
+    public string? PreparedFormula { get; set; }
+
+    /// <summary>Spells the class casts as rituals.</summary>
+    public List<string?>? TreatAsRitual { get; set; }
 }
 
 internal sealed class PackClassLevelJson
@@ -312,6 +351,15 @@ internal sealed class PackFeatJson
 
     /// <summary>Free label of the feat ("starter"...).</summary>
     public string? Category { get; set; }
+
+    /// <summary>Choices made when the feat is taken (no level).</summary>
+    public List<PackLevelChoiceJson?>? Choices { get; set; }
+
+    /// <summary>Only offered by origin choices at creation, never by an Ability Score Improvement.</summary>
+    public bool? CreationOnly { get; set; }
+
+    /// <summary>Starter feat (the optional "Dote inicial" of level 1 when the campaign enables it); implies creationOnly.</summary>
+    public bool? Starter { get; set; }
 }
 
 internal sealed class PackCreatureJson
@@ -482,6 +530,12 @@ internal sealed class PackSubclassJson
 
     /// <summary>Format 2: spells added to the class's spell list for the characters with this subclass (not granted).</summary>
     public List<PackExpandedSpellJson?>? ExpandedSpellList { get; set; }
+
+    /// <summary>Format 3: what the character needs to choose the subclass (same fields as an option's).</summary>
+    public PackPrerequisitesJson? Prerequisites { get; set; }
+
+    /// <summary>Format 3: prerequisites in words (narrative ones, or a text for the structured ones).</summary>
+    public string? PrerequisitesText { get; set; }
 }
 
 internal sealed class PackExpandedSpellJson
@@ -493,8 +547,11 @@ internal sealed class PackExpandedSpellJson
 
 internal sealed class PackSubclassSpellcastingJson
 {
-    /// <summary>"third", "half" or "full".</summary>
+    /// <summary>"third", "half", "full", "pact" or "table".</summary>
     public string? Progression { get; set; }
+
+    /// <summary>"table" (required) and "pact" (optional): slots of the spell levels 1-9 by class level.</summary>
+    public Dictionary<string, List<int?>?>? Slots { get; set; }
 
     public string? Ability { get; set; }
 
@@ -626,7 +683,7 @@ internal sealed class PackItemJson
 
 internal sealed class PackWeaponJson
 {
-    /// <summary>"simple" or "martial".</summary>
+    /// <summary>"simple", "martial" or "exotic" (also the firearm group of a weapon with a <c>firearm</c> section).</summary>
     public string? Category { get; set; }
 
     /// <summary>"melee" or "ranged".</summary>
@@ -660,6 +717,9 @@ internal sealed class PackArmorJson
     public int? MaxDexBonus { get; set; }
 
     public int? StrMin { get; set; }
+
+    /// <summary>Exotic armor: keeps its weight category and needs the "exotic-armor" proficiency.</summary>
+    public bool? Exotic { get; set; }
 
     public bool? StealthDisadvantage { get; set; }
 }
@@ -882,6 +942,9 @@ internal sealed class PackCantripChoiceJson
 internal sealed class PackFeatChoiceJson
 {
     public int? Choose { get; set; }
+
+    /// <summary>Option set the feats come from (heritage feats); null = the <c>feats</c> set.</summary>
+    public string? SetId { get; set; }
 }
 
 internal sealed class PackTraitOptionChoiceJson
@@ -1085,6 +1148,12 @@ internal sealed class PackOptionJson
 
     /// <summary>Uses of a resource spent each time the option is used.</summary>
     public PackOptionCostJson? Cost { get; set; }
+
+    /// <summary>Choices made when the option is taken (no level).</summary>
+    public List<PackLevelChoiceJson?>? Choices { get; set; }
+
+    /// <summary>Choices the option adds at later levels of the class of the pick (with level).</summary>
+    public List<PackLevelChoiceJson?>? LevelChoices { get; set; }
 }
 
 internal sealed class PackOptionCostJson
@@ -1112,6 +1181,28 @@ internal sealed class PackPrerequisitesJson
 
     /// <summary>The character must be able to cast at least one spell.</summary>
     public bool? Spellcasting { get; set; }
+
+    /// <summary>Subclass indexes, one of which the character must have.</summary>
+    public List<string?>? Subclasses { get; set; }
+
+    /// <summary>Option indexes (any set, feats included) the character must have, all of them.</summary>
+    public List<string?>? Options { get; set; }
+
+    /// <summary>Alternatives, one of which must be met entirely (one level deep).</summary>
+    public List<PackPrerequisitesJson?>? AnyOf { get; set; }
+
+    /// <summary>"spellcasting" or "pactMagic".</summary>
+    public string? ClassFeature { get; set; }
+
+    /// <summary>Class indexes, one of which the character must have (with <see cref="ClassFeature"/> when given).</summary>
+    public List<string?>? Classes { get; set; }
+
+    public int? CharacterLevel { get; set; }
+
+    public int? SpellcastingAbilityMin { get; set; }
+
+    /// <summary>Race sizes ("small", "medium"...), one of which the character must have.</summary>
+    public List<string?>? Sizes { get; set; }
 }
 
 /// <summary>Proficiencies required, all of them: armor keys ("light", "medium", "heavy", "shields") and weapon keys ("simple", "martial" or a weapon index).</summary>
@@ -1160,6 +1251,9 @@ internal sealed class PackGrantsJson
 
     /// <summary>Races and subraces: ability the granted spells are cast with ("cha").</summary>
     public string? SpellcastingAbility { get; set; }
+
+    /// <summary>Options and feats: option indexes (any set) the character gets without spending a choice.</summary>
+    public List<string?>? Options { get; set; }
 }
 
 internal sealed class PackGrantedSpellJson
@@ -1233,6 +1327,9 @@ internal sealed class PackLevelChoiceJson
 
     /// <summary>Key of another choice of the same level that is resolved before this one.</summary>
     public string? After { get; set; }
+
+    /// <summary>AsiOrFeat and OptionSet: other option sets whose options are offered too.</summary>
+    public List<string?>? AlsoFrom { get; set; }
 }
 
 internal sealed class PackChoiceFilterJson
@@ -1252,6 +1349,15 @@ internal sealed class PackChoiceFilterJson
 
     /// <summary>Class levels at which a spell of any school may be chosen.</summary>
     public List<int?>? SchoolsExceptAt { get; set; }
+
+    /// <summary>Weapon choices: "simple", "martial", "exotic".</summary>
+    public List<string?>? WeaponCategories { get; set; }
+
+    /// <summary>Weapon choices: true = only firearms, false = no firearms.</summary>
+    public bool? Firearms { get; set; }
+
+    /// <summary>Spell choices: only rituals (or spells the class casts as rituals).</summary>
+    public bool? RitualOnly { get; set; }
 }
 
 // ---- Converters ------------------------------------------------------------------------------------

@@ -1500,12 +1500,18 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<bool>("CountsAsCasterLevel")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<int>("HitDie")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("IsAuxiliary")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsPactCaster")
                         .HasColumnType("boolean");
@@ -1520,6 +1526,13 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("PrerequisitesJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PrerequisitesText")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<string>("ProficiencyNames")
                         .IsRequired()
@@ -1799,6 +1812,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("AlsoFromJson")
+                        .HasColumnType("text");
+
                     b.Property<int>("Choose")
                         .HasColumnType("integer");
 
@@ -1877,14 +1893,23 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
 
+                    b.Property<string>("ChoicesJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("CostJson")
                         .HasColumnType("text");
+
+                    b.Property<bool>("CreationOnly")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("GrantsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LevelChoicesJson")
                         .HasColumnType("text");
 
                     b.Property<string>("ModifiersJson")
@@ -1915,6 +1940,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)");
+
+                    b.Property<bool>("Starter")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Index");
 
@@ -2317,6 +2345,13 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("PrerequisitesJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PrerequisitesText")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<string>("Source")
                         .IsRequired()
@@ -2869,6 +2904,22 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("CharacterSpellSlots", (string)null);
+                });
+
+            modelBuilder.Entity("OpenTrpg.Systems.Dnd5e.Domain.Rules.Dnd5eCampaignRules", b =>
+                {
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("StarterFeatsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("CampaignId");
+
+                    b.ToTable("Dnd5eCampaignRules", (string)null);
                 });
 
             modelBuilder.Entity("OpenTrpg.Core.Domain.Campaigns.Campaign", b =>
@@ -3786,6 +3837,15 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                     b.HasOne("OpenTrpg.Systems.Dnd5e.Domain.Characters.Dnd5eCharacter", null)
                         .WithMany("SpellSlots")
                         .HasForeignKey("CharacterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenTrpg.Systems.Dnd5e.Domain.Rules.Dnd5eCampaignRules", b =>
+                {
+                    b.HasOne("OpenTrpg.Core.Domain.Campaigns.Campaign", null)
+                        .WithOne()
+                        .HasForeignKey("OpenTrpg.Systems.Dnd5e.Domain.Rules.Dnd5eCampaignRules", "CampaignId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

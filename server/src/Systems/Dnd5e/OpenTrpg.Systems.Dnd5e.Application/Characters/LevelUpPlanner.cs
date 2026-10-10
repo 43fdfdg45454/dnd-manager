@@ -1,3 +1,4 @@
+using OpenTrpg.Core.Application.Items;
 using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Application.Common;
 using OpenTrpg.Core.Domain.Catalog;
@@ -39,6 +40,12 @@ public sealed record PlannedOption(
 /// <summary>A choice of the plan: the rule, how many picks are required, the options and the replaceable picks.</summary>
 public sealed record PlannedChoice(LevelChoiceRule Rule, int Required, bool FreeText, IReadOnlyList<PlannedOption> Options, IReadOnlyList<ChoiceItem> Known)
 {
+    /// <summary>
+    /// Choice of an option (<c>options[].choices</c>): it only applies, and is only required, when <c>Index</c> is picked
+    /// in the choice <c>ChoiceKey</c> of the same level-up. Null for the choices of the class.
+    /// </summary>
+    public OptionRequirementDto? Requires { get; init; }
+
     public PlannedOption? Option(string index) => Options.FirstOrDefault(o => o.Index == index);
 
     /// <summary>
@@ -76,10 +83,15 @@ public sealed record PlannedChoice(LevelChoiceRule Rule, int Required, bool Free
             {
                 Cost = o.Cost,
                 Requires = o.Requires,
+                SetId = o.Definition?.SetId,
             })
             .ToList(),
         Known.Select(ChoiceItemDto.From).ToList(),
-        Warning);
+        Warning)
+    {
+        AlsoFrom = Rule.AlsoFrom,
+        Requires = Requires,
+    };
 }
 
 /// <summary>The level-up of a character in one class, as computed by <see cref="LevelUpPlanner"/>.</summary>
@@ -143,6 +155,9 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
     private const string FightingStylePrefix = "fighting-style-";
     private const string ThievesTools = "thieves-tools";
 
+    /// <summary>Most catalog weapons a weapon choice lists.</summary>
+    private const int MaxWeaponOptions = 1000;
+
     /// <summary>"fighter-fighting-style-defense" → "fighting-style-defense"; other indexes unchanged.</summary>
     public static string NormalizeIndex(string index)
     {
@@ -199,6 +214,16 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         var answered = character.Choices.Where(c => c.ClassIndex == definition.Index).Select(c => c.Key).ToHashSet(StringComparer.Ordinal);
         var allRules = WithKnownSpellCounts(await catalog.ListLevelChoiceRulesAsync(definition.Index, cancellationToken), definition, subclasses);
         var rules = SelectRules(allRules, entry?.SubclassIndex, newLevel, answered);
+
+        // Choices that the options of this class the character has add at this level (options[].levelChoices).
+        var classPicks = character.ActivePicks().Where(p => p.ClassIndex == definition.Index && p.SetId is not null).Select(p => p.Item.Index).Distinct(StringComparer.Ordinal).ToList();
+        if (classPicks.Count > 0)
+        {
+            foreach (var picked in await catalog.ListOptionsByIndexAsync(classPicks, cancellationToken))
+            {
+                rules.AddRange(picked.LevelChoices.Where(r => r.Level == newLevel).Select(r => r.ToRule(picked.Index, definition.Index, null, newLevel)));
+            }
+        }
         if (entry is null && character.Classes.Count > 0)
         {
             // Multiclassing: the creation wizard only covered the first class, so the level-1 choices of a new
@@ -213,24 +238,65 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         // Skills (picked, or granted by the subclass or an option) are resolved before the expertise of the same level.
         rules = LevelChoiceOrder.Sort(rules);
 
-        var setIds = rules.Select(r => r.Kind == LevelChoiceKind.AsiOrFeat ? OptionSets.Feats : r.SetId).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        var setIds = rules.Select(r => r.Kind == LevelChoiceKind.AsiOrFeat ? OptionSets.Feats : r.SetId).OfType<string>()
+            .Concat(rules.SelectMany(r => r.AlsoFrom))
+            .ToHashSet(StringComparer.Ordinal);
         if (setIds.Count > 0)
         {
             setIds.Add(OptionSets.PactBoons);
         }
 
-        var options = await catalog.ListOptionsBySetAsync(setIds, cancellationToken);
-        var needsSpells = rules.Any(r => r.Kind is LevelChoiceKind.CantripsKnown or LevelChoiceKind.SpellsKnown or LevelChoiceKind.SpellbookSpells or LevelChoiceKind.Custom)
-            || options.Any(o => o.Prerequisites.Cantrip is not null);
+        var options = (await catalog.ListOptionsBySetAsync(setIds, cancellationToken)).ToList();
+
+        // "from" may name options of other sets (a set that reuses options of another one).
+        var loaded = options.Select(o => o.Index).ToHashSet(StringComparer.Ordinal);
+        var named = rules.Where(r => r.SetId is not null && r.Kind is LevelChoiceKind.OptionSet or LevelChoiceKind.Custom)
+            .SelectMany(r => r.From ?? [])
+            .Select(NormalizeIndex)
+            .Where(i => !loaded.Contains(i))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (named.Count > 0)
+        {
+            options.AddRange(await catalog.ListOptionsByIndexAsync(named, cancellationToken));
+        }
+
+        // Choices made when an option is taken (options[].choices) may draw from other sets.
+        var optionChoices = options.SelectMany(o => o.Choices).ToList();
+        var subSets = optionChoices.Select(c => c.SetId).OfType<string>()
+            .Concat(optionChoices.SelectMany(c => LevelChoiceJson.ParseStringList(c.AlsoFromJson) ?? []))
+            .Where(id => !setIds.Contains(id))
+            .ToHashSet(StringComparer.Ordinal);
+        if (subSets.Count > 0)
+        {
+            var known = options.Select(o => o.Index).ToHashSet(StringComparer.Ordinal);
+            options.AddRange((await catalog.ListOptionsBySetAsync(subSets, cancellationToken)).Where(o => !known.Contains(o.Index)));
+        }
+
+        var choiceKinds = rules.Select(r => r.Kind).Concat(optionChoices.Select(c => c.Kind)).ToHashSet();
+
+        var prerequisites = options.Select(o => o.Prerequisites)
+            .Concat(rules.Any(r => r.Kind == LevelChoiceKind.Subclass) ? subclasses.Select(s => s.Prerequisites) : [])
+            .Where(p => !p.IsEmpty)
+            .ToList();
+        var needsSpells = choiceKinds.Any(k => k is LevelChoiceKind.CantripsKnown or LevelChoiceKind.SpellsKnown or LevelChoiceKind.SpellbookSpells or LevelChoiceKind.Custom)
+            || prerequisites.Any(p => p.ReferencedSpells.Any());
         var spells = needsSpells
             ? await catalog.ListAllSpellsAsync(cancellationToken)
             : await catalog.ListSpellsByIndexAsync(character.Spells.Select(s => s.SpellIndex).Distinct(StringComparer.Ordinal).ToList(), cancellationToken);
-        var skills = rules.Any(r => r.Kind is LevelChoiceKind.Skill or LevelChoiceKind.Expertise)
+        var skills = choiceKinds.Any(k => k is LevelChoiceKind.Skill or LevelChoiceKind.Expertise)
             ? await catalog.ListSkillsAsync(cancellationToken)
             : [];
-        var races = options.Any(o => o.Prerequisites.Races.Count > 0)
+        var weapons = choiceKinds.Contains(LevelChoiceKind.Weapon)
+            ? (await catalog.SearchSrdItemsAsync(new ItemFilter(null, ItemCategory.Weapon, null), 0, MaxWeaponOptions, cancellationToken)).Items
+            : [];
+        var races = prerequisites.Any(p => p.ReferencedRaces.Any())
             ? (await catalog.ListRacesAsync(cancellationToken)).ToDictionary(r => r.Index, r => r.Name, StringComparer.Ordinal)
             : new Dictionary<string, string>(StringComparer.Ordinal);
+        var names = await PrerequisiteNamesAsync(prerequisites, options, allClasses, cancellationToken);
+        var size = prerequisites.Any(p => p.Sizes.Count > 0 || p.AnyOf.Any(a => a.Sizes.Count > 0)) && character.RaceIndex is { } raceIndex
+            ? (await catalog.GetRaceAsync(raceIndex, cancellationToken))?.Size
+            : null;
 
         // Subclass levels whose skill grants an expertise of this level may double (the current subclass, or every
         // subclass when it is chosen now).
@@ -247,8 +313,26 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             PendingChoices = pendingChoices,
             SubclassLevels = subclassLevels,
             CurrentSubclass = entry?.SubclassIndex,
+            Names = names,
+            Size = size,
+            Weapons = weapons,
+            IsPactClass = c => allClasses.FirstOrDefault(d => d.Index == c)?.IsPactCaster ?? c == "warlock",
         };
         var choices = rules.Select(context.Plan).ToList();
+
+        // Choices of the options offered (options[].choices): they apply when the option is picked.
+        foreach (var parent in choices.Where(c => c.Rule.Kind is LevelChoiceKind.OptionSet or LevelChoiceKind.AsiOrFeat or LevelChoiceKind.Custom).ToList())
+        {
+            foreach (var option in parent.Options.Where(o => o.Definition is { ChoicesJson: not null }))
+            {
+                foreach (var sub in option.Definition!.Choices)
+                {
+                    var rule = sub.ToRule(option.Index, definition.Index, parent.Rule.SubclassIndex, newLevel);
+                    choices.Add(context.Plan(rule) with { Requires = new OptionRequirementDto(parent.Rule.Key, option.Index) });
+                }
+            }
+        }
+
         var replacements = await invalidChoices.PlanAsync(character, sheet, cancellationToken);
         choices.AddRange(replacements.Select(r => r.Choice));
 
@@ -262,10 +346,45 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             Classes = classes,
             AutomaticFeatures = await AutomaticFeaturesAsync(definition.Index, entry?.SubclassIndex, newLevel, classLevel, rules, subclasses, cancellationToken),
             Choices = choices,
-            Spellcasting = Spellcasting(character, definition, classLevel, newLevel, spells)
-                ?? SubclassSpellcasting(character, definition, subclasses.FirstOrDefault(s => s.Index == entry?.SubclassIndex)?.Spellcasting, newLevel, spells),
+            Spellcasting = SubclassSpellcasting(character, definition, SubclassCasting(definition, subclasses, entry?.SubclassIndex), classLevel, newLevel, spells)
+                ?? Spellcasting(character, definition, classLevel, newLevel, spells),
             Replacements = replacements,
         };
+    }
+
+    /// <summary>Names of the classes and of the subclasses and options outside the plan that the prerequisites name.</summary>
+    private async Task<Dictionary<string, string>> PrerequisiteNamesAsync(
+        IReadOnlyList<OptionPrerequisites> prerequisites,
+        IReadOnlyList<OptionDefinition> options,
+        IReadOnlyList<ClassDefinition> allClasses,
+        CancellationToken cancellationToken)
+    {
+        var names = allClasses.ToDictionary(c => c.Index, c => c.Name, StringComparer.Ordinal);
+        if (prerequisites.Count == 0)
+        {
+            return names;
+        }
+
+        var known = options.Select(o => o.Index).ToHashSet(StringComparer.Ordinal);
+        var otherOptions = prerequisites.SelectMany(p => p.ReferencedOptions).Where(o => !known.Contains(o)).Distinct(StringComparer.Ordinal).ToList();
+        if (otherOptions.Count > 0)
+        {
+            foreach (var option in await catalog.ListOptionsByIndexAsync(otherOptions, cancellationToken))
+            {
+                names[option.Index] = option.Name;
+            }
+        }
+
+        var subclassIndexes = prerequisites.SelectMany(p => p.ReferencedSubclasses).Distinct(StringComparer.Ordinal).ToList();
+        if (subclassIndexes.Count > 0)
+        {
+            foreach (var subclass in await catalog.ListSubclassesByIndexAsync(subclassIndexes, cancellationToken))
+            {
+                names[subclass.Index] = subclass.Name;
+            }
+        }
+
+        return names;
     }
 
     /// <summary>
@@ -273,7 +392,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
     /// casts by itself, or <paramref name="subclass"/> is not a subclass of it with <c>spellcasting</c>.
     /// </summary>
     private static SubclassSpellcasting? SubclassCasting(ClassDefinition definition, IReadOnlyList<SubclassDefinition> subclasses, string? subclass) =>
-        definition.SpellcastingAbility is null && definition.SpellcastingLevel == 0 && subclass is not null
+        definition.MayGainSubclassSpellcasting && subclass is not null
             ? subclasses.FirstOrDefault(s => s.Index == subclass)?.Spellcasting
             : null;
 
@@ -417,21 +536,49 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         foreach (var entry in current)
         {
             var definition = allClasses.FirstOrDefault(c => c.Index == entry.ClassIndex);
+            var maxLevel = definition?.IsAuxiliary == true ? 1 : 20;
             result.Add(new LevelUpClassDto(
                 entry.ClassIndex,
                 definition?.Name ?? entry.ClassIndex,
-                definition is not null && entry.Level < 20,
-                definition is null ? "La clase ya no está en el catálogo." : entry.Level >= 20 ? "La clase ya está en el nivel 20." : null,
+                definition is not null && entry.Level < maxLevel,
+                definition is null ? "La clase ya no está en el catálogo."
+                    : entry.Level < maxLevel ? null
+                    : maxLevel == 1 ? "Un nivel auxiliar se toma una sola vez." : "La clase ya está en el nivel 20.",
                 definition?.HitDie ?? 0,
                 false,
                 entry.Level,
-                entry.SubclassIndex));
+                entry.SubclassIndex)
+            {
+                Auxiliary = definition?.IsAuxiliary == true,
+                PrerequisitesText = definition?.PrerequisitesText,
+            });
         }
 
+        var names = allClasses.ToDictionary(c => c.Index, c => c.Name, StringComparer.Ordinal);
+        var picks = character.ActivePicks().Select(p => p.Item.Index).ToHashSet(StringComparer.Ordinal);
         foreach (var definition in allClasses.Where(c => current.All(e => e.ClassIndex != c.Index)))
         {
-            var reason = current.Count == 0 ? null : MulticlassRules.WhyNot(definition.Index, current.Select(c => c.ClassIndex), Score, index => allClasses.FirstOrDefault(c => c.Index == index)?.Multiclassing);
-            result.Add(new LevelUpClassDto(definition.Index, definition.Name, reason is null, reason, definition.HitDie, true, 0, null));
+            // Auxiliary levels (H14): after level 1, without the multiclass ability prerequisites, with their own.
+            var reason = definition.IsAuxiliary
+                ? current.Count == 0
+                    ? "Un nivel auxiliar no se toma al crear el personaje."
+                    : PrerequisiteEvaluator.WhyNot(definition.Prerequisites, new PrerequisiteFacts
+                    {
+                        Character = character,
+                        Sheet = sheet,
+                        CharacterLevel = character.TotalLevel + 1,
+                        ClassLevel = character.TotalLevel + 1,
+                        Picks = picks,
+                        IsPactClass = index => allClasses.FirstOrDefault(c => c.Index == index)?.IsPactCaster ?? index == "warlock",
+                        Name = index => names.GetValueOrDefault(index, index),
+                        Detailed = true,
+                    })
+                : current.Count == 0 ? null : MulticlassRules.WhyNot(definition.Index, current.Select(c => c.ClassIndex), Score, index => allClasses.FirstOrDefault(c => c.Index == index)?.Multiclassing);
+            result.Add(new LevelUpClassDto(definition.Index, definition.Name, reason is null, reason, definition.HitDie, true, 0, null)
+            {
+                Auxiliary = definition.IsAuxiliary,
+                PrerequisitesText = definition.PrerequisitesText,
+            });
         }
 
         return result;
@@ -552,11 +699,11 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             definition.IsPactCaster,
             classLevel.CantripsKnown,
             classLevel.SpellsKnown,
-            MaxSpellLevel(classLevel),
+            ClassMaxSpellLevel(definition, classLevel),
             own.Count(s => levels.GetValueOrDefault(s.SpellIndex, -1) == 0),
             own.Count(s => levels.GetValueOrDefault(s.SpellIndex, -1) > 0),
             classLevel.SpellSlots,
-            definition.PreparesSpells && MaxSpellLevel(classLevel) > 0);
+            definition.PreparesSpells && ClassMaxSpellLevel(definition, classLevel) > 0);
     }
 
     /// <summary>Spellcasting of the plan for a class that casts through its subclass (content packs); null when it does not.</summary>
@@ -564,22 +711,24 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         Dnd5eCharacter character,
         ClassDefinition definition,
         SubclassSpellcasting? casting,
+        ClassLevel? classLevel,
         int newLevel,
         IReadOnlyList<SpellDefinition> spells)
     {
-        if (casting is null || definition.SpellcastingAbility is not null || definition.SpellcastingLevel > 0 || newLevel < casting.FromLevel)
+        if (casting is null || newLevel < casting.FromLevel)
         {
             return null;
         }
 
+        // A class that only knows cantrips keeps its ability and its cantrips table when the subclass has none.
         var levels = spells.ToDictionary(s => s.Index, s => s.Level, StringComparer.Ordinal);
         var own = character.Spells.Where(s => s.ClassIndex == definition.Index && !s.AlwaysPrepared).ToList();
         var slots = casting.SlotsAt(newLevel);
         return new LevelUpSpellcastingDto(
             definition.Index,
-            casting.Ability,
-            false,
-            casting.CantripsKnownAt(newLevel),
+            definition.SpellcastingAbility ?? casting.Ability,
+            casting.IsPact,
+            casting.CantripsKnown.Count > 0 ? casting.CantripsKnownAt(newLevel) : classLevel?.CantripsKnown,
             casting.SpellsKnownAt(newLevel),
             SheetCalculator.MaxSpellLevel(slots),
             own.Count(s => levels.GetValueOrDefault(s.SpellIndex, -1) == 0),
@@ -587,6 +736,13 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             slots,
             false);
     }
+
+    /// <summary>
+    /// Highest spell level of a class at a level: its <c>maxSpellLevel</c> table for the progressions without slots
+    /// ("hitPoints", "ritualsOnly"), the slots of the level otherwise.
+    /// </summary>
+    public static int ClassMaxSpellLevel(ClassDefinition definition, ClassLevel? classLevel) =>
+        classLevel is not null && definition.Spellcasting?.MaxSpellLevelAt(classLevel.Level) is { } max ? max : MaxSpellLevel(classLevel);
 
     /// <summary>Highest spell level with slots in the class table at that level (pact slots included); 0 without slots.</summary>
     public static int MaxSpellLevel(ClassLevel? classLevel)
@@ -625,6 +781,18 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         private readonly Dictionary<string, OptionDefinition> _options = options.ToDictionary(o => o.Index, StringComparer.Ordinal);
         private readonly Dictionary<string, SpellDefinition> _spells = spells.ToDictionary(s => s.Index, StringComparer.Ordinal);
         private readonly List<PlannedChoice> _planned = [];
+        private PrerequisiteFacts? _facts;
+
+        /// <summary>Names of the classes, subclasses and options of other sets the prerequisites name.</summary>
+        public IReadOnlyDictionary<string, string> Names { get; init; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        /// <summary>Size of the character's race, or null.</summary>
+        public string? Size { get; init; }
+
+        public Func<string, bool> IsPactClass { get; init; } = _ => false;
+
+        /// <summary>Catalog weapons, for the weapon choices.</summary>
+        public IReadOnlyList<ItemTemplate> Weapons { get; init; } = [];
 
         /// <summary>Answers of the request by choice key (applying), or null (the plan shown to the player).</summary>
         public IReadOnlyDictionary<string, IReadOnlyList<string>>? PendingChoices { get; init; }
@@ -649,16 +817,16 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             switch (rule.Kind)
             {
                 case LevelChoiceKind.Subclass:
-                    list = subclasses.Select(s => Simple(s.Index, s.Name, s.Description)).ToList();
+                    list = subclasses.Select(SubclassOption).ToList();
                     break;
                 case LevelChoiceKind.AsiOrFeat:
-                    list = SetOptions(OptionSets.Feats, null);
+                    list = SetOptions(OptionSets.Feats, null, rule.AlsoFrom);
                     break;
                 case LevelChoiceKind.OptionSet:
-                    list = rule.SetId is null ? [] : SetOptions(rule.SetId, rule.From);
+                    list = rule.SetId is null ? [] : SetOptions(rule.SetId, rule.From, rule.AlsoFrom);
                     break;
                 case LevelChoiceKind.Custom when rule.SetId is not null:
-                    list = SetOptions(rule.SetId, rule.From);
+                    list = SetOptions(rule.SetId, rule.From, []);
                     break;
                 case LevelChoiceKind.Custom when filter.Source is ChoiceFilter.SpellbookSource or ChoiceFilter.KnownSource:
                     list = character.Spells
@@ -673,6 +841,20 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                     break;
                 case LevelChoiceKind.Expertise:
                     list = ExpertiseOptions(rule);
+                    break;
+                case LevelChoiceKind.SavingThrow:
+                    list = Abilities.All
+                        .Where(a => rule.From is null || rule.From.Contains(a, StringComparer.Ordinal))
+                        .Select(a =>
+                        {
+                            var has = character.FindProficiency(ProficiencyType.SavingThrow, a) is not null
+                                || (sheet.SavingThrows.TryGetValue(a, out var save) && save.Proficient && !save.Overridden);
+                            return new PlannedOption(a, BreakdownLabels.Ability(a), [], null, !has, has ? "Ya tienes esta competencia." : null, null, null, []);
+                        })
+                        .ToList();
+                    break;
+                case LevelChoiceKind.Weapon:
+                    list = WeaponOptions(rule, filter);
                     break;
                 case LevelChoiceKind.Skill:
                     list = skills
@@ -699,13 +881,17 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             return new PlannedChoice(rule, required, freeText, list, rule.Replaces ? Known(rule) : []);
         }
 
-        /// <summary>Options of a set (or the <paramref name="from"/> subset), without the ones the character already has.</summary>
-        private List<PlannedOption> SetOptions(string setId, IReadOnlyList<string>? from)
+        /// <summary>
+        /// Options of a set (or the <paramref name="from"/> options, of any set) plus those of the <paramref name="alsoFrom"/>
+        /// sets, without the ones the character already has.
+        /// </summary>
+        private List<PlannedOption> SetOptions(string setId, IReadOnlyList<string>? from, IReadOnlyList<string> alsoFrom)
         {
             var allowed = from?.Select(NormalizeIndex).ToHashSet(StringComparer.Ordinal);
             var taken = _active.Select(p => p.Item.Index).ToHashSet(StringComparer.Ordinal);
             return options
-                .Where(o => o.SetId == setId && (allowed is null || allowed.Contains(o.Index)) && !taken.Contains(o.Index))
+                .Where(o => (allowed is null ? o.SetId == setId : allowed.Contains(o.Index)) || alsoFrom.Contains(o.SetId, StringComparer.Ordinal))
+                .Where(o => !taken.Contains(o.Index) && !o.CreationOnly)
                 .Select(o =>
                 {
                     var reason = WhyNot(o);
@@ -717,108 +903,74 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                 .ToList();
         }
 
-        /// <summary>Spanish prerequisites text derived from the structured ones ("Fuerza 13, competencia con armadura pesada"), or null when there are none.</summary>
-        private string? PrerequisitesText(OptionPrerequisites prerequisites)
+        /// <summary>
+        /// Catalog weapons of a weapon choice (<c>from</c>, or the categories and firearms of the filter); not eligible
+        /// when the character is already proficient with them (by index or by group).
+        /// </summary>
+        private List<PlannedOption> WeaponOptions(LevelChoiceRule rule, ChoiceFilter filter)
         {
-            if (prerequisites.IsEmpty)
-            {
-                return null;
-            }
-
-            var parts = new List<string>();
-            if (prerequisites.MinLevel is { } minLevel)
-            {
-                parts.Add($"nivel {minLevel} de {BreakdownLabels.Class(definition.Index)}");
-            }
-
-            if (prerequisites.PactBoon is { } pactBoon)
-            {
-                parts.Add(_options.GetValueOrDefault(pactBoon)?.Name ?? pactBoon);
-            }
-
-            if (prerequisites.Cantrip is { } cantrip)
-            {
-                parts.Add($"el truco {_spells.GetValueOrDefault(cantrip)?.Name ?? cantrip}");
-            }
-
-            parts.AddRange(prerequisites.Abilities.Where(a => Abilities.IsValid(a.Key)).Select(a => $"{BreakdownLabels.Ability(a.Key)} {a.Value}"));
-            if (prerequisites.Races.Count > 0)
-            {
-                parts.Add($"ser {string.Join(" o ", prerequisites.Races.Select(RaceName))}");
-            }
-
-            parts.AddRange(prerequisites.ArmorProficiencies.Select(a => $"competencia con {ProficiencyKeys.Describe(a)}"));
-            parts.AddRange(prerequisites.WeaponProficiencies.Select(w => $"competencia con {ProficiencyKeys.Describe(w)}"));
-            if (prerequisites.Spellcasting)
-            {
-                parts.Add("poder lanzar al menos un conjuro");
-            }
-
-            var text = string.Join(", ", parts);
-            return text.Length == 0 ? null : char.ToUpperInvariant(text[0]) + text[1..];
+            var keys = character.Proficiencies.Where(p => p.Type == ProficiencyType.Weapon).Select(p => p.Key).ToHashSet(StringComparer.Ordinal);
+            return Weapons
+                .Where(w => w.Index is not null)
+                .Where(w => rule.From is null || rule.From.Contains(w.Index!, StringComparer.Ordinal))
+                .Where(w => filter.WeaponCategories.Count == 0
+                    || filter.WeaponCategories.Any(c => (w.Subcategory ?? string.Empty).StartsWith(c, StringComparison.OrdinalIgnoreCase)))
+                .Where(w => filter.Firearms is null || w.Properties.Contains(ProficiencyKeys.FirearmProperty, StringComparer.OrdinalIgnoreCase) == filter.Firearms)
+                .Select(w =>
+                {
+                    var has = keys.Contains(w.Index!) || ProficiencyKeys.WeaponGroups(w.Subcategory, w.Properties).Any(keys.Contains);
+                    return new PlannedOption(w.Index!, w.Name, [w.Subcategory ?? string.Empty], null, !has, has ? "Ya tienes competencia con esta arma." : null, null, null, []);
+                })
+                .ToList();
         }
 
-        private string RaceName(string index) => races.GetValueOrDefault(index, index);
+        /// <summary>Spanish prerequisites text derived from the structured ones ("Fuerza 13, competencia con armadura pesada"), or null when there are none.</summary>
+        private string? PrerequisitesText(OptionPrerequisites prerequisites) => PrerequisiteEvaluator.Text(prerequisites, Name, definition.Index);
+
+        /// <summary>Display name of an index the prerequisites name: option, spell, race, subclass or class.</summary>
+        private string Name(string index) =>
+            _options.GetValueOrDefault(index)?.Name
+            ?? _spells.GetValueOrDefault(index)?.Name
+            ?? races.GetValueOrDefault(index)
+            ?? subclasses.FirstOrDefault(s => s.Index == index)?.Name
+            ?? Names.GetValueOrDefault(index)
+            ?? BreakdownLabels.Class(index);
+
+        /// <summary>What the prerequisites are checked against: the character, the new class level and the picks of this request.</summary>
+        private PrerequisiteFacts Facts => _facts ??= new PrerequisiteFacts
+        {
+            Character = character,
+            Sheet = sheet,
+            ClassIndex = definition.Index,
+            ClassLevel = newLevel,
+            CharacterLevel = character.TotalLevel + 1,
+            Picks = _active.Select(p => p.Item.Index).Concat(pendingPicks).ToHashSet(StringComparer.Ordinal),
+            Pending = pendingPicks,
+            Size = Size,
+            IsPactClass = IsPactClass,
+            Name = Name,
+            CurrentPactBoon = _active.FirstOrDefault(p => p.SetId == OptionSets.PactBoons)?.Item.Name
+                ?? pendingPicks.Select(p => _options.GetValueOrDefault(p)).FirstOrDefault(o => o?.SetId == OptionSets.PactBoons)?.Name,
+            Detailed = true,
+        };
 
         /// <summary>Why the option cannot be taken now, naming what is required and what the character has; null when it can.</summary>
-        private string? WhyNot(OptionDefinition option)
+        private string? WhyNot(OptionDefinition option) => PrerequisiteEvaluator.WhyNot(option.Prerequisites, Facts);
+
+        /// <summary>A subclass of the choice, not eligible while its prerequisites fail.</summary>
+        private PlannedOption SubclassOption(SubclassDefinition subclass)
         {
-            var prerequisites = option.Prerequisites;
-            var reasons = new List<string>();
-            if (prerequisites.MinLevel is { } minLevel && newLevel < minLevel)
-            {
-                reasons.Add($"Requiere nivel {minLevel} de {BreakdownLabels.Class(definition.Index)}; subes al {newLevel}.");
-            }
-
-            if (prerequisites.PactBoon is { } pactBoon && !HasPick(pactBoon))
-            {
-                var current = _active.FirstOrDefault(p => p.SetId == OptionSets.PactBoons)?.Item.Name
-                    ?? pendingPicks.Select(p => _options.GetValueOrDefault(p)).FirstOrDefault(o => o?.SetId == OptionSets.PactBoons)?.Name;
-                reasons.Add(current is null
-                    ? $"Requiere {_options.GetValueOrDefault(pactBoon)?.Name ?? pactBoon}; aún no tienes don del pacto."
-                    : $"Requiere {_options.GetValueOrDefault(pactBoon)?.Name ?? pactBoon}; tienes {current}.");
-            }
-
-            if (prerequisites.Cantrip is { } cantrip
-                && !character.Spells.Any(s => s.SpellIndex == cantrip)
-                && !pendingPicks.Contains(cantrip))
-            {
-                reasons.Add($"Requiere el truco {_spells.GetValueOrDefault(cantrip)?.Name ?? cantrip}; no lo conoces.");
-            }
-
-            foreach (var (ability, minimum) in prerequisites.Abilities)
-            {
-                if (Abilities.IsValid(ability) && sheet.Abilities[ability].Score < minimum)
-                {
-                    reasons.Add($"Requiere {BreakdownLabels.Ability(ability)} {minimum}; tienes {sheet.Abilities[ability].Score}.");
-                }
-            }
-
-            if (prerequisites.Races.Count > 0 && (character.RaceIndex is null || !prerequisites.Races.Contains(character.RaceIndex, StringComparer.Ordinal)))
-            {
-                var required = string.Join(" o ", prerequisites.Races.Select(RaceName));
-                reasons.Add(character.RaceIndex is null
-                    ? $"Requiere ser {required}; no tienes raza."
-                    : $"Requiere ser {required}; eres {RaceName(character.RaceIndex)}.");
-            }
-
-            var armorKeys = character.Proficiencies.Where(p => p.Type == ProficiencyType.Armor).Select(p => p.Key).ToList();
-            foreach (var armor in prerequisites.ArmorProficiencies.Where(a => !ProficiencyKeys.HasArmor(armorKeys, a)))
-            {
-                reasons.Add($"Requiere competencia con {ProficiencyKeys.Describe(armor)}; no la tienes.");
-            }
-
-            foreach (var weapon in prerequisites.WeaponProficiencies.Where(w => character.FindProficiency(ProficiencyType.Weapon, w) is null))
-            {
-                reasons.Add($"Requiere competencia con {ProficiencyKeys.Describe(weapon)}; no la tienes.");
-            }
-
-            if (prerequisites.Spellcasting && character.Spells.Count == 0 && !sheet.Spellcasting.Any(c => c.MaxSpellLevel > 0))
-            {
-                reasons.Add("Requiere poder lanzar al menos un conjuro; no lanzas conjuros.");
-            }
-
-            return reasons.Count == 0 ? null : string.Join(" ", reasons);
+            var reason = PrerequisiteEvaluator.WhyNot(subclass.Prerequisites, Facts);
+            return new PlannedOption(
+                subclass.Index,
+                subclass.Name,
+                subclass.Description,
+                subclass.PrerequisitesText ?? PrerequisitesText(subclass.Prerequisites),
+                reason is null,
+                reason,
+                null,
+                null,
+                []);
         }
 
         private bool HasPick(string index) => _active.Any(p => p.Item.Index == index) || pendingPicks.Contains(index);
@@ -936,7 +1088,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             var expanded = list == classList
                 ? subclasses.FirstOrDefault(s => s.Index == subclassIndex)?.ExpandedSpellIndexes ?? new HashSet<string>()
                 : new HashSet<string>();
-            var maxSpellLevel = casting is not null ? SheetCalculator.MaxSpellLevel(casting.SlotsAt(newLevel)) : MaxSpellLevel(classLevel);
+            var maxSpellLevel = casting is not null ? SheetCalculator.MaxSpellLevel(casting.SlotsAt(newLevel)) : ClassMaxSpellLevel(definition, classLevel);
             IReadOnlyList<int> levels = rule.Kind == LevelChoiceKind.CantripsKnown || filter.CantripsOnly
                 ? [0]
                 : filter.SpellLevels.Count > 0
@@ -947,6 +1099,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             return spells
                 .Where(s => levels.Contains(s.Level) && !known.Contains(s.Index))
                 .Where(s => list == ChoiceFilter.AnyList || s.ClassIndexes.Contains(list, StringComparer.Ordinal) || expanded.Contains(s.Index))
+                .Where(s => !filter.RitualOnly || (definition.Spellcasting?.CastsAsRitual(s.Index, s.Ritual) ?? s.Ritual))
                 .Select(s => filter.AllowsSchool(s.School, newLevel) ? SpellOption(s) : SpellOption(s) with { Eligible = false, Reason = schoolsReason })
                 .OrderBy(o => o.Eligible ? 0 : 1)
                 .ToList();

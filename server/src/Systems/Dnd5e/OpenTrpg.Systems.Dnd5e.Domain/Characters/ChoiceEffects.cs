@@ -40,13 +40,14 @@ public sealed record ChoiceEffects(
     /// </summary>
     public IReadOnlyList<AbilityIncreaseEffect> OriginAbilityBonuses { get; init; } = [];
 
-    /// <summary>Label of an origin effect: "Grappler (raza)", "Grappler (trasfondo)".</summary>
+    /// <summary>Label of an origin effect: "Grappler (raza)", "Grappler (trasfondo)", "Grappler (dote inicial)".</summary>
     public static string OriginLabel(string name, string key) =>
-        $"{name} ({(OriginChoiceKeys.IsBackground(key) ? "trasfondo" : OriginChoiceKeys.IsSubrace(key) ? "subraza" : "raza")})";
+        $"{name} ({(key == OriginChoiceKeys.StarterFeat ? "dote inicial" : OriginChoiceKeys.IsBackground(key) ? "trasfondo" : OriginChoiceKeys.IsSubrace(key) ? "subraza" : "raza")})";
 
-    /// <summary>Breakdown source of an origin key: race, subrace or background.</summary>
+    /// <summary>Breakdown source of an origin key: race, subrace or background (a feature for the starter feat).</summary>
     public static string OriginSource(string key) =>
-        OriginChoiceKeys.IsBackground(key) ? BreakdownSources.Background : OriginChoiceKeys.IsSubrace(key) ? BreakdownSources.Subrace : BreakdownSources.Race;
+        key == OriginChoiceKeys.StarterFeat ? BreakdownSources.Feature
+        : OriginChoiceKeys.IsBackground(key) ? BreakdownSources.Background : OriginChoiceKeys.IsSubrace(key) ? BreakdownSources.Subrace : BreakdownSources.Race;
 
     public static ChoiceEffects None { get; } = new([], [], []);
 

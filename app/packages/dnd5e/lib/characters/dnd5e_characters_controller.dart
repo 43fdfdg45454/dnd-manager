@@ -155,6 +155,18 @@ class Dnd5eCharacterController extends Notifier<void> {
     _core.apply(result.character);
     return result.damageDice;
   }
+
+  /// Casts a spell of [spellLevel] of [classIndex] paying hit points (a class
+  /// without slots). Returns the hit points lost.
+  Future<int> hitPointCast(String classIndex, int spellLevel) async {
+    final result = await _repository.hitPointCast(
+      id,
+      classIndex: classIndex,
+      spellLevel: spellLevel,
+    );
+    _core.apply(result.character);
+    return result.hitPointsLost;
+  }
 }
 
 final dnd5eCharacterControllerProvider =

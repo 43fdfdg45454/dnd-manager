@@ -266,7 +266,8 @@ class ClassStep extends ConsumerWidget {
         children: [
           Text('Nivel inicial: 1', style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 4),
-          for (final c in list)
+          // Auxiliary levels are taken when levelling up, never at creation.
+          for (final c in list.where((c) => !c.auxiliary))
             WizardChoiceCard(
               key: Key('class-${c.index}'),
               selected: c.index == state.classIndex,

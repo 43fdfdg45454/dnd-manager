@@ -190,7 +190,13 @@ internal sealed partial class ContentPackValidator
         FeatChoice? feats = null;
         if (choices.Feats is { } featChoice)
         {
-            feats = new FeatChoice(RequiredInt($"{path}.feats.choose", featChoice.Choose, 1, 1) ?? 1);
+            var featSet = Reference($"{path}.feats.setId", featChoice.SetId);
+            if (featSet is not null && featSet != OptionSets.Feats)
+            {
+                _setReferences.Add(($"{path}.feats.setId", featSet));
+            }
+
+            feats = new FeatChoice(RequiredInt($"{path}.feats.choose", featChoice.Choose, 1, 1) ?? 1, featSet == OptionSets.Feats ? null : featSet);
         }
 
         var traitOptions = new List<TraitOptionChoice>();

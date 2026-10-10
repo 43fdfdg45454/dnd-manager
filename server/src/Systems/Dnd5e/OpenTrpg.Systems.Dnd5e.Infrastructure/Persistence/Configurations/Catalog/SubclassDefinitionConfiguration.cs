@@ -30,5 +30,7 @@ internal sealed class SubclassDefinitionConfiguration : IEntityTypeConfiguration
         builder.Ignore(x => x.Spellcasting);
         builder.Ignore(x => x.ExpandedSpellList);
         builder.Ignore(x => x.ExpandedSpellIndexes);
+        builder.Ignore(x => x.Prerequisites);
+        builder.Property(x => x.PrerequisitesText).HasMaxLength(LevelChoiceRule.NoteMaxLength);
     }
 }

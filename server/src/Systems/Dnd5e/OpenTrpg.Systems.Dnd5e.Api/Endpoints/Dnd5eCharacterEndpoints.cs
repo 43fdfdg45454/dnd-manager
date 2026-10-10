@@ -217,6 +217,12 @@ public static class Dnd5eCharacterEndpoints
             .WithSummary("Druida del Círculo de la Tierra (nivel 2+): Recuperación natural ({ slotLevels: [..] }). Suma ≤ mitad del nivel de druida (redondeo arriba), ningún espacio de nivel 6+; una vez por descanso largo.")
             .ProducesValidationProblem();
 
+        classActions.MapPost($"/{ClassActionHandler.HitPointCast}", async (Guid id, HitPointCastRequest request, ClaimsPrincipal user, ClassActionHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HitPointCastAsync(user.GetUserId(), id, request, ct)))
+            .WithName("ClassActionHitPointCast")
+            .WithSummary("Lanzar con PG (clase de paquete con progression hitPoints): { classIndex, spellLevel }. Gasta un uso del recurso de la clase y los PG de su tabla; 400 si no quedan usos, PG o el nivel supera el máximo. Devuelve { character, hitPointsLost }.")
+            .ProducesValidationProblem();
+
         classActions.MapPost("/{action}", IResult (string action) => throw ClassActionHandler.UnknownAction(action))
             .WithName("ClassActionUnknown")
             .WithSummary("Acción de clase desconocida: 404.")

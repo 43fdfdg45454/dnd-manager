@@ -104,6 +104,21 @@ public sealed class ApplyLevelUpHandler(
             }
         }
 
+        // Proficiencies that grow with the levels of a class taken as a new class (never the first class).
+        if (entry.Order > 0 && plan.Class.Multiclassing is { ProficienciesByLevel.Count: > 0 } growing)
+        {
+            foreach (var (_, gained) in growing.ProficienciesByLevel.Where(p => p.Key <= entry.Level))
+            {
+                foreach (var (list, type) in new[] { (gained.Armor, ProficiencyType.Armor), (gained.Weapons, ProficiencyType.Weapon), (gained.Tools, ProficiencyType.Tool) })
+                {
+                    foreach (var key in list)
+                    {
+                        character.AddProficiency(type, key, ProficiencySource.Class);
+                    }
+                }
+            }
+        }
+
         character.RecordChoice(
             entry.Level,
             classIndex,
@@ -126,7 +141,7 @@ public sealed class ApplyLevelUpHandler(
             }
         }
 
-        await ChoiceGrants.ApplyAsync(catalog, character, replacedOptions, cancellationToken);
+        await ChoiceGrants.ApplyAsync(catalog, character, replacedOptions, now, cancellationToken);
         foreach (var (choice, selection) in resolved.Where(r => r.Choice.Rule.Kind == LevelChoiceKind.Expertise))
         {
             ApplyEffects(character, classIndex, choice, selection, replacedOptions, now);
@@ -251,6 +266,15 @@ public sealed class ApplyLevelUpHandler(
             var rule = choice.Rule;
             if (rule.SubclassIndex is { } ruleSubclass && ruleSubclass != subclass)
             {
+                continue;
+            }
+
+            // A choice of an option only applies when that option is picked in this same level-up (an answer left over
+            // from another pick is ignored).
+            if (choice.Requires is { } requires
+                && !(answers.TryGetValue(requires.ChoiceKey, out var parent) && (parent.Selected.Contains(requires.Index, StringComparer.Ordinal) || parent.Feat == requires.Index)))
+            {
+                used.Add(rule.Key);
                 continue;
             }
 
@@ -416,7 +440,7 @@ public sealed class ApplyLevelUpHandler(
         {
             Kind = rule.Kind.ToString(),
             Name = rule.Name,
-            SetId = OptionSets.Feats,
+            SetId = feat.Definition?.SetId ?? OptionSets.Feats,
             Feat = new ChoiceItem(feat.Index, feat.Name),
             Ability = raised,
         };
@@ -443,6 +467,20 @@ public sealed class ApplyLevelUpHandler(
                 foreach (var item in selection.Selected)
                 {
                     character.AddProficiency(ProficiencyType.Skill, item.Index, ProficiencySource.Class);
+                }
+
+                break;
+            case LevelChoiceKind.SavingThrow:
+                foreach (var item in selection.Selected)
+                {
+                    character.AddProficiency(ProficiencyType.SavingThrow, item.Index, ProficiencySource.Class);
+                }
+
+                break;
+            case LevelChoiceKind.Weapon:
+                foreach (var item in selection.Selected)
+                {
+                    character.AddProficiency(ProficiencyType.Weapon, item.Index, ProficiencySource.Class);
                 }
 
                 break;

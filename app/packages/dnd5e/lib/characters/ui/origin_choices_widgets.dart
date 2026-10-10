@@ -14,6 +14,7 @@ const _searchThreshold = 8;
 String originSourceLabel(String source) => switch (source) {
   'subrace' => 'Subraza',
   'background' => 'Trasfondo',
+  'campaign' => 'Campaña',
   _ => 'Raza',
 };
 

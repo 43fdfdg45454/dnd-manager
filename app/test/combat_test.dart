@@ -1299,6 +1299,76 @@ void main() {
       expect(find.byKey(const Key('spell-crit-cure-wounds')), findsNothing);
     });
 
+    // A fictitious content pack class that casts without slots, paying hit
+    // points, and another one that only casts rituals.
+    FakeCharactersRepository slotless() {
+      final json = makeCharacterJson(
+        status: 'Active',
+        hitPointsCurrent: 20,
+        classes: [
+          {'classIndex': 'ejemplo-penitente', 'className': 'Penitente de ejemplo', 'level': 3},
+          {'classIndex': 'ejemplo-escriba', 'className': 'Escriba de ejemplo', 'level': 1},
+        ],
+        spells: [
+          {'spellIndex': 'burning-hands', 'classIndex': 'ejemplo-penitente'},
+          {'spellIndex': 'shield', 'classIndex': 'ejemplo-escriba'},
+        ],
+        combat: makeCombatJson(spellSlots: const []),
+      );
+      (json['sheet'] as Map<String, dynamic>)['spellcasting'] = [
+        {
+          'classIndex': 'ejemplo-penitente',
+          'ability': 'wis',
+          'saveDc': 13,
+          'attackBonus': 5,
+          'maxSpellLevel': 2,
+          'progression': 'hitPoints',
+          'hitPointCost': [2, 4, 6],
+          'usesResource': 'ejemplo-plegarias',
+        },
+        {
+          'classIndex': 'ejemplo-escriba',
+          'ability': 'int',
+          'saveDc': 11,
+          'attackBonus': 3,
+          'maxSpellLevel': 1,
+          'progression': 'ritualsOnly',
+        },
+      ];
+      return FakeCharactersRepository(characters: [json]);
+    }
+
+    testWidgets('una clase sin espacios lanza pagando PG al nivel elegido', (tester) async {
+      final repo = slotless();
+      await _pump(tester, characters: repo, catalog: catalog());
+
+      // Levels up to its maximum (2), not to its cost table (3).
+      await _tap(tester, 'spell-level-burning-hands');
+      expect(find.text('3'), findsNothing);
+      await _tap(tester, find.text('2').last);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('spell-hp-cost-burning-hands'))).data,
+        'Sin espacios: lanzarlo a nivel 2 cuesta 4 PG.',
+      );
+
+      await _tap(tester, 'spell-spend-burning-hands');
+      expect(repo.hitPointCasts, [(classIndex: 'ejemplo-penitente', spellLevel: 2)]);
+      expect(repo.slotSpends, isEmpty);
+      expect(find.text('Burning Hands lanzado a nivel 2: pierdes 4 PG.'), findsOneWidget);
+    });
+
+    testWidgets('una clase que solo lanza rituales no gasta nada', (tester) async {
+      final repo = slotless();
+      await _pump(tester, characters: repo, catalog: catalog());
+
+      final cast = find.byKey(const Key('spell-spend-shield'));
+      expect(find.descendant(of: cast, matching: find.text('Lanzar como ritual')), findsOneWidget);
+      await _tap(tester, cast);
+      expect(repo.slotSpends, isEmpty);
+      expect(repo.hitPointCasts, isEmpty);
+      expect(find.text('Shield lanzado como ritual (10 minutos más).'), findsOneWidget);
+    });
+
     group('detalle, tipo de acción y desglose (fase 27)', () {
       final mageArmor = spell({
         'index': 'mage-armor',

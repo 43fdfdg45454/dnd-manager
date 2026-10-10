@@ -158,7 +158,8 @@ public sealed partial class Dnd5eCharacter
 
     /// <summary>
     /// What the character currently has from its level choices: for each class and key, the picks of every
-    /// level in order, minus the ones replaced later. Feats count as picks of the <c>feats</c> set.
+    /// level in order, minus the ones replaced later. Feats count as picks of the <c>feats</c> set (or of the set of the
+    /// option an ability improvement took instead, with <c>alsoFrom</c>).
     /// </summary>
     public IReadOnlyList<ActivePick> ActivePicks()
     {
@@ -177,7 +178,7 @@ public sealed partial class Dnd5eCharacter
                 active.AddRange(selection.Selected.Select(item => new ActivePick(choice.ClassIndex, choice.Key, choice.Level, selection.Kind, selection.SetId, item)));
                 if (selection.Feat is { } feat)
                 {
-                    active.Add(new ActivePick(choice.ClassIndex, choice.Key, choice.Level, selection.Kind, OptionSets.Feats, feat));
+                    active.Add(new ActivePick(choice.ClassIndex, choice.Key, choice.Level, selection.Kind, selection.SetId ?? OptionSets.Feats, feat));
                 }
             }
 
@@ -185,6 +186,47 @@ public sealed partial class Dnd5eCharacter
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Records an option granted by another source (<see cref="CharacterChoice.GrantedKey"/>) at a level of a class; it
+    /// counts as a pick of that class with its own option set. No-op when the character already has the option.
+    /// </summary>
+    public bool AddGrantedOption(string classIndex, int level, ChoiceItem option, string setId, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(option);
+        if (ActivePicks().Any(p => p.Item.Index == option.Index))
+        {
+            return false;
+        }
+
+        RecordChoice(
+            Math.Clamp(level, AbilityRules.MinLevel, AbilityRules.MaxLevel),
+            classIndex,
+            CharacterChoice.GrantedKey,
+            new ChoiceSelection { Kind = CharacterChoice.GrantedKind, Name = "Opción concedida", SetId = setId, Selected = [option] },
+            now);
+        return true;
+    }
+
+    /// <summary>Removes the granted options whose index matches (their source is gone). Returns the removed indexes.</summary>
+    public IReadOnlyList<string> RemoveGrantedOptions(Func<string, bool> indexMatches, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(indexMatches);
+        var removed = _choices
+            .Where(c => c.Key == CharacterChoice.GrantedKey && c.Selection.Selected.Any(i => indexMatches(i.Index)))
+            .ToList();
+        foreach (var choice in removed)
+        {
+            _choices.Remove(choice);
+        }
+
+        if (removed.Count > 0)
+        {
+            Touch(now);
+        }
+
+        return removed.SelectMany(c => c.Selection.Selected.Select(i => i.Index)).ToList();
     }
 
     /// <summary>Adds a proficiency unless the character already has it ("stealth" also matches "skill-stealth"). True when added.</summary>

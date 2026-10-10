@@ -23,6 +23,8 @@ internal sealed partial class ContentPackValidator
     private readonly List<(string Path, string? SetId, string Index)> _optionReferences = [];
     private readonly List<(string Path, string Index)> _spellReferences = [];
     private readonly List<(string Path, string Index)> _raceReferences = [];
+    private readonly List<(string Path, string Index)> _classReferences = [];
+    private readonly List<(string Path, string Index)> _subclassReferences = [];
     private readonly HashSet<string> _declaredSets = new(StringComparer.Ordinal);
 
     /// <summary>True when <paramref name="value"/> is given and the pack declares format 2; reports an error when it is given without it.</summary>
@@ -78,7 +80,7 @@ internal sealed partial class ContentPackValidator
         ForEach($"{path}.options", set.Options, (optionPath, option) => Option(optionPath, option, setId, rows));
     }
 
-    private void Option(string path, PackOptionJson option, string setId, ContentPackRows rows, string? category = null)
+    private void Option(string path, PackOptionJson option, string setId, ContentPackRows rows, string? category = null, bool creationOnly = false, bool starter = false)
     {
         var index = Index($"{path}.index", "options", option.Index);
         var definition = new OptionDefinition
@@ -94,7 +96,11 @@ internal sealed partial class ContentPackValidator
             GrantsJson = option.Grants is null ? null : Grants($"{path}.grants", option.Grants),
             ResourceJson = Resource($"{path}.resource", option.Resource),
             CostJson = Cost($"{path}.cost", option.Cost, setId),
+            ChoicesJson = OptionChoices($"{path}.choices", option.Choices, index, atLevels: false),
+            LevelChoicesJson = OptionChoices($"{path}.levelChoices", option.LevelChoices, index, atLevels: true),
             Category = category,
+            CreationOnly = creationOnly,
+            Starter = starter,
             Source = _id,
         };
 
@@ -104,12 +110,11 @@ internal sealed partial class ContentPackValidator
         }
     }
 
-    private string? Prerequisites(string path, PackPrerequisitesJson? prerequisites)
+    private string? Prerequisites(string path, PackPrerequisitesJson? prerequisites) =>
+        prerequisites is null ? null : LevelChoiceJson.Serialize(PrerequisitesObject(path, prerequisites, nested: false));
+
+    private Dictionary<string, object?> PrerequisitesObject(string path, PackPrerequisitesJson prerequisites, bool nested)
     {
-        if (prerequisites is null)
-        {
-            return null;
-        }
 
         var minLevel = OptionalInt($"{path}.minLevel", prerequisites.MinLevel, 1, 20);
         var pactBoon = Reference($"{path}.pactBoon", prerequisites.PactBoon);
@@ -160,7 +165,7 @@ internal sealed partial class ContentPackValidator
             }
             else
             {
-                AddError(armorPath, "Armadura desconocida. Valores admitidos: light, medium, heavy, shields.");
+                AddError(armorPath, "Armadura desconocida. Valores admitidos: light, medium, heavy, shields, exotic.");
             }
         });
 
@@ -174,7 +179,100 @@ internal sealed partial class ContentPackValidator
         });
 
         var spellcasting = prerequisites.Spellcasting == true;
-        return LevelChoiceJson.Serialize(new { minLevel, pactBoon, cantrip, abilities, races, proficiency = new { armor, weapon }, spellcasting });
+        var result = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["minLevel"] = minLevel,
+            ["pactBoon"] = pactBoon,
+            ["cantrip"] = cantrip,
+            ["abilities"] = abilities,
+            ["races"] = races,
+            ["proficiency"] = new { armor, weapon },
+            ["spellcasting"] = spellcasting,
+        };
+
+        var subclasses = new List<string>();
+        ForEachText($"{path}.subclasses", prerequisites.Subclasses, (subclassPath, value) =>
+        {
+            if (Reference(subclassPath, value) is { } index && !subclasses.Contains(index))
+            {
+                subclasses.Add(index);
+                _subclassReferences.Add((subclassPath, index));
+            }
+        });
+
+        var options = new List<string>();
+        ForEachText($"{path}.options", prerequisites.Options, (optionPath, value) =>
+        {
+            if (Reference(optionPath, value) is { } index && !options.Contains(index))
+            {
+                options.Add(index);
+                _optionReferences.Add((optionPath, null, index));
+            }
+        });
+
+        var classes = new List<string>();
+        ForEachText($"{path}.classes", prerequisites.Classes, (classPath, value) =>
+        {
+            if (Reference(classPath, value) is { } index && !classes.Contains(index))
+            {
+                classes.Add(index);
+                _classReferences.Add((classPath, index));
+            }
+        });
+
+        string? classFeature = null;
+        if (prerequisites.ClassFeature?.Trim() is { Length: > 0 } feature)
+        {
+            if (ClassFeatures.All.Contains(feature))
+            {
+                classFeature = feature;
+            }
+            else
+            {
+                AddError($"{path}.classFeature", "Valores admitidos: spellcasting, pactMagic.");
+            }
+        }
+
+        var sizes = new List<string>();
+        ForEachText($"{path}.sizes", prerequisites.Sizes, (sizePath, value) =>
+        {
+            var size = value.ToLowerInvariant();
+            if (!Sizes.Contains(size, StringComparer.OrdinalIgnoreCase))
+            {
+                AddError(sizePath, $"Tamaño desconocido. Valores admitidos: {string.Join(", ", Sizes.Select(z => z.ToLowerInvariant()))}.");
+            }
+            else if (!sizes.Contains(size))
+            {
+                sizes.Add(size);
+            }
+        });
+
+        var anyOf = new List<object>();
+        if (prerequisites.AnyOf is { } alternatives)
+        {
+            if (nested)
+            {
+                AddError($"{path}.anyOf", "Las alternativas no pueden tener a su vez \"anyOf\".");
+            }
+            else if (alternatives.Count < 2)
+            {
+                AddError($"{path}.anyOf", "Necesita al menos dos alternativas.");
+            }
+            else
+            {
+                ForEach($"{path}.anyOf", alternatives, (alternativePath, alternative) => anyOf.Add(PrerequisitesObject(alternativePath, alternative, nested: true)));
+            }
+        }
+
+        result["subclasses"] = subclasses;
+        result["options"] = options;
+        result["classes"] = classes;
+        result["classFeature"] = classFeature;
+        result["characterLevel"] = OptionalInt($"{path}.characterLevel", prerequisites.CharacterLevel, 1, 20);
+        result["spellcastingAbilityMin"] = OptionalInt($"{path}.spellcastingAbilityMin", prerequisites.SpellcastingAbilityMin, 1, 30);
+        result["sizes"] = sizes;
+        result["anyOf"] = anyOf;
+        return result;
     }
 
     private string ChoiceModifiers(string path, List<PackChoiceModifierJson?>? modifiers, string owner = "Una opción")
@@ -349,13 +447,28 @@ internal sealed partial class ContentPackValidator
             }
         });
 
+        var options = new List<string>();
+        ForEachText($"{path}.options", grants.Options, (optionPath, value) =>
+        {
+            if (origin)
+            {
+                AddError(optionPath, "Las razas, subrazas y trasfondos no conceden opciones.");
+            }
+            else if (Reference(optionPath, value) is { } index && !options.Contains(index))
+            {
+                options.Add(index);
+                _optionReferences.Add((optionPath, null, index));
+            }
+        });
+
         return LevelChoiceJson.Serialize(new
         {
             skills,
             cantrips,
             spells,
-            armor = TextList($"{path}.armor", grants.Armor, 50, ShortTextMaxLength),
-            weapons = TextList($"{path}.weapons", grants.Weapons, 50, ShortTextMaxLength),
+            options,
+            armor = TextList($"{path}.armor", grants.Armor, 50, ShortTextMaxLength).Select(a => ProficiencyKeys.NormalizeArmor(a) ?? a).ToList(),
+            weapons = TextList($"{path}.weapons", grants.Weapons, 50, ShortTextMaxLength).Select(ProficiencyKeys.NormalizeWeapon).ToList(),
             tools = TextList($"{path}.tools", grants.Tools, 50, ShortTextMaxLength),
             languages = TextList($"{path}.languages", grants.Languages, 50, ShortTextMaxLength),
             savingThrows,
@@ -596,9 +709,9 @@ internal sealed partial class ContentPackValidator
     private SubclassSpellcasting? SubclassSpellcasting(string path, PackSubclassSpellcastingJson spellcasting, string classIndex)
     {
         var valid = true;
-        if (_casterClasses.Contains(classIndex))
+        if (_casterClasses.Contains(classIndex) && !_cantripOnlyClasses.Contains(classIndex))
         {
-            AddError(path, $"La clase '{classIndex}' ya lanza conjuros: spellcasting solo vale en subclases de clases que no lanzan conjuros.");
+            AddError(path, $"La clase '{classIndex}' ya lanza conjuros con espacios: spellcasting solo vale en subclases de clases que no lanzan conjuros o solo conocen trucos.");
             valid = false;
         }
 
@@ -637,9 +750,30 @@ internal sealed partial class ContentPackValidator
 
         var cantrips = KnownTable($"{path}.cantripsKnown", spellcasting.CantripsKnown, 10);
         var spells = KnownTable($"{path}.spellsKnown", spellcasting.SpellsKnown, 30);
+        var progression = spellcasting.Progression?.Trim().ToLowerInvariant();
+        IReadOnlyDictionary<int, IReadOnlyList<int>> slots = new Dictionary<int, IReadOnlyList<int>>();
+        if (spellcasting.Slots is { Count: > 0 } table)
+        {
+            if (progression is not (Domain.Catalog.SubclassSpellcasting.Table or Domain.Catalog.SubclassSpellcasting.Pact))
+            {
+                AddError($"{path}.slots", "Solo se admite con \"progression\": \"table\" o \"pact\"; las demás progresiones calculan los espacios.");
+            }
+
+            slots = SlotTable($"{path}.slots", table);
+        }
+        else if (progression == Domain.Catalog.SubclassSpellcasting.Table)
+        {
+            AddError($"{path}.slots", "Obligatorio con \"progression\": \"table\".");
+            valid = false;
+        }
+
         return valid && level is not null && !string.IsNullOrEmpty(ability) && !string.IsNullOrEmpty(spellList) && cantrips is not null && spells is not null
             && (spellcasting.FromLevel is null || fromLevel is not null)
             ? new SubclassSpellcasting(level.Value, ability, fromLevel ?? 1, spellList, cantrips, spells)
+            {
+                IsPact = progression == Domain.Catalog.SubclassSpellcasting.Pact,
+                Slots = slots,
+            }
             : null;
     }
 
@@ -668,9 +802,21 @@ internal sealed partial class ContentPackValidator
         return valid ? result : null;
     }
 
-    private void LevelChoice(string path, PackLevelChoiceJson rule, string classIndex, string? subclassIndex, ContentPackRows rows, SubclassSpellcasting? spellcasting = null)
+    /// <summary>A level choice after validation (null fields: invalid).</summary>
+    private sealed record ParsedLevelChoice(int? Level, string Key, string Name, LevelChoiceKind? Kind, string? SetId, int? Choose, string? FromJson, string? Filter, string Note, string? After, string? AlsoFromJson, bool Replaces, bool Cumulative);
+
+    private ParsedLevelChoice ParseLevelChoice(string path, PackLevelChoiceJson rule, bool levelRequired, SubclassSpellcasting? spellcasting = null, IReadOnlyCollection<LevelChoiceKind>? allowedKinds = null)
     {
-        var level = RequiredInt($"{path}.level", rule.Level, 1, 20);
+        int? level = null;
+        if (levelRequired)
+        {
+            level = RequiredInt($"{path}.level", rule.Level, 1, 20);
+        }
+        else if (rule.Level is not null)
+        {
+            AddError($"{path}.level", "Las elecciones de una opción se hacen al tomarla: sin level (usa levelChoices para niveles posteriores).");
+        }
+
         var key = RequiredText($"{path}.key", rule.Key, LevelChoiceRule.KeyMaxLength);
         if (key.Length > 0 && !IndexPattern().IsMatch(key))
         {
@@ -684,13 +830,20 @@ internal sealed partial class ContentPackValidator
         {
             AddError($"{path}.kind", "Campo obligatorio.");
         }
-        else if (EnumNames.TryParse<LevelChoiceKind>(rule.Kind.Trim(), out var parsed))
+        else if (EnumNames.TryParse<LevelChoiceKind>(rule.Kind.Trim(), out var parsed)
+                 && (parsed is not (LevelChoiceKind.SavingThrow or LevelChoiceKind.Weapon) || allowedKinds is not null))
         {
             kind = parsed;
+            if (allowedKinds is not null && !allowedKinds.Contains(parsed))
+            {
+                AddError($"{path}.kind", $"Aquí se admiten: {string.Join(", ", allowedKinds)}.");
+                kind = null;
+            }
         }
         else
         {
-            AddError($"{path}.kind", $"Tipo de elección desconocido. Valores admitidos: {string.Join(", ", Enum.GetNames<LevelChoiceKind>())}.");
+            var names = Enum.GetNames<LevelChoiceKind>().Where(n => allowedKinds is not null || n is not (nameof(LevelChoiceKind.SavingThrow) or nameof(LevelChoiceKind.Weapon)));
+            AddError($"{path}.kind", $"Tipo de elección desconocido. Valores admitidos: {string.Join(", ", names)}.");
         }
 
         var setId = NullableText($"{path}.setId", rule.SetId, IndexMaxLength);
@@ -708,11 +861,38 @@ internal sealed partial class ContentPackValidator
         ForEachText($"{path}.from", rule.From, (fromPath, value) =>
         {
             from.Add(value);
+
+            // Any option of the catalog or the pack may be named: a set can reuse options of other sets.
             if (setId is not null && kind is LevelChoiceKind.OptionSet or LevelChoiceKind.Custom)
             {
-                _optionReferences.Add((fromPath, setId, value));
+                _optionReferences.Add((fromPath, null, value));
+            }
+            else if (kind == LevelChoiceKind.SavingThrow && !Abilities.IsValid(value.ToLowerInvariant()))
+            {
+                AddError(fromPath, "Característica desconocida (str, dex, con, int, wis o cha).");
             }
         });
+
+        var alsoFrom = new List<string>();
+        if (rule.AlsoFrom is not null && kind is not (LevelChoiceKind.AsiOrFeat or LevelChoiceKind.OptionSet))
+        {
+            AddError($"{path}.alsoFrom", "Solo se admite en las elecciones AsiOrFeat y OptionSet.");
+        }
+        else
+        {
+            ForEachText($"{path}.alsoFrom", rule.AlsoFrom, (alsoPath, value) =>
+            {
+                if (value == setId || (kind == LevelChoiceKind.AsiOrFeat && value == OptionSets.Feats))
+                {
+                    AddError(alsoPath, "Ya es el conjunto de la elección.");
+                }
+                else if (!alsoFrom.Contains(value))
+                {
+                    alsoFrom.Add(value);
+                    _setReferences.Add((alsoPath, value));
+                }
+            });
+        }
 
         // Spell choices of a subclass with spellcasting may leave "choose" out: the increase of its known table is used.
         var knownTable = kind switch
@@ -737,17 +917,37 @@ internal sealed partial class ContentPackValidator
             }
         }
 
-        if (level is null || key.Length == 0 || kind is null || choose is null)
+        return new ParsedLevelChoice(
+            level,
+            key,
+            name,
+            kind,
+            kind == LevelChoiceKind.AsiOrFeat ? null : setId,
+            choose,
+            rule.From is null ? null : LevelChoiceJson.Serialize(from),
+            filter,
+            note,
+            after,
+            alsoFrom.Count == 0 ? null : LevelChoiceJson.Serialize(alsoFrom),
+            rule.Replaces ?? false,
+            rule.Cumulative ?? false);
+    }
+
+    private void LevelChoice(string path, PackLevelChoiceJson rule, string classIndex, string? subclassIndex, ContentPackRows rows, SubclassSpellcasting? spellcasting = null)
+    {
+        var parsed = ParseLevelChoice(path, rule, levelRequired: true, spellcasting);
+        if (parsed is not { Level: { } level, Kind: { } kind, Choose: { } choose } || parsed.Key.Length == 0)
         {
             return;
         }
 
-        if (after is not null)
+        var key = parsed.Key;
+        if (parsed.After is { } after)
         {
-            _afterReferences.Add(($"{path}.after", classIndex, subclassIndex, level.Value, key, after));
+            _afterReferences.Add(($"{path}.after", classIndex, subclassIndex, level, key, after));
         }
 
-        var id = LevelChoiceRule.IdFor(classIndex, subclassIndex, level.Value, key);
+        var id = LevelChoiceRule.IdFor(classIndex, subclassIndex, level, key);
         if (!Record("levelChoiceRules", id, path))
         {
             return;
@@ -758,20 +958,72 @@ internal sealed partial class ContentPackValidator
             Id = id,
             ClassIndex = classIndex,
             SubclassIndex = subclassIndex,
-            Level = level.Value,
+            Level = level,
             Key = key,
-            Name = name,
-            Kind = kind.Value,
-            SetId = kind == LevelChoiceKind.AsiOrFeat ? null : setId,
-            Choose = choose.Value,
-            FromJson = rule.From is null ? null : LevelChoiceJson.Serialize(from),
-            FilterJson = filter,
-            Replaces = rule.Replaces ?? false,
-            Cumulative = rule.Cumulative ?? false,
-            Note = note,
-            After = after,
+            Name = parsed.Name,
+            Kind = kind,
+            SetId = parsed.SetId,
+            Choose = choose,
+            FromJson = parsed.FromJson,
+            FilterJson = parsed.Filter,
+            Replaces = parsed.Replaces,
+            Cumulative = parsed.Cumulative,
+            Note = parsed.Note,
+            After = parsed.After,
+            AlsoFromJson = parsed.AlsoFromJson,
             Source = _id,
         });
+    }
+
+    /// <summary>Kinds of the choices an option carries.</summary>
+    private static readonly LevelChoiceKind[] OptionChoiceKinds =
+    [
+        LevelChoiceKind.OptionSet, LevelChoiceKind.Skill, LevelChoiceKind.Expertise, LevelChoiceKind.Tool, LevelChoiceKind.Language,
+        LevelChoiceKind.CantripsKnown, LevelChoiceKind.SpellsKnown, LevelChoiceKind.SavingThrow, LevelChoiceKind.Weapon, LevelChoiceKind.Custom,
+    ];
+
+    /// <summary>
+    /// <c>choices</c> (made when the option is taken) or <c>levelChoices</c> (at later class levels) of an option or a
+    /// feat, as the JSON of <see cref="OptionChoiceRule"/>; null when there are none.
+    /// </summary>
+    private string? OptionChoices(string path, List<PackLevelChoiceJson?>? rules, string? optionIndex, bool atLevels)
+    {
+        if (rules is null)
+        {
+            return null;
+        }
+
+        var result = new List<OptionChoiceRule>();
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        ForEach(path, rules, (rulePath, rule) =>
+        {
+            if (rule.After is not null)
+            {
+                AddError($"{rulePath}.after", "No se admite en las elecciones de una opción.");
+            }
+
+            var parsed = ParseLevelChoice(rulePath, rule, levelRequired: atLevels, allowedKinds: OptionChoiceKinds);
+            if (parsed is not { Kind: { } kind, Choose: { } choose } || parsed.Key.Length == 0)
+            {
+                return;
+            }
+
+            if (!keys.Add(atLevels ? $"{parsed.Key}@{parsed.Level}" : parsed.Key))
+            {
+                AddError($"{rulePath}.key", "Key repetida en la opción.");
+                return;
+            }
+
+            if (optionIndex is not null && OptionChoiceRule.KeyFor(optionIndex, parsed.Key).Length > Dnd5eCharacter.IndexMaxLength)
+            {
+                AddError($"{rulePath}.key", $"El índice de la opción y la key juntos superan {Dnd5eCharacter.IndexMaxLength} caracteres.");
+                return;
+            }
+
+            result.Add(new OptionChoiceRule(parsed.Level, parsed.Key, parsed.Name, kind, parsed.SetId, choose, parsed.FromJson, parsed.Filter, parsed.Note, parsed.Replaces, parsed.Cumulative, parsed.AlsoFromJson));
+        });
+
+        return result.Count == 0 ? null : OptionChoiceRule.Serialize(result);
     }
 
     private string? Filter(string path, PackChoiceFilterJson? filter)
@@ -830,6 +1082,20 @@ internal sealed partial class ContentPackValidator
             AddError($"{path}.schoolsExceptAt", "Solo tiene sentido junto con schools.");
         }
 
+        var weaponCategories = new List<string>();
+        ForEachText($"{path}.weaponCategories", filter.WeaponCategories, (categoryPath, value) =>
+        {
+            var category = value.ToLowerInvariant();
+            if (!WeaponCategories.Contains(category))
+            {
+                AddError(categoryPath, $"Valores admitidos: {string.Join(", ", WeaponCategories)}.");
+            }
+            else if (!weaponCategories.Contains(category))
+            {
+                weaponCategories.Add(category);
+            }
+        });
+
         return LevelChoiceJson.Serialize(new
         {
             spellList,
@@ -839,6 +1105,9 @@ internal sealed partial class ContentPackValidator
             cantripsOnly = filter.CantripsOnly ?? false,
             schools = schools.Count > 0 ? schools : null,
             schoolsExceptAt = exceptAt.Count > 0 ? exceptAt.Order().ToList() : null,
+            weaponCategories = weaponCategories.Count > 0 ? weaponCategories : null,
+            firearms = filter.Firearms,
+            ritualOnly = filter.RitualOnly == true ? true : (bool?)null,
         });
     }
 
@@ -906,6 +1175,18 @@ internal sealed partial class ContentPackValidator
         foreach (var (path, index) in _raceReferences.Where(r => !races.Contains(r.Index)))
         {
             AddError(path, $"La raza '{index}' no existe en el catálogo ni en el paquete.");
+        }
+
+        var classes = _context.Classes.Keys.Concat(rows.Classes.Select(c => c.Index)).ToHashSet(StringComparer.Ordinal);
+        foreach (var (path, index) in _classReferences.Where(r => !classes.Contains(r.Index)))
+        {
+            AddError(path, $"La clase '{index}' no existe en el catálogo ni en el paquete.");
+        }
+
+        var subclasses = _context.SrdSubclasses.Keys.Concat(rows.Subclasses.Select(c => c.Index)).ToHashSet(StringComparer.Ordinal);
+        foreach (var (path, index) in _subclassReferences.Where(r => !subclasses.Contains(r.Index)))
+        {
+            AddError(path, $"La subclase '{index}' no existe en el catálogo ni en el paquete.");
         }
     }
 }

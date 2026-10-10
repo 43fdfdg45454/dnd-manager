@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:opentrpg_core/features/dice/domain/dice_expression.dart';
 
 import '../../catalog/data/models.dart' show SpellDetail;
@@ -47,6 +49,20 @@ String withModifier(String formula, int modifier) {
   final text = formula.replaceAll(RegExp(r'\s+'), '');
   return text.replaceAll(RegExp(r'\+?MOD', caseSensitive: false), bonusSuffix(modifier));
 }
+
+/// Levels a class that casts with hit points can cast a spell of
+/// [spellLevel] at: from it up to its maximum level now (and its cost table).
+List<int> hitPointCastLevels(int spellLevel, Spellcasting casting) {
+  if (spellLevel <= 0) return const [0];
+  final max = math.min(casting.maxSpellLevel, casting.hitPointCost.length);
+  if (max < spellLevel) return [spellLevel];
+  return [for (var l = spellLevel; l <= max; l++) l];
+}
+
+/// Hit points a spell of [level] costs a class that casts with hit points (0
+/// when its table does not reach that level).
+int hitPointCastCost(Spellcasting casting, int level) =>
+    level >= 1 && level <= casting.hitPointCost.length ? casting.hitPointCost[level - 1] : 0;
 
 /// Slot levels the spell can be cast at: from its level up to 9, keeping those
 /// the character has slots for (regular or pact). When it has none, just the

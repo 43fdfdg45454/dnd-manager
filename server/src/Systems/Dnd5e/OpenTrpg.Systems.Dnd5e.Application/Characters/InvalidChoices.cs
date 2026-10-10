@@ -183,7 +183,7 @@ public sealed class InvalidChoicesPlanner(ICatalogRepository catalog, CatalogSco
                     var current = character.OriginChoice(invalid.Key)?.Selection;
                     character.RecordOriginChoice(
                         invalid.Key,
-                        new ChoiceSelection { Kind = OriginChoiceKeys.FeatKind, Name = current?.Name ?? "Dote", SetId = OptionSets.Feats, Feat = selected, Ability = ability },
+                        new ChoiceSelection { Kind = OriginChoiceKeys.FeatKind, Name = current?.Name ?? "Dote", SetId = invalid.SetId, Feat = selected, Ability = ability },
                         now);
                 }
 
@@ -192,13 +192,13 @@ public sealed class InvalidChoicesPlanner(ICatalogRepository catalog, CatalogSco
 
             var level = character.Classes.FirstOrDefault(c => c.ClassIndex == invalid.ClassIndex)?.Level ?? invalid.Level;
             var selection = invalid.IsFeat
-                ? new ChoiceSelection { Kind = nameof(LevelChoiceKind.AsiOrFeat), Name = "Sustitución", SetId = OptionSets.Feats, Feat = selected, Ability = ability, Replaced = [invalid.Item] }
+                ? new ChoiceSelection { Kind = nameof(LevelChoiceKind.AsiOrFeat), Name = "Sustitución", SetId = invalid.SetId, Feat = selected, Ability = ability, Replaced = [invalid.Item] }
                 : new ChoiceSelection { Kind = invalid.Kind, Name = "Sustitución", SetId = invalid.SetId, Selected = selected is null ? [] : [selected], Replaced = [invalid.Item] };
             character.RecordChoice(Math.Max(1, level), invalid.ClassIndex, invalid.Key, selection, now);
         }
 
         var replaced = resolved.Select(r => r.Invalid.Item.Index).ToList();
-        await ChoiceGrants.ApplyAsync(catalog, character, replaced, cancellationToken);
+        await ChoiceGrants.ApplyAsync(catalog, character, replaced, now, cancellationToken);
         return replaced;
     }
 

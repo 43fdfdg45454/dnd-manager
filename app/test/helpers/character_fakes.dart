@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:opentrpg_core/features/characters/data/characters_repository.dart';
 import 'package:opentrpg_dnd5e/characters/dnd5e_characters_repository.dart';
 import 'package:opentrpg_dnd5e/characters/models.dart';
+import 'package:opentrpg_dnd5e/session/campaign_rules.dart';
 
 import 'fakes.dart';
 
@@ -956,6 +957,53 @@ class FakeCharactersRepository implements CharactersRepository, Dnd5eCharactersR
     _fail();
     classActions.add((action: action, body: body));
     return get(id);
+  }
+
+  /// Bodies of `hit-point-cast`, in order.
+  final List<({String classIndex, int spellLevel})> hitPointCasts = [];
+
+  /// Hit points each level of a `hit-point-cast` costs.
+  int hitPointCastCostPerLevel = 2;
+
+  @override
+  Future<HitPointCastResult> hitPointCast(
+    String id, {
+    required String classIndex,
+    required int spellLevel,
+  }) async {
+    _fail();
+    hitPointCasts.add((classIndex: classIndex, spellLevel: spellLevel));
+    final json = _json(id);
+    final lost = spellLevel * hitPointCastCostPerLevel;
+    json['hitPointsCurrent'] = ((json['hitPointsCurrent'] as int? ?? 0) - lost).clamp(0, 1 << 30);
+    return HitPointCastResult(character: await get(id), hitPointsLost: lost);
+  }
+
+  // -- Campaign rules (phase 35) ----------------------------------------------
+
+  /// Rules by campaign id (the default ones when missing).
+  final Map<String, CampaignRules> campaignRulesById = {};
+
+  /// Bodies of `PUT /campaigns/{id}/rules`.
+  final List<({String campaignId, bool starterFeatsEnabled})> rulesSaves = [];
+
+  @override
+  Future<CampaignRules> campaignRules(String campaignId) async {
+    return campaignRulesById[campaignId] ?? const CampaignRules();
+  }
+
+  @override
+  Future<CampaignRules> saveCampaignRules(
+    String campaignId, {
+    required bool starterFeatsEnabled,
+  }) async {
+    _fail();
+    rulesSaves.add((campaignId: campaignId, starterFeatsEnabled: starterFeatsEnabled));
+    final old = campaignRulesById[campaignId] ?? const CampaignRules();
+    return campaignRulesById[campaignId] = CampaignRules(
+      starterFeatsEnabled: starterFeatsEnabled,
+      starterFeatsAvailable: old.starterFeatsAvailable,
+    );
   }
 
   @override

@@ -17,6 +17,7 @@ import '../../features/change_requests/ui/change_requests_page.dart';
 import '../../features/characters/ui/character_page.dart';
 import '../../features/characters/ui/sheet_editor_page.dart';
 import '../../features/compendium/ui/compendium_page.dart';
+import '../../features/content_packs/ui/campaign_content_setup_page.dart';
 import '../../features/home/ui/attribution_page.dart';
 import '../../features/home/ui/app_shell.dart';
 import '../../features/home/ui/home_page.dart';
@@ -71,6 +72,7 @@ abstract final class AppRoutes {
   static const campaignSessionSummary = '/campaigns/:id/sessions/:sessionId/summary';
   static const campaignLibrary = '/campaigns/:id/library';
   static const campaignCompendiumPath = '/campaigns/:id/compendium';
+  static const campaignContentSetupPath = '/campaigns/:id/content-setup';
   static const library = '/library';
   static const libraryViewer = '/library/:docId/view';
   static const compendium = '/compendium';
@@ -80,6 +82,9 @@ abstract final class AppRoutes {
   /// The compendium opened from the campaign [id]: it can narrow the
   /// catalog to the content packs the campaign enables.
   static String campaignCompendium(String id) => '/campaigns/$id/compendium';
+
+  /// "Contenido": the content packs and rules of a campaign just created.
+  static String campaignContentSetup(String id) => '/campaigns/$id/content-setup';
 
   /// Location of the campaign with the given [id]: the router sends it to
   /// "Mi sesión" or "Mesa del DM" according to the role, or to "Campaña"
@@ -417,6 +422,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.campaignCompendiumPath,
         builder: (context, state) => CompendiumPage(campaignId: state.pathParameters['id']),
+      ),
+      GoRoute(
+        path: AppRoutes.campaignContentSetupPath,
+        builder: (context, state) =>
+            CampaignContentSetupPage(campaignId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: AppRoutes.libraryViewer,

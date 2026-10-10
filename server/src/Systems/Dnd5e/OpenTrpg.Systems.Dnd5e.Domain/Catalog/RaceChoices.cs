@@ -19,8 +19,11 @@ public sealed record PickChoice(int Choose, IReadOnlyList<OriginOption> From);
 /// <summary>A cantrip of <see cref="SpellList"/> (a class index, or "any"); <see cref="From"/> narrows it when not empty. Always prepared.</summary>
 public sealed record CantripChoice(int Choose, string SpellList, IReadOnlyList<OriginOption> From);
 
-/// <summary>Feats of the <c>feats</c> option set (variant human).</summary>
-public sealed record FeatChoice(int Choose);
+/// <summary>
+/// Feats of the <c>feats</c> option set (variant human) or, with <paramref name="SetId"/>, options of another set
+/// (heritage feats of a race).
+/// </summary>
+public sealed record FeatChoice(int Choose, string? SetId = null);
 
 /// <summary>Breath weapon of a draconic ancestry: area ("15 ft. cone"), saving throw ability and damage dice by character level.</summary>
 public sealed record BreathWeaponInfo(string Name, string Area, string SaveAbility, IReadOnlyDictionary<int, string> DamageAtCharacterLevel)
@@ -108,6 +111,12 @@ public static class OriginChoiceKeys
     public const string SubracePrefix = "race.subrace.";
     public const string BackgroundPrefix = "background.";
 
+    /// <summary>
+    /// The optional starter feat of level 1 (<see cref="FeatKind"/>), offered when the campaign enables starter feats.
+    /// It does not depend on the race or background, so changing them keeps it.
+    /// </summary>
+    public const string StarterFeat = "campaign.starterFeat";
+
     public const string AbilityBonuses = "abilityBonuses";
     public const string Skills = "skills";
     public const string Languages = "languages";
@@ -143,7 +152,7 @@ public static class OriginChoiceKeys
         key.StartsWith(RaceGrantPrefix, StringComparison.Ordinal) || key.StartsWith(SubraceGrantPrefix, StringComparison.Ordinal);
 
     public static bool IsOrigin(string key) =>
-        key.StartsWith(RacePrefix, StringComparison.Ordinal) || key.StartsWith(BackgroundPrefix, StringComparison.Ordinal);
+        key.StartsWith(RacePrefix, StringComparison.Ordinal) || key.StartsWith(BackgroundPrefix, StringComparison.Ordinal) || key == StarterFeat;
 
     public static bool IsBackground(string key) => key.StartsWith(BackgroundPrefix, StringComparison.Ordinal);
 

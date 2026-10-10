@@ -115,8 +115,25 @@ class _SpellCardState extends ConsumerState<SpellCard> {
   SpellDetail get _detail => widget.detail;
   String get _index => _detail.index;
 
-  List<int> get _levels =>
-      castLevels(_detail.level, regularSlots(widget.character), pactSlotsOf(widget.character));
+  /// The class of the spell casts with hit points instead of slots.
+  bool get _withHitPoints {
+    final casting = _casting;
+    return casting != null &&
+        casting.castsWithHitPoints &&
+        casting.classIndex == widget.spell.classIndex;
+  }
+
+  /// The class of the spell has no slots and casts only rituals.
+  bool get _ritualOnly {
+    final casting = _casting;
+    return casting != null && casting.ritualsOnly && casting.classIndex == widget.spell.classIndex;
+  }
+
+  List<int> get _levels => _ritualOnly
+      ? [_detail.level]
+      : _withHitPoints
+      ? hitPointCastLevels(_detail.level, _casting!)
+      : castLevels(_detail.level, regularSlots(widget.character), pactSlotsOf(widget.character));
 
   int get _level {
     final levels = _levels;
@@ -177,10 +194,41 @@ class _SpellCardState extends ConsumerState<SpellCard> {
     await rollAndShow(context, expression, label: 'Curación: ${_detail.name}$_levelSuffix');
   }
 
+  /// A class without slots: the server spends a use of its resource and the
+  /// hit points of the level. A concentration spell then becomes the one the
+  /// character concentrates on.
+  Future<void> _castWithHitPoints() async {
+    final casting = _casting!;
+    final level = _level;
+    final concentration = _detail.concentration;
+    if (concentration &&
+        !await confirmReplaceConcentration(context, ref, widget.character, _index)) {
+      return;
+    }
+    if (!mounted) return;
+    final controller = ref.read(dnd5eCharacterControllerProvider(widget.character.id).notifier);
+    var lost = 0;
+    final cast = await runCombat(context, () async {
+      lost = await controller.hitPointCast(casting.classIndex, level);
+    });
+    if (!cast || !mounted) return;
+    if (concentration) {
+      await runCombat(context, () => controller.setConcentration(_index));
+      if (!mounted) return;
+    }
+    showCombatMessage(
+      context,
+      '${_detail.name} lanzado a nivel $level: pierdes $lost PG'
+      '${concentration ? '. Concentrándote en el conjuro.' : '.'}',
+    );
+  }
+
   /// Spends a slot of the cast level: a regular one when there is one left,
   /// else a pact slot of that level. A concentration spell then becomes the
   /// one the character concentrates on.
   Future<void> _cast() async {
+    if (_withHitPoints) return _castWithHitPoints();
+    if (_ritualOnly) return _castAsRitual();
     final level = _level;
     final regular = regularSlots(widget.character).where((s) => s.level == level).firstOrNull;
     final pact = pactSlotsOf(widget.character);
@@ -215,6 +263,13 @@ class _SpellCardState extends ConsumerState<SpellCard> {
       if (!mounted) return;
     }
     if (level >= 1 && widget.surgeTable != null) setState(() => _surgePending = true);
+  }
+
+  /// A class that only casts rituals: nothing is spent; a concentration
+  /// spell becomes the one the character concentrates on.
+  Future<void> _castAsRitual() async {
+    if (_detail.concentration) return _concentrate();
+    showCombatMessage(context, '${_detail.name} lanzado como ritual (10 minutos más).');
   }
 
   /// A concentration cantrip: only starts concentrating (nothing is spent).
@@ -359,7 +414,7 @@ class _SpellCardState extends ConsumerState<SpellCard> {
       ?d.range,
       ?d.duration,
       if (d.concentration) 'Concentración',
-      if (d.ritual) 'Ritual',
+      if (d.ritual || d.ritualForClasses.contains(widget.spell.classIndex)) 'Ritual',
     ].where((e) => e.isNotEmpty).join(' · ');
 
     return CombatCard(
@@ -404,6 +459,16 @@ class _SpellCardState extends ConsumerState<SpellCard> {
             )
           else if (d.description.isNotEmpty)
             ExpandableText([d.description.first], key: Key('spell-summary-$_index')),
+          if (d.level > 0 && _withHitPoints && levels.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Sin espacios: lanzarlo a nivel $_level cuesta '
+                '${hitPointCastCost(_casting!, _level)} PG.',
+                key: Key('spell-hp-cost-$_index'),
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
           if (d.level > 0 && levels.length > 1)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -456,7 +521,7 @@ class _SpellCardState extends ConsumerState<SpellCard> {
                 OutlinedButton(
                   key: Key('spell-spend-$_index'),
                   onPressed: widget.canEdit ? _cast : null,
-                  child: const Text('Lanzar'),
+                  child: Text(_ritualOnly ? 'Lanzar como ritual' : 'Lanzar'),
                 )
               else if (d.concentration)
                 OutlinedButton(

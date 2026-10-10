@@ -293,7 +293,7 @@ public class ContentPackV3Tests(ContentPackV3ApiFactory factory) : IClassFixture
         weaver["resources"]![0]!["max"] = "classSpecific:nada";
         weaver["subclassFlavor"] = new string('x', 500);
         pack["items"]![0]!["firearm"]!["misfire"] = 0;
-        pack["items"]![1]!["weapon"] = JsonNode.Parse("""{ "category": "exotic", "range": "melee", "damage": "1d4", "damageType": "piercing" }""");
+        pack["items"]![1]!["weapon"] = JsonNode.Parse("""{ "category": "legendaria", "range": "melee", "damage": "1d4", "damageType": "piercing" }""");
         pack["creatures"]![0]!["challengeRating"] = 40;
         pack["creatures"]![0]!["abilities"]!["luck"] = 3;
         pack["reference"]!["languages"]![0]!["index"] = "lengua-sin-prefijo";
