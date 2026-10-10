@@ -555,6 +555,7 @@ las del SRD. Son opciones del conjunto `feats` y admiten los mismos campos que u
 | `prerequisitesText`, `prerequisites` | | Como en [`Option`](#option). |
 | `abilityIncrease`, `modifiers`, `grants`, `resource` | | Como en [`Option`](#option). |
 | `creationOnly` | `bool?` | `true`: solo se ofrece en las elecciones de origen al crear el personaje (`choices.feats` de raza, subraza o trasfondo), nunca en una mejora de característica ni con `alsoFrom`. |
+| `repeatable` | `bool?` | `true`: la dote se vuelve a ofrecer en cada mejora de característica aunque ya se tenga, y cada vez cuenta por separado (sus modificadores se suman). Ver [dotes repetibles](#dotes-repetibles). |
 | `starter` | `bool?` | `true`: dote inicial. Solo se ofrece en la elección opcional "Dote inicial" de nivel 1 cuando la campaña activa las dotes iniciales (ver abajo). Implica `creationOnly` (poner `creationOnly: false` con `starter: true` es un error) y no aparece en `choices.feats`. |
 
 #### Dotes iniciales
@@ -718,6 +719,7 @@ lo ofrece como desplegable "Grupo" junto a la categoría.
 | `damage` | `SpellDamage?` o `SpellDamage[]?` | `null` si no hace daño. Una lista cuando el conjuro hace daño de varios tipos (golpe flamígero: fuego y radiante). |
 | `healAtSlotLevel` | `{ "<nivel>": string }?` | Curación por nivel de espacio (claves `"1"` a `"9"`): `"1d8 + MOD"` (`MOD` es el modificador de lanzamiento). Sin `category`, un conjuro que cura es `Healing`. |
 | `dcAbility` | `string?` | Característica de la salvación (`dex`, `wis`...). |
+| `tags` | `string[]?` | Etiquetas del conjuro: índices de `reference.spellTags` del paquete o de sus paquetes requeridos (ver [etiquetas de conjuro](#etiquetas-de-conjuro)). |
 | `category` | `string?` | Opcional: `Healing`, `Damage`, `Control`, `Buff`, `Defense`, `Utility` o `Summoning` (sin distinguir mayúsculas). La app la muestra como icono junto al nombre. Si falta se deduce: con `damage` → `Damage`; con `dcAbility` y sin daño → `Control`; si no, `Utility`. |
 
 **`SpellDamage`**: `type` (`string?`, ≤ 32, p. ej. `Radiant`), `atSlotLevel` (objeto con claves `"1"`
@@ -1149,8 +1151,11 @@ la app los muestra en la pestaña **Reglas** del compendio, con búsqueda.
 ### `Reference`
 
 Vocabularios que el SRD trae de serie y que un paquete puede ampliar: un objeto con las listas
-`languages`, `weaponProperties`, `equipmentCategories`, `damageTypes`, `magicSchools` y `tools`, cuyas
-entradas son `{ "index", "name", "description"? }` (índice con prefijo). Las entradas de
+`languages`, `weaponProperties`, `armorProperties`, `equipmentCategories`, `damageTypes`, `magicSchools`,
+`tools` y `spellTags`, cuyas entradas son `{ "index", "name", "description"? }` (índice con prefijo).
+`armorProperties` son propiedades de armadura (las que añaden las [mejoras de objeto](#mejoras-de-objetos-concretos));
+las entradas de `spellTags` admiten además `spells` (`string[]?`) para etiquetar conjuros del SRD o de
+otros paquetes (ver [etiquetas de conjuro](#etiquetas-de-conjuro)). Las entradas de
 `equipmentCategories` admiten además `items` (`string[]?`, índices de objetos del catálogo o del
 paquete): la categoría se puede usar entonces en el equipo inicial (`category`) y
 `GET .../equipment-categories/{index}` lista esos objetos. Los tipos de daño de un
@@ -1455,8 +1460,8 @@ Los bonos aparecen en los desgloses con el nombre de la opción y el nivel: "Jur
 concede). Las competencias se añaden con origen "Clase"; los conjuros, siempre preparados. Los
 conjuros y trucos deben existir en el SRD o en el paquete. En razas y subrazas (`races[].grants`,
 `subraces[].grants`) se admiten además `spellcastingAbility` y `spells[].usesPerLongRest`, y
-`minLevel` es el nivel total ([ver Race](#grants-de-raza-y-subraza)); fuera de ellas esos dos campos
-dan error.
+`minLevel` es el nivel total ([ver Race](#grants-de-raza-y-subraza)). Esos dos campos valen también en
+opciones, dotes y niveles de subclase ([conjuros concedidos](#conjuros-concedidos-con-su-característica)).
 
 #### Modificadores de reglas de la hoja
 
@@ -1505,9 +1510,10 @@ o valor fuera de rango), `...modifiers[0].condition` (condición no admitida en 
 | Campo | Efecto |
 | --- | --- |
 | `resistances`, `immunities` | Tipos de daño (SRD o `reference.damageTypes`). Aparecen en la sección "Defensas" de la hoja con su origen. |
-| `conditionImmunities` | Estados del SRD (`charmed`, `poisoned`...) o de `conditions[]` del propio paquete. |
+| `conditionImmunities` | Estados del SRD (`charmed`, `poisoned`...), de `conditions[]` del propio paquete o de sus paquetes requeridos. |
+| `removeSkills` | Índices de habilidad (`["athletics"]`) cuya competencia se pierde aunque otra fuente la dé. La hoja las lista en `lostSkills` (con su origen) y la habilidad queda sin competencia. Lista fija: no hay "a elegir". |
 | `size` | `tiny`, `small`, `medium`, `large`, `huge` o `gargantuan`: sustituye al tamaño de la raza (el último gana). Cambia la capacidad de carga (×½ diminuto, ×2 grande, ×4 enorme, ×8 gargantuesco) y avisa al usar armas pesadas siendo pequeño o diminuto. |
-| `removeSavingThrows` | `{ "choose": 1-6, "from": ["str", "dex"] }`: competencias en salvaciones que se pierden. Si `from` tiene exactamente `choose`, se pierden sin preguntar; si no, el jugador elige (solo en dotes de origen, ver [Dotes iniciales](#dotes-iniciales)). La hoja las lista en `lostSavingThrows`. |
+| `removeSavingThrows` | `{ "choose": 1-6, "from": ["str", "dex"] }`: competencias en salvaciones que se pierden. Si `from` tiene exactamente `choose`, se pierden sin preguntar; si no, el jugador elige (en las dotes de origen, ver [Dotes iniciales](#dotes-iniciales), y en las de una subida de nivel). La hoja las lista en `lostSavingThrows`. |
 | `skillChoicesDelta` | −10 a 10: cambio en las habilidades de clase que se eligen al crear el personaje (−1: una menos). Lo aplica el asistente de creación. |
 | `naturalWeapons` | Armas naturales: `{ "name", "damage"?, "damageByCharacterLevel"?: {"5": "1d8"}, "damageType", "finesse"?, "reach"?: 5-30 }` (`damage` o la tabla por nivel, dados `NdM` o fijo). Aparecen como ataques con competencia (`natural: true`), Fuerza o, si son sutiles, la mejor de Fuerza y Destreza, y su `attackBreakdown`. |
 
@@ -1541,12 +1547,13 @@ otras. Las clases no tienen `grants` por nivel: lo que una clase da a todos se m
 | `key` | `string` | **Obligatorio**. Índice, sin prefijo obligatorio. Si coincide con otro recurso automático del personaje, se queda el de máximo mayor. |
 | `name` | `string` | **Obligatorio**, ≤ 100. |
 | `max` | `int`, `string` u objeto | Máximo de usos (ver abajo). |
-| `recharge` | `string?` | `ShortRest`, `LongRest` (por defecto), `Dawn` o `Manual`. |
+| `recharge` | `string?` | `ShortRest`, `LongRest` (por defecto), `Dawn`, `Manual` o `Initiative` (se recupera al tirar iniciativa y con cualquier descanso). |
+| `rechargeRoll` | `object?` | `{ "dice": "d6", "min": 5 }`: se recupera entero cuando el jugador saca `min` o más con ese dado (ver [recarga por dado](#recarga-al-tirar-iniciativa-y-por-dado)). |
 | `dice` | `string?` | Dado que se tira con cada uso: `d4`, `d6`, `d8`, `d10`, `d12`, `d20` o `d100`. |
 | `diceByLevel` | `object?` | Dado por nivel de la clase: `{ "3": "d8", "10": "d10", "18": "d12" }`. Vale la entrada más alta no superior al nivel; por debajo de la primera, `dice` (o ninguno). |
 | `rollOnRest` | `object?` | Dados que se tiran al descansar (ver abajo). |
 
-**`max`** admite cuatro formas:
+**`max`** admite cinco formas:
 
 | Forma | Ejemplo | Valor |
 | --- | --- | --- |
@@ -1554,6 +1561,7 @@ otras. Las clases no tienen `grants` por nivel: lo que una clase da a todos se m
 | Fórmula | `"proficiencyBonus"`, `"2*classLevel+mod:int"` | Suma de los términos; mínimo 1. |
 | Fórmula con mínimo | `{ "formula": "mod:wis", "min": 0 }` | Suma de los términos; mínimo `min` (0–999). |
 | Tabla por nivel | `{ "byLevel": { "3": 4, "7": 5, "15": 6 } }` | La entrada más alta no superior al nivel de la clase (0–999). Por debajo de la primera entrada, el personaje aún no tiene el recurso. |
+| Tabla más fórmula | `{ "byLevel": { "3": 2, "6": 3 }, "formula": "mod:con", "min": 1 }` | La entrada de la tabla más la fórmula; `min` por defecto 0. Por debajo de la primera entrada, sin recurso. |
 
 Gramática de las fórmulas: términos separados por `+` (hasta 10, con espacios opcionales); cada término
 es un entero (0–999) o `[n*]símbolo`, con `n` entero 1–99 y `símbolo` uno de:
@@ -1872,7 +1880,7 @@ compendio) que cumpla el filtro, y la guarda con su nombre y sus PG actuales.
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `beastFilter.maxChallengeRating` | `number` | **Obligatorio**. VD máximo de la bestia, entre 0 y 30 (`0.25` para 1/4). |
+| `beastFilter.maxChallengeRating` | `number` | **Obligatorio** (salvo con `creatureIndexes`, ver [compañeros de lista cerrada](#compañeros-varios-de-lista-cerrada-y-con-fórmulas)). VD máximo de la bestia, entre 0 y 30 (`0.25` para 1/4). |
 | `beastFilter.sizes` | `string[]?` | Tamaños permitidos: `Tiny`, `Small`, `Medium`, `Large`, `Huge`, `Gargantuan`. Vacío o ausente: cualquiera. |
 | `hitPoints` | `string?` | `"beast"` (los PG de la bestia, por defecto) o `"max(beast, N*classLevel)"` con N entre 1 y 20: el mayor entre los PG de la bestia y N × el nivel en la clase del rasgo. |
 | `proficiencyBonusFromCharacter` | `bool?` | Suma el bonificador de competencia del personaje a la CA y a las salvaciones y habilidades en que la bestia ya es competente. |
@@ -1903,6 +1911,215 @@ En la API:
 La pestaña Combate (y la hoja) ofrece "Elegir compañero" con las bestias que cumplen el filtro y
 muestra el bloque del compañero con CA, PG (con controles de daño y curación), salvaciones,
 habilidades y ataques con botones de tirada; cada valor abre su desglose.
+
+## Ampliaciones de la fase 35B3: recursos, compañeros y objetos
+
+Todos los ejemplos son ficticios. Los campos nuevos se validan al importar con la ruta exacta del error
+(`...resource.rechargeRoll.dice`, `...companion.maxCount`, `...itemEffects.damageStep`...).
+
+### Máximo de recursos con tabla y fórmula
+
+`max` admite una tabla por nivel **más** una fórmula: `{ "byLevel": { "3": 2, "6": 3 }, "formula": "mod:con" }`
+(con `min` opcional, 0 por defecto). El desglose muestra la entrada de la tabla y cada término de la
+fórmula por separado.
+
+Un rasgo, opción o dote puede ampliar el máximo de un recurso con el modificador `ResourceMaxBonus`,
+cuyo `target` es el `key` del recurso (del SRD o de un paquete): el bono aparece en el desglose con el
+nombre del rasgo y su nivel.
+
+```json
+{
+  "index": "brio-ejemplo-senda",
+  "levels": [{
+    "level": 3,
+    "features": [
+      { "index": "brio-ejemplo-brio", "name": "Brío",
+        "resource": { "key": "brio-ejemplo-brio", "name": "Brío", "max": { "byLevel": { "3": 2, "6": 3 }, "formula": "mod:con" } } },
+      { "index": "brio-ejemplo-reserva", "name": "Reserva",
+        "modifiers": [{ "kind": "ResourceMaxBonus", "target": "brio-ejemplo-brio", "value": 1 }] }
+    ]
+  }]
+}
+```
+
+### Recarga al tirar iniciativa y por dado
+
+- `"recharge": "Initiative"`: el recurso se recupera entero al tirar iniciativa (y con cualquier descanso).
+  `POST /api/v1/systems/dnd5e/characters/{id}/resources/initiative` recupera todos los recursos `Initiative`
+  del personaje, sin aprobación; la app lo ofrece como **Recuperar al tirar iniciativa**.
+- `"rechargeRoll": { "dice": "d6", "min": 5 }` (`dice`: `d4`, `d6`, `d8`, `d10`, `d12`, `d20` o `d100`; `min` entre 1 y las caras del dado):
+  el jugador tira el dado físico y escribe el resultado con
+  `POST /api/v1/systems/dnd5e/characters/{id}/resources/{resourceId}/recharge-roll` (`{ "value": 5 }`). La respuesta
+  es `{ character, recharged }`: con `min` o más el recurso se recupera entero. Un valor fuera del dado o un
+  recurso sin `rechargeRoll` dan 400. La app muestra **Tirar recarga** junto al recurso (`rechargeRoll` en el
+  recurso del personaje).
+
+```json
+{ "key": "brio-ejemplo-resuello", "name": "Resuello", "max": 1, "recharge": "Manual", "rechargeRoll": { "dice": "d6", "min": 5 } }
+```
+
+### Recursos en rasgos de raza
+
+Los rasgos de raza (en `races[].traits` o en los [rasgos compartidos](#rasgos-compartidos)) admiten
+`resource`, con la misma forma que el de una opción; `classLevel` es el nivel total del personaje. El
+origen del recurso es "Rasgo (raza)".
+
+```json
+{ "index": "brio-ejemplo-tenacidad", "name": "Tenacidad", "description": ["Rasgo ficticio."],
+  "resource": { "key": "brio-ejemplo-tenacidad", "name": "Tenacidad", "max": "proficiencyBonus" } }
+```
+
+### Conjuros concedidos con su característica
+
+`grants.spellcastingAbility` y `grants.spells[].usesPerLongRest` valen también en opciones, dotes y
+`levels[].grants` de subclase. Los conjuros y trucos concedidos forman un grupo de lanzamiento propio en
+la hoja (`spellcasting[]` con `name` = nombre de la opción, dote o subclase y `classIndex` = su índice),
+con su CD y su ataque calculados con esa característica. Cada conjuro con `usesPerLongRest` crea un
+recurso automático `<índice de la opción>.<conjuro>`.
+
+```json
+{ "index": "brio-ejemplo-chispa", "name": "Chispa arcana",
+  "grants": { "cantrips": ["light"], "spells": [{ "index": "magic-missile", "usesPerLongRest": 1 }], "spellcastingAbility": "int" } }
+```
+
+### Etiquetas de conjuro
+
+Vocabulario en `reference.spellTags` (`{ index, name, description?, spells? }`). Un conjuro las lleva en
+`spells[].tags`; `spells` de la entrada etiqueta conjuros del SRD o de otros paquetes sin redefinirlos (la
+etiqueta pertenece al paquete que la declara y se borra con él). Se usan en:
+
+- `filter.tags` de una elección de conjuros (`levelChoices`): solo conjuros con alguna de esas etiquetas;
+- `expandedSpellList` de subclase: entradas `{ "tags": ["..."] }` que añaden todos los conjuros etiquetados;
+- el compendio: `GET /api/v1/systems/dnd5e/catalog/spells?tag=<índice>`; el resumen y el detalle de un
+  conjuro llevan `tags`.
+
+```json
+"reference": { "spellTags": [{ "index": "brio-ejemplo-luz", "name": "Luz", "spells": ["light", "magic-missile"] }] },
+"spells": [{ "index": "brio-ejemplo-destello", "name": "Destello", "level": 1, "tags": ["brio-ejemplo-luz"], "...": "..." }]
+```
+
+### Dotes repetibles
+
+`feats[].repeatable: true`: la mejora de característica la vuelve a ofrecer aunque ya se tenga y cada
+elección cuenta por separado (dos veces `InitiativeBonus: 1` suman +2, con dos líneas en el desglose).
+
+### Característica de lanzamiento sobrescrita
+
+El DM puede cambiar la característica de lanzamiento de un grupo de la hoja con el override
+`spellcastingAbility.<clave>` (la clase, la opción o la subclase del grupo) y un valor de 1 a 6
+(`str`, `dex`, `con`, `int`, `wis`, `cha`). La CD, el ataque y los conjuros preparados se recalculan con
+ella y el grupo lleva `abilityOverridden: true`, que la app marca.
+
+```json
+{ "overrides": [{ "field": "spellcastingAbility.wizard", "value": 5, "note": "Regla de mesa" }] }
+```
+
+### Compañeros: varios, de lista cerrada y con fórmulas
+
+`levels[].features[].companion` admite además (todo opcional):
+
+| Campo | Tipo | Descripción |
+| --- | --- | --- |
+| `creatureIndexes` | `string[]?` | Lista cerrada de criaturas de **cualquier tipo** (de `creatures[]` del SRD, de los paquetes requeridos o del paquete). Con ella `beastFilter` deja de ser obligatorio; si se dan ambos, la criatura debe estar en la lista y cumplir el filtro. Hasta 50. |
+| `maxCount` | `int` o `"proficiencyBonus"` | Cuántos compañeros a la vez (1–20; por defecto 1). |
+| `crBudgetByLevel` | `object?` | VD total de todos los compañeros por nivel de la clase (`{ "2": 0.5, "6": 1 }`; vale la entrada más alta no superior). |
+| `hitPoints` | `string?` | Además de las formas anteriores, una suma de términos: `beast` (como mucho uno), `characterLevel`, `classLevel`, `halfClassLevel`, `mod:<característica>` (del personaje), con factor opcional `2*`, y enteros. Mínimo 1. |
+| `bonuses` | `object?` | `armorClass`, `savingThrows` (todas; las no competentes parten del modificador de la criatura), `attack` y `damage`: un entero (−10 a 30) o `"proficiencyBonus"`. Aparecen en los desgloses como "Bonificador del rasgo" o "Competencia del personaje". |
+| `featuresByLevel` | `object?` | Textos de lo que ganan los compañeros por nivel de la clase (`{ "6": "Texto..." }`); la hoja muestra los alcanzados. |
+
+```json
+"companion": {
+  "creatureIndexes": ["brio-ejemplo-titere", "brio-ejemplo-penumbra"],
+  "maxCount": "proficiencyBonus",
+  "crBudgetByLevel": { "2": 0.5, "6": 1 },
+  "hitPoints": "beast+classLevel+mod:int",
+  "bonuses": { "armorClass": 1, "savingThrows": "proficiencyBonus", "attack": "proficiencyBonus", "damage": 2 },
+  "featuresByLevel": { "2": "Texto de ejemplo.", "6": "Texto de ejemplo." }
+}
+```
+
+En la API, el detalle lleva `companions[]` (todos, el más antiguo primero; `companion` sigue siendo el
+primero) con `type` y `features`, y `companionFeature` añade `creatureIndexes`, `creatures[]` (índice,
+nombre, tipo, tamaño y VD), `maxCount` (al nivel actual), `challengeBudget`, `challengeBudgetText`,
+`bonuses` y `features`. Rutas por compañero:
+
+- `POST …/characters/{id}/companions` (`{ beastIndex, name }`): añade uno sin aprobación; 409 si ya tiene el
+  máximo y 400 en `beastIndex` si se pasa del VD total o la criatura no está en la lista.
+- `PUT …/companions/{companionId}`: como `PUT …/companion` (cambiar de criatura en un personaje activo es una
+  solicitud para el DM).
+- `POST …/companions/{companionId}/hp` y `DELETE …/companions/{companionId}` (el dueño o un DM, sin aprobación).
+
+### Mejoras de objetos concretos
+
+Un rasgo de clase o de subclase con `itemEnhancement` permite al personaje mejorar **una entrada concreta**
+de su inventario (un arma, armadura o escudo) con las opciones de unos conjuntos:
+
+```json
+{ "index": "brio-ejemplo-mano-experta", "name": "Mano experta",
+  "itemEnhancement": { "optionSets": ["brio-ejemplo-mejoras"], "maxPerItemByLevel": { "3": 1, "5": 2 } } }
+```
+
+| Campo | Tipo | Descripción |
+| --- | --- | --- |
+| `optionSets` | `string[]` | **Obligatorio**. Conjuntos (del paquete o del catálogo) cuyas opciones aplica el rasgo. Hasta 10. |
+| `maxPerItemByLevel` | `object` | **Obligatorio**. Opciones por objeto según el nivel de la clase (1–20). |
+
+Las opciones de esos conjuntos describen su efecto en `itemEffects` (y, si quieren, `modifiers` de tipos de
+objeto, que cuentan mientras el objeto está activo; `prerequisites.minLevel` es el nivel de la clase del
+rasgo y `prerequisites.options`, mejoras que el mismo objeto debe tener):
+
+| Campo | Tipo | Descripción |
+| --- | --- | --- |
+| `appliesTo` | `string[]?` | `weapon`, `armor` y/o `shield`; vacío: cualquiera de los tres. |
+| `attackBonus`, `damageBonus` | `int?` | −10 a 10: al ataque y al daño de esa arma. |
+| `armorClassBonus` | `int?` | −10 a 10: a la CA mientras la armadura o el escudo están equipados. |
+| `addProperties` | `string[]?` | Propiedades que gana el objeto (de arma o de `reference.armorProperties`). |
+| `damageStep` | `int?` | −4 a 4: pasos del dado de daño en la escala 1 → 1d4 → 1d6 → 1d8 → 1d10 → 1d12 → 2d8 → 2d10 → 2d12 (2d6 cuenta como 1d12). |
+| `damageType` | `string?` | Tipo de daño que pasa a hacer el arma (del SRD o de `reference.damageTypes`). |
+
+```json
+{ "setId": "brio-ejemplo-mejoras", "name": "Mejoras", "options": [
+  { "index": "brio-ejemplo-afilado", "name": "Afilado",
+    "itemEffects": { "appliesTo": ["weapon"], "attackBonus": 1, "damageStep": 1, "addProperties": ["finesse"] } },
+  { "index": "brio-ejemplo-reforzado", "name": "Reforzado",
+    "modifiers": [{ "kind": "SaveBonus", "target": "con", "value": 1 }],
+    "itemEffects": { "appliesTo": ["armor", "shield"], "armorClassBonus": 1, "addProperties": ["brio-ejemplo-liviano"] } }
+] }
+```
+
+`PUT /api/v1/systems/dnd5e/characters/{id}/items/{itemId}/enhancements` (`{ "options": ["brio-ejemplo-afilado"] }`, lista
+vacía para quitarlas):
+
+- el dueño de un personaje con el rasgo las aplica **directamente** (es una operación de su rasgo), dentro de
+  las opciones por objeto de su nivel y de los prerrequisitos;
+- sin el rasgo, en un personaje activo, se crea una solicitud `ItemEnhancement` (202) que el DM aprueba;
+- el DM (y el dueño de un borrador) las aplica directamente, sin los límites del rasgo.
+
+La hoja aplica las mejoras: el ataque del arma lleva cada bono con su origen ("Afilado (Longsword)"), el dado
+y el tipo de daño cambiados y las propiedades añadidas; la CA y las salvaciones, los bonos de la armadura o
+el escudo. El detalle lleva `itemEnhancements[]` (`itemId`, `itemName`, `options`, `damageDice`, `damageType`,
+`properties` y `breakdowns` con `attack`, `damage` y `armorClass`) e `itemEnhancementFeature` (el rasgo
+alcanzado, `maxPerItem` y las opciones con `available`).
+
+### Injertos
+
+Un objeto con `graft` ocupa un espacio corporal: solo se puede **equipar** un injerto por espacio (equipar
+otro en el mismo espacio da un error que nombra el que ya lo ocupa). Los espacios son texto libre en
+minúsculas (≤ 40). Para que se pueda equipar, el objeto debe ser equipable (`category: "MagicItem"`, o con
+`effects` o `modifiers`). El detalle del personaje lleva `grafts[]` (`itemId`, `name`, `slot`, `equipped`) y la
+app los muestra en la sección "Injertos".
+
+```json
+{ "index": "brio-ejemplo-brazo-de-hierro", "name": "Brazo de hierro", "category": "MagicItem",
+  "effects": ["Texto de ejemplo."], "graft": { "slot": "brazos" } }
+```
+
+### Restos de 35B2
+
+- `grants.removeSkills` (lista fija) y `grants.conditionImmunities` con estados de los paquetes requeridos
+  (ver [Grants de hoja](#grants-de-hoja)).
+- Una dote de subida de nivel con `removeSavingThrows` a elegir pide la salvación en el asistente: la
+  opción del plan lleva `removeSavingThrows` y la respuesta, `{ "feat": "...", "removedSavingThrows": ["str"] }`.
 
 ## El SRD como paquete base
 
