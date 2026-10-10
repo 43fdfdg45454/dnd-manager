@@ -4,31 +4,29 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
+import '../../../core/characters/models.dart';
 import '../../../core/cache/stale_data.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
-import '../../../core/theme/app_icon.dart';
+import '../../../core/systems/game_system_ui.dart';
+import '../../../core/systems/system_registry.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
 import '../../campaigns/ui/feedback.dart';
 import '../../campaigns/ui/general/campaign_section_page.dart';
-import '../../catalog/data/models.dart' show titleFromIndex;
 import '../../dice/ui/dice_sheet.dart';
 import '../data/characters_controller.dart';
 import '../data/characters_repository.dart';
-import '../data/models.dart';
 import '../data/view_mode_controller.dart';
-import '../domain/character_format.dart';
-import '../domain/class_theme.dart';
+import '../domain/character_permissions.dart';
 import 'change_owner_dialog.dart';
 import 'character_avatar.dart';
 import 'character_detail_tabs.dart';
-import 'combat/combat_view.dart';
 
 /// A character: a header with its actions and two main tabs, "Combate" (the
-/// combat view) and "Detalle" ([CharacterDetailTabs]: Resumen, Habilidades,
-/// Rasgos, Hechizos, Inventario, Notas). The main view and the last sub-tab
+/// combat view of its game system) and "Detalle" ([CharacterDetailTabs]: the
+/// sub-tabs of the system, Inventario and Notas). The main view and the last sub-tab
 /// are remembered per character. A dice button floats over every tab.
 class CharacterPage extends ConsumerWidget {
   const CharacterPage({super.key, required this.characterId});
@@ -170,6 +168,7 @@ class _CharacterViewState extends ConsumerState<_CharacterView>
       myUserId: myUserId,
       myRole: campaign.value?.myRole,
     );
+    final system = ref.watch(campaignSystemUiProvider(character.campaignId));
 
     return Scaffold(
       appBar: AppBar(
@@ -206,6 +205,7 @@ class _CharacterViewState extends ConsumerState<_CharacterView>
           headerSliverBuilder: (context, _) => [
             SliverToBoxAdapter(
               child: _Header(
+                system: system,
                 character: character,
                 permissions: permissions,
                 onSubmit: () => runAction(
@@ -228,8 +228,9 @@ class _CharacterViewState extends ConsumerState<_CharacterView>
           body: TabBarView(
             controller: _tabController,
             children: [
-              CombatView(
-                character: character,
+              system.combatView(
+                context,
+                character,
                 canEdit: permissions.canEdit,
                 isDm: permissions.isDm,
               ),
@@ -242,69 +243,33 @@ class _CharacterViewState extends ConsumerState<_CharacterView>
   }
 }
 
-/// "Contenido no disponible": part of the character comes from a content pack
-/// that was removed. The tooltip names what is missing.
-class CatalogMissingBadge extends StatelessWidget {
-  const CatalogMissingBadge({super.key, required this.character});
-
-  final CharacterDetail character;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final missing = character.missingContent.join(', ');
-    return Tooltip(
-      message: 'Falta en el catálogo: $missing. La ficha conserva los datos.',
-      triggerMode: TooltipTriggerMode.tap,
-      child: Chip(
-        key: const Key('catalog-missing'),
-        avatar: Icon(Icons.warning_amber_rounded, size: 16, color: scheme.onErrorContainer),
-        label: Text('Contenido no disponible', style: TextStyle(color: scheme.onErrorContainer)),
-        backgroundColor: scheme.errorContainer,
-        side: BorderSide.none,
-        visualDensity: VisualDensity.compact,
-      ),
-    );
-  }
-}
-
 class _Header extends StatelessWidget {
   const _Header({
+    required this.system,
     required this.character,
     required this.permissions,
     required this.onSubmit,
     required this.onActivate,
   });
 
+  final GameSystemUi system;
   final CharacterDetail character;
   final CharacterPermissions permissions;
   final VoidCallback onSubmit;
   final VoidCallback onActivate;
 
-  String get _race {
-    final race =
-        character.raceName ??
-        (character.raceIndex == null ? null : titleFromIndex(character.raceIndex!));
-    if (race == null) return 'Sin raza';
-    final subrace =
-        character.subraceName ??
-        (character.subraceIndex == null ? null : titleFromIndex(character.subraceIndex!));
-    return subrace == null ? race : '$race ($subrace)';
-  }
-
   @override
   Widget build(BuildContext context) {
     final c = character;
-    final classes = c.classes.isEmpty ? 'Sin clase' : classesLabel(c.classes);
     final pending = c.pendingChangeRequests.where((r) => r.isPending).length;
 
-    return ClassAccent(
-      classIndex: mainClassIndex(c),
-      child: Builder(builder: (context) => _buildHeader(context, classes, pending)),
+    return system.characterAccent(
+      c,
+      child: Builder(builder: (context) => _buildHeader(context, pending)),
     );
   }
 
-  Widget _buildHeader(BuildContext context, String classes, int pending) {
+  Widget _buildHeader(BuildContext context, int pending) {
     final theme = Theme.of(context);
     final c = character;
     return Padding(
@@ -325,15 +290,10 @@ class _Header extends StatelessWidget {
                       key: const Key('character-title'),
                       style: theme.textTheme.headlineSmall,
                     ),
-                    const SizedBox(height: 2),
-                    _ClassLine(
-                      character: c,
-                      child: Text(
-                        '$_race · $classes${c.classes.isEmpty ? '' : ' · Nivel ${c.totalLevel}'}',
-                        key: const Key('character-subtitle'),
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ),
+                    if (system.characterHeadline(c) case final headline?) ...[
+                      const SizedBox(height: 2),
+                      headline,
+                    ],
                   ],
                 ),
               ),
@@ -349,7 +309,7 @@ class _Header extends StatelessWidget {
                 label: Text(c.status.label),
                 visualDensity: VisualDensity.compact,
               ),
-              if (c.missingContent.isNotEmpty) CatalogMissingBadge(character: c),
+              ...system.characterBadges(c),
               if (pending > 0)
                 ActionChip(
                   key: const Key('character-pending'),
@@ -394,34 +354,6 @@ class _Header extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// The subtitle of a header with the icon of the character's main class,
-/// tinted with its accent.
-class _ClassLine extends StatelessWidget {
-  const _ClassLine({required this.character, required this.child});
-
-  final CharacterDetail character;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final main = mainClassIndex(character);
-    if (main == null) return child;
-    return Row(
-      children: [
-        AppIcon(
-          classThemeOf(main).icon,
-          key: const Key('character-class-icon'),
-          size: 18,
-          color: Theme.of(context).colorScheme.primary,
-          semanticLabel: classThemeOf(main).labelEs,
-        ),
-        const SizedBox(width: 6),
-        Flexible(child: child),
-      ],
     );
   }
 }

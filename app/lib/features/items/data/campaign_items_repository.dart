@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
-import '../../catalog/data/models.dart' show ItemDetail, ItemSummary, Page;
-import '../../../systems/dnd5e/items/dnd5e_item.dart';
+import '../../../core/catalog/catalog_models.dart' show Page;
+import 'models.dart' show ItemSummary;
 
 /// Which templates a campaign item search covers.
 enum ItemSource {
@@ -57,20 +57,26 @@ class CampaignItemsRepository {
     return result.data;
   }
 
-  Future<ItemDetail> create(String campaignId, ItemTemplateInput input) async {
+  /// Creates a homebrew template; [template] is the JSON of the game system
+  /// form (`ItemFormReader.readTemplate`).
+  Future<ItemSummary> create(String campaignId, Map<String, dynamic> template) async {
     final response = await _client.dio.post<Map<String, dynamic>>(
       '$_api/$campaignId/items',
-      data: input.toJson(),
+      data: template,
     );
-    return ItemDetail.fromJson(response.data!);
+    return ItemSummary.fromJson(response.data!);
   }
 
-  Future<ItemDetail> update(String campaignId, String templateId, ItemTemplateInput input) async {
+  Future<ItemSummary> update(
+    String campaignId,
+    String templateId,
+    Map<String, dynamic> template,
+  ) async {
     final response = await _client.dio.patch<Map<String, dynamic>>(
       '$_api/$campaignId/items/$templateId',
-      data: input.toJson(),
+      data: template,
     );
-    return ItemDetail.fromJson(response.data!);
+    return ItemSummary.fromJson(response.data!);
   }
 
   /// 409 when an item or a shop still uses the template.

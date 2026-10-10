@@ -5,7 +5,6 @@ import '../../../../core/theme/app_icon.dart';
 import '../../../../core/theme/icons.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/offline_widgets.dart';
-import '../../../catalog/domain/catalog_format.dart';
 import '../../../characters/data/characters_controller.dart';
 import '../../../characters/data/models.dart' show CharacterDetail;
 import '../../../characters/ui/combat/combat_support.dart';

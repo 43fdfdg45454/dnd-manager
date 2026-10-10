@@ -5,17 +5,17 @@ import 'package:go_router/go_router.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/cache/stale_data.dart';
+import '../../../core/characters/models.dart' show CharacterSummary;
 import '../../../core/router/app_router.dart';
+import '../../../core/systems/game_system_ui.dart';
+import '../../../core/systems/system_registry.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
-import '../../catalog/domain/catalog_format.dart';
 import '../../characters/data/characters_controller.dart';
-import '../../characters/data/models.dart' show CharacterSummary;
 import '../data/items_controllers.dart';
 import '../data/models.dart';
 import '../data/shops_repository.dart';
-import '../domain/items_format.dart';
 import 'effective_item_page.dart';
 import 'item_composer.dart';
 import 'item_feedback.dart';
@@ -83,7 +83,8 @@ class _ShopPageState extends ConsumerState<ShopPage> {
       ..showSnackBar(
         SnackBar(
           content: Text(
-            'Compra realizada: ${item.effective.name} ×${choice.quantity} por ${formatCostCp(total)}.',
+            'Compra realizada: ${item.effective.name} ×${choice.quantity} por '
+            '${ref.read(campaignSystemUiProvider(widget.campaignId)).formatPrice(total)}.',
           ),
         ),
       );
@@ -130,7 +131,7 @@ class _ShopPageState extends ConsumerState<ShopPage> {
   Future<void> _editItem(ShopItem item) async {
     final patch = await showDialog<ShopItemPatch>(
       context: context,
-      builder: (_) => ShopItemDialog(item: item),
+      builder: (_) => ShopItemDialog(campaignId: widget.campaignId, item: item),
     );
     if (patch == null || !mounted) return;
     await runItemAction(
@@ -167,14 +168,18 @@ class _ShopPageState extends ConsumerState<ShopPage> {
     ),
   );
 
-  void _openDetail(ShopItem item) => Navigator.of(context)
-      .push<void>(MaterialPageRoute(builder: (_) => EffectiveItemPage(effective: item.effective)));
+  void _openDetail(ShopItem item) => Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => EffectiveItemPage(campaignId: widget.campaignId, effective: item.effective),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
     final shop = ref.watch(shopControllerProvider(widget.shopId));
     final campaign = ref.watch(campaignDetailControllerProvider(widget.campaignId)).value;
     final isDm = campaign?.myRole.isAtLeastDm ?? false;
+    final system = ref.watch(campaignSystemUiProvider(widget.campaignId));
     final auth = ref.watch(authControllerProvider);
     final myUserId = auth is AuthSignedIn ? auth.user.id : '';
     final mine = [
@@ -234,6 +239,7 @@ class _ShopPageState extends ConsumerState<ShopPage> {
             onRetry: () => ref.invalidate(shopControllerProvider(widget.shopId)),
           ),
           data: (data) => _ShopBody(
+            system: system,
             shop: data,
             isDm: isDm,
             mine: mine,
@@ -252,6 +258,7 @@ class _ShopPageState extends ConsumerState<ShopPage> {
 
 class _ShopBody extends ConsumerWidget {
   const _ShopBody({
+    required this.system,
     required this.shop,
     required this.isDm,
     required this.mine,
@@ -263,6 +270,7 @@ class _ShopBody extends ConsumerWidget {
     required this.onOpenDetail,
   });
 
+  final GameSystemUi system;
   final Shop shop;
   final bool isDm;
   final List<CharacterSummary> mine;
@@ -308,7 +316,7 @@ class _ShopBody extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
-                    'Dinero de ${buyer.name}: ${formatMoney(money.copperPieces)}',
+                    'Dinero de ${buyer.name}: ${system.formatMoney(money.copperPieces)}',
                     key: const Key('shop-money'),
                     style: theme.textTheme.titleSmall,
                   ),
@@ -334,7 +342,7 @@ class _ShopBody extends ConsumerWidget {
             onTap: () => onOpenDetail(item),
             title: Text(item.effective.name),
             subtitle: Text(
-              '${formatCostCp(item.priceCp)} · ${item.isUnlimited ? 'Stock ∞' : 'Stock ${item.stock}'}',
+              '${system.formatPrice(item.priceCp)} · ${item.isUnlimited ? 'Stock ∞' : 'Stock ${item.stock}'}',
               key: Key('shop-item-info-${item.id}'),
             ),
             trailing: Row(

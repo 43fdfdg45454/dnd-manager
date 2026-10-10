@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../core/systems/game_system_ui.dart';
+import '../../../core/systems/system_registry.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/domain/campaign_models.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
-import '../../catalog/data/catalog_controllers.dart';
-import '../../catalog/data/models.dart' show ItemSummary;
 import '../data/campaign_items_repository.dart';
 import '../data/items_controllers.dart';
-import '../domain/item_form_data.dart';
+import '../data/models.dart' show ItemSummary;
 import 'item_feedback.dart';
-import 'item_fields_form.dart';
 import 'item_search_list.dart';
-import '../../../systems/dnd5e/dnd5e_routes.dart';
 
 /// "Objetos" tab of a campaign: the SRD and homebrew items with search and a
 /// source toggle. At least a DM creates, edits and deletes the homebrew ones.
@@ -62,7 +59,8 @@ class HomebrewTab extends ConsumerWidget {
         campaignId: campaign.id,
         initialSource: ItemSource.all,
         showSourceFilter: true,
-        onSelected: (item) => context.push(Dnd5eRoutes.item(item.id)),
+        onSelected: (item) =>
+            ref.read(campaignSystemUiProvider(campaign.id)).openCatalogItem(context, item.id),
         // Only the campaign's own items can be edited; SRD items are read-only.
         trailingBuilder: isDm
             ? (context, item) => !item.isHomebrew
@@ -83,8 +81,8 @@ class HomebrewTab extends ConsumerWidget {
   }
 }
 
-/// Create or edit a homebrew item with the advanced form. Pops with true when
-/// it was saved.
+/// Create or edit a homebrew item with the item form of the game system
+/// ([GameSystemUi.itemFormSection]). Pops with true when it was saved.
 class HomebrewFormPage extends ConsumerStatefulWidget {
   const HomebrewFormPage({super.key, required this.campaignId, this.editing});
 
@@ -98,13 +96,15 @@ class HomebrewFormPage extends ConsumerStatefulWidget {
 }
 
 class _HomebrewFormPageState extends ConsumerState<HomebrewFormPage> {
-  final _formKey = GlobalKey<ItemFieldsFormState>();
+  final _formKey = GlobalKey();
   bool _busy = false;
 
   Future<void> _save() async {
     final form = _formKey.currentState;
-    if (form == null || !form.validate()) return;
-    final input = form.read().toInput();
+    if (form is! ItemFormReader) return;
+    final reader = form as ItemFormReader;
+    if (!reader.validate()) return;
+    final input = reader.readTemplate();
     final editing = widget.editing;
     final actions = ref.read(homebrewActionsProvider);
     setState(() => _busy = true);
@@ -128,26 +128,26 @@ class _HomebrewFormPageState extends ConsumerState<HomebrewFormPage> {
   @override
   Widget build(BuildContext context) {
     final editing = widget.editing;
+    final system = ref.watch(campaignSystemUiProvider(widget.campaignId));
     Widget body;
     if (editing == null) {
       body = _FormBody(
-        formKey: _formKey,
-        initial: const ItemFormData(),
+        form: system.itemFormSection(ItemFormScope(formKey: _formKey, templateMode: true)),
         busy: _busy,
         onSave: _save,
       );
     } else {
+      final template = system.itemTemplate(editing.id);
       body = ref
-          .watch(itemDetailProvider(editing.id))
+          .watch(template)
           .when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => ItemsErrorView(
-              error: error,
-              onRetry: () => ref.invalidate(itemDetailProvider(editing.id)),
-            ),
+            error: (error, _) =>
+                ItemsErrorView(error: error, onRetry: () => ref.invalidate(template)),
             data: (detail) => _FormBody(
-              formKey: _formKey,
-              initial: ItemFormData.fromDetail(detail),
+              form: system.itemFormSection(
+                ItemFormScope(formKey: _formKey, template: detail, templateMode: true),
+              ),
               busy: _busy,
               onSave: _save,
             ),
@@ -161,15 +161,10 @@ class _HomebrewFormPageState extends ConsumerState<HomebrewFormPage> {
 }
 
 class _FormBody extends StatelessWidget {
-  const _FormBody({
-    required this.formKey,
-    required this.initial,
-    required this.busy,
-    required this.onSave,
-  });
+  const _FormBody({required this.form, required this.busy, required this.onSave});
 
-  final GlobalKey<ItemFieldsFormState> formKey;
-  final ItemFormData initial;
+  /// The item form of the game system.
+  final Widget? form;
   final bool busy;
   final VoidCallback onSave;
 
@@ -178,7 +173,7 @@ class _FormBody extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.fromLTRB(16, 12, 16, 24 + MediaQuery.paddingOf(context).bottom),
       children: [
-        ItemFieldsForm(key: formKey, initial: initial, templateMode: true),
+        ?form,
         const SizedBox(height: 8),
         FilledButton.icon(
           key: const Key('homebrew-save'),

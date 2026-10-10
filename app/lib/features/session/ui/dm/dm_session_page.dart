@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/characters/models.dart' show RestKind, RestRequest;
+import '../../../../core/motion/rest_celebration.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/systems/system_registry.dart';
 import '../../../../core/theme/app_icon.dart';
 import '../../../../core/theme/components.dart';
 import '../../../../core/theme/icons.dart';
@@ -12,20 +15,16 @@ import '../../../../core/ui/offline_widgets.dart';
 import '../../../campaigns/data/campaigns_controller.dart';
 import '../../../campaigns/domain/campaign_models.dart';
 import '../../../characters/data/characters_controller.dart';
-import '../../../characters/data/models.dart' show RestKind, RestRequest;
-import '../../../characters/ui/combat/rest_celebration.dart';
 import '../../../items/data/items_controllers.dart';
 import '../../../items/data/models.dart' show ShopSummary;
 import '../../../sessions/ui/next_session_card.dart';
 import '../../data/session_controllers.dart';
 import '../session_feedback.dart';
 import '../stash_card.dart';
-import '../../../../systems/dnd5e/session/party_models.dart';
-import '../../../../systems/dnd5e/session/party_controller.dart';
-import '../../../../systems/dnd5e/session/party_panel.dart';
 
-/// "Mesa del DM": the party at a glance with forced rests, level grants, secret
-/// messages and dice, the party stash, the shops with their open/closed switch,
+/// "Mesa del DM": the party panel of the game system (D&D 5e: the party at a
+/// glance with forced rests, level grants, secret messages and dice), the
+/// party stash, the shops with their open/closed switch,
 /// the petitions (rest requests and change requests) and the next session. For
 /// DMs and the Owner.
 class DmSessionPage extends ConsumerStatefulWidget {
@@ -40,19 +39,18 @@ class DmSessionPage extends ConsumerStatefulWidget {
 class _DmSessionPageState extends ConsumerState<DmSessionPage> {
   String get _campaignId => widget.campaignId;
 
-  List<TableCharacter> _characters(List<PartyMember> party) => [
-    for (final m in party) (id: m.id, name: m.name),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final campaign = ref.watch(campaignDetailControllerProvider(_campaignId)).value;
     if (campaign == null) return const Center(child: CircularProgressIndicator());
-    final party = ref.watch(partyControllerProvider(_campaignId)).value ?? const <PartyMember>[];
+    final system = ref.watch(campaignSystemUiProvider(_campaignId));
+    final characters = ref.watch(system.tableCharacters(_campaignId));
 
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(partyControllerProvider(_campaignId));
+        for (final provider in system.tableProviders(_campaignId)) {
+          ref.invalidate(provider);
+        }
         ref.invalidate(restRequestsControllerProvider(_campaignId));
         ref.invalidate(stashControllerProvider(_campaignId));
         ref.invalidate(shopsControllerProvider(_campaignId));
@@ -61,9 +59,9 @@ class _DmSessionPageState extends ConsumerState<DmSessionPage> {
         key: const Key('dm-session'),
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
         children: [
-          Dnd5ePartyPanel(campaignId: _campaignId),
+          system.partyPanel(context, _campaignId),
           const SizedBox(height: 8),
-          PartyStashCard(campaign: campaign, characters: _characters(party)),
+          PartyStashCard(campaign: campaign, characters: characters),
           _ShopsCard(campaign: campaign),
           _PetitionsCard(campaignId: _campaignId),
           const NextSessionCard(),

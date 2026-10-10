@@ -13,7 +13,7 @@ import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
 import 'package:opentrpg/features/campaigns/ui/general/campaign_section_page.dart';
 import 'package:opentrpg/features/characters/data/models.dart';
 import 'package:opentrpg/features/characters/ui/combat/combat_support.dart';
-import 'package:opentrpg/features/characters/ui/combat/rest_celebration.dart';
+import 'package:opentrpg/core/motion/rest_celebration.dart';
 import 'package:opentrpg/features/characters/ui/combat/vitals_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

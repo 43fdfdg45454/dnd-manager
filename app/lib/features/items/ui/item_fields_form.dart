@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../../catalog/data/models.dart' show ItemModifier, itemModifierKinds;
+import '../../catalog/data/models.dart' show ItemDetail, ItemModifier, itemModifierKinds;
 import '../../catalog/domain/catalog_format.dart';
 import '../../catalog/domain/item_modifier_format.dart';
-import '../../characters/data/models.dart' show abilityKeys;
+import '../../../core/systems/game_system_ui.dart';
+import '../../../systems/dnd5e/characters/models.dart' show abilityKeys;
 import '../../characters/domain/character_format.dart' show copperToGoldText, skillLabel;
 import '../domain/item_form_data.dart';
+import '../data/models.dart';
 import '../domain/items_format.dart';
+import '../../../systems/dnd5e/items/money_format.dart';
 import '../../../systems/dnd5e/items/dnd5e_item.dart';
 
 /// Form with every item field. It is used for homebrew templates
@@ -15,9 +18,13 @@ import '../../../systems/dnd5e/items/dnd5e_item.dart';
 /// The parent keeps a `GlobalKey<ItemFieldsFormState>` to validate the form
 /// and read its [ItemFormData].
 class ItemFieldsForm extends StatefulWidget {
-  const ItemFieldsForm({super.key, required this.initial, this.templateMode = false});
+  const ItemFieldsForm({super.key, this.template, this.templateMode = false});
 
-  final ItemFormData initial;
+  /// The catalog template the form starts from (an [ItemDetail]); null for
+  /// an item from scratch.
+  final ItemSummary? template;
+
+  ItemFormData get initial => _formDataOf(template);
 
   /// Shows the template-only fields (subcategory, cost).
   final bool templateMode;
@@ -25,6 +32,13 @@ class ItemFieldsForm extends StatefulWidget {
   @override
   State<ItemFieldsForm> createState() => ItemFieldsFormState();
 }
+
+/// The form data of [template] (empty for an item from scratch).
+ItemFormData _formDataOf(ItemSummary? template) => switch (template) {
+  null => const ItemFormData(),
+  final ItemDetail detail => ItemFormData.fromDetail(detail),
+  final summary => ItemFormData.fromDetail(ItemDetail.fromJson(summary.raw)),
+};
 
 /// Maximum number of modifiers per item (server limit).
 const maxItemModifiers = 10;
@@ -40,7 +54,7 @@ class _ModifierRow {
   void dispose() => value.dispose();
 }
 
-class ItemFieldsFormState extends State<ItemFieldsForm> {
+class ItemFieldsFormState extends State<ItemFieldsForm> implements ItemFormReader {
   final _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _name;
@@ -123,6 +137,7 @@ class ItemFieldsFormState extends State<ItemFieldsForm> {
   }
 
   /// True when every field is valid (and shows the errors otherwise).
+  @override
   bool validate() => _formKey.currentState?.validate() ?? false;
 
   /// Current values of the form.
@@ -159,6 +174,13 @@ class ItemFieldsFormState extends State<ItemFieldsForm> {
       ],
     );
   }
+
+  @override
+  Map<String, dynamic> readTemplate() => read().toInput().toJson();
+
+  @override
+  ItemOverrides readOverrides({ItemSummary? template}) =>
+      read().toOverrides(base: template == null ? null : _formDataOf(template));
 
   final List<_ModifierRow> _modifiers = [];
 

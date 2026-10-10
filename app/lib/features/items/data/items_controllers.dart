@@ -1,13 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../catalog/data/catalog_controllers.dart' show itemDetailProvider;
-import '../../catalog/data/models.dart' show ItemDetail, ItemSummary, Page;
+import '../../../core/catalog/catalog_models.dart' show Page;
+import '../../../core/systems/system_registry.dart';
 import '../../characters/data/characters_controller.dart';
 import 'campaign_items_repository.dart';
 import 'inventory_repository.dart';
 import 'models.dart';
 import 'shops_repository.dart';
-import '../../../systems/dnd5e/items/dnd5e_item.dart';
 
 const itemsPageSize = 30;
 
@@ -137,16 +136,20 @@ class HomebrewActions {
 
   CampaignItemsRepository get _repository => _ref.read(campaignItemsRepositoryProvider);
 
-  Future<ItemDetail> create(String campaignId, ItemTemplateInput input) async {
-    final created = await _repository.create(campaignId, input);
+  Future<ItemSummary> create(String campaignId, Map<String, dynamic> template) async {
+    final created = await _repository.create(campaignId, template);
     _ref.invalidate(campaignItemsControllerProvider);
     return created;
   }
 
-  Future<ItemDetail> update(String campaignId, String templateId, ItemTemplateInput input) async {
-    final updated = await _repository.update(campaignId, templateId, input);
+  Future<ItemSummary> update(
+    String campaignId,
+    String templateId,
+    Map<String, dynamic> template,
+  ) async {
+    final updated = await _repository.update(campaignId, templateId, template);
     _ref.invalidate(campaignItemsControllerProvider);
-    _ref.invalidate(itemDetailProvider(templateId));
+    _ref.read(campaignSystemUiProvider(campaignId)).onItemTemplateChanged(_ref, templateId);
     return updated;
   }
 

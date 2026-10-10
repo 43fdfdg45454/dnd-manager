@@ -4,9 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/auth/auth_controller.dart';
 import '../../../../core/auth/auth_state.dart';
+import '../../../../core/characters/models.dart';
 import '../../../../core/motion/vignette.dart';
 import '../../../../core/network/api_error.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/systems/game_system_ui.dart';
+import '../../../../core/systems/system_registry.dart';
 import '../../../../core/theme/app_icon.dart';
 import '../../../../core/theme/components.dart';
 import '../../../../core/theme/icons.dart';
@@ -15,23 +18,12 @@ import '../../../../core/ui/offline_widgets.dart';
 import '../../../campaigns/data/campaigns_controller.dart';
 import '../../../campaigns/domain/campaign_models.dart';
 import '../../../characters/data/characters_controller.dart';
-import '../../../characters/data/models.dart';
-import '../../../characters/domain/class_theme.dart';
-import '../../../characters/domain/character_format.dart';
+import '../../../characters/domain/character_permissions.dart';
 import '../../../characters/ui/character_avatar.dart';
 import '../../../characters/ui/character_detail_tabs.dart';
-import '../../../characters/ui/combat/attacks_section.dart';
-import '../../../characters/ui/combat/class_panels.dart';
-import '../../../characters/ui/combat/resources_section.dart';
-import '../../../characters/ui/combat/rest_section.dart';
-import '../../../characters/ui/combat/spells_section.dart';
-import '../../../characters/ui/combat/vitals_section.dart';
 import '../../../items/data/items_controllers.dart';
 import '../stash_card.dart';
-import 'combat_items_section.dart';
 import 'messages_inbox.dart';
-import '../../../../systems/dnd5e/dnd5e_routes.dart';
-import '../../../../systems/dnd5e/session/level_up_card.dart';
 
 /// The two halves of "Mi sesión", the same main views as the character page.
 enum PlayerSubview {
@@ -175,8 +167,9 @@ class _NoCharacter extends ConsumerWidget {
   final CampaignDetail campaign;
   final List<CharacterSummary> drafts;
 
-  /// Opens the guided creation wizard.
-  void _create(BuildContext context) => context.push(Dnd5eRoutes.characterWizard(campaign.id));
+  /// Opens the guided creation wizard of the game system.
+  void _create(BuildContext context, WidgetRef ref) =>
+      ref.read(campaignSystemUiProvider(campaign.id)).openCreationWizard(context, campaign.id);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -204,7 +197,7 @@ class _NoCharacter extends ConsumerWidget {
           child: OfflineAware(
             builder: (context, canWrite) => FilledButton.icon(
               key: const Key('player-create-character'),
-              onPressed: canWrite ? () => _create(context) : null,
+              onPressed: canWrite ? () => _create(context, ref) : null,
               icon: const AppIcon(AppIcons.hood, size: 20),
               label: const Text('Crear personaje'),
             ),
@@ -226,12 +219,12 @@ class _NoCharacter extends ConsumerWidget {
   }
 }
 
-/// One character of the player in the selected [subview]. While the character
-/// has a granted level, invalid picks, a pending spell preparation or a pending
-/// rest roll, the matching full-screen page opens by itself and cannot be left,
-/// in this order: the level-up wizard, "Sustituye lo que ya no cumples",
-/// "Prepara tus conjuros" and "Tira tus dados" (also when a `character.updated`
-/// event activates it).
+/// One character of the player in the selected [subview]. While the game
+/// system has a full-screen page the player must complete
+/// ([GameSystemUi.pendingActionRoute]; D&D 5e: the level-up wizard,
+/// "Sustituye lo que ya no cumples", "Prepara tus conjuros" and "Tira tus
+/// dados", in this order), it opens by itself and cannot be left (also when a
+/// `character.updated` event activates it).
 class _CharacterSession extends ConsumerStatefulWidget {
   const _CharacterSession({
     super.key,
@@ -255,19 +248,9 @@ class _CharacterSessionState extends ConsumerState<_CharacterSession> {
   /// Opens the forced page that [character] needs, if any (one at a time).
   void _force(CharacterDetail character) {
     if (_forcing) return;
-    final String? route;
-    if (character.pendingLevelUpTo != null) {
-      route = Dnd5eRoutes.levelUp(character.id);
-    } else if (character.invalidChoices.isNotEmpty) {
-      route = Dnd5eRoutes.invalidChoices(character.id);
-    } else if (character.spellPreparationPending) {
-      route = Dnd5eRoutes.prepareSpells(character.id);
-    } else if (character.restRollsPending) {
-      route = Dnd5eRoutes.restRolls(character.id);
-    } else {
-      route = null;
-    }
-    final target = route;
+    final target = ref
+        .read(campaignSystemUiProvider(widget.campaign.id))
+        .pendingActionRoute(character);
     if (target == null) return;
     _forcing = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -292,6 +275,7 @@ class _CharacterSessionState extends ConsumerState<_CharacterSession> {
   @override
   Widget build(BuildContext context) {
     final detail = ref.watch(characterControllerProvider(widget.characterId));
+    final system = ref.watch(campaignSystemUiProvider(widget.campaign.id));
     final loaded = detail.value;
     if (loaded != null && loaded.status == CharacterStatus.active) _force(loaded);
     return detail.when(
@@ -301,13 +285,24 @@ class _CharacterSessionState extends ConsumerState<_CharacterSession> {
         message: describeCharacterError(error),
         onRetry: () => ref.invalidate(characterControllerProvider(widget.characterId)),
       ),
-      // At 0 hit points a dark vignette closes in on the edges of the session.
+      // A character down (D&D 5e: at 0 hit points) darkens the edges of the
+      // session.
       data: (character) => DarkVignette(
         key: const Key('player-vignette'),
-        active: character.hitPointsCurrent == 0,
+        active: system.isDown(character),
         child: switch (widget.subview) {
-          PlayerSubview.combat => _CombatSubview(character: character),
-          PlayerSubview.detail => _DetailSubview(campaign: widget.campaign, character: character),
+          PlayerSubview.combat => system.combatView(
+            context,
+            character,
+            canEdit: true,
+            inSession: true,
+            header: _PlayerHeader(system: system, character: character),
+          ),
+          PlayerSubview.detail => _DetailSubview(
+            system: system,
+            campaign: widget.campaign,
+            character: character,
+          ),
         },
       ),
     );
@@ -318,50 +313,24 @@ class _CharacterSessionState extends ConsumerState<_CharacterSession> {
 EdgeInsets _listPadding(BuildContext context) =>
     EdgeInsets.fromLTRB(12, 4, 12, 32 + MediaQuery.paddingOf(context).bottom);
 
-class _CombatSubview extends StatelessWidget {
-  const _CombatSubview({required this.character});
-
-  final CharacterDetail character;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = character;
-    return ListView(
-      key: const Key('player-combat'),
-      padding: _listPadding(context),
-      children: [
-        _PlayerHeader(character: c),
-        if (c.pendingLevelUpTo != null) LevelUpCard(character: c),
-        HpCard(key: const ValueKey('player-hp-card'), character: c, canEdit: true),
-        StatsCard(character: c, canEdit: true),
-        if (c.hitPointsCurrent == 0) DeathSavesCard(character: c, canEdit: true),
-        ConditionsCard(character: c, canEdit: true),
-        AttacksSection(character: c),
-        SpellsSection(character: c, canEdit: true),
-        SpellSlotsSection(character: c, canEdit: true),
-        ResourcesSection(character: c, canEdit: true),
-        ClassPanelsSection(character: c, canEdit: true),
-        CombatItemsSection(character: c, canEdit: true),
-      ],
-    );
-  }
-}
-
-/// Name, portrait and classes with the accent of the main class.
+/// Name, portrait and the short line of the game system with the accent of
+/// the character (D&D 5e: classes and level, with the colour of the main
+/// class).
 class _PlayerHeader extends StatelessWidget {
-  const _PlayerHeader({required this.character});
+  const _PlayerHeader({required this.system, required this.character});
 
+  final GameSystemUi system;
   final CharacterDetail character;
 
   @override
   Widget build(BuildContext context) {
     final c = character;
-    return ClassAccent(
-      classIndex: mainClassIndex(c),
+    return system.characterAccent(
+      c,
       child: Builder(
         builder: (context) {
           final theme = Theme.of(context);
-          final main = mainClassIndex(c);
+          final headline = system.characterHeadline(c, compact: true);
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
@@ -377,23 +346,7 @@ class _PlayerHeader extends StatelessWidget {
                         key: const Key('player-character-name'),
                         style: theme.textTheme.headlineSmall,
                       ),
-                      if (c.classes.isNotEmpty)
-                        Row(
-                          children: [
-                            AppIcon(
-                              classThemeOf(main).icon,
-                              size: 18,
-                              color: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                '${classesLabel(c.classes)} · Nivel ${c.totalLevel}',
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                            ),
-                          ],
-                        ),
+                      ?headline,
                     ],
                   ),
                 ),
@@ -407,11 +360,13 @@ class _PlayerHeader extends StatelessWidget {
 }
 
 /// "Detalle": the player's header over the sub-tabs of the sheet
-/// ([CharacterDetailTabs]) with a first "Sesión" sub-tab: the level-up card,
-/// the rests, the open shops, the party stash and the DM's messages.
+/// ([CharacterDetailTabs]) with a first "Sesión" sub-tab: the cards of the
+/// game system (D&D 5e: the level granted and the rests), the open shops, the
+/// party stash and the DM's messages.
 class _DetailSubview extends ConsumerWidget {
-  const _DetailSubview({required this.campaign, required this.character});
+  const _DetailSubview({required this.system, required this.campaign, required this.character});
 
+  final GameSystemUi system;
   final CampaignDetail campaign;
   final CharacterDetail character;
 
@@ -429,7 +384,7 @@ class _DetailSubview extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: _PlayerHeader(character: c),
+          child: _PlayerHeader(system: system, character: c),
         ),
         Expanded(
           child: CharacterDetailTabs(
@@ -439,8 +394,7 @@ class _DetailSubview extends ConsumerWidget {
               key: const Key('player-session'),
               padding: _listPadding(context),
               children: [
-                if (c.pendingLevelUpTo != null) LevelUpCard(character: c),
-                RestSection(character: c, canEdit: true),
+                ...system.sessionCards(context, c),
                 _OpenShopsCard(campaignId: campaign.id),
                 PartyStashCard(campaign: campaign, takerCharacterId: c.id),
                 MessagesInbox(campaignId: campaign.id),

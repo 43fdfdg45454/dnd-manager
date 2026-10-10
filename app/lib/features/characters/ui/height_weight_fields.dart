@@ -2,36 +2,42 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../catalog/data/models.dart' show HeightWeightTable;
-import '../../dice/data/dice_controller.dart' show diceRandomProvider;
-import '../domain/height_weight.dart';
+import '../../../core/systems/game_system_ui.dart';
+import '../../../core/systems/system_registry.dart';
+import '../domain/measures.dart';
 
 /// "Altura y peso" section: height (inches) and weight (pounds) fields with the
-/// metric conversion below and, when the race or subrace has a table, a "Tirar"
-/// button that rolls it with the app's dice engine, fills both fields and shows
-/// the roll in a SnackBar. Free data without mechanical effect.
+/// metric conversion below. The header comes from the game system of
+/// [campaignId] ([GameSystemUi.heightWeightRoller]; D&D 5e: a "Tirar" button
+/// that rolls the table of the race or subrace and fills both fields). Free
+/// data without mechanical effect.
 ///
-/// Keys: `<keyPrefix>-height`, `<keyPrefix>-weight`,
-/// `<keyPrefix>-roll-height-weight` and `<keyPrefix>-height-weight-preview`.
+/// Keys: `<keyPrefix>-height`, `<keyPrefix>-weight` and
+/// `<keyPrefix>-height-weight-preview` (D&D 5e adds
+/// `<keyPrefix>-roll-height-weight`).
 class HeightWeightFields extends ConsumerStatefulWidget {
   const HeightWeightFields({
     super.key,
+    required this.campaignId,
     required this.keyPrefix,
     required this.initialHeight,
     required this.initialWeight,
     required this.onHeightChanged,
     required this.onWeightChanged,
-    this.table,
+    this.raceIndex,
+    this.subraceIndex,
   });
 
+  final String campaignId;
   final String keyPrefix;
   final String initialHeight;
   final String initialWeight;
   final ValueChanged<String> onHeightChanged;
   final ValueChanged<String> onWeightChanged;
 
-  /// Table of the race or subrace; null hides the "Tirar" button.
-  final HeightWeightTable? table;
+  /// Race and subrace of the character, for the tables of the system.
+  final String? raceIndex;
+  final String? subraceIndex;
 
   @override
   ConsumerState<HeightWeightFields> createState() => _HeightWeightFieldsState();
@@ -48,43 +54,33 @@ class _HeightWeightFieldsState extends ConsumerState<HeightWeightFields> {
     super.dispose();
   }
 
-  void _roll(HeightWeightTable table) {
-    final roll = rollHeightWeight(table, ref.read(diceRandomProvider));
-    if (roll == null) return;
-    _height.text = '${roll.heightInches}';
-    _weight.text = '${roll.weightPounds}';
+  void _onRolled(int heightInches, int weightPounds) {
+    _height.text = '$heightInches';
+    _weight.text = '$weightPounds';
     widget.onHeightChanged(_height.text);
     widget.onWeightChanged(_weight.text);
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(roll.summary)));
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final table = widget.table;
     final prefix = widget.keyPrefix;
+    final title = Text('Altura y peso', style: theme.textTheme.titleSmall);
+    final header = ref
+        .watch(campaignSystemUiProvider(widget.campaignId))
+        .heightWeightRoller(
+          HeightWeightScope(
+            title: title,
+            keyPrefix: prefix,
+            raceIndex: widget.raceIndex,
+            subraceIndex: widget.subraceIndex,
+            onRolled: _onRolled,
+          ),
+        );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(child: Text('Altura y peso', style: theme.textTheme.titleSmall)),
-            if (table != null)
-              TextButton.icon(
-                key: Key('$prefix-roll-height-weight'),
-                onPressed: () => _roll(table),
-                icon: const Icon(Icons.casino_outlined),
-                label: const Text('Tirar'),
-              ),
-          ],
-        ),
-        if (table != null)
-          Text(
-            'Tabla de la raza: ${describeHeightWeightTable(table)}',
-            style: theme.textTheme.bodySmall,
-          ),
+        header ?? Row(children: [Expanded(child: title)]),
         const SizedBox(height: 4),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,

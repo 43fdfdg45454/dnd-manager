@@ -227,8 +227,8 @@ class FakeCampaignItemsRepository implements CampaignItemsRepository {
   Object? deleteError;
   final List<ItemSource> sources = [];
   final List<({String? category, String? subcategory, List<String>? indexes})> queries = [];
-  final List<ItemTemplateInput> created = [];
-  final List<({String id, ItemTemplateInput input})> updated = [];
+  final List<Map<String, dynamic>> created = [];
+  final List<({String id, Map<String, dynamic> input})> updated = [];
   final List<String> deleted = [];
 
   @override
@@ -262,19 +262,33 @@ class FakeCampaignItemsRepository implements CampaignItemsRepository {
   }
 
   @override
-  Future<ItemDetail> create(String campaignId, ItemTemplateInput input) async {
+  Future<ItemSummary> create(String campaignId, Map<String, dynamic> input) async {
     created.add(input);
     final id = 'hb${created.length}';
-    homebrew.add(ItemSummary(id: id, name: input.name, category: input.category));
-    return ItemDetail(id: id, name: input.name, category: input.category);
+    homebrew.add(
+      ItemSummary(id: id, name: input['name'] as String, category: input['category'] as String),
+    );
+    return ItemDetail(id: id, name: input['name'] as String, category: input['category'] as String);
   }
 
   @override
-  Future<ItemDetail> update(String campaignId, String templateId, ItemTemplateInput input) async {
+  Future<ItemSummary> update(
+    String campaignId,
+    String templateId,
+    Map<String, dynamic> input,
+  ) async {
     updated.add((id: templateId, input: input));
     final index = homebrew.indexWhere((i) => i.id == templateId);
-    homebrew[index] = ItemSummary(id: templateId, name: input.name, category: input.category);
-    return ItemDetail(id: templateId, name: input.name, category: input.category);
+    homebrew[index] = ItemSummary(
+      id: templateId,
+      name: input['name'] as String,
+      category: input['category'] as String,
+    );
+    return ItemDetail(
+      id: templateId,
+      name: input['name'] as String,
+      category: input['category'] as String,
+    );
   }
 
   @override

@@ -6,16 +6,9 @@ import '../data/models.dart';
 import 'character_format.dart';
 import 'payload_format.dart';
 import '../../../systems/dnd5e/items/dnd5e_item.dart';
+import '../../../systems/dnd5e/items/money_format.dart';
 
 export '../../../core/characters/change_detail.dart';
-
-/// Sheet edit: one row per changed field, with the previous value when the
-/// server stored a snapshot (null for requests older than that feature).
-final class SheetChangeDetail extends ChangeDetail {
-  const SheetChangeDetail(this.fields);
-
-  final List<FieldChange> fields;
-}
 
 /// Builds the detail of [request]: the D&D 5e types first
 /// ([describeDnd5eChange]) and then the ones of the core.

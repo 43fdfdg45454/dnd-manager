@@ -11,9 +11,9 @@ import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/domain/campaign_models.dart';
 import '../../campaigns/ui/feedback.dart';
 import '../data/characters_controller.dart';
-import '../data/models.dart';
+import '../../../core/characters/models.dart';
+import '../../../core/systems/system_registry.dart';
 import 'new_character_dialog.dart';
-import '../../../systems/dnd5e/dnd5e_routes.dart';
 
 /// "Personajes" section of a campaign: summary cards plus the "new character"
 /// button. A player opens only their own characters; the others show name,
@@ -23,8 +23,9 @@ class CharactersTab extends ConsumerWidget {
 
   final CampaignDetail campaign;
 
-  /// Opens the guided creation wizard.
-  void _openWizard(BuildContext context) => context.push(Dnd5eRoutes.characterWizard(campaign.id));
+  /// Opens the guided creation wizard of the game system.
+  void _openWizard(BuildContext context, WidgetRef ref) =>
+      ref.read(campaignSystemUiProvider(campaign.id)).openCreationWizard(context, campaign.id);
 
   /// DM shortcut: name and player only (an NPC by default).
   Future<void> _createQuick(BuildContext context, WidgetRef ref, String myUserId) async {
@@ -66,7 +67,7 @@ class CharactersTab extends ConsumerWidget {
           ],
           OfflineAwareFab(
             fabKey: const Key('characters-new'),
-            onPressed: () => _openWizard(context),
+            onPressed: () => _openWizard(context, ref),
             icon: const Icon(Icons.person_add_alt_1),
             label: const Text('Nuevo personaje'),
           ),
@@ -145,28 +146,23 @@ class _QuickCreateMenu extends ConsumerWidget {
   }
 }
 
-/// Summary card: name, race, classes and level, status chip and HP when visible.
+/// Summary card: name, the roster line of the game system (D&D 5e: race,
+/// classes and level), status chip and its status (D&D 5e: HP) when visible.
 /// Without [canOpen] (someone else's character for a player) it has no link
-/// and no hit points.
-class CharacterCard extends StatelessWidget {
+/// and no status.
+class CharacterCard extends ConsumerWidget {
   const CharacterCard({super.key, required this.character, this.canOpen = true});
 
   final CharacterSummary character;
   final bool canOpen;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final c = character;
-    final classes = c.classes.isEmpty ? 'Sin clase' : classesLabel(c.classes);
-    final subtitle = [
-      if (c.raceName != null) c.raceName!,
-      classes,
-      if (c.classes.isNotEmpty) 'Nivel ${c.level}',
-    ].join(' · ');
-    final hp = c.hitPointsMax == null || !canOpen
-        ? null
-        : 'PG ${c.hitPointsCurrent ?? c.hitPointsMax} / ${c.hitPointsMax}';
+    final system = ref.watch(campaignSystemUiProvider(c.campaignId));
+    final subtitle = system.rosterSubtitle(c);
+    final hp = canOpen ? system.rosterStatus(c) : null;
 
     return Card(
       key: Key('character-${c.id}'),

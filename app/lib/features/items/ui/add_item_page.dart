@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../catalog/data/models.dart' show ItemSummary;
 import '../data/items_controllers.dart';
 import '../data/models.dart';
 import 'item_composer.dart';

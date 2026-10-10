@@ -54,6 +54,7 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        dnd5eSystemsOverride(),
         authControllerProvider.overrideWith(() => FixedAuthController(AuthSignedIn(makeUser()))),
         campaignsRepositoryProvider.overrideWithValue(
           FakeCampaignsRepository(campaigns: [makeCampaign(myRole: role)]),

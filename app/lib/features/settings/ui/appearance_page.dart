@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/motion/motion_settings.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/systems/game_system_ui.dart';
+import '../../../core/systems/system_registry.dart';
+import '../../../core/ui/breakdown.dart';
 import '../../../core/ui/stat_value.dart';
-import '../../characters/data/models.dart';
-import '../../characters/domain/class_theme.dart';
 import '../data/appearance_controller.dart';
 
 /// "Personalización": palette, mode, fonts, text size, class colours,
@@ -47,7 +48,11 @@ class AppearancePage extends ConsumerWidget {
           type: MaterialType.transparency,
           child: Column(
             children: [
-              _Preview(settings: settings, brightness: brightness),
+              _Preview(
+                settings: settings,
+                brightness: brightness,
+                sample: ref.watch(defaultGameSystemUiProvider).sampleAccent,
+              ),
               Expanded(
                 child: ListView(
                   key: const Key('appearance-options'),
@@ -444,14 +449,14 @@ class _FontOption extends StatelessWidget {
 /// A miniature character card in the chosen palette, fonts, class colours and
 /// textures: class icon and name, hit points, a [StatValue] and a button.
 /// Built in its own theme so it follows the settings even before the app
-/// theme around it rebuilds.
+/// theme around it rebuilds. The class comes from the game system
+/// ([GameSystemUi.sampleAccent]; D&D 5e: a wizard).
 class _Preview extends StatelessWidget {
-  const _Preview({required this.settings, required this.brightness});
+  const _Preview({required this.settings, required this.brightness, this.sample});
 
   final AppearanceSettings settings;
   final Brightness brightness;
-
-  static const _classIndex = 'wizard';
+  final SystemAccent? sample;
 
   static const _armorClass = ValueBreakdown(
     total: 15,
@@ -479,7 +484,11 @@ class _Preview extends StatelessWidget {
       child: Builder(
         builder: (context) {
           final theme = Theme.of(context);
-          final accent = classAccentOf(context, _classIndex);
+          // With class colours off (or no sample) it is the palette accent.
+          final sample = this.sample;
+          final accent = sample == null || !context.appStyle.classColors
+              ? context.tokens.oldGold
+              : sample.of(theme.brightness);
           return GrainBackground(
             key: const Key('appearance-preview-area'),
             child: Padding(
@@ -494,7 +503,7 @@ class _Preview extends StatelessWidget {
                     Row(
                       children: [
                         AppIcon(
-                          classThemeOf(_classIndex).icon,
+                          sample?.icon ?? AppIcons.d20,
                           key: const Key('appearance-preview-class-icon'),
                           color: accent,
                         ),

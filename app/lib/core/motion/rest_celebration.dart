@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-import '../../../../core/motion/rest_animations.dart';
-import '../../data/models.dart' show RestKind;
+import '../characters/models.dart' show RestKind;
+import 'rest_animations.dart';
 
 /// Plays the animation of an approved rest over the whole screen: a campfire
 /// ([CampfireBurst]) for a short rest, the moon crossing the night

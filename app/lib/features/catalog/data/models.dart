@@ -1,10 +1,13 @@
 import 'dart:convert';
 
+import '../../items/data/models.dart' show ItemSummary;
+
 // Hand-written catalog models for `/api/v1/systems/dnd5e/catalog`. Every parser is tolerant:
 // missing or null fields fall back to empty values and a few fields accept more
 // than one wire shape (for example a string or an object with a `name`).
 
 export '../../../core/catalog/catalog_models.dart';
+export '../../items/data/models.dart' show ItemSummary;
 
 Map<String, dynamic>? _map(Object? value) => value is Map ? Map<String, dynamic>.from(value) : null;
 
@@ -21,12 +24,6 @@ String? _strOrNull(Object? value) {
 int? _int(Object? value) {
   if (value is num) return value.toInt();
   if (value is String) return int.tryParse(value);
-  return null;
-}
-
-double? _double(Object? value) {
-  if (value is num) return value.toDouble();
-  if (value is String) return double.tryParse(value);
   return null;
 }
 
@@ -857,52 +854,10 @@ class SpellDetail extends SpellSummary {
 // Items
 // ---------------------------------------------------------------------------
 
-class ItemSummary {
-  const ItemSummary({
-    required this.id,
-    required this.name,
-    this.index,
-    this.category,
-    this.subcategory,
-    this.rarity,
-    this.requiresAttunement = false,
-    this.costCp,
-    this.weightLb,
-    this.source,
-  });
-
-  factory ItemSummary.fromJson(Map<String, dynamic> json) => ItemSummary(
-    id: _str(json['id']),
-    index: _strOrNull(json['index']),
-    name: _str(json['name'], _str(json['index'])),
-    category: _strOrNull(json['category']),
-    subcategory: _strOrNull(json['subcategory']),
-    rarity: _strOrNull(json['rarity']),
-    requiresAttunement: _bool(json['requiresAttunement']),
-    costCp: _int(json['costCp']),
-    weightLb: _double(json['weightLb']),
-    source: _strOrNull(json['source']),
-  );
-
-  final String id;
-  final String? index;
-  final String name;
-  final String? category;
-  final String? subcategory;
-  final String? rarity;
-  final bool requiresAttunement;
-
-  /// "srd", "homebrew" (campaign item) or the id of a content pack; null when
-  /// the server does not say.
-  final String? source;
-
-  /// Whether the item belongs to the campaign (and can be edited), as opposed
-  /// to coming from the SRD or a content pack.
-  bool get isHomebrew => source == null || source == 'homebrew';
-
-  /// Cost in copper pieces; null when unknown.
-  final int? costCp;
-  final double? weightLb;
+/// The D&D 5e fields of a catalog [ItemSummary], read from its raw JSON.
+extension Dnd5eItemSummary on ItemSummary {
+  String? get rarity => _strOrNull(raw['rarity']);
+  bool get requiresAttunement => _bool(raw['requiresAttunement']);
 }
 
 class ItemDamage {
@@ -936,11 +891,12 @@ class ItemDetail extends ItemSummary {
     super.index,
     super.category,
     super.subcategory,
-    super.rarity,
-    super.requiresAttunement,
+    this.rarity,
+    this.requiresAttunement = false,
     super.costCp,
     super.weightLb,
     super.source,
+    super.raw,
     this.damage,
     this.armor,
     this.rangeNormal,
@@ -992,11 +948,12 @@ class ItemDetail extends ItemSummary {
       name: summary.name,
       category: summary.category,
       subcategory: summary.subcategory,
-      rarity: summary.rarity,
-      requiresAttunement: summary.requiresAttunement,
+      rarity: _strOrNull(json['rarity']),
+      requiresAttunement: _bool(json['requiresAttunement']),
       costCp: summary.costCp,
       weightLb: summary.weightLb,
       source: summary.source,
+      raw: json,
       damage: damage,
       armor: armor,
       rangeNormal: _int(rangeJson?['normal'] ?? json['rangeNormal']),
@@ -1007,6 +964,10 @@ class ItemDetail extends ItemSummary {
       modifiers: ItemModifier.listFromJson(json['modifiers']),
     );
   }
+
+  final String? rarity;
+
+  final bool requiresAttunement;
 
   final ItemDamage? damage;
   final ItemArmor? armor;

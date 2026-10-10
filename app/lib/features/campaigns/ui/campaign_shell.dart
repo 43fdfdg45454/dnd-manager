@@ -7,12 +7,14 @@ import 'package:go_router/go_router.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/cache/stale_data.dart';
+import '../../../core/characters/models.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/realtime/connection_banner.dart';
 import '../../../core/realtime/realtime_events.dart';
 import '../../../core/realtime/realtime_provider.dart';
 import '../../../core/realtime/realtime_status_icon.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/systems/system_registry.dart';
 import '../../../core/theme/app_icon.dart';
 import '../../../core/theme/icons.dart';
 import '../../../core/theme/textures.dart';
@@ -20,10 +22,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../characters/data/characters_controller.dart';
 import '../../characters/data/characters_repository.dart';
-import '../../characters/data/models.dart';
-import '../../session/data/party_repository.dart';
 import '../../session/data/session_controllers.dart';
-import '../../../systems/dnd5e/dnd5e_events.dart';
 import '../data/campaigns_controller.dart';
 import '../data/campaigns_repository.dart';
 import '../domain/campaign_models.dart';
@@ -118,40 +117,61 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
       );
   }
 
-  /// "¡Puedes subir a nivel N!" for the owner of the character the DM granted
-  /// a level to (the event also reaches the rest of the campaign).
-  Future<void> _announceLevelUp(String? characterId) async {
-    if (characterId == null) return;
+  /// The character [characterId] when it belongs to the user (the game system
+  /// tells its own notices about it), or null: someone else's, or offline.
+  Future<CharacterDetail?> _ownCharacter(String characterId) async {
     final auth = ref.read(authControllerProvider);
     final myUserId = auth is AuthSignedIn ? auth.user.id : null;
-    if (myUserId == null) return;
+    if (myUserId == null) return null;
     final known = ref.read(campaignCharactersControllerProvider(campaignId)).value;
     if (known != null &&
         !known.any(
           (c) => c.id.toLowerCase() == characterId.toLowerCase() && c.ownerUserId == myUserId,
         )) {
-      return;
+      return null;
     }
     try {
       final character = await ref.read(characterControllerProvider(characterId).future);
-      final level = character.pendingLevelUpTo;
-      if (!mounted || character.ownerUserId != myUserId || level == null) return;
-      ScaffoldMessenger.maybeOf(context)
-        ?..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            key: const Key('realtime-notice-level-up'),
-            content: Text('¡Puedes subir a nivel $level!'),
-            action: SnackBarAction(
-              label: 'Ver',
-              onPressed: () => navigationShell.goBranch(CampaignBranches.player),
-            ),
-          ),
-        );
+      return character.ownerUserId == myUserId ? character : null;
     } catch (_) {
-      // Not the owner (no access to the sheet) or offline: the card of "Mi
-      // sesión" shows the grant when the sheet loads.
+      // Not the owner (no access to the sheet) or offline: the sheet shows
+      // what changed when it loads.
+      return null;
     }
+  }
+
+  /// The notice of an event of the game system (D&D 5e: "¡Puedes subir a
+  /// nivel N!", "El DM ha declarado un descanso").
+  Future<void> _announceSystemEvent(UnknownCampaignEvent event) async {
+    final notice = await ref
+        .read(campaignSystemUiProvider(campaignId))
+        .playerNotice(event, ownCharacter: _ownCharacter);
+    if (notice == null || !mounted) return;
+    final key = 'realtime-notice-${notice.id}';
+    final icon = notice.icon;
+    final tokens = context.tokens;
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          key: Key(key),
+          content: icon == null
+              ? Text(notice.text)
+              : Row(
+                  children: [
+                    AppIcon(icon, key: Key('$key-icon'), size: 20, color: tokens.ember),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(notice.text)),
+                  ],
+                ),
+          action: notice.openSession
+              ? SnackBarAction(
+                  label: 'Ver',
+                  onPressed: () => navigationShell.goBranch(CampaignBranches.player),
+                )
+              : null,
+        ),
+      );
   }
 
   /// "El DM aceptó/rechazó …" for the requester, with a shortcut to the sheet.
@@ -191,8 +211,7 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
   /// Banner for players (the DM is the one who caused these events).
   void _onRealtimeEvent(CampaignEvent received) {
     if (!mounted || !received.isFor(campaignId)) return;
-    // Pending 33B: the D&D 5e banners will come from the game system.
-    final event = dnd5eEventOf(received);
+    final event = received;
     if (event is MembershipRemoved) {
       _onMembershipRemoved();
       return;
@@ -203,40 +222,29 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
     }
     final role = ref.read(campaignDetailControllerProvider(campaignId)).value?.myRole;
     if (role == null || role.isAtLeastDm) return;
-    if (event is LevelUpGranted) {
-      unawaited(_announceLevelUp(event.characterId));
+    if (event is UnknownCampaignEvent) {
+      unawaited(_announceSystemEvent(event));
       return;
     }
-    final (key, text) = switch (event) {
-      MessageReceived() => ('realtime-notice-message', 'Mensaje del DM'),
-      PartyRest() => ('realtime-notice-rest', 'El DM ha declarado un descanso'),
-      _ => (null, null),
-    };
-    if (key == null || text == null) return;
+    if (event is! MessageReceived) return;
+    const key = 'realtime-notice-message';
     final tokens = context.tokens;
     ScaffoldMessenger.maybeOf(context)
       ?..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          key: Key(key),
+          key: const Key(key),
           content: Row(
             children: [
-              AppIcon(
-                event is MessageReceived ? AppIcons.seal : AppIcons.campfire,
-                key: Key('$key-icon'),
-                size: 20,
-                color: event is MessageReceived ? tokens.blood : tokens.ember,
-              ),
+              AppIcon(AppIcons.seal, key: const Key('$key-icon'), size: 20, color: tokens.blood),
               const SizedBox(width: 10),
-              Expanded(child: Text(text)),
+              const Expanded(child: Text('Mensaje del DM')),
             ],
           ),
-          action: event is MessageReceived
-              ? SnackBarAction(
-                  label: 'Ver',
-                  onPressed: () => navigationShell.goBranch(CampaignBranches.player),
-                )
-              : null,
+          action: SnackBarAction(
+            label: 'Ver',
+            onPressed: () => navigationShell.goBranch(CampaignBranches.player),
+          ),
         ),
       );
   }
@@ -331,7 +339,9 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
                 child: OfflineBannerLayout(
                   scopes: [
                     staleTree(CampaignsRepository.campaignPath(campaignId)),
-                    staleTree(PartyRepository.partyPath(campaignId)),
+                    if (ref.watch(campaignSystemUiProvider(campaignId)).staleScope(campaignId)
+                        case final scope?)
+                      staleTree(scope),
                   ],
                   child: detail.when(
                     skipLoadingOnReload: true,

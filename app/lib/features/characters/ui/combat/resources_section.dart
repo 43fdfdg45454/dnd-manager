@@ -452,7 +452,11 @@ Future<void> openCombatItemDetail(
     showCombatMessage(context, 'El objeto ya no está en el inventario.');
     return;
   }
-  await openInventoryItemDetail(context, item);
+  await openInventoryItemDetail(
+    context,
+    item,
+    campaignId: ref.read(characterControllerProvider(characterId)).value?.campaignId,
+  );
 }
 
 class ConsumablesSection extends ConsumerWidget {

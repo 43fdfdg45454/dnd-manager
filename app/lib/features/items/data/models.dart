@@ -56,6 +56,60 @@ List<T> _objects<T>(Object? value, T Function(Map<String, dynamic>) parse) {
 }
 
 // ---------------------------------------------------------------------------
+// Catalog item (template) summary
+// ---------------------------------------------------------------------------
+
+/// One item template of the catalog (SRD, content pack or campaign homebrew)
+/// as the lists show it. The fields of the game system (D&D 5e: rarity,
+/// attunement) stay in [raw].
+class ItemSummary {
+  const ItemSummary({
+    required this.id,
+    required this.name,
+    this.index,
+    this.category,
+    this.subcategory,
+    this.costCp,
+    this.weightLb,
+    this.source,
+    this.raw = const {},
+  });
+
+  factory ItemSummary.fromJson(Map<String, dynamic> json) => ItemSummary(
+    id: _str(json['id']),
+    index: _strOrNull(json['index']),
+    name: _str(json['name'], _str(json['index'])),
+    category: _strOrNull(json['category']),
+    subcategory: _strOrNull(json['subcategory']),
+    costCp: _int(json['costCp']),
+    weightLb: _double(json['weightLb']),
+    source: _strOrNull(json['source']),
+    raw: json,
+  );
+
+  final String id;
+  final String? index;
+  final String name;
+  final String? category;
+  final String? subcategory;
+
+  /// "srd", "homebrew" (campaign item) or the id of a content pack; null when
+  /// the server does not say.
+  final String? source;
+
+  /// Whether the item belongs to the campaign (and can be edited), as opposed
+  /// to coming from the SRD or a content pack.
+  bool get isHomebrew => source == null || source == 'homebrew';
+
+  /// Cost in the smallest unit of money; null when unknown.
+  final int? costCp;
+  final double? weightLb;
+
+  /// The JSON as it arrived, with the fields of the game system.
+  final Map<String, dynamic> raw;
+}
+
+// ---------------------------------------------------------------------------
 // Overrides and effective item
 // ---------------------------------------------------------------------------
 

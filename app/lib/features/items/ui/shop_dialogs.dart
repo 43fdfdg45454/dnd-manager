@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../characters/data/models.dart' show CharacterSummary;
-import '../../characters/domain/character_format.dart' show copperToGoldText;
+import '../../../core/characters/models.dart' show CharacterSummary;
+import '../../../core/systems/game_system_ui.dart';
+import '../../../core/systems/system_registry.dart';
 import '../data/items_controllers.dart';
 import '../data/models.dart';
-import '../domain/items_format.dart';
-import '../../catalog/domain/catalog_format.dart';
 
 /// Values of the shop form.
 class ShopFormData {
@@ -120,20 +119,24 @@ class _ShopFormDialogState extends State<ShopFormDialog> {
   }
 }
 
-/// Edits the price (in gp) and the stock of a shop item.
-class ShopItemDialog extends StatefulWidget {
-  const ShopItemDialog({super.key, required this.item});
+/// Edits the price (in gp) and the stock of a shop item of [campaignId].
+class ShopItemDialog extends ConsumerStatefulWidget {
+  const ShopItemDialog({super.key, required this.campaignId, required this.item});
 
+  final String campaignId;
   final ShopItem item;
 
   @override
-  State<ShopItemDialog> createState() => _ShopItemDialogState();
+  ConsumerState<ShopItemDialog> createState() => _ShopItemDialogState();
 }
 
-class _ShopItemDialogState extends State<ShopItemDialog> {
+class _ShopItemDialogState extends ConsumerState<ShopItemDialog> {
   final _formKey = GlobalKey<FormState>();
+
+  GameSystemUi get _system => ref.read(campaignSystemUiProvider(widget.campaignId));
+
   late final TextEditingController _price = TextEditingController(
-    text: copperToGoldText(widget.item.priceCp),
+    text: _system.moneyInputText(widget.item.priceCp),
   );
   late final TextEditingController _stock = TextEditingController(
     text: widget.item.stock?.toString() ?? '',
@@ -151,7 +154,7 @@ class _ShopItemDialogState extends State<ShopItemDialog> {
     final stock = _stock.text.trim();
     Navigator.of(context).pop(
       ShopItemPatch(
-        priceCp: parseGoldToCp(_price.text),
+        priceCp: _system.parseMoney(_price.text),
         stock: stock.isEmpty ? null : int.parse(stock),
         unlimitedStock: stock.isEmpty,
       ),
@@ -171,7 +174,7 @@ class _ShopItemDialogState extends State<ShopItemDialog> {
               key: const Key('shop-item-price'),
               controller: _price,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              validator: (v) => parseGoldToCp(v ?? '') == null ? 'Precio no válido' : null,
+              validator: (v) => _system.parseMoney(v ?? '') == null ? 'Precio no válido' : null,
               decoration: const InputDecoration(
                 labelText: 'Precio (gp)',
                 border: OutlineInputBorder(),
@@ -243,6 +246,7 @@ class _BuyDialogState extends ConsumerState<BuyDialog> {
     final item = widget.item;
     final theme = Theme.of(context);
     final money = ref.watch(inventoryControllerProvider(_characterId)).value?.copperPieces;
+    final system = ref.watch(campaignSystemUiProvider(widget.characters.first.campaignId));
     final total = item.priceCp * _quantity;
     final maxQuantity = item.stock;
     return AlertDialog(
@@ -288,12 +292,12 @@ class _BuyDialogState extends ConsumerState<BuyDialog> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Total: ${formatCostCp(total)}',
+              'Total: ${system.formatPrice(total)}',
               key: const Key('buy-total'),
               style: theme.textTheme.titleSmall,
             ),
             if (money != null) ...[
-              Text('Dinero disponible: ${formatMoney(money)}', key: const Key('buy-money')),
+              Text('Dinero disponible: ${system.formatMoney(money)}', key: const Key('buy-money')),
               if (money < total)
                 Text(
                   'No tienes suficiente dinero.',

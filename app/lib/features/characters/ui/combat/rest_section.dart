@@ -13,7 +13,7 @@ import '../character_tabs.dart' show titleFromSpellIndex;
 import 'combat_state.dart';
 import 'combat_support.dart';
 import 'recovery_reminder.dart';
-import 'rest_celebration.dart';
+import '../../../../core/motion/rest_celebration.dart';
 import '../../../../systems/dnd5e/characters/dnd5e_characters_controller.dart';
 
 /// "Descansos". The DM (and the Owner) rests the character directly: "Descanso

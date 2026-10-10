@@ -20,6 +20,7 @@ import 'package:opentrpg/features/items/ui/shop_page.dart';
 import 'package:opentrpg/features/items/ui/transactions_page.dart';
 import 'package:opentrpg/features/session/data/messages_repository.dart';
 import 'package:opentrpg/systems/dnd5e/items/dnd5e_item.dart';
+import 'package:opentrpg/systems/dnd5e/items/money_format.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -120,6 +121,7 @@ Future<void> _pumpApp(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        dnd5eSystemsOverride(),
         messagesRepositoryProvider.overrideWithValue(FakeMessagesRepository()),
         fakeRealtimeOverride(),
         authControllerProvider.overrideWith(() => FixedAuthController(AuthSignedIn(makeUser()))),
@@ -872,8 +874,8 @@ void main() {
       await tester.enterText(find.byKey(const Key('modifier-value-0')), '21');
       await _tapVisible(tester, find.byKey(const Key('homebrew-save')));
 
-      expect(items.created.single.modifiers, [
-        const ItemModifier(kind: 'AbilitySet', target: 'str', value: 21),
+      expect(items.created.single['modifiers'], [
+        const ItemModifier(kind: 'AbilitySet', target: 'str', value: 21).toJson(),
       ]);
     });
 
@@ -1469,8 +1471,8 @@ void main() {
       await tester.enterText(find.byKey(const Key('item-form-cost')), '25');
       await _tapVisible(tester, find.byKey(const Key('homebrew-save')));
 
-      expect(items.created.single.name, 'Espada de la mina');
-      expect(items.created.single.costCp, 2500);
+      expect(items.created.single['name'], 'Espada de la mina');
+      expect(items.created.single['costCp'], 2500);
       expect(find.text('Objeto creado.'), findsOneWidget);
       expect(find.text('Espada de la mina'), findsOneWidget);
     });

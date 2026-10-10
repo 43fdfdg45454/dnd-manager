@@ -6,16 +6,17 @@ import 'package:intl/intl.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/cache/stale_data.dart';
+import '../../../core/characters/change_detail.dart';
+import '../../../core/characters/models.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/systems/game_system_ui.dart';
+import '../../../core/systems/system_registry.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/data/campaigns_repository.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
 import '../../campaigns/ui/feedback.dart';
 import '../../characters/data/characters_controller.dart';
-import '../../characters/data/models.dart';
-import '../../characters/domain/change_details.dart';
-import '../../items/domain/items_format.dart';
 
 const _filters = <(String, ChangeRequestStatus?)>[
   ('Pendientes', ChangeRequestStatus.pending),
@@ -355,16 +356,23 @@ class _CommentDialogState extends State<_CommentDialog> {
 }
 
 /// The detail of a request, shaped by its type: a before/after table for sheet
-/// edits, a card for an item, the balance for money...
-class ChangeDetailView extends StatelessWidget {
+/// edits, a card for an item, the balance for money... The game system of the
+/// campaign describes its own types ([GameSystemUi.describeChangeRequest]);
+/// the core, the rest.
+class ChangeDetailView extends ConsumerWidget {
   const ChangeDetailView({super.key, required this.request});
 
   final ChangeRequest request;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final detail = describeChange(request);
+    final system = ref.watch(campaignSystemUiProvider(request.campaignId));
+    final formatMoney = system.formatMoney;
+    final detail =
+        system.describeChangeRequest(request) ??
+        describeCoreChange(request) ??
+        PlainChangeDetail(genericPayloadLines(request.payload));
     return switch (detail) {
       SheetChangeDetail(:final fields) when fields.isEmpty => const Text(
         'Esta solicitud no incluye cambios detallados.',
@@ -405,7 +413,10 @@ class ChangeDetailView extends StatelessWidget {
           child: Text.rich(
             TextSpan(
               children: [
-                TextSpan(text: '${line.label}: ', style: const TextStyle(fontWeight: FontWeight.w600)),
+                TextSpan(
+                  text: '${line.label}: ',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 TextSpan(text: line.value),
               ],
             ),
@@ -425,7 +436,9 @@ class _FieldTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final headerStyle = theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final headerStyle = theme.textTheme.labelMedium?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
     final hasBefore = fields.any((f) => f.before != null);
     return Table(
       key: const Key('change-field-table'),

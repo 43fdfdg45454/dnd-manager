@@ -10,7 +10,8 @@ import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/domain/campaign_models.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
-import '../../catalog/domain/catalog_format.dart';
+import '../../../core/systems/game_system_ui.dart';
+import '../../../core/systems/system_registry.dart';
 import '../../items/domain/items_format.dart';
 import '../../items/ui/quantity_dialog.dart';
 import '../data/models.dart';
@@ -43,7 +44,10 @@ class PartyStashCard extends ConsumerWidget {
       ref.read(stashControllerProvider(campaign.id).notifier);
 
   Future<void> _adjustGold(BuildContext context, WidgetRef ref) async {
-    final deltaCp = await showDialog<int>(context: context, builder: (_) => const _GoldDialog());
+    final deltaCp = await showDialog<int>(
+      context: context,
+      builder: (_) => _GoldDialog(system: ref.read(campaignSystemUiProvider(campaign.id))),
+    );
     if (deltaCp == null || !context.mounted) return;
     await runTableAction(
       context,
@@ -207,6 +211,7 @@ class PartyStashCard extends ConsumerWidget {
               ],
             ),
             data: (data) => _StashContent(
+              system: ref.watch(campaignSystemUiProvider(campaign.id)),
               stash: data,
               isDm: isDm,
               canTake: !isDm && data.playersCanTakeFromStash && takerCharacterId != null,
@@ -229,6 +234,7 @@ enum _StashAction { edit, giveTo, remove }
 
 class _StashContent extends StatelessWidget {
   const _StashContent({
+    required this.system,
     required this.stash,
     required this.isDm,
     required this.canTake,
@@ -241,6 +247,7 @@ class _StashContent extends StatelessWidget {
     required this.onRemove,
   });
 
+  final GameSystemUi system;
   final PartyStash stash;
   final bool isDm;
   final bool canTake;
@@ -264,7 +271,7 @@ class _StashContent extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                formatMoney(stash.copperPieces),
+                system.formatMoney(stash.copperPieces),
                 key: const Key('stash-gold'),
                 style: theme.textTheme.titleSmall?.merge(AppTypography.numeric),
               ),
@@ -369,7 +376,9 @@ class _StashContent extends StatelessWidget {
 
 /// Gold added (positive) or withdrawn (negative) from the stash, in gp.
 class _GoldDialog extends StatefulWidget {
-  const _GoldDialog();
+  const _GoldDialog({required this.system});
+
+  final GameSystemUi system;
 
   @override
   State<_GoldDialog> createState() => _GoldDialogState();
@@ -386,7 +395,7 @@ class _GoldDialogState extends State<_GoldDialog> {
   }
 
   void _submit() {
-    final cp = parseGoldToCp(_amount.text, allowNegative: true);
+    final cp = widget.system.parseMoney(_amount.text, allowNegative: true);
     if (cp == null || cp == 0) {
       setState(() => _error = 'Indica una cantidad en gp');
       return;

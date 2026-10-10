@@ -4,12 +4,13 @@ import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_error.dart';
+import '../../../core/systems/system_registry.dart';
 import '../../../core/ui/infinite_scroll_list.dart';
 import '../../../core/ui/source_chip.dart';
-import '../../catalog/data/models.dart' show ItemSummary;
-import '../../catalog/domain/catalog_format.dart';
 import '../data/campaign_items_repository.dart';
 import '../data/items_controllers.dart';
+import '../data/models.dart' show ItemSummary;
+import '../domain/items_format.dart';
 import 'item_feedback.dart';
 
 const _searchDebounce = Duration(milliseconds: 350);
@@ -62,6 +63,7 @@ class _ItemSearchListState extends ConsumerState<ItemSearchList> {
   Widget build(BuildContext context) {
     final key = (campaignId: widget.campaignId, source: _source, search: _search);
     final items = ref.watch(campaignItemsControllerProvider(key));
+    final system = ref.watch(campaignSystemUiProvider(widget.campaignId));
     return Column(
       children: [
         Padding(
@@ -117,8 +119,8 @@ class _ItemSearchListState extends ConsumerState<ItemSearchList> {
                         subtitle: Text(
                           [
                             itemCategoryLabel(item.category),
-                            if (item.rarity != null) rarityLabel(item.rarity),
-                            if (item.costCp != null) formatCostCp(item.costCp),
+                            ...system.itemSummaryFacts(item),
+                            if (item.costCp case final cost?) system.formatPrice(cost),
                           ].where((e) => e.isNotEmpty).join(' · '),
                         ),
                         trailing: item.id == widget.selectedId

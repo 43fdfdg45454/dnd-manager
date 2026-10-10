@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/characters/models.dart' show CharacterDetail;
 import '../../../core/network/api_error.dart';
-import '../../catalog/data/catalog_controllers.dart';
-import '../../characters/data/models.dart' show CharacterDetail;
+import '../../../core/systems/system_registry.dart';
 import '../data/items_controllers.dart';
 import '../data/models.dart';
 import '../domain/items_format.dart';
-import '../../catalog/domain/catalog_format.dart';
 import 'item_feedback.dart';
 
 /// Sells an inventory item to an open shop: picks the shop and the quantity and
@@ -41,12 +40,15 @@ class _SellDialogState extends ConsumerState<SellDialog> {
     setState(() => _busy = false);
     if (!done) return;
     final total = result?.transaction.totalCp;
+    final system = ref.read(campaignSystemUiProvider(widget.character.campaignId));
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
           content: Text(
-            total == null ? 'Venta realizada.' : 'Venta realizada: recibes ${formatCostCp(total)}.',
+            total == null
+                ? 'Venta realizada.'
+                : 'Venta realizada: recibes ${system.formatPrice(total)}.',
           ),
         ),
       );
@@ -74,6 +76,7 @@ class _SellDialogState extends ConsumerState<SellDialog> {
       } else {
         selected = open.firstWhere((s) => s.id == _shopId, orElse: () => open.first);
         body = _SellForm(
+          campaignId: widget.character.campaignId,
           item: item,
           shops: open,
           selected: selected,
@@ -102,6 +105,7 @@ class _SellDialogState extends ConsumerState<SellDialog> {
 
 class _SellForm extends ConsumerWidget {
   const _SellForm({
+    required this.campaignId,
     required this.item,
     required this.shops,
     required this.selected,
@@ -110,6 +114,7 @@ class _SellForm extends ConsumerWidget {
     required this.onQuantity,
   });
 
+  final String campaignId;
   final CharacterItem item;
   final List<ShopSummary> shops;
   final ShopSummary selected;
@@ -119,8 +124,9 @@ class _SellForm extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final system = ref.watch(campaignSystemUiProvider(campaignId));
     final templateId = item.templateId;
-    final template = templateId == null ? null : ref.watch(itemDetailProvider(templateId)).value;
+    final template = templateId == null ? null : ref.watch(system.itemTemplate(templateId)).value;
     final shop = ref.watch(shopControllerProvider(selected.id)).value;
     final shopPrice = shop?.items.where((s) => s.templateId == templateId && templateId != null);
     final unit = sellUnitCp(
@@ -182,8 +188,8 @@ class _SellForm extends ConsumerWidget {
           )
         else
           Text(
-            'Recibirás ${formatCostCp(sellPayoutCp(unitCp: unit, quantity: quantity, buybackPercent: selected.buybackPercent))}'
-            ' (${selected.buybackPercent} % de ${formatCostCp(unit * quantity)})',
+            'Recibirás ${system.formatPrice(sellPayoutCp(unitCp: unit, quantity: quantity, buybackPercent: selected.buybackPercent))}'
+            ' (${selected.buybackPercent} % de ${system.formatPrice(unit * quantity)})',
             key: const Key('sell-payout'),
             style: theme.textTheme.titleSmall,
           ),

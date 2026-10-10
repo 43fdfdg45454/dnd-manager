@@ -9,7 +9,8 @@ import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_repository.dart';
 import '../data/items_controllers.dart';
 import '../data/models.dart';
-import '../../catalog/domain/catalog_format.dart';
+import '../../../core/systems/game_system_ui.dart';
+import '../../../core/systems/system_registry.dart';
 import 'item_feedback.dart';
 
 /// Transaction history of a campaign (purchases, sales and the movements of the
@@ -54,8 +55,10 @@ class TransactionsPage extends ConsumerWidget {
                     onLoadMore: () =>
                         ref.read(transactionsControllerProvider(campaignId).notifier).loadMore(),
                     describeError: describeItemError,
-                    itemBuilder: (context, index) =>
-                        _TransactionTile(transaction: page.items[index]),
+                    itemBuilder: (context, index) => _TransactionTile(
+                      system: ref.watch(campaignSystemUiProvider(campaignId)),
+                      transaction: page.items[index],
+                    ),
                   ),
           ),
         ),
@@ -65,7 +68,9 @@ class TransactionsPage extends ConsumerWidget {
 }
 
 class _TransactionTile extends StatelessWidget {
-  const _TransactionTile({required this.transaction});
+  const _TransactionTile({required this.system, required this.transaction});
+
+  final GameSystemUi system;
 
   final Transaction transaction;
 
@@ -92,9 +97,9 @@ class _TransactionTile extends StatelessWidget {
     // Money: what a character pays (-) or gets (+) in a trade or a gold share;
     // the stash gold as it is; nothing for the loot moves.
     final String? amount = switch (t.type) {
-      TransactionType.purchase => '-${formatCostCp(t.totalCp)}',
-      TransactionType.sale || TransactionType.stashGoldSplit => '+${formatCostCp(t.totalCp)}',
-      TransactionType.stashGoldAdd => formatCostCp(t.totalCp),
+      TransactionType.purchase => '-${system.formatPrice(t.totalCp)}',
+      TransactionType.sale || TransactionType.stashGoldSplit => '+${system.formatPrice(t.totalCp)}',
+      TransactionType.stashGoldAdd => system.formatPrice(t.totalCp),
       _ => null,
     };
     final subtitle = [

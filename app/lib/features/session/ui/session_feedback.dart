@@ -2,7 +2,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_error.dart';
+import '../../../core/systems/game_system_ui.dart' show TableCharacter;
 import '../../campaigns/ui/feedback.dart';
+
+export '../../../core/systems/game_system_ui.dart' show TableCharacter;
 
 /// Spanish message for a failed table action (party, stash, messages): the
 /// server's own reason for a 400 or 409 when it sends one, else the generic
@@ -30,9 +33,6 @@ Future<bool> runTableAction(
   String? success,
   Map<int, String> errors = const {},
 }) => runAction(context, action, success: success, errors: errors, describe: describeTableError);
-
-/// A character that can be chosen in the table dialogs.
-typedef TableCharacter = ({String id, String name});
 
 /// Lets the DM choose characters: several (checkboxes, [initial] checked) or,
 /// with [single], exactly one. Pops with the chosen ids, or null.

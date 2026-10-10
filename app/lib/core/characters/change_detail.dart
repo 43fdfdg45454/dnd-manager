@@ -14,6 +14,14 @@ abstract class ChangeDetail {
   const ChangeDetail();
 }
 
+/// Sheet edit: one row per changed field, with the previous value when the
+/// server stored a snapshot (null for requests older than that feature).
+final class SheetChangeDetail extends ChangeDetail {
+  const SheetChangeDetail(this.fields);
+
+  final List<FieldChange> fields;
+}
+
 /// An item to add: its resolved name and what defines it.
 final class ItemChangeDetail extends ChangeDetail {
   const ItemChangeDetail({

@@ -1,3 +1,7 @@
+export '../../../core/ui/text_format.dart';
+export '../../items/domain/items_format.dart'
+    show formatWeightLb, itemCategories, itemCategoryLabel;
+
 /// Coin denominations in copper pieces, largest first.
 const _coins = <(String, int)>[('pp', 1000), ('gp', 100), ('ep', 50), ('sp', 10), ('cp', 1)];
 
@@ -26,13 +30,6 @@ String formatCostCp(int? costCp, {bool allCoins = false}) {
   return parts.join(' ');
 }
 
-/// "3" -> "3", "0.5" -> "0.5", "2.0" -> "2".
-String formatWeightLb(double? weight) {
-  if (weight == null) return '—';
-  final text = weight == weight.roundToDouble() ? weight.toInt().toString() : weight.toString();
-  return '$text lb';
-}
-
 /// Spanish name of an ability slug ("str", "Strength", ...). Unknown values are
 /// returned unchanged.
 String abilityLabel(String ability) {
@@ -47,38 +44,6 @@ String abilityLabel(String ability) {
 }
 
 String _normalize(String value) => value.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
-
-/// Item categories as the API spells them, with their Spanish plural (filter
-/// menu).
-const itemCategories = <String, String>{
-  'Weapon': 'Armas',
-  'Armor': 'Armaduras',
-  'Shield': 'Escudos',
-  'AdventuringGear': 'Equipo de aventura',
-  'Tool': 'Herramientas',
-  'Mount': 'Monturas y vehículos',
-  'Consumable': 'Consumibles',
-  'MagicItem': 'Objetos mágicos',
-  'Other': 'Otros',
-};
-
-const _itemCategoryNames = <String, String>{
-  'weapon': 'Arma',
-  'armor': 'Armadura',
-  'shield': 'Escudo',
-  'adventuringgear': 'Equipo de aventura',
-  'tool': 'Herramienta',
-  'mount': 'Montura o vehículo',
-  'consumable': 'Consumible',
-  'magicitem': 'Objeto mágico',
-  'other': 'Otro',
-};
-
-/// Spanish singular name of an item category, for lists and detail pages.
-String itemCategoryLabel(String? category) {
-  if (category == null) return '';
-  return _itemCategoryNames[_normalize(category)] ?? category;
-}
 
 const _rarities = <String, String>{
   'common': 'Común',
@@ -97,11 +62,3 @@ String rarityLabel(String? rarity) {
 
 /// "Truco" for level 0, "Nivel N" otherwise.
 String spellLevelLabel(int level) => level == 0 ? 'Truco' : 'Nivel $level';
-
-/// Drops the Markdown emphasis and heading marks that the SRD dataset keeps in
-/// descriptions.
-String cleanText(String text) => text
-    .replaceAll('**', '')
-    .replaceAll(RegExp(r'^#+\s*', multiLine: true), '')
-    .replaceAll(RegExp(r'(?<![A-Za-z0-9])_(.+?)_(?![A-Za-z0-9])'), r'$1')
-    .trim();

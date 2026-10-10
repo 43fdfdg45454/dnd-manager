@@ -3,14 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/catalog/catalog_models.dart' show Page;
 import '../../../core/network/api_error.dart';
+import '../../../core/systems/system_registry.dart';
 import '../../../core/ui/infinite_scroll_list.dart';
 import '../../../core/ui/source_chip.dart';
-import '../../catalog/data/models.dart' show ItemSummary, Page;
-import '../../catalog/domain/catalog_format.dart';
 import '../data/campaign_items_repository.dart';
 import '../data/items_controllers.dart';
 import '../data/models.dart';
+import '../domain/items_format.dart';
 import 'item_feedback.dart';
 
 /// A category filter of the catalog as the shop page offers it, mapped to the
@@ -392,6 +393,7 @@ class _ShopCatalogAddPageState extends ConsumerState<ShopCatalogAddPage> {
   }
 
   Widget _buildList() {
+    final system = ref.watch(campaignSystemUiProvider(widget.campaignId));
     if (_loading && _items.isEmpty) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return ItemsErrorView(error: _error!, onRetry: _reload);
@@ -419,8 +421,8 @@ class _ShopCatalogAddPageState extends ConsumerState<ShopCatalogAddPage> {
                 subtitle: Text(
                   [
                     itemCategoryLabel(item.category),
-                    if (item.rarity != null) rarityLabel(item.rarity),
-                    price == null ? 'Sin precio de lista (0 po)' : formatCostCp(price),
+                    ...system.itemSummaryFacts(item),
+                    price == null ? 'Sin precio de lista (0 po)' : system.formatPrice(price),
                   ].where((e) => e.isNotEmpty).join(' · '),
                 ),
               );

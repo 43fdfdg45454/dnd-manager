@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../catalog/domain/catalog_format.dart';
-import '../../catalog/ui/detail_widgets.dart';
+import '../../../core/systems/game_system_ui.dart';
+import '../../../core/systems/system_registry.dart';
+import '../../../core/ui/detail_widgets.dart';
 import '../data/models.dart';
-import '../../../systems/dnd5e/items/dnd5e_item.dart';
+import '../domain/items_format.dart';
 
 /// Icon flagging a field (or the whole item) as different from its template.
 class OverrideBadge extends StatelessWidget {
@@ -22,37 +24,47 @@ class OverrideBadge extends StatelessWidget {
 }
 
 /// Opens the [EffectiveItemPage] of an inventory entry with its quantity,
-/// charges and notes.
-Future<void> openInventoryItemDetail(BuildContext context, CharacterItem item) =>
-    Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => EffectiveItemPage(
-          effective: item.effective,
-          overrides: item.overrides,
-          isCustom: item.isCustom,
-          extraFacts: [
-            ('Cantidad', '${item.quantity}'),
-            (
-              'Cargas',
-              item.charges == null ? null : '${item.charges}/${item.chargesMax ?? item.charges}',
-            ),
-            ('Notas', item.notes),
-          ],
+/// charges and notes. [campaignId] picks the game system (the default one
+/// when null).
+Future<void> openInventoryItemDetail(
+  BuildContext context,
+  CharacterItem item, {
+  String? campaignId,
+}) => Navigator.of(context).push<void>(
+  MaterialPageRoute(
+    builder: (_) => EffectiveItemPage(
+      campaignId: campaignId,
+      effective: item.effective,
+      overrides: item.overrides,
+      isCustom: item.isCustom,
+      extraFacts: [
+        ('Cantidad', '${item.quantity}'),
+        (
+          'Cargas',
+          item.charges == null ? null : '${item.charges}/${item.chargesMax ?? item.charges}',
         ),
-      ),
-    );
+        ('Notas', item.notes),
+      ],
+    ),
+  ),
+);
 
 /// Detail of an item as the character sees it (template plus overrides), with
-/// the overridden fields marked. Reuses the catalog detail widgets.
-class EffectiveItemPage extends StatelessWidget {
+/// the overridden fields marked. The rows and effects of the game system of
+/// [campaignId] ([GameSystemUi.itemFacts], [GameSystemUi.itemModifiers]) go
+/// between the facts of the entry and the description.
+class EffectiveItemPage extends ConsumerWidget {
   const EffectiveItemPage({
     super.key,
+    this.campaignId,
     required this.effective,
     this.overrides = const ItemOverrides(),
     this.isCustom = false,
     this.extraFacts = const [],
   });
 
+  /// The campaign of the item; null uses the default game system.
+  final String? campaignId;
   final EffectiveItem effective;
 
   /// The fields that differ from the template.
@@ -83,41 +95,15 @@ class EffectiveItemPage extends StatelessWidget {
     );
   }
 
-  static String? _damage(ItemDamage? damage) =>
-      damage == null ? null : [damage.dice, ?damage.type].join(' ');
-
-  static String? _range(EffectiveItem i) {
-    final normal = i.rangeNormal;
-    if (normal == null) return null;
-    final long = i.rangeLong;
-    return long == null ? '$normal pies' : '$normal/$long pies';
-  }
-
-  static String? _armorClass(ItemArmor? armor) {
-    final base = armor?.baseAc;
-    if (armor == null || base == null) return null;
-    if (armor.addDexModifier != true) return '$base';
-    final max = armor.maxDexBonus;
-    return max == null ? '$base + mod. Des' : '$base + mod. Des (máx. $max)';
-  }
-
-  /// The modifiers to list. Servers that predate the structured modifiers only
-  /// send the attack and damage bonuses, which are shown as modifiers too.
-  List<ItemModifier> get _modifiers {
-    final i = effective;
-    return [
-      ...i.modifiers,
-      if (i.attackBonus != 0 && !i.modifiers.any((m) => m.kind == 'AttackBonus'))
-        ItemModifier(kind: 'AttackBonus', value: i.attackBonus),
-      if (i.damageBonus != 0 && !i.modifiers.any((m) => m.kind == 'DamageBonus'))
-        ItemModifier(kind: 'DamageBonus', value: i.damageBonus),
-    ];
-  }
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final id = campaignId;
+    final system = id == null
+        ? ref.watch(defaultGameSystemUiProvider)
+        : ref.watch(campaignSystemUiProvider(id));
     final i = effective;
-    final modifiers = _modifiers;
+    final modifiers = system.itemModifiers(i);
+    final modifiersView = modifiers?.view;
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(i.name, key: const Key('effective-title'))),
@@ -150,31 +136,14 @@ class EffectiveItemPage extends StatelessWidget {
           ],
           const SizedBox(height: 8),
           for (final (label, value) in extraFacts) FactRow(label, value),
-          _row('Rareza', i.rarity == null ? null : rarityLabel(i.rarity), const ['rarity']),
-          _row('Sintonización', i.requiresAttunement ? 'Requerida' : null, const [
-            'requiresAttunement',
-          ]),
-          _row('Peso', i.weightLb == null ? null : formatWeightLb(i.weightLb), const ['weightLb']),
-          _row('Daño', _damage(i.damage), const ['damageDice', 'damageType']),
-          _row('Versátil', i.damage?.versatileDice, const ['versatileDice']),
-          _row('Alcance', _range(i), const ['rangeNormal', 'rangeLong']),
-          _row('Propiedades', i.properties.join(', '), const ['properties']),
-          _row('Clase de armadura', _armorClass(i.armor), const [
-            'armorClassBase',
-            'addDexModifier',
-            'maxDexBonus',
-          ]),
-          _row('Fuerza mínima', i.armor?.strengthMinimum?.toString(), const ['strengthMinimum']),
-          _row('Sigilo', (i.armor?.stealthDisadvantage ?? false) ? 'Desventaja' : null, const [
-            'stealthDisadvantage',
-          ]),
-          if (modifiers.isNotEmpty || i.effects.isNotEmpty) ...[
+          for (final fact in system.itemFacts(i)) _row(fact.label, fact.value, fact.fields),
+          if (modifiersView != null || i.effects.isNotEmpty) ...[
             Row(
               children: [
                 const Expanded(child: SectionTitle('Efectos')),
-                if (_marked(const ['modifiers', 'attackBonus', 'damageBonus']))
+                if (modifiers != null && _marked(modifiers.fields))
                   KeyedSubtree(
-                    key: const Key('override-mark-modifiers'),
+                    key: Key('override-mark-${modifiers.fields.first}'),
                     child: const OverrideBadge(),
                   ),
                 if (_marked(const ['effects']))
@@ -184,7 +153,7 @@ class EffectiveItemPage extends StatelessWidget {
                   ),
               ],
             ),
-            ModifierLines(modifiers),
+            ?modifiersView,
             Paragraphs(i.effects),
           ],
           if (i.description.isNotEmpty) ...[

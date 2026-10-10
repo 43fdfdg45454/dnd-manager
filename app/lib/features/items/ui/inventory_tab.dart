@@ -3,19 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
-import '../../catalog/domain/catalog_format.dart';
-import '../../characters/data/models.dart' show CharacterDetail;
+import '../../../core/characters/models.dart' show CharacterDetail;
+import '../../../core/systems/game_system_ui.dart';
+import '../../../core/systems/system_registry.dart';
 import '../../session/data/session_controllers.dart';
 import '../data/items_controllers.dart';
 import '../data/models.dart';
 import '../domain/items_format.dart';
 import 'add_item_page.dart';
-import 'attunement_dialog.dart';
 import 'effective_item_page.dart';
 import 'item_feedback.dart';
 import 'quantity_dialog.dart';
 import 'sell_dialog.dart';
-import '../../../systems/dnd5e/items/dnd5e_item.dart';
 
 /// "Inventario" tab of a character: money, weight, attunement and the items
 /// grouped as equipped, backpack and consumables.
@@ -51,7 +50,10 @@ class _InventoryView extends ConsumerWidget {
   Future<void> _editMoney(BuildContext context, WidgetRef ref) async {
     final change = await showDialog<({int deltaCp, String reason})>(
       context: context,
-      builder: (_) => _MoneyDialog(copperPieces: inventory.copperPieces),
+      builder: (_) => _MoneyDialog(
+        system: ref.read(campaignSystemUiProvider(character.campaignId)),
+        copperPieces: inventory.copperPieces,
+      ),
     );
     if (change == null || !context.mounted) return;
     await runWrite(
@@ -70,6 +72,7 @@ class _InventoryView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final system = ref.watch(campaignSystemUiProvider(character.campaignId));
     final grouped = <InventoryGroup, List<CharacterItem>>{};
     for (final item in inventory.items) {
       grouped.putIfAbsent(groupOf(item), () => []).add(item);
@@ -92,7 +95,7 @@ class _InventoryView extends ConsumerWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        formatMoney(inventory.copperPieces),
+                        system.formatMoney(inventory.copperPieces),
                         key: const Key('inventory-money'),
                         style: theme.textTheme.titleMedium,
                       ),
@@ -115,11 +118,12 @@ class _InventoryView extends ConsumerWidget {
                     color: overweight ? theme.colorScheme.error : null,
                   ),
                 ),
-                Text(
-                  'Sintonizados ${inventory.attunedCount}/$maxAttunedItems',
-                  key: const Key('inventory-attuned'),
-                  style: theme.textTheme.bodyMedium,
-                ),
+                if (system.maxAttunedItems > 0)
+                  Text(
+                    'Sintonizados ${inventory.attunedCount}/${system.maxAttunedItems}',
+                    key: const Key('inventory-attuned'),
+                    style: theme.textTheme.bodyMedium,
+                  ),
               ],
             ),
           ),
@@ -185,13 +189,10 @@ class _ItemTile extends ConsumerWidget {
             success: 'Sintonía eliminada.',
           );
         } else {
-          // At the limit of three, the player chooses which item to drop.
-          await attuneWithReplacement(
-            context,
-            item: item,
-            attunedItems: [...?ref.read(inventoryControllerProvider(character.id)).value?.items],
-            write: (patch) => _controller(ref).patch(item.id, patch),
-          );
+          // At the limit, the system lets the player choose which item to drop.
+          await ref
+              .read(campaignSystemUiProvider(character.campaignId))
+              .openAttunement(context, character.id, item);
         }
       case _ItemAction.use:
         await runItemAction(
@@ -212,7 +213,7 @@ class _ItemTile extends ConsumerWidget {
           success: 'Notas guardadas.',
         );
       case _ItemAction.detail:
-        await openInventoryItemDetail(context, item);
+        await openInventoryItemDetail(context, item, campaignId: character.campaignId);
       case _ItemAction.sell:
         await showDialog<void>(
           context: context,
@@ -262,6 +263,7 @@ class _ItemTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final system = ref.watch(campaignSystemUiProvider(character.campaignId));
     final e = item.effective;
     // Giving back to the party stash: DMs always, players when the campaign
     // allows it; never an attuned item.
@@ -317,12 +319,12 @@ class _ItemTile extends ConsumerWidget {
             key: Key('inv-menu-${item.id}'),
             onSelected: (action) => _onAction(context, ref, action),
             itemBuilder: (_) => [
-              if (canEquip(e))
+              if (system.canEquip(e))
                 PopupMenuItem(
                   value: _ItemAction.equip,
                   child: Text(item.equipped ? 'Desequipar' : 'Equipar'),
                 ),
-              if (e.requiresAttunement || item.attuned)
+              if (system.requiresAttunement(e) || item.attuned)
                 PopupMenuItem(
                   value: _ItemAction.attune,
                   child: Text(item.attuned ? 'Quitar sintonía' : 'Sintonizar'),
@@ -361,7 +363,9 @@ class _SmallChip extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _MoneyDialog extends StatefulWidget {
-  const _MoneyDialog({required this.copperPieces});
+  const _MoneyDialog({required this.system, required this.copperPieces});
+
+  final GameSystemUi system;
 
   final int copperPieces;
 
@@ -383,9 +387,10 @@ class _MoneyDialogState extends State<_MoneyDialog> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    Navigator.of(
-      context,
-    ).pop((deltaCp: parseGoldToCp(_delta.text, allowNegative: true)!, reason: _reason.text.trim()));
+    Navigator.of(context).pop((
+      deltaCp: widget.system.parseMoney(_delta.text, allowNegative: true)!,
+      reason: _reason.text.trim(),
+    ));
   }
 
   @override
@@ -398,7 +403,7 @@ class _MoneyDialogState extends State<_MoneyDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Dinero actual: ${formatMoney(widget.copperPieces)}'),
+            Text('Dinero actual: ${widget.system.formatMoney(widget.copperPieces)}'),
             const SizedBox(height: 12),
             TextFormField(
               key: const Key('money-delta'),
@@ -406,7 +411,7 @@ class _MoneyDialogState extends State<_MoneyDialog> {
               autofocus: true,
               keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
               validator: (v) {
-                final cp = parseGoldToCp(v ?? '', allowNegative: true);
+                final cp = widget.system.parseMoney(v ?? '', allowNegative: true);
                 return cp == null || cp == 0 ? 'Indica una cantidad en gp' : null;
               },
               decoration: const InputDecoration(
