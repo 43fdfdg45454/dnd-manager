@@ -15,6 +15,7 @@ using Dnd.Application.Party;
 using Dnd.Application.Releases;
 using Dnd.Application.Sessions;
 using Dnd.Application.Setup;
+using Dnd.Application.Systems;
 using Dnd.Application.Items;
 using Dnd.Application.Users;
 using Dnd.Domain.Characters;
@@ -65,6 +66,7 @@ public static class DependencyInjection
         services.AddScoped<LeaveCampaignHandler>();
         services.AddScoped<TransferOwnershipHandler>();
 
+        services.AddSingleton<ListSystemsHandler>();
         services.AddSingleton<GetAttributionHandler>();
         services.AddScoped<ListClassesHandler>();
         services.AddScoped<GetClassHandler>();

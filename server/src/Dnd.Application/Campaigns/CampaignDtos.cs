@@ -10,7 +10,8 @@ public sealed record CampaignSummaryDto(
     string OwnerDisplayName,
     string MyRole,
     int MemberCount,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string SystemId);
 
 public sealed record CampaignDto(
     Guid Id,
@@ -24,7 +25,8 @@ public sealed record CampaignDto(
     DateTimeOffset UpdatedAt,
     string TimeZoneId,
     IReadOnlyList<int> ReminderOffsetsMinutes,
-    bool PlayersCanTakeFromStash)
+    bool PlayersCanTakeFromStash,
+    string SystemId)
 {
     /// <param name="members">Current members of the campaign, as returned by the repository.</param>
     public static CampaignDto From(Campaign campaign, IReadOnlyList<MemberDto> members, Guid currentUserId) => new(
@@ -39,7 +41,8 @@ public sealed record CampaignDto(
         campaign.UpdatedAt,
         campaign.TimeZoneId,
         campaign.ReminderOffsetsMinutes,
-        campaign.PlayersCanTakeFromStash);
+        campaign.PlayersCanTakeFromStash,
+        campaign.SystemId);
 }
 
 public sealed record MemberDto(Guid UserId, string DisplayName, string Email, string Role, DateTimeOffset JoinedAt);

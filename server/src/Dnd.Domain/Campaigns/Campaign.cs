@@ -13,6 +13,11 @@ public sealed class Campaign : EntityBase
     public const int NameMaxLength = 100;
     public const int DescriptionMaxLength = 2000;
 
+    /// <summary>Id of the game system of campaigns that do not choose one (D&amp;D 5e, SRD 5.1).</summary>
+    public const string DefaultSystemId = "dnd5e";
+
+    public const int SystemIdMaxLength = 32;
+
     /// <summary>Upper bound of the shared gold of the party stash, in copper pieces.</summary>
     public const long MaxStashCopperPieces = 1_000_000_000_000;
 
@@ -28,6 +33,12 @@ public sealed class Campaign : EntityBase
     public string Description { get; private set; } = string.Empty;
 
     public Guid OwnerId { get; private set; }
+
+    /// <summary>
+    /// Game system of the campaign (for example <c>dnd5e</c>): lowercase letters, digits and hyphens,
+    /// at most <see cref="SystemIdMaxLength"/> characters. Fixed at creation; it never changes.
+    /// </summary>
+    public string SystemId { get; private set; } = DefaultSystemId;
 
     public DateTimeOffset UpdatedAt { get; private set; }
 
@@ -52,13 +63,16 @@ public sealed class Campaign : EntityBase
 
     /// <summary>
     /// Creates a campaign whose creator becomes its owner (and only member). A null time zone uses
-    /// <see cref="CampaignSchedule.FallbackTimeZoneId"/>.
+    /// <see cref="CampaignSchedule.FallbackTimeZoneId"/>; a null game system uses <see cref="DefaultSystemId"/>.
+    /// Whether the system is registered is checked by the caller.
     /// </summary>
-    public static Campaign Create(string name, string? description, Guid ownerId, DateTimeOffset now, string? timeZoneId = null)
+    public static Campaign Create(
+        string name, string? description, Guid ownerId, DateTimeOffset now, string? timeZoneId = null, string? systemId = null)
     {
         var campaign = new Campaign
         {
             OwnerId = ownerId,
+            SystemId = NormalizeSystemId(systemId),
             CreatedAt = now,
             UpdatedAt = now,
             TimeZoneId = CampaignSchedule.RequireTimeZone(timeZoneId ?? CampaignSchedule.FallbackTimeZoneId),
@@ -67,6 +81,27 @@ public sealed class Campaign : EntityBase
         campaign.SetDescription(description);
         campaign._members.Add(CampaignMember.Create(campaign.Id, ownerId, CampaignRole.Owner, now));
         return campaign;
+    }
+
+    /// <summary>
+    /// Trims and lowercases a game system id (null or blank → <see cref="DefaultSystemId"/>) and checks
+    /// its format: 1 to <see cref="SystemIdMaxLength"/> characters among <c>[a-z0-9-]</c>.
+    /// </summary>
+    public static string NormalizeSystemId(string? systemId)
+    {
+        if (string.IsNullOrWhiteSpace(systemId))
+        {
+            return DefaultSystemId;
+        }
+
+        var value = systemId.Trim().ToLowerInvariant();
+        if (value.Length > SystemIdMaxLength || !value.All(c => c is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '-'))
+        {
+            throw DomainException.RuleViolation(
+                $"El sistema de juego debe tener como mucho {SystemIdMaxLength} caracteres entre minúsculas, dígitos y guiones.");
+        }
+
+        return value;
     }
 
     public CampaignMember? FindMember(Guid userId) => _members.FirstOrDefault(m => m.UserId == userId);
