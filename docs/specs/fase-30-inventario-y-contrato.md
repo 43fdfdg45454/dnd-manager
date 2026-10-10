@@ -1023,6 +1023,11 @@ Sobre las preguntas anteriores, en orden:
 8. `RestRequests.HitDiceJson` → `PayloadJson` en la fase 32, junto con el resto de renombrados.
 9. Altura y peso siguen en pulgadas y libras en el núcleo; la unidad la presenta el sistema.
 
+Enmienda (2026-10-10, 05:04Z): el propietario decidió que **no hace falta compatibilidad hacia atrás**
+(nadie usa la app todavía; las instancias se recrean). Quedan sin efecto las decisiones 2 y 5 (JSON
+plano por compatibilidad y alias de rutas) y la mitigación "mantener el JSON idéntico": se elige la
+forma más limpia y la app se adapta en el mismo PR o en la fase 33. Ver `docs/specs/fase-32-division-del-servidor.md`.
+
 ### Lista de comprobación para las fases 31–33
 
 **Fase 31 — Sistema por campaña** (sin mover código)
