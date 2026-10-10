@@ -1,4 +1,4 @@
-namespace OpenTrpg.Core.Domain.Characters;
+namespace OpenTrpg.Core.Domain.Rules;
 
 /// <summary>Source of die rolls used by the domain (hit dice on short rests). Tests inject a fixed roller.</summary>
 public interface IDiceRoller

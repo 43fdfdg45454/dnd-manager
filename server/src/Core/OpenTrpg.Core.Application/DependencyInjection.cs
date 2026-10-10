@@ -21,6 +21,7 @@ using OpenTrpg.Core.Application.Users;
 using OpenTrpg.Core.Domain.Characters;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTrpg.Core.Domain.Rules;
 
 namespace OpenTrpg.Core.Application;
 

@@ -56,7 +56,7 @@ public sealed class UpdateSheetHandler(
             character.CampaignId,
             character.Id,
             currentUserId,
-            ChangeRequestType.EditSheet,
+            Dnd5eChangeRequestTypes.EditSheet,
             SheetPatchJson.Serialize(patch),
             clock.UtcNow,
             SheetPatchJson.Serialize(SheetPatchSnapshot.Before(character, patch)));

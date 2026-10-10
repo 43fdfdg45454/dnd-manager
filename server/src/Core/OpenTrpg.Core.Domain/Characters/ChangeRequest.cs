@@ -22,7 +22,8 @@ public sealed class ChangeRequest : EntityBase
 
     public Guid RequestedByUserId { get; private set; }
 
-    public ChangeRequestType Type { get; private set; }
+    /// <summary>One of <see cref="ChangeRequestTypes"/> or a type registered by the game system.</summary>
+    public string Type { get; private set; } = string.Empty;
 
     public string PayloadJson { get; private set; } = "{}";
 
@@ -48,12 +49,12 @@ public sealed class ChangeRequest : EntityBase
         Guid campaignId,
         Guid characterId,
         Guid requestedByUserId,
-        ChangeRequestType type,
+        string type,
         string? payloadJson,
         DateTimeOffset now,
         string? beforeJson = null)
     {
-        if (!Enum.IsDefined(type))
+        if (string.IsNullOrWhiteSpace(type) || type.Length > ChangeRequestTypes.MaxLength)
         {
             throw DomainException.RuleViolation("El tipo de solicitud no es válido.");
         }

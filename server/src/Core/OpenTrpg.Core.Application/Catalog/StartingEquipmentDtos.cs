@@ -51,7 +51,7 @@ internal static class StartingEquipmentResolver
         var categoryIndexes = present.SelectMany(e => e.CategoryIndexes()).Distinct(StringComparer.Ordinal).ToList();
 
         var templates = (await catalog.ListCatalogItemsByIndexAsync(itemIndexes, cancellationToken))
-            .OrderBy(t => t.Source == CatalogSources.Srd ? 0 : 1)
+            .OrderBy(t => t.Source == Dnd5eCatalogSources.Srd ? 0 : 1)
             .GroupBy(t => t.Index!, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
         var categories = (await catalog.ListEquipmentCategoriesByIndexAsync(categoryIndexes, cancellationToken))
@@ -95,7 +95,7 @@ public sealed class GetEquipmentCategoryHandler(ICatalogRepository catalog)
     {
         var category = await catalog.GetEquipmentCategoryAsync(index, cancellationToken) ?? throw CatalogErrors.EquipmentCategoryNotFound();
         var items = (await catalog.ListCatalogItemsByIndexAsync(category.ItemIndexes, cancellationToken))
-            .OrderBy(t => t.Source == CatalogSources.Srd ? 0 : 1)
+            .OrderBy(t => t.Source == Dnd5eCatalogSources.Srd ? 0 : 1)
             .GroupBy(t => t.Index!, StringComparer.Ordinal)
             .Select(g => g.First())
             .OrderBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase)

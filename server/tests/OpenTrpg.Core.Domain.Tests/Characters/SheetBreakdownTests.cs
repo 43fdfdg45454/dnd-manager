@@ -8,7 +8,7 @@ namespace OpenTrpg.Core.Domain.Tests.Characters;
 
 public class SheetBreakdownTests
 {
-    private static readonly ItemTemplate CloakOfProtection = ItemTemplate.CreateSrd("cloak-of-protection", new ItemTemplateData
+    private static readonly ItemTemplate CloakOfProtection = ItemTemplate.CreateCatalog(Dnd5eCatalogSources.Srd, "cloak-of-protection", new ItemTemplateData
     {
         Name = "Cloak of Protection",
         Category = ItemCategory.MagicItem,
@@ -16,7 +16,7 @@ public class SheetBreakdownTests
         Modifiers = [new ItemModifier(ItemModifierKind.ArmorClassBonus, null, 1), new ItemModifier(ItemModifierKind.SaveBonus, null, 1)],
     }, Now);
 
-    private static readonly ItemTemplate AmuletOfHealth = ItemTemplate.CreateSrd("amulet-of-health", new ItemTemplateData
+    private static readonly ItemTemplate AmuletOfHealth = ItemTemplate.CreateCatalog(Dnd5eCatalogSources.Srd, "amulet-of-health", new ItemTemplateData
     {
         Name = "Amulet of Health",
         Category = ItemCategory.MagicItem,

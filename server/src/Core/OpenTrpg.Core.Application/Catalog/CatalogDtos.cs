@@ -331,7 +331,7 @@ public sealed record SpellDetailDto(
 /// <summary>Origin of an item template as shown by the API.</summary>
 public static class ItemSources
 {
-    public const string Srd = CatalogSources.Srd;
+    public const string Srd = Dnd5eCatalogSources.Srd;
     public const string Homebrew = CatalogSources.Homebrew;
 
     /// <summary>"srd", "homebrew" or the id of the content pack.</summary>

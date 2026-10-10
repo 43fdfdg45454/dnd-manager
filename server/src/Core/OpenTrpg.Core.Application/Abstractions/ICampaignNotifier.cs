@@ -6,12 +6,12 @@ namespace OpenTrpg.Core.Application.Abstractions;
 /// Realtime event of a campaign (SignalR message <c>campaignEvent</c>). It only carries ids: the client
 /// fetches again over HTTP whatever it is allowed to see.
 /// </summary>
-/// <param name="Type">One of <see cref="CampaignEventTypes"/>.</param>
+/// <param name="Type">One of <see cref="CampaignEventTypes"/>, or a kind declared by a game system (<c>IGameSystem.RealtimeEventKinds</c>).</param>
 /// <param name="CharacterId">Character concerned, when there is one.</param>
 /// <param name="EntityId">Other entity concerned (message, shop, change request, session...), or null.</param>
 public sealed record CampaignEvent(string Type, Guid CampaignId, Guid? CharacterId, Guid? EntityId, DateTimeOffset At);
 
-/// <summary>Values of <see cref="CampaignEvent.Type"/>.</summary>
+/// <summary>Values of <see cref="CampaignEvent.Type"/> published by the core; game systems declare their own kinds.</summary>
 public static class CampaignEventTypes
 {
     /// <summary>A secret message for the user (sent to that user only).</summary>
@@ -19,9 +19,6 @@ public static class CampaignEventTypes
 
     /// <summary>Combat state, rest, sheet, inventory or an approved request of a character changed.</summary>
     public const string CharacterUpdated = "character.updated";
-
-    /// <summary>The DM forced a rest on the party (<see cref="CampaignEvent.EntityId"/> is null).</summary>
-    public const string PartyRest = "party.rest";
 
     public const string ShopUpdated = "shop.updated";
 
@@ -42,12 +39,6 @@ public static class CampaignEventTypes
 
     /// <summary>A rest request was created, approved, rejected or cancelled (<see cref="CampaignEvent.EntityId"/> = request).</summary>
     public const string RestRequestUpdated = "restRequest.updated";
-
-    /// <summary>A DM granted a level-up to the character (sent to the campaign and to the character's owner).</summary>
-    public const string LevelUpGranted = "levelUp.granted";
-
-    /// <summary>The character completed a level-up (sent to the campaign, together with <see cref="CharacterUpdated"/>).</summary>
-    public const string LevelUpCompleted = "levelUp.completed";
 
     /// <summary>
     /// The user was invited to the campaign (sent to that user only; <see cref="CampaignEvent.EntityId"/> = invitation).

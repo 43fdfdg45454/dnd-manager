@@ -94,7 +94,7 @@ public sealed class LevelChoiceRule
     public string? After { get; init; }
 
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
-    public string Source { get; init; } = CatalogSources.Srd;
+    public string Source { get; init; } = Dnd5eCatalogSources.Srd;
 
     public IReadOnlyList<string>? From => LevelChoiceJson.ParseStringList(FromJson);
 
@@ -113,7 +113,7 @@ public sealed class OptionSetDefinition
     public required string Name { get; init; }
 
     /// <summary>"srd" or the id of the content pack that added it. Packs may add options to sets of other sources.</summary>
-    public string Source { get; init; } = CatalogSources.Srd;
+    public string Source { get; init; } = Dnd5eCatalogSources.Srd;
 }
 
 /// <summary>
@@ -153,7 +153,7 @@ public sealed class OptionDefinition
     public string? CostJson { get; init; }
 
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
-    public string Source { get; init; } = CatalogSources.Srd;
+    public string Source { get; init; } = Dnd5eCatalogSources.Srd;
 
     public OptionPrerequisites Prerequisites => LevelChoiceJson.ParsePrerequisites(PrerequisitesJson);
 

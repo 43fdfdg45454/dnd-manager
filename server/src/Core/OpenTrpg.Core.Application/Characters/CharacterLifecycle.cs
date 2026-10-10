@@ -21,12 +21,12 @@ public sealed class SubmitCharacterHandler(
         character.EnsureCanSubmit(currentUserId);
         await originChoices.EnsureCompleteAsync(character, cancellationToken);
 
-        if ((await changeRequests.ListPendingAsync(character.Id, ChangeRequestType.Activate, cancellationToken)).Count > 0)
+        if ((await changeRequests.ListPendingAsync(character.Id, ChangeRequestTypes.Activate, cancellationToken)).Count > 0)
         {
             throw AppException.Conflict("Ya hay una solicitud de activación pendiente para este personaje.");
         }
 
-        var request = ChangeRequest.Create(character.CampaignId, character.Id, currentUserId, ChangeRequestType.Activate, null, clock.UtcNow);
+        var request = ChangeRequest.Create(character.CampaignId, character.Id, currentUserId, ChangeRequestTypes.Activate, null, clock.UtcNow);
         changeRequests.Add(request);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await notifier.ChangeRequestUpdatedAsync(character.CampaignId, character.Id, request.Id, clock.UtcNow, cancellationToken);
@@ -69,7 +69,7 @@ public sealed class ActivateCharacterHandler(
         character.Activate(sheet.HitPointsMax, now);
         await preparation.RequireInitialPreparationAsync(character, now, cancellationToken);
 
-        foreach (var pending in await changeRequests.ListPendingAsync(character.Id, ChangeRequestType.Activate, cancellationToken))
+        foreach (var pending in await changeRequests.ListPendingAsync(character.Id, ChangeRequestTypes.Activate, cancellationToken))
         {
             pending.Approve(currentUserId, "Activado directamente por un DM.", now);
         }

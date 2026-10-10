@@ -198,7 +198,7 @@ internal sealed class ChangeRequestConfiguration : IEntityTypeConfiguration<Chan
         builder.ToTable("ChangeRequests");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.Property(x => x.Type).HasConversion<string>().HasMaxLength(16).IsRequired();
+        builder.Property(x => x.Type).HasMaxLength(ChangeRequestTypes.MaxLength).IsRequired();
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
         builder.Property(x => x.PayloadJson).IsRequired();
         builder.Property(x => x.Comment).HasMaxLength(ChangeRequest.CommentMaxLength);

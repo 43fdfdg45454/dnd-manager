@@ -11,6 +11,6 @@ internal static class CatalogItemQueries
     public static IQueryable<ItemTemplate> WhereListed(this IQueryable<ItemTemplate> query, AppDbContext db) =>
         query.Where(x =>
             x.CampaignId != null
-            || x.Source == CatalogSources.Srd
+            || x.Source == Dnd5eCatalogSources.Srd
             || db.CatalogImports.Any(i => i.Ruleset == CatalogSources.PackRulesetPrefix + x.Source));
 }

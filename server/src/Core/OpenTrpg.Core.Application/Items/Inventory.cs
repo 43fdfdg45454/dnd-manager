@@ -130,10 +130,10 @@ public sealed class InventoryOperations(
     };
 
     /// <summary>AddItem for a catalog item without overrides; CustomItem for anything made or changed by hand.</summary>
-    public static ChangeRequestType AddRequestType(AddInventoryItemRequest request) =>
+    public static string AddRequestType(AddInventoryItemRequest request) =>
         request.TemplateId is null || !(request.Overrides?.ToDomain().Normalize().IsEmpty ?? true)
-            ? ChangeRequestType.CustomItem
-            : ChangeRequestType.AddItem;
+            ? ChangeRequestTypes.CustomItem
+            : ChangeRequestTypes.AddItem;
 
     public async Task<CharacterItem> AddAsync(Character character, AddInventoryItemRequest request, DateTimeOffset now, CancellationToken cancellationToken)
     {
@@ -170,7 +170,7 @@ public sealed class InventoryOperations(
     public async Task<ChangeRequestDto> RequestAsync<TPayload>(
         Character character,
         Guid requestedByUserId,
-        ChangeRequestType type,
+        string type,
         TPayload payload,
         CancellationToken cancellationToken,
         object? before = null)
@@ -194,12 +194,12 @@ public sealed class InventoryOperations(
     {
         switch (request.Type)
         {
-            case ChangeRequestType.AddItem or ChangeRequestType.CustomItem:
+            case ChangeRequestTypes.AddItem or ChangeRequestTypes.CustomItem:
                 var add = Deserialize<AddInventoryItemRequest>(request.PayloadJson);
                 await ValidateAsync(addValidator, add, cancellationToken);
                 await AddAsync(character, add, now, cancellationToken);
                 break;
-            case ChangeRequestType.RemoveItem:
+            case ChangeRequestTypes.RemoveItem:
                 var remove = Deserialize<RemoveItemPayload>(request.PayloadJson);
                 if (!character.Items.Any(i => i.Id == remove.ItemId))
                 {
@@ -208,7 +208,7 @@ public sealed class InventoryOperations(
 
                 character.RemoveItem(remove.ItemId, remove.Quantity, now);
                 break;
-            case ChangeRequestType.AdjustMoney:
+            case ChangeRequestTypes.AdjustMoney:
                 var money = Deserialize<AdjustMoneyRequest>(request.PayloadJson);
                 await ValidateAsync(moneyValidator, money, cancellationToken);
                 character.AdjustMoney(money.DeltaCp, now);
@@ -401,7 +401,7 @@ public sealed class RemoveInventoryItemHandler(
 
         var templates = await reader.TemplatesAsync(character, cancellationToken);
         var payload = new RemoveItemPayload(itemId, quantity, InventoryView.Resolve(templates, item).Name);
-        return await operations.RequestAsync(character, currentUserId, ChangeRequestType.RemoveItem, payload, cancellationToken, new { quantity = item.Quantity });
+        return await operations.RequestAsync(character, currentUserId, ChangeRequestTypes.RemoveItem, payload, cancellationToken, new { quantity = item.Quantity });
     }
 }
 
@@ -434,7 +434,7 @@ public sealed class AdjustMoneyHandler(
         }
 
         var trimmed = request with { Reason = string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim() };
-        var changeRequest = await operations.RequestAsync(character, currentUserId, ChangeRequestType.AdjustMoney, trimmed, cancellationToken, new { copperPieces = character.CopperPieces });
+        var changeRequest = await operations.RequestAsync(character, currentUserId, ChangeRequestTypes.AdjustMoney, trimmed, cancellationToken, new { copperPieces = character.CopperPieces });
         return new InventoryChangeResult(null, null, changeRequest);
     }
 }

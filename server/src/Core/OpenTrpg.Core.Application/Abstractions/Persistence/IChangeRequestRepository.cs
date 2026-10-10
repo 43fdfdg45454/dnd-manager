@@ -24,7 +24,7 @@ public interface IChangeRequestRepository
     Task<ChangeRequest?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>Tracked pending requests of a character, optionally of one type.</summary>
-    Task<IReadOnlyList<ChangeRequest>> ListPendingAsync(Guid characterId, ChangeRequestType? type, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ChangeRequest>> ListPendingAsync(Guid characterId, string? type, CancellationToken cancellationToken = default);
 
     /// <summary>Read-only requests matching the query, newest first.</summary>
     Task<IReadOnlyList<ChangeRequestView>> ListViewsAsync(ChangeRequestQuery query, CancellationToken cancellationToken = default);

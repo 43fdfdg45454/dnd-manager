@@ -23,7 +23,7 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
     public async Task<bool> SeedAsync(CancellationToken cancellationToken = default)
     {
         var alreadyImported = await db.CatalogImports.AnyAsync(
-            x => x.Ruleset == CatalogImport.SrdRuleset && x.DatasetVersion == SrdDataset.Version,
+            x => x.Ruleset == Dnd5eCatalogSources.SrdRuleset && x.DatasetVersion == SrdDataset.Version,
             cancellationToken);
         if (alreadyImported)
         {
@@ -55,7 +55,7 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
                 ["subraces"] = await InsertAsync(catalog.Subraces, cancellationToken),
                 ["traits"] = await InsertAsync(catalog.Traits, cancellationToken),
                 ["spells"] = await InsertAsync(catalog.Spells, cancellationToken),
-                ["items"] = await CatalogItems.UpsertAsync(db, CatalogSources.Srd, catalog.Items, now, cancellationToken),
+                ["items"] = await CatalogItems.UpsertAsync(db, Dnd5eCatalogSources.Srd, catalog.Items, now, cancellationToken),
                 ["conditions"] = await InsertAsync(catalog.Conditions, cancellationToken),
                 ["skills"] = await InsertAsync(catalog.Skills, cancellationToken),
                 ["backgrounds"] = await InsertAsync(catalog.Backgrounds, cancellationToken),
@@ -67,7 +67,7 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
 
             db.CatalogImports.Add(new CatalogImport
             {
-                Ruleset = CatalogImport.SrdRuleset,
+                Ruleset = Dnd5eCatalogSources.SrdRuleset,
                 DatasetVersion = SrdDataset.Version,
                 ImportedAt = now,
                 CreatedAt = now,
@@ -96,7 +96,7 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
     /// </summary>
     private async Task DeleteDefinitionsAsync(CancellationToken cancellationToken)
     {
-        const string srd = CatalogSources.Srd;
+        const string srd = Dnd5eCatalogSources.Srd;
         await db.CatalogFeatures.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogSubclassLevels.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
         await db.CatalogSubclasses.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
@@ -119,7 +119,7 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
     /// </summary>
     private async Task<int> UpsertRacesAsync(IReadOnlyList<RaceDefinition> races, CancellationToken cancellationToken)
     {
-        const string srd = CatalogSources.Srd;
+        const string srd = Dnd5eCatalogSources.Srd;
         var indexes = races.Select(r => r.Index).ToList();
         await db.CatalogRaces.Where(x => x.Source == srd && !indexes.Contains(x.Index)).ExecuteDeleteAsync(cancellationToken);
         var existing = (await db.CatalogRaces.AsNoTracking().Where(x => x.Source == srd).Select(x => x.Index).ToListAsync(cancellationToken))

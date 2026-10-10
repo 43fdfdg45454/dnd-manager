@@ -24,7 +24,7 @@ internal static class SrdLevelChoices
         var rules = Read<RulesFile>("level-choices.json").Rules ?? [];
 
         return new LevelChoiceCatalog(
-            sets.Select(s => new OptionSetDefinition { SetId = s.SetId!, Name = s.Name ?? s.SetId!, Source = CatalogSources.Srd }).ToList(),
+            sets.Select(s => new OptionSetDefinition { SetId = s.SetId!, Name = s.Name ?? s.SetId!, Source = Dnd5eCatalogSources.Srd }).ToList(),
             sets.SelectMany(s => (s.Options ?? []).Select(o => MapOption(s.SetId!, o))).ToList(),
             rules.Select(MapRule).ToList());
     }
@@ -45,7 +45,7 @@ internal static class SrdLevelChoices
         AbilityIncreaseJson = Raw(o.AbilityIncrease),
         GrantsJson = Raw(o.Grants),
         ResourceJson = Raw(o.Resource),
-        Source = CatalogSources.Srd,
+        Source = Dnd5eCatalogSources.Srd,
     };
 
     private static LevelChoiceRule MapRule(RuleJson r) => new()
@@ -64,7 +64,7 @@ internal static class SrdLevelChoices
         Replaces = r.Replaces ?? false,
         Cumulative = r.Cumulative ?? false,
         Note = r.Note ?? string.Empty,
-        Source = CatalogSources.Srd,
+        Source = Dnd5eCatalogSources.Srd,
     };
 
     private static T Read<T>(string fileName)

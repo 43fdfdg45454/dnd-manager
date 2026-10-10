@@ -3,6 +3,7 @@ using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Application.Common;
 using OpenTrpg.Core.Domain.Characters;
 using FluentValidation;
+using OpenTrpg.Core.Domain.Rules;
 
 namespace OpenTrpg.Core.Application.Characters;
 

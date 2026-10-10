@@ -6,6 +6,7 @@ using OpenTrpg.Core.Application.Abstractions;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
+using OpenTrpg.Core.Application.Systems.Dnd5e;
 
 namespace OpenTrpg.Core.Api.Tests.Realtime;
 
@@ -77,7 +78,7 @@ public sealed class RealtimeTests(ApiFactory factory) : IClassFixture<ApiFactory
         var s = await factory.CreateCampaignScenarioAsync();
         await s.Player.CreateActiveCharacterAsync(s.Dm, s.CampaignId);
         await using var connection = await ConnectAsync(s.Player);
-        var rest = Expect(connection, CampaignEventTypes.PartyRest);
+        var rest = Expect(connection, Dnd5eEventTypes.PartyRest);
         await connection.InvokeAsync("JoinCampaign", s.CampaignId);
 
         var response = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/rest", new { kind = "long" });
@@ -293,7 +294,7 @@ public sealed class RealtimeTests(ApiFactory factory) : IClassFixture<ApiFactory
         var s = await factory.CreateCampaignScenarioAsync();
         var hero = await s.Player.CreateActiveCharacterAsync(s.Dm, s.CampaignId);
         await using var connection = await ConnectAsync(s.Player);
-        var granted = Expect(connection, CampaignEventTypes.LevelUpGranted);
+        var granted = Expect(connection, Dnd5eEventTypes.LevelUpGranted);
 
         // Not joined to the campaign: the event still reaches the owner through their user group.
         var response = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { hero.Id } });

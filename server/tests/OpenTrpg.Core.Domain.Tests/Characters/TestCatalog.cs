@@ -1,5 +1,6 @@
 using OpenTrpg.Core.Domain.Catalog;
 using OpenTrpg.Core.Domain.Characters;
+using OpenTrpg.Core.Domain.Rules;
 
 namespace OpenTrpg.Core.Domain.Tests.Characters;
 

@@ -122,7 +122,7 @@ public sealed class ApproveChangeRequestHandler(
         var now = clock.UtcNow;
         switch (request.Type)
         {
-            case ChangeRequestType.Activate:
+            case ChangeRequestTypes.Activate:
                 if (character.Status == CharacterStatus.Draft)
                 {
                     await originChoices.EnsureCompleteAsync(character, cancellationToken);
@@ -132,16 +132,16 @@ public sealed class ApproveChangeRequestHandler(
                 character.Activate(sheet.HitPointsMax, now);
                 await preparation.RequireInitialPreparationAsync(character, now, cancellationToken);
                 break;
-            case ChangeRequestType.EditSheet:
+            case Dnd5eChangeRequestTypes.EditSheet:
                 await ApplySheetPatchAsync(character, request.PayloadJson, now, cancellationToken);
                 break;
-            case ChangeRequestType.AddItem or ChangeRequestType.CustomItem or ChangeRequestType.RemoveItem or ChangeRequestType.AdjustMoney:
+            case ChangeRequestTypes.AddItem or ChangeRequestTypes.CustomItem or ChangeRequestTypes.RemoveItem or ChangeRequestTypes.AdjustMoney:
                 await inventory.ApplyApprovedAsync(character, request, now, cancellationToken);
 
                 // Removing an equipped item can lower the sheet (item modifiers): cap the current hit points.
                 await sheets.RecalculateAsync(character, cancellationToken);
                 break;
-            case ChangeRequestType.Companion:
+            case Dnd5eChangeRequestTypes.Companion:
                 await companions.ApplyApprovedAsync(character, request.PayloadJson, now, cancellationToken);
                 break;
             default:

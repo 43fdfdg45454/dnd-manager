@@ -11,6 +11,9 @@ public interface IGameSystem
 
     /// <summary>Name, version, attributions and system documents.</summary>
     GameSystemInfo Info { get; }
+
+    /// <summary>Realtime event kinds the system publishes, in addition to the core ones (<c>CampaignEventTypes</c>).</summary>
+    IReadOnlyList<string> RealtimeEventKinds { get; }
 }
 
 /// <summary>Descriptive information of a game system.</summary>

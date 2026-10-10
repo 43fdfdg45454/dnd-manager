@@ -272,7 +272,7 @@ public class SpellPreparationEndpointsTests(CatalogApiFactory factory, ITestOutp
 
         await factory.WithDbAsync(async db =>
         {
-            var spells = await db.CatalogSpells.AsNoTracking().Where(x => x.Source == CatalogSources.Srd).ToListAsync();
+            var spells = await db.CatalogSpells.AsNoTracking().Where(x => x.Source == Dnd5eCatalogSources.Srd).ToListAsync();
             Assert.Equal(319, spells.Count);
             Assert.All(spells, sp => Assert.True(Enum.IsDefined(sp.Category), sp.Index));
 

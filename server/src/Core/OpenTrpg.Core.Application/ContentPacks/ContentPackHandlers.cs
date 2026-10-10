@@ -37,7 +37,7 @@ public sealed class ListCatalogSourcesHandler(IContentPackImporter importer)
 
     public async Task<IReadOnlyList<CatalogSourceDto>> HandleAsync(CancellationToken cancellationToken = default) =>
         [
-            new CatalogSourceDto(CatalogSources.Srd, SrdName, null),
+            new CatalogSourceDto(Dnd5eCatalogSources.Srd, SrdName, null),
             .. (await importer.ListAsync(cancellationToken)).Select(p => new CatalogSourceDto(p.Id, p.Name, p.Version)),
         ];
 }

@@ -88,5 +88,5 @@ public class ChangeRequestTests
     }
 
     private ChangeRequest NewRequest(string? payload = """{"name":"Nuevo"}""") =>
-        ChangeRequest.Create(Guid.NewGuid(), Guid.NewGuid(), _player, ChangeRequestType.EditSheet, payload, Now);
+        ChangeRequest.Create(Guid.NewGuid(), Guid.NewGuid(), _player, ChangeRequestTypes.Other, payload, Now);
 }

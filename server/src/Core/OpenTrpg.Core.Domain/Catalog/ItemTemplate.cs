@@ -22,8 +22,8 @@ public sealed class ItemTemplate : EntityBase
     /// <summary>Dataset slug for catalog items (SRD and content packs); null for homebrew.</summary>
     public string? Index { get; private set; }
 
-    /// <summary>"srd", "homebrew" or the id of the content pack (see <see cref="CatalogSources"/>).</summary>
-    public string Source { get; private set; } = CatalogSources.Srd;
+    /// <summary>Base content of the game system (for example "srd"), "homebrew" or the id of the content pack (see <see cref="CatalogSources"/>).</summary>
+    public string Source { get; private set; } = string.Empty;
 
     public string Name { get; private set; } = string.Empty;
 
@@ -75,10 +75,7 @@ public sealed class ItemTemplate : EntityBase
     /// <summary>True when the item can be used inside the campaign: SRD items and the campaign's own homebrew.</summary>
     public bool IsVisibleIn(Guid campaignId) => CampaignId is null || CampaignId == campaignId;
 
-    public static ItemTemplate CreateSrd(string index, ItemTemplateData data, DateTimeOffset now) =>
-        CreateCatalog(CatalogSources.Srd, index, data, now);
-
-    /// <summary>Creates a catalog item of the SRD or of a content pack (<paramref name="source"/> = pack id).</summary>
+    /// <summary>Creates a catalog item of the base content of a game system or of a content pack (<paramref name="source"/> = pack id).</summary>
     public static ItemTemplate CreateCatalog(string source, string index, ItemTemplateData data, DateTimeOffset now)
     {
         var item = new ItemTemplate { Index = index, Source = source, CreatedAt = now };

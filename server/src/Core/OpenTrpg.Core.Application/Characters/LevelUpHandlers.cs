@@ -4,6 +4,7 @@ using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Application.Common;
 using OpenTrpg.Core.Domain.Catalog;
 using OpenTrpg.Core.Domain.Characters;
+using OpenTrpg.Core.Application.Systems.Dnd5e;
 
 namespace OpenTrpg.Core.Application.Characters;
 
@@ -126,7 +127,7 @@ public sealed class ApplyLevelUpHandler(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
         await notifier.CharacterUpdatedAsync(character.CampaignId, character.Id, now, cancellationToken);
-        await notifier.NotifyAsync(new CampaignEvent(CampaignEventTypes.LevelUpCompleted, character.CampaignId, character.Id, null, now), cancellationToken);
+        await notifier.NotifyAsync(new CampaignEvent(Dnd5eEventTypes.LevelUpCompleted, character.CampaignId, character.Id, null, now), cancellationToken);
         return await sheets.BuildDetailAsync(character, cancellationToken);
     }
 

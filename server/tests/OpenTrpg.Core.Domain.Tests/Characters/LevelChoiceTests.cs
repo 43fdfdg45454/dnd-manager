@@ -35,7 +35,7 @@ public class LevelChoiceTests
         ResourceJson = """{"key":"dreadful-word","name":"Dreadful Word","max":1,"recharge":"LongRest"}""",
     };
 
-    private static readonly ItemTemplate Shortbow = ItemTemplate.CreateSrd("shortbow", new ItemTemplateData
+    private static readonly ItemTemplate Shortbow = ItemTemplate.CreateCatalog(Dnd5eCatalogSources.Srd, "shortbow", new ItemTemplateData
     {
         Name = "Shortbow",
         Category = ItemCategory.Weapon,
@@ -47,7 +47,7 @@ public class LevelChoiceTests
         RangeLong = 320,
     }, Now);
 
-    private static readonly ItemTemplate Dagger = ItemTemplate.CreateSrd("dagger", new ItemTemplateData
+    private static readonly ItemTemplate Dagger = ItemTemplate.CreateCatalog(Dnd5eCatalogSources.Srd, "dagger", new ItemTemplateData
     {
         Name = "Dagger",
         Category = ItemCategory.Weapon,

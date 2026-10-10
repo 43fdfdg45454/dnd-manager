@@ -125,7 +125,7 @@ public sealed class CompanionPlanner(ICatalogRepository catalog, IBeastCatalog b
         return existing;
     }
 
-    /// <summary>Applies an approved <see cref="ChangeRequestType.Companion"/> request.</summary>
+    /// <summary>Applies an approved <see cref="Dnd5eChangeRequestTypes.Companion"/> request.</summary>
     public Task ApplyApprovedAsync(Character character, string payloadJson, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var payload = CompanionPayload.Parse(payloadJson)
@@ -244,7 +244,7 @@ public sealed class CompanionPlanner(ICatalogRepository catalog, IBeastCatalog b
             .ToList());
 }
 
-/// <summary>Payload (and snapshot) of a <see cref="ChangeRequestType.Companion"/> request.</summary>
+/// <summary>Payload (and snapshot) of a <see cref="Dnd5eChangeRequestTypes.Companion"/> request.</summary>
 public sealed record CompanionPayload(string BeastIndex, string BeastName, string Name)
 {
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
@@ -267,7 +267,7 @@ public sealed record CompanionPayload(string BeastIndex, string BeastName, strin
 
 /// <summary>
 /// <c>PUT /characters/{id}/companion</c>: the owner or a DM. Choosing the first companion and renaming it apply directly; a
-/// player changing the beast of an active character creates a <see cref="ChangeRequestType.Companion"/> request, which DMs
+/// player changing the beast of an active character creates a <see cref="Dnd5eChangeRequestTypes.Companion"/> request, which DMs
 /// (and the owner of a draft) skip.
 /// </summary>
 public sealed class SetCompanionHandler(
@@ -307,7 +307,7 @@ public sealed class SetCompanionHandler(
             character.CampaignId,
             character.Id,
             currentUserId,
-            ChangeRequestType.Companion,
+            Dnd5eChangeRequestTypes.Companion,
             new CompanionPayload(beast.Index, beast.Name, name).ToJson(),
             now,
             before.ToJson());

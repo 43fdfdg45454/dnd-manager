@@ -31,6 +31,8 @@ public sealed class Dnd5eSystem : IGameSystem
     public GameSystemInfo Info { get; } = new(
         Name,
         SrdVersion,
-        [new AttributionInfo(CatalogImport.SrdRuleset, SrdLicense, SrdAttributionText)],
+        [new AttributionInfo(Dnd5eCatalogSources.SrdRuleset, SrdLicense, SrdAttributionText)],
         [new SystemDocumentInfo(SrdFileName, SrdTitle, SrdDescription)]);
+
+    public IReadOnlyList<string> RealtimeEventKinds => Dnd5eEventTypes.All;
 }

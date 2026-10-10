@@ -7,7 +7,7 @@ namespace OpenTrpg.Core.Domain.Tests.Items;
 /// <summary>SRD-like item templates for the inventory and shop tests.</summary>
 internal static class TestItems
 {
-    public static readonly ItemTemplate ChainMail = ItemTemplate.CreateSrd("chain-mail", new ItemTemplateData
+    public static readonly ItemTemplate ChainMail = ItemTemplate.CreateCatalog(Dnd5eCatalogSources.Srd, "chain-mail", new ItemTemplateData
     {
         Name = "Chain Mail",
         Category = ItemCategory.Armor,
@@ -20,7 +20,7 @@ internal static class TestItems
         StealthDisadvantage = true,
     }, Now);
 
-    public static readonly ItemTemplate Leather = ItemTemplate.CreateSrd("leather-armor", new ItemTemplateData
+    public static readonly ItemTemplate Leather = ItemTemplate.CreateCatalog(Dnd5eCatalogSources.Srd, "leather-armor", new ItemTemplateData
     {
         Name = "Leather Armor",
         Category = ItemCategory.Armor,
@@ -31,7 +31,7 @@ internal static class TestItems
         AddDexModifier = true,
     }, Now);
 
-    public static readonly ItemTemplate Shield = ItemTemplate.CreateSrd("shield", new ItemTemplateData
+    public static readonly ItemTemplate Shield = ItemTemplate.CreateCatalog(Dnd5eCatalogSources.Srd, "shield", new ItemTemplateData
     {
         Name = "Shield",
         Category = ItemCategory.Shield,
@@ -41,7 +41,7 @@ internal static class TestItems
         ArmorClassBase = 2,
     }, Now);
 
-    public static readonly ItemTemplate Longsword = ItemTemplate.CreateSrd("longsword", new ItemTemplateData
+    public static readonly ItemTemplate Longsword = ItemTemplate.CreateCatalog(Dnd5eCatalogSources.Srd, "longsword", new ItemTemplateData
     {
         Name = "Longsword",
         Category = ItemCategory.Weapon,
@@ -55,7 +55,7 @@ internal static class TestItems
         Description = ["A sword."],
     }, Now);
 
-    public static readonly ItemTemplate Arrow = ItemTemplate.CreateSrd("arrow", new ItemTemplateData
+    public static readonly ItemTemplate Arrow = ItemTemplate.CreateCatalog(Dnd5eCatalogSources.Srd, "arrow", new ItemTemplateData
     {
         Name = "Arrow",
         Category = ItemCategory.AdventuringGear,
@@ -64,7 +64,7 @@ internal static class TestItems
         WeightLb = 0.05m,
     }, Now);
 
-    public static readonly ItemTemplate Rope = ItemTemplate.CreateSrd("rope", new ItemTemplateData
+    public static readonly ItemTemplate Rope = ItemTemplate.CreateCatalog(Dnd5eCatalogSources.Srd, "rope", new ItemTemplateData
     {
         Name = "Rope",
         Category = ItemCategory.AdventuringGear,
@@ -73,7 +73,7 @@ internal static class TestItems
         WeightLb = 10,
     }, Now);
 
-    public static readonly ItemTemplate Healing = ItemTemplate.CreateSrd("potion-of-healing", new ItemTemplateData
+    public static readonly ItemTemplate Healing = ItemTemplate.CreateCatalog(Dnd5eCatalogSources.Srd, "potion-of-healing", new ItemTemplateData
     {
         Name = "Potion of Healing",
         Category = ItemCategory.MagicItem,
@@ -81,7 +81,7 @@ internal static class TestItems
         Rarity = ItemRarity.Common,
     }, Now);
 
-    public static ItemTemplate Attuned(string name) => ItemTemplate.CreateSrd(name.ToLowerInvariant(), new ItemTemplateData
+    public static ItemTemplate Attuned(string name) => ItemTemplate.CreateCatalog(Dnd5eCatalogSources.Srd, name.ToLowerInvariant(), new ItemTemplateData
     {
         Name = name,
         Category = ItemCategory.MagicItem,

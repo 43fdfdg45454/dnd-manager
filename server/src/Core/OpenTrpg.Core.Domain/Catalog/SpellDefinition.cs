@@ -56,5 +56,5 @@ public sealed class SpellDefinition
     public SpellCategory Category { get; init; } = SpellCategory.Utility;
 
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
-    public string Source { get; init; } = CatalogSources.Srd;
+    public string Source { get; init; } = Dnd5eCatalogSources.Srd;
 }

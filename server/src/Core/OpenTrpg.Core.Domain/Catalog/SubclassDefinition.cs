@@ -33,5 +33,5 @@ public sealed class SubclassDefinition
     public IReadOnlySet<string> ExpandedSpellIndexes => ExpandedSpellList.Select(s => s.Index).ToHashSet(StringComparer.Ordinal);
 
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
-    public string Source { get; init; } = CatalogSources.Srd;
+    public string Source { get; init; } = Dnd5eCatalogSources.Srd;
 }

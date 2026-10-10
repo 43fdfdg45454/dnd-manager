@@ -9,7 +9,7 @@ internal sealed class ChangeRequestRepository(AppDbContext db) : IChangeRequestR
     public Task<ChangeRequest?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         db.ChangeRequests.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
-    public async Task<IReadOnlyList<ChangeRequest>> ListPendingAsync(Guid characterId, ChangeRequestType? type, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ChangeRequest>> ListPendingAsync(Guid characterId, string? type, CancellationToken cancellationToken = default)
     {
         var query = db.ChangeRequests.Where(x => x.CharacterId == characterId && x.Status == ChangeRequestStatus.Pending);
         if (type is { } requestType)

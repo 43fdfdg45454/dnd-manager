@@ -271,7 +271,7 @@ public class CombatCalculatorTests
         string? versatile = null,
         IReadOnlyList<string>? properties = null,
         (int Normal, int Long)? range = null) =>
-        ItemTemplate.CreateSrd(index, new ItemTemplateData
+        ItemTemplate.CreateCatalog(Dnd5eCatalogSources.Srd, index, new ItemTemplateData
         {
             Name = name,
             Category = ItemCategory.Weapon,

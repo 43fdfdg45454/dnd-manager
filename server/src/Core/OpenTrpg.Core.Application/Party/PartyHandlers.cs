@@ -4,6 +4,8 @@ using OpenTrpg.Core.Application.Characters;
 using OpenTrpg.Core.Domain.Campaigns;
 using OpenTrpg.Core.Domain.Characters;
 using FluentValidation;
+using OpenTrpg.Core.Domain.Rules;
+using OpenTrpg.Core.Application.Systems.Dnd5e;
 
 namespace OpenTrpg.Core.Application.Party;
 
@@ -203,7 +205,7 @@ public sealed class PartyRestHandler(
         var cancelled = await restRequests.CancelPendingAsync(targets.Select(c => c.Id).ToList(), currentUserId, now, cancellationToken);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        await notifier.NotifyAsync(new CampaignEvent(CampaignEventTypes.PartyRest, campaignId, null, null, now), cancellationToken);
+        await notifier.NotifyAsync(new CampaignEvent(Dnd5eEventTypes.PartyRest, campaignId, null, null, now), cancellationToken);
         await RestRequestLoader.NotifyAsync(notifier, cancelled, now, cancellationToken);
 
         // A long rest asks the characters that prepare spells to prepare them again (the app opens the screen).
@@ -333,7 +335,7 @@ public sealed class PartyLevelHandler(
         await unitOfWork.SaveChangesAsync(cancellationToken);
         foreach (var character in granted)
         {
-            var e = new CampaignEvent(CampaignEventTypes.LevelUpGranted, campaignId, character.Id, null, now);
+            var e = new CampaignEvent(Dnd5eEventTypes.LevelUpGranted, campaignId, character.Id, null, now);
             await notifier.NotifyAsync(e, cancellationToken);
             if (character.OwnerUserId is { } ownerId)
             {

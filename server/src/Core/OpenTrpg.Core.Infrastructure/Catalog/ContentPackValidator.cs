@@ -168,7 +168,7 @@ internal sealed partial class ContentPackValidator
         {
             AddError("id", "Debe tener entre 3 y 40 caracteres: minúsculas, números y guiones.");
         }
-        else if (CatalogSources.IsReserved(id))
+        else if (Dnd5eCatalogSources.IsReserved(id))
         {
             AddError("id", $"\"{id}\" está reservado; elige otro identificador.");
         }

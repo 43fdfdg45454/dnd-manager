@@ -267,7 +267,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
             itemId = (await db.ItemTemplates.SingleAsync(x => x.Source == id)).Id;
 
             // Simulates a new SRD dataset version.
-            await db.CatalogImports.Where(x => x.Ruleset == CatalogImport.SrdRuleset).ExecuteDeleteAsync();
+            await db.CatalogImports.Where(x => x.Ruleset == Dnd5eCatalogSources.SrdRuleset).ExecuteDeleteAsync();
         });
 
         using (var scope = factory.Services.CreateScope())
@@ -281,8 +281,8 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         await factory.WithDbAsync(async db =>
         {
             Assert.Equal(12, await db.CatalogClasses.CountAsync());
-            Assert.Equal(12, await db.CatalogSubclasses.CountAsync(x => x.Source == CatalogSources.Srd));
-            Assert.Equal(319, await db.CatalogSpells.CountAsync(x => x.Source == CatalogSources.Srd));
+            Assert.Equal(12, await db.CatalogSubclasses.CountAsync(x => x.Source == Dnd5eCatalogSources.Srd));
+            Assert.Equal(319, await db.CatalogSpells.CountAsync(x => x.Source == Dnd5eCatalogSources.Srd));
             Assert.Equal(itemId, (await db.ItemTemplates.SingleAsync(x => x.Source == id)).Id);
             Assert.True(await db.CatalogSpells.AnyAsync(x => x.Source == id));
             Assert.True(await db.CatalogRaces.AnyAsync(x => x.Source == id));

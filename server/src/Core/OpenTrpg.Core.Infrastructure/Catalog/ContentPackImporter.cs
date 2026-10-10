@@ -123,7 +123,7 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
 
     public async Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default)
     {
-        if (CatalogSources.IsReserved(id))
+        if (Dnd5eCatalogSources.IsReserved(id))
         {
             return false;
         }
@@ -199,11 +199,11 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
             .Select(x => new { x.Index, x.SubclassFlavor })
             .ToDictionaryAsync(x => x.Index, x => x.SubclassFlavor, StringComparer.Ordinal, cancellationToken);
         var subclasses = await db.CatalogSubclasses.AsNoTracking()
-            .Where(x => x.Source == CatalogSources.Srd)
+            .Where(x => x.Source == Dnd5eCatalogSources.Srd)
             .Select(x => new { x.Index, x.ClassIndex })
             .ToDictionaryAsync(x => x.Index, x => x.ClassIndex, StringComparer.Ordinal, cancellationToken);
         var packSubclasses = await db.CatalogSubclasses.AsNoTracking()
-            .Where(x => x.Source != CatalogSources.Srd)
+            .Where(x => x.Source != Dnd5eCatalogSources.Srd)
             .Select(x => new { x.Index, x.ClassIndex, x.Source })
             .ToDictionaryAsync(x => x.Index, x => (x.ClassIndex, x.Source), StringComparer.Ordinal, cancellationToken);
         var skills = await db.CatalogSkills.AsNoTracking()
@@ -220,7 +220,7 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
             .ToListAsync(cancellationToken);
         var spells = spellRows.ToDictionary(x => x.Index, x => x.Source, StringComparer.Ordinal);
         var srdItems = await db.ItemTemplates.AsNoTracking()
-            .Where(x => x.CampaignId == null && x.Source == CatalogSources.Srd && x.Index != null)
+            .Where(x => x.CampaignId == null && x.Source == Dnd5eCatalogSources.Srd && x.Index != null)
             .Select(x => x.Index!)
             .ToListAsync(cancellationToken);
         var categories = await db.CatalogEquipmentCategories.AsNoTracking().Select(x => x.Index).ToListAsync(cancellationToken);
@@ -324,7 +324,7 @@ internal sealed partial class ContentPackImporter(AppDbContext db, IDateTimeProv
         // Classes are not extended by packs, but a subclass or feature must not hide a class index either.
         await CheckAsync("subclasses", async keys => Pairs(
             await db.CatalogClasses.AsNoTracking().Where(x => keys.Contains(x.Index)).Select(x => x.Index).ToListAsync(cancellationToken),
-            x => (x, CatalogSources.Srd)));
+            x => (x, Dnd5eCatalogSources.Srd)));
     }
 
     /// <summary>

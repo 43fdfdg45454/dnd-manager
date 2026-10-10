@@ -47,7 +47,7 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
             Assert.True(await db.ItemTemplates.AnyAsync(x => x.CampaignId == null && x.Category == ItemCategory.Consumable));
 
             var import = await db.CatalogImports.SingleAsync();
-            Assert.Equal(CatalogImport.SrdRuleset, import.Ruleset);
+            Assert.Equal(Dnd5eCatalogSources.SrdRuleset, import.Ruleset);
             Assert.Contains("a6212beb", import.DatasetVersion);
             Assert.Contains("skill choices", import.DatasetVersion);
             Assert.Contains("personality", import.DatasetVersion);
@@ -63,9 +63,9 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
 
         await factory.WithDbAsync(async db =>
         {
-            Assert.Equal(13, await db.CatalogOptionSets.CountAsync(x => x.Source == CatalogSources.Srd));
-            Assert.Equal(99, await db.CatalogOptions.CountAsync(x => x.Source == CatalogSources.Srd));
-            Assert.Equal(197, await db.CatalogLevelChoiceRules.CountAsync(x => x.Source == CatalogSources.Srd));
+            Assert.Equal(13, await db.CatalogOptionSets.CountAsync(x => x.Source == Dnd5eCatalogSources.Srd));
+            Assert.Equal(99, await db.CatalogOptions.CountAsync(x => x.Source == Dnd5eCatalogSources.Srd));
+            Assert.Equal(197, await db.CatalogLevelChoiceRules.CountAsync(x => x.Source == Dnd5eCatalogSources.Srd));
 
             var defense = await db.CatalogOptions.SingleAsync(x => x.Index == "fighting-style-defense");
             Assert.Equal([new ChoiceModifier(ItemModifierKind.ArmorClassBonus, null, 1, ModifierConditions.WearingArmor)], defense.Modifiers);
