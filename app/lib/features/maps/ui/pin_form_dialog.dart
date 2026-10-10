@@ -178,6 +178,7 @@ class _ColorDot extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return InkResponse(
       onTap: onTap,
+      radius: 22,
       child: Container(
         width: 30,
         height: 30,

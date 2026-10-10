@@ -1033,6 +1033,30 @@ void main() {
       );
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('el área de pulsación de los espacios abraza los puntos y los centra', (
+      tester,
+    ) async {
+      final repo = _repo(
+        combat: makeCombatJson(spellSlots: const [], pactSlots: {'level': 5, 'max': 2, 'used': 0}),
+      );
+      await _pump(tester, characters: repo);
+      final pips = find.byKey(const Key('combat-pact-slots-pips'));
+      final ink = find.descendant(of: pips, matching: find.byType(InkWell));
+      final inkRect = tester.getRect(ink);
+      final dots = tester.getRect(find.descendant(of: pips, matching: find.byType(Wrap)));
+      // Two 24 px pips with 8 px between them, 8 px of padding on every side.
+      expect(dots.width, 56);
+      expect(inkRect.width, 72);
+      expect(inkRect.height, 48);
+      expect(dots.center, inkRect.center);
+      // The pip row itself is the ink area: it does not stretch to the row.
+      expect(tester.getRect(pips), inkRect);
+      expect(
+        inkRect.width,
+        lessThan(tester.getRect(find.byKey(const Key('combat-pact-slots'))).width),
+      );
+    });
   });
 
   group('conjuros en combate', () {

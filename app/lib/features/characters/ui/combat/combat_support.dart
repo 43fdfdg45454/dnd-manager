@@ -120,6 +120,9 @@ class PipRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = Theme.of(context).colorScheme.primary;
+    // The ink hugs the pips, with the same padding on every side, so the pips
+    // sit centred in the highlight. A parent that would stretch it (a tight
+    // `Expanded`) wraps it in an `Align` instead.
     return Semantics(
       label: semanticLabel,
       child: InkWell(
@@ -129,7 +132,7 @@ class PipRow extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            padding: const EdgeInsets.all(8),
             child: Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
               spacing: 8,

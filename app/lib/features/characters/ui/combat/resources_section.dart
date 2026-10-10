@@ -109,13 +109,16 @@ class SpellSlotsSection extends ConsumerWidget {
           ),
         ),
         Expanded(
-          child: PipRow(
-            key: Key('$key-pips'),
-            total: slot.max,
-            filled: slot.max - slot.used,
-            semanticLabel: '$label: ${slot.max - slot.used} de ${slot.max} disponibles',
-            onTap: canEdit ? () => _spend(context, ref, level, slot) : null,
-            onLongPress: canEdit ? () => _restore(context, ref, level, slot) : null,
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: PipRow(
+              key: Key('$key-pips'),
+              total: slot.max,
+              filled: slot.max - slot.used,
+              semanticLabel: '$label: ${slot.max - slot.used} de ${slot.max} disponibles',
+              onTap: canEdit ? () => _spend(context, ref, level, slot) : null,
+              onLongPress: canEdit ? () => _restore(context, ref, level, slot) : null,
+            ),
           ),
         ),
       ],
