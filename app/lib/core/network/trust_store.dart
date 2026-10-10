@@ -17,7 +17,7 @@ class TrustStore {
   /// How many user certificates were added to [context].
   final int certificateCount;
 
-  static const MethodChannel channel = MethodChannel('com.dndcompanion/trust');
+  static const MethodChannel channel = MethodChannel('com.opentrpg/trust');
 
   /// Reads the user CAs from the platform (none off Android or when the call
   /// fails) and builds the context. Never throws.

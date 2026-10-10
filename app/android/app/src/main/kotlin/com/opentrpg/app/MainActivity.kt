@@ -10,7 +10,7 @@ import java.security.cert.X509Certificate
 class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.dndcompanion/trust")
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.opentrpg/trust")
             .setMethodCallHandler { call, result ->
                 if (call.method == "userCertificates") {
                     result.success(userCertificates())
