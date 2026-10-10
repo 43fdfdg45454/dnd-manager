@@ -270,15 +270,16 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
                         {
                             index = "folk-opcion-dote",
                             name = "Dote de ejemplo",
-                            grants = new { spells = new[] { new { index = "darkness", usesPerLongRest = 1 } }, spellcastingAbility = "cha" },
+                            grants = new { spells = new[] { new { index = "darkness", usesPerLongRest = 0 } }, spellcastingAbility = "suerte" },
                         },
                     },
                 },
             },
         };
         var optionErrors = await ReadErrorsAsync(await admin.PostAsync(PacksUrl, Json(option)));
-        Assert.Contains(optionErrors, e => e.StartsWith("optionSets[0].options[0].grants.spells[0].usesPerLongRest: Solo se admite en las razas", StringComparison.Ordinal));
-        Assert.Contains("optionSets[0].options[0].grants.spellcastingAbility: Solo se admite en las razas y subrazas.", optionErrors);
+        // Since phase 35B3 options and feats may grant spells with their own ability and uses (H37): only bad values fail.
+        Assert.Contains(optionErrors, e => e.StartsWith("optionSets[0].options[0].grants.spells[0].usesPerLongRest:", StringComparison.Ordinal));
+        Assert.Contains(optionErrors, e => e.StartsWith("optionSets[0].options[0].grants.spellcastingAbility: Característica desconocida", StringComparison.Ordinal));
     }
 
     private static StringContent Json(object value) => new(JsonSerializer.Serialize(value), Encoding.UTF8, "application/json");
