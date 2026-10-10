@@ -226,13 +226,22 @@ class _ItemTile extends ConsumerWidget {
           confirmLabel: 'Devolver',
         );
         if (quantity == null || !context.mounted) return;
-        await runItemAction(
-          context,
-          () => ref
-              .read(stashControllerProvider(character.campaignId).notifier)
-              .giveBack(characterId: character.id, characterItemId: item.id, quantity: quantity),
-          success: 'Devuelto al botín del grupo.',
-        );
+        // The stash controller is auto-disposed: kept alive while the request
+        // runs, since the stash card may not be on screen (e.g. the inventory
+        // sub-tab of "Detalle").
+        final stash = stashControllerProvider(character.campaignId);
+        final keepAlive = ProviderScope.containerOf(context).listen(stash, (_, _) {});
+        try {
+          await runItemAction(
+            context,
+            () => ref
+                .read(stash.notifier)
+                .giveBack(characterId: character.id, characterItemId: item.id, quantity: quantity),
+            success: 'Devuelto al botín del grupo.',
+          );
+        } finally {
+          keepAlive.close();
+        }
       case _ItemAction.remove:
         final quantity = await showDialog<int>(
           context: context,
