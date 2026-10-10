@@ -1,10 +1,10 @@
-import 'package:opentrpg/core/auth/auth_controller.dart';
-import 'package:opentrpg/core/auth/auth_state.dart';
-import 'package:opentrpg/features/characters/data/models.dart';
-import 'package:opentrpg/features/characters/ui/combat/recovery_reminder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/core/auth/auth_controller.dart';
+import 'package:opentrpg_core/core/auth/auth_state.dart';
+import 'package:opentrpg_dnd5e/characters/models.dart';
+import 'package:opentrpg_dnd5e/characters/ui/combat/recovery_reminder.dart';
 
 import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';

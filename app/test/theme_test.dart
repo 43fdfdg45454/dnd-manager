@@ -1,16 +1,17 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
-import 'package:opentrpg/core/theme/app_theme.dart';
-import 'package:opentrpg/features/catalog/data/catalog_controllers.dart';
-import 'package:opentrpg/features/catalog/data/models.dart';
-import 'package:opentrpg/features/home/ui/attribution_page.dart';
-import 'helpers/fakes.dart' show dnd5eSystemsOverride;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/core/theme/app_theme.dart';
+import 'package:opentrpg_core/features/home/ui/attribution_page.dart';
+import 'package:opentrpg_dnd5e/catalog/data/catalog_controllers.dart';
+import 'package:opentrpg_dnd5e/catalog/data/models.dart';
+
+import 'helpers/fakes.dart' show dnd5eSystemsOverride;
 
 /// WCAG 2.x relative luminance.
 double _luminance(Color color) {

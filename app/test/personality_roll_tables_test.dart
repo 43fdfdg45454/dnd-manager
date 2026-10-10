@@ -1,10 +1,10 @@
-import 'package:opentrpg/core/ui/selection_grid.dart';
-import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
-import 'package:opentrpg/features/catalog/data/models.dart';
-import 'package:opentrpg/features/catalog/ui/roll_table_widgets.dart';
-import 'package:opentrpg/features/characters/data/character_wizard_controller.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/core/ui/selection_grid.dart';
+import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg_dnd5e/catalog/data/models.dart';
+import 'package:opentrpg_dnd5e/catalog/ui/roll_table_widgets.dart';
+import 'package:opentrpg_dnd5e/characters/data/character_wizard_controller.dart';
 
 import 'dice_test.dart' show SequenceRandom;
 import 'helpers/app_pump.dart';

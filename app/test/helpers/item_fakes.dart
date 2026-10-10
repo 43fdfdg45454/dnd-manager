@@ -1,11 +1,11 @@
 import 'package:dio/dio.dart';
-import 'package:opentrpg/features/catalog/data/models.dart';
-import 'package:opentrpg/features/items/data/campaign_items_repository.dart';
-import 'package:opentrpg/features/items/data/inventory_repository.dart';
-import 'package:opentrpg/features/items/data/models.dart';
-import 'package:opentrpg/features/items/data/shops_repository.dart';
-import 'package:opentrpg/features/items/domain/items_format.dart';
-import 'package:opentrpg/systems/dnd5e/items/dnd5e_item.dart';
+import 'package:opentrpg_core/features/items/data/campaign_items_repository.dart';
+import 'package:opentrpg_core/features/items/data/inventory_repository.dart';
+import 'package:opentrpg_core/features/items/data/models.dart';
+import 'package:opentrpg_core/features/items/data/shops_repository.dart';
+import 'package:opentrpg_core/features/items/domain/items_format.dart';
+import 'package:opentrpg_dnd5e/catalog/data/models.dart';
+import 'package:opentrpg_dnd5e/items/dnd5e_item.dart';
 
 import 'character_fakes.dart';
 import 'fakes.dart';

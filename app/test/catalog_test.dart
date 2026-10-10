@@ -1,21 +1,20 @@
-import 'package:opentrpg/core/router/app_router.dart';
-import 'package:opentrpg/core/ui/source_chip.dart';
-import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
-import 'package:opentrpg/features/catalog/data/models.dart';
-import 'package:opentrpg/features/catalog/domain/catalog_format.dart';
-import 'package:opentrpg/features/catalog/ui/class_detail_page.dart';
-import 'package:opentrpg/features/compendium/ui/compendium_page.dart';
-import 'package:opentrpg/features/catalog/ui/item_detail_page.dart';
-import 'package:opentrpg/features/catalog/ui/spell_detail_page.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:opentrpg_core/core/router/app_router.dart';
+import 'package:opentrpg_core/core/ui/source_chip.dart';
+import 'package:opentrpg_core/features/compendium/ui/compendium_page.dart';
+import 'package:opentrpg_dnd5e/catalog/data/catalog_repository.dart';
+import 'package:opentrpg_dnd5e/catalog/data/models.dart';
+import 'package:opentrpg_dnd5e/catalog/domain/catalog_format.dart';
+import 'package:opentrpg_dnd5e/catalog/ui/class_detail_page.dart';
+import 'package:opentrpg_dnd5e/catalog/ui/item_detail_page.dart';
+import 'package:opentrpg_dnd5e/catalog/ui/spell_detail_page.dart';
+import 'package:opentrpg_dnd5e/dnd5e_routes.dart';
 
 import 'helpers/catalog_fakes.dart';
 import 'helpers/fakes.dart';
-
-import 'package:opentrpg/systems/dnd5e/dnd5e_routes.dart';
 
 final _wizard = ClassSummary(
   index: 'wizard',

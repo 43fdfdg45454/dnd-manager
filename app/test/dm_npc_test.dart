@@ -1,6 +1,6 @@
-import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
 
 import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';

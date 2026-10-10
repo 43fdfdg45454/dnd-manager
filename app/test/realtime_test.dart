@@ -1,15 +1,15 @@
-import 'package:opentrpg/core/network/connectivity.dart';
-import 'package:opentrpg/core/realtime/realtime_events.dart';
-import 'package:opentrpg/systems/dnd5e/dnd5e_events.dart';
-import 'package:opentrpg/core/realtime/realtime_hub.dart';
-import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
-import 'package:opentrpg/features/campaigns/ui/campaign_shell.dart';
-import 'package:opentrpg/features/characters/data/models.dart';
-import 'package:opentrpg/features/session/data/models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:opentrpg_core/core/network/connectivity.dart';
+import 'package:opentrpg_core/core/realtime/realtime_events.dart';
+import 'package:opentrpg_core/core/realtime/realtime_hub.dart';
+import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg_core/features/campaigns/ui/campaign_shell.dart';
+import 'package:opentrpg_core/features/session/data/models.dart';
+import 'package:opentrpg_dnd5e/characters/models.dart';
+import 'package:opentrpg_dnd5e/dnd5e_events.dart';
 
 import 'helpers/app_pump.dart';
 import 'helpers/character_fakes.dart';

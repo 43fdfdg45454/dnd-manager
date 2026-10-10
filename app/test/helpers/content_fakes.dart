@@ -2,19 +2,19 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:opentrpg/core/content/content_visibility.dart';
-import 'package:opentrpg/core/files/file_disk_cache.dart';
-import 'package:opentrpg/core/files/files_repository.dart';
-import 'package:opentrpg/core/files/stored_file.dart';
-import 'package:opentrpg/features/library/data/library_repository.dart';
-import 'package:opentrpg/features/library/data/library_storage.dart';
-import 'package:opentrpg/features/library/data/models.dart';
-import 'package:opentrpg/features/lore/data/lore_repository.dart';
-import 'package:opentrpg/features/lore/data/models.dart';
-import 'package:opentrpg/features/maps/data/maps_repository.dart';
-import 'package:opentrpg/features/maps/data/models.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:image_picker/image_picker.dart';
+import 'package:opentrpg_core/core/content/content_visibility.dart';
+import 'package:opentrpg_core/core/files/file_disk_cache.dart';
+import 'package:opentrpg_core/core/files/files_repository.dart';
+import 'package:opentrpg_core/core/files/stored_file.dart';
+import 'package:opentrpg_core/features/library/data/library_repository.dart';
+import 'package:opentrpg_core/features/library/data/library_storage.dart';
+import 'package:opentrpg_core/features/library/data/models.dart';
+import 'package:opentrpg_core/features/lore/data/lore_repository.dart';
+import 'package:opentrpg_core/features/lore/data/models.dart';
+import 'package:opentrpg_core/features/maps/data/maps_repository.dart';
+import 'package:opentrpg_core/features/maps/data/models.dart';
 
 import 'fakes.dart';
 

@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter_riverpod/misc.dart' show Override;
-import 'package:opentrpg/features/characters/data/characters_repository.dart';
-import 'package:opentrpg/features/characters/data/models.dart';
-import 'package:opentrpg/systems/dnd5e/characters/dnd5e_characters_repository.dart';
+import 'package:opentrpg_core/features/characters/data/characters_repository.dart';
+import 'package:opentrpg_dnd5e/characters/dnd5e_characters_repository.dart';
+import 'package:opentrpg_dnd5e/characters/models.dart';
 
 import 'fakes.dart';
 

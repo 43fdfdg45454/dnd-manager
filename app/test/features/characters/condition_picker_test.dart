@@ -1,9 +1,9 @@
-import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
-import 'package:opentrpg/features/catalog/data/models.dart' show Condition;
-import 'package:opentrpg/features/characters/ui/combat/vitals_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_dnd5e/catalog/data/catalog_repository.dart';
+import 'package:opentrpg_dnd5e/catalog/data/models.dart' show Condition;
+import 'package:opentrpg_dnd5e/characters/ui/combat/vitals_section.dart';
 
 import '../../helpers/catalog_fakes.dart';
 

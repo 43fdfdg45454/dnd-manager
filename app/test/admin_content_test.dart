@@ -1,15 +1,15 @@
 import 'package:dio/dio.dart';
-import 'package:opentrpg/core/auth/auth_controller.dart';
-import 'package:opentrpg/core/auth/auth_state.dart';
-import 'package:opentrpg/core/auth/user_dto.dart';
-import 'package:opentrpg/features/admin/data/admin_users_repository.dart';
-import 'package:opentrpg/features/admin/data/content_packs_controller.dart';
-import 'package:opentrpg/features/admin/data/content_packs_repository.dart';
-import 'package:opentrpg/features/admin/domain/content_pack.dart';
-import 'package:opentrpg/features/admin/ui/admin_content_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/core/auth/auth_controller.dart';
+import 'package:opentrpg_core/core/auth/auth_state.dart';
+import 'package:opentrpg_core/core/auth/user_dto.dart';
+import 'package:opentrpg_core/features/admin/data/admin_users_repository.dart';
+import 'package:opentrpg_core/features/admin/data/content_packs_controller.dart';
+import 'package:opentrpg_core/features/admin/data/content_packs_repository.dart';
+import 'package:opentrpg_core/features/admin/domain/content_pack.dart';
+import 'package:opentrpg_core/features/admin/ui/admin_content_page.dart';
 
 import 'helpers/app_pump.dart';
 import 'helpers/content_pack_fakes.dart';

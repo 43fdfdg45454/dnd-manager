@@ -3,44 +3,44 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:opentrpg/core/auth/auth_controller.dart';
-import 'package:opentrpg/core/auth/auth_state.dart';
-import 'package:opentrpg/core/auth/user_dto.dart';
-import 'package:opentrpg/core/content/content_visibility.dart';
-import 'package:opentrpg/core/files/authenticated_image.dart';
-import 'package:opentrpg/core/files/external_file_opener.dart';
-import 'package:opentrpg/core/files/file_disk_cache.dart';
-import 'package:opentrpg/core/files/files_repository.dart';
-import 'package:opentrpg/core/files/image_upload.dart';
-import 'package:opentrpg/core/files/stored_file.dart';
-import 'package:opentrpg/core/network/api_client.dart';
-import 'package:opentrpg/core/network/api_error.dart';
-import 'package:opentrpg/core/router/app_router.dart';
-import 'package:opentrpg/core/storage/local_preferences.dart';
-import 'package:opentrpg/core/ui/markdown_view.dart';
-import 'package:opentrpg/features/campaigns/data/campaigns_repository.dart';
-import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
-import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
-import 'package:opentrpg/features/characters/ui/character_page.dart';
-import 'package:opentrpg/features/items/data/inventory_repository.dart';
-import 'package:opentrpg/features/library/data/library_controllers.dart';
-import 'package:opentrpg/features/library/data/library_repository.dart';
-import 'package:opentrpg/features/library/data/library_storage.dart';
-import 'package:opentrpg/features/library/data/models.dart';
-import 'package:opentrpg/features/library/ui/library_page.dart';
-import 'package:opentrpg/features/lore/data/lore_repository.dart';
-import 'package:opentrpg/features/lore/data/models.dart';
-import 'package:opentrpg/features/lore/ui/lore_editor_page.dart';
-import 'package:opentrpg/features/lore/ui/lore_entry_page.dart';
-import 'package:opentrpg/features/maps/data/maps_repository.dart';
-import 'package:opentrpg/features/maps/data/models.dart' show parsePinColor;
-import 'package:opentrpg/features/maps/ui/map_viewer_page.dart';
-import 'package:opentrpg/features/session/data/messages_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:opentrpg_core/core/auth/auth_controller.dart';
+import 'package:opentrpg_core/core/auth/auth_state.dart';
+import 'package:opentrpg_core/core/auth/user_dto.dart';
+import 'package:opentrpg_core/core/content/content_visibility.dart';
+import 'package:opentrpg_core/core/files/authenticated_image.dart';
+import 'package:opentrpg_core/core/files/external_file_opener.dart';
+import 'package:opentrpg_core/core/files/file_disk_cache.dart';
+import 'package:opentrpg_core/core/files/files_repository.dart';
+import 'package:opentrpg_core/core/files/image_upload.dart';
+import 'package:opentrpg_core/core/files/stored_file.dart';
+import 'package:opentrpg_core/core/network/api_client.dart';
+import 'package:opentrpg_core/core/network/api_error.dart';
+import 'package:opentrpg_core/core/router/app_router.dart';
+import 'package:opentrpg_core/core/storage/local_preferences.dart';
+import 'package:opentrpg_core/core/ui/markdown_view.dart';
+import 'package:opentrpg_core/features/campaigns/data/campaigns_repository.dart';
+import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg_core/features/characters/ui/character_page.dart';
+import 'package:opentrpg_core/features/items/data/inventory_repository.dart';
+import 'package:opentrpg_core/features/library/data/library_controllers.dart';
+import 'package:opentrpg_core/features/library/data/library_repository.dart';
+import 'package:opentrpg_core/features/library/data/library_storage.dart';
+import 'package:opentrpg_core/features/library/data/models.dart';
+import 'package:opentrpg_core/features/library/ui/library_page.dart';
+import 'package:opentrpg_core/features/lore/data/lore_repository.dart';
+import 'package:opentrpg_core/features/lore/data/models.dart';
+import 'package:opentrpg_core/features/lore/ui/lore_editor_page.dart';
+import 'package:opentrpg_core/features/lore/ui/lore_entry_page.dart';
+import 'package:opentrpg_core/features/maps/data/maps_repository.dart';
+import 'package:opentrpg_core/features/maps/data/models.dart' show parsePinColor;
+import 'package:opentrpg_core/features/maps/ui/map_viewer_page.dart';
+import 'package:opentrpg_core/features/session/data/messages_repository.dart';
+import 'package:opentrpg_dnd5e/catalog/data/catalog_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'helpers/app_pump.dart';
@@ -134,9 +134,7 @@ Future<void> _pumpApp(
         filesRepositoryProvider.overrideWithValue(
           files ?? FakeFilesRepository(storage: fakeStorage),
         ),
-        ...fakeCharactersOverrides(
-          characters ?? FakeCharactersRepository(isDm: role.isAtLeastDm),
-        ),
+        ...fakeCharactersOverrides(characters ?? FakeCharactersRepository(isDm: role.isAtLeastDm)),
         inventoryRepositoryProvider.overrideWithValue(FakeInventoryRepository()),
         catalogRepositoryProvider.overrideWithValue(FakeCatalogRepository()),
         localPreferencesProvider.overrideWithValue(prefs),

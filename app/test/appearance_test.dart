@@ -1,16 +1,16 @@
-import 'package:opentrpg/app.dart';
-import 'package:opentrpg/core/auth/auth_controller.dart';
-import 'package:opentrpg/core/auth/auth_state.dart';
-import 'package:opentrpg/core/motion/motion_settings.dart';
-import 'package:opentrpg/core/router/app_router.dart';
-import 'package:opentrpg/core/storage/local_preferences.dart';
-import 'package:opentrpg/core/theme/app_theme.dart';
-import 'package:opentrpg/features/characters/domain/class_theme.dart';
-import 'package:opentrpg/features/settings/data/appearance_controller.dart';
-import 'package:opentrpg/features/settings/ui/appearance_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg/app.dart';
+import 'package:opentrpg_core/core/auth/auth_controller.dart';
+import 'package:opentrpg_core/core/auth/auth_state.dart';
+import 'package:opentrpg_core/core/motion/motion_settings.dart';
+import 'package:opentrpg_core/core/router/app_router.dart';
+import 'package:opentrpg_core/core/storage/local_preferences.dart';
+import 'package:opentrpg_core/core/theme/app_theme.dart';
+import 'package:opentrpg_core/features/settings/data/appearance_controller.dart';
+import 'package:opentrpg_core/features/settings/ui/appearance_page.dart';
+import 'package:opentrpg_dnd5e/characters/domain/class_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'helpers/app_pump.dart';

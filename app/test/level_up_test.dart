@@ -1,16 +1,16 @@
 import 'package:dio/dio.dart';
-import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
-import 'package:opentrpg/features/catalog/data/models.dart' show SpellDetail;
-import 'package:opentrpg/features/catalog/ui/catalog_detail_links.dart';
-import 'package:opentrpg/features/catalog/ui/spell_detail_page.dart';
-import 'package:opentrpg/features/characters/data/level_up_controller.dart';
-import 'package:opentrpg/features/characters/data/models.dart';
-import 'package:opentrpg/features/characters/ui/level_up/hit_points_step.dart';
-import 'package:opentrpg/features/dice/data/dice_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg_core/features/dice/data/dice_controller.dart';
+import 'package:opentrpg_dnd5e/catalog/data/models.dart' show SpellDetail;
+import 'package:opentrpg_dnd5e/catalog/ui/catalog_detail_links.dart';
+import 'package:opentrpg_dnd5e/catalog/ui/spell_detail_page.dart';
+import 'package:opentrpg_dnd5e/characters/data/level_up_controller.dart';
+import 'package:opentrpg_dnd5e/characters/models.dart';
+import 'package:opentrpg_dnd5e/characters/ui/level_up/hit_points_step.dart';
 
 import 'dice_test.dart' show SequenceRandom;
 import 'helpers/app_pump.dart';
@@ -345,9 +345,7 @@ void main() {
     Future<(ProviderContainer, FakeCharactersRepository)> load(Map<String, dynamic> plan) async {
       final characters = FakeCharactersRepository(characters: [_character()]);
       characters.levelUpPlans[''] = plan;
-      final container = ProviderContainer(
-        overrides: [...fakeCharactersOverrides(characters)],
-      );
+      final container = ProviderContainer(overrides: [...fakeCharactersOverrides(characters)]);
       addTearDown(container.dispose);
       container.listen(levelUpControllerProvider('ch1'), (_, _) {});
       await pumpEventQueue();

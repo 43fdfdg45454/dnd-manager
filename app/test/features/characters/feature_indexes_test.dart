@@ -15,7 +15,7 @@ void main() {
 
     final pattern = RegExp(r"featureIndex: '([^']+)'");
     final used = <String>{};
-    for (final file in Directory('lib/features/characters/ui/combat/panels').listSync()) {
+    for (final file in Directory('packages/dnd5e/lib/characters/ui/combat/panels').listSync()) {
       if (file is! File || !file.path.endsWith('.dart')) continue;
       for (final m in pattern.allMatches(file.readAsStringSync())) {
         used.add(m.group(1)!);

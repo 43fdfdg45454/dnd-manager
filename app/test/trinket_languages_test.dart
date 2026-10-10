@@ -1,9 +1,9 @@
-import 'package:opentrpg/core/ui/selection_grid.dart';
-import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
-import 'package:opentrpg/features/catalog/data/models.dart';
-import 'package:opentrpg/features/characters/data/models.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/core/ui/selection_grid.dart';
+import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg_dnd5e/catalog/data/models.dart';
+import 'package:opentrpg_dnd5e/characters/models.dart';
 
 import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';
