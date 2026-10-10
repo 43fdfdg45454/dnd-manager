@@ -62,8 +62,12 @@ void main() {
           'lostSavingThrows': [
             {'type': 'wis', 'source': 'feat', 'label': 'Renuncia (dote inicial)'},
           ],
+          'lostSkills': [
+            {'type': 'athletics', 'source': 'race', 'label': 'Pétreo'},
+          ],
         },
       );
+      expect(c.sheet.lostSkills.single.type, 'athletics');
       expect(c.sheet.immunities.single.type, 'poison');
       expect(c.sheet.lostSavingThrows.single.label, 'Renuncia (dote inicial)');
 
@@ -78,6 +82,9 @@ void main() {
       expect(find.text('hechizado · Mente firme (nivel 3)'), findsOneWidget);
       expect(find.byKey(const Key('lost-save-wis')), findsOneWidget);
       expect(find.textContaining('Renuncia (dote inicial)'), findsOneWidget);
+      expect(find.byKey(const Key('lost-skills')), findsOneWidget);
+      expect(find.byKey(const Key('lost-skill-athletics')), findsOneWidget);
+      expect(find.textContaining('Pétreo'), findsOneWidget);
     });
 
     testWidgets('sin defensas no hay sección', (tester) async {
@@ -164,6 +171,85 @@ void main() {
   });
 
   group('Hechizos', () {
+    testWidgets('los conjuros concedidos van en su sección y la característica cambiada se marca', (
+      tester,
+    ) async {
+      final repository = FakeCharactersRepository(
+        characters: [
+          makeCharacterJson(
+            status: 'Active',
+            classes: [
+              {'classIndex': 'wizard', 'className': 'Wizard', 'level': 3},
+            ],
+            spellcasting: [
+              {
+                'classIndex': 'wizard',
+                'ability': 'wis',
+                'saveDc': 13,
+                'attackBonus': 5,
+                'abilityOverridden': true,
+              },
+              {
+                'classIndex': 'brio-ejemplo-chispa',
+                'name': 'Chispa de ejemplo',
+                'ability': 'int',
+                'saveDc': 13,
+                'attackBonus': 5,
+              },
+            ],
+            overrides: [
+              {'field': 'spellcastingAbility.wizard', 'value': 5, 'note': 'Regla de mesa'},
+            ],
+            spells: [
+              {
+                'spellIndex': 'magic-missile',
+                'classIndex': 'brio-ejemplo-chispa',
+                'name': 'Magic Missile',
+                'level': 1,
+                'alwaysPrepared': true,
+              },
+              {'spellIndex': 'fire-bolt', 'classIndex': 'wizard', 'name': 'Fire Bolt', 'level': 0},
+            ],
+            resources: [
+              {
+                'id': 'r1',
+                'key': 'brio-ejemplo-chispa.magic-missile',
+                'name': 'Magic Missile',
+                'max': 1,
+                'used': 0,
+                'recharge': 'LongRest',
+              },
+            ],
+          ),
+        ],
+      );
+      await pumpRealApp(
+        tester,
+        location: '/characters/ch1',
+        fakes: AppFakes(
+          campaigns: FakeCampaignsRepository(campaigns: [makeCampaign()]),
+          characters: repository,
+        ),
+      );
+      await openDetailTab(tester, 'tab-spells');
+
+      final section = find.byKey(const Key('spells-granted-brio-ejemplo-chispa'));
+      expect(section, findsOneWidget);
+      expect(
+        find.descendant(of: section, matching: find.text('Chispa de ejemplo: ')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('spell-brio-ejemplo-chispa-magic-missile')), findsOneWidget);
+      expect(find.textContaining('1 de 1 uso por descanso largo'), findsOneWidget);
+      // The granted spell is not repeated in the level lists.
+      expect(find.byKey(const Key('spell-magic-missile')), findsNothing);
+      expect(find.byKey(const Key('spell-fire-bolt')), findsOneWidget);
+
+      expect(find.byKey(const Key('sheet-spell-ability-wizard')), findsOneWidget);
+      expect(find.text(' · Sabiduría'), findsOneWidget);
+      expect(find.byKey(const Key('override-spellcastingAbility.wizard')), findsOneWidget);
+    });
+
     testWidgets('CD y ataque propios de los trucos y rango de crítico de conjuro', (tester) async {
       final repository = FakeCharactersRepository(
         characters: [

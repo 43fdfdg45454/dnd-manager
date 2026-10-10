@@ -559,10 +559,14 @@ class Spellcasting {
     this.cantripAttackBonus,
     this.criticalRange = 20,
     this.criticalRangeSource,
+    this.name,
+    this.abilityOverridden = false,
   });
 
   factory Spellcasting.fromJson(Map<String, dynamic> json) => Spellcasting(
     classIndex: _str(json['classIndex']),
+    name: _strOrNull(json['name']),
+    abilityOverridden: json['abilityOverridden'] == true,
     ability: _str(json['ability']),
     saveDc: _int(json['saveDc']) ?? 0,
     attackBonus: _int(json['attackBonus']) ?? 0,
@@ -587,6 +591,13 @@ class Spellcasting {
   final int saveDc;
   final int attackBonus;
   final int? preparedMax;
+
+  /// Name of a feat, option or subclass that grants spells cast with its own
+  /// ability ([classIndex] is its index); null for classes and the race.
+  final String? name;
+
+  /// The ability was chosen by an override (`spellcastingAbility.<classIndex>`).
+  final bool abilityOverridden;
 
   /// Spells known allowed at the class level (classes that cast through a
   /// subclass of a content pack); null when the class has no fixed number.
@@ -757,6 +768,7 @@ class CharacterSheet {
     this.immunities = const [],
     this.conditionImmunities = const [],
     this.lostSavingThrows = const [],
+    this.lostSkills = const [],
     this.classSaveDcs = const [],
     this.passiveInvestigation = 10,
     this.passiveInsight = 10,
@@ -806,6 +818,7 @@ class CharacterSheet {
       immunities: _objects(json['immunities'], SheetDefense.fromJson),
       conditionImmunities: _objects(json['conditionImmunities'], SheetDefense.fromJson),
       lostSavingThrows: _objects(json['lostSavingThrows'], SheetDefense.fromJson),
+      lostSkills: _objects(json['lostSkills'], SheetDefense.fromJson),
       classSaveDcs: _objects(json['classSaveDcs'], ClassSaveDc.fromJson),
       passiveInvestigation: _int(json['passiveInvestigation']) ?? 10,
       passiveInsight: _int(json['passiveInsight']) ?? 10,
@@ -859,6 +872,10 @@ class CharacterSheet {
 
   /// Saving throw proficiencies taken away by the race or a feat.
   final List<SheetDefense> lostSavingThrows;
+
+  /// Skill proficiencies taken away (`grants.removeSkills`); [SheetDefense.type]
+  /// is the skill index.
+  final List<SheetDefense> lostSkills;
 
   /// Save DCs of the class features (8 + proficiency + ability).
   final List<ClassSaveDc> classSaveDcs;
