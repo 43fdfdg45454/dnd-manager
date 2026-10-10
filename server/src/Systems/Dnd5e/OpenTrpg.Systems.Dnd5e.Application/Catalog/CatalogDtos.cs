@@ -241,7 +241,8 @@ public sealed record PickChoiceDto(int Choose, IReadOnlyList<OriginOptionDto> Fr
 /// <summary>A cantrip of the <see cref="SpellList"/> class ("any" for every list), narrowed to <see cref="From"/> when not empty.</summary>
 public sealed record CantripChoiceDto(int Choose, string SpellList, IReadOnlyList<OriginOptionDto> From);
 
-public sealed record FeatChoiceDto(int Choose);
+/// <param name="SetId">Option set of the feats (heritage feats); null = the <c>feats</c> set.</param>
+public sealed record FeatChoiceDto(int Choose, string? SetId = null);
 
 /// <summary>Breath weapon of an option (area, saving throw ability, damage dice by character level).</summary>
 public sealed record BreathWeaponDto(string Name, string Area, string SaveAbility, IReadOnlyDictionary<int, string> DamageAtCharacterLevel);
@@ -280,7 +281,7 @@ public sealed record RaceChoicesDto(
             Pick(choices.Languages),
             Pick(choices.Tools),
             choices.Cantrip is { } c ? new CantripChoiceDto(c.Choose, c.SpellList, Options(c.From)) : null,
-            choices.Feats is { } f ? new FeatChoiceDto(f.Choose) : null,
+            choices.Feats is { } f ? new FeatChoiceDto(f.Choose, f.SetId) : null,
             choices.TraitOptions
                 .Select(t => new TraitOptionChoiceDto(
                     t.Key,

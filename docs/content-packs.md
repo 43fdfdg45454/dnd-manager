@@ -490,6 +490,31 @@ las del SRD. Son opciones del conjunto `feats` y admiten los mismos campos que u
 | `description` | `string[]?` | Párrafos. |
 | `prerequisitesText`, `prerequisites` | | Como en [`Option`](#option). |
 | `abilityIncrease`, `modifiers`, `grants`, `resource` | | Como en [`Option`](#option). |
+| `creationOnly` | `bool?` | `true`: solo se ofrece en las elecciones de origen al crear el personaje (`choices.feats` de raza, subraza o trasfondo), nunca en una mejora de característica ni con `alsoFrom`. |
+| `starter` | `bool?` | `true`: dote inicial. Solo se ofrece en la elección opcional "Dote inicial" de nivel 1 cuando la campaña activa las dotes iniciales (ver abajo). Implica `creationOnly` (poner `creationOnly: false` con `starter: true` es un error) y no aparece en `choices.feats`. |
+
+#### Dotes iniciales
+
+Regla variante por campaña. El Owner o un DM la activa junto a los paquetes de contenido con
+`PUT /api/v1/systems/dnd5e/campaigns/{id}/rules` (`{ "starterFeatsEnabled": true }`); `GET` de la misma ruta
+devuelve `{ starterFeatsEnabled, starterFeatsAvailable }`, donde `starterFeatsAvailable` indica si algún paquete
+activo de la campaña trae dotes `starter` (la app solo muestra el interruptor entonces). No hay lista de dotes
+permitidas: con el ajuste activo valen todas las dotes `starter` de los paquetes activos.
+
+Con el ajuste activo, un personaje de nivel 1 tiene en `GET /characters/{id}/origin-choices` la elección opcional
+`campaign.starterFeat` ("Dote inicial", `kind` `Feat`, `source` `campaign`, `required` 0), además de todas las
+demás. Se responde como cualquier dote de origen (`{ "feat": "...", "ability": "..." }`). Fuera del nivel 1 o con el
+ajuste apagado, la API la rechaza (400, `code: starter-feat-not-allowed`); una respuesta ya dada se conserva y se
+puede quitar.
+
+```json
+"feats": [
+  { "index": "reinos-ejemplo-chispa-temprana", "name": "Chispa temprana", "starter": true,
+    "description": ["Dote inicial ficticia."], "grants": { "skills": ["perception"] } },
+  { "index": "reinos-ejemplo-lazo-de-sangre", "name": "Lazo de sangre", "creationOnly": true,
+    "description": ["Dote de origen ficticia."] }
+]
+```
 
 Una dote también puede declararse como opción de `optionSets` con `"setId": "feats"`; `feats` es el
 atajo recomendado.
@@ -668,6 +693,8 @@ Mismo formato que los [`Grants` de las opciones](#option), con estas diferencias
 - Se aplican al crear o cambiar la raza (o la subraza) con origen "Raza" y se retiran al cambiarla. Si
   el personaje ya tenía la competencia por otra vía, la conserva con su origen.
 - `spells[].minLevel` es el **nivel total** del personaje (no el de una clase).
+- Un conjuro o truco que conceden a la vez la raza y la subraza es de la **subraza**: su `minLevel` sustituye al de
+  la raza (la raza lo da a nivel 3 y la subraza a nivel 1: el personaje de esa subraza lo tiene desde el nivel 1).
 - Los conjuros y trucos se conceden siempre preparados y sin clase (en la API, `classIndex` = `race`).
   La hoja muestra la sección "Raza" en Hechizos con la CD y el ataque calculados con
   `spellcastingAbility` (`str`..`cha`), **obligatoria** cuando hay `spells` o `cantrips`. Si raza y
@@ -803,7 +830,7 @@ asistente ya los pide en su propio paso).
 | `languages` | `{ "choose": 1-10, "from": ["Elvish"] }` | Idiomas (nombres, como las competencias de idioma); sin `from`, cualquiera. |
 | `tools` | `{ "choose": 1-10, "from": ["Catalejo de ejemplo"] }` | Competencias en herramientas; sin `from`, texto libre. |
 | `cantrip` | `{ "choose": 1, "spellList": "wizard", "from": ["light"] }` | Truco de la lista de esa clase (`any`: cualquiera), siempre preparado (clase `race` en la lista de conjuros). |
-| `feats` | `{ "choose": 1 }` | Una dote del conjunto `feats`, con sus efectos (humano variante). |
+| `feats` | `{ "choose": 1, "setId": "reinos-ejemplo-herencias" }` | Una dote del conjunto `feats`, con sus efectos (humano variante), salvo las `starter`. Con `setId`, una opción de ese conjunto (del SRD, de un paquete de `requires` o del propio paquete): dotes de herencia de una raza. |
 | `traitOptions` | `[{ "key": "linaje", "name": "Linaje", "choose": 1, "options": [{ "index": "linaje-escarcha", "name": "Escarcha", "description": ["..."], "damageType": "cold" }] }]` | Opciones de un rasgo; `damageType` da la resistencia a ese daño y `breathWeapon` (`{ "name", "area": "15 ft. cone", "save": "con", "damageAtCharacterLevel": { "1": "2d6", "6": "3d6" } }`) el arma de aliento de esa opción. |
 
 Las entradas de `from` en `abilityBonuses`, `skills`, `languages`, `tools` y `cantrip` pueden ser un

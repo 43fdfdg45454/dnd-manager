@@ -1886,6 +1886,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                     b.Property<string>("CostJson")
                         .HasColumnType("text");
 
+                    b.Property<bool>("CreationOnly")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1924,6 +1927,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)");
+
+                    b.Property<bool>("Starter")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Index");
 
@@ -2887,6 +2893,22 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                     b.ToTable("CharacterSpellSlots", (string)null);
                 });
 
+            modelBuilder.Entity("OpenTrpg.Systems.Dnd5e.Domain.Rules.Dnd5eCampaignRules", b =>
+                {
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("StarterFeatsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("CampaignId");
+
+                    b.ToTable("Dnd5eCampaignRules", (string)null);
+                });
+
             modelBuilder.Entity("OpenTrpg.Core.Domain.Campaigns.Campaign", b =>
                 {
                     b.HasOne("OpenTrpg.Core.Domain.Users.User", null)
@@ -3802,6 +3824,15 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                     b.HasOne("OpenTrpg.Systems.Dnd5e.Domain.Characters.Dnd5eCharacter", null)
                         .WithMany("SpellSlots")
                         .HasForeignKey("CharacterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OpenTrpg.Systems.Dnd5e.Domain.Rules.Dnd5eCampaignRules", b =>
+                {
+                    b.HasOne("OpenTrpg.Core.Domain.Campaigns.Campaign", null)
+                        .WithOne()
+                        .HasForeignKey("OpenTrpg.Systems.Dnd5e.Domain.Rules.Dnd5eCampaignRules", "CampaignId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

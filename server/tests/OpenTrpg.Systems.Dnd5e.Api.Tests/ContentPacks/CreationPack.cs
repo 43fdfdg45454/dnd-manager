@@ -22,8 +22,9 @@ internal static class CreationPack
         ["name"] = "Crónicas del vacío (prueba)",
         ["version"] = "1.0.0",
         ["classes"] = new JsonArray(Herald(), Keeper()),
-        ["optionSets"] = new JsonArray(Signals(), Tactics()),
+        ["optionSets"] = new JsonArray(Signals(), Tactics(), Heritages()),
         ["feats"] = Feats(),
+        ["races"] = Races(),
         ["items"] = Items(),
     };
 
@@ -201,6 +202,70 @@ internal static class CreationPack
                     ["choose"] = 1,
                     ["filter"] = new JsonObject { ["weaponCategories"] = new JsonArray("exotic"), ["firearms"] = false },
                 }),
+        },
+        // H13/H15: a feat only for origin choices and a starter feat.
+        new JsonObject { ["index"] = I("lazo-de-sangre"), ["name"] = "Lazo de sangre", ["creationOnly"] = true, ["description"] = new JsonArray("Dote ficticia.") },
+        new JsonObject
+        {
+            ["index"] = I("chispa-temprana"),
+            ["name"] = "Chispa temprana",
+            ["starter"] = true,
+            ["description"] = new JsonArray("Dote ficticia."),
+            ["grants"] = new JsonObject { ["skills"] = new JsonArray("perception") },
+        },
+    ];
+
+    /// <summary>H13: heritage feats of the "Medio vacío" race (an option set of their own).</summary>
+    private static JsonObject Heritages() => new()
+    {
+        ["setId"] = I("herencias"),
+        ["name"] = "Herencias",
+        ["options"] = new JsonArray(
+            Option("herencia-niebla", "Herencia de niebla", null, new JsonObject { ["skills"] = new JsonArray("stealth") }),
+            Option("herencia-ceniza", "Herencia de ceniza", null)),
+    };
+
+    /// <summary>
+    /// H13: "Medio vacío" picks one heritage feat; H13b: "Eco" grants a spell at level 3 and its subrace "Eco temprano"
+    /// the same spell at level 1.
+    /// </summary>
+    private static JsonArray Races() =>
+    [
+        new JsonObject
+        {
+            ["index"] = I("medio-vacio"),
+            ["name"] = "Medio vacío",
+            ["speed"] = 30,
+            ["size"] = "Medium",
+            ["languages"] = new JsonArray("Common"),
+            ["choices"] = new JsonObject
+            {
+                ["abilityBonuses"] = new JsonObject { ["choose"] = 2, ["amount"] = 1 },
+                ["feats"] = new JsonObject { ["choose"] = 1, ["setId"] = I("herencias") },
+            },
+        },
+        new JsonObject
+        {
+            ["index"] = I("eco"),
+            ["name"] = "Eco",
+            ["speed"] = 30,
+            ["size"] = "Medium",
+            ["languages"] = new JsonArray("Common"),
+            ["grants"] = new JsonObject
+            {
+                ["spells"] = new JsonArray(new JsonObject { ["index"] = "cure-wounds", ["minLevel"] = 3 }),
+                ["spellcastingAbility"] = "wis",
+            },
+            ["subraces"] = new JsonArray(new JsonObject
+            {
+                ["index"] = I("eco-temprano"),
+                ["name"] = "Eco temprano",
+                ["grants"] = new JsonObject
+                {
+                    ["spells"] = new JsonArray(new JsonObject { ["index"] = "cure-wounds", ["minLevel"] = 1 }),
+                    ["spellcastingAbility"] = "wis",
+                },
+            }),
         },
     ];
 

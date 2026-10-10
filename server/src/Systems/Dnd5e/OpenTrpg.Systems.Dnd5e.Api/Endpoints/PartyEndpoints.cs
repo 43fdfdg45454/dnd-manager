@@ -5,6 +5,7 @@ using OpenTrpg.Core.Application.Party;
 using Microsoft.AspNetCore.Mvc;
 using OpenTrpg.Systems.Dnd5e.Api.Endpoints;
 using OpenTrpg.Systems.Dnd5e.Application;
+using OpenTrpg.Systems.Dnd5e.Application.Campaigns;
 using OpenTrpg.Systems.Dnd5e.Application.Party;
 
 namespace OpenTrpg.Systems.Dnd5e.Api.Endpoints;
@@ -51,6 +52,26 @@ public static class PartyEndpoints
             .WithName("PartyRevokeLevel")
             .WithSummary("Retira el nivel concedido y aún no completado ({ characterIds? } opcional; sin lista, a todos). Requiere al menos DM.")
             .ProducesValidationProblem();
+
+        var rules = app.MapGroup("/campaigns/{campaignId:guid}/rules")
+            .WithTags(Dnd5eModule.Tag("Campaigns"))
+            .RequireAuthorization()
+            .RequireCampaignSystem(Dnd5eSystem.SystemId)
+            .AddEndpointFilter<ValidationFilter>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        rules.MapGet("", async (Guid campaignId, ClaimsPrincipal user, CampaignRulesHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.GetAsync(user.GetUserId(), campaignId, ct)))
+            .WithName("GetCampaignRules")
+            .WithSummary("Reglas opcionales de la campaña: starterFeatsEnabled y starterFeatsAvailable (algún paquete activo trae dotes starter). Miembros.");
+
+        rules.MapPut("", async (Guid campaignId, UpdateCampaignRulesRequest request, ClaimsPrincipal user, CampaignRulesHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.UpdateAsync(user.GetUserId(), campaignId, request, ct)))
+            .WithName("UpdateCampaignRules")
+            .WithSummary("Cambia las reglas opcionales ({ starterFeatsEnabled? }). Emite campaign.updated. Owner/DM.")
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status403Forbidden);
 
         return app;
     }

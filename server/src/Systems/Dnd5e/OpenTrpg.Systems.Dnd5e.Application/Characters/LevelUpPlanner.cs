@@ -854,7 +854,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             var taken = _active.Select(p => p.Item.Index).ToHashSet(StringComparer.Ordinal);
             return options
                 .Where(o => (allowed is null ? o.SetId == setId : allowed.Contains(o.Index)) || alsoFrom.Contains(o.SetId, StringComparer.Ordinal))
-                .Where(o => !taken.Contains(o.Index))
+                .Where(o => !taken.Contains(o.Index) && !o.CreationOnly)
                 .Select(o =>
                 {
                     var reason = WhyNot(o);

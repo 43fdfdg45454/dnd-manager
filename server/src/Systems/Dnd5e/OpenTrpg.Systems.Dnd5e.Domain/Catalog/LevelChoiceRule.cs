@@ -248,6 +248,18 @@ public sealed class OptionDefinition
     /// <summary>Free label of a feat of a content pack ("starter"...), or null.</summary>
     public string? Category { get; init; }
 
+    /// <summary>
+    /// Only offered by origin choices at creation (race, subrace or background feats, or the starter feat): never by
+    /// a level-up choice.
+    /// </summary>
+    public bool CreationOnly { get; init; }
+
+    /// <summary>
+    /// Starter feat: offered only by the optional "Dote inicial" choice at level 1 when the campaign enables it
+    /// (implies <see cref="CreationOnly"/>).
+    /// </summary>
+    public bool Starter { get; init; }
+
     public OptionPrerequisites Prerequisites => LevelChoiceJson.ParsePrerequisites(PrerequisitesJson);
 
     public IReadOnlyList<ChoiceModifier> Modifiers => LevelChoiceJson.ParseModifiers(ModifiersJson);

@@ -732,6 +732,12 @@ internal sealed partial class ContentPackValidator
     private void Feats(List<PackFeatJson?>? feats, ContentPackRows rows)
     {
         ForEach("feats", feats, (path, feat) =>
+        {
+            if (feat.Starter == true && feat.CreationOnly == false)
+            {
+                AddError($"{path}.creationOnly", "Una dote starter solo se ofrece en la creación: quita creationOnly o ponlo a true.");
+            }
+
             Option(path, new PackOptionJson
             {
                 Index = feat.Index,
@@ -744,7 +750,10 @@ internal sealed partial class ContentPackValidator
                 Grants = feat.Grants,
                 Resource = feat.Resource,
                 Choices = feat.Choices,
-            }, OptionSets.Feats, rows, NullableText($"{path}.category", feat.Category, OptionDefinition.CategoryMaxLength)));
+            }, OptionSets.Feats, rows, NullableText($"{path}.category", feat.Category, OptionDefinition.CategoryMaxLength),
+            creationOnly: feat.CreationOnly == true || feat.Starter == true,
+            starter: feat.Starter == true);
+        });
         rows.Feats = rows.Options.Count(o => o.SetId == OptionSets.Feats);
     }
 

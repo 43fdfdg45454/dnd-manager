@@ -80,7 +80,7 @@ internal sealed partial class ContentPackValidator
         ForEach($"{path}.options", set.Options, (optionPath, option) => Option(optionPath, option, setId, rows));
     }
 
-    private void Option(string path, PackOptionJson option, string setId, ContentPackRows rows, string? category = null)
+    private void Option(string path, PackOptionJson option, string setId, ContentPackRows rows, string? category = null, bool creationOnly = false, bool starter = false)
     {
         var index = Index($"{path}.index", "options", option.Index);
         var definition = new OptionDefinition
@@ -99,6 +99,8 @@ internal sealed partial class ContentPackValidator
             ChoicesJson = OptionChoices($"{path}.choices", option.Choices, index, atLevels: false),
             LevelChoicesJson = OptionChoices($"{path}.levelChoices", option.LevelChoices, index, atLevels: true),
             Category = category,
+            CreationOnly = creationOnly,
+            Starter = starter,
             Source = _id,
         };
 

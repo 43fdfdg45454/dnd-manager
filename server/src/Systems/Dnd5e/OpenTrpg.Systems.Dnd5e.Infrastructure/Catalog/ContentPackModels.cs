@@ -327,6 +327,12 @@ internal sealed class PackFeatJson
 
     /// <summary>Choices made when the feat is taken (no level).</summary>
     public List<PackLevelChoiceJson?>? Choices { get; set; }
+
+    /// <summary>Only offered by origin choices at creation, never by an Ability Score Improvement.</summary>
+    public bool? CreationOnly { get; set; }
+
+    /// <summary>Starter feat (the optional "Dote inicial" of level 1 when the campaign enables it); implies creationOnly.</summary>
+    public bool? Starter { get; set; }
 }
 
 internal sealed class PackCreatureJson
@@ -906,6 +912,9 @@ internal sealed class PackCantripChoiceJson
 internal sealed class PackFeatChoiceJson
 {
     public int? Choose { get; set; }
+
+    /// <summary>Option set the feats come from (heritage feats); null = the <c>feats</c> set.</summary>
+    public string? SetId { get; set; }
 }
 
 internal sealed class PackTraitOptionChoiceJson

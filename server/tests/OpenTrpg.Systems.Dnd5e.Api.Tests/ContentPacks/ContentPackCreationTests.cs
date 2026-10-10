@@ -9,6 +9,7 @@ using OpenTrpg.Core.Application.Characters;
 using OpenTrpg.Core.Application.Common;
 using OpenTrpg.Core.Application.ContentPacks;
 using OpenTrpg.Core.Application.Items;
+using OpenTrpg.Systems.Dnd5e.Application.Campaigns;
 using OpenTrpg.Systems.Dnd5e.Application.Catalog;
 using OpenTrpg.Systems.Dnd5e.Application.Characters;
 using static OpenTrpg.Systems.Dnd5e.Api.Tests.ContentPacks.CreationPack;
@@ -416,6 +417,121 @@ public class ContentPackCreationTests(ContentPackCreationApiFactory factory) : I
     }
 
     // ---- Helpers ---------------------------------------------------------------------------------------
+
+    // ---- H13/H13b: heritage feats, creation-only feats, subrace spells over race spells ----------------------
+
+    [Fact]
+    public async Task Heritage_feats_come_from_their_set_and_creation_only_feats_stay_out_of_improvements()
+    {
+        var s = await ScenarioAsync();
+        var draft = await OriginDraftAsync(s, I("medio-vacio"), null, "fighter", 1);
+        var choices = await GetAsync<OriginChoicesDto>(s.Player.Client, OriginUrl(draft.Id));
+        var heritage = choices.Choices.Single(c => c.Key == "race.feat");
+        Assert.Equal([I("herencia-ceniza"), I("herencia-niebla")], heritage.Options.Select(o => o.Index).ToList());
+
+        var saved = await s.Player.Client.PutAsJsonAsync(OriginUrl(draft.Id), new { choices = new object[] { new { key = "race.feat", selected = new { feat = I("herencia-niebla") } } } });
+        Assert.True(saved.StatusCode == HttpStatusCode.OK, await saved.Content.ReadAsStringAsync());
+        var hero = await s.Player.GetCharacterAsync(draft.Id);
+        Assert.Contains(hero.Proficiencies, p => p is { Type: "Skill", Key: "stealth" });
+        Assert.Contains(hero.Feats, f => f.Index == I("herencia-niebla"));
+
+        // At level 4 the improvement offers the pack's normal feat but neither the creation-only nor the starter one.
+        var fighter = await DraftAsync(s, "fighter", 3, new { str = 15, dex = 12, con = 14, @int = 10, wis = 10, cha = 8 });
+        await GrantAsync(s, fighter.Id);
+        var plan = await PlanAsync(s.Player, fighter.Id, "fighter");
+        var feats = plan.Choices.Single(c => c.Kind == "AsiOrFeat").Options.Select(o => o.Index).ToList();
+        Assert.Contains(I("vigia-del-eco"), feats);
+        Assert.DoesNotContain(I("lazo-de-sangre"), feats);
+        Assert.DoesNotContain(I("chispa-temprana"), feats);
+    }
+
+    [Fact]
+    public async Task A_subrace_spell_replaces_the_same_spell_of_the_race()
+    {
+        var s = await ScenarioAsync();
+        var plain = await OriginDraftAsync(s, I("eco"), null, "fighter", 1);
+        Assert.DoesNotContain(plain.Spells, sp => sp.SpellIndex == "cure-wounds");
+
+        var early = await OriginDraftAsync(s, I("eco"), I("eco-temprano"), "fighter", 1);
+        Assert.Contains(early.Spells, sp => sp is { SpellIndex: "cure-wounds", ClassIndex: "race", AlwaysPrepared: true });
+    }
+
+    [Fact]
+    public async Task Heritage_sets_and_starter_feats_are_validated()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        var pack = Renamed(Build(), "vacio-malo-h13");
+        pack["races"]![0]!["choices"]!["feats"]!["setId"] = "vacio-malo-h13-inexistente";
+        var feats = pack["feats"]!.AsArray();
+        feats[^1]!["creationOnly"] = false;
+
+        var errors = await ImportErrorsAsync(admin, pack);
+
+        Assert.Contains(errors, e => e.StartsWith("races[0].choices.feats.setId:", StringComparison.Ordinal));
+        Assert.Contains(errors, e => e.StartsWith($"feats[{feats.Count - 1}].creationOnly:", StringComparison.Ordinal));
+    }
+
+    // ---- H15: starter feats ---------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task Starter_feat_is_an_optional_level_one_choice_when_the_campaign_enables_it()
+    {
+        var s = await ScenarioAsync();
+        var rulesUrl = $"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/rules";
+        var rules = await GetAsync<CampaignRulesDto>(s.Player.Client, rulesUrl);
+        Assert.Equal(new CampaignRulesDto(false, true), rules);
+        Assert.Equal(HttpStatusCode.Forbidden, (await s.Player.Client.PutAsJsonAsync(rulesUrl, new { starterFeatsEnabled = true })).StatusCode);
+
+        var draft = await OriginDraftAsync(s, "human", null, "fighter", 1);
+        var starter = new { key = "campaign.starterFeat", selected = new { feat = I("chispa-temprana") } };
+        Assert.DoesNotContain((await GetAsync<OriginChoicesDto>(s.Player.Client, OriginUrl(draft.Id))).Choices, c => c.Key == "campaign.starterFeat");
+        var refused = await s.Player.Client.PutAsJsonAsync(OriginUrl(draft.Id), new { choices = new object[] { starter } });
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Equal("starter-feat-not-allowed", (await refused.ReadProblemAsync()).GetProperty("code").GetString());
+
+        var enabled = await s.Dm.Client.PutAsJsonAsync(rulesUrl, new { starterFeatsEnabled = true });
+        Assert.Equal(new CampaignRulesDto(true, true), await enabled.Content.ReadFromJsonAsync<CampaignRulesDto>());
+
+        var choices = await GetAsync<OriginChoicesDto>(s.Player.Client, OriginUrl(draft.Id));
+        var choice = choices.Choices.Single(c => c.Key == "campaign.starterFeat");
+        Assert.Equal(("Dote inicial", "Feat", "campaign", 0), (choice.Name, choice.Kind, choice.Source, choice.Required));
+        Assert.Equal([I("chispa-temprana")], choice.Options.Select(o => o.Index).ToList());
+        Assert.True(choices.Complete);
+
+        var saved = await s.Player.Client.PutAsJsonAsync(OriginUrl(draft.Id), new { choices = new object[] { starter } });
+        Assert.True(saved.StatusCode == HttpStatusCode.OK, await saved.Content.ReadAsStringAsync());
+        var hero = await s.Player.GetCharacterAsync(draft.Id);
+        Assert.Contains(hero.Proficiencies, p => p is { Type: "Skill", Key: "perception" });
+        Assert.Contains(hero.Feats, f => f.Index == I("chispa-temprana"));
+
+        // Only at level 1.
+        var veteran = await OriginDraftAsync(s, "human", null, "fighter", 2);
+        Assert.DoesNotContain((await GetAsync<OriginChoicesDto>(s.Player.Client, OriginUrl(veteran.Id))).Choices, c => c.Key == "campaign.starterFeat");
+        var late = await s.Player.Client.PutAsJsonAsync(OriginUrl(veteran.Id), new { choices = new object[] { starter } });
+        Assert.Equal("starter-feat-not-allowed", (await late.ReadProblemAsync()).GetProperty("code").GetString());
+
+        // Without starter feats in the active packs the switch has nothing to offer.
+        var other = await factory.CreateCampaignScenarioAsync();
+        Assert.Equal(new CampaignRulesDto(false, false), await GetAsync<CampaignRulesDto>(other.Dm.Client, $"/api/v1/systems/dnd5e/campaigns/{other.CampaignId}/rules"));
+    }
+
+    private static string OriginUrl(Guid id) => $"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/origin-choices";
+
+    /// <summary>A draft (origin choices still open) of <paramref name="race"/> and <paramref name="classIndex"/> at <paramref name="level"/>.</summary>
+    private static async Task<CharacterDetailDto> OriginDraftAsync(CampaignScenario s, string race, string? subrace, string classIndex, int level)
+    {
+        var character = await s.Player.CreateCharacterAsync(s.CampaignId, race);
+        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(character.Id)}/sheet", new
+        {
+            raceIndex = race,
+            subraceIndex = subrace,
+            classes = new[] { new { classIndex, level } },
+            baseAbilities = new { str = 14, dex = 12, con = 14, @int = 10, wis = 12, cha = 10 },
+            applyRacialBonuses = false,
+        });
+        Assert.True(patch.StatusCode == HttpStatusCode.OK, await patch.Content.ReadAsStringAsync());
+        return await s.Player.GetCharacterAsync(character.Id);
+    }
 
     /// <summary>Imports the pack once per database.</summary>
     private async Task ImportAsync(HttpClient admin)
