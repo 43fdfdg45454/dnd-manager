@@ -62,10 +62,7 @@ public interface ICharacterSheetService
 
 public sealed class CharacterSheetService(
     ICatalogRepository catalog,
-    IDnd5eCharacterRepository dnd5eCharacters,
-    IEquippedGearProvider gearProvider,
     IUserRepository users,
-    IChangeRequestRepository changeRequests,
     IRestRequestRepository restRequests,
     IItemTemplateRepository itemTemplates,
     ICharacterCompanionRepository companions,

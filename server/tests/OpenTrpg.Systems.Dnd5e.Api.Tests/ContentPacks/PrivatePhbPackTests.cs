@@ -249,7 +249,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
             var choose = await s.Player.Client.PutAsJsonAsync($"{ItemTestHelpers.CharacterUrl(ranger.Id)}/companion", new { beastIndex = "wolf", name = "Sombra" });
             Assert.Equal(HttpStatusCode.OK, choose.StatusCode);
             var withCompanion = (await choose.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
-            Assert.Equal(("wolf", 12), (withCompanion.Companion!.BeastIndex, withCompanion.Companion.HitPointsMax));
+            Assert.Equal(("wolf", 12), (withCompanion.Companion!.BeastIndex, withCompanion.Companion!.HitPointsMax));
         }
 
         // From v2.7 the trinket table has its hundred entries.

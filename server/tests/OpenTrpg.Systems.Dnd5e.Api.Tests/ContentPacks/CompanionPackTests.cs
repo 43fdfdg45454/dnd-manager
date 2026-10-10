@@ -125,7 +125,7 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
 
         // Higher level: 4 × 6 = 24 hit points and proficiency +3.
         var sixth = await PatchAsync(s, hero.Id, level: 6, subclass: Subclass);
-        Assert.Equal((24, 16), (sixth.Companion!.HitPointsMax, sixth.Companion.ArmorClass));
+        Assert.Equal((24, 16), (sixth.Companion!.HitPointsMax, sixth.Companion!.ArmorClass));
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
         // Nothing changes until the DM approves.
         var pending = await s.Player.Client.GetFromJsonAsync<CharacterDetailDto>(ItemTestHelpers.CharacterUrl(hero));
         Assert.Equal("wolf", pending!.Companion!.BeastIndex);
-        Assert.Contains(pending.PendingChangeRequests, r => r.Id == request.Id);
+        Assert.Contains(pending!.PendingChangeRequests, r => r.Id == request.Id);
 
         var approved = await s.Dm.Client.PostAsJsonAsync($"/api/v1/change-requests/{request.Id}/approve", new { });
         Assert.True(approved.StatusCode == HttpStatusCode.OK, await approved.Content.ReadAsStringAsync());
@@ -190,7 +190,7 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
         Assert.Equal(HttpStatusCode.NoContent, (await s.Dm.Client.DeleteAsync(url)).StatusCode);
         var removed = await s.Player.Client.GetFromJsonAsync<CharacterDetailDto>(ItemTestHelpers.CharacterUrl(hero));
         Assert.Null(removed!.Companion);
-        Assert.True(removed.CompanionPending);
+        Assert.True(removed!.CompanionPending);
     }
 
     [Theory]
