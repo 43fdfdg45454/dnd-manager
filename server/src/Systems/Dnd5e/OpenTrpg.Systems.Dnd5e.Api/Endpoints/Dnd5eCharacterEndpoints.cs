@@ -7,25 +7,39 @@ using OpenTrpg.Core.Application.Characters;
 using Microsoft.AspNetCore.Http.HttpResults;
 using OpenTrpg.Core.Application.Common;
 using OpenTrpg.Systems.Dnd5e.Api.Endpoints;
+using OpenTrpg.Systems.Dnd5e.Application;
 using OpenTrpg.Systems.Dnd5e.Application.Characters;
 
 namespace OpenTrpg.Systems.Dnd5e.Api.Endpoints;
 
 /// <summary>
 /// The D&amp;D 5e routes of a character (origin choices, combat tracking, companion, resources, rests, spell
-/// preparation, invalid choices and class actions), at the same paths as before the split.
+/// preparation, invalid choices and class actions), under <c>/api/v1/systems/dnd5e/characters/{id}</c>.
 /// </summary>
 public static class Dnd5eCharacterEndpoints
 {
     public static IEndpointRouteBuilder MapDnd5eCharacterEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/characters/{id:guid}")
-            .WithTags("Characters")
+        var group = app.MapGroup("/characters/{id:guid}")
+            .WithTags(Dnd5eModule.Tag("Characters"))
             .RequireAuthorization()
+            .RequireCharacterSystem(Dnd5eSystem.SystemId)
             .AddEndpointFilter<ValidationFilter>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPatch("/sheet", async Task<Results<Ok<CharacterDetailDto>, Accepted<ChangeRequestDto>>> (
+                Guid id, JsonElement patch, ClaimsPrincipal user, UpdateSheetHandler handler, CancellationToken ct) =>
+            {
+                var result = await handler.HandleAsync(user.GetUserId(), id, patch, ct);
+                return result.ChangeRequest is { } request
+                    ? TypedResults.Accepted($"/api/v1/change-requests/{request.Id}", request)
+                    : TypedResults.Ok(result.Character!);
+            })
+            .WithName("UpdateCharacterSheet")
+            .WithSummary("Edita la hoja: 200 si se aplica (DM o dueño en borrador); 202 con la solicitud creada si necesita aprobación del DM.")
+            .ProducesValidationProblem();
 
         group.MapGet("/origin-choices", async (Guid id, ClaimsPrincipal user, OriginChoicesHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.GetAsync(user.GetUserId(), id, ct)))

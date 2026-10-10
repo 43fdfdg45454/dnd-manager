@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 /// Build-time configuration.
 abstract final class AppConfig {
-  static const String appName = 'D&D Companion';
+  static const String appName = 'OpenTRPG';
 
   static const String _definedServerUrl = String.fromEnvironment('API_BASE_URL');
 

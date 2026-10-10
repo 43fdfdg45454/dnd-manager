@@ -70,7 +70,7 @@ builder.Services.AddOptions<FormOptions>().Configure<IOptions<FileStorageOptions
 // Data Protection keys (used by ASP.NET internals such as antiforgery; auth uses JWT) persist next to the
 // uploaded files so they survive container restarts instead of living in the ephemeral home directory.
 builder.Services.AddDataProtection()
-    .SetApplicationName("dnd-companion")
+    .SetApplicationName("opentrpg")
     .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(
         Path.GetFullPath(builder.Configuration["FileStorage:RootPath"] ?? "data/files"), ".dataprotection")));
 
@@ -90,9 +90,9 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "D&D Companion API",
+        Title = "OpenTRPG API",
         Version = "v1",
-        Description = "API del companion para campañas de D&D 5e.",
+        Description = "API de OpenTRPG, companion para campañas de rol de mesa.",
     });
 
     // Optional<T> request fields are plain (nullable) values on the wire.

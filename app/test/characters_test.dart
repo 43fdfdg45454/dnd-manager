@@ -1585,7 +1585,7 @@ void main() {
       adapter.body = makeCharacterJson();
       final saved = await repository.patchSheet('ch1', const SheetPatch(name: 'X'));
       expect(saved, isA<Saved>());
-      expect(adapter.requests.last.path, '/api/v1/characters/ch1/sheet');
+      expect(adapter.requests.last.path, '/api/v1/systems/dnd5e/characters/ch1/sheet');
       expect(adapter.requests.last.method, 'PATCH');
       expect(adapter.requests.last.data, {'name': 'X'});
 

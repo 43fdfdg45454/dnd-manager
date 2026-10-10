@@ -5,13 +5,13 @@ import '../../../core/network/api_client.dart';
 import 'beast_models.dart';
 import 'models.dart';
 
-/// Catalog endpoints under `/api/v1/catalog`.
+/// Catalog endpoints under `/api/v1/systems/dnd5e/catalog`.
 class CatalogRepository {
   CatalogRepository(this._client);
 
   final ApiClient _client;
 
-  static const _base = '/api/v1/catalog';
+  static const _base = '/api/v1/systems/dnd5e/catalog';
 
   /// Root of every cached catalog answer (see `staleSinceProvider`).
   static const rootPath = _base;

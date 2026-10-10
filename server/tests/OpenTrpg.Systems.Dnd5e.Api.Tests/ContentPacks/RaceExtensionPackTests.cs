@@ -88,18 +88,18 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
         Assert.Equal((1, 1, 1), (result.Counts["races"], result.Counts["subraces"], result.Counts["raceExtensions"]));
 
         var s = await factory.CreateCampaignScenarioAsync();
-        var dwarf = (await s.Player.Client.GetFromJsonAsync<RaceDetailDto>("/api/v1/catalog/races/dwarf"))!;
+        var dwarf = (await s.Player.Client.GetFromJsonAsync<RaceDetailDto>("/api/v1/systems/dnd5e/catalog/races/dwarf"))!;
         Assert.Equal("srd", dwarf.Source);
         var deepFolk = Assert.Single(dwarf.Subraces, r => r.Index == "folk-ejemplo-deep-folk");
         Assert.Equal((30, PackId), (deepFolk.Speed, deepFolk.Source));
         Assert.Contains(dwarf.Traits, t => t.Index == "folk-ejemplo-stone-memory");
         Assert.Contains("history", dwarf.Grants!.Skills);
         Assert.Contains("battleaxes", dwarf.Grants.Weapons);
-        var races = (await s.Player.Client.GetFromJsonAsync<List<RaceSummaryDto>>("/api/v1/catalog/races"))!;
+        var races = (await s.Player.Client.GetFromJsonAsync<List<RaceSummaryDto>>("/api/v1/systems/dnd5e/catalog/races"))!;
         Assert.Contains("folk-ejemplo-deep-folk", races.Single(r => r.Index == "dwarf").SubraceIndexes);
 
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Enana");
-        var url = $"{ItemTestHelpers.CharacterUrl(hero.Id)}/sheet";
+        var url = $"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet";
         var patch = await s.Player.Client.PatchAsJsonAsync(url, new
         {
             raceIndex = "dwarf",
@@ -136,7 +136,7 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
 
         // Uninstalling the pack removes the subrace: the sheet warns and its grants are gone on the next recalculation.
         Assert.Equal(HttpStatusCode.NoContent, (await admin.DeleteAsync($"{PacksUrl}/{PackId}")).StatusCode);
-        dwarf = (await s.Player.Client.GetFromJsonAsync<RaceDetailDto>("/api/v1/catalog/races/dwarf"))!;
+        dwarf = (await s.Player.Client.GetFromJsonAsync<RaceDetailDto>("/api/v1/systems/dnd5e/catalog/races/dwarf"))!;
         Assert.DoesNotContain(dwarf.Subraces, r => r.Index == "folk-ejemplo-deep-folk");
         Assert.DoesNotContain(dwarf.Traits, t => t.Index == "folk-ejemplo-stone-memory");
 
@@ -161,7 +161,7 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
 
         var s = await factory.CreateCampaignScenarioAsync();
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Montañesa");
-        var url = $"{ItemTestHelpers.CharacterUrl(hero.Id)}/sheet";
+        var url = $"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet";
         await s.Player.Client.PatchAsJsonAsync(url, new { raceIndex = "folk-ejemplo-mountain-folk", classes = new[] { new { classIndex = "wizard", level = 1 } } });
 
         var detail = await s.Player.GetCharacterAsync(hero.Id);

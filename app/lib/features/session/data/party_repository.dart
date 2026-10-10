@@ -5,13 +5,14 @@ import '../../../core/network/api_client.dart';
 import '../../characters/data/models.dart' show DamageOutcome;
 import 'models.dart';
 
-/// DM tools for the table under `/api/v1/campaigns/{id}/party` (at least DM).
+/// DM tools for the table under `/api/v1/systems/dnd5e/campaigns/{id}/party`
+/// (at least DM).
 class PartyRepository {
   PartyRepository(this._client);
 
   final ApiClient _client;
 
-  static String partyPath(String campaignId) => '/api/v1/campaigns/$campaignId/party';
+  static String partyPath(String campaignId) => '/api/v1/systems/dnd5e/campaigns/$campaignId/party';
 
   static List<PartyMember> _parse(Object? json) =>
       parseList(PartyMember.fromJson)((json as Map<String, dynamic>)['characters']);

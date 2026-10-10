@@ -1,6 +1,6 @@
-# D&D 5e Companion — Plan maestro
+# OpenTRPG — Plan maestro
 
-Companion app para sesiones **presenciales** de D&D 5e: cada jugador lleva su personaje en Android,
+Companion app para sesiones **presenciales** de rol (hoy con el módulo D&D 5e): cada jugador lleva su personaje en Android,
 el DM gestiona campaña, lore, mapas, tiendas y calendario, y un administrador del servidor crea los
 usuarios. Servidor .NET autohospedado con Docker.
 
@@ -127,10 +127,10 @@ indicado (`Agent` con `model: opus | sonnet | haiku`), dándoles el contrato esc
 
 ## Estado
 
-Fases 0 a 31 implementadas y en `master` (cada una con su contrato en `docs/specs/`). Verificado en
+Fases 0 a 32 implementadas y en `master` (cada una con su contrato en `docs/specs/`). Verificado en
 este entorno: servidor compila sin avisos y pasa sus tests (SQLite en memoria); cliente sin
 incidencias de análisis y con sus tests en verde. CI publica en cada push a `master` la imagen
-`ghcr.io/<owner>/dnd-companion-api:latest` y una release con el APK firmado. **No verificado aquí**
+`ghcr.io/<owner>/opentrpg-api:latest` y una release con el APK firmado. **No verificado aquí**
 (sin PostgreSQL ni Android SDK): migraciones contra PostgreSQL real, aspecto de las fuentes variables
 y los SVG en dispositivo, SignalR a través del reverse proxy, envío SMTP real, apertura de documentos
 con aplicaciones externas. Primeros pasos recomendados: `docker compose pull && up -d`, abrir
@@ -174,7 +174,9 @@ jugador en dos móviles; cualquier desviación se corrige sobre los contratos de
 | 29 | Correcciones de uso: la próxima sesión del inicio caduca y desaparece con la campaña, descripciones en todas las elecciones de origen, altura y peso del personaje (tablas de raza en los paquetes y tirada en el asistente), selector de condiciones desplazable con información, concentración junto a las condiciones, botón de información en los rasgos de clase y navegación de la ficha y de Mi sesión en dos vistas (Combate y Detalle con subpestañas) | Ver `docs/specs/fase-29-correcciones-de-uso.md` |
 | 30 | Inventario y contrato del framework (ADR 0009): clasificación de cada fichero del servidor y de la app como núcleo, 5e o mixto, contratos `IGameSystem` y `GameSystemUi` sobre papel, alias de rutas bajo `/api/v1/systems/dnd5e` y lista de pasos para las fases 31–33; sin cambios de código | Ver `docs/specs/fase-30-inventario-y-contrato.md` |
 | 31 | Sistema por campaña: `Campaign.SystemId` (migración `AddCampaignSystemId`, `dnd5e` por defecto), registro de sistemas con `IGameSystem` mínimo y `Dnd5eSystem` (atribución del SRD), `GET /api/v1/systems`, `systemId` en los DTO de campaña y en el diálogo de creación de la app | Ver `docs/specs/fase-31-sistema-por-campana.md` |
-| 32A | División del servidor: solución `OpenTrpg.slnx` con `OpenTrpg.Core.{Domain,Application,Infrastructure,Api,Api.Abstractions}` y `OpenTrpg.Systems.Dnd5e.{Domain,Application,Infrastructure,Api}`; `IGameSystem` completo con `Dnd5eSystem`; personaje del núcleo y `Dnd5eCharacters` en tabla propia; SRD embebido en el módulo; dinero con nombres neutros | Ver `docs/specs/fase-32-division-del-servidor.md` (32B rutas y 32C renombrado pendientes) |
+| 32A | División del servidor: solución `OpenTrpg.slnx` con `OpenTrpg.Core.{Domain,Application,Infrastructure,Api,Api.Abstractions}` y `OpenTrpg.Systems.Dnd5e.{Domain,Application,Infrastructure,Api}`; `IGameSystem` completo con `Dnd5eSystem`; personaje del núcleo y `Dnd5eCharacters` en tabla propia; SRD embebido en el módulo; dinero con nombres neutros | Ver `docs/specs/fase-32-division-del-servidor.md` |
+| 32B | Rutas del módulo 5e bajo `/api/v1/systems/dnd5e` (catálogo, personaje 5e, grupo, subida de nivel) sin alias; filtros `RequireCharacterSystem`/`RequireCampaignSystem` (404 si la campaña es de otro sistema); Swagger agrupado por sistema; la app usa las rutas nuevas y conserva el ámbito sin conexión de la Mesa del DM | Ver `docs/specs/fase-32-division-del-servidor.md` |
+| 32C | Renombrado a OpenTRPG: imagen `ghcr.io/<owner>/opentrpg-api`, APK `opentrpg-X.Y.Z.apk`, proyecto Compose `opentrpg`, nombre de app, emisor JWT, remitente SMTP, plantillas y documentación; `applicationId` Android sin cambios | Ver `docs/specs/fase-32-division-del-servidor.md` |
 
 ## Verificación end-to-end
 

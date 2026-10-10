@@ -8,8 +8,8 @@ public static class ReleaseUrls
 {
     public static string DownloadFor(int buildNumber) => $"/api/v1/app/download/{buildNumber}";
 
-    /// <summary>Name the APK is offered under, for example <c>dnd-companion-1.2.0.apk</c>.</summary>
-    public static string FileNameFor(string version) => $"dnd-companion-{version}.apk";
+    /// <summary>Name the APK is offered under, for example <c>opentrpg-1.2.0.apk</c>.</summary>
+    public static string FileNameFor(string version) => $"opentrpg-{version}.apk";
 }
 
 /// <summary>What the app needs to decide whether to offer an update (<c>GET /api/v1/app/latest</c>).</summary>

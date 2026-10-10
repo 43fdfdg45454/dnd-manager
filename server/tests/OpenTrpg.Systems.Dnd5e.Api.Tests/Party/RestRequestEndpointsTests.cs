@@ -64,8 +64,8 @@ public class RestRequestEndpointsTests(CatalogApiFactory factory)
         var s = await factory.CreateCampaignScenarioAsync();
         var hero = await ActiveFighterAsync(s.Player, s.Dm, s.CampaignId, "Impaciente");
 
-        var longRest = await s.Player.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/rest/long", null);
-        var shortRest = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/rest/short", new { });
+        var longRest = await s.Player.Client.PostAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/rest/long", null);
+        var shortRest = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/rest/short", new { });
 
         Assert.Equal(HttpStatusCode.Forbidden, longRest.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, shortRest.StatusCode);
@@ -141,7 +141,7 @@ public class RestRequestEndpointsTests(CatalogApiFactory factory)
         var request = await AskAsync(s.Player, hero.Id, new { kind = "short", hitDice = new Dictionary<string, int> { ["fighter"] = 3 } });
 
         // The DM lowers the level before approving: only 2 dice remain.
-        var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/sheet", new { classes = new[] { new { classIndex = "fighter", level = 2 } } });
+        var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet", new { classes = new[] { new { classIndex = "fighter", level = 2 } } });
         Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
         await ResolveAsync(s.Dm, request.Id, "approve", null);
 
@@ -169,7 +169,7 @@ public class RestRequestEndpointsTests(CatalogApiFactory factory)
         var hero = await ActiveFighterAsync(s.Player, s.Dm, s.CampaignId, "Atendido");
         var request = await AskAsync(s.Player, hero.Id, new { kind = "long" });
 
-        var response = await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/rest/long", null);
+        var response = await s.Dm.Client.PostAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/rest/long", null);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Null((await response.Content.ReadFromJsonAsync<CharacterDetailDto>())!.PendingRest);
@@ -180,7 +180,7 @@ public class RestRequestEndpointsTests(CatalogApiFactory factory)
 
     private static async Task HurtAsync(SignedInUser player, Guid characterId, int hitPoints)
     {
-        var response = await player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(characterId)}/combat", new { hitPointsCurrent = hitPoints });
+        var response = await player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(characterId)}/combat", new { hitPointsCurrent = hitPoints });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 

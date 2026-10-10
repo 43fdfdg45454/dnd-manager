@@ -143,11 +143,11 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
         Assert.Equal([CalmStrike], Assert.Single(after.Combat.Resources, r => r.Key == "ki").Options.Select(o => o.Index));
 
         // "Usar": the player spends the amount through the usual endpoint, without approval.
-        var spend = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(monk.Id)}/resources/{ki.Id}/spend", new { amount = cost.Amount });
+        var spend = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(monk.Id)}/resources/{ki.Id}/spend", new { amount = cost.Amount });
         Assert.True(spend.IsSuccessStatusCode, await spend.Content.ReadAsStringAsync());
         Assert.Equal(2, (await s.Player.GetCharacterAsync(monk.Id)).Resources.Single(r => r.Key == "ki").Used);
 
-        var again = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(monk.Id)}/resources/{ki.Id}/spend", new { amount = cost.Amount });
+        var again = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(monk.Id)}/resources/{ki.Id}/spend", new { amount = cost.Amount });
         Assert.False(again.IsSuccessStatusCode);
     }
 
@@ -296,7 +296,7 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
     private static async Task<CharacterDetailDto> LevelAsync(CampaignScenario s, string classIndex, string? subclass, int level, string name)
     {
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, name);
-        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/sheet", new
+        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet", new
         {
             classes = new[] { new { classIndex, subclassIndex = subclass, level } },
             baseAbilities = new { str = 14, dex = 14, con = 14, @int = 12, wis = 16, cha = 10 },
@@ -304,20 +304,20 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
         });
         Assert.True(patch.StatusCode == HttpStatusCode.OK, await patch.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/activate", null)).StatusCode);
-        var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { hero.Id } });
+        var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { hero.Id } });
         Assert.Equal(HttpStatusCode.OK, granted.StatusCode);
         return await s.Player.GetCharacterAsync(hero.Id);
     }
 
     private static async Task<LevelUpPlanDto> PlanAsync(SignedInUser actor, Guid id)
     {
-        var response = await actor.Client.GetAsync($"{ItemTestHelpers.CharacterUrl(id)}/level-up");
+        var response = await actor.Client.GetAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/level-up");
         Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
         return (await response.Content.ReadFromJsonAsync<LevelUpPlanDto>())!;
     }
 
     private static Task<HttpResponseMessage> PostLevelUpAsync(SignedInUser actor, Guid id, int hitPoints, params object[] choices) =>
-        actor.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(id)}/level-up", new { hitPointsRolled = hitPoints, choices });
+        actor.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/level-up", new { hitPointsRolled = hitPoints, choices });
 
     private static async Task<CharacterDetailDto> ApplyAsync(SignedInUser actor, Guid id, int hitPoints, params object[] choices)
     {

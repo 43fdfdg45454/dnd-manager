@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../cache/stale_data.dart';
 import '../../features/campaigns/data/campaigns_repository.dart';
+import '../../features/session/data/party_repository.dart';
 import '../theme/contrast.dart';
 import '../theme/tokens.dart';
 import '../ui/offline_widgets.dart';
@@ -58,9 +59,15 @@ class ConnectionBanner extends ConsumerWidget {
       );
     }
 
-    final stale = ref.watch(
-      staleSinceProvider(staleTree(CampaignsRepository.campaignPath(campaignId))),
-    );
+    // The campaign tree and the party of the DM table (a route of the game system).
+    DateTime? stale;
+    for (final scope in [
+      staleTree(CampaignsRepository.campaignPath(campaignId)),
+      staleTree(PartyRepository.partyPath(campaignId)),
+    ]) {
+      final since = ref.watch(staleSinceProvider(scope));
+      if (since != null && (stale == null || since.isBefore(stale))) stale = since;
+    }
     final since = stale ?? state.lastConnectedAt;
     final age = since == null ? null : describeDataAge(since.toLocal(), now());
     final text = age == null ? 'Sin conexión en vivo' : 'Sin conexión en vivo · datos de $age';

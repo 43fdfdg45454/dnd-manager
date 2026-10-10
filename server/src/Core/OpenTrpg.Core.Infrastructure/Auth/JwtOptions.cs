@@ -8,9 +8,9 @@ public sealed class JwtOptions
     /// <summary>HS256 signing key. At least <see cref="MinSecretLength"/> characters.</summary>
     public string Secret { get; set; } = string.Empty;
 
-    public string Issuer { get; set; } = "dnd-companion";
+    public string Issuer { get; set; } = "opentrpg";
 
-    public string Audience { get; set; } = "dnd-companion-app";
+    public string Audience { get; set; } = "opentrpg";
 
     public int AccessTokenMinutes { get; set; } = 15;
 

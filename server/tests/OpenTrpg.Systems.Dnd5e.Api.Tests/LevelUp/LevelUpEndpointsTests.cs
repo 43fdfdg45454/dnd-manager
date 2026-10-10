@@ -177,7 +177,7 @@ public class LevelUpEndpointsTests(CatalogApiFactory factory)
                 new { key = "spells-known", selected = new[] { spell2 } },
             },
         });
-        var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { warlock.Id } });
+        var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { warlock.Id } });
         Assert.Equal(HttpStatusCode.OK, granted.StatusCode);
 
         var plan = await PlanAsync(s.Player, warlock.Id);
@@ -411,7 +411,7 @@ public class LevelUpEndpointsTests(CatalogApiFactory factory)
 
     // ---- Helpers ---------------------------------------------------------------------------------------
 
-    private static string Url(Guid id) => $"{ItemTestHelpers.CharacterUrl(id)}/level-up";
+    private static string Url(Guid id) => $"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/level-up";
 
     /// <summary>Character of the player, activated by the DM and (unless <paramref name="grant"/> is false) granted the next level.</summary>
     private static async Task<CharacterDetailDto> ActiveAsync(
@@ -435,7 +435,7 @@ public class LevelUpEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(HttpStatusCode.OK, activate.StatusCode);
         if (grant)
         {
-            var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { character.Id } });
+            var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { character.Id } });
             Assert.Equal(HttpStatusCode.OK, granted.StatusCode);
         }
 
@@ -444,7 +444,7 @@ public class LevelUpEndpointsTests(CatalogApiFactory factory)
 
     private static async Task PatchSheetAsync(SignedInUser actor, Guid id, object patch)
     {
-        var response = await actor.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(id)}/sheet", patch);
+        var response = await actor.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/sheet", patch);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 

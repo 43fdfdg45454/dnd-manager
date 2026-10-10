@@ -17,7 +17,7 @@ namespace OpenTrpg.Core.Api.Hosting;
 /// </remarks>
 public static class LoggingSetup
 {
-    public const string ApplicationName = "dnd-companion-api";
+    public const string ApplicationName = "opentrpg-api";
 
     private const string DevelopmentTemplate =
         "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}";

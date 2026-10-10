@@ -174,10 +174,10 @@ public class SubclassSpellcastingPackTests(SubclassSpellcastingPackApiFactory fa
                 new { key = "trucos", selected = new[] { "fire-bolt", "light" } },
             },
         };
-        var refused = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(veteran.Id)}/level-up", Body("charm-person"));
+        var refused = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(veteran.Id)}/level-up", Body("charm-person"));
         Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
         Assert.DoesNotContain("Falta", await refused.Content.ReadAsStringAsync(), StringComparison.Ordinal);
-        var learned = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(veteran.Id)}/level-up", Body("magic-missile"));
+        var learned = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(veteran.Id)}/level-up", Body("magic-missile"));
         Assert.True(learned.StatusCode == HttpStatusCode.OK, await learned.Content.ReadAsStringAsync());
         var after = (await learned.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
         Assert.Contains(after.Spells, sp => sp.SpellIndex == "magic-missile" && sp.ClassIndex == "fighter");
@@ -237,7 +237,7 @@ public class SubclassSpellcastingPackTests(SubclassSpellcastingPackApiFactory fa
     private static async Task<CharacterDetailDto> PatchAsync(CampaignScenario s, Guid id, (string Class, string? Subclass, int Level)[] classes, bool player = false)
     {
         var client = player ? s.Player.Client : s.Dm.Client;
-        var patch = await client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(id)}/sheet", new
+        var patch = await client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/sheet", new
         {
             classes = classes.Select(c => new { classIndex = c.Class, subclassIndex = c.Subclass, level = c.Level }).ToArray(),
             baseAbilities = new { str = 16, dex = 12, con = 14, @int = 14, wis = 10, cha = 8 },
@@ -249,13 +249,13 @@ public class SubclassSpellcastingPackTests(SubclassSpellcastingPackApiFactory fa
 
     private static async Task GrantAsync(CampaignScenario s, Guid characterId)
     {
-        var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { characterId } });
+        var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { characterId } });
         Assert.Equal(HttpStatusCode.OK, granted.StatusCode);
     }
 
     private static async Task<LevelUpPlanDto> PlanAsync(SignedInUser actor, Guid id)
     {
-        var response = await actor.Client.GetAsync($"{ItemTestHelpers.CharacterUrl(id)}/level-up");
+        var response = await actor.Client.GetAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/level-up");
         Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
         return (await response.Content.ReadFromJsonAsync<LevelUpPlanDto>())!;
     }

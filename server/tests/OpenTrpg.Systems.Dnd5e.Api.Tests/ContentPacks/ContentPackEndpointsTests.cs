@@ -51,7 +51,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         Assert.Equal(2, result.Counts["traits"]);
         Assert.Equal(1, result.Counts["backgrounds"]);
 
-        var fighter = await GetAsync<ClassDetailDto>(admin, "/api/v1/catalog/classes/fighter");
+        var fighter = await GetAsync<ClassDetailDto>(admin, "/api/v1/systems/dnd5e/catalog/classes/fighter");
         var sentinel = Assert.Single(fighter.Subclasses, s => s.Index == "reinos-ejemplo-centinela");
         Assert.Equal(ExampleId, sentinel.Source);
         Assert.Equal("Centinela", sentinel.Name);
@@ -61,34 +61,34 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         Assert.Equal("Vigilia", Assert.Single(level3.Features).Name);
         Assert.Equal("srd", Assert.Single(fighter.Subclasses, s => s.Index == "champion").Source);
 
-        var items = await GetAsync<PagedResult<ItemSummaryDto>>(admin, "/api/v1/catalog/items?search=espada%20del%20alba");
+        var items = await GetAsync<PagedResult<ItemSummaryDto>>(admin, "/api/v1/systems/dnd5e/catalog/items?search=espada%20del%20alba");
         var sword = Assert.Single(items.Items);
         Assert.Equal(ExampleId, sword.Source);
         Assert.Equal("Rare", sword.Rarity);
-        var swordDetail = await GetAsync<ItemDetailDto>(admin, $"/api/v1/catalog/items/{sword.Id}");
+        var swordDetail = await GetAsync<ItemDetailDto>(admin, $"/api/v1/systems/dnd5e/catalog/items/{sword.Id}");
         Assert.Equal(["AttackBonus", "DamageBonus"], swordDetail.Modifiers.Select(m => m.Kind));
         Assert.Equal("1d10", swordDetail.VersatileDice);
 
-        var spells = await GetAsync<PagedResult<SpellSummaryDto>>(admin, "/api/v1/catalog/spells?search=luz%20del%20alba");
+        var spells = await GetAsync<PagedResult<SpellSummaryDto>>(admin, "/api/v1/systems/dnd5e/catalog/spells?search=luz%20del%20alba");
         var spell = Assert.Single(spells.Items);
         Assert.Equal(ExampleId, spell.Source);
         Assert.Equal("Evocation", spell.School);
         Assert.Equal("Damage", spell.Category);
-        var spellDetail = await GetAsync<SpellDetailDto>(admin, $"/api/v1/catalog/spells/{spell.Index}");
+        var spellDetail = await GetAsync<SpellDetailDto>(admin, $"/api/v1/systems/dnd5e/catalog/spells/{spell.Index}");
         Assert.Equal("2d8", spellDetail.Damage?.AtSlotLevel?[1]);
         Assert.Equal("dex", spellDetail.DcAbility);
-        Assert.Contains((await GetAsync<PagedResult<SpellSummaryDto>>(admin, "/api/v1/catalog/spells?classIndex=paladin&level=1&pageSize=100")).Items, x => x.Index == spell.Index);
+        Assert.Contains((await GetAsync<PagedResult<SpellSummaryDto>>(admin, "/api/v1/systems/dnd5e/catalog/spells?classIndex=paladin&level=1&pageSize=100")).Items, x => x.Index == spell.Index);
 
-        var races = await GetAsync<List<RaceSummaryDto>>(admin, "/api/v1/catalog/races");
+        var races = await GetAsync<List<RaceSummaryDto>>(admin, "/api/v1/systems/dnd5e/catalog/races");
         Assert.Equal(ExampleId, Assert.Single(races, r => r.Index == "reinos-ejemplo-aurano").Source);
         Assert.All(races.Where(r => r.Index == "elf"), r => Assert.Equal("srd", r.Source));
-        var race = await GetAsync<RaceDetailDto>(admin, "/api/v1/catalog/races/reinos-ejemplo-aurano");
+        var race = await GetAsync<RaceDetailDto>(admin, "/api/v1/systems/dnd5e/catalog/races/reinos-ejemplo-aurano");
         Assert.Equal("Brillo", Assert.Single(race.Traits).Name);
         var subrace = Assert.Single(race.Subraces);
         Assert.Equal("Mirada clara", Assert.Single(subrace.Traits).Name);
         Assert.Equal(new AbilityBonusDto("wis", 1), Assert.Single(subrace.AbilityBonuses));
 
-        var backgrounds = await GetAsync<List<BackgroundDto>>(admin, "/api/v1/catalog/backgrounds");
+        var backgrounds = await GetAsync<List<BackgroundDto>>(admin, "/api/v1/systems/dnd5e/catalog/backgrounds");
         var lighthouse = Assert.Single(backgrounds, b => b.Index == "reinos-ejemplo-farero");
         Assert.Equal(ExampleId, lighthouse.Source);
         Assert.Equal(["Perception", "Survival"], lighthouse.SkillProficiencies);
@@ -98,7 +98,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         Assert.Equal("Reinos de Ejemplo", pack.Name);
         Assert.Equal(2, pack.Counts["traits"]);
 
-        var sources = await GetAsync<List<CatalogSourceDto>>(admin, "/api/v1/catalog/sources");
+        var sources = await GetAsync<List<CatalogSourceDto>>(admin, "/api/v1/systems/dnd5e/catalog/sources");
         Assert.Equal("srd", sources[0].Id);
         Assert.Contains(new CatalogSourceDto(ExampleId, "Reinos de Ejemplo", "1.0.0"), sources);
     }
@@ -109,15 +109,15 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         const string id = "reinos-ejemplo-re";
         var admin = await factory.CreateAdminClientAsync();
         await ImportAsync(admin, Example(id));
-        var before = Assert.Single((await GetAsync<PagedResult<ItemSummaryDto>>(admin, "/api/v1/catalog/items?search=espada%20del%20alba&pageSize=100")).Items, i => i.Source == id);
+        var before = Assert.Single((await GetAsync<PagedResult<ItemSummaryDto>>(admin, "/api/v1/systems/dnd5e/catalog/items?search=espada%20del%20alba&pageSize=100")).Items, i => i.Source == id);
 
         var renamed = Example(id).Replace("Espada del Alba", "Espada del Ocaso", StringComparison.Ordinal).Replace("\"1.0.0\"", "\"1.1.0\"", StringComparison.Ordinal);
         var response = await admin.PostAsync(PacksUrl, new StringContent(renamed, Encoding.UTF8, "application/json"));
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
-        var after = Assert.Single((await GetAsync<PagedResult<ItemSummaryDto>>(admin, "/api/v1/catalog/items?search=espada%20del%20ocaso&pageSize=100")).Items, i => i.Source == id);
+        var after = Assert.Single((await GetAsync<PagedResult<ItemSummaryDto>>(admin, "/api/v1/systems/dnd5e/catalog/items?search=espada%20del%20ocaso&pageSize=100")).Items, i => i.Source == id);
         Assert.Equal(before.Id, after.Id);
-        Assert.DoesNotContain((await GetAsync<PagedResult<ItemSummaryDto>>(admin, "/api/v1/catalog/items?search=espada%20del%20alba&pageSize=100")).Items, i => i.Source == id);
+        Assert.DoesNotContain((await GetAsync<PagedResult<ItemSummaryDto>>(admin, "/api/v1/systems/dnd5e/catalog/items?search=espada%20del%20alba&pageSize=100")).Items, i => i.Source == id);
 
         var pack = Assert.Single(await GetAsync<List<ContentPackDto>>(admin, PacksUrl), p => p.Id == id);
         Assert.Equal("1.1.0", pack.Version);
@@ -143,7 +143,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         var characterId = (await created.Content.ReadFromJsonAsync<CharacterDetailDto>())!.Id;
 
-        var patch = await s.Dm.Client.PatchAsJsonAsync($"/api/v1/characters/{characterId}/sheet", new
+        var patch = await s.Dm.Client.PatchAsJsonAsync($"/api/v1/systems/dnd5e/characters/{characterId}/sheet", new
         {
             raceIndex = $"{id}-aurano",
             subraceIndex = $"{id}-aurano-del-alba",
@@ -159,17 +159,17 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         Assert.False(withPack.Classes.Single().CatalogMissing);
 
         // An inventory entry keeps using the pack item after the deletion.
-        var sword = Assert.Single((await GetAsync<PagedResult<ItemSummaryDto>>(admin, "/api/v1/catalog/items?search=espada%20del%20alba&pageSize=100")).Items, i => i.Source == id);
+        var sword = Assert.Single((await GetAsync<PagedResult<ItemSummaryDto>>(admin, "/api/v1/systems/dnd5e/catalog/items?search=espada%20del%20alba&pageSize=100")).Items, i => i.Source == id);
         var added = await s.Dm.Client.PostAsJsonAsync($"/api/v1/characters/{characterId}/inventory", new { templateId = sword.Id, quantity = 1 });
         Assert.Equal(HttpStatusCode.Created, added.StatusCode);
 
         Assert.Equal(HttpStatusCode.NoContent, (await admin.DeleteAsync($"{PacksUrl}/{id}")).StatusCode);
 
-        var fighter = await GetAsync<ClassDetailDto>(admin, "/api/v1/catalog/classes/fighter");
+        var fighter = await GetAsync<ClassDetailDto>(admin, "/api/v1/systems/dnd5e/catalog/classes/fighter");
         Assert.DoesNotContain(fighter.Subclasses, x => x.Source == id);
-        Assert.DoesNotContain((await GetAsync<PagedResult<ItemSummaryDto>>(admin, "/api/v1/catalog/items?search=espada%20del%20alba&pageSize=100")).Items, i => i.Source == id);
-        Assert.DoesNotContain((await GetAsync<PagedResult<SpellSummaryDto>>(admin, "/api/v1/catalog/spells?search=luz%20del%20alba&pageSize=100")).Items, x => x.Source == id);
-        Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync($"/api/v1/catalog/races/{id}-aurano")).StatusCode);
+        Assert.DoesNotContain((await GetAsync<PagedResult<ItemSummaryDto>>(admin, "/api/v1/systems/dnd5e/catalog/items?search=espada%20del%20alba&pageSize=100")).Items, i => i.Source == id);
+        Assert.DoesNotContain((await GetAsync<PagedResult<SpellSummaryDto>>(admin, "/api/v1/systems/dnd5e/catalog/spells?search=luz%20del%20alba&pageSize=100")).Items, x => x.Source == id);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync($"/api/v1/systems/dnd5e/catalog/races/{id}-aurano")).StatusCode);
         Assert.DoesNotContain(await GetAsync<List<ContentPackDto>>(admin, PacksUrl), p => p.Id == id);
 
         var detail = await GetAsync<CharacterDetailDto>(s.Dm.Client, $"/api/v1/characters/{characterId}");
@@ -259,7 +259,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         Assert.Equal(HttpStatusCode.Unauthorized, (await factory.CreateClient().GetAsync(PacksUrl)).StatusCode);
 
         // Every user can see the sources, to label the pack content.
-        Assert.Equal(HttpStatusCode.OK, (await user.Client.GetAsync("/api/v1/catalog/sources")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await user.Client.GetAsync("/api/v1/systems/dnd5e/catalog/sources")).StatusCode);
     }
 
     [Fact]
@@ -282,7 +282,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
             Assert.True(await scope.ServiceProvider.GetRequiredService<ISrdSeeder>().SeedAsync());
         }
 
-        var fighter = await GetAsync<ClassDetailDto>(admin, "/api/v1/catalog/classes/fighter");
+        var fighter = await GetAsync<ClassDetailDto>(admin, "/api/v1/systems/dnd5e/catalog/classes/fighter");
         Assert.Contains(fighter.Subclasses, x => x.Index == $"{id}-centinela" && x.Levels.Single().Features.Single().Name == "Vigilia");
         Assert.Contains(fighter.Subclasses, x => x.Index == "champion");
         await factory.WithDbAsync(async db =>
@@ -321,7 +321,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
 
         foreach (var (index, category) in new[] { ("lobo", "Summoning"), ("red", "Control"), ("mapa", "Utility") })
         {
-            var spell = await GetAsync<SpellDetailDto>(admin, $"/api/v1/catalog/spells/reinos-categorias-{index}");
+            var spell = await GetAsync<SpellDetailDto>(admin, $"/api/v1/systems/dnd5e/catalog/spells/reinos-categorias-{index}");
             Assert.Equal((index, category), (index, spell.Category));
         }
     }

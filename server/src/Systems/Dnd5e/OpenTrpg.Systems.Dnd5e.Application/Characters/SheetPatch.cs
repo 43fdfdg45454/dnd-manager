@@ -26,7 +26,7 @@ public sealed record SpellPatch(string SpellIndex, string ClassIndex, bool IsPre
 public sealed record OverridePatch(string Field, int Value, string? Note = null);
 
 /// <summary>
-/// Sheet edit sent by the client (<c>PATCH /characters/{id}/sheet</c>) and stored as the payload of
+/// Sheet edit sent by the client (<c>PATCH /systems/dnd5e/characters/{id}/sheet</c>) and stored as the payload of
 /// EditSheet change requests. Absent fields do not change; every list given replaces the existing one.
 /// <see cref="RaceIndex"/>, <see cref="SubraceIndex"/>, <see cref="BackgroundIndex"/> and
 /// <see cref="Alignment"/> distinguish absent (unchanged) from an explicit <c>null</c> (cleared).

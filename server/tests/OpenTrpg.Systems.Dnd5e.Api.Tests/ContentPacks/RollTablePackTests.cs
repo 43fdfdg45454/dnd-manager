@@ -18,7 +18,7 @@ public sealed class RollTablePackApiFactory : ApiFactory
 public class RollTablePackTests(RollTablePackApiFactory factory) : IClassFixture<RollTablePackApiFactory>
 {
     private const string PacksUrl = "/api/v1/admin/content-packs";
-    private const string RollTablesUrl = "/api/v1/catalog/roll-tables";
+    private const string RollTablesUrl = "/api/v1/systems/dnd5e/catalog/roll-tables";
 
     [Fact]
     public async Task A_pack_background_brings_its_personality_and_optional_table()
@@ -50,7 +50,7 @@ public class RollTablePackTests(RollTablePackApiFactory factory) : IClassFixture
         var created = await admin.PostAsync(PacksUrl, Json(pack));
         Assert.True(created.StatusCode == HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
 
-        var backgrounds = await admin.GetFromJsonAsync<List<BackgroundDto>>("/api/v1/catalog/backgrounds");
+        var backgrounds = await admin.GetFromJsonAsync<List<BackgroundDto>>("/api/v1/systems/dnd5e/catalog/backgrounds");
         var background = Assert.Single(backgrounds!, b => b.Index == "tablas-trasfondo-cartografo");
         Assert.Equal(["Rasgo A.", "Rasgo B.", "Rasgo C."], background.Personality!.Traits);
         Assert.Equal([("Ideal A.", (string?)"Lawful"), ("Ideal B.", null)], background.Personality.Ideals.Select(i => (i.Text, i.Alignment)));

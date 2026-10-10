@@ -4,6 +4,7 @@ using OpenTrpg.Core.Api.Filters;
 using OpenTrpg.Core.Application.Party;
 using Microsoft.AspNetCore.Mvc;
 using OpenTrpg.Systems.Dnd5e.Api.Endpoints;
+using OpenTrpg.Systems.Dnd5e.Application;
 using OpenTrpg.Systems.Dnd5e.Application.Party;
 
 namespace OpenTrpg.Systems.Dnd5e.Api.Endpoints;
@@ -13,9 +14,10 @@ public static class PartyEndpoints
 {
     public static IEndpointRouteBuilder MapPartyEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/campaigns/{campaignId:guid}/party")
-            .WithTags("Party")
+        var group = app.MapGroup("/campaigns/{campaignId:guid}/party")
+            .WithTags(Dnd5eModule.Tag("Party"))
             .RequireAuthorization()
+            .RequireCampaignSystem(Dnd5eSystem.SystemId)
             .AddEndpointFilter<ValidationFilter>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)

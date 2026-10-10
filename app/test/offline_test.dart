@@ -96,8 +96,12 @@ void main() {
     test('ordena la query y descarta los nulos', () {
       expect(responseCacheKey('/api/v1/campaigns'), '/api/v1/campaigns');
       expect(
-        responseCacheKey('/api/v1/catalog/spells', {'search': 'bola fuego', 'level': 3, 'x': null}),
-        '/api/v1/catalog/spells?level=3&search=bola+fuego',
+        responseCacheKey('/api/v1/systems/dnd5e/catalog/spells', {
+          'search': 'bola fuego',
+          'level': 3,
+          'x': null,
+        }),
+        '/api/v1/systems/dnd5e/catalog/spells?level=3&search=bola+fuego',
       );
       expect(
         responseCacheKey('/a', {'b': 1, 'a': true}),
@@ -166,11 +170,11 @@ void main() {
     test('la query forma parte de la clave', () async {
       adapter.body = {'items': [], 'total': 0, 'page': 1, 'pageSize': 50};
       await client.getCached(
-        '/api/v1/catalog/spells',
+        '/api/v1/systems/dnd5e/catalog/spells',
         query: {'search': 'luz', 'page': 1, 'level': null},
         parse: (json) => json,
       );
-      expect(cache.entries.keys, ['/api/v1/catalog/spells?page=1&search=luz']);
+      expect(cache.entries.keys, ['/api/v1/systems/dnd5e/catalog/spells?page=1&search=luz']);
       expect(adapter.requests.single.queryParameters, {'search': 'luz', 'page': 1});
     });
   });
@@ -238,7 +242,7 @@ void main() {
       await cache.write('/api/v1/campaigns/c1', '{"a":1}', at);
       await cache.write('/api/v1/campaigns/c1', '{"a":2}', at.add(const Duration(minutes: 1)));
       await cache.write('/api/v1/campaigns/C1/lore', '[]', at);
-      await cache.write('/api/v1/catalog/spells?level=1', '{}', at);
+      await cache.write('/api/v1/systems/dnd5e/catalog/spells?level=1', '{}', at);
 
       final entry = await cache.read('/api/v1/campaigns/c1');
       expect(entry!.body, '{"a":2}');
@@ -252,10 +256,10 @@ void main() {
       await cache.write('/x', '1', at.subtract(const Duration(days: 1)));
       await cache.prune();
       expect(await cache.read('/x'), isNull);
-      expect(await cache.read('/api/v1/catalog/spells?level=1'), isNotNull);
+      expect(await cache.read('/api/v1/systems/dnd5e/catalog/spells?level=1'), isNotNull);
 
       await cache.clear();
-      expect(await cache.read('/api/v1/catalog/spells?level=1'), isNull);
+      expect(await cache.read('/api/v1/systems/dnd5e/catalog/spells?level=1'), isNull);
     });
   });
 

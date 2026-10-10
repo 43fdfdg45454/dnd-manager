@@ -141,14 +141,14 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
         Assert.Equal(12, (await HpAsync(s.Player.Client, hero, new { delta = 40 })).Companion!.HitPointsCurrent);
         Assert.Equal(9, (await HpAsync(s.Dm.Client, hero, new { current = 9 })).Companion!.HitPointsCurrent);
 
-        var url = $"{ItemTestHelpers.CharacterUrl(hero)}/companion/hp";
+        var url = $"{ItemTestHelpers.Dnd5eCharacterUrl(hero)}/companion/hp";
         Assert.Equal(HttpStatusCode.BadRequest, (await s.Player.Client.PostAsJsonAsync(url, new { current = 13 })).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await s.Player.Client.PostAsJsonAsync(url, new { delta = 1, current = 1 })).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await s.Player.Client.PostAsJsonAsync(url, new { })).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await s.Outsider.Client.PostAsJsonAsync(url, new { delta = -1 })).StatusCode);
 
         // A long rest brings it back to full hit points.
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(hero)}/rest/long", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero)}/rest/long", null)).StatusCode);
         var rested = await s.Player.Client.GetFromJsonAsync<CharacterDetailDto>(ItemTestHelpers.CharacterUrl(hero));
         Assert.Equal(12, rested!.Companion!.HitPointsCurrent);
     }
@@ -185,7 +185,7 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
         var direct = await PutAsync(s.Dm.Client, hero, "boar", "Colmillo");
         Assert.Equal(HttpStatusCode.OK, direct.StatusCode);
         Assert.Equal("boar", (await direct.Content.ReadFromJsonAsync<CharacterDetailDto>())!.Companion!.BeastIndex);
-        var url = $"{ItemTestHelpers.CharacterUrl(hero)}/companion";
+        var url = $"{ItemTestHelpers.Dnd5eCharacterUrl(hero)}/companion";
         Assert.Equal(HttpStatusCode.Forbidden, (await s.Player.Client.DeleteAsync(url)).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await s.Dm.Client.DeleteAsync(url)).StatusCode);
         var removed = await s.Player.Client.GetFromJsonAsync<CharacterDetailDto>(ItemTestHelpers.CharacterUrl(hero));
@@ -236,11 +236,11 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
     }
 
     private static Task<HttpResponseMessage> PutAsync(HttpClient client, Guid id, string beastIndex, string name) =>
-        client.PutAsJsonAsync($"{ItemTestHelpers.CharacterUrl(id)}/companion", new { beastIndex, name });
+        client.PutAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/companion", new { beastIndex, name });
 
     private static async Task<CharacterDetailDto> HpAsync(HttpClient client, Guid id, object body)
     {
-        var response = await client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(id)}/companion/hp", body);
+        var response = await client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/companion/hp", body);
         Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
         return (await response.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
     }
@@ -249,7 +249,7 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
 
     private static async Task<CharacterDetailDto> PatchAsync(CampaignScenario s, Guid id, int level, string? subclass, HttpClient? client = null)
     {
-        var patch = await (client ?? s.Dm.Client).PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(id)}/sheet", new
+        var patch = await (client ?? s.Dm.Client).PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/sheet", new
         {
             classes = new[] { new { classIndex = "ranger", subclassIndex = subclass, level } },
             baseAbilities = new { str = 12, dex = 16, con = 14, @int = 10, wis = 14, cha = 8 },

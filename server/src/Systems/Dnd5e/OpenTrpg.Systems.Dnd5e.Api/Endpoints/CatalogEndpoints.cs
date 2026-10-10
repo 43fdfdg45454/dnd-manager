@@ -12,8 +12,8 @@ public static class CatalogEndpoints
 {
     public static IEndpointRouteBuilder MapCatalogEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/catalog")
-            .WithTags("Catalog")
+        var group = app.MapGroup("/catalog")
+            .WithTags(Dnd5eModule.Tag("Catalog"))
             .RequireAuthorization()
             .AddEndpointFilter<ValidationFilter>()
             .ProducesProblem(StatusCodes.Status401Unauthorized);

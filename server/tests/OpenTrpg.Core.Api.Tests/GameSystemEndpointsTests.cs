@@ -17,7 +17,7 @@ namespace OpenTrpg.Core.Api.Tests;
 public class GameSystemEndpointsTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
     /// <summary>
-    /// Body of <c>GET /api/v1/catalog/attribution</c> before the game systems existed. The attribution now
+    /// Body of <c>GET /api/v1/systems/dnd5e/catalog/attribution</c> before the game systems existed. The attribution now
     /// comes from the D&amp;D 5e system and must not change by a single byte.
     /// </summary>
     private const string AttributionJson =
@@ -49,7 +49,7 @@ public class GameSystemEndpointsTests(ApiFactory factory) : IClassFixture<ApiFac
     {
         var user = await factory.CreateSignedInUserAsync();
 
-        var response = await user.Client.GetAsync("/api/v1/catalog/attribution");
+        var response = await user.Client.GetAsync("/api/v1/systems/dnd5e/catalog/attribution");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(AttributionJson, await response.Content.ReadAsStringAsync());

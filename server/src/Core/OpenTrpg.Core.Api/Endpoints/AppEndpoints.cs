@@ -15,7 +15,7 @@ public static class AppEndpoints
     {
         var group = app.MapGroup("/api/v1/app").WithTags("App").AllowAnonymous();
 
-        group.MapGet("/info", () => TypedResults.Ok(new AppInfoResponse("dnd-companion-api", ApiVersion)))
+        group.MapGet("/info", () => TypedResults.Ok(new AppInfoResponse("opentrpg-api", ApiVersion)))
             .WithName("GetAppInfo")
             .WithSummary("Nombre y versión de la API. Lo usa el cliente para comprobar conectividad.");
 
@@ -50,7 +50,7 @@ public static class AppEndpoints
             .Produces(StatusCodes.Status206PartialContent, contentType: "application/vnd.android.package-archive")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithName("DownloadRelease")
-            .WithSummary("Descarga anónima del APK de un número de compilación (Content-Disposition dnd-companion-{versión}.apk, soporta Range).");
+            .WithSummary("Descarga anónima del APK de un número de compilación (Content-Disposition opentrpg-{versión}.apk, soporta Range).");
 
         return app;
     }

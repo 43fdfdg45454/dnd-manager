@@ -18,7 +18,7 @@ public sealed class TrinketPackApiFactory : ApiFactory
 public class TrinketPackTests(TrinketPackApiFactory factory) : IClassFixture<TrinketPackApiFactory>
 {
     private const string PacksUrl = "/api/v1/admin/content-packs";
-    private const string TrinketsUrl = "/api/v1/catalog/trinkets";
+    private const string TrinketsUrl = "/api/v1/systems/dnd5e/catalog/trinkets";
 
     [Fact]
     public async Task Trinket_tables_resolve_their_items_and_the_last_imported_pack_wins_each_roll()

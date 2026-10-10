@@ -1,4 +1,4 @@
-name: dnd-companion
+name: opentrpg
 
 # Toda la configuración viene de .env (copia de .env.sample): sin valores fijos ni por defecto aquí.
 # Ajustes menos habituales (nivel de log, límite de subida, recordatorios, seguridad SMTP...) tienen

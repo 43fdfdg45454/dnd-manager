@@ -15,6 +15,9 @@ internal static class ItemTestHelpers
 {
     public static string CharacterUrl(Guid id) => $"/api/v1/characters/{id}";
 
+    /// <summary>Prefix of the D&amp;D 5e routes of a character (phase 32B).</summary>
+    public static string Dnd5eCharacterUrl(Guid id) => $"/api/v1/systems/dnd5e/characters/{id}";
+
     public static string InventoryUrl(Guid characterId) => $"{CharacterUrl(characterId)}/inventory";
 
     public static string ItemsUrl(Guid campaignId) => $"/api/v1/campaigns/{campaignId}/items";
@@ -24,7 +27,7 @@ internal static class ItemTestHelpers
     /// <summary>Id of an SRD item by exact name (the first one when the dataset repeats the name).</summary>
     public static async Task<Guid> SrdItemIdAsync(this SignedInUser actor, string name)
     {
-        var response = await actor.Client.GetAsync($"/api/v1/catalog/items?search={Uri.EscapeDataString(name)}&pageSize=50");
+        var response = await actor.Client.GetAsync($"/api/v1/systems/dnd5e/catalog/items?search={Uri.EscapeDataString(name)}&pageSize=50");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var page = (await response.Content.ReadFromJsonAsync<PagedResult<ItemSummaryDto>>())!;
         return page.Items.First(i => i.Name == name).Id;
@@ -130,7 +133,7 @@ internal static class ItemTestHelpers
     public static async Task<CharacterDetailDto> ActiveFighterAsync(SignedInUser owner, SignedInUser dm, Guid campaignId, string name)
     {
         var character = await owner.CreateCharacterAsync(campaignId, name);
-        var patch = await owner.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/sheet", new
+        var patch = await owner.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(character.Id)}/sheet", new
         {
             classes = new[] { new { classIndex = "fighter", level = 3 } },
             baseAbilities = new { str = 16, dex = 12, con = 14, @int = 10, wis = 10, cha = 10 },

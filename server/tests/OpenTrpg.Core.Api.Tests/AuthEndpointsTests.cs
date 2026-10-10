@@ -152,8 +152,8 @@ public class AuthEndpointsTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var client = factory.CreateClient();
         var forged = new JsonWebTokenHandler().CreateToken(new Microsoft.IdentityModel.Tokens.SecurityTokenDescriptor
         {
-            Issuer = "dnd-companion",
-            Audience = "dnd-companion-app",
+            Issuer = "opentrpg",
+            Audience = "opentrpg",
             Expires = DateTime.UtcNow.AddMinutes(5),
             Claims = new Dictionary<string, object> { ["sub"] = Guid.NewGuid().ToString(), ["role"] = "Admin" },
             SigningCredentials = new Microsoft.IdentityModel.Tokens.SigningCredentials(

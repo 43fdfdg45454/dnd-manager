@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex">
-  <title>Crear administrador · D&amp;D Companion</title>
+  <title>Crear administrador · OpenTRPG</title>
   <style>
     :root {
       --bg: #f4f1ea;
@@ -93,7 +93,7 @@
 <body>
   <main>
     <h1>Crear administrador</h1>
-    <p class="lead">D&amp;D Companion</p>
+    <p class="lead">OpenTRPG</p>
 
     <div id="loading" class="message" role="status" aria-live="polite">Comprobando el estado de la instancia…</div>
 
@@ -211,7 +211,7 @@
           .then(function (response) {
             if (response.status === 201) {
               form.hidden = true;
-              show('Administrador creado. Ya puedes iniciar sesión en la app de D&D Companion.', true);
+              show('Administrador creado. Ya puedes iniciar sesión en la app de OpenTRPG.', true);
               return;
             }
             if (response.status === 409) {

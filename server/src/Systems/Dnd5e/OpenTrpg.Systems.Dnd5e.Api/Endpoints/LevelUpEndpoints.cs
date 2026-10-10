@@ -3,6 +3,7 @@ using OpenTrpg.Core.Api.Auth;
 using OpenTrpg.Core.Api.Filters;
 using OpenTrpg.Core.Application.Characters;
 using OpenTrpg.Systems.Dnd5e.Api.Endpoints;
+using OpenTrpg.Systems.Dnd5e.Application;
 using OpenTrpg.Systems.Dnd5e.Application.Characters;
 
 namespace OpenTrpg.Systems.Dnd5e.Api.Endpoints;
@@ -12,9 +13,10 @@ public static class LevelUpEndpoints
 {
     public static IEndpointRouteBuilder MapLevelUpEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/characters/{id:guid}/level-up")
-            .WithTags("LevelUp")
+        var group = app.MapGroup("/characters/{id:guid}/level-up")
+            .WithTags(Dnd5eModule.Tag("LevelUp"))
             .RequireAuthorization()
+            .RequireCharacterSystem(Dnd5eSystem.SystemId)
             .AddEndpointFilter<ValidationFilter>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
