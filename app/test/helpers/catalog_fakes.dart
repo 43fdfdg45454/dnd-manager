@@ -115,6 +115,12 @@ class FakeCatalogRepository implements CatalogRepository {
   final List<SpellCall> spellCalls = [];
   final List<({String? search, String? category, int page})> itemCalls = [];
 
+  /// `group` of every items call (weapon/armor group filter).
+  final List<String?> itemGroupCalls = [];
+
+  /// Group of each item id, matched by the fake when filtering by group.
+  final Map<String, String> itemGroupOf = {};
+
   void _fail() {
     if (error != null) throw error!;
   }
@@ -214,16 +220,21 @@ class FakeCatalogRepository implements CatalogRepository {
     String? search,
     String? category,
     String? rarity,
+    String? group,
     int page = 1,
     int pageSize = 50,
     String? campaignId,
   }) async {
     _fail();
     itemCalls.add((search: search, category: category, page: page));
+    itemGroupCalls.add(group);
     final q = (search ?? '').toLowerCase();
     final filtered = _scoped(itemList, (i) => i.source, campaignId)
         .where(
-          (i) => (category == null || i.category == category) && i.name.toLowerCase().contains(q),
+          (i) =>
+              (category == null || i.category == category) &&
+              (group == null || itemGroupOf[i.id] == group) &&
+              i.name.toLowerCase().contains(q),
         )
         .toList();
     return _slice(filtered, page, pageSize);

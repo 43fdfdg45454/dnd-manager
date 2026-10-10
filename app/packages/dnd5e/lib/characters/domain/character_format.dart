@@ -222,3 +222,46 @@ const damageTypeLabels = <String, String>{
 /// Spanish name of a damage type index ("fire" -> "fuego"); unknown ones stay as sent.
 String damageTypeLabel(String damageType) =>
     damageTypeLabels[damageType.toLowerCase()] ?? damageType;
+
+/// Spanish names of the SRD conditions (immunities of the sheet).
+const conditionLabels = <String, String>{
+  'blinded': 'cegado',
+  'charmed': 'hechizado',
+  'deafened': 'ensordecido',
+  'exhaustion': 'agotamiento',
+  'frightened': 'asustado',
+  'grappled': 'agarrado',
+  'incapacitated': 'incapacitado',
+  'invisible': 'invisible',
+  'paralyzed': 'paralizado',
+  'petrified': 'petrificado',
+  'poisoned': 'envenenado',
+  'prone': 'derribado',
+  'restrained': 'apresado',
+  'stunned': 'aturdido',
+  'unconscious': 'inconsciente',
+};
+
+/// Spanish name of a condition index ("charmed" -> "hechizado"); pack
+/// conditions stay as sent, without dashes.
+String conditionLabel(String condition) =>
+    conditionLabels[condition.toLowerCase()] ?? condition.replaceAll('-', ' ');
+
+/// Spanish names of the creature sizes.
+const sizeLabels = <String, String>{
+  'tiny': 'Diminuto',
+  'small': 'Pequeño',
+  'medium': 'Mediano',
+  'large': 'Grande',
+  'huge': 'Enorme',
+  'gargantuan': 'Gargantuesco',
+};
+
+/// Spanish name of a size ("small" -> "Pequeño"); unknown ones stay as sent.
+String sizeLabel(String size) => sizeLabels[size.toLowerCase()] ?? size;
+
+/// Spanish names of the movements besides walking.
+const speedModeLabels = <String, String>{'swim': 'Nado', 'climb': 'Trepar', 'fly': 'Vuelo'};
+
+/// Spanish name of a movement ("swim" -> "Nado").
+String speedModeLabel(String mode) => speedModeLabels[mode] ?? mode;

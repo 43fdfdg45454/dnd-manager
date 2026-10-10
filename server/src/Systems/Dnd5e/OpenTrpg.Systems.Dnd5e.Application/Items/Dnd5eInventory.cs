@@ -17,7 +17,15 @@ public static class Dnd5eInventory
     public const int CarryCapacityPerStrength = 15;
 
     /// <summary>Carrying capacity of a final Strength score.</summary>
-    public static int CarryingCapacity(int strengthScore) => strengthScore * CarryCapacityPerStrength;
+    /// <param name="size">Size of the character ("tiny".."gargantuan"); Medium when null or unknown.</param>
+    public static int CarryingCapacity(int strengthScore, string? size = null) => size switch
+    {
+        "tiny" => strengthScore * CarryCapacityPerStrength / 2,
+        "large" => strengthScore * CarryCapacityPerStrength * 2,
+        "huge" => strengthScore * CarryCapacityPerStrength * 4,
+        "gargantuan" => strengthScore * CarryCapacityPerStrength * 8,
+        _ => strengthScore * CarryCapacityPerStrength,
+    };
 
     /// <summary>
     /// Gear of the equipped entries among <paramref name="items"/> (in inventory order): armor, shield

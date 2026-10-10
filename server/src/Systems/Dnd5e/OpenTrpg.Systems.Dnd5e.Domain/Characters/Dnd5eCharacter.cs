@@ -27,6 +27,9 @@ public sealed partial class Dnd5eCharacter
     /// <summary>Result of the optional table of the background, e.g. "Especialidad: Bibliotecario".</summary>
     public const int BackgroundDetailMaxLength = 200;
     public const int MaxDeathSaves = 3;
+
+    /// <summary>Most failed death saves a feature can require to die (content packs).</summary>
+    public const int MaxDeathSaveFailures = 10;
     public const int MaxExhaustionLevel = 6;
     public const int MaxTemporaryHitPoints = 999;
     public const int MaxConditions = 20;
@@ -312,8 +315,11 @@ public sealed partial class Dnd5eCharacter
 
     // ---- Combat tracking -----------------------------------------------------------------------
 
-    /// <summary>Applies combat tracking changes. <paramref name="maxHp"/> is the sheet's maximum hit points.</summary>
-    public void ApplyCombatUpdate(CombatUpdate update, int maxHp, DateTimeOffset now)
+    /// <summary>
+    /// Applies combat tracking changes. <paramref name="maxHp"/> is the sheet's maximum hit points and
+    /// <paramref name="deathSaveFailuresToDie"/> its failed death saves that kill (3 unless a feature changes it).
+    /// </summary>
+    public void ApplyCombatUpdate(CombatUpdate update, int maxHp, DateTimeOffset now, int deathSaveFailuresToDie = MaxDeathSaves)
     {
         ArgumentNullException.ThrowIfNull(update);
 
@@ -328,9 +334,12 @@ public sealed partial class Dnd5eCharacter
             throw DomainException.RuleViolation($"Los puntos de golpe temporales deben estar entre 0 y {MaxTemporaryHitPoints}.");
         }
 
-        if (update.DeathSaveSuccesses is < 0 or > MaxDeathSaves || update.DeathSaveFailures is < 0 or > MaxDeathSaves)
+        var maxFailures = Math.Clamp(deathSaveFailuresToDie, MaxDeathSaves, MaxDeathSaveFailures);
+        if (update.DeathSaveSuccesses is < 0 or > MaxDeathSaves || update.DeathSaveFailures is < 0 || update.DeathSaveFailures > maxFailures)
         {
-            throw DomainException.RuleViolation($"Las salvaciones contra muerte deben estar entre 0 y {MaxDeathSaves}.");
+            throw DomainException.RuleViolation(update.DeathSaveFailures > maxFailures
+                ? $"Los fallos de salvación contra muerte deben estar entre 0 y {maxFailures}."
+                : $"Las salvaciones contra muerte deben estar entre 0 y {MaxDeathSaves}.");
         }
 
         if (update.ExhaustionLevel is < 0 or > MaxExhaustionLevel)
@@ -687,10 +696,11 @@ public sealed partial class Dnd5eCharacter
 
     /// <summary>
     /// Long rest: hit points to <paramref name="maxHp"/>, every slot recovered, short and long rest
-    /// resources restored, recovers max(1, total level / 2) spent hit dice (main class first),
-    /// exhaustion −1, death saves reset and concentration ends. Temporary hit points are kept.
+    /// resources restored, recovers max(1, total level / 2) spent hit dice (main class first; all of them with
+    /// <paramref name="allHitDice"/>, a feature of a content pack), exhaustion −1, death saves reset and concentration
+    /// ends. Temporary hit points are kept.
     /// </summary>
-    public void LongRest(int maxHp, DateTimeOffset now)
+    public void LongRest(int maxHp, DateTimeOffset now, bool allHitDice = false)
     {
         HitPointsCurrent = Math.Max(0, maxHp);
 
@@ -709,7 +719,7 @@ public sealed partial class Dnd5eCharacter
             resource.AfterRest(RestKind.Long);
         }
 
-        var toRecover = Math.Max(1, TotalLevel / 2);
+        var toRecover = allHitDice ? int.MaxValue : Math.Max(1, TotalLevel / 2);
         var used = new Dictionary<string, int>(HitDiceUsed, StringComparer.Ordinal);
         foreach (var characterClass in OrderedClasses)
         {

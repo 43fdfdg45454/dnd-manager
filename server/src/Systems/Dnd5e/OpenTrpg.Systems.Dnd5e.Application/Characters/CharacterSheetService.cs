@@ -459,6 +459,10 @@ public sealed class CharacterSheetService(
             Progression = s.Progression,
             HitPointCost = s.HitPointCost,
             UsesResource = s.UsesResource,
+            CantripSaveDc = s.CantripSaveDc,
+            CantripAttackBonus = s.CantripAttackBonus,
+            CriticalRange = s.CriticalRange,
+            CriticalRangeSource = s.CriticalRangeSource,
         }).ToList(),
         sheet.PactMagic?.SlotLevel,
         sheet.OverriddenFields,
@@ -467,5 +471,21 @@ public sealed class CharacterSheetService(
     {
         Resistances = sheet.Resistances.Select(r => new ResistanceDto(r.DamageType, r.Source, r.Label)).ToList(),
         BreathWeapon = sheet.BreathWeapon is { } b ? new BreathWeaponValueDto(b.Name, b.Source, b.DamageType, b.Dice, b.SaveAbility, b.Area, b.Dc) : null,
+        Immunities = sheet.Immunities.Select(Defense).ToList(),
+        ConditionImmunities = sheet.ConditionImmunities.Select(Defense).ToList(),
+        LostSavingThrows = sheet.LostSavingThrows.Select(Defense).ToList(),
+        ClassSaveDcs = sheet.ClassSaveDcs.Select(d => new ClassSaveDcDto(d.ClassIndex, d.Name, d.Ability, d.Dc, d.BreakdownKey)).ToList(),
+        PassiveInvestigation = sheet.PassiveInvestigation,
+        PassiveInsight = sheet.PassiveInsight,
+        AbilityMaxScores = sheet.AbilityMaxScores,
+        Size = sheet.Size,
+        SizeSource = sheet.SizeSource,
+        Speeds = sheet.Speeds.ToDictionary(v => v.Mode, v => v.Feet, StringComparer.Ordinal),
+        DeathSaveFailuresToDie = sheet.DeathSaveFailuresToDie,
+        DeathSaveFailuresSource = sheet.DeathSaveFailuresSource,
+        RecoversAllHitDice = sheet.RecoversAllHitDice,
+        HitDiceRecoverySource = sheet.HitDiceRecoverySource,
     };
+
+    private static DefenseDto Defense(SourcedValue value) => new(value.Value, value.Source, value.Label);
 }

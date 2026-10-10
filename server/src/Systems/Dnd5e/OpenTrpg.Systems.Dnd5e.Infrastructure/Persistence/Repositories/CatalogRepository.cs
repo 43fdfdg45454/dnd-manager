@@ -180,6 +180,30 @@ internal sealed class CatalogRepository(AppDbContext db, CatalogScopeContext sco
             query = query.Where(x => x.Rarity == rarity);
         }
 
+        if (filter.Categories is { Count: > 0 } categories)
+        {
+            query = query.Where(x => categories.Contains(x.Category));
+        }
+
+        if (filter.Property is { } property && filter.SubcategoryPrefix is { } either && filter.PropertyOrSubcategory)
+        {
+            var tag = ItemTemplate.TagOf(property);
+            query = query.Where(x => x.PropertyTags.Contains(tag) || x.Subcategory.ToLower().StartsWith(either));
+        }
+        else
+        {
+            if (filter.SubcategoryPrefix is { } prefix)
+            {
+                query = query.Where(x => x.Subcategory.ToLower().StartsWith(prefix));
+            }
+
+            if (filter.Property is { } only)
+            {
+                var tag = ItemTemplate.TagOf(only);
+                query = query.Where(x => x.PropertyTags.Contains(tag));
+            }
+        }
+
         var total = await query.CountAsync(cancellationToken);
         var items = await query.OrderBy(x => x.Name).ThenBy(x => x.Index).Skip(skip).Take(take).ToListAsync(cancellationToken);
         return (items, total);

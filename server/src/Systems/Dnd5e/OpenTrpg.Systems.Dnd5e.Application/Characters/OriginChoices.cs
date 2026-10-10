@@ -44,7 +44,11 @@ public sealed record OriginChoiceDto(
     IReadOnlyList<LevelUpOptionDto> Options,
     IReadOnlyList<ChoiceItemDto> Selected,
     ChoiceItemDto? Feat,
-    string? Ability);
+    string? Ability)
+{
+    /// <summary>Feats with <c>grants.removeSavingThrows</c> to choose: the saving throw proficiencies the player gives up.</summary>
+    public IReadOnlyList<string> RemovedSavingThrows { get; init; } = [];
+}
 
 /// <param name="Complete">Every required choice is answered (the draft can be submitted or activated).</param>
 public sealed record OriginChoicesDto(Guid CharacterId, bool Complete, IReadOnlyList<OriginChoiceDto> Choices);
@@ -227,11 +231,18 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
                             o.SpellCategory)
                         {
                             DamageType = o.DamageType,
+                            RemoveSavingThrows = o.Definition?.Grants.RemoveSavingThrows is { } remove
+                                ? new RemoveSavingThrowsDto(remove.Choose, remove.From)
+                                : null,
+                            SkillChoicesDelta = o.Definition?.Grants.SkillChoicesDelta ?? 0,
                         })
                         .ToList(),
                     (answer?.Selected ?? []).Select(ChoiceItemDto.From).ToList(),
                     answer?.Feat is { } feat ? ChoiceItemDto.From(feat) : null,
-                    answer?.Ability);
+                    answer?.Ability)
+                {
+                    RemovedSavingThrows = answer?.RemovedSavingThrows ?? [],
+                };
             })
             .ToList());
 
@@ -598,6 +609,7 @@ public sealed class OriginChoicesHandler(
     {
         string? featIndex = null;
         string? ability = null;
+        List<string>? removed = null;
         if (selected.ValueKind == JsonValueKind.Array && selected.GetArrayLength() == 1 && selected[0].ValueKind == JsonValueKind.String)
         {
             featIndex = selected[0].GetString()?.Trim();
@@ -613,6 +625,11 @@ public sealed class OriginChoicesHandler(
                         break;
                     case "ability" when property.Value.ValueKind is JsonValueKind.String or JsonValueKind.Null:
                         ability = property.Value.GetString()?.Trim().ToLowerInvariant();
+                        break;
+                    case "removedsavingthrows" when property.Value.ValueKind == JsonValueKind.Array:
+                        removed = property.Value.EnumerateArray()
+                            .Select(e => e.ValueKind == JsonValueKind.String ? e.GetString()?.Trim().ToLowerInvariant() ?? string.Empty : string.Empty)
+                            .ToList();
                         break;
                     default:
                         throw AppException.Validation("choices", $"La elección «{choice.Name}» tiene un campo desconocido: {property.Name}.");
@@ -652,6 +669,35 @@ public sealed class OriginChoicesHandler(
             SetId = feat.Definition?.SetId ?? OptionSets.Feats,
             Feat = new ChoiceItem(feat.Index, feat.Name),
             Ability = raised,
+            RemovedSavingThrows = RemovedSavingThrowsOf(feat, removed),
         };
+    }
+
+    /// <summary>
+    /// The saving throws a feat with <c>grants.removeSavingThrows</c> takes away, when the player chooses them
+    /// (<c>removedSavingThrows</c>: exactly <c>choose</c> abilities of <c>from</c>); null when nothing is chosen.
+    /// </summary>
+    private static List<string>? RemovedSavingThrowsOf(PlannedOption feat, List<string>? removed)
+    {
+        var rule = feat.Definition?.Grants.RemoveSavingThrows;
+        if (rule is null || rule.Fixed.Count > 0)
+        {
+            if (removed is { Count: > 0 })
+            {
+                throw AppException.Validation("choices", $"«{feat.Name}» no pide elegir salvaciones que perder.");
+            }
+
+            return null;
+        }
+
+        var chosen = (removed ?? []).Distinct(StringComparer.Ordinal).ToList();
+        if (chosen.Count != rule.Choose
+            || chosen.Any(a => !Abilities.IsValid(a) || (rule.From.Count > 0 && !rule.From.Contains(a, StringComparer.Ordinal))))
+        {
+            var from = rule.From.Count == 0 ? "cualquiera" : string.Join(", ", rule.From);
+            throw AppException.Validation("choices", $"«{feat.Name}»: elige {rule.Choose} salvación(es) que pierdes en \"removedSavingThrows\" ({from}).");
+        }
+
+        return chosen;
     }
 }

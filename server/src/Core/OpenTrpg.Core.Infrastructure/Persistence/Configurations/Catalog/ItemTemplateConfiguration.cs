@@ -35,6 +35,7 @@ internal sealed class ItemTemplateConfiguration : IEntityTypeConfiguration<ItemT
         builder.Property(x => x.DamageType).HasMaxLength(32);
         builder.Property(x => x.VersatileDice).HasMaxLength(32);
         builder.Property(x => x.Properties).HasJsonListConversion();
+        builder.Property(x => x.PropertyTags).IsRequired();
         builder.Property(x => x.Description).HasJsonListConversion();
         builder.Property(x => x.Effects).HasJsonListConversion();
         builder.Property(x => x.Modifiers).HasJsonListConversion();

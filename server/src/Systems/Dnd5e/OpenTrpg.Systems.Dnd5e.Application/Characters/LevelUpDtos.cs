@@ -100,6 +100,12 @@ public sealed record LevelUpChoiceDto(
 }
 
 /// <summary>
+/// Saving throw proficiencies lost: <see cref="Choose"/> of <see cref="From"/> (empty = any). When <see cref="From"/> lists
+/// exactly <see cref="Choose"/> they are lost without asking; otherwise the answer carries <c>removedSavingThrows</c>.
+/// </summary>
+public sealed record RemoveSavingThrowsDto(int Choose, IReadOnlyList<string> From);
+
+/// <summary>
 /// An option of a choice. Not <see cref="Eligible"/> when its prerequisites are not met (<see cref="Reason"/>).
 /// <see cref="SpellLevel"/> and <see cref="SpellCategory"/> (a <c>SpellCategory</c> name) for spells;
 /// <see cref="AbilityIncrease"/> for feats that raise an ability.
@@ -130,6 +136,12 @@ public sealed record LevelUpOptionDto(
     /// this level); null when it is always available. The app hides it until that pick is selected.
     /// </summary>
     public OptionRequirementDto? Requires { get; init; }
+
+    /// <summary>Feats that take saving throw proficiencies away (<c>grants.removeSavingThrows</c>), or null.</summary>
+    public RemoveSavingThrowsDto? RemoveSavingThrows { get; init; }
+
+    /// <summary>Change of the class skills chosen at creation that the option brings (−2: two fewer); 0 = none.</summary>
+    public int SkillChoicesDelta { get; init; }
 }
 
 /// <summary>

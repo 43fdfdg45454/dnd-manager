@@ -38,8 +38,8 @@ public sealed class CombatUpdateRequestValidator : AbstractValidator<CombatUpdat
             .WithMessage($"Los puntos de golpe temporales deben estar entre 0 y {Dnd5eCharacter.MaxTemporaryHitPoints}.");
         RuleFor(x => x.DeathSaveSuccesses).InclusiveBetween(0, Dnd5eCharacter.MaxDeathSaves)
             .WithMessage($"Las salvaciones contra muerte deben estar entre 0 y {Dnd5eCharacter.MaxDeathSaves}.");
-        RuleFor(x => x.DeathSaveFailures).InclusiveBetween(0, Dnd5eCharacter.MaxDeathSaves)
-            .WithMessage($"Las salvaciones contra muerte deben estar entre 0 y {Dnd5eCharacter.MaxDeathSaves}.");
+        RuleFor(x => x.DeathSaveFailures).InclusiveBetween(0, Dnd5eCharacter.MaxDeathSaveFailures)
+            .WithMessage($"Los fallos de salvación contra muerte deben estar entre 0 y {Dnd5eCharacter.MaxDeathSaveFailures}.");
         RuleFor(x => x.ExhaustionLevel).InclusiveBetween(0, Dnd5eCharacter.MaxExhaustionLevel)
             .WithMessage($"El nivel de agotamiento debe estar entre 0 y {Dnd5eCharacter.MaxExhaustionLevel}.");
         RuleFor(x => x.Conditions!)
@@ -204,7 +204,8 @@ public sealed class UpdateCombatHandler(CharacterTracker tracker, IDateTimeProvi
                 Inspiration = request.Inspiration,
             },
             sheet.HitPointsMax,
-            clock.UtcNow);
+            clock.UtcNow,
+            sheet.DeathSaveFailuresToDie);
         return await tracker.SaveAsync(character, cancellationToken);
     }
 }

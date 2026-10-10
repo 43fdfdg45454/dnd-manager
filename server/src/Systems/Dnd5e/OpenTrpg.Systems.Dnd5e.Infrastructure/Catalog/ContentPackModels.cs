@@ -197,6 +197,18 @@ internal sealed class PackClassJson
 
     /// <summary>Auxiliary classes: counts as one level of the caster class for its slots.</summary>
     public bool? CountsAsCasterLevel { get; set; }
+
+    /// <summary>Save DCs of the class's features (8 + proficiency + ability): one object or a list.</summary>
+    [JsonConverter(typeof(SingleOrListConverter<PackClassSaveDcJson>))]
+    public List<PackClassSaveDcJson?>? SaveDc { get; set; }
+}
+
+internal sealed class PackClassSaveDcJson
+{
+    /// <summary>What the DC is for, shown in the sheet ("CD de maniobras").</summary>
+    public string? Name { get; set; }
+
+    public string? Ability { get; set; }
 }
 
 internal sealed class PackClassProficienciesJson
@@ -679,6 +691,9 @@ internal sealed class PackItemJson
 
     /// <summary>Contents of an equipment pack (explorer's pack...), given with the item in the starting equipment.</summary>
     public List<PackStartingItemJson?>? Contents { get; set; }
+
+    /// <summary>Class indexes that may attune to the item (with <see cref="RequiresAttunement"/>); none = any class.</summary>
+    public List<string?>? AttunementClasses { get; set; }
 }
 
 internal sealed class PackWeaponJson
@@ -703,6 +718,36 @@ internal sealed class PackWeaponJson
 
     /// <summary>Special rules of the weapon (free text).</summary>
     public string? Special { get; set; }
+
+    /// <summary>Whether the ability modifier is added to the damage (default: yes, except firearms).</summary>
+    public bool? AddAbilityToDamage { get; set; }
+
+    /// <summary>Minimum scores to wield it without penalty (<c>{"str": 15}</c>); the sheet warns below them.</summary>
+    public Dictionary<string, int?>? Requires { get; set; }
+
+    /// <summary>Second profile (double or switch weapons): another attack with its own damage and properties.</summary>
+    public PackAlternateWeaponJson? Alternate { get; set; }
+}
+
+internal sealed class PackAlternateWeaponJson
+{
+    /// <summary>Name of the attack ("Lanza (modo arrojadizo)"); "&lt;item&gt; (perfil alternativo)" by default.</summary>
+    public string? Name { get; set; }
+
+    /// <summary>"melee" or "ranged" (the weapon's own by default).</summary>
+    public string? Range { get; set; }
+
+    public string? Damage { get; set; }
+
+    public string? DamageType { get; set; }
+
+    public string? VersatileDamage { get; set; }
+
+    public List<string?>? Properties { get; set; }
+
+    public int? RangeNormal { get; set; }
+
+    public int? RangeLong { get; set; }
 }
 
 internal sealed class PackArmorJson
@@ -731,6 +776,9 @@ internal sealed class PackFirearmJson
 
     /// <summary>Attack roll at or below which the firearm misfires.</summary>
     public int? Misfire { get; set; }
+
+    /// <summary>Era of the firearm ("renaissance", "modern"...): informative data.</summary>
+    public string? Era { get; set; }
 }
 
 internal sealed class PackModifierJson
@@ -1219,9 +1267,16 @@ internal sealed class PackChoiceModifierJson
 
     public string? Target { get; set; }
 
-    public int? Value { get; set; }
+    /// <summary>An integer, or a formula text ("characterLevel", "mod:wis", "walk" in <c>Speed</c>).</summary>
+    public JsonElement? Value { get; set; }
 
     public string? Condition { get; set; }
+
+    /// <summary><c>ArmorClassFormula</c>: abilities added to the base (<see cref="Value"/>).</summary>
+    public List<string?>? Abilities { get; set; }
+
+    /// <summary><c>ArmorClassFormula</c>: whether the shield is added (true by default).</summary>
+    public bool? AllowShield { get; set; }
 }
 
 internal sealed class PackAbilityIncreaseJson
@@ -1254,6 +1309,52 @@ internal sealed class PackGrantsJson
 
     /// <summary>Options and feats: option indexes (any set) the character gets without spending a choice.</summary>
     public List<string?>? Options { get; set; }
+
+    /// <summary>Damage types resisted.</summary>
+    public List<string?>? Resistances { get; set; }
+
+    /// <summary>Damage types the character is immune to.</summary>
+    public List<string?>? Immunities { get; set; }
+
+    /// <summary>Conditions the character is immune to (SRD or pack condition indexes).</summary>
+    public List<string?>? ConditionImmunities { get; set; }
+
+    /// <summary>Size the character has instead of the race's ("small").</summary>
+    public string? Size { get; set; }
+
+    /// <summary>Saving throw proficiencies lost: <c>{"choose": 1, "from": ["str", "dex"]}</c>.</summary>
+    public PackRemoveSavingThrowsJson? RemoveSavingThrows { get; set; }
+
+    /// <summary>Change of the class skills chosen at creation (−2: two fewer).</summary>
+    public int? SkillChoicesDelta { get; set; }
+
+    /// <summary>Natural weapons (claws, bite...): attacks of the sheet.</summary>
+    public List<PackNaturalWeaponJson?>? NaturalWeapons { get; set; }
+}
+
+internal sealed class PackRemoveSavingThrowsJson
+{
+    public int? Choose { get; set; }
+
+    public List<string?>? From { get; set; }
+}
+
+internal sealed class PackNaturalWeaponJson
+{
+    public string? Name { get; set; }
+
+    /// <summary>Dice ("1d6").</summary>
+    public string? Damage { get; set; }
+
+    /// <summary>Dice by character level (<c>{"1": "1d6", "5": "1d8"}</c>).</summary>
+    public Dictionary<string, string?>? DamageByCharacterLevel { get; set; }
+
+    public string? DamageType { get; set; }
+
+    public bool? Finesse { get; set; }
+
+    /// <summary>Reach in feet (5 by default).</summary>
+    public int? Reach { get; set; }
 }
 
 internal sealed class PackGrantedSpellJson

@@ -528,6 +528,10 @@ class Spellcasting {
     this.progression,
     this.hitPointCost = const [],
     this.usesResource,
+    this.cantripSaveDc,
+    this.cantripAttackBonus,
+    this.criticalRange = 20,
+    this.criticalRangeSource,
   });
 
   factory Spellcasting.fromJson(Map<String, dynamic> json) => Spellcasting(
@@ -545,6 +549,10 @@ class Spellcasting {
         if (_int(v) case final int cost) cost,
     ],
     usesResource: _strOrNull(json['usesResource']),
+    cantripSaveDc: _int(json['cantripSaveDc']),
+    cantripAttackBonus: _int(json['cantripAttackBonus']),
+    criticalRange: _int(json['criticalRange']) ?? 20,
+    criticalRangeSource: _strOrNull(json['criticalRangeSource']),
   );
 
   final String classIndex;
@@ -572,6 +580,20 @@ class Spellcasting {
 
   /// "hitPoints": key of the class resource each spell spends.
   final String? usesResource;
+
+  /// Save DC of the cantrips when a feature changes it (breakdown
+  /// `spellSaveDc.<class>.cantrip`); null otherwise.
+  final int? cantripSaveDc;
+
+  /// Spell attack bonus of the cantrips when a feature changes it (breakdown
+  /// `spellAttackBonus.<class>.cantrip`); null otherwise.
+  final int? cantripAttackBonus;
+
+  /// Lowest d20 roll of a spell attack that is a critical hit (20 by default).
+  final int criticalRange;
+
+  /// What lowered [criticalRange], or null.
+  final String? criticalRangeSource;
 
   /// The class casts without slots, paying hit points.
   bool get castsWithHitPoints => progression == 'hitPoints';
@@ -611,6 +633,48 @@ class Resistance {
   final String damageType;
   final String source;
   final String label;
+}
+
+/// An immunity, condition immunity or lost saving throw (`DefenseDto`): [type]
+/// is a damage type, a condition index or an ability, [label] what grants it.
+class SheetDefense {
+  const SheetDefense({required this.type, this.source = '', this.label = ''});
+
+  factory SheetDefense.fromJson(Map<String, dynamic> json) => SheetDefense(
+    type: _str(json['type']),
+    source: _str(json['source']),
+    label: _str(json['label']),
+  );
+
+  final String type;
+  final String source;
+  final String label;
+}
+
+/// A save DC of a class feature besides the spell one (`ClassSaveDcDto`), with
+/// the key of its breakdown in `CharacterSheet.breakdowns`.
+class ClassSaveDc {
+  const ClassSaveDc({
+    required this.classIndex,
+    required this.name,
+    required this.ability,
+    required this.dc,
+    required this.breakdownKey,
+  });
+
+  factory ClassSaveDc.fromJson(Map<String, dynamic> json) => ClassSaveDc(
+    classIndex: _str(json['classIndex']),
+    name: _str(json['name']),
+    ability: _str(json['ability']),
+    dc: _int(json['dc']) ?? 0,
+    breakdownKey: _str(json['breakdownKey']),
+  );
+
+  final String classIndex;
+  final String name;
+  final String ability;
+  final int dc;
+  final String breakdownKey;
 }
 
 /// Breath weapon of a draconic ancestry (`BreathWeaponValueDto`).
@@ -663,6 +727,20 @@ class CharacterSheet {
     this.breakdowns = const {},
     this.resistances = const [],
     this.breathWeapon,
+    this.immunities = const [],
+    this.conditionImmunities = const [],
+    this.lostSavingThrows = const [],
+    this.classSaveDcs = const [],
+    this.passiveInvestigation = 10,
+    this.passiveInsight = 10,
+    this.abilityMaxScores = const {},
+    this.size = '',
+    this.sizeSource,
+    this.speeds = const {},
+    this.deathSaveFailuresToDie = 3,
+    this.deathSaveFailuresSource,
+    this.recoversAllHitDice = false,
+    this.hitDiceRecoverySource,
   });
 
   factory CharacterSheet.fromJson(Map<String, dynamic> json) {
@@ -698,6 +776,20 @@ class CharacterSheet {
       breathWeapon: _map(json['breathWeapon']) == null
           ? null
           : BreathWeapon.fromJson(_map(json['breathWeapon'])!),
+      immunities: _objects(json['immunities'], SheetDefense.fromJson),
+      conditionImmunities: _objects(json['conditionImmunities'], SheetDefense.fromJson),
+      lostSavingThrows: _objects(json['lostSavingThrows'], SheetDefense.fromJson),
+      classSaveDcs: _objects(json['classSaveDcs'], ClassSaveDc.fromJson),
+      passiveInvestigation: _int(json['passiveInvestigation']) ?? 10,
+      passiveInsight: _int(json['passiveInsight']) ?? 10,
+      abilityMaxScores: _intMap(json['abilityMaxScores']),
+      size: _str(json['size']),
+      sizeSource: _strOrNull(json['sizeSource']),
+      speeds: _intMap(json['speeds']),
+      deathSaveFailuresToDie: _int(json['deathSaveFailuresToDie']) ?? 3,
+      deathSaveFailuresSource: _strOrNull(json['deathSaveFailuresSource']),
+      recoversAllHitDice: json['recoversAllHitDice'] == true,
+      hitDiceRecoverySource: _strOrNull(json['hitDiceRecoverySource']),
     );
   }
 
@@ -732,6 +824,48 @@ class CharacterSheet {
   /// `breakdowns['breathWeapon.dc']`), or null.
   final BreathWeapon? breathWeapon;
 
+  /// Damage types the character is immune to (content packs).
+  final List<SheetDefense> immunities;
+
+  /// Conditions the character is immune to ([SheetDefense.type] is the index).
+  final List<SheetDefense> conditionImmunities;
+
+  /// Saving throw proficiencies taken away by the race or a feat.
+  final List<SheetDefense> lostSavingThrows;
+
+  /// Save DCs of the class features (8 + proficiency + ability).
+  final List<ClassSaveDc> classSaveDcs;
+
+  /// Passive Investigation and Insight (breakdowns `passiveInvestigation`,
+  /// `passiveInsight`).
+  final int passiveInvestigation;
+  final int passiveInsight;
+
+  /// Highest score of each ability (20 unless a feature changes it); empty
+  /// when the server does not send it.
+  final Map<String, int> abilityMaxScores;
+
+  /// "tiny", "small", "medium"...; empty without race.
+  final String size;
+
+  /// The race, or the feature that changed the size.
+  final String? sizeSource;
+
+  /// Swimming, climbing and flying speeds by mode ("swim" → 30); breakdowns
+  /// `speed.<mode>`.
+  final Map<String, int> speeds;
+
+  /// Failed death saves that kill the character (3 unless a feature changes it).
+  final int deathSaveFailuresToDie;
+  final String? deathSaveFailuresSource;
+
+  /// A long rest recovers every hit die instead of half.
+  final bool recoversAllHitDice;
+  final String? hitDiceRecoverySource;
+
+  /// Highest score allowed for [key] (20 by default).
+  int abilityMax(String key) => abilityMaxScores[key] ?? 20;
+
   ValueBreakdown? breakdown(String key) => breakdowns[key];
 
   AbilityScore ability(String key) => abilities[key] ?? const AbilityScore(score: 10, modifier: 0);
@@ -756,6 +890,10 @@ class CombatAttack {
     this.notes,
     this.attackBreakdown,
     this.damageBreakdown,
+    this.criticalRange = 20,
+    this.criticalRangeSource,
+    this.warnings = const [],
+    this.natural = false,
   });
 
   factory CombatAttack.fromJson(Map<String, dynamic> json) => CombatAttack(
@@ -770,6 +908,10 @@ class CombatAttack {
     notes: _strOrNull(json['notes']),
     attackBreakdown: ValueBreakdown.maybeFromJson(json['attackBreakdown']),
     damageBreakdown: ValueBreakdown.maybeFromJson(json['damageBreakdown']),
+    criticalRange: _int(json['criticalRange']) ?? 20,
+    criticalRangeSource: _strOrNull(json['criticalRangeSource']),
+    warnings: [for (final w in (json['warnings'] as List? ?? const [])) _str(w)],
+    natural: json['natural'] == true,
   );
 
   final String? itemId;
@@ -788,6 +930,18 @@ class CombatAttack {
   /// the server does not send them.
   final ValueBreakdown? attackBreakdown;
   final ValueBreakdown? damageBreakdown;
+
+  /// Lowest d20 roll that is a critical hit (20 unless a feature lowers it).
+  final int criticalRange;
+
+  /// What lowered [criticalRange], or null.
+  final String? criticalRangeSource;
+
+  /// Problems wielding it ("Requiere Fuerza 16; tienes 14.").
+  final List<String> warnings;
+
+  /// A natural weapon of the race or a feature (claws, bite...).
+  final bool natural;
 
   bool hasProperty(String property) =>
       properties.any((p) => p.toLowerCase() == property.toLowerCase());
@@ -1687,6 +1841,8 @@ class LevelUpOption {
     this.cost,
     this.requires,
     this.setId,
+    this.removeSavingThrows,
+    this.skillChoicesDelta = 0,
   });
 
   factory LevelUpOption.fromJson(Map<String, dynamic> json) {
@@ -1711,8 +1867,18 @@ class LevelUpOption {
           ? null
           : (choiceKey: _str(requires['choiceKey']), index: _str(requires['index'])),
       setId: _strOrNull(json['setId']),
+      removeSavingThrows: _map(json['removeSavingThrows']) == null
+          ? null
+          : RemoveSavingThrows.fromJson(_map(json['removeSavingThrows'])!),
+      skillChoicesDelta: _int(json['skillChoicesDelta']) ?? 0,
     );
   }
+
+  /// Feats that take saving throw proficiencies away, or null.
+  final RemoveSavingThrows? removeSavingThrows;
+
+  /// Change of the class skills chosen at creation (−1: one fewer).
+  final int skillChoicesDelta;
 
   /// Option set of the option ("feats", or a set offered with
   /// [LevelUpChoice.alsoFrom]); null for non-options.
@@ -1746,6 +1912,22 @@ class LevelUpOption {
 
   /// For feats that raise an ability.
   final AbilityIncrease? abilityIncrease;
+}
+
+/// Saving throw proficiencies a feat takes away (`RemoveSavingThrowsDto`):
+/// [choose] of [from] (empty = any). With exactly [choose] in [from] they are
+/// lost without asking; otherwise the player picks them.
+class RemoveSavingThrows {
+  const RemoveSavingThrows({required this.choose, this.from = const []});
+
+  factory RemoveSavingThrows.fromJson(Map<String, dynamic> json) =>
+      RemoveSavingThrows(choose: _int(json['choose']) ?? 0, from: _strings(json['from']));
+
+  final int choose;
+  final List<String> from;
+
+  /// The player has to pick which ones are lost.
+  bool get asks => from.length != choose;
 }
 
 /// Prefix of the key of a forced replacement choice.
@@ -1974,18 +2156,24 @@ class LevelUpChoiceAnswer {
   const LevelUpChoiceAnswer.picks(this.key, this.selected, {this.replaced = const []})
     : asi = null,
       feat = null,
-      ability = null;
+      ability = null,
+      removedSavingThrows = const [];
 
   const LevelUpChoiceAnswer.asi(this.key, Map<String, int> this.asi)
     : selected = const [],
       replaced = const [],
       feat = null,
-      ability = null;
+      ability = null,
+      removedSavingThrows = const [];
 
-  const LevelUpChoiceAnswer.feat(this.key, String this.feat, {this.ability})
-    : selected = const [],
-      replaced = const [],
-      asi = null;
+  const LevelUpChoiceAnswer.feat(
+    this.key,
+    String this.feat, {
+    this.ability,
+    this.removedSavingThrows = const [],
+  }) : selected = const [],
+       replaced = const [],
+       asi = null;
 
   final String key;
   final List<String> selected;
@@ -1994,12 +2182,20 @@ class LevelUpChoiceAnswer {
   final String? feat;
   final String? ability;
 
+  /// Origin feats with `grants.removeSavingThrows` to choose: the saving
+  /// throw proficiencies given up.
+  final List<String> removedSavingThrows;
+
   Map<String, dynamic> toJson() => {
     'key': key,
     'selected': asi != null
         ? {'asi': asi}
         : feat != null
-        ? {'feat': feat, 'ability': ?ability}
+        ? {
+            'feat': feat,
+            'ability': ?ability,
+            if (removedSavingThrows.isNotEmpty) 'removedSavingThrows': removedSavingThrows,
+          }
         : selected,
     if (replaced.isNotEmpty) 'replaced': replaced,
   };
@@ -2265,6 +2461,7 @@ class OriginChoice {
     this.selected = const [],
     this.feat,
     this.ability,
+    this.removedSavingThrows = const [],
   });
 
   factory OriginChoice.fromJson(Map<String, dynamic> json) {
@@ -2283,6 +2480,7 @@ class OriginChoice {
       selected: _objects(json['selected'], ChoiceItem.fromJson),
       feat: feat == null ? null : ChoiceItem.fromJson(feat),
       ability: _strOrNull(json['ability']),
+      removedSavingThrows: _strings(json['removedSavingThrows']),
     );
   }
 
@@ -2309,6 +2507,9 @@ class OriginChoice {
   /// Current feat answer and the ability it raised.
   final ChoiceItem? feat;
   final String? ability;
+
+  /// Saving throws given up with the feat answer (`removedSavingThrows`).
+  final List<String> removedSavingThrows;
 
   LevelUpOption? option(String index) {
     for (final o in options) {

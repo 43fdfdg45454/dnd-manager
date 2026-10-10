@@ -130,6 +130,15 @@ class SummaryTab extends StatelessWidget {
               breakdown: sheet.breakdown('speed'),
               mark: OverrideMark(character: c, field: 'speed'),
             ),
+            for (final mode in sheet.speeds.keys)
+              StatTile(
+                statKey: 'speed-$mode',
+                breakdownKey: 'speed.$mode',
+                totalText: '${sheet.speeds[mode]} pies',
+                label: speedModeLabel(mode),
+                value: '${sheet.speeds[mode]} pies',
+                breakdown: sheet.breakdown('speed.$mode'),
+              ),
             StatTile(
               statKey: 'hp',
               breakdownKey: 'hitPointsMax',
@@ -179,34 +188,23 @@ class SummaryTab extends StatelessWidget {
           formatHeightAndWeight(c.heightInches, c.weightPounds),
           key: const Key('summary-height-weight'),
         ),
+        if (sheet.size.isNotEmpty)
+          FactRow(
+            'Tamaño',
+            [sizeLabel(sheet.size), if (sheet.sizeSource != null) sheet.sizeSource!].join(' · '),
+            key: const Key('summary-size'),
+          ),
+        if (sheet.classSaveDcs.isNotEmpty) ...[
+          const SectionTitle('CD de clase'),
+          for (final dc in sheet.classSaveDcs) _ClassSaveDcRow(character: c, dc: dc),
+        ],
         if (c.companion != null || c.companionFeature != null) ...[
           const SectionTitle('Compañero animal'),
           CompanionSection(character: c, canEdit: canEdit, isDm: isDm),
         ],
         const SectionTitle('Salvaciones'),
         for (final key in abilityKeys) _SavingThrowRow(character: c, abilityKey: key),
-        if (sheet.resistances.isNotEmpty) ...[
-          const SectionTitle('Resistencias'),
-          Wrap(
-            key: const Key('resistances'),
-            spacing: 8,
-            runSpacing: 4,
-            children: [
-              for (final r in sheet.resistances)
-                Tooltip(
-                  message: r.label,
-                  child: Chip(
-                    key: Key('resistance-${r.damageType}'),
-                    label: Text(
-                      r.label.isEmpty
-                          ? damageTypeLabel(r.damageType)
-                          : '${damageTypeLabel(r.damageType)} · ${r.label}',
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
+        if (_hasDefenses(sheet)) _DefensesSection(sheet: sheet),
         if (sheet.breathWeapon != null) _BreathWeaponCard(character: c),
         if (sheet.itemEffects.isNotEmpty) ...[
           const SectionTitle('Efectos de objetos'),
@@ -220,6 +218,97 @@ class SummaryTab extends StatelessWidget {
             ),
         ],
       ],
+    );
+  }
+}
+
+bool _hasDefenses(CharacterSheet sheet) =>
+    sheet.resistances.isNotEmpty ||
+    sheet.immunities.isNotEmpty ||
+    sheet.conditionImmunities.isNotEmpty ||
+    sheet.lostSavingThrows.isNotEmpty;
+
+/// "Defensas": resistances, damage and condition immunities and the saving
+/// throw proficiencies taken away, each chip with what grants it.
+class _DefensesSection extends StatelessWidget {
+  const _DefensesSection({required this.sheet});
+
+  final CharacterSheet sheet;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget chip(String key, String text, String label) => Tooltip(
+      message: label,
+      child: Chip(key: Key(key), label: Text(label.isEmpty ? text : '$text · $label')),
+    );
+
+    Widget group(String title, String key, List<Widget> chips) => Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.labelLarge),
+          Wrap(key: Key(key), spacing: 8, runSpacing: 4, children: chips),
+        ],
+      ),
+    );
+
+    return Column(
+      key: const Key('defenses'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionTitle('Defensas'),
+        if (sheet.resistances.isNotEmpty)
+          group('Resistencias', 'resistances', [
+            for (final r in sheet.resistances)
+              chip('resistance-${r.damageType}', damageTypeLabel(r.damageType), r.label),
+          ]),
+        if (sheet.immunities.isNotEmpty)
+          group('Inmunidades', 'immunities', [
+            for (final i in sheet.immunities)
+              chip('immunity-${i.type}', damageTypeLabel(i.type), i.label),
+          ]),
+        if (sheet.conditionImmunities.isNotEmpty)
+          group('Inmune a estados', 'condition-immunities', [
+            for (final i in sheet.conditionImmunities)
+              chip('condition-immunity-${i.type}', conditionLabel(i.type), i.label),
+          ]),
+        if (sheet.lostSavingThrows.isNotEmpty)
+          group('Sin competencia en salvación', 'lost-saves', [
+            for (final l in sheet.lostSavingThrows)
+              chip('lost-save-${l.type}', abilityLabel(l.type), l.label),
+          ]),
+      ],
+    );
+  }
+}
+
+/// A save DC of a class feature ("CD de maniobras: 14"), tappable for its breakdown.
+class _ClassSaveDcRow extends StatelessWidget {
+  const _ClassSaveDcRow({required this.character, required this.dc});
+
+  final CharacterDetail character;
+  final ClassSaveDc dc;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.bodyMedium;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(child: Text('${dc.name} (${abilityLabel(dc.ability)})', style: style)),
+          StatValue(
+            statKey: dc.breakdownKey,
+            textKey: Key('class-save-dc-${dc.breakdownKey}'),
+            title: dc.name,
+            text: 'CD ${dc.dc}',
+            totalText: '${dc.dc}',
+            breakdown: character.sheet.breakdown(dc.breakdownKey),
+            style: _numeric(style),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -482,6 +571,33 @@ class SkillsTab extends StatelessWidget {
             ),
             for (final skill in group.skills) _SkillRow(character: character, skill: skill),
           ],
+        const SectionTitle('Pasivas'),
+        Wrap(
+          key: const Key('passives'),
+          spacing: 16,
+          runSpacing: 4,
+          children: [
+            for (final (key, label, value) in [
+              ('passivePerception', 'Percepción', character.sheet.passivePerception),
+              ('passiveInvestigation', 'Investigación', character.sheet.passiveInvestigation),
+              ('passiveInsight', 'Perspicacia', character.sheet.passiveInsight),
+            ])
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('$label ', style: theme.textTheme.bodyMedium),
+                  StatValue(
+                    statKey: key,
+                    textKey: Key('passive-$key'),
+                    title: '$label pasiva',
+                    text: '$value',
+                    breakdown: character.sheet.breakdown(key),
+                    style: _numeric(theme.textTheme.bodyLarge),
+                  ),
+                ],
+              ),
+          ],
+        ),
         for (final group in others)
           if (group.keys.isNotEmpty) ...[
             SectionTitle(switch (group.type) {
@@ -913,6 +1029,34 @@ class _SpellcastingRow extends StatelessWidget {
             breakdown: sheet.breakdown('spellAttackBonus.${sc.classIndex}'),
             style: style,
           ),
+          if (sc.cantripSaveDc != null) ...[
+            Text(' · CD de trucos ', style: style),
+            StatValue(
+              statKey: 'spellSaveDc.${sc.classIndex}.cantrip',
+              textKey: Key('sheet-cantrip-dc-${sc.classIndex}'),
+              title: 'CD de trucos ($className)',
+              text: '${sc.cantripSaveDc}',
+              breakdown: sheet.breakdown('spellSaveDc.${sc.classIndex}.cantrip'),
+              style: style,
+            ),
+          ],
+          if (sc.cantripAttackBonus != null) ...[
+            Text(' · Ataque de trucos ', style: style),
+            StatValue(
+              statKey: 'spellAttackBonus.${sc.classIndex}.cantrip',
+              textKey: Key('sheet-cantrip-attack-${sc.classIndex}'),
+              title: 'Ataque de trucos ($className)',
+              text: formatModifier(sc.cantripAttackBonus!),
+              breakdown: sheet.breakdown('spellAttackBonus.${sc.classIndex}.cantrip'),
+              style: style,
+            ),
+          ],
+          if (sc.criticalRange < 20)
+            Text(
+              ' · Crítico con ${sc.criticalRange}-20',
+              key: Key('sheet-spell-crit-${sc.classIndex}'),
+              style: style,
+            ),
           if (sc.preparedMax != null) Text(' · Preparados máx. ${sc.preparedMax}', style: style),
           if (sc.spellsKnownMax != null)
             Text(

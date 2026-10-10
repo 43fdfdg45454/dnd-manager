@@ -57,6 +57,22 @@ class ItemFiltersController extends Notifier<String?> {
 final itemCategoryFilterProvider = NotifierProvider.autoDispose
     .family<ItemFiltersController, String?, String?>(ItemFiltersController.new);
 
+class ItemGroupFilterController extends Notifier<String?> {
+  ItemGroupFilterController(this.compendium);
+
+  final String? compendium;
+
+  @override
+  String? build() => null;
+
+  void setGroup(String? group) => state = group;
+}
+
+/// Selected weapon/armor group (`group` of the API: simple, martial, exotic,
+/// firearm or bomb) or null for all, per compendium.
+final itemGroupFilterProvider = NotifierProvider.autoDispose
+    .family<ItemGroupFilterController, String?, String?>(ItemGroupFilterController.new);
+
 /// Makes [ref] reload when the catalog of the instance changes or, with
 /// [campaignId], when the packs that campaign enables change.
 void watchCatalogScope(Ref ref, String? campaignId) {
@@ -175,7 +191,10 @@ class ItemsController extends _CompendiumPagedController<ItemSummary> {
   ItemsController(super.compendium);
 
   @override
-  void watchFilters() => ref.watch(itemCategoryFilterProvider(compendium));
+  void watchFilters() {
+    ref.watch(itemCategoryFilterProvider(compendium));
+    ref.watch(itemGroupFilterProvider(compendium));
+  }
 
   @override
   String? sourceOf(ItemSummary item) => item.source;
@@ -184,6 +203,7 @@ class ItemsController extends _CompendiumPagedController<ItemSummary> {
   Future<Page<ItemSummary>> fetch(int page, {required String? campaignId}) => repository.items(
     search: ref.read(compendiumSearchProvider(compendium)),
     category: ref.read(itemCategoryFilterProvider(compendium)),
+    group: ref.read(itemGroupFilterProvider(compendium)),
     page: page,
     pageSize: catalogPageSize,
     campaignId: campaignId,

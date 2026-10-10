@@ -7,7 +7,51 @@ using OpenTrpg.Systems.Dnd5e.Domain.Characters;
 namespace OpenTrpg.Systems.Dnd5e.Domain.Characters;
 
 /// <summary>A modifier of a chosen option, labelled for the breakdowns ("Defense (nivel 1)").</summary>
-public sealed record FeatureModifier(string Label, ItemModifierKind Kind, string? Target, int Value, string? Condition);
+public sealed record FeatureModifier(string Label, ItemModifierKind Kind, string? Target, int Value, string? Condition)
+{
+    /// <summary><see cref="ModifierFormula"/> of the value (null: <see cref="Value"/>); <see cref="SheetCalculator"/> resolves it.</summary>
+    public string? Formula { get; init; }
+
+    /// <summary>Class whose level <c>classLevel</c> counts in <see cref="Formula"/> (null: the character level).</summary>
+    public string? ClassIndex { get; init; }
+
+    /// <summary>How the value of a formula was obtained (one part per term); null for a constant.</summary>
+    public IReadOnlyList<BreakdownPart>? Parts { get; init; }
+
+    /// <summary><see cref="ItemModifierKind.ArmorClassFormula"/>: abilities added to the base.</summary>
+    public IReadOnlyList<string> Abilities { get; init; } = [];
+
+    /// <summary><see cref="ItemModifierKind.ArmorClassFormula"/>: whether the shield is added.</summary>
+    public bool AllowShield { get; init; } = true;
+
+    /// <summary>The breakdown parts of the value: <see cref="Parts"/>, or one part with the label and the value.</summary>
+    public IReadOnlyList<BreakdownPart> ValueParts => Parts ?? [new BreakdownPart(BreakdownSources.Feature, Label, Value)];
+
+    /// <summary>A modifier of the catalog labelled with its origin, tied to the class of its choice or feature.</summary>
+    public static FeatureModifier From(string label, ChoiceModifier modifier, string? classIndex)
+    {
+        ArgumentNullException.ThrowIfNull(modifier);
+        return new FeatureModifier(label, modifier.Kind, modifier.Target, modifier.Value, modifier.Condition)
+        {
+            Formula = modifier.Formula,
+            ClassIndex = classIndex,
+            Abilities = modifier.Abilities,
+            AllowShield = modifier.AllowShield,
+        };
+    }
+}
+
+/// <summary>
+/// Grants of a chosen option or feat that change the sheet (defenses, size, natural weapons, lost saving throws),
+/// labelled with their origin; <see cref="RemovedSavingThrows"/> are the abilities the player chose to lose.
+/// </summary>
+public sealed record GrantEffect(string Label, string Source, OptionGrants Grants)
+{
+    public IReadOnlyList<string> RemovedSavingThrows { get; init; } = [];
+}
+
+/// <summary>A damage resistance the player chose in a <c>Resistance</c> choice of an option or a feat.</summary>
+public sealed record ChosenResistance(string Label, string DamageType);
 
 /// <summary>An ability increase of an Ability Score Improvement or a feat ("Mejora de característica (nivel 4)").</summary>
 /// <param name="Source">Breakdown source (<see cref="BreakdownSources.Feature"/>; race or background for origin feats).</param>
@@ -40,6 +84,12 @@ public sealed record ChoiceEffects(
     /// </summary>
     public IReadOnlyList<AbilityIncreaseEffect> OriginAbilityBonuses { get; init; } = [];
 
+    /// <summary>Sheet grants of the chosen options and feats and of the subclass levels reached.</summary>
+    public IReadOnlyList<GrantEffect> Grants { get; init; } = [];
+
+    /// <summary>Resistances chosen in <c>Resistance</c> choices.</summary>
+    public IReadOnlyList<ChosenResistance> ChosenResistances { get; init; } = [];
+
     /// <summary>Label of an origin effect: "Grappler (raza)", "Grappler (trasfondo)", "Grappler (dote inicial)".</summary>
     public static string OriginLabel(string name, string key) =>
         $"{name} ({(key == OriginChoiceKeys.StarterFeat ? "dote inicial" : OriginChoiceKeys.IsBackground(key) ? "trasfondo" : OriginChoiceKeys.IsSubrace(key) ? "subraza" : "raza")})";
@@ -70,9 +120,15 @@ public sealed record ChoiceEffects(
         var originBonuses = new List<AbilityIncreaseEffect>();
         var choices = character.Choices.Where(c => c.Key != CharacterChoice.HitPointsKey).ToList();
 
-        void AddOption(OptionDefinition option, string? classIndex, string label, string? chosenAbility, string source)
+        var grants = new List<GrantEffect>();
+        void AddOption(OptionDefinition option, string? classIndex, string label, string? chosenAbility, string source, IReadOnlyList<string>? removedSaves = null)
         {
-            modifiers.AddRange(option.Modifiers.Select(m => new FeatureModifier(label, m.Kind, m.Target, m.Value, m.Condition)));
+            modifiers.AddRange(option.Modifiers.Select(m => FeatureModifier.From(label, m, classIndex)));
+            if (option.Grants is { HasSheetEffects: true } sheetGrants)
+            {
+                grants.Add(new GrantEffect(label, source, sheetGrants) { RemovedSavingThrows = removedSaves ?? [] });
+            }
+
             if (option.AbilityIncrease is { } increase
                 && (chosenAbility ?? (increase.From.Count == 1 ? increase.From[0] : null)) is { } ability
                 && Abilities.IsValid(ability))
@@ -117,7 +173,7 @@ public sealed record ChoiceEffects(
             if (selection.Feat is { } feat && !ReplacedLater(choice, feat.Index) && findOption(feat.Index) is { } featOption)
             {
                 var label = choice.IsOrigin ? OriginLabel(featOption.Name, choice.Key) : Label(featOption.Name, choice.Level);
-                AddOption(featOption, choice.ClassIndex, label, selection.Ability, choice.IsOrigin ? OriginSource(choice.Key) : BreakdownSources.Feature);
+                AddOption(featOption, choice.ClassIndex, label, selection.Ability, choice.IsOrigin ? OriginSource(choice.Key) : BreakdownSources.Feature, selection.RemovedSavingThrows);
             }
         }
 
@@ -129,7 +185,31 @@ public sealed record ChoiceEffects(
             }
         }
 
-        return new ChoiceEffects(modifiers, increases, resources) { OriginAbilityBonuses = originBonuses };
+        // A choice inside an option or feat ("<option>/<key>") is labelled with the option ("Aguante (nivel 4)").
+        string ResistanceLabel(ActivePick pick)
+        {
+            var slash = pick.Key.IndexOf('/', StringComparison.Ordinal);
+            if (slash > 0 && findOption(pick.Key[..slash]) is { } owner)
+            {
+                return Label(owner.Name, pick.Level);
+            }
+
+            return choices.FirstOrDefault(c => c.ClassIndex == pick.ClassIndex && c.Key == pick.Key) is { } choice
+                ? (choice.IsOrigin ? OriginLabel(choice.Selection.Name, choice.Key) : Label(choice.Selection.Name, pick.Level))
+                : pick.Key;
+        }
+
+        var resistances = character.ActivePicks()
+            .Where(p => p.Kind == nameof(LevelChoiceKind.Resistance))
+            .Select(p => new ChosenResistance(ResistanceLabel(p), p.Item.Index))
+            .ToList();
+
+        return new ChoiceEffects(modifiers, increases, resources)
+        {
+            OriginAbilityBonuses = originBonuses,
+            Grants = grants,
+            ChosenResistances = resistances,
+        };
     }
 
     /// <summary>
@@ -177,7 +257,23 @@ public sealed record ChoiceEffects(
         ArgumentNullException.ThrowIfNull(character);
         ArgumentNullException.ThrowIfNull(features);
         return ReachedFeatures(character, features)
-            .SelectMany(f => f.Modifiers.Select(m => new FeatureModifier(Label(f.Name, f.Level), m.Kind, m.Target, m.Value, m.Condition)))
+            .SelectMany(f => f.Modifiers.Select(m => FeatureModifier.From(Label(f.Name, f.Level), m, f.ClassIndex)))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Sheet grants (defenses, size, natural weapons) of the subclass levels the character has reached, labelled with
+    /// the subclass name and the level ("Círculo del ejemplo (nivel 6)").
+    /// </summary>
+    public static IReadOnlyList<GrantEffect> SubclassLevelGrants(Dnd5eCharacter character, IEnumerable<SubclassLevel> levels, Func<string, string?> subclassName)
+    {
+        ArgumentNullException.ThrowIfNull(character);
+        ArgumentNullException.ThrowIfNull(levels);
+        ArgumentNullException.ThrowIfNull(subclassName);
+        return levels
+            .Where(l => l.Grants.HasSheetEffects && character.Classes.Any(c => c.SubclassIndex == l.SubclassIndex && l.Level <= c.Level))
+            .OrderBy(l => l.Level)
+            .Select(l => new GrantEffect(Label(subclassName(l.SubclassIndex) ?? l.SubclassIndex, l.Level), BreakdownSources.Class, l.Grants))
             .ToList();
     }
 

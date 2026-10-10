@@ -95,6 +95,9 @@ public sealed record ChoiceSelection
 
     public string? Ability { get; init; }
 
+    /// <summary>Feats with <c>grants.removeSavingThrows</c>: abilities whose saving throw proficiency the character loses.</summary>
+    public IReadOnlyList<string>? RemovedSavingThrows { get; init; }
+
     public int? Roll { get; init; }
 
     public string ToJson() => JsonSerializer.Serialize(this, Options);

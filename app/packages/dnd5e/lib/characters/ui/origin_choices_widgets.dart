@@ -31,6 +31,7 @@ class OriginChoiceView extends StatefulWidget {
     required this.onText,
     required this.onFeat,
     required this.onFeatAbility,
+    this.onRemovedSave,
   });
 
   final OriginChoice choice;
@@ -39,6 +40,10 @@ class OriginChoiceView extends StatefulWidget {
   final void Function(int slot, String text) onText;
   final ValueChanged<String> onFeat;
   final ValueChanged<String> onFeatAbility;
+
+  /// Marks or unmarks a saving throw given up with the chosen feat; without
+  /// it the picker is not shown.
+  final ValueChanged<String>? onRemovedSave;
 
   @override
   State<OriginChoiceView> createState() => _OriginChoiceViewState();
@@ -65,6 +70,7 @@ class _OriginChoiceViewState extends State<OriginChoiceView> {
     ];
     final feat = answer.feat == null ? null : choice.option(answer.feat!);
     final increase = feat?.abilityIncrease;
+    final remove = feat?.removeSavingThrows;
 
     return Padding(
       key: Key('origin-choice-${choice.key}'),
@@ -169,6 +175,41 @@ class _OriginChoiceViewState extends State<OriginChoiceView> {
               ],
             ),
           ],
+          if (feat != null && remove != null && remove.asks && widget.onRemovedSave != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              remove.choose == 1
+                  ? 'Con ${feat.name} pierdes la competencia en 1 salvación:'
+                  : 'Con ${feat.name} pierdes la competencia en ${remove.choose} salvaciones:',
+              key: const Key('origin-removed-saves-title'),
+              style: theme.textTheme.titleSmall,
+            ),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                for (final ability in remove.from.isEmpty ? abilityKeys : remove.from)
+                  FilterChip(
+                    key: Key('origin-removed-save-$ability'),
+                    label: Text(abilityAbbreviation(ability)),
+                    selected: answer.removedSavingThrows.contains(ability),
+                    onSelected: (_) => widget.onRemovedSave!(ability),
+                  ),
+              ],
+            ),
+          ],
+          if (feat != null && feat.skillChoicesDelta != 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                feat.skillChoicesDelta < 0
+                    ? '${feat.name}: eliges ${-feat.skillChoicesDelta} habilidad(es) de clase menos'
+                    : '${feat.name}: eliges ${feat.skillChoicesDelta} habilidad(es) de clase más',
+                key: const Key('origin-skill-delta'),
+                style: theme.textTheme.bodySmall?.copyWith(color: tokens.boneMuted),
+              ),
+            ),
         ],
       ),
     );
@@ -196,6 +237,8 @@ class _OriginChoiceViewState extends State<OriginChoiceView> {
       effectsPreview: option.effectsPreview,
       abilityIncrease: option.abilityIncrease,
       damageType: type,
+      removeSavingThrows: option.removeSavingThrows,
+      skillChoicesDelta: option.skillChoicesDelta,
     );
   }
 }

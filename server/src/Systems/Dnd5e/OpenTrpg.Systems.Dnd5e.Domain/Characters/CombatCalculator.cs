@@ -13,7 +13,11 @@ namespace OpenTrpg.Systems.Dnd5e.Domain.Characters;
 /// <param name="TemplateIndex">Dataset index of the template ("longsword"); null for homebrew or hand-made items.</param>
 /// <param name="Item">The effective item (overrides applied).</param>
 /// <param name="Attuned">Whether the entry is attuned: the weapon's own modifiers need it when the item requires attunement.</param>
-public sealed record EquippedWeapon(Guid? ItemId, string? TemplateIndex, EffectiveItem Item, bool Attuned = false);
+public sealed record EquippedWeapon(Guid? ItemId, string? TemplateIndex, EffectiveItem Item, bool Attuned = false)
+{
+    /// <summary>Rules of the template's system data (content packs): ability to damage, requirements, second profile.</summary>
+    public WeaponRules Rules { get; init; } = WeaponRules.None;
+}
 
 /// <summary>
 /// One attack of the combat view. <see cref="Damage"/> reads like "1d8+3". <see cref="AttackBreakdown"/>
@@ -31,13 +35,30 @@ public sealed record AttackValue(
     IReadOnlyList<string> Properties,
     string? Notes,
     ValueBreakdown AttackBreakdown,
-    ValueBreakdown DamageBreakdown);
+    ValueBreakdown DamageBreakdown)
+{
+    /// <summary>Lowest d20 roll that is a critical hit (20 by default).</summary>
+    public int CriticalRange { get; init; } = SheetCalculator.DefaultCriticalRange;
+
+    /// <summary>What lowered <see cref="CriticalRange"/>, or null.</summary>
+    public string? CriticalRangeSource { get; init; }
+
+    /// <summary>Problems wielding the weapon: unmet ability requirements, a heavy weapon for a small character.</summary>
+    public IReadOnlyList<string> Warnings { get; init; } = [];
+
+    /// <summary>Natural weapon granted by the race, an option or a feat (no inventory entry).</summary>
+    public bool Natural { get; init; }
+}
 
 /// <summary>How a weapon is used, for the conditions of <see cref="FeatureModifier"/>.</summary>
 /// <param name="Ranged">Ranged weapon (<see cref="CombatCalculator.IsRanged"/>).</param>
 /// <param name="TwoHanded">Melee weapon with the two-handed property.</param>
 /// <param name="OtherWeaponEquipped">Another weapon is equipped too.</param>
-public sealed record WeaponContext(bool Ranged, bool TwoHanded, bool OtherWeaponEquipped);
+public sealed record WeaponContext(bool Ranged, bool TwoHanded, bool OtherWeaponEquipped)
+{
+    /// <summary>A firearm (the "firearm" property).</summary>
+    public bool Firearm { get; init; }
+}
 
 /// <summary>
 /// Pure combat numbers (SRD 5.1): attacks of the equipped weapons plus the unarmed strike, and the
@@ -66,6 +87,11 @@ public static class CombatCalculator
     private const string Heavy = "heavy";
     private const string TwoHanded = "two-handed";
     private const string Shortsword = "shortsword";
+    private const string FirearmProperty = "firearm";
+    private const string Reach = "reach";
+
+    /// <summary>Sizes that wield heavy weapons with disadvantage.</summary>
+    private static readonly HashSet<string> SmallSizes = new(StringComparer.OrdinalIgnoreCase) { "tiny", "small" };
 
     /// <summary>
     /// Attacks of the equipped weapons (in the given order) followed by the unarmed strike.
@@ -103,12 +129,49 @@ public static class CombatCalculator
         var featureDamage = sheet.FeatureModifiers.Where(m => m.Kind == ItemModifierKind.DamageBonus).ToList();
         var equippedWeapons = weapons.Where(w => w.Item.Category == ItemCategory.Weapon).ToList();
 
-        var attacks = new List<AttackValue>();
+        var criticals = sheet.FeatureModifiers.Where(m => m.Kind == ItemModifierKind.CriticalRange && (m.Target is null or ModifierTargets.Weapon)).ToList();
+        (int Range, string? Source) Critical(WeaponContext? context)
+        {
+            var best = criticals
+                .Where(m => m.Value is >= 2 and < SheetCalculator.DefaultCriticalRange && ConditionHolds(m.Condition, context, versatileGrip: false))
+                .OrderBy(m => m.Value)
+                .FirstOrDefault();
+            return best is null ? (SheetCalculator.DefaultCriticalRange, null) : (best.Value, best.Label);
+        }
+
+        var profiles = new List<EquippedWeapon>();
         foreach (var weapon in equippedWeapons)
+        {
+            profiles.Add(weapon);
+            if (weapon.Rules.Alternate is { } alternate)
+            {
+                var range = alternate.Range ?? (IsRanged(weapon.Item) ? "ranged" : "melee");
+                var category = (weapon.Item.Subcategory ?? string.Empty).Split(' ', 2)[0];
+                profiles.Add(weapon with
+                {
+                    Item = weapon.Item with
+                    {
+                        Name = alternate.Name ?? $"{weapon.Item.Name} (perfil alternativo)",
+                        DamageDice = alternate.Damage,
+                        DamageType = alternate.DamageType ?? weapon.Item.DamageType,
+                        VersatileDice = alternate.VersatileDamage,
+                        Properties = alternate.Properties.Count > 0 ? alternate.Properties : weapon.Item.Properties,
+                        RangeNormal = alternate.RangeNormal,
+                        RangeLong = alternate.RangeLong,
+                        Subcategory = $"{(category.Length > 0 ? category : "Simple")} {(range == "ranged" ? "Ranged" : "Melee")}",
+                    },
+                    Rules = weapon.Rules with { Alternate = null },
+                });
+            }
+        }
+
+        var attacks = new List<AttackValue>();
+        foreach (var weapon in profiles)
         {
             var item = weapon.Item;
             var ranged = IsRanged(item);
-            var context = new WeaponContext(ranged, !ranged && HasProperty(item, TwoHanded), equippedWeapons.Count > 1);
+            var firearm = HasProperty(item, FirearmProperty);
+            var context = new WeaponContext(ranged, !ranged && HasProperty(item, TwoHanded), equippedWeapons.Count > 1) { Firearm = firearm };
             var monkWeapon = martialArtsDie is not null && IsMonkWeapon(weapon);
             var useDex = IsRanged(item) || ((HasProperty(item, Finesse) || monkWeapon) && dex > str);
             var ability = useDex ? Abilities.Dex : Abilities.Str;
@@ -123,7 +186,11 @@ public static class CombatCalculator
                 attack.Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, sheet.ProficiencyBonus);
             }
 
-            var damageBonus = new BreakdownBuilder().Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), sheet.Modifier(ability));
+            // Firearms do not add the ability modifier to the damage unless the pack says so (weapon.addAbilityToDamage).
+            var addAbility = weapon.Rules.AddAbilityToDamage ?? !firearm;
+            var damageBonus = addAbility
+                ? new BreakdownBuilder().Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), sheet.Modifier(ability))
+                : new BreakdownBuilder();
             if (ownAttack != 0)
             {
                 attack.Add(BreakdownSources.Item, item.Name, ownAttack);
@@ -139,7 +206,13 @@ public static class CombatCalculator
                 .AddAll(FeatureParts(featureDamage, context, versatileGrip: true));
             damageBonus.AddAll(globalDamage).AddAll(FeatureParts(featureDamage, context, versatileGrip: false));
             var dice = monkWeapon ? AtLeastDie(item.DamageDice, martialArtsDie!.Value) : item.DamageDice;
+            var warnings = weapon.Rules.UnmetRequirements(a => sheet.Abilities[a].Score, BreakdownLabels.Ability).ToList();
+            if (HasProperty(item, Heavy) && SmallSizes.Contains(sheet.Size))
+            {
+                warnings.Add("Desventaja: arma pesada y tamaño pequeño.");
+            }
 
+            var (criticalRange, criticalSource) = Critical(context);
             attacks.Add(new AttackValue(
                 weapon.ItemId,
                 item.Name,
@@ -151,7 +224,58 @@ public static class CombatCalculator
                 item.Properties,
                 item.Effects.Count == 0 ? null : string.Join("; ", item.Effects),
                 attack.Build(),
-                damageBonus.Build()));
+                damageBonus.Build())
+            {
+                CriticalRange = criticalRange,
+                CriticalRangeSource = criticalSource,
+                Warnings = warnings,
+            });
+        }
+
+        // Natural weapons (claws, bite...): always proficient, Str or (finesse) the higher of Str and Dex.
+        foreach (var natural in sheet.NaturalWeapons)
+        {
+            var weapon = natural.Weapon;
+            var ability = weapon.Finesse && dex > str ? Abilities.Dex : Abilities.Str;
+            var attack = new BreakdownBuilder()
+                .Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), sheet.Modifier(ability))
+                .Add(BreakdownSources.Proficiency, BreakdownLabels.Proficiency, sheet.ProficiencyBonus)
+                .AddAll(globalAttack)
+                .AddAll(FeatureParts(featureAttack, null, versatileGrip: false));
+            var damage = new BreakdownBuilder()
+                .Add(BreakdownSources.Ability, BreakdownLabels.Ability(ability), sheet.Modifier(ability))
+                .AddAll(globalDamage)
+                .AddAll(FeatureParts(featureDamage, null, versatileGrip: false));
+            var dice = weapon.DamageAt(Math.Max(1, sheet.TotalLevel)) ?? "1";
+            var properties = new List<string>();
+            if (weapon.Finesse)
+            {
+                properties.Add(Finesse);
+            }
+
+            if (weapon.Reach > 5)
+            {
+                properties.Add(Reach);
+            }
+
+            var (criticalRange, criticalSource) = Critical(null);
+            attacks.Add(new AttackValue(
+                null,
+                weapon.Name,
+                attack.Total,
+                FormatDamage(dice, damage.Total),
+                weapon.DamageType.Length == 0 ? null : weapon.DamageType,
+                null,
+                weapon.Reach > 5 ? weapon.Reach.ToString(CultureInfo.InvariantCulture) : null,
+                properties,
+                natural.Label,
+                attack.Build(),
+                damage.Build())
+            {
+                CriticalRange = criticalRange,
+                CriticalRangeSource = criticalSource,
+                Natural = true,
+            });
         }
 
         var unarmedAbility = martialArtsDie is not null && dex > str ? Abilities.Dex : Abilities.Str;
@@ -164,6 +288,7 @@ public static class CombatCalculator
             .Add(BreakdownSources.Ability, BreakdownLabels.Ability(unarmedAbility), sheet.Modifier(unarmedAbility))
             .AddAll(globalDamage)
             .AddAll(FeatureParts(featureDamage, null, versatileGrip: false));
+        var (unarmedCritical, unarmedCriticalSource) = Critical(null);
         attacks.Add(new AttackValue(
             null,
             UnarmedStrikeName,
@@ -175,7 +300,11 @@ public static class CombatCalculator
             [],
             null,
             unarmedAttack.Build(),
-            unarmedDamage.Build()));
+            unarmedDamage.Build())
+        {
+            CriticalRange = unarmedCritical,
+            CriticalRangeSource = unarmedCriticalSource,
+        });
 
         return attacks;
     }
@@ -301,6 +430,7 @@ public static class CombatCalculator
         ModifierConditions.RangedWeapon => weapon.Ranged,
         ModifierConditions.OneHandedMeleeNoOtherWeapon => !weapon.Ranged && !weapon.TwoHanded && !weapon.OtherWeaponEquipped && !versatileGrip,
         ModifierConditions.TwoHandedMelee => !weapon.Ranged && (weapon.TwoHanded || versatileGrip),
+        ModifierConditions.Firearm => weapon.Firearm,
         _ => false,
     };
 
@@ -308,7 +438,7 @@ public static class CombatCalculator
     private static List<BreakdownPart> FeatureParts(IEnumerable<FeatureModifier> modifiers, WeaponContext? weapon, bool versatileGrip) =>
         modifiers
             .Where(m => ConditionHolds(m.Condition, weapon, versatileGrip))
-            .Select(m => new BreakdownPart(BreakdownSources.Feature, m.Label, m.Value))
+            .SelectMany(m => m.ValueParts)
             .ToList();
 
     /// <summary>Attack or damage bonuses of non-weapon items, one part per item name (non-zero sums only).</summary>

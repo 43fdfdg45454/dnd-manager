@@ -64,6 +64,7 @@ class BackgroundStep extends ConsumerWidget {
     final backgrounds = ref.watch(backgroundsProvider(args.campaignId));
     final theme = Theme.of(context);
     final choices = state.classDetail?.skillChoices;
+    final skillsToChoose = state.classSkillsToChoose;
     final granted = state.backgroundSkills;
     final fixed = state.fixedLanguages;
     final toChoose = state.languagesToChoose;
@@ -133,10 +134,18 @@ class BackgroundStep extends ConsumerWidget {
               padding: const EdgeInsets.only(top: 20, bottom: 4),
             ),
             Text(
-              'Habilidades de clase ${state.skills.length}/${choices.choose}',
+              'Habilidades de clase ${state.skills.length}/$skillsToChoose',
               key: const Key('wizard-skills-counter'),
               style: theme.textTheme.bodySmall,
             ),
+            if (state.starterSkillChoicesDelta != 0)
+              Text(
+                state.starterSkillChoicesDelta < 0
+                    ? 'Tu dote inicial resta ${-state.starterSkillChoicesDelta} a las habilidades de clase'
+                    : 'Tu dote inicial suma ${state.starterSkillChoicesDelta} a las habilidades de clase',
+                key: const Key('wizard-skills-delta'),
+                style: theme.textTheme.bodySmall,
+              ),
             const SizedBox(height: 8),
             SelectionGrid(
               onToggle: controller.toggleSkill,
@@ -153,7 +162,7 @@ class BackgroundStep extends ConsumerWidget {
                         ? SelectionState.locked
                         : state.skills.contains(skill)
                         ? SelectionState.selected
-                        : state.skills.length >= choices.choose
+                        : state.skills.length >= skillsToChoose
                         ? SelectionState.blocked
                         : SelectionState.available,
                   ),

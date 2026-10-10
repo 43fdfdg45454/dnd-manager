@@ -403,6 +403,33 @@ void main() {
       expect(find.text('Longsword'), findsNothing);
     });
 
+    testWidgets('la pestaña de objetos filtra por grupo de arma', (tester) async {
+      final repository = _repository();
+      repository.itemGroupOf['i1'] = 'martial';
+      await _pumpCompendium(tester, repository);
+
+      await tester.tap(find.byKey(const Key('tab-items')));
+      await tester.pumpAndSettle();
+      expect(repository.itemGroupCalls.last, isNull);
+
+      await tester.tap(find.byKey(const Key('filter-item-group')));
+      await tester.pumpAndSettle();
+      expect(find.text('Armas de fuego').last, findsOneWidget);
+      await tester.tap(find.text('Marciales').last);
+      await tester.pumpAndSettle();
+
+      expect(repository.itemGroupCalls.last, 'martial');
+      expect(find.text('Longsword'), findsOneWidget);
+      expect(find.text('Potion of Healing'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('filter-item-group')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bombas').last);
+      await tester.pumpAndSettle();
+      expect(repository.itemGroupCalls.last, 'bomb');
+      expect(find.text('No se encontraron objetos.'), findsOneWidget);
+    });
+
     testWidgets('clases, razas y condiciones se listan y las condiciones abren una hoja', (
       tester,
     ) async {

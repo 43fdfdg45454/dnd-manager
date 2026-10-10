@@ -44,9 +44,23 @@ internal sealed class ItemTemplateRepository(AppDbContext db, IGameSystemRegistr
             query = query.Where(x => categories.Contains(x.Category));
         }
 
-        if (filter.SubcategoryPrefix is { } prefix)
+        if (filter.Property is { } property && filter.SubcategoryPrefix is { } either && filter.PropertyOrSubcategory)
         {
-            query = query.Where(x => x.Subcategory.ToLower().StartsWith(prefix));
+            var tag = ItemTemplate.TagOf(property);
+            query = query.Where(x => x.PropertyTags.Contains(tag) || x.Subcategory.ToLower().StartsWith(either));
+        }
+        else
+        {
+            if (filter.SubcategoryPrefix is { } prefix)
+            {
+                query = query.Where(x => x.Subcategory.ToLower().StartsWith(prefix));
+            }
+
+            if (filter.Property is { } only)
+            {
+                var tag = ItemTemplate.TagOf(only);
+                query = query.Where(x => x.PropertyTags.Contains(tag));
+            }
         }
 
         if (filter.Indexes is { Count: > 0 } indexes)

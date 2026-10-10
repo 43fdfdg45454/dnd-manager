@@ -298,16 +298,25 @@ internal sealed partial class ContentPackValidator
                 return;
             }
 
-            if (modifier.Value is not { } value)
+            if (!ModifierValue($"{modifierPath}.value", modifier.Value, kind, out var value, out var formula))
             {
-                AddError($"{modifierPath}.value", "Campo obligatorio.");
                 return;
             }
 
-            var candidate = new ItemModifier(kind, modifier.Target, value);
-            if (candidate.Validate() is { } error)
+            string? target;
+            if (ItemModifier.IsItemKind(kind))
             {
-                AddError(modifierPath, error);
+                var candidate = new ItemModifier(kind, modifier.Target, value ?? 0);
+                if (candidate.Validate() is { } error)
+                {
+                    AddError(modifierPath, error);
+                    return;
+                }
+
+                target = candidate.Normalize().Target;
+            }
+            else if (!CharacterRuleModifier(modifierPath, kind, modifier.Target, value, out target))
+            {
                 return;
             }
 
@@ -318,11 +327,168 @@ internal sealed partial class ContentPackValidator
                 return;
             }
 
-            var normalized = candidate.Normalize();
-            result.Add(new { kind = normalized.Kind.ToString(), target = normalized.Target, value = normalized.Value, condition });
+            if (condition is not null && ConditionsOf(kind, target) is { } allowed && !allowed.Contains(condition, StringComparer.Ordinal))
+            {
+                AddError($"{modifierPath}.condition", allowed.Count == 0
+                    ? "Este tipo de modificador no admite condición."
+                    : $"Condición no admitida en este tipo de modificador. Valores admitidos: {string.Join(", ", allowed)}.");
+                return;
+            }
+
+            var entry = new Dictionary<string, object?>
+            {
+                ["kind"] = kind.ToString(),
+                ["target"] = target,
+                ["value"] = value,
+                ["condition"] = condition,
+            };
+            if (formula is not null)
+            {
+                entry["formula"] = formula;
+            }
+
+            if (kind == ItemModifierKind.ArmorClassFormula)
+            {
+                entry["abilities"] = ArmorClassAbilities($"{modifierPath}.abilities", modifier.Abilities);
+                entry["allowShield"] = modifier.AllowShield ?? true;
+            }
+            else if (modifier.Abilities is not null || modifier.AllowShield is not null)
+            {
+                AddError(modifierPath, "\"abilities\" y \"allowShield\" solo se admiten en ArmorClassFormula.");
+                return;
+            }
+
+            result.Add(entry);
         });
 
         return LevelChoiceJson.Serialize(result);
+    }
+
+    /// <summary>
+    /// Reads the value of a modifier: a number (<paramref name="value"/>) or a formula text (<paramref name="formula"/>,
+    /// <see cref="ModifierFormula"/>). False (with the error added) when it is missing or not valid.
+    /// </summary>
+    private bool ModifierValue(string path, JsonElement? element, ItemModifierKind kind, out int? value, out string? formula)
+    {
+        value = null;
+        formula = null;
+        switch (element)
+        {
+            case null or { ValueKind: JsonValueKind.Null or JsonValueKind.Undefined }:
+                if (kind == ItemModifierKind.HitDiceRecovery)
+                {
+                    return true;
+                }
+
+                AddError(path, "Campo obligatorio.");
+                return false;
+            case { ValueKind: JsonValueKind.Number } number when number.TryGetInt32(out var integer):
+                value = integer;
+                return true;
+            case { ValueKind: JsonValueKind.String } text:
+                var trimmed = text.GetString()?.Trim();
+                if (kind is ItemModifierKind.AbilityBonus or ItemModifierKind.AbilitySet or ItemModifierKind.AbilityMax
+                    or ItemModifierKind.ArmorClassFormula or ItemModifierKind.CriticalRange or ItemModifierKind.DeathSaveFailures
+                    or ItemModifierKind.HitDiceRecovery)
+                {
+                    AddError(path, "Este tipo de modificador no admite fórmulas: usa un número entero.");
+                    return false;
+                }
+
+                if (string.IsNullOrEmpty(trimmed) || trimmed.Length > ShortTextMaxLength
+                    || ModifierFormula.Parse(trimmed, allowWalk: kind == ItemModifierKind.Speed) is null)
+                {
+                    AddError(path, kind == ItemModifierKind.Speed
+                        ? "Fórmula no válida: usa \"walk\" (igual a la velocidad caminando), un número o términos como \"characterLevel\", \"classLevel\", \"proficiencyBonus\" o \"mod:dex\" unidos con +."
+                        : "Fórmula no válida: usa términos como \"characterLevel\", \"halfCharacterLevel\", \"classLevel\", \"halfClassLevel\", \"proficiencyBonus\", \"mod:wis\" o números unidos con + (\"2*classLevel\").");
+                    return false;
+                }
+
+                formula = trimmed;
+                return true;
+            default:
+                AddError(path, "Debe ser un número entero o una fórmula.");
+                return false;
+        }
+    }
+
+    /// <summary>Checks the target and the value of a character rule modifier (<see cref="ItemModifierKind.ArmorClassFormula"/> on).</summary>
+    private bool CharacterRuleModifier(string path, ItemModifierKind kind, string? rawTarget, int? value, out string? target)
+    {
+        target = string.IsNullOrWhiteSpace(rawTarget) ? null : rawTarget.Trim().ToLowerInvariant();
+        string? error = kind switch
+        {
+            ItemModifierKind.ArmorClassFormula => target is not null ? "Este tipo de modificador no admite objetivo."
+                : value is < 0 or > 30 ? "La base de la CA debe estar entre 0 y 30." : null,
+            ItemModifierKind.CriticalRange => target is not null && !ModifierTargets.CriticalRange.Contains(target, StringComparer.Ordinal)
+                ? "El objetivo debe ser weapon, spell o ninguno (ambos)."
+                : value is < 2 or > 19 ? "El crítico debe empezar en una tirada entre 2 y 19." : null,
+            ItemModifierKind.SpellSaveDcBonus or ItemModifierKind.SpellAttackBonus =>
+                target is not null && (target.Length > IndexMaxLength || !IndexPattern().IsMatch(target))
+                    ? "El objetivo debe ser el índice de una clase o ninguno (todas)."
+                    : value is < ItemLimits.MinModifier or > ItemLimits.MaxModifier ? $"El valor debe estar entre {ItemLimits.MinModifier} y {ItemLimits.MaxModifier}." : null,
+            ItemModifierKind.PassiveBonus => target is null || !ModifierTargets.Passives.Contains(target, StringComparer.Ordinal)
+                ? $"El objetivo debe ser {string.Join(", ", ModifierTargets.Passives)}."
+                : value is < ItemLimits.MinModifier or > ItemLimits.MaxModifier ? $"El valor debe estar entre {ItemLimits.MinModifier} y {ItemLimits.MaxModifier}." : null,
+            ItemModifierKind.AbilityMax => target is null || !Abilities.IsValid(target)
+                ? "El modificador necesita una característica: str, dex, con, int, wis o cha."
+                : value is < 1 or > 30 ? "El máximo debe estar entre 1 y 30." : null,
+            ItemModifierKind.Speed => target is null || !ModifierTargets.Speeds.Contains(target, StringComparer.Ordinal)
+                ? $"El objetivo debe ser {string.Join(", ", ModifierTargets.Speeds)}."
+                : value is < 0 or > 200 ? "La velocidad debe estar entre 0 y 200 pies." : null,
+            ItemModifierKind.DeathSaveFailures => target is not null ? "Este tipo de modificador no admite objetivo."
+                : value is < 3 or > 10 ? "Los fallos para morir deben estar entre 3 y 10." : null,
+            ItemModifierKind.HitDiceRecovery => target != ModifierTargets.All ? "El objetivo debe ser \"all\" (todos los dados de golpe)." : null,
+            _ => "El tipo de modificador no es válido.",
+        };
+
+        if (error is not null)
+        {
+            AddError(path, error);
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>The conditions a kind admits (empty: none), or null when it admits any.</summary>
+    private static IReadOnlyList<string>? ConditionsOf(ItemModifierKind kind, string? target) => kind switch
+    {
+        ItemModifierKind.ArmorClassFormula => [ModifierConditions.NoArmor],
+        ItemModifierKind.CriticalRange when target == ModifierTargets.Spell => [],
+        ItemModifierKind.CriticalRange =>
+        [
+            ModifierConditions.RangedWeapon, ModifierConditions.Firearm, ModifierConditions.OneHandedMeleeNoOtherWeapon,
+            ModifierConditions.TwoHandedMelee,
+        ],
+        ItemModifierKind.SpellSaveDcBonus or ItemModifierKind.SpellAttackBonus => [ModifierConditions.Cantrip],
+        ItemModifierKind.PassiveBonus or ItemModifierKind.AbilityMax or ItemModifierKind.Speed
+            or ItemModifierKind.DeathSaveFailures or ItemModifierKind.HitDiceRecovery => [],
+        _ => ModifierConditions.All.Where(c => c != ModifierConditions.Cantrip).ToList(),
+    };
+
+    private List<string> ArmorClassAbilities(string path, List<string?>? values)
+    {
+        var abilities = new List<string>();
+        ForEachText(path, values, (abilityPath, ability) =>
+        {
+            var key = ability.ToLowerInvariant();
+            if (!Abilities.IsValid(key))
+            {
+                AddError(abilityPath, "Característica desconocida (str, dex, con, int, wis o cha).");
+            }
+            else if (!abilities.Contains(key))
+            {
+                abilities.Add(key);
+            }
+        });
+
+        if (abilities.Count > 3)
+        {
+            AddError(path, "Como máximo 3 características.");
+        }
+
+        return abilities;
     }
 
     private string? AbilityIncreaseOf(string path, PackAbilityIncreaseJson? increase)
@@ -461,20 +627,197 @@ internal sealed partial class ContentPackValidator
             }
         });
 
-        return LevelChoiceJson.Serialize(new
+        var result = new Dictionary<string, object?>
         {
-            skills,
-            cantrips,
-            spells,
-            options,
-            armor = TextList($"{path}.armor", grants.Armor, 50, ShortTextMaxLength).Select(a => ProficiencyKeys.NormalizeArmor(a) ?? a).ToList(),
-            weapons = TextList($"{path}.weapons", grants.Weapons, 50, ShortTextMaxLength).Select(ProficiencyKeys.NormalizeWeapon).ToList(),
-            tools = TextList($"{path}.tools", grants.Tools, 50, ShortTextMaxLength),
-            languages = TextList($"{path}.languages", grants.Languages, 50, ShortTextMaxLength),
-            savingThrows,
-            spellcastingAbility,
-        });
+            ["skills"] = skills,
+            ["cantrips"] = cantrips,
+            ["spells"] = spells,
+            ["options"] = options,
+            ["armor"] = TextList($"{path}.armor", grants.Armor, 50, ShortTextMaxLength).Select(a => ProficiencyKeys.NormalizeArmor(a) ?? a).ToList(),
+            ["weapons"] = TextList($"{path}.weapons", grants.Weapons, 50, ShortTextMaxLength).Select(ProficiencyKeys.NormalizeWeapon).ToList(),
+            ["tools"] = TextList($"{path}.tools", grants.Tools, 50, ShortTextMaxLength),
+            ["languages"] = TextList($"{path}.languages", grants.Languages, 50, ShortTextMaxLength),
+            ["savingThrows"] = savingThrows,
+            ["spellcastingAbility"] = spellcastingAbility,
+        };
+        SheetGrants(path, grants, result);
+        return LevelChoiceJson.Serialize(result);
     }
+
+    /// <summary>
+    /// Validates the grants that change the sheet (defenses, size, saving throws lost, skill choices, natural weapons)
+    /// and adds the present ones to <paramref name="result"/>, so grants without them serialize as before.
+    /// </summary>
+    private void SheetGrants(string path, PackGrantsJson grants, Dictionary<string, object?> result)
+    {
+        if (DamageTypes($"{path}.resistances", grants.Resistances) is { Count: > 0 } resistances)
+        {
+            result["resistances"] = resistances;
+        }
+
+        if (DamageTypes($"{path}.immunities", grants.Immunities) is { Count: > 0 } immunities)
+        {
+            result["immunities"] = immunities;
+        }
+
+        var conditions = new List<string>();
+        ForEachText($"{path}.conditionImmunities", grants.ConditionImmunities, (conditionPath, value) =>
+        {
+            var condition = value.ToLowerInvariant();
+            if (Domain.Catalog.DamageTypes.Conditions.Contains(condition, StringComparer.Ordinal) || _packConditions.Contains(condition))
+            {
+                if (!conditions.Contains(condition))
+                {
+                    conditions.Add(condition);
+                }
+            }
+            else
+            {
+                AddError(conditionPath, $"Estado desconocido. Valores admitidos: {string.Join(", ", Domain.Catalog.DamageTypes.Conditions)} o los estados del paquete.");
+            }
+        });
+        if (conditions.Count > 0)
+        {
+            result["conditionImmunities"] = conditions;
+        }
+
+        if (grants.Size?.Trim().ToLowerInvariant() is { Length: > 0 } size)
+        {
+            if (Domain.Catalog.DamageTypes.Sizes.Contains(size, StringComparer.Ordinal))
+            {
+                result["size"] = size;
+            }
+            else
+            {
+                AddError($"{path}.size", $"Tamaño desconocido. Valores admitidos: {string.Join(", ", Domain.Catalog.DamageTypes.Sizes)}.");
+            }
+        }
+
+        if (grants.RemoveSavingThrows is { } remove)
+        {
+            var from = new List<string>();
+            ForEachText($"{path}.removeSavingThrows.from", remove.From, (abilityPath, ability) =>
+            {
+                var key = ability.ToLowerInvariant();
+                if (!Abilities.IsValid(key))
+                {
+                    AddError(abilityPath, "Característica desconocida (str, dex, con, int, wis o cha).");
+                }
+                else if (!from.Contains(key))
+                {
+                    from.Add(key);
+                }
+            });
+
+            var choose = RequiredInt($"{path}.removeSavingThrows.choose", remove.Choose, 1, 6);
+            if (choose is { } count && from.Count > 0 && count > from.Count)
+            {
+                AddError($"{path}.removeSavingThrows.choose", "No puede superar el número de salvaciones de \"from\".");
+            }
+            else if (choose is { } valid)
+            {
+                result["removeSavingThrows"] = new { choose = valid, from };
+            }
+        }
+
+        if (OptionalInt($"{path}.skillChoicesDelta", grants.SkillChoicesDelta, -10, 10) is { } delta and not 0)
+        {
+            result["skillChoicesDelta"] = delta;
+        }
+
+        var weapons = new List<object>();
+        ForEach($"{path}.naturalWeapons", grants.NaturalWeapons, (weaponPath, weapon) =>
+        {
+            var name = RequiredText($"{weaponPath}.name", weapon.Name, NaturalWeapon.NameMaxLength);
+            var damage = NaturalWeaponDice($"{weaponPath}.damage", weapon.Damage);
+            var byLevel = new SortedDictionary<int, string>();
+            foreach (var (levelText, dice) in weapon.DamageByCharacterLevel ?? [])
+            {
+                var levelPath = $"{weaponPath}.damageByCharacterLevel.{levelText}";
+                if (!int.TryParse(levelText, NumberStyles.None, CultureInfo.InvariantCulture, out var level) || level is < 1 or > 20)
+                {
+                    AddError(levelPath, "El nivel debe ser un número entre 1 y 20.");
+                }
+                else if (NaturalWeaponDice(levelPath, dice) is { } levelDice)
+                {
+                    byLevel[level] = levelDice;
+                }
+                else if (string.IsNullOrWhiteSpace(dice))
+                {
+                    AddError(levelPath, "Campo obligatorio.");
+                }
+            }
+
+            if (damage is null && byLevel.Count == 0)
+            {
+                AddError($"{weaponPath}.damage", "Indica \"damage\" o \"damageByCharacterLevel\".");
+            }
+
+            var damageType = weapon.DamageType?.Trim().ToLowerInvariant();
+            if (string.IsNullOrEmpty(damageType))
+            {
+                AddError($"{weaponPath}.damageType", "Campo obligatorio.");
+            }
+            else if (!KnownDamageType(damageType))
+            {
+                AddError($"{weaponPath}.damageType", $"Tipo de daño desconocido. Valores admitidos: {string.Join(", ", DamageTypeIndexes)}.");
+            }
+
+            var reach = OptionalInt($"{weaponPath}.reach", weapon.Reach, 5, 30);
+            if (name is null)
+            {
+                return;
+            }
+
+            var entry = new Dictionary<string, object?> { ["name"] = name, ["damageType"] = damageType };
+            if (damage is not null)
+            {
+                entry["damage"] = damage;
+            }
+
+            if (byLevel.Count > 0)
+            {
+                entry["damageByCharacterLevel"] = byLevel.ToDictionary(p => p.Key.ToString(CultureInfo.InvariantCulture), p => p.Value);
+            }
+
+            if (weapon.Finesse == true)
+            {
+                entry["finesse"] = true;
+            }
+
+            if (reach is { } feet and not 5)
+            {
+                entry["reach"] = feet;
+            }
+
+            weapons.Add(entry);
+        });
+        if (weapons.Count > 0)
+        {
+            result["naturalWeapons"] = weapons;
+        }
+    }
+
+    /// <summary>Damage dice of a natural weapon ("1d6", "2d4", "1"), without spaces; null when absent or not valid.</summary>
+    private string? NaturalWeaponDice(string path, string? value)
+    {
+        var dice = value?.Replace(" ", string.Empty, StringComparison.Ordinal);
+        if (string.IsNullOrEmpty(dice))
+        {
+            return null;
+        }
+
+        if (dice.Length > ItemLimits.DiceMaxLength || !NaturalDicePattern().IsMatch(dice))
+        {
+            AddError(path, "Dados no válidos: usa \"1d6\", \"2d4\" o un número fijo.");
+            return null;
+        }
+
+        return dice;
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^(\d{1,2}d(4|6|8|10|12|20)|\d{1,2})$")]
+    private static partial System.Text.RegularExpressions.Regex NaturalDicePattern();
 
     private string? Resource(string path, PackResourceJson? resource)
     {
@@ -831,7 +1174,7 @@ internal sealed partial class ContentPackValidator
             AddError($"{path}.kind", "Campo obligatorio.");
         }
         else if (EnumNames.TryParse<LevelChoiceKind>(rule.Kind.Trim(), out var parsed)
-                 && (parsed is not (LevelChoiceKind.SavingThrow or LevelChoiceKind.Weapon) || allowedKinds is not null))
+                 && (parsed is not (LevelChoiceKind.SavingThrow or LevelChoiceKind.Weapon or LevelChoiceKind.Resistance) || allowedKinds is not null))
         {
             kind = parsed;
             if (allowedKinds is not null && !allowedKinds.Contains(parsed))
@@ -842,7 +1185,7 @@ internal sealed partial class ContentPackValidator
         }
         else
         {
-            var names = Enum.GetNames<LevelChoiceKind>().Where(n => allowedKinds is not null || n is not (nameof(LevelChoiceKind.SavingThrow) or nameof(LevelChoiceKind.Weapon)));
+            var names = Enum.GetNames<LevelChoiceKind>().Where(n => allowedKinds is not null || n is not (nameof(LevelChoiceKind.SavingThrow) or nameof(LevelChoiceKind.Weapon) or nameof(LevelChoiceKind.Resistance)));
             AddError($"{path}.kind", $"Tipo de elección desconocido. Valores admitidos: {string.Join(", ", names)}.");
         }
 
@@ -870,6 +1213,10 @@ internal sealed partial class ContentPackValidator
             else if (kind == LevelChoiceKind.SavingThrow && !Abilities.IsValid(value.ToLowerInvariant()))
             {
                 AddError(fromPath, "Característica desconocida (str, dex, con, int, wis o cha).");
+            }
+            else if (kind == LevelChoiceKind.Resistance && !KnownDamageType(value.ToLowerInvariant()))
+            {
+                AddError(fromPath, $"Tipo de daño desconocido. Valores admitidos: {string.Join(", ", DamageTypeIndexes)}.");
             }
         });
 
@@ -979,7 +1326,8 @@ internal sealed partial class ContentPackValidator
     private static readonly LevelChoiceKind[] OptionChoiceKinds =
     [
         LevelChoiceKind.OptionSet, LevelChoiceKind.Skill, LevelChoiceKind.Expertise, LevelChoiceKind.Tool, LevelChoiceKind.Language,
-        LevelChoiceKind.CantripsKnown, LevelChoiceKind.SpellsKnown, LevelChoiceKind.SavingThrow, LevelChoiceKind.Weapon, LevelChoiceKind.Custom,
+        LevelChoiceKind.CantripsKnown, LevelChoiceKind.SpellsKnown, LevelChoiceKind.SavingThrow, LevelChoiceKind.Weapon, LevelChoiceKind.Resistance,
+        LevelChoiceKind.Custom,
     ];
 
     /// <summary>

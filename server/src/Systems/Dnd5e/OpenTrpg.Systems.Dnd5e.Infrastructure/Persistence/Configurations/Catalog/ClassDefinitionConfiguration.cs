@@ -37,6 +37,7 @@ internal sealed class ClassDefinitionConfiguration : IEntityTypeConfiguration<Cl
         builder.Ignore(x => x.PreparesSpells);
         builder.Ignore(x => x.Prerequisites);
         builder.Ignore(x => x.MayGainSubclassSpellcasting);
+        builder.Ignore(x => x.SaveDcs);
         builder.Property(x => x.PrerequisitesText).HasMaxLength(ClassDefinition.PrerequisitesTextMaxLength);
     }
 }

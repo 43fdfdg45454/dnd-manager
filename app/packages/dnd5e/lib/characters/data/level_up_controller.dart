@@ -255,6 +255,10 @@ class LevelUpState {
 
   // -- Abilities ---------------------------------------------------------------
 
+  /// Highest score an improvement may reach in [ability]: 20, or what a
+  /// feature of a content pack sets (`abilityMaxScores` of the sheet).
+  int maxScore(String ability) => character?.sheet.abilityMax(ability) ?? improvementMaxScore;
+
   /// Score of [ability] without items and overrides (what the 20 cap is
   /// checked against).
   int naturalScore(String ability) {
@@ -330,10 +334,14 @@ class LevelUpState {
     if (!_featMode(choice, selection)) {
       final values = selection.asi.values.where((v) => v != 0);
       final overCap = selection.asi.entries.any(
-        (e) => e.value > 0 && naturalScore(e.key) + e.value > improvementMaxScore,
+        (e) => e.value > 0 && naturalScore(e.key) + e.value > maxScore(e.key),
       );
       if (selection.asiTotal != improvementPoints || values.any((v) => v < 0) || overCap) {
-        return 'Reparte $improvementPoints puntos (ninguna puede pasar de $improvementMaxScore)';
+        final caps = {
+          for (final a in const ['str', 'dex', 'con', 'int', 'wis', 'cha']) maxScore(a),
+        };
+        final cap = caps.length == 1 ? '${caps.first}' : 'su máximo';
+        return 'Reparte $improvementPoints puntos (ninguna puede pasar de $cap)';
       }
       return null;
     }
@@ -344,9 +352,9 @@ class LevelUpState {
     if (increase != null) {
       final ability = selection.featAbility ?? (increase.needsPick ? null : increase.options.first);
       if (ability == null) return 'Elige la característica que sube ${feat.name}';
-      if (naturalScore(ability) + increase.amount > improvementMaxScore) {
+      if (naturalScore(ability) + increase.amount > maxScore(ability)) {
         return '${feat.name} no puede subir ${abilityLabel(ability)} por encima de '
-            '$improvementMaxScore';
+            '${maxScore(ability)}';
       }
     }
     return null;
@@ -621,7 +629,7 @@ class LevelUpController extends Notifier<LevelUpState> {
       if (next < 0 || next > improvementPoints) return s;
       if (delta > 0) {
         if (s.asiTotal + delta > improvementPoints) return s;
-        if (state.naturalScore(ability) + next > improvementMaxScore) return s;
+        if (state.naturalScore(ability) + next > state.maxScore(ability)) return s;
       }
       return s.copyWith(asi: {...s.asi, ability: next}, mode: ImprovementMode.asi);
     });

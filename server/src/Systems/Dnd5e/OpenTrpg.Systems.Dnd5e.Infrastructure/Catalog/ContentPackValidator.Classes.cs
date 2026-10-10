@@ -250,6 +250,25 @@ internal sealed partial class ContentPackValidator
         var hasSubclasses = definition.Subclasses is { Count: > 0 };
         GenerateLevelChoices(path, index, flavor.Length > 0 ? flavor : DefaultSubclassFlavor, subclassLevel ?? (hasSubclasses ? 3 : null), asiLevels, spellcasting, rows);
 
+        var saveDcs = new List<object>();
+        ForEach($"{path}.saveDc", definition.SaveDc, (dcPath, dc) =>
+        {
+            var dcName = RequiredText($"{dcPath}.name", dc.Name, ClassSaveDc.NameMaxLength);
+            var dcAbility = dc.Ability?.Trim().ToLowerInvariant();
+            if (string.IsNullOrEmpty(dcAbility))
+            {
+                AddError($"{dcPath}.ability", "Campo obligatorio.");
+            }
+            else if (!Abilities.IsValid(dcAbility))
+            {
+                AddError($"{dcPath}.ability", "Característica desconocida (str, dex, con, int, wis o cha).");
+            }
+            else if (dcName is not null)
+            {
+                saveDcs.Add(new { name = dcName, ability = dcAbility });
+            }
+        });
+
         rows.Classes.Add(new ClassDefinition
         {
             Index = index,
@@ -277,6 +296,7 @@ internal sealed partial class ContentPackValidator
             PrerequisitesJson = auxiliaryPrerequisites,
             PrerequisitesText = auxiliaryText,
             CountsAsCasterLevel = auxiliary && definition.CountsAsCasterLevel == true,
+            SaveDcsJson = saveDcs.Count == 0 ? null : LevelChoiceJson.Serialize(saveDcs),
         });
 
         // A class that only knows cantrips (or casts without slots) may get spellcasting from a subclass (H04).

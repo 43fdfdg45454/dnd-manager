@@ -32,6 +32,7 @@ public sealed class SheetCatalog
     private readonly Dictionary<string, OptionDefinition> _options;
     private readonly IReadOnlyList<SkillInfo> _skills;
     private readonly IReadOnlyList<FeatureDefinition> _featureResources;
+    private readonly IReadOnlyList<SubclassLevel> _subclassLevels;
 
     private SheetCatalog(
         IEnumerable<ClassDefinition> classes,
@@ -45,7 +46,8 @@ public sealed class SheetCatalog
         IReadOnlyList<SkillInfo> skills,
         IEnumerable<RaceExtensionDefinition> raceExtensions,
         IEnumerable<SpellDefinition> grantedSpells,
-        IReadOnlyList<FeatureDefinition> featureResources)
+        IReadOnlyList<FeatureDefinition> featureResources,
+        IReadOnlyList<SubclassLevel> subclassLevels)
     {
         _classes = classes.ToDictionary(c => c.Index, StringComparer.Ordinal);
         _classInfos = _classes.Values.ToDictionary(c => c.Index, c => ClassInfo.From(c, levels), StringComparer.Ordinal);
@@ -59,6 +61,7 @@ public sealed class SheetCatalog
         _raceExtensions = raceExtensions.ToLookup(e => e.RaceIndex, StringComparer.Ordinal);
         _grantedSpellNames = grantedSpells.GroupBy(s => s.Index, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First().Name, StringComparer.Ordinal);
         _featureResources = featureResources;
+        _subclassLevels = subclassLevels;
     }
 
     /// <summary>Loads what the given characters reference (plus the extra indexes, e.g. those of a pending edit).</summary>
@@ -78,6 +81,7 @@ public sealed class SheetCatalog
         var subclassIndexes = Distinct(characters.SelectMany(c => c.Classes).Select(c => c.SubclassIndex));
         var subclasses = await catalog.ListSubclassesByIndexAsync(subclassIndexes, cancellationToken);
         var featureResources = await catalog.ListFeatureEffectsAsync(classIndexes, subclassIndexes, cancellationToken);
+        var subclassLevels = subclassIndexes.Count == 0 ? [] : await catalog.ListSubclassLevelsAsync(subclassIndexes, cancellationToken);
         var raceIndexes = Distinct(characters.Select(c => c.RaceIndex));
         var races = await catalog.ListRacesByIndexAsync(raceIndexes, cancellationToken);
         var subraces = await catalog.ListSubracesByIndexAsync(Distinct(characters.Select(c => c.SubraceIndex)), cancellationToken);
@@ -100,7 +104,7 @@ public sealed class SheetCatalog
         // Options picked in level choices (fighting styles, invocations, feats...): their effects enter the sheet.
         var options = await catalog.ListOptionsByIndexAsync(Distinct(characters.SelectMany(ChoiceEffects.OptionIndexes)), cancellationToken);
 
-        return new SheetCatalog(classes, levels, subclasses, races, subraces, backgrounds, spells, options, skills, raceExtensions, grantedSpells, featureResources);
+        return new SheetCatalog(classes, levels, subclasses, races, subraces, backgrounds, spells, options, skills, raceExtensions, grantedSpells, featureResources, subclassLevels);
     }
 
     public ClassDefinition? Class(string index) => _classes.GetValueOrDefault(index);
@@ -143,13 +147,15 @@ public sealed class SheetCatalog
             .Concat(ChoiceEffects.FeatureResources(character, _featureResources))
             .ToList();
         var featureModifiers = ChoiceEffects.FeatureModifiers(character, _featureResources);
-        if (featureResources.Count > 0 || featureModifiers.Count > 0)
+        var subclassGrants = ChoiceEffects.SubclassLevelGrants(character, _subclassLevels, i => Subclass(i)?.Name);
+        if (featureResources.Count > 0 || featureModifiers.Count > 0 || subclassGrants.Count > 0)
         {
             var current = choices ?? ChoiceEffects.None;
             choices = current with
             {
                 Resources = [.. current.Resources, .. featureResources],
                 Modifiers = [.. current.Modifiers, .. featureModifiers],
+                Grants = [.. current.Grants, .. subclassGrants],
             };
         }
 
