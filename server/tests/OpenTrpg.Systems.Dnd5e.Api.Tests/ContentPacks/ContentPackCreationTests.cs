@@ -785,7 +785,7 @@ public class ContentPackCreationTests(ContentPackCreationApiFactory factory) : I
     }
 
     /// <summary>An active character of <paramref name="classIndex"/> at <paramref name="level"/> with the given base scores.</summary>
-    private static async Task<CharacterDetailDto> DraftAsync(CampaignScenario s, string classIndex, int level, object scores, string? subclass = null)
+    internal static async Task<CharacterDetailDto> DraftAsync(CampaignScenario s, string classIndex, int level, object scores, string? subclass = null)
     {
         var character = await s.Player.CreateCharacterAsync(s.CampaignId, classIndex);
         var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(character.Id)}/sheet", new
@@ -826,13 +826,13 @@ public class ContentPackCreationTests(ContentPackCreationApiFactory factory) : I
         return answers.ToArray();
     }
 
-    private static async Task GrantAsync(CampaignScenario s, Guid characterId)
+    internal static async Task GrantAsync(CampaignScenario s, Guid characterId)
     {
         var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { characterId } });
         Assert.Equal(HttpStatusCode.OK, granted.StatusCode);
     }
 
-    private static async Task<LevelUpPlanDto> PlanAsync(SignedInUser actor, Guid id, string? classIndex = null)
+    internal static async Task<LevelUpPlanDto> PlanAsync(SignedInUser actor, Guid id, string? classIndex = null)
     {
         var query = classIndex is null ? string.Empty : $"?classIndex={classIndex}";
         var response = await actor.Client.GetAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/level-up{query}");
@@ -840,7 +840,7 @@ public class ContentPackCreationTests(ContentPackCreationApiFactory factory) : I
         return (await response.Content.ReadFromJsonAsync<LevelUpPlanDto>())!;
     }
 
-    private static async Task<CharacterDetailDto> ApplyAsync(SignedInUser actor, Guid id, object body)
+    internal static async Task<CharacterDetailDto> ApplyAsync(SignedInUser actor, Guid id, object body)
     {
         var response = await actor.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/level-up", body);
         Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
@@ -862,5 +862,122 @@ public class ContentPackCreationTests(ContentPackCreationApiFactory factory) : I
         var response = await client.GetAsync(url);
         Assert.True(response.StatusCode == HttpStatusCode.OK, $"{url}: {(int)response.StatusCode} {await response.Content.ReadAsStringAsync()}");
         return (await response.Content.ReadFromJsonAsync<T>())!;
+    }
+}
+
+/// <summary>Own database: the fictitious creation pack with two more choices (<see cref="SameLevelUpPickTests"/>).</summary>
+public sealed class SameLevelUpPickApiFactory : ApiFactory
+{
+    protected override bool SeedCatalog => true;
+}
+
+/// <summary>
+/// Picks that depend on another choice of the same level-up (phase 35C, found walking a private pack): an option offered
+/// by two choices is taken once, and the choice of a subclass picked at that level checks its options with that subclass.
+/// </summary>
+public class SameLevelUpPickTests(SameLevelUpPickApiFactory factory) : IClassFixture<SameLevelUpPickApiFactory>
+{
+    private static readonly SemaphoreSlim ImportLock = new(1, 1);
+    private static bool _imported;
+
+    [Fact]
+    public async Task An_option_offered_by_two_choices_of_one_level_up_is_taken_once()
+    {
+        var s = await ScenarioAsync();
+        var keeper = I("guardian");
+        var hero = await ContentPackCreationTests.DraftAsync(s, keeper, 3, new { str = 14, dex = 12, con = 14, @int = 10, wis = 14, cha = 8 }, I("orden-llama"));
+        await ContentPackCreationTests.GrantAsync(s, hero.Id);
+        var plan = await ContentPackCreationTests.PlanAsync(s.Player, hero.Id, keeper);
+        Assert.Contains(plan.Choices.Single(c => c.Key == "asi").Options, o => o.Index == I("senal-basica") && o.Eligible);
+        Assert.Contains(plan.Choices.Single(c => c.Key == "senales-4").Options, o => o.Index == I("senal-basica") && o.Eligible);
+
+        var twice = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/level-up", new
+        {
+            classIndex = keeper,
+            hitPointsRolled = 6,
+            choices = new object[]
+            {
+                new { key = "asi", selected = new { feat = I("senal-basica") } },
+                new { key = "senales-4", selected = new[] { I("senal-basica") } },
+            },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, twice.StatusCode);
+        Assert.Contains("solo puede elegirse una vez", await twice.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+
+        hero = await ContentPackCreationTests.ApplyAsync(s.Player, hero.Id, new
+        {
+            classIndex = keeper,
+            hitPointsRolled = 6,
+            choices = new object[]
+            {
+                new { key = "asi", selected = new { feat = I("senal-basica") } },
+                new { key = "senales-4", selected = new[] { I("destello") } },
+            },
+        });
+        Assert.Equal(4, hero.Sheet.TotalLevel);
+    }
+
+    [Fact]
+    public async Task The_choice_of_a_subclass_chosen_at_that_level_offers_the_options_that_require_it()
+    {
+        var s = await ScenarioAsync();
+        var keeper = I("guardian");
+        var hero = await ContentPackCreationTests.DraftAsync(s, keeper, 2, new { str = 15, dex = 12, con = 14, @int = 10, wis = 14, cha = 8 });
+        await ContentPackCreationTests.GrantAsync(s, hero.Id);
+
+        var plan = await ContentPackCreationTests.PlanAsync(s.Player, hero.Id, keeper);
+        var beacon = plan.Choices.Single(c => c.Key == "faro-de-la-orden");
+        Assert.Equal((I("orden-yunque"), 1, null), (beacon.SubclassIndex, beacon.Required, beacon.Warning));
+        Assert.True(beacon.Options.Single(o => o.Index == I("faro-del-yunque")).Eligible);
+
+        hero = await ContentPackCreationTests.ApplyAsync(s.Player, hero.Id, new
+        {
+            classIndex = keeper,
+            hitPointsRolled = 6,
+            choices = new object[]
+            {
+                new { key = "subclass", selected = new[] { I("orden-yunque") } },
+                new { key = "faro-de-la-orden", selected = new[] { I("faro-del-yunque") } },
+            },
+        });
+        Assert.Contains(hero.Choices, c => c.Key == "faro-de-la-orden" && c.Selected.Single().Index == I("faro-del-yunque"));
+    }
+
+    /// <summary>
+    /// The pack with a signal choice at level 4 next to the improvement that also offers signals, and a choice of the
+    /// Anvil order at level 3 from the signal that requires that order; imported once per database.
+    /// </summary>
+    private async Task<CampaignScenario> ScenarioAsync()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        await ImportLock.WaitAsync();
+        try
+        {
+            if (!_imported)
+            {
+                var definition = Build();
+                var keeper = definition["classes"]![1]!;
+                keeper["levelChoices"]!.AsArray().Add(new JsonObject
+                {
+                    ["level"] = 4, ["key"] = "senales-4", ["name"] = "Señales", ["kind"] = "OptionSet", ["setId"] = I("senales"), ["choose"] = 1,
+                });
+                keeper["subclasses"]![1]!["levelChoices"] = new JsonArray(new JsonObject
+                {
+                    ["level"] = 3, ["key"] = "faro-de-la-orden", ["name"] = "Faro de la orden", ["kind"] = "OptionSet", ["setId"] = I("senales"),
+                    ["from"] = new JsonArray(I("faro-del-yunque")), ["choose"] = 1,
+                });
+                var imported = await admin.PostAsync("/api/v1/admin/content-packs", new StringContent(definition.ToJsonString(), Encoding.UTF8, "application/json"));
+                Assert.True(imported.StatusCode == HttpStatusCode.Created, await imported.Content.ReadAsStringAsync());
+                _imported = true;
+            }
+        }
+        finally
+        {
+            ImportLock.Release();
+        }
+
+        var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync(Id);
+        return s;
     }
 }
