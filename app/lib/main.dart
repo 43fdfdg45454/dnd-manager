@@ -6,6 +6,7 @@ import 'package:opentrpg_core/core/network/connectivity.dart';
 import 'package:opentrpg_core/core/network/trust_store.dart';
 import 'package:opentrpg_core/core/server/server_config_repository.dart';
 import 'package:opentrpg_core/core/storage/local_preferences.dart';
+import 'package:opentrpg_core/core/systems/game_system_ui.dart';
 import 'package:opentrpg_core/core/systems/system_registry.dart';
 import 'package:opentrpg_core/core/update/update_controller.dart';
 import 'package:opentrpg_dnd5e/dnd5e_ui.dart';
@@ -13,6 +14,9 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+
+/// The game systems this build brings; the core never imports them.
+const List<GameSystemUi> hostGameSystems = [Dnd5eUi()];
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,8 +31,7 @@ Future<void> main() async {
   runApp(
     ProviderScope(
       overrides: [
-        // The game systems this build brings; the core never imports them.
-        gameSystemsProvider.overrideWithValue(const [Dnd5eUi()]),
+        gameSystemsProvider.overrideWithValue(hostGameSystems),
         serverConfigRepositoryProvider.overrideWithValue(ServerConfigRepository(prefs)),
         localPreferencesProvider.overrideWithValue(prefs),
         responseCacheProvider.overrideWithValue(responseCache),

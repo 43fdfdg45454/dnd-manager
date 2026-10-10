@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:opentrpg_core/core/characters/models.dart' as core;
 import 'package:opentrpg_core/core/realtime/realtime_events.dart';
 import 'package:opentrpg_core/core/systems/game_system_ui.dart';
+import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
 import 'package:opentrpg_core/core/systems/system_registry.dart';
 import 'package:opentrpg_core/core/systems/unsupported_system_ui.dart';
 import 'package:opentrpg_core/features/dice/domain/dice_expression.dart';
@@ -13,7 +14,9 @@ import 'package:opentrpg_dnd5e/characters/models.dart';
 import 'package:opentrpg_dnd5e/dnd5e_events.dart';
 import 'package:opentrpg_dnd5e/dnd5e_ui.dart';
 
+import 'helpers/app_pump.dart';
 import 'helpers/character_fakes.dart';
+import 'helpers/fakes.dart';
 
 /// Every die shows [face].
 class _Always implements Random {
@@ -110,6 +113,23 @@ void main() {
       expect(find.text('Esta app no incluye el sistema pathfinder2e.'), findsOneWidget);
       expect(system.detailTabs(character, canEdit: true), hasLength(1));
       expect(system.routes(GlobalKey<NavigatorState>()), isEmpty);
+    });
+    testWidgets('la ficha de una campaña de otro sistema muestra el aviso', (tester) async {
+      await pumpRealApp(
+        tester,
+        location: '/characters/ch1',
+        fakes: AppFakes(
+          campaigns: FakeCampaignsRepository(
+            campaigns: [makeCampaign(myRole: CampaignRole.player, systemId: 'otro')],
+          ),
+          characters: FakeCharactersRepository(
+            characters: [makeCharacterJson(status: 'Active', ownerUserId: 'u1')],
+          ),
+        ),
+      );
+      expect(find.byKey(const Key('unsupported-system')), findsWidgets);
+      expect(find.text('Esta app no incluye el sistema otro.'), findsWidgets);
+      expect(find.text('Thorin'), findsWidgets);
     });
   });
 
