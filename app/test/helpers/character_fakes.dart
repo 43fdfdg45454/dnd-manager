@@ -785,6 +785,43 @@ class FakeCharactersRepository implements CharactersRepository, Dnd5eCharactersR
     });
   }
 
+  /// Calls to `POST /resources/initiative` and bodies of `recharge-roll`.
+  int initiativeRecharges = 0;
+  final List<({String id, int value})> rechargeRolls = [];
+
+  @override
+  Future<CharacterDetail> rechargeOnInitiative(String id) async {
+    _fail();
+    initiativeRecharges++;
+    _combat(id, (combat) {
+      for (final r in (combat['resources'] as List? ?? const [])) {
+        if (r['recharge'] == 'Initiative') r['used'] = 0;
+      }
+    });
+    return get(id);
+  }
+
+  @override
+  Future<({CharacterDetail character, bool recharged})> rechargeRoll(
+    String id,
+    String resourceId,
+    int value,
+  ) async {
+    _fail();
+    rechargeRolls.add((id: resourceId, value: value));
+    var recharged = false;
+    _combat(id, (combat) {
+      for (final r in (combat['resources'] as List? ?? const [])) {
+        final roll = r['rechargeRoll'] as Map?;
+        if (r['id'] == resourceId && roll != null && value >= (roll['min'] as int)) {
+          r['used'] = 0;
+          recharged = true;
+        }
+      }
+    });
+    return (character: await get(id), recharged: recharged);
+  }
+
   @override
   Future<CharacterDetail> shortRest(String id, {Map<String, int> hitDice = const {}}) async {
     _fail();

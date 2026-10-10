@@ -96,6 +96,18 @@ class Dnd5eCharacterController extends Notifier<void> {
   Future<void> saveResourceRolls(String resourceId, List<int> values) async =>
       _core.apply(await _repository.saveResourceRolls(id, resourceId, values));
 
+  /// Brings back the resources that recharge on initiative.
+  Future<void> rechargeOnInitiative() async =>
+      _core.apply(await _repository.rechargeOnInitiative(id));
+
+  /// Writes the value rolled on the recharge die of [resourceId]; true when
+  /// the resource came back.
+  Future<bool> rechargeRoll(String resourceId, int value) async {
+    final result = await _repository.rechargeRoll(id, resourceId, value);
+    _core.apply(result.character);
+    return result.recharged;
+  }
+
   /// Replaces the invalid picks (`replace.<index>` answers).
   Future<void> replaceInvalidChoices(List<LevelUpChoiceAnswer> answers) async =>
       _core.apply(await _repository.replaceInvalidChoices(id, answers));

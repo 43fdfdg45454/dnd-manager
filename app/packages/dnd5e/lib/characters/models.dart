@@ -123,7 +123,10 @@ enum Recharge {
   shortRest('ShortRest', 'Descanso corto'),
   longRest('LongRest', 'Descanso largo'),
   dawn('Dawn', 'Amanecer'),
-  manual('Manual', 'Manual');
+  manual('Manual', 'Manual'),
+
+  /// Comes back when initiative is rolled (and with any rest).
+  initiative('Initiative', 'Al tirar iniciativa');
 
   const Recharge(this.apiValue, this.label);
 
@@ -286,10 +289,12 @@ class CharacterResource {
     this.source,
     this.breakdown,
     this.options = const [],
+    this.rechargeRoll,
   });
 
   factory CharacterResource.fromJson(Map<String, dynamic> json) {
     final roll = _map(json['rollOnRest']);
+    final rechargeRoll = _map(json['rechargeRoll']);
     return CharacterResource(
       id: _str(json['id']),
       key: _strOrNull(json['key']),
@@ -305,8 +310,12 @@ class CharacterResource {
       source: _strOrNull(json['source']),
       breakdown: ValueBreakdown.maybeFromJson(json['breakdown']),
       options: _objects(json['options'], CharacterOptionCost.fromJson),
+      rechargeRoll: rechargeRoll == null ? null : RechargeRoll.fromJson(rechargeRoll),
     );
   }
+
+  /// Die that brings the resource back ("d6", 5 or more), or null.
+  final RechargeRoll? rechargeRoll;
 
   /// Chosen options that spend this resource ("Golpe sereno", 2): the
   /// "Usar" buttons of the Combat tab.
@@ -337,6 +346,24 @@ class CharacterResource {
   final int used;
   final Recharge recharge;
   final bool isAuto;
+}
+
+/// A die the player rolls to get a resource back: [min] or more on [dice]
+/// recovers it whole (`rechargeRoll`).
+class RechargeRoll {
+  const RechargeRoll({required this.dice, required this.min});
+
+  factory RechargeRoll.fromJson(Map<String, dynamic> json) =>
+      RechargeRoll(dice: _str(json['dice'], 'd6'), min: _int(json['min']) ?? 1);
+
+  final String dice;
+  final int min;
+
+  /// Faces of [dice] ("d6" -> 6).
+  int get faces => int.tryParse(dice.replaceFirst('d', '')) ?? 6;
+
+  /// "d6 ≥ 5".
+  String get label => '$dice ≥ $min';
 }
 
 /// What using an option costs (`OptionCostDto`): [amount] uses of the

@@ -107,6 +107,29 @@ class Dnd5eCharactersRepository {
         ),
       );
 
+  /// `POST /characters/{id}/resources/initiative`: the resources that come
+  /// back when initiative is rolled.
+  Future<CharacterDetail> rechargeOnInitiative(String id) async =>
+      CharacterDetail.fromJson(await _json('POST', '$_dnd5e/characters/$id/resources/initiative'));
+
+  /// `POST /characters/{id}/resources/{resourceId}/recharge-roll`: the value
+  /// rolled on the resource's recharge die; whether it came back.
+  Future<({CharacterDetail character, bool recharged})> rechargeRoll(
+    String id,
+    String resourceId,
+    int value,
+  ) async {
+    final json = await _json(
+      'POST',
+      '$_dnd5e/characters/$id/resources/$resourceId/recharge-roll',
+      data: {'value': value},
+    );
+    return (
+      character: CharacterDetail.fromJson(Map<String, dynamic>.from(json['character'] as Map)),
+      recharged: json['recharged'] == true,
+    );
+  }
+
   // -- Animal companion (phase 25, block 6) ----------------------------------
 
   /// `PUT /characters/{id}/companion`: chooses or renames the companion.

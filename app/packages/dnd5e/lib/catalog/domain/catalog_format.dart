@@ -108,6 +108,7 @@ String rechargeLabel(String recharge) => switch (recharge.toLowerCase()) {
   'longrest' => 'Descanso largo',
   'shortrest' => 'Descanso corto',
   'dawn' => 'Al amanecer',
+  'initiative' => 'Al tirar iniciativa',
   'none' || '' => 'No se recupera',
   _ => recharge,
 };
