@@ -50,12 +50,10 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
             Assert.Equal(ItemCategory.MagicItem, (await db.ItemTemplates.SingleAsync(x => x.CampaignId == null && x.Index == "wand-of-lightning-bolts")).Category);
             Assert.True(await db.ItemTemplates.AnyAsync(x => x.CampaignId == null && x.Category == ItemCategory.Consumable));
 
-            var import = await db.CatalogImports.SingleAsync();
-            Assert.Equal(Dnd5eCatalogSources.SrdRuleset, import.Ruleset);
-            Assert.Contains("a6212beb", import.DatasetVersion);
-            Assert.Contains("skill choices", import.DatasetVersion);
-            Assert.Contains("personality", import.DatasetVersion);
-            Assert.Contains("race grants", import.DatasetVersion);
+            var import = await db.ContentPacks.SingleAsync();
+            Assert.Equal((Dnd5eCatalogSources.Srd, "dnd5e", "SRD 5.1", 0, true), (import.Id, import.SystemId, import.Name, import.FormatVersion, import.IsBase));
+            Assert.StartsWith("5.1-", import.Version);
+            Assert.True(import.Version.Length <= ContentPack.VersionMaxLength);
             Assert.Contains("\"spells\":319", import.CountsJson);
         });
     }
@@ -76,7 +74,7 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
             var rule = await db.Set<LevelChoiceRule>().SingleAsync(x => x.Id == "warlock/-/2/eldritch-invocations");
             Assert.Equal((LevelChoiceKind.OptionSet, 2, true, true), (rule.Kind, rule.Choose, rule.Replaces, rule.Cumulative));
             Assert.True((await db.Set<LevelChoiceRule>().SingleAsync(x => x.Id == "wizard/-/2/spellbook")).Filter.MaxSpellLevelBySlots);
-            Assert.Contains("\"levelChoiceRules\":197", (await db.CatalogImports.SingleAsync()).CountsJson);
+            Assert.Contains("\"levelChoiceRules\":197", (await db.ContentPacks.SingleAsync()).CountsJson);
         });
     }
 
@@ -114,7 +112,7 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
 
         await factory.WithDbAsync(async db =>
         {
-            Assert.Equal(1, await db.CatalogImports.CountAsync());
+            Assert.Equal(1, await db.ContentPacks.CountAsync());
             Assert.Equal(319, await db.Set<SpellDefinition>().CountAsync());
             Assert.Equal(599, await db.ItemTemplates.CountAsync(x => x.CampaignId == null));
         });
@@ -130,7 +128,7 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
             idsBefore = await db.ItemTemplates.Where(x => x.Index != null).ToDictionaryAsync(x => x.Index!, x => x.Id);
 
             // Simulates a dataset version that was never imported.
-            await db.CatalogImports.ExecuteDeleteAsync();
+            await db.ContentPacks.ExecuteDeleteAsync();
         });
 
         using var scope = factory.Services.CreateScope();
@@ -140,7 +138,7 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
 
         await factory.WithDbAsync(async db =>
         {
-            Assert.Equal(1, await db.CatalogImports.CountAsync());
+            Assert.Equal(1, await db.ContentPacks.CountAsync());
             Assert.Equal(12, await db.Set<ClassDefinition>().CountAsync());
             Assert.Equal(319, await db.Set<SpellDefinition>().CountAsync());
             var idsAfter = await db.ItemTemplates.Where(x => x.Index != null).ToDictionaryAsync(x => x.Index!, x => x.Id);

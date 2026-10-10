@@ -1,5 +1,6 @@
 using OpenTrpg.Core.Application.Abstractions;
 using OpenTrpg.Core.Application.Abstractions.Persistence;
+using OpenTrpg.Core.Application.ContentPacks;
 using OpenTrpg.Core.Infrastructure.Auth;
 using OpenTrpg.Core.Infrastructure.Campaigns;
 using OpenTrpg.Core.Infrastructure.Catalog;
@@ -50,6 +51,8 @@ public static class DependencyInjection
         services.AddScoped<IReleaseRepository, ReleaseRepository>();
         services.AddScoped<IInstanceStatsRepository, InstanceStatsRepository>();
         services.AddScoped<IContentPackImporter, ContentPackRegistry>();
+        services.AddScoped<IContentPackRepository, ContentPackRepository>();
+        services.AddScoped<ICatalogScopeResolver, CatalogScopeResolver>();
         services.AddScoped<SystemDocumentSeeder>();
 
         services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));

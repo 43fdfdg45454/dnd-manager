@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OpenTrpg.Core.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using OpenTrpg.Core.Infrastructure.Persistence;
 namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261010141512_ReplaceCatalogImportsWithContentPacks")]
+    partial class ReplaceCatalogImportsWithContentPacks
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -172,28 +175,6 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                     b.HasIndex("ToUserId");
 
                     b.ToTable("OwnershipTransfers", (string)null);
-                });
-
-            modelBuilder.Entity("OpenTrpg.Core.Domain.Catalog.CampaignContentPack", b =>
-                {
-                    b.Property<Guid>("CampaignId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("PackId")
-                        .HasMaxLength(60)
-                        .HasColumnType("character varying(60)");
-
-                    b.Property<DateTimeOffset>("EnabledAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("EnabledByUserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("CampaignId", "PackId");
-
-                    b.HasIndex("PackId");
-
-                    b.ToTable("CampaignContentPacks", (string)null);
                 });
 
             modelBuilder.Entity("OpenTrpg.Core.Domain.Catalog.ContentPack", b =>
@@ -2770,21 +2751,6 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("ToUserId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("OpenTrpg.Core.Domain.Catalog.CampaignContentPack", b =>
-                {
-                    b.HasOne("OpenTrpg.Core.Domain.Campaigns.Campaign", null)
-                        .WithMany()
-                        .HasForeignKey("CampaignId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("OpenTrpg.Core.Domain.Catalog.ContentPack", null)
-                        .WithMany()
-                        .HasForeignKey("PackId")
-                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

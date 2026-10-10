@@ -126,7 +126,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         Assert.Equal(HttpStatusCode.Created, (await admin.PostAsync(PacksUrl, new StringContent(renamed, Encoding.UTF8, "application/json"))).StatusCode);
         await factory.WithDbAsync(async db =>
         {
-            Assert.Equal(1, await db.CatalogImports.CountAsync(x => x.Ruleset == CatalogSources.PackRuleset(id)));
+            Assert.Equal(1, await db.ContentPacks.CountAsync(x => x.Id == id));
             Assert.Equal(1, await db.Set<SubclassDefinition>().CountAsync(x => x.Source == id));
             Assert.Equal(1, await db.ItemTemplates.CountAsync(x => x.Source == id));
         });
@@ -274,7 +274,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
             itemId = (await db.ItemTemplates.SingleAsync(x => x.Source == id)).Id;
 
             // Simulates a new SRD dataset version.
-            await db.CatalogImports.Where(x => x.Ruleset == Dnd5eCatalogSources.SrdRuleset).ExecuteDeleteAsync();
+            await db.ContentPacks.Where(x => x.Id == Dnd5eCatalogSources.Srd).ExecuteDeleteAsync();
         });
 
         using (var scope = factory.Services.CreateScope())
@@ -296,7 +296,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
             Assert.True(await db.Set<SubraceDefinition>().AnyAsync(x => x.Source == id));
             Assert.Equal(2, await db.Set<TraitDefinition>().CountAsync(x => x.Source == id));
             Assert.True(await db.Set<BackgroundDefinition>().AnyAsync(x => x.Source == id));
-            Assert.True(await db.CatalogImports.AnyAsync(x => x.Ruleset == CatalogSources.PackRuleset(id)));
+            Assert.True(await db.ContentPacks.AnyAsync(x => x.Id == id && !x.IsBase));
         });
     }
 

@@ -184,7 +184,7 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
         var admin = await factory.CreateAdminClientAsync();
         Assert.Equal(HttpStatusCode.Created, (await admin.PostAsync(PacksUrl, Json(Pack))).StatusCode);
         await factory.WithDbAsync(async db =>
-            await db.CatalogImports.Where(x => x.Ruleset == Dnd5eCatalogSources.SrdRuleset).ExecuteDeleteAsync());
+            await db.ContentPacks.Where(x => x.Id == Dnd5eCatalogSources.Srd).ExecuteDeleteAsync());
 
         using (var scope = factory.Services.CreateScope())
         {

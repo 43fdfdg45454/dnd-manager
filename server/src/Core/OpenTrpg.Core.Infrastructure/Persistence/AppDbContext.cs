@@ -39,7 +39,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IEnumer
 
     public DbSet<ItemTemplate> ItemTemplates => Set<ItemTemplate>();
 
-    public DbSet<CatalogImport> CatalogImports => Set<CatalogImport>();
+    public DbSet<ContentPack> ContentPacks => Set<ContentPack>();
+
+    public DbSet<CampaignContentPack> CampaignContentPacks => Set<CampaignContentPack>();
+
 
     public DbSet<Character> Characters => Set<Character>();
 

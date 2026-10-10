@@ -15,8 +15,8 @@ namespace OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
 
 /// <summary>
 /// Imports the embedded SRD 5.1 dataset into the catalog tables in a single transaction.
-/// Idempotent: nothing happens when a <see cref="CatalogImport"/> exists for the same ruleset and
-/// dataset version. When an older version was imported, the SRD definitions are replaced and SRD
+/// Idempotent: nothing happens when the base <see cref="ContentPack"/> <c>srd</c> exists with the same dataset version
+/// (<see cref="SrdDataset.PackVersion"/>); the seeder writes that row (<c>IsBase</c>, format 0) in the same transaction. When an older version was imported, the SRD definitions are replaced and SRD
 /// item templates are updated in place by index, so their ids (referenced by inventories) survive.
 /// Definitions of content packs (<c>Source</c> other than "srd") are left intact: classes, which
 /// pack subclasses and features reference, are updated in place instead of deleted. The level choice
@@ -27,8 +27,8 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
 {
     public async Task<bool> SeedAsync(CancellationToken cancellationToken = default)
     {
-        var alreadyImported = await db.CatalogImports.AnyAsync(
-            x => x.Ruleset == Dnd5eCatalogSources.SrdRuleset && x.DatasetVersion == SrdDataset.Version,
+        var alreadyImported = await db.ContentPacks.AnyAsync(
+            x => x.Id == Dnd5eCatalogSources.Srd && x.IsBase && x.Version == SrdDataset.PackVersion,
             cancellationToken);
         if (alreadyImported)
         {
@@ -70,12 +70,16 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
                 ["levelChoiceRules"] = await InsertAsync(levelChoices.Rules, cancellationToken),
             };
 
-            db.CatalogImports.Add(new CatalogImport
+            await db.ContentPacks.Where(x => x.Id == Dnd5eCatalogSources.Srd).ExecuteDeleteAsync(cancellationToken);
+            db.ContentPacks.Add(new ContentPack
             {
-                Ruleset = Dnd5eCatalogSources.SrdRuleset,
-                DatasetVersion = SrdDataset.Version,
+                Id = Dnd5eCatalogSources.Srd,
+                SystemId = Dnd5eCatalogSources.SystemId,
+                Name = Dnd5eCatalogSources.SrdName,
+                Version = SrdDataset.PackVersion,
+                FormatVersion = 0,
+                IsBase = true,
                 ImportedAt = now,
-                CreatedAt = now,
                 CountsJson = JsonSerializer.Serialize(counts),
             });
             await db.SaveChangesAsync(cancellationToken);

@@ -26,6 +26,12 @@ public interface IItemTemplateRepository
     /// <summary>Untracked item usable in the campaign (SRD, or homebrew of that campaign); null otherwise.</summary>
     Task<ItemTemplate?> GetVisibleAsync(Guid campaignId, Guid id, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// A template the campaign can add to a shop, an inventory or the stash: its homebrew, the base content and the
+    /// content packs the campaign enables (<c>CampaignContentPacks</c>); null otherwise.
+    /// </summary>
+    Task<ItemTemplate?> GetSelectableAsync(Guid campaignId, Guid id, CancellationToken cancellationToken = default);
+
     /// <summary>Tracked homebrew item of the campaign; null for SRD items or other campaigns.</summary>
     Task<ItemTemplate?> GetHomebrewAsync(Guid campaignId, Guid id, CancellationToken cancellationToken = default);
 

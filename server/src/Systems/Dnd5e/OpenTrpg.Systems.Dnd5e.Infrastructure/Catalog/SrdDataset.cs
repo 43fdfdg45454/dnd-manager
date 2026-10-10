@@ -39,6 +39,13 @@ internal static class SrdDataset
     /// </summary>
     public const string Version = "5e-database@a6212beb (2026-10-02); mapping 2026-10-09b: consumables, modifiers, skill choices, level choices, starting gear, spell categories, healing, origins, resistances, personality, race grants";
 
+    /// <summary>
+    /// Short form of <see cref="Version"/> stored as the version of the base <c>ContentPack</c> (40 characters at most):
+    /// "5.1-" and the first eight hexadecimal digits of the SHA-256 of <see cref="Version"/>.
+    /// </summary>
+    public static readonly string PackVersion =
+        "5.1-" + Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Version)))[..8];
+
     private const string ResourcePrefix = "5e-SRD-";
 
     private static readonly JsonSerializerOptions JsonOptions = new()

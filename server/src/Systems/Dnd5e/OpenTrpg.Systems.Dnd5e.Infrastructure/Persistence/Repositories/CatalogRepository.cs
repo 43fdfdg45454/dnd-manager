@@ -265,13 +265,10 @@ internal sealed class CatalogRepository(AppDbContext db) : ICatalogRepository
     /// <summary>Import time of every content pack, by pack id.</summary>
     private async Task<Dictionary<string, DateTimeOffset>> PackImportTimesAsync(CancellationToken cancellationToken)
     {
-        var imports = await db.CatalogImports.AsNoTracking()
-            .Where(x => x.Ruleset.StartsWith(CatalogSources.PackRulesetPrefix))
-            .Select(x => new { x.Ruleset, x.ImportedAt })
+        var imports = await db.ContentPacks.AsNoTracking()
+            .Where(x => !x.IsBase)
+            .Select(x => new { x.Id, x.ImportedAt })
             .ToListAsync(cancellationToken);
-        return imports.ToDictionary(
-            x => x.Ruleset[CatalogSources.PackRulesetPrefix.Length..],
-            x => x.ImportedAt,
-            StringComparer.Ordinal);
+        return imports.ToDictionary(x => x.Id, x => x.ImportedAt, StringComparer.Ordinal);
     }
 }
