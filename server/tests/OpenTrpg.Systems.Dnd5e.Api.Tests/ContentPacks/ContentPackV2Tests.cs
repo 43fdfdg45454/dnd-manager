@@ -25,8 +25,8 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
         Assert.Equal((1, 3, 1, 1), (result.Counts["optionSets"], result.Counts["options"], result.Counts["levelChoices"], result.Counts["subclasses"]));
 
         var s = await factory.CreateCampaignScenarioAsync();
-
         await s.EnablePacksAsync();
+
         var hero = await ActiveFighterAsync(s, level: 2);
 
         var plan = await PlanAsync(s.Player, hero.Id);
@@ -153,8 +153,8 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
         Assert.Equal(4, result.Counts["options"]);
 
         var s = await factory.CreateCampaignScenarioAsync();
-
         await s.EnablePacksAsync();
+
         var hero = await ActiveFighterAsync(s, level: 3);
         var proficiencies = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet", new
         {

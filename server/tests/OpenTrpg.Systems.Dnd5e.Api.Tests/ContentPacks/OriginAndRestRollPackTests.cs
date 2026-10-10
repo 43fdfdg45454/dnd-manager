@@ -92,8 +92,8 @@ public class OriginAndRestRollPackTests(OriginPackApiFactory factory) : IClassFi
         Assert.True(import.StatusCode == HttpStatusCode.Created, await import.Content.ReadAsStringAsync());
 
         var s = await factory.CreateCampaignScenarioAsync();
-
         await s.EnablePacksAsync();
+
         var race = await s.Player.Client.GetFromJsonAsync<RaceDetailDto>("/api/v1/systems/dnd5e/catalog/races/augurios-ejemplo-viajero");
         Assert.Equal((2, 6, 1), (race!.Choices!.AbilityBonuses!.Choose, race.Choices.AbilityBonuses.From.Count, race.Choices.Feats!.Choose));
         Assert.Equal(["cold"], race.Resistances);

@@ -36,6 +36,17 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
             Assert.Equal(18, await db.Set<SkillDefinition>().CountAsync());
             Assert.Equal(1, await db.Set<BackgroundDefinition>().CountAsync());
 
+            // Phase 34: the SRD beasts, its vocabularies and no rules document live in tables of their own.
+            Assert.Equal(87, await db.Set<CreatureDefinition>().CountAsync());
+            Assert.Equal(0, await db.Set<RuleDefinition>().CountAsync());
+            Assert.Equal(16 + 11 + 39 + 13 + 8 + 31, await db.Set<ReferenceEntry>().CountAsync());
+            Assert.Equal(
+                [(ReferenceEntry.DamageTypes, 13), (ReferenceEntry.EquipmentCategories, 39), (ReferenceEntry.Languages, 16), (ReferenceEntry.MagicSchools, 8), (ReferenceEntry.Tools, 31), (ReferenceEntry.WeaponProperties, 11)],
+                (await db.Set<ReferenceEntry>().GroupBy(e => e.Kind).Select(g => new { g.Key, Count = g.Count() }).ToListAsync())
+                    .OrderBy(g => g.Key, StringComparer.Ordinal)
+                    .Select(g => (g.Key, g.Count)));
+            Assert.True(await db.Set<CreatureDefinition>().AllAsync(c => c.Source == Dnd5eCatalogSources.Srd));
+
             var srdItems = await db.ItemTemplates.CountAsync(x => x.CampaignId == null);
             Assert.True(srdItems >= 590, $"Expected at least 590 SRD items, got {srdItems}.");
             Assert.Equal(237 + 362, srdItems);

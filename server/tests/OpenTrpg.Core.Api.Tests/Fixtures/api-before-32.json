@@ -185,7 +185,8 @@
         "isSpellcaster": false,
         "spellcastingLevel": 0,
         "isPactCaster": false,
-        "subclassFlavor": "Primal Path"
+        "subclassFlavor": "Primal Path",
+        "source": "srd"
       },
       {
         "index": "bard",
@@ -199,7 +200,8 @@
         "isSpellcaster": true,
         "spellcastingLevel": 1,
         "isPactCaster": false,
-        "subclassFlavor": "Bard College"
+        "subclassFlavor": "Bard College",
+        "source": "srd"
       },
       {
         "index": "cleric",
@@ -213,7 +215,8 @@
         "isSpellcaster": true,
         "spellcastingLevel": 1,
         "isPactCaster": false,
-        "subclassFlavor": "Divine Domain"
+        "subclassFlavor": "Divine Domain",
+        "source": "srd"
       },
       {
         "index": "druid",
@@ -227,7 +230,8 @@
         "isSpellcaster": true,
         "spellcastingLevel": 1,
         "isPactCaster": false,
-        "subclassFlavor": "Druid Circle"
+        "subclassFlavor": "Druid Circle",
+        "source": "srd"
       },
       {
         "index": "fighter",
@@ -241,7 +245,8 @@
         "isSpellcaster": false,
         "spellcastingLevel": 0,
         "isPactCaster": false,
-        "subclassFlavor": "Martial Archetype"
+        "subclassFlavor": "Martial Archetype",
+        "source": "srd"
       },
       {
         "index": "monk",
@@ -255,7 +260,8 @@
         "isSpellcaster": false,
         "spellcastingLevel": 0,
         "isPactCaster": false,
-        "subclassFlavor": "Monastic Tradition"
+        "subclassFlavor": "Monastic Tradition",
+        "source": "srd"
       },
       {
         "index": "paladin",
@@ -269,7 +275,8 @@
         "isSpellcaster": true,
         "spellcastingLevel": 2,
         "isPactCaster": false,
-        "subclassFlavor": "Sacred Oath"
+        "subclassFlavor": "Sacred Oath",
+        "source": "srd"
       },
       {
         "index": "ranger",
@@ -283,7 +290,8 @@
         "isSpellcaster": true,
         "spellcastingLevel": 2,
         "isPactCaster": false,
-        "subclassFlavor": "Ranger Archetype"
+        "subclassFlavor": "Ranger Archetype",
+        "source": "srd"
       },
       {
         "index": "rogue",
@@ -297,7 +305,8 @@
         "isSpellcaster": false,
         "spellcastingLevel": 0,
         "isPactCaster": false,
-        "subclassFlavor": "Roguish Archetype"
+        "subclassFlavor": "Roguish Archetype",
+        "source": "srd"
       },
       {
         "index": "sorcerer",
@@ -311,7 +320,8 @@
         "isSpellcaster": true,
         "spellcastingLevel": 1,
         "isPactCaster": false,
-        "subclassFlavor": "Sorcerous Origin"
+        "subclassFlavor": "Sorcerous Origin",
+        "source": "srd"
       },
       {
         "index": "warlock",
@@ -325,7 +335,8 @@
         "isSpellcaster": true,
         "spellcastingLevel": 1,
         "isPactCaster": true,
-        "subclassFlavor": "Otherworldly Patron"
+        "subclassFlavor": "Otherworldly Patron",
+        "source": "srd"
       },
       {
         "index": "wizard",
@@ -339,7 +350,8 @@
         "isSpellcaster": true,
         "spellcastingLevel": 1,
         "isPactCaster": false,
-        "subclassFlavor": "Arcane Tradition"
+        "subclassFlavor": "Arcane Tradition",
+        "source": "srd"
       }
     ]
   },
@@ -1272,7 +1284,13 @@
           ],
           "source": "srd"
         }
-      ]
+      ],
+      "source": "srd",
+      "description": [],
+      "subclassLevel": 0,
+      "spellcasting": null,
+      "multiclassing": null,
+      "resources": []
     }
   },
   {

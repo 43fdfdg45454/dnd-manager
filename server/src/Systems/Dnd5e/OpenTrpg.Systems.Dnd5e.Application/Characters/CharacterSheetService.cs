@@ -271,6 +271,7 @@ public sealed class CharacterSheetService(
 
     public async Task<Dnd5eCharacterDetailDto> BuildSystemDetailAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default)
     {
+        await scope.UseCampaignAsync(character.CampaignId, cancellationToken);
         var sheetCatalog = await SheetCatalog.LoadAsync(catalog, [character], includeSpells: true, cancellationToken);
         var sheet = await CalculateAsync(character, sheetCatalog, cancellationToken);
         var pendingRest = (await restRequests.ListPendingAsync([character.Id], cancellationToken)).FirstOrDefault();
@@ -370,7 +371,7 @@ public sealed class CharacterSheetService(
             SpellPreparationPending = character.SpellPreparationPending,
             SpellPreparationReason = character.SpellPreparationReason?.ToString(),
             RestRollsPending = character.RestRollsPending,
-            InvalidChoices = ChoiceValidity.Find(character, sheet, sheetCatalog.Option).Select(InvalidChoicesPlanner.ToDto).ToList(),
+            InvalidChoices = ChoiceValidity.Find(character, sheet, sheetCatalog.Option, scope.Allows).Select(InvalidChoicesPlanner.ToDto).ToList(),
             Choices = character.Choices
                 .Where(c => c.Key != CharacterChoice.HitPointsKey && !(c.IsOrigin && OriginChoiceKeys.IsGrant(c.Key)))
                 .OrderBy(c => c.CreatedAt)
