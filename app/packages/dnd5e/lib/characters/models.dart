@@ -524,6 +524,10 @@ class Spellcasting {
     this.preparedMax,
     this.spellsKnownMax,
     this.cantripsKnownMax,
+    this.maxSpellLevel = 0,
+    this.progression,
+    this.hitPointCost = const [],
+    this.usesResource,
   });
 
   factory Spellcasting.fromJson(Map<String, dynamic> json) => Spellcasting(
@@ -534,6 +538,13 @@ class Spellcasting {
     preparedMax: _int(json['preparedMax']),
     spellsKnownMax: _int(json['spellsKnownMax']),
     cantripsKnownMax: _int(json['cantripsKnownMax']),
+    maxSpellLevel: _int(json['maxSpellLevel']) ?? 0,
+    progression: _strOrNull(json['progression']),
+    hitPointCost: [
+      for (final v in (json['hitPointCost'] as List?) ?? const [])
+        if (_int(v) case final int cost) cost,
+    ],
+    usesResource: _strOrNull(json['usesResource']),
   );
 
   final String classIndex;
@@ -548,6 +559,25 @@ class Spellcasting {
 
   /// Cantrips known allowed at the class level, like [spellsKnownMax].
   final int? cantripsKnownMax;
+
+  /// Highest spell level the class casts now (0: cantrips only).
+  final int maxSpellLevel;
+
+  /// Progression of a class of a content pack ("hitPoints", "ritualsOnly",
+  /// "full"...); null for the SRD classes.
+  final String? progression;
+
+  /// "hitPoints": hit points lost by spell level (index 0 = 1st level).
+  final List<int> hitPointCost;
+
+  /// "hitPoints": key of the class resource each spell spends.
+  final String? usesResource;
+
+  /// The class casts without slots, paying hit points.
+  bool get castsWithHitPoints => progression == 'hitPoints';
+
+  /// The class casts only rituals, without slots.
+  bool get ritualsOnly => progression == 'ritualsOnly';
 }
 
 /// An item modifier applied to the sheet (`ItemEffectDto`).

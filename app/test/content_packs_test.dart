@@ -745,6 +745,73 @@ void main() {
     });
   });
 
+  group('lanzamiento sin espacios', () {
+    testWidgets('la clase muestra su coste en PG y el conjuro para quién es ritual', (
+      tester,
+    ) async {
+      const penitent = ClassDetail(
+        index: 'reinos-ejemplo-penitente',
+        name: 'Penitente de ejemplo',
+        hitDie: 8,
+        isSpellcaster: true,
+        spellcastingAbility: 'wis',
+        source: _packId,
+        spellcasting: ClassSpellcasting(
+          progression: 'hitPoints',
+          preparation: 'known',
+          maxSpellLevel: {1: 1, 5: 2},
+          hitPointCost: [2, 4],
+          usesResource: 'reinos-ejemplo-plegarias',
+        ),
+        levels: [ClassLevel(level: 1)],
+      );
+      final catalog = FakeCatalogRepository(
+        classList: const [
+          ClassSummary(index: 'reinos-ejemplo-escriba', name: 'Escriba de ejemplo', hitDie: 6),
+        ],
+        classDetails: {penitent.index: penitent},
+        spellDetails: const {
+          'alarm': SpellDetail(
+            index: 'alarm',
+            name: 'Alarm',
+            level: 1,
+            ritualForClasses: ['reinos-ejemplo-escriba'],
+          ),
+        },
+        sourceList: _sources,
+      );
+      final router = await pumpRealApp(
+        tester,
+        location: '/compendium/classes/${penitent.index}',
+        fakes: AppFakes(catalog: catalog),
+      );
+
+      expect(find.text('Progresión: Sin espacios: cuesta puntos de golpe'), findsOneWidget);
+      expect(
+        find.text('Nivel máximo de conjuro: nivel 1 desde el nivel 1, nivel 2 desde el nivel 5'),
+        findsOneWidget,
+      );
+      expect(find.text('Coste en PG: 1.º: 2, 2.º: 4'), findsOneWidget);
+
+      router.go('/compendium/spells/alarm');
+      await tester.pumpAndSettle();
+      expect(find.text('Ritual: Solo para Escriba de ejemplo'), findsOneWidget);
+    });
+
+    test('ClassSpellcasting y Spellcasting leen los campos sin espacios', () {
+      final info = ClassSpellcasting.fromJson({
+        'progression': 'ritualsOnly',
+        'preparation': 'known',
+        'ritual': true,
+        'maxSpellLevel': {'1': 1, '9': 3},
+        'treatAsRitual': ['alarm'],
+      });
+      expect(info.maxSpellLevel, {1: 1, 9: 3});
+      expect(info.treatAsRitual, ['alarm']);
+      expect(info.hitPointCost, isEmpty);
+    });
+  });
+
   group('crear una campaña', () {
     testWidgets('tras crearla abre Contenido y continúa al detalle', (tester) async {
       final campaigns = FakeCampaignsRepository();

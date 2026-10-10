@@ -18,6 +18,13 @@ class SpellDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final spell = ref.watch(spellDetailProvider(index));
+    // Names of the classes that cast it as a ritual (only when it says so).
+    final classNames = spell.value?.ritualForClasses.isNotEmpty ?? false
+        ? {
+            for (final c in ref.watch(classesProvider(null)).value ?? const <ClassSummary>[])
+              c.index: c.name,
+          }
+        : const <String, String>{};
     return Scaffold(
       appBar: AppBar(title: Text(spell.value?.name ?? 'Hechizo')),
       body: CatalogAsyncBody<SpellDetail>(
@@ -56,6 +63,11 @@ class SpellDetailPage extends ConsumerWidget {
             FactRow('Duración', s.duration),
             if (s.concentration) const FactRow('Concentración', 'Sí'),
             if (s.ritual) const FactRow('Ritual', 'Sí'),
+            if (!s.ritual && s.ritualForClasses.isNotEmpty)
+              FactRow(
+                'Ritual',
+                'Solo para ${s.ritualForClasses.map((c) => classNames[c] ?? titleFromIndex(c)).join(', ')}',
+              ),
             FactRow('Clases', s.classes.join(', ')),
             for (final e in s.expandedBy)
               Padding(

@@ -327,6 +327,10 @@ class ClassSpellcasting {
     this.preparation = '',
     this.ritual = false,
     this.focus,
+    this.maxSpellLevel = const {},
+    this.hitPointCost = const [],
+    this.usesResource,
+    this.treatAsRitual = const [],
   });
 
   factory ClassSpellcasting.fromJson(Map<String, dynamic> json) => ClassSpellcasting(
@@ -334,10 +338,35 @@ class ClassSpellcasting {
     preparation: _str(json['preparation']),
     ritual: _bool(json['ritual']),
     focus: _strOrNull(json['focus']),
+    maxSpellLevel: {
+      for (final e in (_map(json['maxSpellLevel']) ?? const <String, dynamic>{}).entries)
+        if ((int.tryParse(e.key), _int(e.value)) case (final int level, final int max)) level: max,
+    },
+    hitPointCost: [
+      for (final v in (json['hitPointCost'] as List?) ?? const [])
+        if (_int(v) case final int cost) cost,
+    ],
+    usesResource: _strOrNull(json['usesResource']),
+    treatAsRitual: _strList(json['treatAsRitual']),
   );
 
-  /// "full", "half", "third", "pact" or "table" (own slots table).
+  /// "full", "half", "third", "pact", "table" (own slots table),
+  /// "hitPoints" (no slots: each spell costs hit points) or "ritualsOnly"
+  /// (no slots: rituals only).
   final String progression;
+
+  /// "hitPoints"/"ritualsOnly": highest spell level by class level (the
+  /// levels where it changes).
+  final Map<int, int> maxSpellLevel;
+
+  /// "hitPoints": hit points lost by spell level (index 0 = 1st level).
+  final List<int> hitPointCost;
+
+  /// "hitPoints": key of the class resource each spell spends, if any.
+  final String? usesResource;
+
+  /// Spell indexes the class casts as rituals although they are not.
+  final List<String> treatAsRitual;
 
   /// "prepared" or "known".
   final String preparation;
@@ -923,6 +952,7 @@ class SpellDetail extends SpellSummary {
     this.damageAtCharacterLevel = const {},
     this.healAtSlotLevel = const {},
     this.dcAbility,
+    this.ritualForClasses = const [],
   });
 
   factory SpellDetail.fromJson(Map<String, dynamic> json) {
@@ -952,8 +982,12 @@ class SpellDetail extends SpellSummary {
       damageAtCharacterLevel: _levelMap(_map(json['damage'])?['atCharacterLevel']),
       healAtSlotLevel: _levelMap(json['healAtSlotLevel']),
       dcAbility: _strOrNull(_nameOf(json['dcAbility'])),
+      ritualForClasses: _strList(json['ritualForClasses']),
     );
   }
+
+  /// Classes of content packs that cast it as a ritual although it is not one.
+  final List<String> ritualForClasses;
 
   final String? range;
 

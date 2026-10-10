@@ -94,6 +94,22 @@ class _SpellcastingFacts extends StatelessWidget {
         FactRow('Progresión', spellProgressionLabel(spellcasting.progression)),
         FactRow('Conjuros', spellPreparationLabel(spellcasting.preparation)),
         FactRow('Rituales', spellcasting.ritual ? 'Sí' : 'No'),
+        if (spellcasting.maxSpellLevel.isNotEmpty)
+          FactRow(
+            'Nivel máximo de conjuro',
+            [
+              for (final e in spellcasting.maxSpellLevel.entries)
+                'nivel ${e.value} desde el nivel ${e.key}',
+            ].join(', '),
+          ),
+        if (spellcasting.hitPointCost.isNotEmpty)
+          FactRow(
+            'Coste en PG',
+            [
+              for (var i = 0; i < spellcasting.hitPointCost.length; i++)
+                '${i + 1}.º: ${spellcasting.hitPointCost[i]}',
+            ].join(', '),
+          ),
         FactRow('Foco', spellcasting.focus == null ? null : titleFromIndex(spellcasting.focus!)),
       ],
     );

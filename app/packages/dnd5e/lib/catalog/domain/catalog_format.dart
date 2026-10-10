@@ -87,6 +87,8 @@ const _spellProgressions = <String, String>{
   'third': 'Un tercio',
   'pact': 'Magia de pacto',
   'table': 'Tabla propia',
+  'hitpoints': 'Sin espacios: cuesta puntos de golpe',
+  'ritualsonly': 'Sin espacios: solo rituales',
 };
 
 /// Spanish name of the spell slot progression of a class ("full" ->

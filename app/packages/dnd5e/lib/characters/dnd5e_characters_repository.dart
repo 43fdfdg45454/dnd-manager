@@ -237,12 +237,12 @@ class Dnd5eCharactersRepository {
     );
   }
 
-  /// `hit-point-cast`: casts a spell of [spellLevel] of the class at
+  /// `hit-point-cast`: casts a spell of [spellLevel] of the class
   /// [classIndex] paying hit points instead of a slot. Answers with the
   /// updated character and the hit points lost.
   Future<HitPointCastResult> hitPointCast(
     String id, {
-    required int classIndex,
+    required String classIndex,
     required int spellLevel,
   }) async {
     final json = await _json(

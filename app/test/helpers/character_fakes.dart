@@ -960,7 +960,7 @@ class FakeCharactersRepository implements CharactersRepository, Dnd5eCharactersR
   }
 
   /// Bodies of `hit-point-cast`, in order.
-  final List<({int classIndex, int spellLevel})> hitPointCasts = [];
+  final List<({String classIndex, int spellLevel})> hitPointCasts = [];
 
   /// Hit points each level of a `hit-point-cast` costs.
   int hitPointCastCostPerLevel = 2;
@@ -968,7 +968,7 @@ class FakeCharactersRepository implements CharactersRepository, Dnd5eCharactersR
   @override
   Future<HitPointCastResult> hitPointCast(
     String id, {
-    required int classIndex,
+    required String classIndex,
     required int spellLevel,
   }) async {
     _fail();
