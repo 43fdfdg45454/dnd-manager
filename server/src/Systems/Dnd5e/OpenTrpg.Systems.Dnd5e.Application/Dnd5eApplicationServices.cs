@@ -35,6 +35,9 @@ public static class Dnd5eApplicationServices
         services.AddScoped<SearchItemsHandler>();
         services.AddScoped<GetItemHandler>();
         services.AddScoped<ListConditionsHandler>();
+        services.AddScoped<ListRulesHandler>();
+        services.AddScoped<GetRuleHandler>();
+        services.AddScoped<ListReferenceEntriesHandler>();
         services.AddScoped<ListSkillsHandler>();
         services.AddScoped<ListBackgroundsHandler>();
         services.AddScoped<GetEquipmentCategoryHandler>();

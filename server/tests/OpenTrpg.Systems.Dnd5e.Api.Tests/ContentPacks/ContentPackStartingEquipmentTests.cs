@@ -19,6 +19,7 @@ public class ContentPackStartingEquipmentTests(ContentPackApiFactory factory) : 
         var admin = await factory.CreateAdminClientAsync();
         var pack = new
         {
+            formatVersion = 3,
             id = "equipo-ejemplo",
             name = "Equipo de ejemplo",
             version = "1",
@@ -88,6 +89,7 @@ public class ContentPackStartingEquipmentTests(ContentPackApiFactory factory) : 
         var admin = await factory.CreateAdminClientAsync();
         var pack = new
         {
+            formatVersion = 3,
             id = "equipo-malo",
             name = "Equipo malo",
             version = "1",

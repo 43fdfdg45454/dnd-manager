@@ -157,6 +157,11 @@ public sealed class OptionDefinition
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = Dnd5eCatalogSources.Srd;
 
+    public const int CategoryMaxLength = 40;
+
+    /// <summary>Free label of a feat of a content pack ("starter"...), or null.</summary>
+    public string? Category { get; init; }
+
     public OptionPrerequisites Prerequisites => LevelChoiceJson.ParsePrerequisites(PrerequisitesJson);
 
     public IReadOnlyList<ChoiceModifier> Modifiers => LevelChoiceJson.ParseModifiers(ModifiersJson);

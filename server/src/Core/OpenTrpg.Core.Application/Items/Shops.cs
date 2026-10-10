@@ -180,7 +180,7 @@ public sealed class ShopLoader(IShopRepository shops, ICampaignAccess access, II
     /// <summary>The template of a new shop item, which must be usable in the campaign (400 otherwise).</summary>
     public async Task<ItemTemplate?> VisibleTemplateAsync(Guid campaignId, Guid? templateId, CancellationToken cancellationToken) =>
         templateId is { } id
-            ? await templates.GetVisibleAsync(campaignId, id, cancellationToken) ?? throw ItemErrors.UnknownTemplate()
+            ? await templates.GetSelectableAsync(campaignId, id, cancellationToken) ?? throw ItemErrors.UnknownTemplate()
             : null;
 }
 

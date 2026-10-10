@@ -57,9 +57,15 @@ public sealed record ItemDetailDto(
     string Source,
     IReadOnlyList<ItemModifierDto> Modifiers)
 {
+    /// <summary>System-specific rules data (D&amp;D 5e: firearm reload and misfire, tool, ammunition...), or null.</summary>
+    public System.Text.Json.JsonElement? SystemData { get; init; }
+
     public static ItemDetailDto From(ItemTemplate i) => new(
         i.Id, i.CampaignId, i.Index, i.Name, i.Category.ToString(), i.Subcategory, i.Rarity?.ToString(), i.RequiresAttunement,
         i.Cost, i.WeightLb, i.DamageDice, i.DamageType, i.VersatileDice, i.Properties, i.RangeNormal, i.RangeLong,
         i.ArmorClassBase, i.AddDexModifier, i.MaxDexBonus, i.StrengthMinimum, i.StealthDisadvantage, i.Description, i.IsSrd, i.CreatedAt,
-        i.Effects, ItemSources.Of(i), ItemModifierDto.FromAll(i.Modifiers));
+        i.Effects, ItemSources.Of(i), ItemModifierDto.FromAll(i.Modifiers))
+    {
+        SystemData = i.SystemDataJson is { } json ? System.Text.Json.JsonDocument.Parse(json).RootElement.Clone() : null,
+    };
 }

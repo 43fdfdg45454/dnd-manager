@@ -14,16 +14,35 @@ namespace OpenTrpg.Systems.Dnd5e.Domain.Characters;
 /// <param name="Kind">Kind of that choice (a <c>LevelChoiceKind</c> name, or "Feat" for origin feats).</param>
 /// <param name="SetId">Option set of the pick (<c>feats</c> for feats).</param>
 /// <param name="Reason">Spanish explanation of the prerequisites that fail.</param>
-public sealed record InvalidChoice(string? ClassIndex, string Key, int Level, string Kind, string SetId, ChoiceItem Item, string Reason)
+/// <param name="Code"><see cref="InvalidChoiceCodes.Prerequisites"/> or <see cref="InvalidChoiceCodes.PackDisabled"/>.</param>
+public sealed record InvalidChoice(string? ClassIndex, string Key, int Level, string Kind, string SetId, ChoiceItem Item, string Reason, string Code = InvalidChoiceCodes.Prerequisites)
 {
     public bool IsFeat => SetId == OptionSets.Feats;
+}
+
+/// <summary>Why a pick is invalid.</summary>
+public static class InvalidChoiceCodes
+{
+    /// <summary>Its prerequisites no longer hold.</summary>
+    public const string Prerequisites = "prerequisites";
+
+    /// <summary>It comes from a content pack disabled in the character's campaign.</summary>
+    public const string PackDisabled = "pack-disabled";
+
+    public const string PackDisabledReason = "Este contenido pertenece a un paquete desactivado en la campaña.";
 }
 
 /// <summary>Checks the prerequisites of the options and feats a character has (<see cref="Character.ActivePicks"/>).</summary>
 public static class ChoiceValidity
 {
     /// <summary>The picks whose prerequisites fail, using the calculated sheet and the catalog options (missing ones are skipped).</summary>
-    public static IReadOnlyList<InvalidChoice> Find(Dnd5eCharacter character, CharacterSheet sheet, Func<string, OptionDefinition?> findOption)
+    /// <param name="isEnabled">Whether a source is enabled in the character's campaign (every source when null); a pick of a
+    /// disabled source is invalid with <see cref="InvalidChoiceCodes.PackDisabled"/>.</param>
+    public static IReadOnlyList<InvalidChoice> Find(
+        Dnd5eCharacter character,
+        CharacterSheet sheet,
+        Func<string, OptionDefinition?> findOption,
+        Func<string, bool>? isEnabled = null)
     {
         ArgumentNullException.ThrowIfNull(character);
         ArgumentNullException.ThrowIfNull(sheet);
@@ -35,6 +54,13 @@ public static class ChoiceValidity
         {
             if (findOption(pick.Item.Index) is not { } option)
             {
+                continue;
+            }
+
+            if (isEnabled is not null && !isEnabled(option.Source))
+            {
+                result.Add(new InvalidChoice(
+                    pick.ClassIndex, pick.Key, pick.Level, pick.Kind, pick.SetId!, pick.Item, InvalidChoiceCodes.PackDisabledReason, InvalidChoiceCodes.PackDisabled));
                 continue;
             }
 

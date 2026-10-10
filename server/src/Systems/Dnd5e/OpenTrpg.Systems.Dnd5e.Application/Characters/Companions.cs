@@ -74,16 +74,22 @@ public sealed class CompanionPlanner(ICatalogRepository catalog, IBeastCatalog b
     /// <summary>The companion feature the character has reached, or null.</summary>
     public async Task<CompanionGrant?> GrantAsync(Dnd5eCharacter character, CancellationToken cancellationToken)
     {
+        var classes = character.Classes.Select(c => c.ClassIndex).Distinct(StringComparer.Ordinal).ToList();
         var subclasses = character.Classes.Select(c => c.SubclassIndex).OfType<string>().Distinct(StringComparer.Ordinal).ToList();
-        var features = await catalog.ListSubclassFeatureResourcesAsync(subclasses, cancellationToken);
+        var features = await catalog.ListFeatureEffectsAsync(classes, subclasses, cancellationToken);
         return CompanionGrants.Find(character, features);
     }
 
     /// <summary>The beast, if the catalog has it and the rule allows it; a validation error on <c>beastIndex</c> otherwise.</summary>
-    public BeastDto RequireBeast(CompanionRule rule, string beastIndex)
+    public async Task<BeastDto> RequireBeastAsync(CompanionRule rule, string beastIndex, CancellationToken cancellationToken)
     {
         var index = beastIndex.Trim();
-        var beast = Beast(index) ?? throw AppException.Validation("beastIndex", $"La bestia '{index}' no existe en el catálogo.");
+        var beast = await BeastAsync(index, cancellationToken);
+        if (beast is null || !beast.IsBeast || !(await beasts.ListAsync(cancellationToken)).Any(b => b.Index == beast.Index))
+        {
+            throw AppException.Validation("beastIndex", $"La bestia '{index}' no existe en el catálogo.");
+        }
+
         if (!rule.Allows(beast.ChallengeRating, beast.Size))
         {
             throw AppException.Validation(
@@ -100,8 +106,8 @@ public sealed class CompanionPlanner(ICatalogRepository catalog, IBeastCatalog b
             .HitPointsMax.Total;
 
     /// <summary>Maximum hit points of an existing companion (its stored hit points when the beast is gone from the catalog).</summary>
-    public int MaxHitPoints(CharacterCompanion companion, CompanionGrant? grant) =>
-        Beast(companion.BeastIndex) is { } beast
+    public async Task<int> MaxHitPointsAsync(CharacterCompanion companion, CompanionGrant? grant, CancellationToken cancellationToken) =>
+        await BeastAsync(companion.BeastIndex, cancellationToken) is { } beast
             ? MaxHitPoints(beast, grant, companion.HitPointsMaxOverride)
             : companion.HitPointsMaxOverride ?? companion.HitPointsCurrent;
 
@@ -112,7 +118,7 @@ public sealed class CompanionPlanner(ICatalogRepository catalog, IBeastCatalog b
     public async Task<CharacterCompanion> ApplyAsync(Dnd5eCharacter character, string beastIndex, string name, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var grant = await GrantAsync(character, cancellationToken) ?? throw NoCompanionFeature();
-        var beast = RequireBeast(grant.Rule, beastIndex);
+        var beast = await RequireBeastAsync(grant.Rule, beastIndex, cancellationToken);
         var existing = await companions.GetByCharacterAsync(character.Id, cancellationToken);
         if (existing is null)
         {
@@ -148,7 +154,7 @@ public sealed class CompanionPlanner(ICatalogRepository catalog, IBeastCatalog b
         foreach (var companion in list)
         {
             var character = characters.First(c => c.Id == companion.CharacterId);
-            companion.RestoreHitPoints(MaxHitPoints(companion, await GrantAsync(character, cancellationToken)), now);
+            companion.RestoreHitPoints(await MaxHitPointsAsync(companion, await GrantAsync(character, cancellationToken), cancellationToken), now);
         }
     }
 
@@ -166,9 +172,9 @@ public sealed class CompanionPlanner(ICatalogRepository catalog, IBeastCatalog b
         grant.Rule.AttackBonusFromCharacter);
 
     /// <summary>The companion with its statblock recalculated with the character's <paramref name="proficiencyBonus"/>.</summary>
-    public CharacterCompanionDto BuildDto(CharacterCompanion companion, CompanionGrant? grant, int proficiencyBonus)
+    public async Task<CharacterCompanionDto> BuildDtoAsync(CharacterCompanion companion, CompanionGrant? grant, int proficiencyBonus, CancellationToken cancellationToken)
     {
-        var found = Beast(companion.BeastIndex);
+        var found = await BeastAsync(companion.BeastIndex, cancellationToken);
         var beast = found ?? new BeastDto(
             companion.BeastIndex, companion.BeastIndex, string.Empty, string.Empty, 0, "0", 0, 2, 10, null,
             Math.Max(1, companion.HitPointsCurrent), string.Empty, null,
@@ -228,9 +234,9 @@ public sealed class CompanionPlanner(ICatalogRepository catalog, IBeastCatalog b
             found is null);
     }
 
-    /// <summary>The beast of the catalog with that index, or null.</summary>
-    public BeastDto? Beast(string index) =>
-        beasts.All.FirstOrDefault(b => string.Equals(b.Index, index, StringComparison.OrdinalIgnoreCase));
+    /// <summary>The creature of the catalog with that index (whatever its pack), or null.</summary>
+    public Task<BeastDto?> BeastAsync(string index, CancellationToken cancellationToken) =>
+        beasts.FindAsync(index.Trim().ToLowerInvariant(), cancellationToken);
 
     private static string DescribeFilter(CompanionRule rule)
     {
@@ -294,7 +300,7 @@ public sealed class SetCompanionHandler(
         var character = loaded.Character;
         character.EnsureCanTrack(currentUserId, loaded.IsDm);
         var grant = await planner.GrantAsync(character, cancellationToken) ?? throw CompanionPlanner.NoCompanionFeature();
-        var beast = planner.RequireBeast(grant.Rule, request.BeastIndex);
+        var beast = await planner.RequireBeastAsync(grant.Rule, request.BeastIndex, cancellationToken);
         var name = CharacterCompanion.NormalizeName(request.Name);
         var existing = await companions.GetByCharacterAsync(character.Id, cancellationToken);
         var now = clock.UtcNow;
@@ -310,7 +316,7 @@ public sealed class SetCompanionHandler(
             return new CompanionResult(await sheets.BuildDetailAsync(character, cancellationToken), null);
         }
 
-        var before = new CompanionPayload(existing!.BeastIndex, planner.Beast(existing.BeastIndex)?.Name ?? existing.BeastIndex, existing.Name);
+        var before = new CompanionPayload(existing!.BeastIndex, (await planner.BeastAsync(existing.BeastIndex, cancellationToken))?.Name ?? existing.BeastIndex, existing.Name);
         var changeRequest = ChangeRequest.Create(
             character.CampaignId,
             character.Id,
@@ -340,7 +346,7 @@ public sealed class CompanionTrackingHandler(
     {
         var character = await tracker.LoadAsync(currentUserId, characterId, cancellationToken);
         var companion = await companions.GetByCharacterAsync(character.Id, cancellationToken) ?? throw CompanionPlanner.NoCompanion();
-        var max = planner.MaxHitPoints(companion, await planner.GrantAsync(character, cancellationToken));
+        var max = await planner.MaxHitPointsAsync(companion, await planner.GrantAsync(character, cancellationToken), cancellationToken);
         companion.TrackHitPoints(request.Delta, request.Current, max, clock.UtcNow);
         return await tracker.SaveAsync(character, cancellationToken);
     }

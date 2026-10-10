@@ -17,11 +17,26 @@ internal sealed partial class ContentPackValidator
     private readonly List<(string Path, string Index)> _itemReferences = [];
 
     /// <summary>Validates and normalizes <c>startingEquipment</c>; returns the JSON stored in the catalog.</summary>
-    private string ParseStartingEquipment(string path, PackStartingEquipmentJson equipment)
+    private string ParseStartingEquipment(string path, PackStartingEquipmentJson equipment, bool allowGold = false)
     {
-        if (equipment.Gold is { ValueKind: not JsonValueKind.Null })
+        StartingGold? gold = null;
+        if (equipment.Gold is { ValueKind: not JsonValueKind.Null } goldJson)
         {
-            AddError($"{path}.gold", "Solo las clases tienen riqueza inicial alternativa; en un trasfondo usa \"fixedGoldCp\".");
+            if (!allowGold)
+            {
+                AddError($"{path}.gold", "Solo las clases tienen riqueza inicial alternativa; en un trasfondo usa \"fixedGoldCp\".");
+            }
+            else if (goldJson.ValueKind != JsonValueKind.Object
+                     || !goldJson.TryGetProperty("dice", out var dice) || dice.ValueKind != JsonValueKind.String
+                     || !HeightWeightTable.IsValidModifier(dice.GetString() ?? string.Empty) || !(dice.GetString() ?? string.Empty).Contains('d', StringComparison.Ordinal)
+                     || !goldJson.TryGetProperty("multiplier", out var multiplier) || !multiplier.TryGetInt32(out var factor) || factor is < 1 or > 1000)
+            {
+                AddError($"{path}.gold", "Usa { \"dice\": \"4d4\", \"multiplier\": 10 } (dados y multiplicador en po).");
+            }
+            else
+            {
+                gold = new StartingGold(dice.GetString()!, factor);
+            }
         }
 
         var fixedItems = StartingItems($"{path}.fixed", equipment.Fixed);
@@ -72,7 +87,7 @@ internal sealed partial class ContentPackValidator
         });
 
         var fixedGold = OptionalInt($"{path}.fixedGoldCp", equipment.FixedGoldCp, 0, MaxFixedGoldCp);
-        return new StartingEquipment(fixedItems, choices, null, fixedGold is > 0 ? fixedGold : null).ToJson();
+        return new StartingEquipment(fixedItems, choices, gold, fixedGold is > 0 ? fixedGold : null).ToJson();
     }
 
     private List<StartingItem> StartingItems(string path, List<PackStartingItemJson?>? items)

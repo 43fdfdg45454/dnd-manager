@@ -26,7 +26,7 @@ public static class Dnd5eInfrastructureServices
         services.AddScoped<ICharacterCompanionRepository, CharacterCompanionRepository>();
         services.AddScoped<ISrdSeeder, SrdSeeder>();
         services.AddScoped<IDnd5eCatalogSystem, Dnd5eCatalogSystem>();
-        services.AddSingleton<IBeastCatalog, SrdBeastCatalog>();
+        services.AddScoped<IBeastCatalog, SrdBeastCatalog>();
 
         return services;
     }

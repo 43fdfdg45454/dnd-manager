@@ -176,7 +176,7 @@ public class StartingEquipmentTests(CatalogApiFactory factory, ITestOutputHelper
         await factory.WithDbAsync(async db =>
         {
             Assert.Equal(39, await db.Set<EquipmentCategory>().CountAsync(x => x.Source == Dnd5eCatalogSources.Srd));
-            Assert.Contains("\"equipmentCategories\":39", (await db.CatalogImports.SingleAsync()).CountsJson);
+            Assert.Contains("\"equipmentCategories\":39", (await db.ContentPacks.SingleAsync()).CountsJson);
         });
     }
 

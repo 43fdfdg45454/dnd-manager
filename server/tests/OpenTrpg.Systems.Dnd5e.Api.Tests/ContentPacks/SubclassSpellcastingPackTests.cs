@@ -36,15 +36,15 @@ public class SubclassSpellcastingPackTests(SubclassSpellcastingPackApiFactory fa
 
     private static JsonObject Pack() => JsonSerializer.SerializeToNode(new
     {
-        formatVersion = 2,
+        formatVersion = 3,
         id = "runas-ejemplo",
         name = "Runas de Ejemplo",
         version = "1.0.0",
-        classesExtended = new[]
+        classes = new[]
         {
             new
             {
-                classIndex = "fighter",
+                extends = "fighter",
                 subclasses = new[]
                 {
                     new
@@ -91,6 +91,7 @@ public class SubclassSpellcastingPackTests(SubclassSpellcastingPackApiFactory fa
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Centinela");
 
         var second = await PatchAsync(s, hero.Id, [("fighter", null, 2)]);
@@ -126,6 +127,7 @@ public class SubclassSpellcastingPackTests(SubclassSpellcastingPackApiFactory fa
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Aprendiz");
         await PatchAsync(s, hero.Id, [("fighter", null, 2)], player: true);
         Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/activate", null)).StatusCode);
@@ -190,7 +192,7 @@ public class SubclassSpellcastingPackTests(SubclassSpellcastingPackApiFactory fa
         var admin = await factory.CreateAdminClientAsync();
         var pack = Pack();
         pack["id"] = "runas-malas";
-        var subclass = pack["classesExtended"]![0]!["subclasses"]![0]!.AsObject();
+        var subclass = pack["classes"]![0]!["subclasses"]![0]!.AsObject();
         subclass["index"] = "runas-malas-x";
         subclass["spellcasting"] = JsonNode.Parse("""{"progression":"quarter","ability":"luck","fromLevel":0,"spellList":"nadie","spellsKnown":{"0":2,"3":-1}}""");
         subclass["levelChoices"] = JsonNode.Parse("""
@@ -202,7 +204,7 @@ public class SubclassSpellcastingPackTests(SubclassSpellcastingPackApiFactory fa
 
         var errors = await ImportErrorsAsync(admin, pack);
 
-        var prefix = "classesExtended[0].subclasses[0]";
+        var prefix = "classes[0].subclasses[0]";
         foreach (var path in new[]
         {
             "spellcasting.progression", "spellcasting.ability", "spellcasting.fromLevel", "spellcasting.spellList",
@@ -217,8 +219,8 @@ public class SubclassSpellcastingPackTests(SubclassSpellcastingPackApiFactory fa
         // A class that already casts spells cannot take a subclass spellcasting.
         var wizard = Pack();
         wizard["id"] = "runas-mago";
-        wizard["classesExtended"]![0]!["classIndex"] = "wizard";
-        wizard["classesExtended"]![0]!["subclasses"]![0]!["index"] = "runas-mago-x";
+        wizard["classes"]![0]!["extends"] = "wizard";
+        wizard["classes"]![0]!["subclasses"]![0]!["index"] = "runas-mago-x";
         Assert.Contains(await ImportErrorsAsync(admin, wizard), e => e.StartsWith($"{prefix}.spellcasting:", StringComparison.Ordinal));
     }
 

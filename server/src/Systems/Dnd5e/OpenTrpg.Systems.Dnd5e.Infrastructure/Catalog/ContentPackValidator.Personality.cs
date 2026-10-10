@@ -188,7 +188,7 @@ internal sealed partial class ContentPackValidator
         {
             classIndex = null;
         }
-        else if (!_context.Classes.ContainsKey(classIndex))
+        else if (!_classes.ContainsKey(classIndex))
         {
             AddError($"{path}.classIndex", $"La clase '{classIndex}' no existe en el catálogo.");
             classIndex = null;

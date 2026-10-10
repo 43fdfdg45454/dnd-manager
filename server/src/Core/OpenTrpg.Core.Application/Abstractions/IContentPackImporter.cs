@@ -11,12 +11,13 @@ public interface IContentPackImporter
     /// </summary>
     Task<ContentPackImportResultDto> ImportAsync(Stream json, CancellationToken cancellationToken = default);
 
-    /// <summary>Imported packs ordered by name.</summary>
+    /// <summary>Every pack of the instance (base packs first, then by name).</summary>
     Task<IReadOnlyList<ContentPackDto>> ListAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes the definitions of the pack. Items still used by inventories, shops or party stashes are kept so
-    /// those entries keep working; the catalog no longer lists them. Returns false when the pack does not exist.
+    /// those entries keep working; the catalog no longer lists them. Returns false when the pack does not exist; throws
+    /// a 409 <c>base-pack</c> conflict for the base pack of a system.
     /// </summary>
     Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default);
 }

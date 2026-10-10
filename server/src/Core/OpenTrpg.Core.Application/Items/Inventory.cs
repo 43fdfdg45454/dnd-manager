@@ -155,7 +155,7 @@ public sealed class InventoryOperations(
     public async Task<(ItemTemplate? Template, ItemOverrides Overrides)> ResolveAddAsync(Guid campaignId, AddInventoryItemRequest request, CancellationToken cancellationToken)
     {
         var template = request.TemplateId is { } templateId
-            ? await templates.GetVisibleAsync(campaignId, templateId, cancellationToken) ?? throw ItemErrors.UnknownTemplate()
+            ? await templates.GetSelectableAsync(campaignId, templateId, cancellationToken) ?? throw ItemErrors.UnknownTemplate()
             : null;
         var overrides = (request.Overrides?.ToDomain() ?? ItemOverrides.None()).Normalize();
         if (template is null && overrides.Name is null)

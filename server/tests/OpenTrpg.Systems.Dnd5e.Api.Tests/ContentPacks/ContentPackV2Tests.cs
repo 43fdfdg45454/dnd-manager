@@ -25,6 +25,8 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
         Assert.Equal((1, 3, 1, 1), (result.Counts["optionSets"], result.Counts["options"], result.Counts["levelChoices"], result.Counts["subclasses"]));
 
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
+
         var hero = await ActiveFighterAsync(s, level: 2);
 
         var plan = await PlanAsync(s.Player, hero.Id);
@@ -78,7 +80,7 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
         var admin = await factory.CreateAdminClientAsync();
         var pack = new
         {
-            formatVersion = 2,
+            formatVersion = 3,
             id = "malo-ejemplo",
             name = "Malo",
             version = "1",
@@ -94,11 +96,11 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
                     },
                 },
             },
-            classesExtended = new object[]
+            classes = new object[]
             {
                 new
                 {
-                    classIndex = "fighter",
+                    extends = "fighter",
                     levelChoices = new object[]
                     {
                         new { level = 3, key = "algo", name = "Algo", kind = "OptionSet", setId = "malo-ejemplo-no-existe", choose = 1 },
@@ -112,11 +114,14 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
 
         Assert.Contains(errors, e => e.StartsWith("optionSets[0].options[0].index:", StringComparison.Ordinal));
         Assert.Contains(errors, e => e.StartsWith("optionSets[0].options[1].modifiers[0].condition:", StringComparison.Ordinal));
-        Assert.Contains(errors, e => e.StartsWith("classesExtended[0].levelChoices[0].setId:", StringComparison.Ordinal));
-        Assert.Contains(errors, e => e.StartsWith("classesExtended[0].levelChoices[1]:", StringComparison.Ordinal) && e.Contains("srd", StringComparison.Ordinal));
+        Assert.Contains(errors, e => e.StartsWith("classes[0].levelChoices[0].setId:", StringComparison.Ordinal));
+        Assert.Contains(errors, e => e.StartsWith("classes[0].levelChoices[1]:", StringComparison.Ordinal) && e.Contains("srd", StringComparison.Ordinal));
 
         var v1 = await ImportErrorsAsync(admin, JsonSerializer.Serialize(new { id = "viejo-ejemplo", name = "Viejo", version = "1", optionSets = Array.Empty<object>() }));
-        Assert.Contains(v1, e => e.StartsWith("optionSets:", StringComparison.Ordinal) && e.Contains("formatVersion", StringComparison.Ordinal));
+        Assert.Contains(v1, e => e.StartsWith("formatVersion:", StringComparison.Ordinal));
+
+        var v2 = await ImportErrorsAsync(admin, JsonSerializer.Serialize(new { formatVersion = 2, id = "viejo-ejemplo", name = "Viejo", version = "1" }));
+        Assert.Contains(v2, e => e.StartsWith("formatVersion:", StringComparison.Ordinal) && e.Contains("3", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -125,7 +130,7 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
         var admin = await factory.CreateAdminClientAsync();
         var pack = new
         {
-            formatVersion = 2,
+            formatVersion = 3,
             id = "requisitos-ejemplo",
             name = "Requisitos de Ejemplo",
             version = "1.0.0",
@@ -148,6 +153,8 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
         Assert.Equal(4, result.Counts["options"]);
 
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
+
         var hero = await ActiveFighterAsync(s, level: 3);
         var proficiencies = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet", new
         {
@@ -207,7 +214,7 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
         var admin = await factory.CreateAdminClientAsync();
         var pack = new
         {
-            formatVersion = 2,
+            formatVersion = 3,
             id = "requisitos-malos",
             name = "Requisitos malos",
             version = "1",

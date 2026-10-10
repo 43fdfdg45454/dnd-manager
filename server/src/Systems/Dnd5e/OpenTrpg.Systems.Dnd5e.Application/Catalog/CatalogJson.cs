@@ -21,6 +21,9 @@ internal static class CatalogJson
             ? new SkillChoicesDto(stored.Choose, stored.From ?? [])
             : new SkillChoicesDto(0, []);
 
+    public static IReadOnlyList<string> StringList(string? json) =>
+        json is null ? [] : TryDeserialize<List<string>>(json) ?? [];
+
     public static JsonElement Object(string json)
     {
         try

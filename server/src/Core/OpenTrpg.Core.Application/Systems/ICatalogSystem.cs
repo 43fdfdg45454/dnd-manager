@@ -13,7 +13,10 @@ public interface ICatalogSystem
     /// <summary>True for source ids a content pack cannot take (the base pack of the system).</summary>
     bool IsReservedSource(string id);
 
-    /// <summary>Loads the base pack (the SRD in D&amp;D 5e) when it is not loaded yet. Idempotent.</summary>
+    /// <summary>
+    /// Loads the base pack (the SRD in D&amp;D 5e) when it is not loaded yet and registers it as the system's base
+    /// <c>ContentPack</c> (<c>IsBase</c>) in the same transaction. Idempotent.
+    /// </summary>
     Task LoadBasePackAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -26,5 +29,10 @@ public interface ICatalogSystem
     Task DeletePackAsync(string packId, CancellationToken cancellationToken = default);
 }
 
-/// <summary>A pack the system imported: its header and the definitions written per type.</summary>
-public sealed record PackImportResult(string Id, string Name, string Version, IReadOnlyDictionary<string, int> Counts);
+/// <summary>A pack the system imported: its header, the packs it requires and the definitions written per type.</summary>
+public sealed record PackImportResult(string Id, string Name, string Version, IReadOnlyDictionary<string, int> Counts)
+{
+    public int FormatVersion { get; init; }
+
+    public IReadOnlyList<string> Requires { get; init; } = [];
+}

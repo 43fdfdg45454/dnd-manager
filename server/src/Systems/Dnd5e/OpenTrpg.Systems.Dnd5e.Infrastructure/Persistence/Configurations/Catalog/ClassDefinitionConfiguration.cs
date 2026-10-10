@@ -27,5 +27,13 @@ internal sealed class ClassDefinitionConfiguration : IEntityTypeConfiguration<Cl
         builder.Property(x => x.StartingEquipmentText).IsRequired();
         builder.Property(x => x.SkillChoicesJson).IsRequired();
         builder.Ignore(x => x.StartingEquipment);
+        builder.Property(x => x.Source).HasMaxLength(CatalogSources.MaxLength).IsRequired();
+        builder.HasIndex(x => x.Source);
+        builder.Property(x => x.Description).HasJsonListConversion();
+        builder.Ignore(x => x.Spellcasting);
+        builder.Ignore(x => x.Multiclassing);
+        builder.Ignore(x => x.Resources);
+        builder.Ignore(x => x.SpellList);
+        builder.Ignore(x => x.PreparesSpells);
     }
 }

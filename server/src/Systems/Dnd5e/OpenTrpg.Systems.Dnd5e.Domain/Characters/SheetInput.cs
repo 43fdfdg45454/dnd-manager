@@ -44,6 +44,9 @@ public sealed record ClassInfo
 
     public bool IsPactCaster { get; init; }
 
+    /// <summary>Whether the class prepares its spells from its list (<see cref="ClassDefinition.PreparesSpells"/>).</summary>
+    public bool PreparesSpells { get; init; }
+
     /// <summary>Spell slots (9 entries, spell levels 1-9) by class level.</summary>
     public IReadOnlyDictionary<int, IReadOnlyList<int>> SpellSlotsByLevel { get; init; } = new Dictionary<int, IReadOnlyList<int>>();
 
@@ -95,6 +98,7 @@ public sealed record ClassInfo
             SpellcastingAbility = definition.SpellcastingAbility,
             SpellcastingLevel = definition.SpellcastingLevel,
             IsPactCaster = definition.IsPactCaster,
+            PreparesSpells = definition.PreparesSpells,
             SpellSlotsByLevel = levels
                 .Where(l => l.ClassIndex == definition.Index)
                 .GroupBy(l => l.Level)

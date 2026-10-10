@@ -192,8 +192,7 @@ public static class CompanionGrants
         ArgumentNullException.ThrowIfNull(character);
         ArgumentNullException.ThrowIfNull(features);
         return features
-            .Where(f => f.SubclassIndex is not null)
-            .Select(f => (Feature: f, Rule: f.Companion, Owner: character.Classes.FirstOrDefault(c => c.ClassIndex == f.ClassIndex && c.SubclassIndex == f.SubclassIndex)))
+            .Select(f => (Feature: f, Rule: f.Companion, Owner: character.Classes.FirstOrDefault(c => c.ClassIndex == f.ClassIndex && (f.SubclassIndex is null || c.SubclassIndex == f.SubclassIndex))))
             .Where(f => f.Rule is not null && f.Owner is not null && f.Feature.Level <= f.Owner.Level)
             .OrderByDescending(f => f.Feature.Level)
             .ThenBy(f => f.Feature.Index, StringComparer.Ordinal)

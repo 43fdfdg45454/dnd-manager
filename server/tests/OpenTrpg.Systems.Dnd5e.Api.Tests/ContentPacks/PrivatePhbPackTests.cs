@@ -36,7 +36,8 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
         var response = await admin.PostAsync(PacksUrl, new StringContent(await File.ReadAllTextAsync(path), Encoding.UTF8, "application/json"));
         Assert.True(response.StatusCode == HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
         var result = (await response.Content.ReadFromJsonAsync<ContentPackImportResultDto>())!;
-        Assert.Equal(PackId, result.Id);
+        Assert.Equal((PackId, 3, "dnd5e"), (result.Id, result.FormatVersion, result.SystemId));
+        Assert.Equal(41, result.Counts["feats"]);
         Assert.Equal(28, result.Counts["subclasses"]);
         Assert.Equal(42, result.Counts["spells"]);
         Assert.Equal(12, result.Counts["backgrounds"]);
@@ -92,6 +93,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
 
         // A fighter reaching level 3 is offered the Battle Master and, with it, three maneuvers; the superiority dice come with the feature itself.
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync(PackId);
         var hero = await ActiveFighterAsync(s, level: 2);
         var plan = await PlanAsync(s.Player, hero.Id);
         var subclass = Assert.Single(plan.Choices, c => c.Kind == "Subclass");

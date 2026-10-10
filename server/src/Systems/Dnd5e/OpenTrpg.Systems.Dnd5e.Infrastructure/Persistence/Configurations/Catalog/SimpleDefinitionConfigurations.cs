@@ -20,6 +20,59 @@ internal sealed class ConditionDefinitionConfiguration : IEntityTypeConfiguratio
         builder.Property(x => x.Name).HasMaxLength(CatalogColumns.NameMaxLength).IsRequired();
         builder.HasIndex(x => x.Name);
         builder.Property(x => x.Description).HasJsonListConversion();
+        builder.Property(x => x.Source).HasMaxLength(CatalogSources.MaxLength).IsRequired();
+        builder.HasIndex(x => x.Source);
+    }
+}
+
+internal sealed class CreatureDefinitionConfiguration : IEntityTypeConfiguration<CreatureDefinition>
+{
+    public void Configure(EntityTypeBuilder<CreatureDefinition> builder)
+    {
+        builder.ToTable("Dnd5eCreatures");
+        builder.HasKey(x => x.Index);
+        builder.Property(x => x.Index).HasMaxLength(CatalogColumns.IndexMaxLength);
+        builder.Property(x => x.Name).HasMaxLength(CatalogColumns.NameMaxLength).IsRequired();
+        builder.HasIndex(x => x.Name);
+        builder.Property(x => x.Type).HasMaxLength(CreatureDefinition.TypeMaxLength).IsRequired();
+        builder.HasIndex(x => x.Type);
+        builder.Property(x => x.Subtype).HasMaxLength(CatalogColumns.NameMaxLength);
+        builder.Property(x => x.Size).HasMaxLength(16).IsRequired();
+        builder.Property(x => x.DataJson).IsRequired();
+        builder.Property(x => x.Source).HasMaxLength(CatalogSources.MaxLength).IsRequired();
+        builder.HasIndex(x => x.Source);
+    }
+}
+
+internal sealed class RuleDefinitionConfiguration : IEntityTypeConfiguration<RuleDefinition>
+{
+    public void Configure(EntityTypeBuilder<RuleDefinition> builder)
+    {
+        builder.ToTable("Dnd5eRules");
+        builder.HasKey(x => x.Index);
+        builder.Property(x => x.Index).HasMaxLength(CatalogColumns.IndexMaxLength);
+        builder.Property(x => x.Title).HasMaxLength(CatalogColumns.NameMaxLength).IsRequired();
+        builder.HasIndex(x => x.Title);
+        builder.Property(x => x.Category).HasMaxLength(RuleDefinition.CategoryMaxLength).IsRequired();
+        builder.Property(x => x.Body).HasJsonListConversion();
+        builder.Property(x => x.Tags).HasJsonListConversion();
+        builder.Property(x => x.Source).HasMaxLength(CatalogSources.MaxLength).IsRequired();
+        builder.HasIndex(x => x.Source);
+    }
+}
+
+internal sealed class ReferenceEntryConfiguration : IEntityTypeConfiguration<ReferenceEntry>
+{
+    public void Configure(EntityTypeBuilder<ReferenceEntry> builder)
+    {
+        builder.ToTable("Dnd5eReferenceEntries");
+        builder.HasKey(x => new { x.Kind, x.Index });
+        builder.Property(x => x.Kind).HasMaxLength(ReferenceEntry.KindMaxLength);
+        builder.Property(x => x.Index).HasMaxLength(CatalogColumns.IndexMaxLength);
+        builder.Property(x => x.Name).HasMaxLength(CatalogColumns.NameMaxLength).IsRequired();
+        builder.Property(x => x.DescriptionJson).IsRequired();
+        builder.Property(x => x.Source).HasMaxLength(CatalogSources.MaxLength).IsRequired();
+        builder.HasIndex(x => x.Source);
     }
 }
 

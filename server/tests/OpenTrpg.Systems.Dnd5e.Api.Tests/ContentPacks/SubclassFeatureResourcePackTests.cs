@@ -25,15 +25,15 @@ public class SubclassFeatureResourcePackTests(FeatureResourcePackApiFactory fact
 
     private static object Pack(object tacticsResource, object wardResource) => new
     {
-        formatVersion = 2,
+        formatVersion = 3,
         id = "tacticos-ejemplo",
         name = "Tácticos de Ejemplo",
         version = "1.0.0",
-        classesExtended = new[]
+        classes = new[]
         {
             new
             {
-                classIndex = "fighter",
+                extends = "fighter",
                 subclasses = new[]
                 {
                     new
@@ -80,6 +80,8 @@ public class SubclassFeatureResourcePackTests(FeatureResourcePackApiFactory fact
         Assert.True(import.StatusCode == HttpStatusCode.Created, await import.Content.ReadAsStringAsync());
 
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
+
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Estratega");
         var below = await PatchAsync(s, hero.Id, level: 2, subclass: null);
         Assert.DoesNotContain(below.Resources, r => r.Key is "tacticos-ejemplo-dados" or "tacticos-ejemplo-escudo");
@@ -111,6 +113,7 @@ public class SubclassFeatureResourcePackTests(FeatureResourcePackApiFactory fact
     public async Task Bardic_inspiration_exposes_its_die()
     {
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var bard = await s.Player.CreateCharacterAsync(s.CampaignId, "Juglar");
         var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(bard.Id)}/sheet", new
         {
@@ -163,19 +166,6 @@ public class SubclassFeatureResourcePackTests(FeatureResourcePackApiFactory fact
         {
             Assert.Contains(path, body);
         }
-    }
-
-    [Fact]
-    public async Task Feature_resources_require_format_2()
-    {
-        var admin = await factory.CreateAdminClientAsync();
-        var pack = JsonSerializer.SerializeToNode(Pack(Tactics, Ward))!;
-        pack["formatVersion"] = 1;
-
-        var response = await admin.PostAsync(PacksUrl, new StringContent(pack.ToJsonString(), Encoding.UTF8, "application/json"));
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains("features[0].resource", await response.Content.ReadAsStringAsync());
     }
 
     private static StringContent Json(object pack) => new(JsonSerializer.Serialize(pack), Encoding.UTF8, "application/json");

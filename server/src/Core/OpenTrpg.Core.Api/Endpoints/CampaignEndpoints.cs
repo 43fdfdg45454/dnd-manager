@@ -2,6 +2,7 @@ using System.Security.Claims;
 using OpenTrpg.Core.Api.Auth;
 using OpenTrpg.Core.Api.Filters;
 using OpenTrpg.Core.Application.Campaigns;
+using OpenTrpg.Core.Application.ContentPacks;
 using OpenTrpg.Core.Application.Sessions;
 
 namespace OpenTrpg.Core.Api.Endpoints;
@@ -49,6 +50,20 @@ public static class CampaignEndpoints
                 TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, request, ct)))
             .WithName("UpdateCampaignSettings")
             .WithSummary("Cambia la zona horaria (IANA) y los recordatorios (minutos antes de cada sesión). Requiere al menos DM.")
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapGet("/{id:guid}/content-packs", async (Guid id, ClaimsPrincipal user, ListCampaignContentPacksHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, ct)))
+            .WithName("ListCampaignContentPacks")
+            .WithSummary("Paquetes de contenido del sistema de la campaña con enabled (el paquete base siempre activo) y requires. Miembros.")
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPut("/{id:guid}/content-packs", async (Guid id, SetCampaignContentPacksRequest request, ClaimsPrincipal user, SetCampaignContentPacksHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, request, ct)))
+            .WithName("SetCampaignContentPacks")
+            .WithSummary("Reemplaza los paquetes activos de la campaña ({ packIds }; el base se ignora). 400 unknown-pack o missing-requirement. Emite campaign.updated. Owner/DM.")
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);

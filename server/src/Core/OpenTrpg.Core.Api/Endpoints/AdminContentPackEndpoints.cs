@@ -25,14 +25,14 @@ public static class AdminContentPackEndpoints
         group.MapGet("", async (ListContentPacksHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(ct)))
             .WithName("ListContentPacks")
-            .WithSummary("Paquetes de contenido importados: id, nombre, versión, fecha de importación y recuentos por tipo.");
+            .WithSummary("Paquetes de contenido de la instancia (el base de cada sistema primero): id, sistema, nombre, versión, versión de formato, isBase, fecha de importación, recuentos y requires.");
 
         group.MapPost("", ImportAsync)
             .DisableAntiforgery()
             .Accepts<ImportContentPackForm>("multipart/form-data", "application/json")
             .Produces<ContentPackImportResultDto>(StatusCodes.Status201Created)
             .WithName("ImportContentPack")
-            .WithSummary("Importa o reemplaza un paquete de contenido: multipart con file, o el JSON del paquete como cuerpo. 400 con errors: lista de \"ruta: mensaje\".")
+            .WithSummary("Importa o reemplaza un paquete de contenido (formato 3): multipart con file, o el JSON del paquete como cuerpo. No se activa en ninguna campaña. 400 con errors: lista de \"ruta: mensaje\".")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status413PayloadTooLarge);
 
@@ -42,8 +42,9 @@ public static class AdminContentPackEndpoints
                 return TypedResults.NoContent();
             })
             .WithName("DeleteContentPack")
-            .WithSummary("Borra el contenido del paquete. Los personajes conservan sus índices y la ficha lo marca como no disponible (catalogMissing).")
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .WithSummary("Borra el contenido del paquete y su activación en las campañas. Los personajes conservan sus índices y la ficha lo marca como no disponible (catalogMissing). 409 base-pack para el paquete base.")
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         return app;
     }

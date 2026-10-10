@@ -587,6 +587,27 @@ public static class LevelChoiceJson
             };
         });
 
+    /// <summary>A JSON array of resources (<see cref="ParseResource"/> each); the invalid entries are left out.</summary>
+    public static IReadOnlyList<OptionResource> ParseResources(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            return document.RootElement.ValueKind != JsonValueKind.Array
+                ? []
+                : document.RootElement.EnumerateArray().Select(e => ParseResource(e.GetRawText())).OfType<OptionResource>().ToList();
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
     /// <summary><c>{"resource":"ki","amount":2}</c>; null when missing or invalid.</summary>
     public static OptionCost? ParseCost(string? json) =>
         Parse<OptionCost>(json, root =>

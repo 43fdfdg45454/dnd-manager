@@ -69,6 +69,9 @@ public sealed class ItemTemplate : EntityBase
     /// <summary>Structured effects on the sheet while the item is active (see <see cref="ItemModifier"/>).</summary>
     public IReadOnlyList<ItemModifier> Modifiers { get; private set; } = [];
 
+    /// <summary>System-specific rules data as a JSON object (<see cref="ItemTemplateData.SystemDataJson"/>), or null.</summary>
+    public string? SystemDataJson { get; private set; }
+
     /// <summary>True for catalog items (SRD and content packs), which no campaign can edit.</summary>
     public bool IsSrd => CampaignId is null;
 
@@ -126,6 +129,7 @@ public sealed class ItemTemplate : EntityBase
         Description = Description,
         Effects = Effects,
         Modifiers = Modifiers,
+        SystemDataJson = SystemDataJson,
     };
 
     /// <summary>Replaces the rules data of a catalog item (SRD or content pack) with a newer version of its dataset.</summary>
@@ -175,5 +179,6 @@ public sealed class ItemTemplate : EntityBase
         Description = data.Description;
         Effects = data.Effects;
         Modifiers = modifiers;
+        SystemDataJson = data.SystemDataJson;
     }
 }

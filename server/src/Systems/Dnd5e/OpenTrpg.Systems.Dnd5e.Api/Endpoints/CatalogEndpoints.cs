@@ -16,7 +16,11 @@ public static class CatalogEndpoints
             .WithTags(Dnd5eModule.Tag("Catalog"))
             .RequireAuthorization()
             .AddEndpointFilter<ValidationFilter>()
+            .AddEndpointFilter<CatalogScopeFilter>()
             .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+        // Every route accepts ?campaignId= (member of the campaign): the catalog that campaign sees (SRD, enabled packs
+        // and homebrew). Without it, the global catalog (SRD and every imported pack).
 
         group.MapGet("/attribution", (GetAttributionHandler handler) => TypedResults.Ok(handler.Handle()))
             .WithName("GetCatalogAttribution")
@@ -56,16 +60,33 @@ public static class CatalogEndpoints
             .WithSummary("Detalle de un conjuro.")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        group.MapGet("/beasts", ([AsParameters] SearchBeastsQuery query, SearchBeastsHandler handler) =>
-                TypedResults.Ok(handler.Handle(query)))
+        group.MapGet("/beasts", async ([AsParameters] SearchBeastsQuery query, SearchBeastsHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(query, ct)))
             .WithName("SearchCatalogBeasts")
-            .WithSummary("Bestias del SRD ordenadas por VD y nombre, con filtros maxCr (0.25 = 1/4), fly y swim (true: solo con esa velocidad; false: solo sin ella) y q (nombre).")
+            .WithSummary("Criaturas del catálogo (bestias del SRD y criaturas de paquetes) ordenadas por VD y nombre, con filtros maxCr (0.25 = 1/4), fly y swim (true: solo con esa velocidad; false: solo sin ella), type (\"beast\") y q (nombre).")
             .ProducesValidationProblem();
 
-        group.MapGet("/beasts/{index}", (string index, GetBeastHandler handler) =>
-                TypedResults.Ok(handler.Handle(index)))
+        group.MapGet("/beasts/{index}", async (string index, GetBeastHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(index, ct)))
             .WithName("GetCatalogBeast")
-            .WithSummary("Estadísticas completas de una bestia del SRD: características, CA, PG, velocidades, sentidos, rasgos y acciones con sus tiradas.")
+            .WithSummary("Estadísticas completas de una criatura: características, CA, PG, velocidades, sentidos, rasgos, acciones, reacciones y acciones legendarias.")
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapGet("/rules", async (string? q, string? category, ListRulesHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(q, category, ct)))
+            .WithName("ListCatalogRules")
+            .WithSummary("Documentos de reglas de los paquetes de contenido (variantes, armas de fuego...) ordenados por título, con búsqueda q y filtro category; vacía con solo el SRD.");
+
+        group.MapGet("/rules/{index}", async (string index, GetRuleHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(index, ct)))
+            .WithName("GetCatalogRule")
+            .WithSummary("Texto completo de un documento de reglas.")
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapGet("/reference/{kind}", async (string kind, ListReferenceEntriesHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(kind, ct)))
+            .WithName("ListCatalogReferenceEntries")
+            .WithSummary("Vocabulario del catálogo (languages, weaponProperties, equipmentCategories, damageTypes, magicSchools o tools): los del SRD y los de los paquetes.")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapGet("/items", async ([AsParameters] SearchItemsQuery query, SearchItemsHandler handler, CancellationToken ct) =>
@@ -93,7 +114,7 @@ public static class CatalogEndpoints
         group.MapGet("/conditions", async (ListConditionsHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(ct)))
             .WithName("ListCatalogConditions")
-            .WithSummary("Condiciones del SRD ordenadas por nombre.");
+            .WithSummary("Condiciones del catálogo (SRD y paquetes) ordenadas por nombre.");
 
         group.MapGet("/skills", async (ListSkillsHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(ct)))
@@ -114,7 +135,7 @@ public static class CatalogEndpoints
         group.MapGet("/sources", async (ListCatalogSourcesHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(ct)))
             .WithName("ListCatalogSources")
-            .WithSummary("Fuentes del catálogo: el SRD y los paquetes de contenido importados (id, nombre y versión), para etiquetar su contenido.");
+            .WithSummary("Fuentes del catálogo: el SRD y los paquetes de contenido importados (id, nombre, versión, isBase), para etiquetar su contenido; con campaignId, enabled dice si la campaña los tiene activos.");
 
         group.MapGet("/features/{index}", async (string index, GetFeatureHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(index, ct)))

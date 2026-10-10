@@ -69,6 +69,9 @@ public static class DependencyInjection
         services.AddScoped<ListSystemsHandler>();
 
         services.AddScoped<ListContentPacksHandler>();
+        services.AddScoped<ListCampaignContentPacksHandler>();
+        services.AddScoped<SetCampaignContentPacksHandler>();
+        services.AddScoped<CatalogScopeContext>();
         services.AddScoped<ImportContentPackHandler>();
         services.AddScoped<DeleteContentPackHandler>();
 
