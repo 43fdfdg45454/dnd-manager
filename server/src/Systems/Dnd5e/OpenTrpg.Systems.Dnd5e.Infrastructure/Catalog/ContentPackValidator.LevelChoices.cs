@@ -262,7 +262,7 @@ internal sealed partial class ContentPackValidator
         ForEachText($"{path}.skills", grants.Skills, (skillPath, skill) =>
         {
             var key = skill.ToLowerInvariant();
-            if (_context.Skills.ContainsKey(key))
+            if (_skills.ContainsKey(key))
             {
                 skills.Add(key);
             }

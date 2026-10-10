@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using OpenTrpg.Core.Infrastructure;
 using OpenTrpg.Core.Infrastructure.Catalog;
 using OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
@@ -24,6 +25,15 @@ internal sealed class PackJson
 
     /// <summary>Packs whose content this one references (they must be imported, and enabled with it in a campaign).</summary>
     public List<string?>? Requires { get; set; }
+
+    /// <summary>License notice of the content (informative, e.g. the CC-BY 4.0 attribution of the SRD); not stored.</summary>
+    public string? Attribution { get; set; }
+
+    /// <summary>The skills of the game (only the base pack of the system defines them).</summary>
+    public List<PackSkillJson?>? Skills { get; set; }
+
+    /// <summary>Racial traits shared by several races or subraces, which reference them by index in their <c>traits</c>.</summary>
+    public List<PackSharedTraitJson?>? Traits { get; set; }
 
     /// <summary>Full classes, or (<c>extends</c>) subclasses and level choices added to a class of the SRD or another pack.</summary>
     public List<PackClassJson?>? Classes { get; set; }
@@ -55,6 +65,32 @@ internal sealed class PackJson
 
     /// <summary>Generic roll tables (e.g. a d100 Wild Magic Surge), optionally tied to a class or subclass.</summary>
     public List<PackRollTableJson?>? RollTables { get; set; }
+}
+
+internal sealed class PackSkillJson
+{
+    public string? Index { get; set; }
+
+    public string? Name { get; set; }
+
+    /// <summary>Ability index ("dex").</summary>
+    public string? Ability { get; set; }
+
+    public List<string?>? Description { get; set; }
+}
+
+/// <summary>A trait of <c>traits[]</c>: its races and subraces are listed here (they may also be of the catalog).</summary>
+internal sealed class PackSharedTraitJson
+{
+    public string? Index { get; set; }
+
+    public string? Name { get; set; }
+
+    public List<string?>? Description { get; set; }
+
+    public List<string?>? Races { get; set; }
+
+    public List<string?>? Subraces { get; set; }
 }
 
 internal sealed class PackRollTableJson
@@ -120,6 +156,15 @@ internal sealed class PackClassJson
 
     public PackClassSpellcastingJson? Spellcasting { get; set; }
 
+    /// <summary>
+    /// Spellcasting given as tables in the levels (<c>levels[].spellSlots</c>, <c>cantripsKnown</c>, <c>spellsKnown</c>) instead
+    /// of <see cref="Spellcasting"/>, as the SRD classes: the ability, without generated choices nor details.
+    /// </summary>
+    public string? SpellcastingAbility { get; set; }
+
+    /// <summary>With <see cref="SpellcastingAbility"/>: contribution to the multiclass table ("full", "half", "third", "pact" or "none").</summary>
+    public string? MulticlassSpellcasting { get; set; }
+
     public string? SubclassFlavor { get; set; }
 
     public int? SubclassLevel { get; set; }
@@ -127,6 +172,9 @@ internal sealed class PackClassJson
     public List<string?>? Description { get; set; }
 
     public List<PackClassLevelJson?>? Levels { get; set; }
+
+    /// <summary>Features of the class no level lists (options and parts of other features), each with its <c>level</c>.</summary>
+    public List<PackFeatureJson?>? Features { get; set; }
 
     public List<PackClassResourceJson?>? Resources { get; set; }
 
@@ -202,6 +250,15 @@ internal sealed class PackClassLevelJson
 
     /// <summary>Values of the class table at this level ("bombs": 2), as the SRD's <c>class_specific</c>.</summary>
     public Dictionary<string, JsonElement>? ClassSpecific { get; set; }
+
+    /// <summary>With <c>spellcastingAbility</c>: spell slots of the levels 1-9 at this class level.</summary>
+    public List<int?>? SpellSlots { get; set; }
+
+    /// <summary>With <c>spellcastingAbility</c>: cantrips known at this class level.</summary>
+    public int? CantripsKnown { get; set; }
+
+    /// <summary>With <c>spellcastingAbility</c>: spells known at this class level.</summary>
+    public int? SpellsKnown { get; set; }
 }
 
 /// <summary>A resource of a class: an option resource whose <c>max</c> may also be <c>"classSpecific:key"</c>.</summary>
@@ -278,6 +335,9 @@ internal sealed class PackCreatureJson
     public int? HitPoints { get; set; }
 
     public string? HitDice { get; set; }
+
+    /// <summary>The hit points roll ("2d8 + 2").</summary>
+    public string? HitPointsRoll { get; set; }
 
     /// <summary>Feet by kind ("walk": 30, "fly": 60).</summary>
     public Dictionary<string, int?>? Speed { get; set; }
@@ -394,6 +454,9 @@ internal sealed class PackReferenceEntryJson
     public string? Name { get; set; }
 
     public List<string?>? Description { get; set; }
+
+    /// <summary>Only in <c>equipmentCategories</c>: the items of the category (starting equipment picks from it).</summary>
+    public List<string?>? Items { get; set; }
 }
 
 internal sealed class PackSubclassJson
@@ -407,6 +470,9 @@ internal sealed class PackSubclassJson
     public List<string?>? Description { get; set; }
 
     public List<PackSubclassLevelJson?>? Levels { get; set; }
+
+    /// <summary>Features of the subclass no level lists, each with its <c>level</c>.</summary>
+    public List<PackFeatureJson?>? Features { get; set; }
 
     /// <summary>Format 2: level choices of the subclass.</summary>
     public List<PackLevelChoiceJson?>? LevelChoices { get; set; }
@@ -456,6 +522,9 @@ internal sealed class PackFeatureJson
     public string? Index { get; set; }
 
     public string? Name { get; set; }
+
+    /// <summary>Only in the <c>features</c> no level lists: the class level of the feature.</summary>
+    public int? Level { get; set; }
 
     public List<string?>? Description { get; set; }
 
@@ -550,6 +619,9 @@ internal sealed class PackItemJson
 
     /// <summary>Format 3: a firearm (with <see cref="Weapon"/>): reload and misfire scores.</summary>
     public PackFirearmJson? Firearm { get; set; }
+
+    /// <summary>Contents of an equipment pack (explorer's pack...), given with the item in the starting equipment.</summary>
+    public List<PackStartingItemJson?>? Contents { get; set; }
 }
 
 internal sealed class PackWeaponJson
@@ -647,7 +719,12 @@ internal sealed class PackSpellJson
 
     public string? AttackType { get; set; }
 
-    public PackSpellDamageJson? Damage { get; set; }
+    /// <summary>One damage part, or an array of parts (Flame Strike: fire and radiant).</summary>
+    [JsonConverter(typeof(SingleOrListConverter<PackSpellDamageJson>))]
+    public List<PackSpellDamageJson?>? Damage { get; set; }
+
+    /// <summary>Healing by slot level (<c>{"1": "1d8 + MOD"}</c>).</summary>
+    public Dictionary<string, string?>? HealAtSlotLevel { get; set; }
 
     public string? DcAbility { get; set; }
 
@@ -753,6 +830,7 @@ internal sealed class PackOriginChoicesJson
 
     public PackPickChoiceJson? Skills { get; set; }
 
+
     public PackPickChoiceJson? Languages { get; set; }
 
     public PackPickChoiceJson? Tools { get; set; }
@@ -770,16 +848,25 @@ internal sealed class PackAbilityBonusChoiceJson
 
     public int? Amount { get; set; }
 
-    /// <summary>Ability indexes; absent = any of the six.</summary>
-    public List<string?>? From { get; set; }
+    /// <summary>Ability indexes (or <c>{ "index", "name" }</c>); absent = any of the six.</summary>
+    public List<PackOptionRefJson?>? From { get; set; }
 }
 
 internal sealed class PackPickChoiceJson
 {
     public int? Choose { get; set; }
 
-    /// <summary>Allowed values; absent = any.</summary>
-    public List<string?>? From { get; set; }
+    /// <summary>Allowed values (or <c>{ "index", "name" }</c> when the name shown differs); absent = any.</summary>
+    public List<PackOptionRefJson?>? From { get; set; }
+}
+
+/// <summary>An option of a choice: its index as a string, or <c>{ "index": "smiths-tools", "name": "Smith's Tools" }</c>.</summary>
+[JsonConverter(typeof(PackOptionRefConverter))]
+internal sealed class PackOptionRefJson
+{
+    public string? Index { get; set; }
+
+    public string? Name { get; set; }
 }
 
 internal sealed class PackCantripChoiceJson
@@ -789,7 +876,7 @@ internal sealed class PackCantripChoiceJson
     /// <summary>Class whose spell list is used ("wizard"), or "any".</summary>
     public string? SpellList { get; set; }
 
-    public List<string?>? From { get; set; }
+    public List<PackOptionRefJson?>? From { get; set; }
 }
 
 internal sealed class PackFeatChoiceJson
@@ -818,6 +905,23 @@ internal sealed class PackTraitOptionJson
 
     /// <summary>Damage type resisted with this option ("fire").</summary>
     public string? DamageType { get; set; }
+
+    /// <summary>Breath weapon of the option (draconic ancestry).</summary>
+    public PackBreathWeaponJson? BreathWeapon { get; set; }
+}
+
+internal sealed class PackBreathWeaponJson
+{
+    public string? Name { get; set; }
+
+    /// <summary>"30 ft. line".</summary>
+    public string? Area { get; set; }
+
+    /// <summary>Ability of the saving throw ("dex").</summary>
+    public string? Save { get; set; }
+
+    /// <summary>Damage dice by character level (<c>{"1": "2d6", "6": "3d6"}</c>).</summary>
+    public Dictionary<string, string?>? DamageAtCharacterLevel { get; set; }
 }
 
 internal sealed class PackAbilityBonusJson
@@ -827,6 +931,8 @@ internal sealed class PackAbilityBonusJson
     public int? Bonus { get; set; }
 }
 
+/// <summary>A trait of a race or subrace, or (a string) the index of a trait of the pack's <c>traits[]</c>.</summary>
+[JsonConverter(typeof(PackTraitConverter))]
 internal sealed class PackTraitJson
 {
     public string? Index { get; set; }
@@ -834,6 +940,10 @@ internal sealed class PackTraitJson
     public string? Name { get; set; }
 
     public List<string?>? Description { get; set; }
+
+    /// <summary>True when given as a string: a reference to <c>traits[]</c>.</summary>
+    [JsonIgnore]
+    public bool IsReference { get; set; }
 }
 
 internal sealed class PackBackgroundJson
@@ -907,6 +1017,9 @@ internal sealed class PackStartingItemJson
     public string? Item { get; set; }
 
     public int? Quantity { get; set; }
+
+    /// <summary>Name shown for the item (optional; the item's own name otherwise).</summary>
+    public string? Name { get; set; }
 }
 
 internal sealed class PackStartingChoiceJson
@@ -1139,4 +1252,80 @@ internal sealed class PackChoiceFilterJson
 
     /// <summary>Class levels at which a spell of any school may be chosen.</summary>
     public List<int?>? SchoolsExceptAt { get; set; }
+}
+
+// ---- Converters ------------------------------------------------------------------------------------
+
+/// <summary>Reads one object or an array of them as a list.</summary>
+internal sealed class SingleOrListConverter<T> : JsonConverter<List<T?>>
+    where T : class
+{
+    public override List<T?>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        reader.TokenType switch
+        {
+            JsonTokenType.Null => null,
+            JsonTokenType.StartArray => JsonSerializer.Deserialize<List<T?>>(ref reader, options),
+            _ => [JsonSerializer.Deserialize<T>(ref reader, options)],
+        };
+
+    public override void Write(Utf8JsonWriter writer, List<T?> value, JsonSerializerOptions options) =>
+        JsonSerializer.Serialize(writer, value, options);
+}
+
+/// <summary>Reads an option of a choice: a string (its index) or <c>{ "index", "name" }</c>.</summary>
+internal sealed class PackOptionRefConverter : JsonConverter<PackOptionRefJson>
+{
+    public override PackOptionRefJson? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.Null:
+                return null;
+            case JsonTokenType.String:
+                return new PackOptionRefJson { Index = reader.GetString() };
+            default:
+                var shape = JsonSerializer.Deserialize<Shape>(ref reader, options);
+                return shape is null ? null : new PackOptionRefJson { Index = shape.Index, Name = shape.Name };
+        }
+    }
+
+    public override void Write(Utf8JsonWriter writer, PackOptionRefJson value, JsonSerializerOptions options) =>
+        JsonSerializer.Serialize(writer, new Shape { Index = value.Index, Name = value.Name }, options);
+
+    private sealed class Shape
+    {
+        public string? Index { get; set; }
+
+        public string? Name { get; set; }
+    }
+}
+
+/// <summary>Reads a trait of a race: a string (a reference to <c>traits[]</c>) or the trait itself.</summary>
+internal sealed class PackTraitConverter : JsonConverter<PackTraitJson>
+{
+    public override PackTraitJson? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.Null:
+                return null;
+            case JsonTokenType.String:
+                return new PackTraitJson { Index = reader.GetString(), IsReference = true };
+            default:
+                var shape = JsonSerializer.Deserialize<Shape>(ref reader, options);
+                return shape is null ? null : new PackTraitJson { Index = shape.Index, Name = shape.Name, Description = shape.Description };
+        }
+    }
+
+    public override void Write(Utf8JsonWriter writer, PackTraitJson value, JsonSerializerOptions options) =>
+        JsonSerializer.Serialize(writer, new Shape { Index = value.Index, Name = value.Name, Description = value.Description }, options);
+
+    private sealed class Shape
+    {
+        public string? Index { get; set; }
+
+        public string? Name { get; set; }
+
+        public List<string?>? Description { get; set; }
+    }
 }

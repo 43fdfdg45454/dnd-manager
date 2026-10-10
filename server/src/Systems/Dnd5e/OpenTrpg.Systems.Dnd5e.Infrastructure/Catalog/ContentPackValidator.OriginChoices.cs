@@ -45,6 +45,70 @@ internal sealed partial class ContentPackValidator
         return result.Distinct(StringComparer.Ordinal).ToList();
     }
 
+    /// <summary>Calls <paramref name="action"/> with the index and (when given as an object) the name of every option of a choice.</summary>
+    private void ForEachOption(string path, List<PackOptionRefJson?>? options, Action<string, string, string?> action)
+    {
+        if (options is null)
+        {
+            return;
+        }
+
+        if (options.Count > MaxListEntries)
+        {
+            AddError(path, $"No puede tener más de {MaxListEntries} entradas.");
+            return;
+        }
+
+        for (var i = 0; i < options.Count; i++)
+        {
+            var index = options[i]?.Index?.Trim();
+            if (string.IsNullOrEmpty(index))
+            {
+                AddError($"{path}[{i}]", "El valor no puede estar vacío.");
+                continue;
+            }
+
+            action($"{path}[{i}]", index, NullableText($"{path}[{i}].name", options[i]!.Name, NameMaxLength));
+        }
+    }
+
+    /// <summary>The options of a free choice (languages, tools, cantrips): the name is the index unless given.</summary>
+    private List<OriginOption> Options(string path, List<PackOptionRefJson?>? options, int maxLength)
+    {
+        var result = new List<OriginOption>();
+        ForEachOption(path, options, (itemPath, index, name) =>
+        {
+            if (index.Length > maxLength)
+            {
+                AddError(itemPath, $"No puede superar los {maxLength} caracteres.");
+            }
+
+            result.Add(new OriginOption(index, name ?? index));
+        });
+        return result;
+    }
+
+    /// <summary>The breath weapon of a trait option (draconic ancestry); null when invalid.</summary>
+    private BreathWeaponInfo? BreathWeapon(string path, PackBreathWeaponJson breath)
+    {
+        var name = RequiredText($"{path}.name", breath.Name, NameMaxLength);
+        var area = RequiredText($"{path}.area", breath.Area, ShortTextMaxLength);
+        var save = breath.Save?.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(save) || !Abilities.IsValid(save))
+        {
+            AddError($"{path}.save", "Característica desconocida (str, dex, con, int, wis o cha).");
+            save = null;
+        }
+
+        var damage = LevelMap($"{path}.damageAtCharacterLevel", breath.DamageAtCharacterLevel, 1, 20);
+        if (damage is null)
+        {
+            AddError($"{path}.damageAtCharacterLevel", "Indica el daño por nivel de personaje ({ \"1\": \"2d6\" }).");
+        }
+
+        return save is null || damage is null || name.Length == 0 || area.Length == 0 ? null : new BreathWeaponInfo(name, area, save, damage);
+    }
+
     private string? OriginChoices(string path, PackOriginChoicesJson? choices)
     {
         if (choices is null)
@@ -58,12 +122,12 @@ internal sealed partial class ContentPackValidator
             var choose = RequiredInt($"{path}.abilityBonuses.choose", bonuses.Choose, 1, 6) ?? 1;
             var amount = bonuses.Amount is null ? 1 : RequiredInt($"{path}.abilityBonuses.amount", bonuses.Amount, 1, 2) ?? 1;
             var from = new List<OriginOption>();
-            ForEachText($"{path}.abilityBonuses.from", bonuses.From, (itemPath, value) =>
+            ForEachOption($"{path}.abilityBonuses.from", bonuses.From, (itemPath, value, label) =>
             {
                 var ability = value.ToLowerInvariant();
                 if (Abilities.IsValid(ability))
                 {
-                    from.Add(new OriginOption(ability, BreakdownLabels.Ability(ability)));
+                    from.Add(new OriginOption(ability, label ?? BreakdownLabels.Ability(ability)));
                 }
                 else
                 {
@@ -87,12 +151,12 @@ internal sealed partial class ContentPackValidator
         if (choices.Skills is { } skillChoice)
         {
             var from = new List<OriginOption>();
-            ForEachText($"{path}.skills.from", skillChoice.From, (itemPath, value) =>
+            ForEachOption($"{path}.skills.from", skillChoice.From, (itemPath, value, label) =>
             {
                 var key = value.ToLowerInvariant();
-                if (_context.Skills.TryGetValue(key, out var name))
+                if (_skills.TryGetValue(key, out var name))
                 {
-                    from.Add(new OriginOption(key, name));
+                    from.Add(new OriginOption(key, label ?? name));
                 }
                 else
                 {
@@ -109,7 +173,7 @@ internal sealed partial class ContentPackValidator
                 return null;
             }
 
-            var from = TextList($"{path}.{name}.from", pick.From, MaxListEntries, ShortTextMaxLength).Select(v => new OriginOption(v, v)).ToList();
+            var from = Options($"{path}.{name}.from", pick.From, ShortTextMaxLength);
             return new PickChoice(RequiredInt($"{path}.{name}.choose", pick.Choose, 1, MaxOriginChoose) ?? 1, from);
         }
 
@@ -120,7 +184,7 @@ internal sealed partial class ContentPackValidator
             cantrip = new CantripChoice(
                 RequiredInt($"{path}.cantrip.choose", cantripChoice.Choose, 1, MaxOriginChoose) ?? 1,
                 string.IsNullOrEmpty(list) ? ChoiceFilter.AnyList : list,
-                TextList($"{path}.cantrip.from", cantripChoice.From, MaxListEntries, IndexMaxLength).Select(v => new OriginOption(v, v)).ToList());
+                Options($"{path}.cantrip.from", cantripChoice.From, IndexMaxLength));
         }
 
         FeatChoice? feats = null;
@@ -162,6 +226,7 @@ internal sealed partial class ContentPackValidator
                 options.Add(new TraitOption(index, RequiredText($"{optionPath}.name", option.Name, NameMaxLength), Paragraphs($"{optionPath}.description", option.Description))
                 {
                     DamageType = damageType,
+                    BreathWeapon = option.BreathWeapon is { } breath ? BreathWeapon($"{optionPath}.breathWeapon", breath) : null,
                 });
             });
             if (options.Count == 0)

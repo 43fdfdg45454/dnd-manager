@@ -75,9 +75,15 @@ public sealed class Dnd5eSystem(IServiceProvider services) : IGameSystem
     public IReadOnlyList<string> RealtimeEventKinds => Dnd5eEventTypes.All;
 }
 
-/// <summary>The catalog part of D&amp;D 5e (implemented by the infrastructure: SRD seed and content packs).</summary>
+/// <summary>The catalog part of D&amp;D 5e (implemented by the infrastructure: the SRD as base pack and the content packs).</summary>
 public interface IDnd5eCatalogSystem : ICatalogSystem
 {
+    /// <summary>
+    /// Imports the SRD base pack embedded in the module (<c>seed/srd-5.1.pack.json</c>) unless that version is already
+    /// imported, and registers it as the base <c>ContentPack</c> of the system, in one transaction.
+    /// </summary>
+    /// <returns>True when the pack was imported; false when that version was already there.</returns>
+    Task<bool> ImportBasePackAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>Coins of D&amp;D 5e, in copper pieces.</summary>

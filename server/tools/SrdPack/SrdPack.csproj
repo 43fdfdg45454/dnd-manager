@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Converts the SRD 5.1 dataset (src/Systems/Dnd5e/seed/srd: 5e-database JSON, CC-BY 4.0, plus level-choices.json and
+    option-sets.json) into the base content pack of the D&D 5e module (src/Systems/Dnd5e/seed/srd-5.1.pack.json, format 3).
+    Run from the server directory: dotnet run (project tools/SrdPack). See tools/SrdPack/README.md.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>OpenTrpg.Tools.SrdPack</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Systems\Dnd5e\OpenTrpg.Systems.Dnd5e.Application\OpenTrpg.Systems.Dnd5e.Application.csproj" />
+  </ItemGroup>
+
+</Project>
