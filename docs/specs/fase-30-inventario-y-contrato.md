@@ -1005,6 +1005,24 @@ abstract class GameSystemUi {
 9. **`HeightInches`/`WeightPounds` en el núcleo** con unidades imperiales: ¿se acepta y la unidad la
    presenta el sistema, o se pasa a cm/kg? Recomendación: se acepta; cambiarlo no aporta nada a 5e.
 
+### Decisiones del revisor (2026-10-10)
+
+Sobre las preguntas anteriores, en orden:
+
+1. Sí: un único `AppDbContext` con modelo compuesto y una sola historia de migraciones. Se enmienda la
+   última consecuencia del ADR 0009 en este mismo cambio.
+2. `CharacterDetailDto` plano en las fases 32 y 33; la forma anidada se decide con el segundo sistema.
+3. Las columnas 5e de objetos se quedan como columnas mapeadas por el módulo (fase 32); un
+   `SystemDataJson` solo si la fase 34 lo necesita. La tienda filtra por el sistema de la campaña.
+4. `CatalogImports` se sustituye por `ContentPacks` en la fase 34, con el SRD como fila base.
+5. Los alias de rutas se retiran en la release siguiente a la fase 33, marcada obligatoria.
+6. El compendio global muestra todo lo importado del sistema por defecto de la instancia (selector si
+   hay más de uno); el filtro por paquetes activos aplica a la ficha, al asistente y a la tienda.
+7. Dinero: las columnas conservan su nombre; se renombran solo las propiedades C# a nombres neutros
+   en la fase 32.
+8. `RestRequests.HitDiceJson` → `PayloadJson` en la fase 32, junto con el resto de renombrados.
+9. Altura y peso siguen en pulgadas y libras en el núcleo; la unidad la presenta el sistema.
+
 ### Lista de comprobación para las fases 31–33
 
 **Fase 31 — Sistema por campaña** (sin mover código)
