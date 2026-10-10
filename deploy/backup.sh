@@ -16,8 +16,8 @@ POSTGRES_DB="${POSTGRES_DB:-$(env_value POSTGRES_DB)}"
 BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-$(env_value BACKUP_RETENTION_DAYS)}"
 
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-14}"
-# Compose llama al volumen <proyecto>_<volumen>: el proyecto es "dnd-companion" (campo name del compose).
-FILES_VOLUME="${FILES_VOLUME:-dnd-companion_files}"
+# Compose llama al volumen <proyecto>_<volumen>: el proyecto es "opentrpg" (campo name del compose).
+FILES_VOLUME="${FILES_VOLUME:-opentrpg_files}"
 
 if ! docker volume inspect "$FILES_VOLUME" > /dev/null 2>&1; then
   echo "No existe el volumen $FILES_VOLUME. Revisa FILES_VOLUME (docker volume ls)." >&2

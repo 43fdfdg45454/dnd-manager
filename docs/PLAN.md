@@ -1,6 +1,6 @@
-# D&D 5e Companion — Plan maestro
+# OpenTRPG — Plan maestro
 
-Companion app para sesiones **presenciales** de D&D 5e: cada jugador lleva su personaje en Android,
+Companion app para sesiones **presenciales** de rol (hoy con el módulo D&D 5e): cada jugador lleva su personaje en Android,
 el DM gestiona campaña, lore, mapas, tiendas y calendario, y un administrador del servidor crea los
 usuarios. Servidor .NET autohospedado con Docker.
 
@@ -130,7 +130,7 @@ indicado (`Agent` con `model: opus | sonnet | haiku`), dándoles el contrato esc
 Fases 0 a 31 implementadas y en `master` (cada una con su contrato en `docs/specs/`). Verificado en
 este entorno: servidor compila sin avisos y pasa sus tests (SQLite en memoria); cliente sin
 incidencias de análisis y con sus tests en verde. CI publica en cada push a `master` la imagen
-`ghcr.io/<owner>/dnd-companion-api:latest` y una release con el APK firmado. **No verificado aquí**
+`ghcr.io/<owner>/opentrpg-api:latest` y una release con el APK firmado. **No verificado aquí**
 (sin PostgreSQL ni Android SDK): migraciones contra PostgreSQL real, aspecto de las fuentes variables
 y los SVG en dispositivo, SignalR a través del reverse proxy, envío SMTP real, apertura de documentos
 con aplicaciones externas. Primeros pasos recomendados: `docker compose pull && up -d`, abrir

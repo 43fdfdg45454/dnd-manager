@@ -1,6 +1,6 @@
-# CLAUDE.md — Lineamientos del proyecto
+# CLAUDE.md — Lineamientos del proyecto OpenTRPG
 
-Companion app para campañas de Dungeons & Dragons 5e en sesiones **presenciales**.
+OpenTRPG: companion app para campañas de rol (hoy con el módulo de Dungeons & Dragons 5e) en sesiones **presenciales**.
 Servidor ASP.NET Core autohospedado con Docker; cliente Flutter (Android).
 
 ## Regla de privacidad (obligatoria)

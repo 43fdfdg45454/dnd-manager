@@ -4,7 +4,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <Version>0.1.0</Version>
-    <Authors>D&amp;D Companion contributors</Authors>
+    <Authors>OpenTRPG contributors</Authors>
     <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
 </Project>
