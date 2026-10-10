@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex">
-  <title>Sesión · D&amp;D Companion</title>
+  <title>Sesión · OpenTRPG</title>
   <style>
     :root {
       --bg: #f4f1ea;
@@ -163,7 +163,7 @@
       }
 
       function render(dto) {
-        document.title = dto.title + ' · D&D Companion';
+        document.title = dto.title + ' · OpenTRPG';
         document.getElementById('title').textContent = 'Sesión ' + dto.number + ' · ' + dto.title;
         document.getElementById('campaign').textContent = dto.campaignName;
         document.getElementById('when').textContent = formatWhen(dto);

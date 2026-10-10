@@ -6,14 +6,14 @@ namespace OpenTrpg.Core.Infrastructure.Email.Templates;
 /// <summary>Spanish account emails (plain text + simple HTML).</summary>
 public static class AccountEmailTemplates
 {
-    public const string SetupSubject = "Tu cuenta en D&D Companion";
+    public const string SetupSubject = "Tu cuenta en OpenTRPG";
     public const string ResetSubject = "Restablecer contraseña";
 
     public static EmailMessage Setup(string to, string displayName, string link) => Build(
         to,
         SetupSubject,
         displayName,
-        intro: "Se ha creado una cuenta para ti en D&D Companion. Para empezar, establece tu contraseña desde este enlace:",
+        intro: "Se ha creado una cuenta para ti en OpenTRPG. Para empezar, establece tu contraseña desde este enlace:",
         buttonText: "Establecer contraseña",
         link,
         expiry: "El enlace caduca en 48 horas. Si caduca, pide al administrador que te lo reenvíe.");
@@ -22,7 +22,7 @@ public static class AccountEmailTemplates
         to,
         ResetSubject,
         displayName,
-        intro: "Hemos recibido una solicitud para restablecer tu contraseña de D&D Companion. Elige una nueva desde este enlace:",
+        intro: "Hemos recibido una solicitud para restablecer tu contraseña de OpenTRPG. Elige una nueva desde este enlace:",
         buttonText: "Restablecer contraseña",
         link,
         expiry: "El enlace caduca en 1 hora. Si no has sido tú, ignora este correo: tu contraseña no cambiará.");
@@ -38,7 +38,7 @@ public static class AccountEmailTemplates
 
             {expiry}
 
-            — D&D Companion
+            — OpenTRPG
             """;
 
         var name = WebUtility.HtmlEncode(displayName);
@@ -52,7 +52,7 @@ public static class AccountEmailTemplates
               <p><a href="{href}" style="display: inline-block; padding: 10px 18px; background: #8b1e1e; color: #fff; text-decoration: none; border-radius: 4px;">{WebUtility.HtmlEncode(buttonText)}</a></p>
               <p style="font-size: 13px; color: #555;">Si el botón no funciona, copia este enlace en el navegador:<br><a href="{href}">{href}</a></p>
               <p style="font-size: 13px; color: #555;">{WebUtility.HtmlEncode(expiry)}</p>
-              <p>— D&amp;D Companion</p>
+              <p>— OpenTRPG</p>
             </body>
             </html>
             """;

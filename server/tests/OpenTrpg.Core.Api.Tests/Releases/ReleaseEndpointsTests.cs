@@ -234,7 +234,7 @@ public sealed class ReleaseEndpointsTests(ContentApiFactory factory) : IClassFix
         Assert.Equal(HttpStatusCode.OK, full.StatusCode);
         Assert.Equal("application/vnd.android.package-archive", full.Content.Headers.ContentType?.MediaType);
         Assert.Equal("attachment", full.Content.Headers.ContentDisposition?.DispositionType);
-        Assert.Equal("dnd-companion-7.1.0.apk", full.Content.Headers.ContentDisposition?.FileName);
+        Assert.Equal("opentrpg-7.1.0.apk", full.Content.Headers.ContentDisposition?.FileName);
         Assert.Equal(apk, await full.Content.ReadAsByteArrayAsync());
 
         var request = new HttpRequestMessage(HttpMethod.Get, release.DownloadUrl) { Headers = { Range = new RangeHeaderValue(10, 19) } };

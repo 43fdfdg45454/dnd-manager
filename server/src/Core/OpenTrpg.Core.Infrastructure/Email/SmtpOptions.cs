@@ -52,5 +52,5 @@ public sealed class SmtpOptions
 
     public string FromAddress { get; set; } = "noreply@example.com";
 
-    public string FromName { get; set; } = "D&D Companion";
+    public string FromName { get; set; } = "OpenTRPG";
 }

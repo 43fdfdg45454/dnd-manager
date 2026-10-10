@@ -1,4 +1,4 @@
-# D&D 5e Companion
+# OpenTRPG
 
 Companion app para campañas de Dungeons & Dragons 5e en sesiones presenciales. Cada jugador
 lleva su personaje en Android; el DM gestiona la campaña, el lore, los mapas, las tiendas y el
@@ -12,7 +12,7 @@ calendario. El servidor es ASP.NET Core y se autohospeda con Docker.
 
 | Carpeta | Contenido |
 |---------|-----------|
-| `server/` | Solución .NET 10: `Dnd.Domain`, `Dnd.Application`, `Dnd.Infrastructure`, `Dnd.Api` y tests |
+| `server/` | Solución .NET 10 (`OpenTrpg.slnx`): núcleo en `src/Core` (`OpenTrpg.Core.*`), módulo D&D 5e en `src/Systems/Dnd5e` (`OpenTrpg.Systems.Dnd5e.*`) y tests |
 | `app/` | Cliente Flutter (Android) |
 | `deploy/` | Docker Compose con `api` y `postgres`; reverse proxy y SMTP a cargo del operador |
 | `docs/` | Plan y ADR |
@@ -24,7 +24,7 @@ calendario. El servidor es ASP.NET Core y se autohospeda con Docker.
 cd server
 dotnet build
 dotnet test
-dotnet run --project src/Dnd.Api      # Swagger en http://localhost:8080/swagger
+dotnet run --project src/Core/OpenTrpg.Core.Api      # Swagger en http://localhost:8080/swagger
 
 # Despliegue con Docker
 cd deploy

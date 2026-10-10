@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'certificate_pinning.dart';
 
-/// Name and version reported by a reachable D&D Companion server.
+/// Name and version reported by a reachable OpenTRPG server.
 class ServerProbeResult {
   const ServerProbeResult({required this.name, required this.version});
 
@@ -24,7 +24,7 @@ enum ServerProbeFailure {
   /// The HTTPS certificate is not trusted (or differs from the pinned one).
   certificate,
 
-  /// The host answered but it is not a D&D Companion API.
+  /// The host answered but it is not a OpenTRPG API.
   notAServer,
 
   /// Connection refused, network down, or a server-side error.
@@ -52,7 +52,7 @@ class ServerProbeException implements Exception {
       hadPinnedCertificate
           ? 'El certificado del servidor ha cambiado y no coincide con el que habías aceptado.'
           : 'El certificado del servidor no es de confianza.',
-    ServerProbeFailure.notAServer => 'No parece un servidor de D&D Companion.',
+    ServerProbeFailure.notAServer => 'No parece un servidor de OpenTRPG.',
     ServerProbeFailure.unreachable => 'No se pudo conectar con el servidor. Comprueba que esté encendido y que estés en la misma red o VPN.',
   };
 

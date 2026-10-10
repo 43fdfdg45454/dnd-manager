@@ -257,7 +257,7 @@ class FakeServerProbe implements ServerProbe {
 }
 
 final fakeServerInfoOverride = serverInfoProvider.overrideWith(
-  (ref) async => const ServerInfo(name: 'dnd-companion-api', version: '0.1.0'),
+  (ref) async => const ServerInfo(name: 'opentrpg-api', version: '0.1.0'),
 );
 
 Member makeMember({

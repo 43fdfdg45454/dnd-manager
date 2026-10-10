@@ -31,7 +31,7 @@ void main() {
       await tester.pumpWidget(_app(user: makeUser()));
       await tester.pumpAndSettle();
 
-      expect(find.text('Conectado a dnd-companion-api v0.1.0'), findsOneWidget);
+      expect(find.text('Conectado a opentrpg-api v0.1.0'), findsOneWidget);
     });
 
     testWidgets('muestra error y botón de reintento si el servidor no responde', (tester) async {
@@ -70,7 +70,7 @@ void main() {
 
       expect(find.byKey(const Key('home-appearance')), findsOneWidget);
       await revealProfileItem(tester, find.byKey(const Key('home-server')));
-      expect(find.text('Conectado a dnd-companion-api v0.1.0'), findsOneWidget);
+      expect(find.text('Conectado a opentrpg-api v0.1.0'), findsOneWidget);
       await revealProfileItem(tester, find.byKey(const Key('home-attribution')));
       expect(find.text('Atribuciones'), findsOneWidget);
     });

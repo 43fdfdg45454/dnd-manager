@@ -44,7 +44,7 @@ curl http://127.0.0.1:8080/health/ready
 
 | Variable | Para qué sirve |
 |----------|----------------|
-| `API_IMAGE` | Imagen de la API en GitHub Packages (`:latest` o una versión fija `:X.Y.Z`, ambas publicadas por la CI en cada push a `master`). Para una compilada en local: `docker build -t dnd-companion-api:local ../server` y `API_IMAGE=dnd-companion-api:local` |
+| `API_IMAGE` | Imagen de la API en GitHub Packages (`:latest` o una versión fija `:X.Y.Z`, ambas publicadas por la CI en cada push a `master`). Para una compilada en local: `docker build -t opentrpg-api:local ../server` y `API_IMAGE=opentrpg-api:local` |
 | `API_BIND`, `API_PORT` | Dirección y puerto del host en los que escucha la API (`127.0.0.1` solo para un proxy local; `0.0.0.0` para exponerla en la LAN/VPN) |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base de datos |
 | `DB_AUTO_MIGRATE` | Aplicar las migraciones al arrancar la API (`true`) |
@@ -67,7 +67,7 @@ servicio `api` del `docker-compose.yml`:
 | `FileStorage__MaxUploadMegabytes` | `200` | Tamaño máximo de subida (ver [Límites de subida](#límites-de-subida)) |
 | `Reminders__Enabled`, `Reminders__PollSeconds` | `true`, `60` | Envío de recordatorios de sesión y frecuencia de comprobación |
 | `Smtp__Security` | `Auto` | `Auto`, `SslOnConnect`, `StartTls` o `None` |
-| `Smtp__FromName` | `D&D Companion` | Nombre del remitente |
+| `Smtp__FromName` | `OpenTRPG` | Nombre del remitente |
 | `SSL_CERT_DIR` | — | Alternativa a `SSL_CERT_FILE`: directorio de PEM procesado con `openssl rehash` |
 | `BACKUP_RETENTION_DAYS` (en `.env`) | `14` | Días que `backup.sh` conserva las copias |
 
@@ -194,7 +194,7 @@ cd deploy
 ./backup.sh                         # siempre antes de actualizar: las migraciones no son reversibles
 git pull
 
-# Imagen publicada en GitHub Packages (ghcr.io/<propietario>/dnd-companion-api):
+# Imagen publicada en GitHub Packages (ghcr.io/<propietario>/opentrpg-api):
 #   - :latest, :X.Y.Z y :sha-<commit> → la CI las publica en cada push a master
 #     (X.Y.Z es la versión semántica que calcula GitVersion; ver "Versionado")
 # Cambia API_IMAGE en .env si quieres otra etiqueta y luego:
@@ -205,6 +205,22 @@ docker compose up -d
 La API aplica las **migraciones automáticamente** al arrancar; `docker compose logs api` muestra el
 resultado y `docker compose ps` debe volver a indicar `healthy`. Si el paquete de GHCR es privado,
 haz `docker login ghcr.io` antes con un token de acceso personal con permiso `read:packages`.
+
+## Migración desde dnd-companion
+
+El proyecto pasó a llamarse OpenTRPG. La imagen `ghcr.io/<propietario>/dnd-companion-api` ya no se
+publica; no hay nombre doble. Para migrar una instalación existente:
+
+1. En `deploy/.env`, cambia `API_IMAGE` a `ghcr.io/<propietario>/opentrpg-api:latest` (o una versión
+   fija `:X.Y.Z`).
+2. `git pull`, `docker compose pull && docker compose up -d`.
+3. El nombre del proyecto de Compose pasa de `dnd-companion` a `opentrpg`, y con él los volúmenes
+   (`opentrpg_pgdata`, `opentrpg_files`). Para conservar los datos sin copiarlos, arranca con el
+   nombre antiguo: `docker compose -p dnd-companion up -d` (y `export FILES_VOLUME=dnd-companion_files`
+   para `backup.sh`). Si prefieres el nombre nuevo, haz antes `./backup.sh` y restaura en los volúmenes nuevos.
+
+El propietario renombrará el repositorio a OpenTRPG en GitHub; el nombre antiguo redirige, así que
+los remotos existentes siguen funcionando.
 
 ## Logs y salud
 
@@ -238,8 +254,8 @@ haz `docker login ghcr.io` antes con un token de acceso personal con permiso `re
 
 - `dnd-<fecha>.sql.gz`: volcado de PostgreSQL (`pg_dump`).
 - `files-<fecha>.tgz`: contenido del volumen de ficheros (mapas, retratos, PDF, APK), con
-  `docker run --rm -v dnd-companion_files:/data ... tar czf`. El volumen se llama
-  `<proyecto>_files` y el proyecto es `dnd-companion` (campo `name` del compose); si lo has
+  `docker run --rm -v opentrpg_files:/data ... tar czf`. El volumen se llama
+  `<proyecto>_files` y el proyecto es `opentrpg` (campo `name` del compose); si lo has
   renombrado, exporta `FILES_VOLUME=<nombre>` (consulta `docker volume ls`).
 
 Borra las copias de más de 14 días (`BACKUP_RETENTION_DAYS`). Prográmalo en el cron del host y copia
@@ -265,7 +281,7 @@ docker compose exec -T postgres psql -U "$POSTGRES_USER" -d postgres \
 gunzip -c backups/dnd-X.sql.gz | docker compose exec -T postgres psql -U "$POSTGRES_USER" "$POSTGRES_DB"
 
 # Ficheros: vaciar el volumen y extraer la copia (como root; la imagen usa el UID 1654)
-docker run --rm -v dnd-companion_files:/data -v "$PWD/backups:/backup" alpine:3.20 \
+docker run --rm -v opentrpg_files:/data -v "$PWD/backups:/backup" alpine:3.20 \
   sh -c 'find /data -mindepth 1 -delete && tar xzf /backup/files-X.tgz -C /data && chown -R 1654:1654 /data'
 
 docker compose up -d
@@ -356,7 +372,7 @@ Cada push a `master` produce, con la misma versión `X.Y.Z`:
 - la release de GitHub **`vX.Y.Z`** (pestaña **Releases**) con el APK firmado con el keystore de los
   *secrets* (sin keystore, firma de depuración y marcada como prerelease); el mismo APK queda como
   artefacto de la ejecución;
-- la imagen `ghcr.io/<propietario>/dnd-companion-api:X.Y.Z` (y `:latest`), que responde esa versión
+- la imagen `ghcr.io/<propietario>/opentrpg-api:X.Y.Z` (y `:latest`), que responde esa versión
   en `GET /api/v1/app/info`;
 - si están definidos los *secrets* `DND_API_URL` y `DND_ADMIN_TOKEN` (o `DND_ADMIN_EMAIL` y
   `DND_ADMIN_PASSWORD`), la subida del APK a tu servidor para que la app avise de la actualización
@@ -391,7 +407,7 @@ TOKEN=$(curl -fsS -X POST "$URL/api/v1/auth/login" \
 
 curl --fail-with-body -X POST "$URL/api/v1/admin/releases" \
   -H "Authorization: Bearer $TOKEN" \
-  -F "file=@dnd-companion-1.2.0.apk;type=application/vnd.android.package-archive" \
+  -F "file=@opentrpg-1.2.0.apk;type=application/vnd.android.package-archive" \
   --form-string "version=1.2.0" \
   --form-string "buildNumber=12" \
   --form-string "notes=Mejoras en la hoja de personaje" \
