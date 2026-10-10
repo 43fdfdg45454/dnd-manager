@@ -92,7 +92,7 @@ public class GameSystemEndpointsTests(ApiFactory factory) : IClassFixture<ApiFac
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var problem = await response.ReadProblemAsync();
-        Assert.Equal("unknown_system", problem.GetProperty("code").GetString());
+        Assert.Equal("unknown-system", problem.GetProperty("code").GetString());
         Assert.True(problem.HasFieldError("systemId"));
         Assert.Contains("Sistema de juego desconocido: «gurps».", problem.ToString());
         Assert.Empty((await owner.Client.GetFromJsonAsync<List<CampaignSummaryDto>>("/api/v1/campaigns"))!);

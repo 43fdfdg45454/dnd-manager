@@ -32,7 +32,7 @@ código de sitio (eso es la fase 32). Detalle de partida: lista de comprobación
 - `GET /api/v1/systems` (autenticado): `[{ "id": "dnd5e", "name": "...", "version": "...",
   "isDefault": true }]`.
 - `CreateCampaignRequest.SystemId` (`string?`): nulo → sistema por defecto; desconocido → 400 con
-  mensaje en español ("Sistema de juego desconocido: «x».") y código de error `unknown_system`.
+  mensaje en español ("Sistema de juego desconocido: «x».") y código de error `unknown-system`.
 - `CampaignDto` y `CampaignSummaryDto` con `systemId`.
 
 ## 4. App
@@ -50,7 +50,7 @@ código de sitio (eso es la fase 32). Detalle de partida: lista de comprobación
 
 - Dominio: `Campaign.Create` normaliza y valida `systemId`.
 - API: crear campaña sin `systemId` → `dnd5e`; con `dnd5e` → igual; con `gurps` → 400
-  `unknown_system`; `GET /systems` devuelve el único sistema con `isDefault`; la migración deja las
+  `unknown-system`; `GET /systems` devuelve el único sistema con `isDefault`; la migración deja las
   campañas existentes en `dnd5e` (prueba con SQLite: crear antes, leer después);
   `GET /api/v1/catalog/attribution` (o la ruta actual) devuelve exactamente lo de antes.
 - App: el diálogo de creación muestra el sistema y envía `systemId`; con dos sistemas en el

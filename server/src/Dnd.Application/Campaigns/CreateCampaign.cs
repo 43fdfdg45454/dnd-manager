@@ -59,5 +59,5 @@ public sealed class CreateCampaignHandler(
     }
 
     private static AppException UnknownSystem(string systemId) =>
-        AppException.Validation("systemId", $"Sistema de juego desconocido: «{systemId}».", "unknown_system");
+        AppException.Validation("systemId", $"Sistema de juego desconocido: «{systemId}».", "unknown-system");
 }

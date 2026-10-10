@@ -127,7 +127,7 @@ indicado (`Agent` con `model: opus | sonnet | haiku`), dándoles el contrato esc
 
 ## Estado
 
-Fases 0 a 29 implementadas y en `master` (cada una con su contrato en `docs/specs/`). Verificado en
+Fases 0 a 31 implementadas y en `master` (cada una con su contrato en `docs/specs/`). Verificado en
 este entorno: servidor compila sin avisos y pasa sus tests (SQLite en memoria); cliente sin
 incidencias de análisis y con sus tests en verde. CI publica en cada push a `master` la imagen
 `ghcr.io/<owner>/dnd-companion-api:latest` y una release con el APK firmado. **No verificado aquí**
@@ -173,6 +173,7 @@ jugador en dos móviles; cualquier desviación se corrige sobre los contratos de
 | 28 | Fichas uniformes: rejilla de fichas iguales en Combate y Resumen (`StatTileGrid`/`StatTile`), iniciativa e inspiración sin romper el alto, habilidades fuera de Combate y pestaña Habilidades agrupada por característica con ventaja/desventaja, valores del compañero y etiquetas de espacios uniformes | Ver `docs/specs/fase-28-fichas-uniformes-y-habilidades.md` |
 | 29 | Correcciones de uso: la próxima sesión del inicio caduca y desaparece con la campaña, descripciones en todas las elecciones de origen, altura y peso del personaje (tablas de raza en los paquetes y tirada en el asistente), selector de condiciones desplazable con información, concentración junto a las condiciones, botón de información en los rasgos de clase y navegación de la ficha y de Mi sesión en dos vistas (Combate y Detalle con subpestañas) | Ver `docs/specs/fase-29-correcciones-de-uso.md` |
 | 30 | Inventario y contrato del framework (ADR 0009): clasificación de cada fichero del servidor y de la app como núcleo, 5e o mixto, contratos `IGameSystem` y `GameSystemUi` sobre papel, alias de rutas bajo `/api/v1/systems/dnd5e` y lista de pasos para las fases 31–33; sin cambios de código | Ver `docs/specs/fase-30-inventario-y-contrato.md` |
+| 31 | Sistema por campaña: `Campaign.SystemId` (migración `AddCampaignSystemId`, `dnd5e` por defecto), registro de sistemas con `IGameSystem` mínimo y `Dnd5eSystem` (atribución del SRD), `GET /api/v1/systems`, `systemId` en los DTO de campaña y en el diálogo de creación de la app | Ver `docs/specs/fase-31-sistema-por-campana.md` |
 
 ## Verificación end-to-end
 
