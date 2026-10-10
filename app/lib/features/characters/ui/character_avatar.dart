@@ -108,6 +108,7 @@ class CharacterAvatar extends ConsumerWidget {
       child: InkResponse(
         key: const Key('character-avatar'),
         onTap: () => _change(context, ref),
+        radius: radius + 6,
         child: Stack(
           children: [
             avatar,
