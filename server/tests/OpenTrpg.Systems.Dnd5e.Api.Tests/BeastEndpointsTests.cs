@@ -9,7 +9,7 @@ namespace OpenTrpg.Systems.Dnd5e.Api.Tests;
 [Collection(CatalogCollection.Name)]
 public class BeastEndpointsTests(CatalogApiFactory factory)
 {
-    private const string Base = "/api/v1/catalog/beasts";
+    private const string Base = "/api/v1/systems/dnd5e/catalog/beasts";
 
     private async Task<T> GetAsync<T>(string url)
     {

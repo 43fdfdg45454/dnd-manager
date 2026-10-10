@@ -51,7 +51,7 @@ public class LevelGrantEndpointsTests(CatalogApiFactory factory)
     {
         var s = await factory.CreateCampaignScenarioAsync();
         var hero = await ActiveFighterAsync(s.Player, s.Dm, s.CampaignId, "Leyenda");
-        var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/sheet", new { classes = new[] { new { classIndex = "fighter", level = 20 } } });
+        var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet", new { classes = new[] { new { classIndex = "fighter", level = 20 } } });
         Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
 
         var party = await GrantAsync(s.Dm, s.CampaignId, null);

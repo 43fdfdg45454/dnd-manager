@@ -64,9 +64,9 @@ public class CampaignItemEndpointsTests(CatalogApiFactory factory)
         var item = await s.Dm.CreateHomebrewAsync(s.CampaignId, Homebrew);
         var srdId = await s.Player.SrdItemIdAsync("Chain Mail");
 
-        var asMember = await s.Player.Client.GetAsync($"/api/v1/catalog/items/{item.Id}");
-        var asOutsider = await s.Outsider.Client.GetAsync($"/api/v1/catalog/items/{item.Id}");
-        var srdAsOutsider = await s.Outsider.Client.GetAsync($"/api/v1/catalog/items/{srdId}");
+        var asMember = await s.Player.Client.GetAsync($"/api/v1/systems/dnd5e/catalog/items/{item.Id}");
+        var asOutsider = await s.Outsider.Client.GetAsync($"/api/v1/systems/dnd5e/catalog/items/{item.Id}");
+        var srdAsOutsider = await s.Outsider.Client.GetAsync($"/api/v1/systems/dnd5e/catalog/items/{srdId}");
 
         Assert.Equal(HttpStatusCode.OK, asMember.StatusCode);
         var detail = (await asMember.Content.ReadFromJsonAsync<ItemDetailDto>())!;
@@ -181,7 +181,7 @@ public class CampaignItemEndpointsTests(CatalogApiFactory factory)
         var response = await s.Owner.Client.DeleteAsync(s.Url);
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await s.Owner.Client.GetAsync($"/api/v1/catalog/items/{item.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await s.Owner.Client.GetAsync($"/api/v1/systems/dnd5e/catalog/items/{item.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await s.Owner.Client.GetAsync(ItemTestHelpers.ShopUrl(shop.Id))).StatusCode);
     }
 

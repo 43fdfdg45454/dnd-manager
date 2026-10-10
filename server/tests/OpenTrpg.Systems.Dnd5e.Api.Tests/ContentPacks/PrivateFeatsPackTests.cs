@@ -34,7 +34,7 @@ public class PrivateFeatsPackTests(ContentPackApiFactory factory) : IClassFixtur
 
         var s = await factory.CreateCampaignScenarioAsync();
         var character = await s.Player.CreateCharacterAsync(s.CampaignId, "Aprendiz");
-        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/sheet", new
+        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(character.Id)}/sheet", new
         {
             classes = new[] { new { classIndex = "fighter", subclassIndex = "champion", level = 3 } },
             baseAbilities = new { str = 16, dex = 12, con = 14, @int = 10, wis = 10, cha = 10 },
@@ -43,10 +43,10 @@ public class PrivateFeatsPackTests(ContentPackApiFactory factory) : IClassFixtur
         });
         Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/activate", null)).StatusCode);
-        var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { character.Id } });
+        var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { character.Id } });
         Assert.Equal(HttpStatusCode.OK, granted.StatusCode);
 
-        var plan = (await s.Player.Client.GetFromJsonAsync<LevelUpPlanDto>($"{ItemTestHelpers.CharacterUrl(character.Id)}/level-up"))!;
+        var plan = (await s.Player.Client.GetFromJsonAsync<LevelUpPlanDto>($"{ItemTestHelpers.Dnd5eCharacterUrl(character.Id)}/level-up"))!;
         var asi = Assert.Single(plan.Choices, c => c.Kind == "AsiOrFeat");
         var feats = asi.Options.Where(o => o.Index.StartsWith($"{result.Id}-", StringComparison.Ordinal)).ToList();
         Assert.True(feats.Count >= 40);

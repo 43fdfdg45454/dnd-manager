@@ -60,7 +60,7 @@ public class ContentPackStartingEquipmentTests(ContentPackApiFactory factory) : 
         var response = await admin.PostAsync(PacksUrl, Json(pack));
         Assert.True(response.StatusCode == HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
 
-        var backgrounds = await (await factory.CreateSignedInUserAsync()).Client.GetFromJsonAsync<List<BackgroundDto>>("/api/v1/catalog/backgrounds");
+        var backgrounds = await (await factory.CreateSignedInUserAsync()).Client.GetFromJsonAsync<List<BackgroundDto>>("/api/v1/systems/dnd5e/catalog/backgrounds");
         var pilgrim = Assert.Single(backgrounds!, b => b.Index == "equipo-ejemplo-peregrino");
         var equipment = pilgrim.StartingEquipment!;
 

@@ -73,7 +73,7 @@ public class LevelUpWalkthroughTests(CatalogApiFactory factory)
     public async Task Every_level_asks_for_what_the_srd_grants(string classIndex)
     {
         var s = await factory.CreateCampaignScenarioAsync();
-        var levels = (await s.Player.Client.GetFromJsonAsync<ClassDetailDto>($"/api/v1/catalog/classes/{classIndex}"))!.Levels
+        var levels = (await s.Player.Client.GetFromJsonAsync<ClassDetailDto>($"/api/v1/systems/dnd5e/catalog/classes/{classIndex}"))!.Levels
             .ToDictionary(l => l.Level);
         var hero = await CreateAsync(s, classIndex);
         var problems = new List<string>();
@@ -225,7 +225,7 @@ public class LevelUpWalkthroughTests(CatalogApiFactory factory)
     {
         var s = await factory.CreateCampaignScenarioAsync();
         var character = await s.Player.CreateCharacterAsync(s.CampaignId, "sorcerer");
-        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/sheet", new
+        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(character.Id)}/sheet", new
         {
             classes = new[] { new { classIndex = "sorcerer", subclassIndex = "draconic", level = 1 } },
             baseAbilities = new { str = 10, dex = 10, con = 10, @int = 10, wis = 10, cha = 16 },
@@ -298,7 +298,7 @@ public class LevelUpWalkthroughTests(CatalogApiFactory factory)
     private static async Task<CharacterDetailDto> CreateAsync(CampaignScenario s, string classIndex, int level = 1, object? scores = null, string[]? skills = null)
     {
         var character = await s.Player.CreateCharacterAsync(s.CampaignId, classIndex);
-        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/sheet", new
+        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(character.Id)}/sheet", new
         {
             classes = new[] { new { classIndex, level } },
             baseAbilities = scores ?? new { str = 10, dex = 10, con = 10, @int = 10, wis = 10, cha = 10 },
@@ -312,13 +312,13 @@ public class LevelUpWalkthroughTests(CatalogApiFactory factory)
 
     private static async Task GrantAsync(CampaignScenario s, Guid characterId)
     {
-        var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { characterId } });
+        var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { characterId } });
         Assert.Equal(HttpStatusCode.OK, granted.StatusCode);
     }
 
     private static async Task<LevelUpPlanDto> PlanAsync(SignedInUser actor, Guid id, string? classIndex = null)
     {
-        var url = $"{ItemTestHelpers.CharacterUrl(id)}/level-up";
+        var url = $"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/level-up";
         var response = await actor.Client.GetAsync(classIndex is null ? url : $"{url}?classIndex={classIndex}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         return (await response.Content.ReadFromJsonAsync<LevelUpPlanDto>())!;
@@ -326,7 +326,7 @@ public class LevelUpWalkthroughTests(CatalogApiFactory factory)
 
     private static async Task<CharacterDetailDto> ApplyAsync(SignedInUser actor, Guid id, object body)
     {
-        var response = await actor.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(id)}/level-up", body);
+        var response = await actor.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/level-up", body);
         Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
         return (await response.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
     }

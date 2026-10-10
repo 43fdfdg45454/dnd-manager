@@ -20,33 +20,33 @@ public class OriginChoicesEndpointsTests(CatalogApiFactory factory)
     {
         var s = await factory.CreateCampaignScenarioAsync();
 
-        var halfElf = await GetAsync<RaceDetailDto>(s.Player, "/api/v1/catalog/races/half-elf");
+        var halfElf = await GetAsync<RaceDetailDto>(s.Player, "/api/v1/systems/dnd5e/catalog/races/half-elf");
         Assert.Equal((2, 1), (halfElf.Choices!.AbilityBonuses!.Choose, halfElf.Choices.AbilityBonuses.Amount));
         Assert.DoesNotContain(halfElf.Choices.AbilityBonuses.From, o => o.Index == "cha");
         Assert.Equal(2, halfElf.Choices.Skills!.Choose);
         Assert.Contains(halfElf.Choices.Skills.From, o => o is { Index: "stealth", Name: "Stealth" });
         Assert.Equal(1, halfElf.Choices.Languages!.Choose);
 
-        var dragonborn = await GetAsync<RaceDetailDto>(s.Player, "/api/v1/catalog/races/dragonborn");
+        var dragonborn = await GetAsync<RaceDetailDto>(s.Player, "/api/v1/systems/dnd5e/catalog/races/dragonborn");
         var ancestry = Assert.Single(dragonborn.Choices!.TraitOptions);
         Assert.Equal(("draconic-ancestry", 1, 10), (ancestry.Key, ancestry.Choose, ancestry.Options.Count));
         var red = Assert.Single(ancestry.Options, o => o.Index == "draconic-ancestry-red");
         Assert.Equal(("fire", "15 ft. cone", "dex"), (red.DamageType, red.BreathWeapon!.Area, red.BreathWeapon.SaveAbility));
 
-        var elf = await GetAsync<RaceDetailDto>(s.Player, "/api/v1/catalog/races/elf");
+        var elf = await GetAsync<RaceDetailDto>(s.Player, "/api/v1/systems/dnd5e/catalog/races/elf");
         var highElf = Assert.Single(elf.Subraces, r => r.Index == "high-elf");
         Assert.Equal(("wizard", 1), (highElf.Choices!.Cantrip!.SpellList, highElf.Choices.Cantrip.Choose));
         Assert.Contains(highElf.Choices.Cantrip.From, o => o.Index == "mage-hand");
 
-        var dwarf = await GetAsync<RaceDetailDto>(s.Player, "/api/v1/catalog/races/dwarf");
+        var dwarf = await GetAsync<RaceDetailDto>(s.Player, "/api/v1/systems/dnd5e/catalog/races/dwarf");
         Assert.Equal(["poison"], dwarf.Resistances);
         Assert.Contains(dwarf.Choices!.Tools!.From, o => o is { Index: "smiths-tools", Name: "Smith's Tools" });
 
-        var human = await GetAsync<RaceDetailDto>(s.Player, "/api/v1/catalog/races/human");
+        var human = await GetAsync<RaceDetailDto>(s.Player, "/api/v1/systems/dnd5e/catalog/races/human");
         Assert.Null(human.Choices!.AbilityBonuses);
         Assert.Equal(1, human.Choices.Languages!.Choose);
 
-        var acolyte = Assert.Single(await GetAsync<List<BackgroundDto>>(s.Player, "/api/v1/catalog/backgrounds"), b => b.Index == "acolyte");
+        var acolyte = Assert.Single(await GetAsync<List<BackgroundDto>>(s.Player, "/api/v1/systems/dnd5e/catalog/backgrounds"), b => b.Index == "acolyte");
         Assert.Equal((2, 0), (acolyte.Choices!.Languages!.Choose, acolyte.Choices.Languages.From.Count));
     }
 
@@ -220,7 +220,7 @@ public class OriginChoicesEndpointsTests(CatalogApiFactory factory)
         var hero = await s.Player.CreateActiveCharacterAsync(s.Dm, s.CampaignId);
         var patch = new { proficiencies = new[] { new { type = "Language", key = "Orc", expertise = false } } };
 
-        var owner = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/sheet", patch);
+        var owner = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet", patch);
         Assert.Equal(HttpStatusCode.Accepted, owner.StatusCode);
         Assert.DoesNotContain((await s.Player.GetCharacterAsync(hero.Id)).Proficiencies, p => p is { Type: "Language", Key: "Orc" });
 
@@ -307,7 +307,7 @@ public class OriginChoicesEndpointsTests(CatalogApiFactory factory)
         throw new FileNotFoundException(name);
     }
 
-    private static string Url(Guid id) => $"{ItemTestHelpers.CharacterUrl(id)}/origin-choices";
+    private static string Url(Guid id) => $"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/origin-choices";
 
     private static async Task<CharacterDetailDto> DraftAsync(CampaignScenario s, string race, string? subrace, string classIndex)
     {
@@ -324,7 +324,7 @@ public class OriginChoicesEndpointsTests(CatalogApiFactory factory)
 
     private static async Task PatchSheetAsync(SignedInUser actor, Guid id, object patch)
     {
-        var response = await actor.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(id)}/sheet", patch);
+        var response = await actor.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/sheet", patch);
         Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
     }
 

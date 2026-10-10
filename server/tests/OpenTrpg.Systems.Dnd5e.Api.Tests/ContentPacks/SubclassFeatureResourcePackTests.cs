@@ -112,7 +112,7 @@ public class SubclassFeatureResourcePackTests(FeatureResourcePackApiFactory fact
     {
         var s = await factory.CreateCampaignScenarioAsync();
         var bard = await s.Player.CreateCharacterAsync(s.CampaignId, "Juglar");
-        var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(bard.Id)}/sheet", new
+        var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(bard.Id)}/sheet", new
         {
             classes = new[] { new { classIndex = "bard", level = 5 } },
             baseAbilities = new { str = 8, dex = 14, con = 12, @int = 10, wis = 10, cha = 16 },
@@ -182,7 +182,7 @@ public class SubclassFeatureResourcePackTests(FeatureResourcePackApiFactory fact
 
     private static async Task<CharacterDetailDto> PatchAsync(CampaignScenario s, Guid id, int level, string? subclass)
     {
-        var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(id)}/sheet", new
+        var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/sheet", new
         {
             classes = new[] { new { classIndex = "fighter", subclassIndex = subclass, level } },
             baseAbilities = new { str = 16, dex = 12, con = 14, @int = 14, wis = 10, cha = 8 },

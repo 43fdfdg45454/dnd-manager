@@ -1,10 +1,7 @@
-using System.Text.Json;
 using System.Security.Claims;
 using OpenTrpg.Core.Api.Auth;
 using OpenTrpg.Core.Api.Filters;
-using OpenTrpg.Core.Application.ChangeRequests;
 using OpenTrpg.Core.Application.Characters;
-using Microsoft.AspNetCore.Http.HttpResults;
 using OpenTrpg.Core.Application.Common;
 
 namespace OpenTrpg.Core.Api.Endpoints;
@@ -47,18 +44,6 @@ public static class CharacterEndpoints
                 TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, ct)))
             .WithName("GetCharacter")
             .WithSummary("Hoja completa del personaje. Solo el dueño y los DMs.");
-
-        group.MapPatch("/sheet", async Task<Results<Ok<CharacterDetailDto>, Accepted<ChangeRequestDto>>> (
-                Guid id, JsonElement patch, ClaimsPrincipal user, UpdateSheetHandler handler, CancellationToken ct) =>
-            {
-                var result = await handler.HandleAsync(user.GetUserId(), id, patch, ct);
-                return result.ChangeRequest is { } request
-                    ? TypedResults.Accepted($"/api/v1/change-requests/{request.Id}", request)
-                    : TypedResults.Ok(result.Character!);
-            })
-            .WithName("UpdateCharacterSheet")
-            .WithSummary("Edita la hoja: 200 si se aplica (DM o dueño en borrador); 202 con la solicitud creada si necesita aprobación del DM.")
-            .ProducesValidationProblem();
 
         group.MapPost("/submit", async (Guid id, ClaimsPrincipal user, SubmitCharacterHandler handler, CancellationToken ct) =>
             {

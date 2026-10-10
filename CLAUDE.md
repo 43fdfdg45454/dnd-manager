@@ -91,7 +91,7 @@ cd deploy && cp .env.sample .env && docker compose pull && docker compose up -d
 - Todo lo demás (subir de nivel, editar stats, ítems a mano, ítems personalizados, oro fuera de
   compras) crea un `ChangeRequest` que el DM aprueba o rechaza. **El DM/Owner aplica directo y
   nunca pasa por aprobación dentro de su campaña**; además dispone de acciones de grupo
-  (`/campaigns/{id}/party/*`) y mensajes secretos a personajes concretos.
+  (`/systems/dnd5e/campaigns/{id}/party/*`) y mensajes secretos a personajes concretos.
 - Un jugador solo ve la hoja de sus propios personajes.
 - Vistas de campaña: General (todos), Mesa del DM (solo rol DM/Owner) y Mi sesión (solo Player).
 

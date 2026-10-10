@@ -149,7 +149,7 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
 
         var s = await factory.CreateCampaignScenarioAsync();
         var hero = await ActiveFighterAsync(s, level: 3);
-        var proficiencies = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/sheet", new
+        var proficiencies = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet", new
         {
             classes = new[] { new { classIndex = "fighter", subclassIndex = "champion", level = 3 } },
             proficiencies = new[] { new { type = "Armor", key = "all-armor", expertise = false }, new { type = "Weapon", key = "martial-weapons", expertise = false } },
@@ -174,7 +174,7 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
         Assert.Equal(["str", "dex"], fencing.AbilityIncrease!.From);
 
         // A half-elf that knows a cantrip meets the race and the spellcasting prerequisites.
-        var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/sheet", new
+        var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet", new
         {
             raceIndex = "half-elf",
             spells = new[] { new { spellIndex = "light", classIndex = "fighter", isPrepared = true } },
@@ -185,7 +185,7 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
         Assert.True(again.Options.Single(o => o.Index == "requisitos-ejemplo-arcana").Eligible);
 
         // A feat with several abilities to choose from raises the chosen one, naming the feat in the breakdown.
-        var missingAbility = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/level-up", new
+        var missingAbility = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/level-up", new
         {
             hitPointsRolled = 6,
             choices = new object[] { new { key = "asi", selected = new { feat = "requisitos-ejemplo-esgrima" } } },
@@ -253,7 +253,7 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
     private static async Task<CharacterDetailDto> ActiveFighterAsync(CampaignScenario s, int level)
     {
         var character = await s.Player.CreateCharacterAsync(s.CampaignId, "Guardia");
-        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/sheet", new
+        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(character.Id)}/sheet", new
         {
             classes = new[] { new { classIndex = "fighter", level } },
             baseAbilities = new { str = 16, dex = 12, con = 14, @int = 10, wis = 13, cha = 10 },
@@ -267,20 +267,20 @@ public class ContentPackV2Tests(ContentPackApiFactory factory) : IClassFixture<C
 
     private static async Task GrantAsync(CampaignScenario s, Guid characterId)
     {
-        var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { characterId } });
+        var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { characterId } });
         Assert.Equal(HttpStatusCode.OK, granted.StatusCode);
     }
 
     private static async Task<LevelUpPlanDto> PlanAsync(SignedInUser actor, Guid id)
     {
-        var response = await actor.Client.GetAsync($"{ItemTestHelpers.CharacterUrl(id)}/level-up");
+        var response = await actor.Client.GetAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/level-up");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         return (await response.Content.ReadFromJsonAsync<LevelUpPlanDto>())!;
     }
 
     private static async Task<CharacterDetailDto> ApplyAsync(SignedInUser actor, Guid id, object body)
     {
-        var response = await actor.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(id)}/level-up", body);
+        var response = await actor.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/level-up", body);
         Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
         return (await response.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
     }

@@ -82,7 +82,7 @@ public sealed class RealtimeTests(ApiFactory factory) : IClassFixture<ApiFactory
         var rest = Expect(connection, Dnd5eEventTypes.PartyRest);
         await connection.InvokeAsync("JoinCampaign", s.CampaignId);
 
-        var response = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/rest", new { kind = "long" });
+        var response = await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/rest", new { kind = "long" });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var e = await rest.WaitAsync(EventTimeout);
@@ -99,7 +99,7 @@ public sealed class RealtimeTests(ApiFactory factory) : IClassFixture<ApiFactory
         var stash = Expect(connection, CampaignEventTypes.PartyStashUpdated);
         await connection.InvokeAsync("JoinCampaign", s.CampaignId);
 
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/combat", new { inspiration = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/combat", new { inspiration = true })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/stash/gold", new { deltaCp = 10 })).StatusCode);
 
         Assert.Equal((Guid?)hero.Id, (await updated.WaitAsync(EventTimeout)).CharacterId);
@@ -118,7 +118,7 @@ public sealed class RealtimeTests(ApiFactory factory) : IClassFixture<ApiFactory
         var invited = Expect(newcomerConnection, CampaignEventTypes.InvitationReceived);
         await connection.InvokeAsync("JoinCampaign", s.CampaignId);
 
-        var pending = await s.Player.Client.PatchAsJsonAsync($"/api/v1/characters/{hero.Id}/sheet", new { name = "Otro nombre" });
+        var pending = await s.Player.Client.PatchAsJsonAsync($"/api/v1/systems/dnd5e/characters/{hero.Id}/sheet", new { name = "Otro nombre" });
         Assert.Equal(HttpStatusCode.Accepted, pending.StatusCode);
         var request = (await pending.Content.ReadFromJsonAsync<OpenTrpg.Core.Application.ChangeRequests.ChangeRequestDto>())!;
         Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsJsonAsync($"/api/v1/change-requests/{request.Id}/reject", new { comment = "No." })).StatusCode);
@@ -298,7 +298,7 @@ public sealed class RealtimeTests(ApiFactory factory) : IClassFixture<ApiFactory
         var granted = Expect(connection, Dnd5eEventTypes.LevelUpGranted);
 
         // Not joined to the campaign: the event still reaches the owner through their user group.
-        var response = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { hero.Id } });
+        var response = await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { hero.Id } });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         Assert.Equal((Guid?)hero.Id, (await granted.WaitAsync(EventTimeout)).CharacterId);

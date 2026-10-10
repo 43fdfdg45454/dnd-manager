@@ -99,7 +99,7 @@ public class ExpandedSpellListPackTests(ExpandedSpellListPackApiFactory factory)
         var detail = await s.Player.GetCharacterAsync(withPatron.Id);
         Assert.DoesNotContain(detail.Spells, sp => sp.SpellIndex is "faerie-fire" or "sleep");
 
-        var learned = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(withPatron.Id)}/level-up", new
+        var learned = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(withPatron.Id)}/level-up", new
         {
             hitPointsRolled = 5,
             choices = new object[]
@@ -132,7 +132,7 @@ public class ExpandedSpellListPackTests(ExpandedSpellListPackApiFactory factory)
         Assert.DoesNotContain(candidates, sp => sp.Index is "faerie-fire" or "sleep");
 
         var prepared = await s.Player.Client.PostAsJsonAsync(
-            $"{ItemTestHelpers.CharacterUrl(withDomain.Id)}/spell-preparation",
+            $"{ItemTestHelpers.Dnd5eCharacterUrl(withDomain.Id)}/spell-preparation",
             new { classes = new[] { new { classIndex = "cleric", spells = new[] { "magic-missile", "bless" } } } });
         Assert.True(prepared.StatusCode == HttpStatusCode.OK, await prepared.Content.ReadAsStringAsync());
 
@@ -147,12 +147,12 @@ public class ExpandedSpellListPackTests(ExpandedSpellListPackApiFactory factory)
         await ImportAsync();
         var admin = await factory.CreateAdminClientAsync();
 
-        var detail = (await admin.GetFromJsonAsync<SpellDetailDto>("/api/v1/catalog/spells/faerie-fire"))!;
+        var detail = (await admin.GetFromJsonAsync<SpellDetailDto>("/api/v1/systems/dnd5e/catalog/spells/faerie-fire"))!;
         var expansion = Assert.Single(detail.ExpandedBy);
         Assert.Equal((Patron, PatronName, "warlock", "pactos-ejemplo"), (expansion.SubclassIndex, expansion.SubclassName, expansion.ClassIndex, expansion.Source));
         Assert.DoesNotContain("warlock", detail.ClassIndexes);
 
-        var page = (await admin.GetFromJsonAsync<PagedResult<SpellSummaryDto>>("/api/v1/catalog/spells?level=1&pageSize=200"))!;
+        var page = (await admin.GetFromJsonAsync<PagedResult<SpellSummaryDto>>("/api/v1/systems/dnd5e/catalog/spells?level=1&pageSize=200"))!;
         Assert.Equal([Patron], page.Items.Single(sp => sp.Index == "sleep").ExpandedBy.Select(e => e.SubclassIndex));
         Assert.Equal([Domain], page.Items.Single(sp => sp.Index == "magic-missile").ExpandedBy.Select(e => e.SubclassIndex));
         Assert.Empty(page.Items.Single(sp => sp.Index == "bless").ExpandedBy);
@@ -208,7 +208,7 @@ public class ExpandedSpellListPackTests(ExpandedSpellListPackApiFactory factory)
     private static async Task<CharacterDetailDto> LevelOneAsync(CampaignScenario s, string classIndex, string? subclass, string name)
     {
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, name);
-        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/sheet", new
+        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet", new
         {
             classes = new[] { new { classIndex, subclassIndex = subclass, level = 1 } },
             baseAbilities = new { str = 8, dex = 14, con = 14, @int = 10, wis = 16, cha = 16 },
@@ -216,21 +216,21 @@ public class ExpandedSpellListPackTests(ExpandedSpellListPackApiFactory factory)
         });
         Assert.True(patch.StatusCode == HttpStatusCode.OK, await patch.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/activate", null)).StatusCode);
-        var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { hero.Id } });
+        var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { hero.Id } });
         Assert.Equal(HttpStatusCode.OK, granted.StatusCode);
         return await s.Player.GetCharacterAsync(hero.Id);
     }
 
     private static async Task<LevelUpPlanDto> PlanAsync(SignedInUser actor, Guid id)
     {
-        var response = await actor.Client.GetAsync($"{ItemTestHelpers.CharacterUrl(id)}/level-up");
+        var response = await actor.Client.GetAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/level-up");
         Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
         return (await response.Content.ReadFromJsonAsync<LevelUpPlanDto>())!;
     }
 
     private static async Task<SpellPreparationDto> PreparationAsync(SignedInUser actor, Guid id)
     {
-        var response = await actor.Client.GetAsync($"{ItemTestHelpers.CharacterUrl(id)}/spell-preparation");
+        var response = await actor.Client.GetAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/spell-preparation");
         Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
         return (await response.Content.ReadFromJsonAsync<SpellPreparationDto>())!;
     }

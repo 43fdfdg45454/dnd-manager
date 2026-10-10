@@ -430,7 +430,7 @@ El jugador se queda con una entrada, que se guarda en la hoja como `backgroundDe
 ]
 ```
 
-`GET /api/v1/catalog/backgrounds` devuelve `personality` (`{ traits, ideals: [{ text, alignment }],
+`GET /api/v1/systems/dnd5e/catalog/backgrounds` devuelve `personality` (`{ traits, ideals: [{ text, alignment }],
 bonds, flaws }` o `null`) y `optionalTables` (`[{ key, name, entries }]`, vacío si no hay).
 
 #### `OriginChoices`
@@ -438,9 +438,9 @@ bonds, flaws }` o `null`) y `optionalTables` (`[{ key, name, entries }]`, vacío
 Decisiones de una raza, subraza o trasfondo (todas opcionales; formatos 1 y 2). El SRD las importa de
 `ability_bonus_options`, `language_options`, las elecciones de competencias de los rasgos y
 `trait_specific` (linaje dracónico, truco del alto elfo). La API las devuelve normalizadas en
-`GET /api/v1/catalog/races/{index}` (`choices` de la raza y de cada subraza) y en
-`GET /api/v1/catalog/backgrounds`; cada personaje las responde con
-`GET`/`PUT /api/v1/characters/{id}/origin-choices` y no se puede activar un borrador con alguna
+`GET /api/v1/systems/dnd5e/catalog/races/{index}` (`choices` de la raza y de cada subraza) y en
+`GET /api/v1/systems/dnd5e/catalog/backgrounds`; cada personaje las responde con
+`GET`/`PUT /api/v1/systems/dnd5e/characters/{id}/origin-choices` y no se puede activar un borrador con alguna
 obligatoria sin responder (400, `code: origin-choices-incomplete`). Los idiomas son opcionales (el
 asistente ya los pide en su propio paso).
 
@@ -524,9 +524,9 @@ defecto 1) o, como atajo para una sola categoría, `category` + `categoryChoose`
 incluir objetos o al menos una categoría. Las categorías son índices de las categorías de equipo del
 SRD (`simple-weapons`, `martial-weapons`, `martial-melee-weapons`, `holy-symbols`,
 `musical-instruments`, `artisans-tools`, `arcane-foci`, `druidic-foci`, `equipment-packs`...);
-`GET /api/v1/catalog/equipment-categories/{index}` lista sus objetos.
+`GET /api/v1/systems/dnd5e/catalog/equipment-categories/{index}` lista sus objetos.
 
-La API devuelve el equipo resuelto en `GET /api/v1/catalog/backgrounds` (`startingEquipment`, o
+La API devuelve el equipo resuelto en `GET /api/v1/systems/dnd5e/catalog/backgrounds` (`startingEquipment`, o
 `null` si el trasfondo no lo define): cada objeto con `item`, `templateId`, `name` y `quantity`, y
 cada categoría con `category`, `name` y `choose`.
 
@@ -557,7 +557,7 @@ Lo habitual es que cada baratija sea un objeto del paquete con `"category": "Oth
 ```
 
 Si varios paquetes definen el mismo `roll`, gana el **último importado** (reimportar un paquete lo
-vuelve a poner por delante). `GET /api/v1/catalog/trinkets` devuelve la tabla efectiva ordenada por
+vuelve a poner por delante). `GET /api/v1/systems/dnd5e/catalog/trinkets` devuelve la tabla efectiva ordenada por
 tirada: `[{ roll, templateId, index, name, description }]` (vacía con solo el SRD).
 
 ### `RollTable`
@@ -603,12 +603,12 @@ tarjeta del conjuro muestra "Oleada de magia salvaje: tira 1d20" con "Tirar d20"
 personaje tiene un recurso automático cuyo `key` termina en `tides-of-chaos` (un `resource` de rasgo,
 p. ej. `reinos-ejemplo-tides-of-chaos`), junto al aviso aparece "Recuperar Mareas del caos", que
 devuelve un uso sin aprobación del DM: es la regla tras una oleada. Por eso
-`POST /api/v1/characters/{id}/resources/{resourceId}/restore` admite a los jugadores, además de los
+`POST /api/v1/systems/dnd5e/characters/{id}/resources/{resourceId}/restore` admite a los jugadores, además de los
 puntos de hechicería, los recursos automáticos cuyo `key` termina en `tides-of-chaos` (el resto de
 recursos automáticos sigue dando 403 a quien no es DM).
 
 Si varios paquetes definen la misma `key`, gana el **último importado**. `GET
-/api/v1/catalog/roll-tables` (filtros opcionales `subclass=` y `class=`) devuelve las tablas efectivas
+/api/v1/systems/dnd5e/catalog/roll-tables` (filtros opcionales `subclass=` y `class=`) devuelve las tablas efectivas
 ordenadas por nombre: `[{ key, name, dice, classIndex, subclassIndex, source, entries: [{ from, to,
 text }] }]` (vacía con solo el SRD).
 
@@ -665,7 +665,7 @@ Solo el administrador de la instancia.
 | `GET /api/v1/admin/content-packs` | `200 [{ id, name, version, importedAt, counts }]` |
 | `POST /api/v1/admin/content-packs` | `201 { id, name, version, counts }`, `400` (errores), `413` (> 20 MB) |
 | `DELETE /api/v1/admin/content-packs/{id}` | `204`, o `404` si no existe |
-| `GET /api/v1/catalog/sources` (cualquier usuario) | `200 [{ id, name, version }]`: `srd` y los paquetes, para etiquetar el contenido |
+| `GET /api/v1/systems/dnd5e/catalog/sources` (cualquier usuario) | `200 [{ id, name, version }]`: `srd` y los paquetes, para etiquetar el contenido |
 
 `counts` tiene el número de `subclasses`, `features`, `items`, `spells`, `races`, `subraces`,
 `raceExtensions` (razas ampliadas con `extends`), `traits`, `backgrounds`, `optionSets`, `options`, `levelChoices`, `trinkets` y `rollTables` importados.
@@ -887,7 +887,7 @@ mecanismo (d6, d8 al 5, d10 al 10, d12 al 15).
 **`rollOnRest`**: `{ "dice": "d20", "count": 2, "rest": "long" }` para rasgos cuyos valores se tiran al
 descansar (al estilo de un presagio). Tras ese descanso (`long`: solo el largo; `short`: corto y largo) el
 recurso queda pendiente (`rollsPending`) hasta que el jugador escribe sus tiradas físicas con
-`POST /api/v1/characters/{id}/resources/{resourceId}/rolls` (`{ "values": [14, 3] }`); los valores se
+`POST /api/v1/systems/dnd5e/characters/{id}/resources/{resourceId}/rolls` (`{ "values": [14, 3] }`); los valores se
 guardan en el recurso (`rolls`). `dice`: `d4`, `d6`, `d8`, `d10`, `d12`, `d20` o `d100`; `count` 1–20.
 
 Los errores llevan la ruta exacta: `...resource.max`, `...resource.max.formula`, `...resource.max.min`,
@@ -923,7 +923,7 @@ En la app:
   como "Golpe sereno (2 Ki)".
 - **Combate**: cada recurso lleva `options` (las opciones elegidas que lo gastan); la pestaña Combate
   las lista bajo el recurso con su coste y un botón **Usar** que gasta `amount` usos con
-  `POST /api/v1/characters/{id}/resources/{resourceId}/spend` (`{ "amount": 2 }`), sin aprobación,
+  `POST /api/v1/systems/dnd5e/characters/{id}/resources/{resourceId}/spend` (`{ "amount": 2 }`), sin aprobación,
   como cualquier uso de recurso. El botón se desactiva si no quedan usos suficientes.
 
 ### `levelChoices`
@@ -1182,14 +1182,14 @@ En la API:
   `hitPointsMax`, `armorClass`, `savingThrows`, `skills`, `attacks[]` (`attackBonus`,
   `attackBreakdown`, `damage[]` con el bonificador ya sumado al primer dado, `damageBreakdown`) y
   `breakdowns` (`armorClass`, `hitPointsMax`, `save.<característica>`, `skill.<habilidad>`).
-- `PUT /api/v1/characters/{id}/companion` (`{ "beastIndex": "wolf", "name": "Ceniza" }`): el dueño o un
+- `PUT /api/v1/systems/dnd5e/characters/{id}/companion` (`{ "beastIndex": "wolf", "name": "Ceniza" }`): el dueño o un
   DM. El primer compañero y los cambios de nombre se aplican directamente; si un jugador cambia la
   bestia de un personaje activo se crea una solicitud `Companion` (202, con `before`) que el DM
   aprueba; el DM/Owner la cambia directamente. Una bestia fuera del filtro da 400 en `beastIndex`; sin
   el rasgo, 409.
-- `POST /api/v1/characters/{id}/companion/hp` (`{ "delta": -5 }` o `{ "current": 7 }`): auto-seguimiento
+- `POST /api/v1/systems/dnd5e/characters/{id}/companion/hp` (`{ "delta": -5 }` o `{ "current": 7 }`): auto-seguimiento
   sin aprobación, entre 0 y el máximo. Un descanso largo lo devuelve al máximo.
-- `DELETE /api/v1/characters/{id}/companion`: solo DM/Owner.
+- `DELETE /api/v1/systems/dnd5e/characters/{id}/companion`: solo DM/Owner.
 - Cada cambio emite `character.updated` por el hub de la campaña.
 
 La pestaña Combate (y la hoja) ofrece "Elegir compañero" con las bestias que cumplen el filtro y

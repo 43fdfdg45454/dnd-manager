@@ -48,14 +48,14 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
         // Every class gains at least one subclass of the pack.
         foreach (var classIndex in Classes)
         {
-            var detail = await GetAsync<ClassDetailDto>(admin, $"/api/v1/catalog/classes/{classIndex}");
+            var detail = await GetAsync<ClassDetailDto>(admin, $"/api/v1/systems/dnd5e/catalog/classes/{classIndex}");
             Assert.Contains(detail.Subclasses, s => s.Source == PackId && s.Index.StartsWith($"{PackId}-", StringComparison.Ordinal));
         }
 
         // PHB subraces sit on the SRD races: the drow with its bonus, weapons and racial spells by level, the wood elf with its own speed.
         // Four races gain PHB subraces; five more only gain their height and weight table.
         Assert.Equal(9, result.Counts["raceExtensions"]);
-        var elf = await GetAsync<RaceDetailDto>(admin, "/api/v1/catalog/races/elf");
+        var elf = await GetAsync<RaceDetailDto>(admin, "/api/v1/systems/dnd5e/catalog/races/elf");
         var drow = Assert.Single(elf.Subraces, s => s.Index == $"{PackId}-dark-elf");
         Assert.Contains(drow.AbilityBonuses, b => b is { Ability: "cha", Bonus: 1 });
         Assert.Contains(drow.Traits, t => t.Name == "Sunlight Sensitivity");
@@ -64,21 +64,21 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
         Assert.Contains(drow.Grants.Spells, sp => sp is { Index: "darkness", MinLevel: 5 });
         var woodElf = Assert.Single(elf.Subraces, s => s.Index == $"{PackId}-wood-elf");
         Assert.Equal(35, woodElf.Speed);
-        var dwarf = await GetAsync<RaceDetailDto>(admin, "/api/v1/catalog/races/dwarf");
+        var dwarf = await GetAsync<RaceDetailDto>(admin, "/api/v1/systems/dnd5e/catalog/races/dwarf");
         Assert.Contains(dwarf.Subraces, s => s.Index == $"{PackId}-mountain-dwarf");
-        var variantHuman = await GetAsync<RaceDetailDto>(admin, $"/api/v1/catalog/races/{PackId}-variant-human");
+        var variantHuman = await GetAsync<RaceDetailDto>(admin, $"/api/v1/systems/dnd5e/catalog/races/{PackId}-variant-human");
         Assert.NotNull(variantHuman.Choices?.Feats);
 
         // Phase 29: every race has a height and weight table; the PHB subraces carry their own.
         Assert.NotNull(variantHuman.HeightWeight);
         foreach (var raceIndex in new[] { "dwarf", "elf", "halfling", "gnome", "human", "dragonborn", "half-elf", "half-orc", "tiefling" })
         {
-            var race = await GetAsync<RaceDetailDto>(admin, $"/api/v1/catalog/races/{raceIndex}");
+            var race = await GetAsync<RaceDetailDto>(admin, $"/api/v1/systems/dnd5e/catalog/races/{raceIndex}");
             Assert.True(race.HeightWeight is not null, $"{raceIndex} sin tabla de altura y peso.");
             Assert.All(race.Subraces.Where(s => s.Source == PackId), s => Assert.NotNull(s.HeightWeight));
         }
 
-        var backgrounds = await GetAsync<List<BackgroundDto>>(admin, "/api/v1/catalog/backgrounds");
+        var backgrounds = await GetAsync<List<BackgroundDto>>(admin, "/api/v1/systems/dnd5e/catalog/backgrounds");
         var sage = Assert.Single(backgrounds, b => b.Index == $"{PackId}-sage");
         Assert.Equal(["Arcana", "History"], sage.SkillProficiencies.Order());
         Assert.NotNull(sage.Personality);
@@ -86,7 +86,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
         Assert.NotNull(sage.StartingEquipment);
         Assert.Equal(12, backgrounds.Count(b => b.Source == PackId));
 
-        var hex = await GetAsync<SpellDetailDto>(admin, $"/api/v1/catalog/spells/{PackId}-hex");
+        var hex = await GetAsync<SpellDetailDto>(admin, $"/api/v1/systems/dnd5e/catalog/spells/{PackId}-hex");
         Assert.Equal((1, "Enchantment", true), (hex.Level, hex.School, hex.Concentration));
         Assert.Contains("warlock", hex.ClassIndexes);
 
@@ -142,7 +142,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
 
         // A cleric of the Light domain gets the always-prepared domain spells and the bonus cantrip.
         var cleric = await s.Player.CreateCharacterAsync(s.CampaignId, "Clériga");
-        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(cleric.Id)}/sheet", new
+        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(cleric.Id)}/sheet", new
         {
             classes = new[] { new { classIndex = "cleric", subclassIndex = $"{PackId}-light-domain", level = 2 } },
             baseAbilities = new { str = 10, dex = 12, con = 14, @int = 10, wis = 16, cha = 10 },
@@ -168,7 +168,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
         if (Version.Parse(result.Version) >= new Version(2, 3))
         {
             var knight = await s.Player.CreateCharacterAsync(s.CampaignId, "Caballera");
-            var knightPatch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(knight.Id)}/sheet", new
+            var knightPatch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(knight.Id)}/sheet", new
             {
                 classes = new[] { new { classIndex = "fighter", subclassIndex = $"{PackId}-eldritch-knight", level = 3 } },
                 baseAbilities = new { str = 16, dex = 12, con = 14, @int = 14, wis = 10, cha = 8 },
@@ -194,9 +194,9 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
         // From v2.4 the Archfey's expanded list reaches the catalog and a warlock with that patron.
         if (Version.Parse(result.Version) >= new Version(2, 4))
         {
-            var faerieFire = await GetAsync<SpellDetailDto>(admin, "/api/v1/catalog/spells/faerie-fire");
+            var faerieFire = await GetAsync<SpellDetailDto>(admin, "/api/v1/systems/dnd5e/catalog/spells/faerie-fire");
             Assert.Contains(faerieFire.ExpandedBy, e => e.SubclassIndex == $"{PackId}-the-archfey" && e.ClassIndex == "warlock");
-            var phantasmal = await GetAsync<SpellDetailDto>(admin, $"/api/v1/catalog/spells/{PackId}-phantasmal-force");
+            var phantasmal = await GetAsync<SpellDetailDto>(admin, $"/api/v1/systems/dnd5e/catalog/spells/{PackId}-phantasmal-force");
             Assert.Equal(2, phantasmal.ExpandedBy.Count);
         }
 
@@ -204,7 +204,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
         if (Version.Parse(result.Version) >= new Version(2, 5))
         {
             var monk = await s.Player.CreateCharacterAsync(s.CampaignId, "Monja");
-            var monkPatch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(monk.Id)}/sheet", new
+            var monkPatch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(monk.Id)}/sheet", new
             {
                 classes = new[] { new { classIndex = "monk", subclassIndex = $"{PackId}-way-of-the-four-elements", level = 2 } },
                 baseAbilities = new { str = 10, dex = 16, con = 14, @int = 10, wis = 14, cha = 8 },
@@ -218,7 +218,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
             Assert.Equal(("ki", 2), (thunders.Cost!.Resource, thunders.Cost.Amount));
 
             var sage2 = await s.Player.CreateCharacterAsync(s.CampaignId, "Sabia");
-            var sagePatch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(sage2.Id)}/sheet", new
+            var sagePatch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(sage2.Id)}/sheet", new
             {
                 classes = new[] { new { classIndex = "cleric", level = 1 } },
                 baseAbilities = new { str = 10, dex = 12, con = 14, @int = 14, wis = 16, cha = 10 },
@@ -236,7 +236,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
         if (Version.Parse(result.Version) >= new Version(2, 6))
         {
             var ranger = await s.Player.CreateCharacterAsync(s.CampaignId, "Montaraz");
-            var rangerPatch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(ranger.Id)}/sheet", new
+            var rangerPatch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(ranger.Id)}/sheet", new
             {
                 classes = new[] { new { classIndex = "ranger", subclassIndex = $"{PackId}-beast-master", level = 3 } },
                 baseAbilities = new { str = 12, dex = 16, con = 14, @int = 10, wis = 14, cha = 8 },
@@ -246,7 +246,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
             var rangerSheet = (await rangerPatch.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
             Assert.True(rangerSheet.CompanionPending);
             Assert.Equal(0.25, (double)rangerSheet.CompanionFeature!.MaxChallengeRating, 3);
-            var choose = await s.Player.Client.PutAsJsonAsync($"{ItemTestHelpers.CharacterUrl(ranger.Id)}/companion", new { beastIndex = "wolf", name = "Sombra" });
+            var choose = await s.Player.Client.PutAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(ranger.Id)}/companion", new { beastIndex = "wolf", name = "Sombra" });
             Assert.Equal(HttpStatusCode.OK, choose.StatusCode);
             var withCompanion = (await choose.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
             Assert.Equal(("wolf", 12), (withCompanion.Companion!.BeastIndex, withCompanion.Companion!.HitPointsMax));
@@ -256,7 +256,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
         if (Version.Parse(result.Version) >= new Version(2, 7))
         {
             Assert.Equal(100, result.Counts["trinkets"]);
-            var trinkets = await GetAsync<List<TrinketDto>>(admin, "/api/v1/catalog/trinkets");
+            var trinkets = await GetAsync<List<TrinketDto>>(admin, "/api/v1/systems/dnd5e/catalog/trinkets");
             Assert.Equal(100, trinkets.Count);
             Assert.Equal(1, trinkets[0].Roll);
         }
@@ -272,7 +272,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
     private static async Task<CharacterDetailDto> ActiveFighterAsync(CampaignScenario s, int level)
     {
         var character = await s.Player.CreateCharacterAsync(s.CampaignId, "Maestra");
-        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/sheet", new
+        var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(character.Id)}/sheet", new
         {
             classes = new[] { new { classIndex = "fighter", level } },
             baseAbilities = new { str = 16, dex = 12, con = 14, @int = 10, wis = 13, cha = 10 },
@@ -287,20 +287,20 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
 
     private static async Task GrantAsync(CampaignScenario s, Guid characterId)
     {
-        var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { characterId } });
+        var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { characterId } });
         Assert.Equal(HttpStatusCode.OK, granted.StatusCode);
     }
 
     private static async Task<LevelUpPlanDto> PlanAsync(SignedInUser actor, Guid id)
     {
-        var response = await actor.Client.GetAsync($"{ItemTestHelpers.CharacterUrl(id)}/level-up");
+        var response = await actor.Client.GetAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/level-up");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         return (await response.Content.ReadFromJsonAsync<LevelUpPlanDto>())!;
     }
 
     private static async Task<CharacterDetailDto> ApplyAsync(SignedInUser actor, Guid id, object body)
     {
-        var response = await actor.Client.PostAsJsonAsync($"{ItemTestHelpers.CharacterUrl(id)}/level-up", body);
+        var response = await actor.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/level-up", body);
         Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
         return (await response.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
     }

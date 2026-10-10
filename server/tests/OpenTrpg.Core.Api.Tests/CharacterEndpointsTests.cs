@@ -606,9 +606,9 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(2, pact.Max);
         Assert.Equal(2, detail.Sheet.PactSlotLevel);
 
-        var spent = await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/spell-slots/0/spend", new { amount = 2 });
+        var spent = await PostAsync(s.Player, $"{Dnd5eCharacterUrl(character.Id)}/spell-slots/0/spend", new { amount = 2 });
         Assert.Equal(2, Assert.Single(spent.SpellSlots).Used);
-        var rested = await PostAsync(s.Dm, $"{CharacterUrl(character.Id)}/rest/short", new { hitDice = new Dictionary<string, int>() });
+        var rested = await PostAsync(s.Dm, $"{Dnd5eCharacterUrl(character.Id)}/rest/short", new { hitDice = new Dictionary<string, int>() });
         Assert.Equal(0, Assert.Single(rested.SpellSlots).Used);
     }
 
@@ -621,11 +621,11 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
         var character = await CreateAsync(s.Player, s.CampaignId, new { name = "Maga" });
         await PatchSheetAsync(s.Player, character.Id, Wizard5);
 
-        var spent = await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/spell-slots/3/spend", new { amount = 2 });
+        var spent = await PostAsync(s.Player, $"{Dnd5eCharacterUrl(character.Id)}/spell-slots/3/spend", new { amount = 2 });
         Assert.Equal(2, Assert.Single(spent.SpellSlots, x => x.Level == 3).Used);
 
-        var none = await s.Player.Client.PostAsync($"{CharacterUrl(character.Id)}/spell-slots/3/spend", null);
-        var noSlotsOfLevel = await s.Player.Client.PostAsJsonAsync($"{CharacterUrl(character.Id)}/spell-slots/4/spend", new { amount = 1 });
+        var none = await s.Player.Client.PostAsync($"{Dnd5eCharacterUrl(character.Id)}/spell-slots/3/spend", null);
+        var noSlotsOfLevel = await s.Player.Client.PostAsJsonAsync($"{Dnd5eCharacterUrl(character.Id)}/spell-slots/4/spend", new { amount = 1 });
 
         Assert.Equal(HttpStatusCode.BadRequest, none.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, noSlotsOfLevel.StatusCode);
@@ -642,10 +642,10 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
 
         var hurt = await PatchCombatAsync(s.Player, character.Id, new { hitPointsCurrent = 3, temporaryHitPoints = 4, exhaustionLevel = 2, deathSaveFailures = 1 });
         Assert.Equal(3, hurt.HitPointsCurrent);
-        await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/spell-slots/1/spend", new { amount = 3 });
-        await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/concentration", new { spellIndex = "shield" });
+        await PostAsync(s.Player, $"{Dnd5eCharacterUrl(character.Id)}/spell-slots/1/spend", new { amount = 3 });
+        await PostAsync(s.Player, $"{Dnd5eCharacterUrl(character.Id)}/concentration", new { spellIndex = "shield" });
 
-        var rested = await PostAsync(s.Dm, $"{CharacterUrl(character.Id)}/rest/long", null);
+        var rested = await PostAsync(s.Dm, $"{Dnd5eCharacterUrl(character.Id)}/rest/long", null);
 
         Assert.Equal(max, rested.HitPointsCurrent);
         Assert.Equal(4, rested.TemporaryHitPoints);
@@ -664,8 +664,8 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
         await ActivateAsync(s.Dm, character.Id);
         await PatchCombatAsync(s.Player, character.Id, new { hitPointsCurrent = 1 });
 
-        var rested = await PostAsync(s.Dm, $"{CharacterUrl(character.Id)}/rest/short", new { hitDice = new Dictionary<string, int> { ["fighter"] = 2 } });
-        var tooMany = await s.Dm.Client.PostAsJsonAsync($"{CharacterUrl(character.Id)}/rest/short", new { hitDice = new Dictionary<string, int> { ["fighter"] = 2 } });
+        var rested = await PostAsync(s.Dm, $"{Dnd5eCharacterUrl(character.Id)}/rest/short", new { hitDice = new Dictionary<string, int> { ["fighter"] = 2 } });
+        var tooMany = await s.Dm.Client.PostAsJsonAsync($"{Dnd5eCharacterUrl(character.Id)}/rest/short", new { hitDice = new Dictionary<string, int> { ["fighter"] = 2 } });
 
         Assert.Equal(2, rested.HitDiceUsed["fighter"]);
         Assert.Equal(1, Assert.Single(rested.Sheet.HitDice).Remaining);
@@ -687,7 +687,7 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
         Assert.True(updated.Inspiration);
         var other = await factory.CreateSignedInUserAsync();
         await s.Owner.AddMemberAsync(s.CampaignId, other, CampaignScenario.PlayerRole);
-        var forbidden = await other.Client.PatchAsJsonAsync($"{CharacterUrl(character.Id)}/combat", new { inspiration = false });
+        var forbidden = await other.Client.PatchAsJsonAsync($"{Dnd5eCharacterUrl(character.Id)}/combat", new { inspiration = false });
         Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
     }
 
@@ -699,23 +699,23 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
         var monk = await PatchSheetAsync(s.Player, character.Id, new { classes = new[] { new { classIndex = "monk", level = 4 } } });
         var ki = Assert.Single(monk.Resources, r => r.Key == "ki");
 
-        var created = await s.Player.Client.PostAsJsonAsync($"{CharacterUrl(character.Id)}/resources", new { name = "Varita", max = 7, recharge = "Dawn" });
+        var created = await s.Player.Client.PostAsJsonAsync($"{Dnd5eCharacterUrl(character.Id)}/resources", new { name = "Varita", max = 7, recharge = "Dawn" });
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         var wand = (await created.Content.ReadFromJsonAsync<CharacterResourceDto>())!;
         Assert.False(wand.IsAuto);
 
-        var spent = await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/resources/{wand.Id}/spend", new { amount = 7 });
+        var spent = await PostAsync(s.Player, $"{Dnd5eCharacterUrl(character.Id)}/resources/{wand.Id}/spend", new { amount = 7 });
         Assert.Equal(7, Assert.Single(spent.Resources, r => r.Id == wand.Id).Used);
-        var overspend = await s.Player.Client.PostAsync($"{CharacterUrl(character.Id)}/resources/{wand.Id}/spend", null);
+        var overspend = await s.Player.Client.PostAsync($"{Dnd5eCharacterUrl(character.Id)}/resources/{wand.Id}/spend", null);
         Assert.Equal(HttpStatusCode.BadRequest, overspend.StatusCode);
-        var restored = await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/resources/{wand.Id}/restore", new { amount = 2 });
+        var restored = await PostAsync(s.Player, $"{Dnd5eCharacterUrl(character.Id)}/resources/{wand.Id}/restore", new { amount = 2 });
         Assert.Equal(5, Assert.Single(restored.Resources, r => r.Id == wand.Id).Used);
 
-        var badRecharge = await s.Player.Client.PostAsJsonAsync($"{CharacterUrl(character.Id)}/resources", new { name = "X", max = 1, recharge = "Weekly" });
+        var badRecharge = await s.Player.Client.PostAsJsonAsync($"{Dnd5eCharacterUrl(character.Id)}/resources", new { name = "X", max = 1, recharge = "Weekly" });
         Assert.Equal(HttpStatusCode.BadRequest, badRecharge.StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, (await s.Player.Client.DeleteAsync($"{CharacterUrl(character.Id)}/resources/{ki.Id}")).StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, (await s.Player.Client.DeleteAsync($"{CharacterUrl(character.Id)}/resources/{wand.Id}")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await s.Player.Client.PostAsync($"{CharacterUrl(character.Id)}/resources/{wand.Id}/spend", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await s.Player.Client.DeleteAsync($"{Dnd5eCharacterUrl(character.Id)}/resources/{ki.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Player.Client.DeleteAsync($"{Dnd5eCharacterUrl(character.Id)}/resources/{wand.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await s.Player.Client.PostAsync($"{Dnd5eCharacterUrl(character.Id)}/resources/{wand.Id}/spend", null)).StatusCode);
     }
 
     [Fact]
@@ -726,11 +726,11 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
         var monk = await PatchSheetAsync(s.Player, character.Id, new { classes = new[] { new { classIndex = "monk", level = 4 } } });
         var ki = Assert.Single(monk.Resources, r => r.Key == "ki");
         Assert.True(ki.IsAuto);
-        await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/resources/{ki.Id}/spend", new { amount = 2 });
+        await PostAsync(s.Player, $"{Dnd5eCharacterUrl(character.Id)}/resources/{ki.Id}/spend", new { amount = 2 });
 
-        var forbidden = await s.Player.Client.PostAsJsonAsync($"{CharacterUrl(character.Id)}/resources/{ki.Id}/restore", new { amount = 1 });
-        var restored = await PostAsync(s.Dm, $"{CharacterUrl(character.Id)}/resources/{ki.Id}/restore", new { amount = 1 });
-        var byOwner = await PostAsync(s.Owner, $"{CharacterUrl(character.Id)}/resources/{ki.Id}/restore", new { amount = 1 });
+        var forbidden = await s.Player.Client.PostAsJsonAsync($"{Dnd5eCharacterUrl(character.Id)}/resources/{ki.Id}/restore", new { amount = 1 });
+        var restored = await PostAsync(s.Dm, $"{Dnd5eCharacterUrl(character.Id)}/resources/{ki.Id}/restore", new { amount = 1 });
+        var byOwner = await PostAsync(s.Owner, $"{Dnd5eCharacterUrl(character.Id)}/resources/{ki.Id}/restore", new { amount = 1 });
 
         Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
         Assert.Equal(1, Assert.Single(restored.Resources, r => r.Id == ki.Id).Used);
@@ -745,9 +745,9 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
         var sorcerer = await PatchSheetAsync(s.Player, character.Id, new { classes = new[] { new { classIndex = "sorcerer", level = 3 } } });
         var points = Assert.Single(sorcerer.Resources, r => r.Key == "sorcery-points");
         Assert.True(points.IsAuto);
-        await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/resources/{points.Id}/spend", new { amount = 3 });
+        await PostAsync(s.Player, $"{Dnd5eCharacterUrl(character.Id)}/resources/{points.Id}/spend", new { amount = 3 });
 
-        var restored = await PostAsync(s.Player, $"{CharacterUrl(character.Id)}/resources/{points.Id}/restore", new { amount = 2 });
+        var restored = await PostAsync(s.Player, $"{Dnd5eCharacterUrl(character.Id)}/resources/{points.Id}/restore", new { amount = 2 });
 
         Assert.Equal(1, Assert.Single(restored.Resources, r => r.Id == points.Id).Used);
     }
@@ -790,7 +790,9 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
 
     private static string CharacterUrl(Guid id) => $"/api/v1/characters/{id}";
 
-    private static string SheetUrl(Guid id) => $"{CharacterUrl(id)}/sheet";
+    private static string Dnd5eCharacterUrl(Guid id) => $"/api/v1/systems/dnd5e/characters/{id}";
+
+    private static string SheetUrl(Guid id) => $"{Dnd5eCharacterUrl(id)}/sheet";
 
     private static string OwnerUrl(Guid id) => $"{CharacterUrl(id)}/owner";
 
@@ -840,7 +842,7 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
 
     private static async Task<CharacterDetailDto> PatchCombatAsync(SignedInUser actor, Guid id, object body)
     {
-        var response = await actor.Client.PatchAsJsonAsync($"{CharacterUrl(id)}/combat", body);
+        var response = await actor.Client.PatchAsJsonAsync($"{Dnd5eCharacterUrl(id)}/combat", body);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         return (await response.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
     }

@@ -118,7 +118,7 @@ public class FeatureModifierPackTests(FeatureModifierPackApiFactory factory) : I
         var detail = await PatchAsync(s, hero.Id, level: 3, subclass: Subclass);
         var tides = Assert.Single(detail.Resources, r => r.Key == "chispas-ejemplo-tides-of-chaos");
         Assert.True(tides.IsAuto);
-        var url = $"{ItemTestHelpers.CharacterUrl(hero.Id)}/resources/{tides.Id}";
+        var url = $"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/resources/{tides.Id}";
         Assert.Equal(HttpStatusCode.OK, (await s.Player.Client.PostAsJsonAsync($"{url}/spend", new { amount = 1 })).StatusCode);
 
         var restore = await s.Player.Client.PostAsJsonAsync($"{url}/restore", new { amount = 1 });
@@ -160,7 +160,7 @@ public class FeatureModifierPackTests(FeatureModifierPackApiFactory factory) : I
 
     private static async Task<CharacterDetailDto> PatchAsync(CampaignScenario s, Guid id, int level, string? subclass)
     {
-        var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.CharacterUrl(id)}/sheet", new
+        var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/sheet", new
         {
             classes = new[] { new { classIndex = "sorcerer", subclassIndex = subclass, level } },
             baseAbilities = new { str = 8, dex = 14, con = 14, @int = 10, wis = 10, cha = 16 },
