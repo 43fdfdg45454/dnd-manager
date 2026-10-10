@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/icons.dart';
-import '../../../../../core/ui/action_type.dart';
+import '../../../../../systems/dnd5e/ui/action_type.dart';
 
 import '../combat_support.dart';
 import 'critical_damage_roll.dart';

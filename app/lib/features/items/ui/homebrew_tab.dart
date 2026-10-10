@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/router/app_router.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/domain/campaign_models.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
@@ -14,6 +13,7 @@ import '../domain/item_form_data.dart';
 import 'item_feedback.dart';
 import 'item_fields_form.dart';
 import 'item_search_list.dart';
+import '../../../systems/dnd5e/dnd5e_routes.dart';
 
 /// "Objetos" tab of a campaign: the SRD and homebrew items with search and a
 /// source toggle. At least a DM creates, edits and deletes the homebrew ones.
@@ -62,7 +62,7 @@ class HomebrewTab extends ConsumerWidget {
         campaignId: campaign.id,
         initialSource: ItemSource.all,
         showSourceFilter: true,
-        onSelected: (item) => context.push(AppRoutes.item(item.id)),
+        onSelected: (item) => context.push(Dnd5eRoutes.item(item.id)),
         // Only the campaign's own items can be edited; SRD items are read-only.
         trailingBuilder: isDm
             ? (context, item) => !item.isHomebrew

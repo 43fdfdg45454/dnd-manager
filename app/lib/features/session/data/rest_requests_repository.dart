@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/cache/cached_result.dart';
 import '../../../core/network/api_client.dart';
-import '../../characters/data/models.dart' show RestRequest;
+import '../../../core/characters/models.dart' show RestRequest;
 
 /// Rest requests the DM resolves (phase 16b).
 class RestRequestsRepository {

@@ -15,18 +15,8 @@ import '../../features/campaigns/ui/general/campaign_general_page.dart';
 import '../../features/campaigns/ui/general/campaign_section_page.dart';
 import '../../features/change_requests/ui/change_requests_page.dart';
 import '../../features/characters/ui/character_page.dart';
-import '../../features/characters/ui/invalid_choices_page.dart';
-import '../../features/characters/ui/level_up/level_up_page.dart';
-import '../../features/characters/ui/prepare_spells_page.dart';
-import '../../features/characters/ui/rest_rolls_page.dart';
 import '../../features/characters/ui/sheet_editor_page.dart';
-import '../../features/characters/ui/wizard/character_wizard_page.dart';
-import '../../features/catalog/ui/class_detail_page.dart';
-import '../../features/catalog/ui/beast_page.dart';
 import '../../features/catalog/ui/compendium_page.dart';
-import '../../features/catalog/ui/item_detail_page.dart';
-import '../../features/catalog/ui/race_detail_page.dart';
-import '../../features/catalog/ui/spell_detail_page.dart';
 import '../../features/home/ui/attribution_page.dart';
 import '../../features/home/ui/app_shell.dart';
 import '../../features/home/ui/home_page.dart';
@@ -49,6 +39,7 @@ import '../../features/items/ui/transactions_page.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 import '../server/server_config_controller.dart';
+import '../systems/system_registry.dart';
 
 abstract final class AppRoutes {
   static const splash = '/splash';
@@ -68,13 +59,8 @@ abstract final class AppRoutes {
   static const campaignChangeRequests = '/campaigns/:id/change-requests';
   static const campaignShop = '/campaigns/:id/shops/:shopId';
   static const campaignTransactions = '/campaigns/:id/transactions';
-  static const campaignCharacterNew = '/campaigns/:id/characters/new';
   static const characterDetail = '/characters/:id';
   static const characterEditor = '/characters/:id/edit';
-  static const characterLevelUpPath = '/characters/:id/level-up';
-  static const characterPrepareSpellsPath = '/characters/:id/prepare-spells';
-  static const characterInvalidChoicesPath = '/characters/:id/invalid-choices';
-  static const characterRestRollsPath = '/characters/:id/rest-rolls';
   static const campaignLoreNew = '/campaigns/:id/lore/new';
   static const campaignLoreEntry = '/campaigns/:id/lore/:entryId';
   static const campaignLoreEdit = '/campaigns/:id/lore/:entryId/edit';
@@ -89,11 +75,6 @@ abstract final class AppRoutes {
   static const compendium = '/compendium';
   static const dice = '/dice';
   static const profile = '/profile';
-  static const spellDetail = '/compendium/spells/:index';
-  static const itemDetail = '/compendium/items/:id';
-  static const classDetail = '/compendium/classes/:index';
-  static const raceDetail = '/compendium/races/:index';
-  static const beastDetail = '/compendium/beasts/:index';
 
   /// Location of the campaign with the given [id]: the router sends it to
   /// "Mi sesión" or "Mesa del DM" according to the role, or to "Campaña"
@@ -162,36 +143,9 @@ abstract final class AppRoutes {
   /// PDF viewer of the library document [docId].
   static String libraryDocument(String docId) => '/library/$docId/view';
 
-  /// Creation wizard of a new character; DMs may preselect the owner.
-  static String characterNew(String campaignId, {String? ownerUserId}) =>
-      '/campaigns/$campaignId/characters/new'
-      '${ownerUserId == null ? '' : '?ownerUserId=${Uri.encodeQueryComponent(ownerUserId)}'}';
-
   static String character(String id) => '/characters/$id';
 
   static String characterEdit(String id) => '/characters/$id/edit';
-
-  /// Level-up wizard of a character with a level granted by the DM.
-  static String characterLevelUp(String id) => '/characters/$id/level-up';
-
-  /// "Prepara tus conjuros" (forced while the preparation is pending).
-  static String characterPrepareSpells(String id) => '/characters/$id/prepare-spells';
-
-  /// "Sustituye lo que ya no cumples" (forced while there are invalid picks).
-  static String characterInvalidChoices(String id) => '/characters/$id/invalid-choices';
-
-  /// "Tira tus dados" (forced while a rest roll is pending).
-  static String characterRestRolls(String id) => '/characters/$id/rest-rolls';
-
-  static String spell(String index) => '/compendium/spells/${Uri.encodeComponent(index)}';
-
-  static String item(String id) => '/compendium/items/${Uri.encodeComponent(id)}';
-
-  static String dndClass(String index) => '/compendium/classes/${Uri.encodeComponent(index)}';
-
-  static String race(String index) => '/compendium/races/${Uri.encodeComponent(index)}';
-
-  static String beast(String index) => '/compendium/beasts/${Uri.encodeComponent(index)}';
 }
 
 /// Computes the redirect target for [location] given the session [auth] state,
@@ -357,17 +311,24 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           StatefulShellBranch(
             routes: [
-              GoRoute(path: AppRoutes.compendium, builder: (context, state) => const CompendiumPage()),
+              GoRoute(
+                path: AppRoutes.compendium,
+                builder: (context, state) => const CompendiumPage(),
+              ),
             ],
           ),
           StatefulShellBranch(
             routes: [GoRoute(path: AppRoutes.dice, builder: (context, state) => const DicePage())],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: AppRoutes.library, builder: (context, state) => const LibraryPage())],
+            routes: [
+              GoRoute(path: AppRoutes.library, builder: (context, state) => const LibraryPage()),
+            ],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: AppRoutes.profile, builder: (context, state) => const ProfilePage())],
+            routes: [
+              GoRoute(path: AppRoutes.profile, builder: (context, state) => const ProfilePage()),
+            ],
           ),
         ],
       ),
@@ -390,13 +351,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.campaignTransactions,
         builder: (context, state) => TransactionsPage(campaignId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: AppRoutes.campaignCharacterNew,
-        builder: (context, state) => CharacterWizardPage(
-          campaignId: state.pathParameters['id']!,
-          ownerUserId: state.uri.queryParameters['ownerUserId'],
-        ),
       ),
       GoRoute(
         path: AppRoutes.campaignLoreNew,
@@ -467,42 +421,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.characterEditor,
         builder: (context, state) => SheetEditorPage(characterId: state.pathParameters['id']!),
       ),
-      GoRoute(
-        path: AppRoutes.characterLevelUpPath,
-        builder: (context, state) => LevelUpPage(characterId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: AppRoutes.characterPrepareSpellsPath,
-        builder: (context, state) => PrepareSpellsPage(characterId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: AppRoutes.characterInvalidChoicesPath,
-        builder: (context, state) => InvalidChoicesPage(characterId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: AppRoutes.characterRestRollsPath,
-        builder: (context, state) => RestRollsPage(characterId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: AppRoutes.spellDetail,
-        builder: (context, state) => SpellDetailPage(index: state.pathParameters['index']!),
-      ),
-      GoRoute(
-        path: AppRoutes.itemDetail,
-        builder: (context, state) => ItemDetailPage(id: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: AppRoutes.classDetail,
-        builder: (context, state) => ClassDetailPage(index: state.pathParameters['index']!),
-      ),
-      GoRoute(
-        path: AppRoutes.raceDetail,
-        builder: (context, state) => RaceDetailPage(index: state.pathParameters['index']!),
-      ),
-      GoRoute(
-        path: AppRoutes.beastDetail,
-        builder: (context, state) => BeastPage(index: state.pathParameters['index']!),
-      ),
+      // Routes of the registered game systems (D&D 5e: level-up, spell
+      // preparation, creation wizard, compendium details...).
+      for (final system in ref.watch(gameSystemsProvider)) ...system.routes(rootNavigatorKey),
     ],
   );
 

@@ -17,10 +17,10 @@ import '../../../characters/ui/character_tabs.dart' show titleFromSpellIndex;
 import '../../../characters/ui/combat/combat_support.dart' show promptNumber;
 import '../../../characters/ui/combat/concentration_flow.dart' show resolveDamageOutcome;
 import '../../../characters/ui/combat/vitals_section.dart' show showConditionPicker;
-import '../../data/models.dart';
-import '../../data/session_controllers.dart';
 import '../session_feedback.dart';
 import 'party_roster.dart' show HpBar;
+import '../../../../systems/dnd5e/session/party_models.dart';
+import '../../../../systems/dnd5e/session/party_controller.dart';
 
 /// Opens the quick controls of the DM for one character of the party.
 Future<void> showDmCharacterSheet(

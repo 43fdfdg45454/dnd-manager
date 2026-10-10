@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_icon.dart';
 import '../../../../../core/theme/components.dart';
 import '../../../../../core/theme/icons.dart';
-import '../../../../../core/ui/spell_category.dart';
+import '../../../../../systems/dnd5e/ui/spell_category.dart';
 import '../../../data/models.dart';
 import '../../character_tabs.dart' show titleFromSpellIndex;
 import '../combat_support.dart';

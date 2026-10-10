@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'breakdown.dart';
-import '../../features/characters/domain/class_theme.dart' show classThemes;
+import '../systems/system_registry.dart';
 import '../theme/app_icon.dart';
 import '../theme/icons.dart';
 import '../theme/tokens.dart';
 
-/// Icon of a breakdown part, by its `source`.
-Widget breakdownSourceIcon(BreakdownPart part, {double size = 20, Color? color}) {
+/// Icon of a breakdown part, by its `source`. [systemIcon] is the one the
+/// game system gives to the part (`GameSystemUi.breakdownIcon`; D&D 5e: the
+/// class of a class or feature part).
+Widget breakdownSourceIcon(
+  BreakdownPart part, {
+  double size = 20,
+  Color? color,
+  AppIcons? systemIcon,
+}) {
+  if (systemIcon != null) return AppIcon(systemIcon, size: size, color: color);
   switch (part.source) {
     case 'race':
     case 'subrace':
@@ -24,12 +33,6 @@ Widget breakdownSourceIcon(BreakdownPart part, {double size = 20, Color? color})
       return Icon(Icons.edit, size: size, color: color);
     case 'class':
     case 'feature':
-      final label = part.label.toLowerCase();
-      for (final theme in classThemes.values) {
-        if (label.contains(theme.labelEs.toLowerCase())) {
-          return AppIcon(theme.icon, size: size, color: color);
-        }
-      }
       return AppIcon(AppIcons.book, size: size, color: color);
     case 'ability':
       return Icon(Icons.bolt, size: size, color: color);
@@ -88,6 +91,13 @@ class BreakdownSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tokens = context.tokens;
+    // The game system names the icon of class and feature parts. Read from
+    // the enclosing ProviderScope, when there is one (the sheet is also shown
+    // by widgets pumped without it).
+    final system = context
+        .findAncestorWidgetOfExactType<UncontrolledProviderScope>()
+        ?.container
+        .read(defaultGameSystemUiProvider);
     return SafeArea(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
@@ -122,6 +132,7 @@ class BreakdownSheet extends StatelessWidget {
                     children: [
                       breakdownSourceIcon(
                         breakdown.parts[i],
+                        systemIcon: system?.breakdownIcon(breakdown.parts[i]),
                         color:
                             breakdown.parts[i].source == 'item' ||
                                 breakdown.parts[i].source == 'override'

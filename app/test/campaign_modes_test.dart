@@ -4,7 +4,7 @@ import 'package:opentrpg/features/campaigns/ui/general/campaign_section_page.dar
 import 'package:opentrpg/features/catalog/data/models.dart' show Condition, ItemSummary;
 import 'package:opentrpg/features/characters/data/models.dart';
 import 'package:opentrpg/features/items/data/models.dart';
-import 'package:opentrpg/features/session/data/models.dart';
+import 'package:opentrpg/systems/dnd5e/session/party_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

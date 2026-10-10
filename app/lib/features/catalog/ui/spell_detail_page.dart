@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/ui/action_type.dart';
+import '../../../systems/dnd5e/ui/action_type.dart';
 import '../../../core/ui/source_chip.dart';
-import '../../../core/ui/spell_category.dart';
+import '../../../systems/dnd5e/ui/spell_category.dart';
 import '../data/catalog_controllers.dart';
 import '../data/models.dart' hide Page;
 import '../domain/catalog_format.dart';

@@ -1,5 +1,5 @@
 import 'package:opentrpg/core/realtime/realtime_events.dart';
-import 'package:opentrpg/core/ui/spell_category.dart';
+import 'package:opentrpg/systems/dnd5e/ui/spell_category.dart';
 import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
 import 'package:opentrpg/features/catalog/data/models.dart' show SpellDetail;
 import 'package:opentrpg/features/catalog/ui/spell_detail_page.dart';

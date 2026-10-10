@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/app_icon.dart';
 import '../../../../../core/theme/icons.dart';
-import '../../../../../core/ui/action_type.dart';
+import '../../../../../systems/dnd5e/ui/action_type.dart';
 
 import '../../../data/models.dart';
 import '../../../domain/class_theme.dart';

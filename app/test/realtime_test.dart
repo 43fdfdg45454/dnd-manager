@@ -1,5 +1,6 @@
 import 'package:opentrpg/core/network/connectivity.dart';
 import 'package:opentrpg/core/realtime/realtime_events.dart';
+import 'package:opentrpg/systems/dnd5e/dnd5e_events.dart';
 import 'package:opentrpg/core/realtime/realtime_hub.dart';
 import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
 import 'package:opentrpg/features/campaigns/ui/campaign_shell.dart';
@@ -127,7 +128,7 @@ void main() {
         'membership.removed': MembershipRemoved,
       };
       for (final MapEntry(key: type, value: expected) in types.entries) {
-        final parsed = CampaignEvent.fromJson({'type': type, 'campaignId': 'c1'});
+        final parsed = dnd5eEventOf(CampaignEvent.fromJson({'type': type, 'campaignId': 'c1'}));
         expect(parsed.runtimeType, expected, reason: type);
       }
     });
@@ -143,8 +144,8 @@ void main() {
       expect(event.isFor('c1'), isTrue);
 
       final unknown = CampaignEvent.fromJson({'type': 'dragon.arrived', 'campaignId': 'c1'});
-      expect(unknown, isA<Unknown>());
-      expect((unknown as Unknown).rawType, 'dragon.arrived');
+      expect(unknown, isA<UnknownCampaignEvent>());
+      expect((unknown as UnknownCampaignEvent).rawType, 'dragon.arrived');
       expect(unknown.at, isNull);
     });
   });
@@ -333,7 +334,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('realtime-notice-request-resolved')), findsOneWidget);
-      expect(find.text('El DM rechazó tu solicitud (edición de hoja) de Thorin: Demasiado'), findsOneWidget);
+      expect(
+        find.text('El DM rechazó tu solicitud (edición de hoja) de Thorin: Demasiado'),
+        findsOneWidget,
+      );
 
       await tester.tap(find.text('Ver'));
       await tester.pumpAndSettle();

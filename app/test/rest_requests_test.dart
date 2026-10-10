@@ -1,4 +1,5 @@
 import 'package:opentrpg/core/realtime/realtime_events.dart';
+import 'package:opentrpg/systems/dnd5e/dnd5e_events.dart';
 import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
 import 'package:opentrpg/features/characters/data/models.dart';
 import 'package:opentrpg/features/characters/ui/combat/rest_section.dart'

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/components.dart';
-import '../../../../core/ui/action_type.dart';
-import '../../../../core/ui/spell_category.dart';
+import '../../../../systems/dnd5e/ui/action_type.dart';
+import '../../../../systems/dnd5e/ui/spell_category.dart';
 import '../../../../core/ui/stat_value.dart';
 import '../../../catalog/data/models.dart' show RollTable, SpellDetail;
 import '../../../catalog/domain/catalog_format.dart' show spellLevelLabel;

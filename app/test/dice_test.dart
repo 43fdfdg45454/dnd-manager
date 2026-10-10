@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'helpers/fakes.dart';
+
 /// Answers the given faces in order (1-based), repeating the last one.
 class SequenceRandom implements Random {
   SequenceRandom(this.faces);
@@ -214,6 +216,7 @@ void main() {
           localPreferencesProvider.overrideWithValue(
             prefs ?? await SharedPreferences.getInstance(),
           ),
+          dnd5eSystemsOverride(),
         ],
       );
       addTearDown(container.dispose);

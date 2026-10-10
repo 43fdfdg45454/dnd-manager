@@ -1,4 +1,3 @@
-import 'package:opentrpg/core/router/app_router.dart';
 import 'package:opentrpg/core/storage/local_preferences.dart';
 import 'package:opentrpg/features/catalog/data/beast_models.dart';
 import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
@@ -15,6 +14,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dice_test.dart' show SequenceRandom;
 import 'helpers/catalog_fakes.dart';
 import 'helpers/motion.dart';
+
+import 'package:opentrpg/systems/dnd5e/dnd5e_routes.dart';
 
 const _wolf = Beast(
   index: 'wolf',
@@ -78,7 +79,7 @@ Future<void> _pump(WidgetTester tester, Widget home, FakeCatalogRepository catal
     routes: [
       GoRoute(path: '/', builder: (_, _) => home),
       GoRoute(
-        path: AppRoutes.beastDetail,
+        path: Dnd5eRoutes.beastDetail,
         builder: (_, state) => BeastPage(index: state.pathParameters['index']!),
       ),
     ],

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_icon.dart';
 import '../../../../core/theme/components.dart';
 import '../../../../core/theme/icons.dart';
-import '../../../../core/ui/action_type.dart';
+import '../../../../systems/dnd5e/ui/action_type.dart';
 import '../../../../core/ui/stat_value.dart';
 import '../../../catalog/ui/catalog_detail_links.dart' show DetailInfoButton;
 import '../../../dice/domain/dice_expression.dart';

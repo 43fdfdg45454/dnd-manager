@@ -1,4 +1,3 @@
-import '../../catalog/data/models.dart' show ItemModifier;
 import '../../catalog/domain/item_modifier_format.dart';
 import '../../items/data/models.dart' show ItemOverrides;
 import '../../items/domain/items_format.dart';
@@ -6,6 +5,7 @@ import '../../../core/characters/change_detail.dart';
 import '../data/models.dart';
 import 'character_format.dart';
 import 'payload_format.dart';
+import '../../../systems/dnd5e/items/dnd5e_item.dart';
 
 export '../../../core/characters/change_detail.dart';
 
@@ -31,9 +31,8 @@ ChangeDetail? describeDnd5eChange(ChangeRequest request) {
     ChangeRequestType.editSheet => SheetChangeDetail(_sheetFields(payload, before)),
     ChangeRequestType.addItem || ChangeRequestType.customItem => _itemDetail(payload, before),
     ChangeRequestType.companion => SheetChangeDetail(_companionFields(payload, before)),
-    ChangeRequestType.activate || ChangeRequestType.other => PlainChangeDetail(
-      describePayload(payload),
-    ),
+    ChangeRequestType.activate ||
+    ChangeRequestType.other => PlainChangeDetail(describePayload(payload)),
     ChangeRequestType.removeItem || ChangeRequestType.adjustMoney => null,
   };
 }
@@ -87,7 +86,9 @@ List<FieldChange> _abilityFields(Object? after, Object? before) {
 
 ItemChangeDetail _itemDetail(Map<String, dynamic> payload, Map<String, dynamic>? before) {
   final overrides = ItemOverrides.fromJson(payload['overrides']);
-  final template = before?['template'] is Map ? Map<String, dynamic>.from(before!['template'] as Map) : null;
+  final template = before?['template'] is Map
+      ? Map<String, dynamic>.from(before!['template'] as Map)
+      : null;
   final name = overrides.name ?? (template?['name'] as String?) ?? 'Objeto';
   final lines = <PayloadLine>[];
   void add(String label, Object? value) {
@@ -106,11 +107,12 @@ ItemChangeDetail _itemDetail(Map<String, dynamic> payload, Map<String, dynamic>?
     final type = overrides.damageType ?? _nameOf(templateDamage?['type']);
     add('Daño', type == null ? damageDice : '$damageDice ${damageTypeLabel(type)}');
   }
-  final armorBase = overrides.armorClassBase ?? templateArmor?['base'] ?? templateArmor?['armorClassBase'];
+  final armorBase =
+      overrides.armorClassBase ?? templateArmor?['base'] ?? templateArmor?['armorClassBase'];
   if (armorBase != null) add('CA', armorBase);
   add('Propiedades', overrides.properties ?? template?['properties']);
-  if (overrides.attackBonus != null) add('Bonificador de ataque', formatModifier(overrides.attackBonus!));
-  if (overrides.damageBonus != null) add('Bonificador de daño', formatModifier(overrides.damageBonus!));
+  if (overrides.attackBonus case final bonus?) add('Bonificador de ataque', formatModifier(bonus));
+  if (overrides.damageBonus case final bonus?) add('Bonificador de daño', formatModifier(bonus));
   if (overrides.requiresAttunement ?? (template?['requiresAttunement'] == true)) {
     add('Sintonización', 'Requiere sintonización');
   }
@@ -124,7 +126,10 @@ ItemChangeDetail _itemDetail(Map<String, dynamic> payload, Map<String, dynamic>?
   if (effects != null && effects.isNotEmpty) add('Efectos', effects);
 
   final modifiers =
-      overrides.modifiers ?? (template == null ? const <ItemModifier>[] : ItemModifier.listFromJson(template['modifiers']));
+      overrides.modifiers ??
+      (template == null
+          ? const <ItemModifier>[]
+          : ItemModifier.listFromJson(template['modifiers']));
   return ItemChangeDetail(
     name: name,
     quantity: _int(payload['quantity']) ?? 1,
@@ -142,8 +147,11 @@ String? _nameOf(Object? value) => switch (value) {
   _ => null,
 };
 
-List<String>? _stringList(Object? value) =>
-    value is List ? [for (final v in value) '$v'] : value is String ? [value] : null;
+List<String>? _stringList(Object? value) => value is List
+    ? [for (final v in value) '$v']
+    : value is String
+    ? [value]
+    : null;
 
 /// "Fuerza", "Destreza"... from a short key.
 String abilityLabel(String key) => abilityName(key);

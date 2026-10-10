@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_error.dart';
 import '../../../core/ui/offline_widgets.dart';
-import '../../../core/ui/spell_category.dart';
+import '../../../systems/dnd5e/ui/spell_category.dart';
 import '../../catalog/data/catalog_controllers.dart';
 import '../../catalog/data/catalog_repository.dart';
 import '../../catalog/data/models.dart' show ClassSummary, titleFromIndex;

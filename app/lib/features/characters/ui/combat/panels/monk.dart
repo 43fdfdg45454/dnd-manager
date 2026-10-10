@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/app_icon.dart';
 import '../../../../../core/theme/icons.dart';
-import '../../../../../core/ui/action_type.dart';
+import '../../../../../systems/dnd5e/ui/action_type.dart';
 
 import '../../../../dice/domain/dice_expression.dart' show bonusSuffix;
 import 'critical_damage_roll.dart';

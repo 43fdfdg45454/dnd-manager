@@ -15,6 +15,8 @@ import 'package:go_router/go_router.dart';
 import 'helpers/catalog_fakes.dart';
 import 'helpers/fakes.dart';
 
+import 'package:opentrpg/systems/dnd5e/dnd5e_routes.dart';
+
 final _wizard = ClassSummary(
   index: 'wizard',
   name: 'Wizard',
@@ -121,7 +123,7 @@ const _fighterJson = <String, dynamic>{
 };
 
 Widget _scope(FakeCatalogRepository repository, Widget child) => ProviderScope(
-  overrides: [catalogRepositoryProvider.overrideWithValue(repository)],
+  overrides: [catalogRepositoryProvider.overrideWithValue(repository), dnd5eSystemsOverride()],
   child: child,
 );
 
@@ -438,7 +440,7 @@ void main() {
         routes: [
           GoRoute(path: AppRoutes.compendium, builder: (_, _) => const CompendiumPage()),
           GoRoute(
-            path: AppRoutes.spellDetail,
+            path: Dnd5eRoutes.spellDetail,
             builder: (_, state) => SpellDetailPage(index: state.pathParameters['index']!),
           ),
         ],

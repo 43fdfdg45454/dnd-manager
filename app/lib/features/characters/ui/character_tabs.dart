@@ -3,13 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_error.dart';
-import '../../../core/router/app_router.dart';
 import '../../../core/theme/textures.dart';
 import '../../../core/theme/typography.dart';
-import '../../../core/ui/action_type.dart';
+import '../../../systems/dnd5e/ui/action_type.dart';
 import '../../../core/ui/stat_tiles.dart';
 import '../../../core/ui/stat_value.dart';
-import '../../../core/ui/spell_category.dart';
+import '../../../systems/dnd5e/ui/spell_category.dart';
 import '../../catalog/data/catalog_controllers.dart';
 import '../../catalog/data/models.dart' show ClassDetail, Feature, ItemModifier, RaceDetail, Trait;
 import '../../catalog/domain/catalog_format.dart';
@@ -26,6 +25,7 @@ import 'combat/companion_section.dart';
 import 'level_up/character_choices_section.dart';
 import 'skill_rolls.dart' show rollSkill, rollSkillWithMode;
 import '../../../systems/dnd5e/characters/dnd5e_characters_controller.dart';
+import '../../../systems/dnd5e/dnd5e_routes.dart';
 
 /// Icon with the note of an override, shown on long press. Renders nothing for
 /// values that were not overridden.
@@ -267,7 +267,7 @@ class _InvalidChoicesNotice extends StatelessWidget {
               alignment: Alignment.centerRight,
               child: TextButton(
                 key: const Key('invalid-choices-open'),
-                onPressed: () => context.push(AppRoutes.characterInvalidChoices(character.id)),
+                onPressed: () => context.push(Dnd5eRoutes.invalidChoices(character.id)),
                 child: const Text('Sustituir'),
               ),
             ),

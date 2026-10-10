@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/cache/cached_result.dart';
 import '../../../core/network/api_client.dart';
-import '../../catalog/data/models.dart' show Page;
+import '../../../core/catalog/catalog_models.dart' show Page;
 import 'models.dart';
 
 /// Session endpoints: `/campaigns/{id}/sessions`, `/campaigns/{id}/journal`,

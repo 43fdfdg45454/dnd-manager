@@ -99,6 +99,7 @@ class AppFakes {
     messagesRepositoryProvider.overrideWithValue(messages),
     restRequestsRepositoryProvider.overrideWithValue(restRequests),
     fakeSystemsOverride(),
+    dnd5eSystemsOverride(),
   ];
 }
 

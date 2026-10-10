@@ -5,6 +5,7 @@ import 'package:opentrpg/features/items/data/inventory_repository.dart';
 import 'package:opentrpg/features/items/data/models.dart';
 import 'package:opentrpg/features/items/data/shops_repository.dart';
 import 'package:opentrpg/features/items/domain/items_format.dart';
+import 'package:opentrpg/systems/dnd5e/items/dnd5e_item.dart';
 
 import 'character_fakes.dart';
 import 'fakes.dart';
@@ -29,7 +30,7 @@ EffectiveItem makeEffective({
   String? damageDice = '1d8',
   bool requiresAttunement = false,
   List<ItemModifier> modifiers = const [],
-}) => EffectiveItem(
+}) => dnd5eEffectiveItem(
   name: name,
   category: category,
   requiresAttunement: requiresAttunement,

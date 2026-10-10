@@ -25,7 +25,7 @@ import 'package:opentrpg/features/characters/ui/combat/vitals_section.dart'
 import 'package:opentrpg/features/characters/ui/combat/wild_magic_surge.dart'
     show isWildMagicSurgeKey;
 import 'package:opentrpg/features/dice/data/dice_controller.dart';
-import 'package:opentrpg/features/session/data/models.dart' show PartyAdjustment;
+import 'package:opentrpg/systems/dnd5e/session/party_models.dart' show PartyAdjustment;
 import 'package:opentrpg/features/session/data/party_repository.dart';
 import 'package:opentrpg/features/items/data/inventory_repository.dart';
 import 'package:flutter/material.dart' hide Page;
@@ -41,6 +41,7 @@ import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
 import 'helpers/item_fakes.dart';
 import 'helpers/motion.dart';
+
 import 'package:opentrpg/systems/dnd5e/characters/dnd5e_characters_repository.dart';
 
 /// Opens `/characters/ch1` (or [location]) with the fakes. [face] is what every

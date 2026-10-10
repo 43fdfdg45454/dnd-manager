@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../cache/stale_data.dart';
 import '../../features/campaigns/data/campaigns_repository.dart';
-import '../../features/session/data/party_repository.dart';
+import '../systems/system_registry.dart';
 import '../theme/contrast.dart';
 import '../theme/tokens.dart';
 import '../ui/offline_widgets.dart';
@@ -59,11 +59,13 @@ class ConnectionBanner extends ConsumerWidget {
       );
     }
 
-    // The campaign tree and the party of the DM table (a route of the game system).
+    // The campaign tree and the extra scope of the game system (D&D 5e: the
+    // party of the DM table, a route of the system).
+    final systemScope = ref.watch(campaignSystemUiProvider(campaignId)).staleScope(campaignId);
     DateTime? stale;
     for (final scope in [
       staleTree(CampaignsRepository.campaignPath(campaignId)),
-      staleTree(PartyRepository.partyPath(campaignId)),
+      if (systemScope != null) staleTree(systemScope),
     ]) {
       final since = ref.watch(staleSinceProvider(scope));
       if (since != null && (stale == null || since.isBefore(stale))) stale = since;

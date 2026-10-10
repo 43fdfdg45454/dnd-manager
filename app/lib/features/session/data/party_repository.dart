@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/cache/cached_result.dart';
 import '../../../core/network/api_client.dart';
 import '../../characters/data/models.dart' show DamageOutcome;
-import 'models.dart';
+import '../../../systems/dnd5e/session/party_models.dart';
 
 /// DM tools for the table under `/api/v1/systems/dnd5e/campaigns/{id}/party`
 /// (at least DM).

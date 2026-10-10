@@ -9,6 +9,7 @@ import 'package:opentrpg/core/auth/user_dto.dart';
 import 'package:opentrpg/core/server/server_config.dart';
 import 'package:opentrpg/core/server/server_config_repository.dart';
 import 'package:opentrpg/core/server/server_probe.dart';
+import 'package:opentrpg/core/systems/system_registry.dart';
 import 'package:opentrpg/features/admin/data/admin_users_repository.dart';
 import 'package:opentrpg/features/admin/domain/paged_users.dart';
 import 'package:opentrpg/features/campaigns/data/campaigns_repository.dart';
@@ -17,6 +18,7 @@ import 'package:opentrpg/features/home/data/server_info.dart';
 import 'package:opentrpg/features/home/data/server_info_repository.dart';
 import 'package:opentrpg/features/systems/data/systems_repository.dart';
 import 'package:opentrpg/features/systems/domain/game_system.dart';
+import 'package:opentrpg/systems/dnd5e/dnd5e_ui.dart';
 
 UserDto makeUser({
   String id = 'u1',
@@ -581,3 +583,7 @@ class FakeSystemsRepository implements SystemsRepository {
 /// Overrides the systems backend with [FakeSystemsRepository].
 Override fakeSystemsOverride([List<GameSystem>? systems]) =>
     systemsRepositoryProvider.overrideWithValue(FakeSystemsRepository(systems));
+
+/// Registers the D&D 5e module (its routes, catalog sources, dice classes...),
+/// as `main.dart` does.
+Override dnd5eSystemsOverride() => gameSystemsProvider.overrideWithValue(const [Dnd5eUi()]);

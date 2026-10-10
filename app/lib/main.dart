@@ -10,7 +10,9 @@ import 'core/network/connectivity.dart';
 import 'core/network/trust_store.dart';
 import 'core/server/server_config_repository.dart';
 import 'core/storage/local_preferences.dart';
+import 'core/systems/system_registry.dart';
 import 'core/update/update_controller.dart';
+import 'systems/dnd5e/dnd5e_ui.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +27,8 @@ Future<void> main() async {
   runApp(
     ProviderScope(
       overrides: [
+        // The game systems this build brings; the core never imports them.
+        gameSystemsProvider.overrideWithValue(const [Dnd5eUi()]),
         serverConfigRepositoryProvider.overrideWithValue(ServerConfigRepository(prefs)),
         localPreferencesProvider.overrideWithValue(prefs),
         responseCacheProvider.overrideWithValue(responseCache),

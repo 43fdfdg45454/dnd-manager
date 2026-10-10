@@ -19,6 +19,7 @@ import 'package:opentrpg/features/items/ui/shop_catalog_page.dart';
 import 'package:opentrpg/features/items/ui/shop_page.dart';
 import 'package:opentrpg/features/items/ui/transactions_page.dart';
 import 'package:opentrpg/features/session/data/messages_repository.dart';
+import 'package:opentrpg/systems/dnd5e/items/dnd5e_item.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -186,20 +187,18 @@ void main() {
 
     test('canEquip admite objetos sin categoría de equipo que hacen algo', () {
       const bonus = ItemModifier(kind: 'AbilityBonus', target: 'str', value: 2);
-      expect(canEquip(const EffectiveItem(name: 'Espada', category: 'Weapon')), isTrue);
+      expect(canEquip(dnd5eEffectiveItem(name: 'Espada', category: 'Weapon')), isTrue);
       expect(
-        canEquip(const EffectiveItem(name: 'Amuleto', category: 'Other', modifiers: [bonus])),
+        canEquip(dnd5eEffectiveItem(name: 'Amuleto', category: 'Other', modifiers: [bonus])),
         isTrue,
       );
       expect(
-        canEquip(
-          const EffectiveItem(name: 'Broche', category: 'AdventuringGear', effects: ['Luz']),
-        ),
+        canEquip(dnd5eEffectiveItem(name: 'Broche', category: 'AdventuringGear', effects: ['Luz'])),
         isTrue,
       );
-      expect(canEquip(const EffectiveItem(name: 'Cuerda', category: 'AdventuringGear')), isFalse);
+      expect(canEquip(dnd5eEffectiveItem(name: 'Cuerda', category: 'AdventuringGear')), isFalse);
       expect(
-        canEquip(const EffectiveItem(name: 'Elixir', category: 'Consumable', modifiers: [bonus])),
+        canEquip(dnd5eEffectiveItem(name: 'Elixir', category: 'Consumable', modifiers: [bonus])),
         isFalse,
       );
     });
@@ -211,7 +210,7 @@ void main() {
 
     test('ItemOverrides.toJson solo envía los campos definidos', () {
       expect(const ItemOverrides().toJson(), isEmpty);
-      const overrides = ItemOverrides(damageDice: '1d10', stealthDisadvantage: false);
+      final overrides = dnd5eItemOverrides(damageDice: '1d10', stealthDisadvantage: false);
       expect(overrides.toJson(), {'damageDice': '1d10', 'stealthDisadvantage': false});
       expect(overrides.definedFields, {'damageDice', 'stealthDisadvantage'});
       expect(ItemOverrides.fromJson({'name': 'X', 'effects': <String>[]}).toJson(), {
@@ -283,8 +282,8 @@ void main() {
       expect(remove.toJson(), {'modifiers': <Object>[]});
       expect(remove.definedFields, {'modifiers'});
 
-      const some = ItemOverrides(
-        modifiers: [ItemModifier(kind: 'AbilitySet', target: 'str', value: 19)],
+      final some = dnd5eItemOverrides(
+        modifiers: const [ItemModifier(kind: 'AbilitySet', target: 'str', value: 19)],
       );
       expect(some.toJson(), {
         'modifiers': [
@@ -422,7 +421,7 @@ void main() {
           'ch1': [
             makeCharacterItem(
               id: 'mod',
-              overrides: const ItemOverrides(damageDice: '1d10'),
+              overrides: dnd5eItemOverrides(damageDice: '1d10'),
               effective: makeEffective(name: 'Longsword +1', damageDice: '1d10'),
             ),
             makeCharacterItem(id: 'plain', templateId: 't-dagger'),
@@ -906,8 +905,8 @@ void main() {
           'ch1': [
             makeCharacterItem(
               id: 'gloves',
-              overrides: const ItemOverrides(
-                modifiers: [ItemModifier(kind: 'AbilityBonus', target: 'dex', value: 3)],
+              overrides: dnd5eItemOverrides(
+                modifiers: const [ItemModifier(kind: 'AbilityBonus', target: 'dex', value: 3)],
               ),
               effective: makeEffective(
                 name: 'Guantes ágiles',

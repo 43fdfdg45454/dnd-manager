@@ -4,9 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_error.dart';
 import '../../../core/theme/components.dart';
-import '../../../core/ui/action_type.dart';
+import '../../../systems/dnd5e/ui/action_type.dart';
 import '../../../core/ui/offline_widgets.dart';
-import '../../../core/ui/spell_category.dart';
+import '../../../systems/dnd5e/ui/spell_category.dart';
 import '../../catalog/domain/catalog_format.dart';
 import '../../catalog/ui/catalog_detail_links.dart';
 import '../data/characters_controller.dart';
