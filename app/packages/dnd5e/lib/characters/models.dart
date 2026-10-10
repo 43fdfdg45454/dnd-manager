@@ -1156,6 +1156,7 @@ class Dnd5eCharacter {
     this.feats = const [],
     this.optionCosts = const [],
     this.companion,
+    this.companions = const [],
     this.companionFeature,
     this.companionPending = false,
     this.raceCatalogMissing = false,
@@ -1207,6 +1208,12 @@ class Dnd5eCharacter {
       companion: _map(json['companion']) == null
           ? null
           : CharacterCompanion.fromJson(_map(json['companion'])!),
+      companions: json['companions'] is List
+          ? _objects(json['companions'], CharacterCompanion.fromJson)
+          : [
+              if (_map(json['companion']) case final Map<String, dynamic> one)
+                CharacterCompanion.fromJson(one),
+            ],
       companionFeature: _map(json['companionFeature']) == null
           ? null
           : CompanionFeature.fromJson(_map(json['companionFeature'])!),
@@ -1282,6 +1289,10 @@ class Dnd5eCharacter {
 
   /// The animal companion, or null (phase 25, block 6).
   final CharacterCompanion? companion;
+
+  /// Every companion, oldest first (several when the feature allows it);
+  /// `[companion]` when the server does not send the list.
+  final List<CharacterCompanion> companions;
 
   /// The companion feature the character has reached, or null.
   final CompanionFeature? companionFeature;
@@ -1372,6 +1383,7 @@ extension Dnd5eCharacterDetail on CharacterDetail {
   List<CharacterFeat> get feats => dnd5e.feats;
   List<CharacterOptionCost> get optionCosts => dnd5e.optionCosts;
   CharacterCompanion? get companion => dnd5e.companion;
+  List<CharacterCompanion> get companions => dnd5e.companions;
   CompanionFeature? get companionFeature => dnd5e.companionFeature;
   bool get companionPending => dnd5e.companionPending;
   bool get raceCatalogMissing => dnd5e.raceCatalogMissing;

@@ -40,20 +40,64 @@ class CompanionSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = character;
     final feature = c.companionFeature;
-    final companion = c.companion;
-    if (companion != null) {
-      return CompanionCard(character: c, companion: companion, canEdit: canEdit, isDm: isDm);
+    final companions = c.companions.isNotEmpty ? c.companions : [?c.companion];
+    if (companions.isNotEmpty) {
+      final budgetLeft = feature?.budgetLeft(companions);
+      final canAdd =
+          feature != null &&
+          companions.length < feature.maxCount &&
+          (budgetLeft == null || budgetLeft > 0);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final (i, companion) in companions.indexed)
+            CompanionCard(
+              key: Key(i == 0 ? 'companion-card' : 'companion-card-$i'),
+              character: c,
+              companion: companion,
+              canEdit: canEdit,
+              isDm: isDm,
+            ),
+          if (feature != null && feature.maxCount > 1)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    [
+                      '${companions.length} de ${feature.maxCount} compañeros',
+                      if (feature.challengeBudgetText != null)
+                        'VD total máx. ${feature.challengeBudgetText}',
+                    ].join(' · '),
+                    key: const Key('companions-count'),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  if (canAdd)
+                    OutlinedButton.icon(
+                      key: const Key('companion-add'),
+                      onPressed: canEdit ? () => addCompanion(context, ref, c) : null,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Añadir compañero'),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      );
     }
     if (feature == null) return const SizedBox.shrink();
     final theme = Theme.of(context);
     return CombatCard(
       key: const Key('companion-pending'),
-      title: 'Compañero animal',
+      title: feature.creatures.isEmpty ? 'Compañero animal' : 'Compañero',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${feature.featureName}: elige una bestia (${feature.filterText}).',
+            feature.creatures.isEmpty
+                ? '${feature.featureName}: elige una bestia (${feature.filterText}).'
+                : '${feature.featureName}: elige una criatura de la lista.',
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 8),
@@ -72,25 +116,79 @@ class CompanionSection extends ConsumerWidget {
   }
 }
 
-/// Opens the beast picker filtered by the companion feature, asks for a name
-/// and saves the choice. A player changing the beast of an active character
-/// sends it to the DM.
-Future<void> chooseCompanion(BuildContext context, WidgetRef ref, CharacterDetail character) async {
+/// A creature picked for a companion: its catalog index and name.
+typedef CompanionPick = ({String index, String name});
+
+Future<CompanionPick?> _pickCreature(
+  BuildContext context,
+  CompanionFeature feature, {
+  double? budgetLeft,
+}) => Navigator.of(context).push<CompanionPick>(
+  MaterialPageRoute(
+    builder: (_) => CompanionPickerPage(feature: feature, budgetLeft: budgetLeft),
+  ),
+);
+
+/// Adds one more companion: picks a creature within what the budget leaves,
+/// asks for its name and sends it (no approval needed).
+Future<void> addCompanion(BuildContext context, WidgetRef ref, CharacterDetail character) async {
   final feature = character.companionFeature;
   if (feature == null) return;
-  final beast = await Navigator.of(context)
-      .push<BeastSummary>(MaterialPageRoute(builder: (_) => CompanionPickerPage(feature: feature)));
+  final creature = await _pickCreature(
+    context,
+    feature,
+    budgetLeft: feature.budgetLeft(character.companions),
+  );
+  if (creature == null || !context.mounted) return;
+  final name = await showDialog<String>(
+    context: context,
+    builder: (_) => CompanionNameDialog(initial: creature.name, beastName: creature.name),
+  );
+  if (name == null || !context.mounted) return;
+  await runCombat(
+    context,
+    () => _controller(ref, character).addCompanion(beastIndex: creature.index, name: name),
+    success: '$name se une al grupo.',
+  );
+}
+
+/// Opens the beast picker filtered by the companion feature (or its closed
+/// list of creatures), asks for a name and saves the choice for [current]
+/// (the first companion when null). A player changing the beast of an active
+/// character sends it to the DM.
+Future<void> chooseCompanion(
+  BuildContext context,
+  WidgetRef ref,
+  CharacterDetail character, {
+  CharacterCompanion? current,
+}) async {
+  final feature = character.companionFeature;
+  if (feature == null) return;
+  final others = [
+    for (final c in character.companions)
+      if (c.id != current?.id) c,
+  ];
+  final beast = await _pickCreature(
+    context,
+    feature,
+    budgetLeft: current == null && character.companions.isEmpty
+        ? feature.challengeBudget
+        : feature.budgetLeft(others),
+  );
   if (beast == null || !context.mounted) return;
-  final current = character.companion;
+  final existing = current ?? character.companion;
   final name = await showDialog<String>(
     context: context,
     builder: (_) =>
-        CompanionNameDialog(initial: current?.name ?? beast.name, beastName: beast.name),
+        CompanionNameDialog(initial: existing?.name ?? beast.name, beastName: beast.name),
   );
   if (name == null || !context.mounted) return;
   SheetSaveResult? result;
   final done = await runCombat(context, () async {
-    result = await _controller(ref, character).setCompanion(beastIndex: beast.index, name: name);
+    result = await _controller(
+      ref,
+      character,
+    ).setCompanion(beastIndex: beast.index, name: name, companionId: current?.id);
   });
   if (!done || !context.mounted) return;
   showCombatMessage(context, switch (result) {
@@ -102,12 +200,18 @@ Future<void> chooseCompanion(BuildContext context, WidgetRef ref, CharacterDetai
 /// The beasts of the catalog the companion feature allows (challenge rating
 /// and size); tapping one returns it.
 class CompanionPickerPage extends ConsumerWidget {
-  const CompanionPickerPage({super.key, required this.feature});
+  const CompanionPickerPage({super.key, required this.feature, this.budgetLeft});
 
   final CompanionFeature feature;
 
+  /// Challenge rating still free in the feature's budget; null: no budget.
+  final double? budgetLeft;
+
+  bool _fits(double challengeRating) => budgetLeft == null || challengeRating <= budgetLeft!;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (feature.creatures.isNotEmpty) return _closedList(context);
     final BeastQuery query = (maxCr: feature.maxChallengeRating, fly: null, swim: null);
     final beasts = ref.watch(beastsProvider(query));
     return Scaffold(
@@ -127,7 +231,7 @@ class CompanionPickerPage extends ConsumerWidget {
         data: (list) {
           final allowed = [
             for (final b in list)
-              if (feature.allows(b.challengeRating, b.size)) b,
+              if (feature.allows(b.challengeRating, b.size) && _fits(b.challengeRating)) b,
           ];
           return ListView(
             key: const Key('companion-picker'),
@@ -165,7 +269,7 @@ class CompanionPickerPage extends ConsumerWidget {
                         const Icon(Icons.chevron_right),
                       ],
                     ),
-                    onTap: () => Navigator.of(context).pop(b),
+                    onTap: () => Navigator.of(context).pop((index: b.index, name: b.name)),
                   ),
             ],
           );
@@ -173,7 +277,53 @@ class CompanionPickerPage extends ConsumerWidget {
       ),
     );
   }
+
+  /// The feature's closed list: creatures over the budget left are disabled.
+  Widget _closedList(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Elegir compañero')),
+    body: ListView(
+      key: const Key('companion-picker'),
+      children: [
+        if (budgetLeft != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text(
+              'VD disponible: ${_crText(budgetLeft!)}.',
+              key: const Key('companion-budget-left'),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        for (final k in feature.creatures)
+          ListTile(
+            key: Key('companion-creature-${k.index}'),
+            enabled: _fits(k.challengeRating),
+            title: Text(k.name),
+            subtitle: Text(
+              [
+                if (k.type.isNotEmpty) k.type,
+                if (k.size.isNotEmpty) companionSizeLabels[k.size] ?? k.size,
+                'VD ${k.challengeRatingText}',
+              ].join(' · '),
+            ),
+            trailing: DetailInfoButton(
+              key: Key('detail-creature-${k.index}'),
+              onPressed: () => openBeastDetail(context, k.index),
+            ),
+            onTap: () => Navigator.of(context).pop((index: k.index, name: k.name)),
+          ),
+      ],
+    ),
+  );
 }
+
+/// "1/2", "1/4", "1/8" or the whole number of a challenge rating.
+String _crText(double value) => switch (value) {
+  0.125 => '1/8',
+  0.25 => '1/4',
+  0.5 => '1/2',
+  _ when value == value.roundToDouble() => '${value.round()}',
+  _ => value.toStringAsFixed(2).replaceAll('.', ','),
+};
 
 /// Asks for the companion's name (prefilled with [initial]).
 class CompanionNameDialog extends StatefulWidget {
@@ -269,15 +419,34 @@ class _CompanionCardState extends ConsumerState<CompanionCard> {
     if (amount == null) return;
     await runCombat(
       context,
-      () => _controller(ref, widget.character).trackCompanionHp(delta: sign * amount),
+      () => _controller(
+        ref,
+        widget.character,
+      ).trackCompanionHp(delta: sign * amount, companionId: _companionId),
     );
   }
+
+  /// Id for the `/companions/{id}` routes; null keeps the single-companion
+  /// routes of characters with one companion.
+  String? get _companionId =>
+      widget.character.companions.length > 1 ||
+          (widget.character.companionFeature?.maxCount ?? 1) > 1
+      ? widget.companion.id
+      : null;
+
+  /// The owner may dismiss one of several companions; the DM always.
+  bool get _canRemove => widget.isDm || _companionId != null;
 
   Future<void> _menu(_CompanionAction action) async {
     final c = widget.character;
     switch (action) {
       case _CompanionAction.change:
-        await chooseCompanion(context, ref, c);
+        await chooseCompanion(
+          context,
+          ref,
+          c,
+          current: _companionId == null ? null : widget.companion,
+        );
       case _CompanionAction.rename:
         final name = await showDialog<String>(
           context: context,
@@ -286,8 +455,11 @@ class _CompanionCardState extends ConsumerState<CompanionCard> {
         if (name == null || name == widget.companion.name || !mounted) return;
         await runCombat(
           context,
-          () =>
-              _controller(ref, c).setCompanion(beastIndex: widget.companion.beastIndex, name: name),
+          () => _controller(ref, c).setCompanion(
+            beastIndex: widget.companion.beastIndex,
+            name: name,
+            companionId: _companionId,
+          ),
           success: 'Compañero renombrado.',
         );
       case _CompanionAction.remove:
@@ -311,7 +483,7 @@ class _CompanionCardState extends ConsumerState<CompanionCard> {
         if (confirmed != true || !mounted) return;
         await runCombat(
           context,
-          () => _controller(ref, c).deleteCompanion(),
+          () => _controller(ref, c).deleteCompanion(companionId: _companionId),
           success: 'Compañero quitado.',
         );
     }
@@ -331,7 +503,6 @@ class _CompanionCardState extends ConsumerState<CompanionCard> {
         : tokens.blood;
     final bigNumber = numericStyle(theme.textTheme.headlineMedium);
     return CombatCard(
-      key: const Key('companion-card'),
       title: 'Compañero: ${p.name}',
       trailing: widget.canEdit
           ? PopupMenuButton<_CompanionAction>(
@@ -341,11 +512,11 @@ class _CompanionCardState extends ConsumerState<CompanionCard> {
               itemBuilder: (_) => [
                 const PopupMenuItem(value: _CompanionAction.rename, child: Text('Renombrar')),
                 if (widget.character.companionFeature != null)
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: _CompanionAction.change,
-                    child: Text('Cambiar bestia'),
+                    child: Text(p.type == 'beast' ? 'Cambiar bestia' : 'Cambiar criatura'),
                   ),
-                if (widget.isDm)
+                if (_canRemove)
                   const PopupMenuItem(
                     value: _CompanionAction.remove,
                     child: Text('Quitar compañero'),
@@ -489,6 +660,16 @@ class _CompanionCardState extends ConsumerState<CompanionCard> {
             const SizedBox(height: 8),
             Text('Acciones', style: theme.textTheme.labelLarge),
             for (final (i, a) in p.attacks.indexed) _CompanionAttackTile(attack: a, position: i),
+          ],
+          if (p.features.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text('Mejoras por nivel', style: theme.textTheme.labelLarge),
+            for (final f in p.features)
+              Padding(
+                key: Key('companion-feature-${f.level}'),
+                padding: const EdgeInsets.only(top: 2),
+                child: Text('Nivel ${f.level}: ${f.text}', style: theme.textTheme.bodySmall),
+              ),
           ],
         ],
       ),

@@ -57,9 +57,19 @@ class CompanionFeature {
     this.hitPoints = 'beast',
     this.proficiencyBonusFromCharacter = false,
     this.attackBonusFromCharacter = false,
+    this.creatures = const [],
+    this.maxCount = 1,
+    this.challengeBudget,
+    this.challengeBudgetText,
+    this.features = const [],
   });
 
   factory CompanionFeature.fromJson(Map<String, dynamic> json) => CompanionFeature(
+    creatures: _objects(json['creatures'], CompanionCreature.fromJson),
+    maxCount: _int(json['maxCount']) ?? 1,
+    challengeBudget: json['challengeBudget'] == null ? null : _double(json['challengeBudget']),
+    challengeBudgetText: _strOrNull(json['challengeBudgetText']),
+    features: _objects(json['features'], CompanionFeatureText.fromJson),
     featureIndex: _str(json['featureIndex']),
     featureName: _str(json['featureName']),
     classIndex: _str(json['classIndex']),
@@ -91,6 +101,32 @@ class CompanionFeature {
   final bool proficiencyBonusFromCharacter;
   final bool attackBonusFromCharacter;
 
+  /// Closed list of creatures (any type) to choose from; empty when the
+  /// companion is a beast of the filter.
+  final List<CompanionCreature> creatures;
+
+  /// How many companions the character may have now.
+  final int maxCount;
+
+  /// Highest total challenge rating of all the companions, or null.
+  final double? challengeBudget;
+  final String? challengeBudgetText;
+
+  /// What the companions gain up to the class level.
+  final List<CompanionFeatureText> features;
+
+  /// Challenge rating still free in the budget once [companions] are counted
+  /// (null without a budget). Challenge ratings come from [creatures].
+  double? budgetLeft(Iterable<CharacterCompanion> companions) {
+    final budget = challengeBudget;
+    if (budget == null) return null;
+    var used = 0.0;
+    for (final c in companions) {
+      used += creatures.where((k) => k.index == c.beastIndex).firstOrNull?.challengeRating ?? 0;
+    }
+    return budget - used;
+  }
+
   /// Whether a beast of [challengeRating] and [size] qualifies.
   bool allows(double challengeRating, String size) =>
       challengeRating <= maxChallengeRating &&
@@ -102,6 +138,45 @@ class CompanionFeature {
     if (sizes.isNotEmpty)
       'tamaño ${sizes.map((s) => (companionSizeLabels[s] ?? s).toLowerCase()).join(' o ')}',
   ].join(', ');
+}
+
+/// A creature of the closed list of a companion feature.
+class CompanionCreature {
+  const CompanionCreature({
+    required this.index,
+    required this.name,
+    this.type = '',
+    this.size = '',
+    this.challengeRating = 0,
+    this.challengeRatingText = '0',
+  });
+
+  factory CompanionCreature.fromJson(Map<String, dynamic> json) => CompanionCreature(
+    index: _str(json['index']),
+    name: _str(json['name'], _str(json['index'])),
+    type: _str(json['type']),
+    size: _str(json['size']),
+    challengeRating: _double(json['challengeRating']),
+    challengeRatingText: _str(json['challengeRatingText'], '0'),
+  );
+
+  final String index;
+  final String name;
+  final String type;
+  final String size;
+  final double challengeRating;
+  final String challengeRatingText;
+}
+
+/// What companions gain at a class level ("Nivel 6: ...").
+class CompanionFeatureText {
+  const CompanionFeatureText({required this.level, required this.text});
+
+  factory CompanionFeatureText.fromJson(Map<String, dynamic> json) =>
+      CompanionFeatureText(level: _int(json['level']) ?? 0, text: _str(json['text']));
+
+  final int level;
+  final String text;
 }
 
 /// A damage component of a companion attack, the bonus already in the dice.
@@ -173,9 +248,13 @@ class CharacterCompanion {
     this.attacks = const [],
     this.breakdowns = const {},
     this.beastMissing = false,
+    this.type = 'beast',
+    this.features = const [],
   });
 
   factory CharacterCompanion.fromJson(Map<String, dynamic> json) => CharacterCompanion(
+    type: _str(json['type'], 'beast'),
+    features: _objects(json['features'], CompanionFeatureText.fromJson),
     id: _str(json['id']),
     beastIndex: _str(json['beastIndex']),
     beastName: _str(json['beastName'], _str(json['beastIndex'])),
@@ -226,4 +305,10 @@ class CharacterCompanion {
 
   /// The beast is no longer in the catalog.
   final bool beastMissing;
+
+  /// Creature type ("beast", "undead"...).
+  final String type;
+
+  /// What the companion has gained up to the class level of the feature.
+  final List<CompanionFeatureText> features;
 }

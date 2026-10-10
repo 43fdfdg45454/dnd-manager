@@ -677,16 +677,36 @@ class FakeCharactersRepository implements CharactersRepository, Dnd5eCharactersR
   final List<({int? delta, int? current})> companionHpCalls = [];
   final List<String> companionDeletes = [];
 
+  /// Companion ids of the `/companions/{id}` calls (rename, HP, delete), in
+  /// order, and the bodies of `POST /companions`.
+  final List<String> companionIdCalls = [];
+  final List<({String beastIndex, String name})> companionAdds = [];
+
+  /// The companion [companionId] of the character (the single one when null).
+  Map<String, dynamic> _companion(String id, String? companionId) {
+    final json = _json(id);
+    if (companionId == null) return json['companion'] as Map<String, dynamic>;
+    companionIdCalls.add(companionId);
+    final list = (json['companions'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    return list.firstWhere(
+      (c) => c['id'] == companionId,
+      orElse: () => json['companion'] as Map<String, dynamic>,
+    );
+  }
+
   @override
   Future<SheetSaveResult> setCompanion(
     String id, {
     required String beastIndex,
     required String name,
+    String? companionId,
   }) async {
     _fail();
     companionChoices.add((beastIndex: beastIndex, name: name));
     final json = _json(id);
-    final existing = json['companion'] as Map<String, dynamic>?;
+    final existing = companionId == null
+        ? json['companion'] as Map<String, dynamic>?
+        : _companion(id, companionId);
     if (existing != null && existing['beastIndex'] != beastIndex && !isDm) {
       final request = makeChangeRequest(
         id: 'cr${requests.length + 1}',
@@ -697,16 +717,50 @@ class FakeCharactersRepository implements CharactersRepository, Dnd5eCharactersR
       requests.add(request);
       return PendingApproval(request);
     }
-    json['companion'] = makeCompanionJson(beastIndex: beastIndex, name: name);
+    if (companionId != null && existing != null) {
+      existing
+        ..['beastIndex'] = beastIndex
+        ..['name'] = name;
+    } else {
+      json['companion'] = makeCompanionJson(beastIndex: beastIndex, name: name);
+    }
     json['companionPending'] = false;
     return Saved(await get(id));
   }
 
   @override
-  Future<CharacterDetail> trackCompanionHp(String id, {int? delta, int? current}) async {
+  Future<CharacterDetail> addCompanion(
+    String id, {
+    required String beastIndex,
+    required String name,
+  }) async {
+    _fail();
+    companionAdds.add((beastIndex: beastIndex, name: name));
+    final json = _json(id);
+    final list = [
+      ...((json['companions'] as List?) ??
+          [if (json['companion'] case final Map<String, dynamic> one) one]),
+    ];
+    list.add({
+      ...makeCompanionJson(beastIndex: beastIndex, name: name),
+      'id': 'cp${list.length + 1}',
+    });
+    json['companions'] = list;
+    json['companion'] = list.first;
+    json['companionPending'] = false;
+    return get(id);
+  }
+
+  @override
+  Future<CharacterDetail> trackCompanionHp(
+    String id, {
+    int? delta,
+    int? current,
+    String? companionId,
+  }) async {
     _fail();
     companionHpCalls.add((delta: delta, current: current));
-    final companion = _json(id)['companion'] as Map<String, dynamic>;
+    final companion = _companion(id, companionId);
     final max = companion['hitPointsMax'] as int;
     companion['hitPointsCurrent'] =
         current ?? ((companion['hitPointsCurrent'] as int) + delta!).clamp(0, max);
@@ -714,10 +768,27 @@ class FakeCharactersRepository implements CharactersRepository, Dnd5eCharactersR
   }
 
   @override
-  Future<void> deleteCompanion(String id) async {
+  Future<void> deleteCompanion(String id, {String? companionId}) async {
     _fail();
     companionDeletes.add(id);
-    _json(id)
+    final json = _json(id);
+    if (companionId != null && json['companions'] is List) {
+      companionIdCalls.add(companionId);
+      final list = [
+        for (final c in (json['companions'] as List).cast<Map<String, dynamic>>())
+          if (c['id'] != companionId) c,
+      ];
+      json['companions'] = list;
+      if (list.isEmpty) {
+        json
+          ..remove('companion')
+          ..['companionPending'] = true;
+      } else {
+        json['companion'] = list.first;
+      }
+      return;
+    }
+    json
       ..remove('companion')
       ..['companionPending'] = true;
   }

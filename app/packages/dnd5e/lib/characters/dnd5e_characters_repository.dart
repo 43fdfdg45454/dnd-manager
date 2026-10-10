@@ -132,15 +132,17 @@ class Dnd5eCharactersRepository {
 
   // -- Animal companion (phase 25, block 6) ----------------------------------
 
-  /// `PUT /characters/{id}/companion`: chooses or renames the companion.
-  /// [Saved] when applied; [PendingApproval] when a player changes the beast.
+  /// `PUT /characters/{id}/companion` (or `/companions/{companionId}`):
+  /// chooses or renames the companion. [Saved] when applied;
+  /// [PendingApproval] when a player changes the beast.
   Future<SheetSaveResult> setCompanion(
     String id, {
     required String beastIndex,
     required String name,
+    String? companionId,
   }) async {
     final response = await _client.dio.put<Map<String, dynamic>>(
-      '$_dnd5e/characters/$id/companion',
+      _companionPath(id, companionId),
       data: {'beastIndex': beastIndex, 'name': name},
     );
     if (response.statusCode == 202) {
@@ -149,21 +151,44 @@ class Dnd5eCharactersRepository {
     return Saved(CharacterDetail.fromJson(response.data!));
   }
 
-  /// `POST /characters/{id}/companion/hp`: [delta] (negative for damage) or
-  /// [current], without approval.
-  Future<CharacterDetail> trackCompanionHp(String id, {int? delta, int? current}) async =>
-      CharacterDetail.fromJson(
-        await _json(
-          'POST',
-          '$_dnd5e/characters/$id/companion/hp',
-          data: {'delta': ?delta, 'current': ?current},
-        ),
-      );
+  /// `POST /characters/{id}/companions`: adds one more companion, within the
+  /// feature's maximum and challenge budget, without approval.
+  Future<CharacterDetail> addCompanion(
+    String id, {
+    required String beastIndex,
+    required String name,
+  }) async => CharacterDetail.fromJson(
+    await _json(
+      'POST',
+      '$_dnd5e/characters/$id/companions',
+      data: {'beastIndex': beastIndex, 'name': name},
+    ),
+  );
 
-  /// `DELETE /characters/{id}/companion` (DM only).
-  Future<void> deleteCompanion(String id) async {
-    await _client.dio.delete<void>('$_dnd5e/characters/$id/companion');
+  /// `POST /characters/{id}/companion/hp` (or `/companions/{companionId}/hp`):
+  /// [delta] (negative for damage) or [current], without approval.
+  Future<CharacterDetail> trackCompanionHp(
+    String id, {
+    int? delta,
+    int? current,
+    String? companionId,
+  }) async => CharacterDetail.fromJson(
+    await _json(
+      'POST',
+      '${_companionPath(id, companionId)}/hp',
+      data: {'delta': ?delta, 'current': ?current},
+    ),
+  );
+
+  /// `DELETE /characters/{id}/companion` (DM only) or
+  /// `/companions/{companionId}` (the owner or a DM).
+  Future<void> deleteCompanion(String id, {String? companionId}) async {
+    await _client.dio.delete<void>(_companionPath(id, companionId));
   }
+
+  String _companionPath(String id, String? companionId) => companionId == null
+      ? '$_dnd5e/characters/$id/companion'
+      : '$_dnd5e/characters/$id/companions/$companionId';
 
   Future<CharacterDetail> patchCombat(String id, CombatPatch patch) async =>
       CharacterDetail.fromJson(

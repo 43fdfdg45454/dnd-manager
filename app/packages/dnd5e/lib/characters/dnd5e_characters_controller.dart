@@ -69,10 +69,20 @@ class Dnd5eCharacterController extends Notifier<void> {
     return result.outcome;
   }
 
-  /// Chooses or renames the animal companion: [Saved] when applied,
-  /// [PendingApproval] when the DM has to approve a change of beast.
-  Future<SheetSaveResult> setCompanion({required String beastIndex, required String name}) async {
-    final result = await _repository.setCompanion(id, beastIndex: beastIndex, name: name);
+  /// Chooses or renames the animal companion ([companionId] for one of
+  /// several): [Saved] when applied, [PendingApproval] when the DM has to
+  /// approve a change of beast.
+  Future<SheetSaveResult> setCompanion({
+    required String beastIndex,
+    required String name,
+    String? companionId,
+  }) async {
+    final result = await _repository.setCompanion(
+      id,
+      beastIndex: beastIndex,
+      name: name,
+      companionId: companionId,
+    );
     switch (result) {
       case Saved(:final detail):
         _core.apply(detail);
@@ -82,13 +92,24 @@ class Dnd5eCharacterController extends Notifier<void> {
     return result;
   }
 
-  /// Moves the companion's hit points by [delta] or sets them to [current].
-  Future<void> trackCompanionHp({int? delta, int? current}) async =>
-      _core.apply(await _repository.trackCompanionHp(id, delta: delta, current: current));
+  /// Adds one more companion (features that allow several).
+  Future<void> addCompanion({required String beastIndex, required String name}) async =>
+      _core.apply(await _repository.addCompanion(id, beastIndex: beastIndex, name: name));
 
-  /// DM only: removes the companion.
-  Future<void> deleteCompanion() async {
-    await _repository.deleteCompanion(id);
+  /// Moves the companion's hit points by [delta] or sets them to [current].
+  Future<void> trackCompanionHp({int? delta, int? current, String? companionId}) async =>
+      _core.apply(
+        await _repository.trackCompanionHp(
+          id,
+          delta: delta,
+          current: current,
+          companionId: companionId,
+        ),
+      );
+
+  /// Removes the companion (DM only), or dismisses [companionId].
+  Future<void> deleteCompanion({String? companionId}) async {
+    await _repository.deleteCompanion(id, companionId: companionId);
     await _core.reload();
   }
 
