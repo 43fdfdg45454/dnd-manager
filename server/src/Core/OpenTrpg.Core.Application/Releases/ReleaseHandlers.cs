@@ -28,7 +28,7 @@ public sealed class GetLatestReleaseHandler(IReleaseRepository releases, IFileRe
     }
 }
 
-/// <summary>Opens the APK of a build number for an anonymous download, named <c>dnd-companion-{version}.apk</c>.</summary>
+/// <summary>Opens the APK of a build number for an anonymous download, named <c>opentrpg-{version}.apk</c>.</summary>
 public sealed class DownloadReleaseHandler(IReleaseRepository releases, IFileRepository files, IFileStorage storage)
 {
     public async Task<FileDownload> HandleAsync(int buildNumber, CancellationToken cancellationToken = default)

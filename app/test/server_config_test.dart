@@ -523,7 +523,7 @@ void main() {
       await tester.tap(find.byKey(const Key('server-test')));
       await tester.pumpAndSettle();
 
-      expect(find.text('No parece un servidor de D&D Companion.'), findsOneWidget);
+      expect(find.text('No parece un servidor de OpenTRPG.'), findsOneWidget);
       expect(find.byKey(const Key('server-trust')), findsNothing);
     });
 

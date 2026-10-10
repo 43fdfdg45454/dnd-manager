@@ -7,7 +7,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-# Lee un valor de .env sin ejecutarlo como script (valores como "D&D Companion" romperían "source").
+# Lee un valor de .env sin ejecutarlo como script (valores como "OpenTRPG" romperían "source").
 env_value() {
   sed -n "s/^$1=//p" .env 2> /dev/null | tail -n 1 | sed -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/"
 }

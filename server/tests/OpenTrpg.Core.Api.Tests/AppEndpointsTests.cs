@@ -29,7 +29,7 @@ public class AppEndpointsTests : IClassFixture<ApiFactory>
         var info = await _client.GetFromJsonAsync<AppInfoResponse>("/api/v1/app/info");
 
         Assert.NotNull(info);
-        Assert.Equal("dnd-companion-api", info.Name);
+        Assert.Equal("opentrpg-api", info.Name);
         Assert.Matches(@"^\d+\.\d+\.\d+$", info.Version);
     }
 

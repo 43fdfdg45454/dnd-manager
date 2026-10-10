@@ -101,7 +101,7 @@ public static class SessionEmailTemplates
             text.AppendLine(body.Trim()).AppendLine();
         }
 
-        text.AppendLine($"{buttonText}: {link}").AppendLine().Append("— D&D Companion");
+        text.AppendLine($"{buttonText}: {link}").AppendLine().Append("— OpenTRPG");
 
         var html = new StringBuilder();
         html.AppendLine("<!DOCTYPE html>")
@@ -128,7 +128,7 @@ public static class SessionEmailTemplates
         var href = WebUtility.HtmlEncode(link);
         html.AppendLine($"  <p><a href=\"{href}\" style=\"display: inline-block; padding: 10px 18px; background: #8b1e1e; color: #fff; text-decoration: none; border-radius: 4px;\">{WebUtility.HtmlEncode(buttonText)}</a></p>")
             .AppendLine($"  <p style=\"font-size: 13px; color: #555;\">Si el botón no funciona, copia este enlace en el navegador:<br><a href=\"{href}\">{href}</a></p>")
-            .AppendLine("  <p>— D&amp;D Companion</p>")
+            .AppendLine("  <p>— OpenTRPG</p>")
             .AppendLine("</body>")
             .Append("</html>");
 

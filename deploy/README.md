@@ -67,7 +67,7 @@ servicio `api` del `docker-compose.yml`:
 | `FileStorage__MaxUploadMegabytes` | `200` | Tamaño máximo de subida (ver [Límites de subida](#límites-de-subida)) |
 | `Reminders__Enabled`, `Reminders__PollSeconds` | `true`, `60` | Envío de recordatorios de sesión y frecuencia de comprobación |
 | `Smtp__Security` | `Auto` | `Auto`, `SslOnConnect`, `StartTls` o `None` |
-| `Smtp__FromName` | `D&D Companion` | Nombre del remitente |
+| `Smtp__FromName` | `OpenTRPG` | Nombre del remitente |
 | `SSL_CERT_DIR` | — | Alternativa a `SSL_CERT_FILE`: directorio de PEM procesado con `openssl rehash` |
 | `BACKUP_RETENTION_DAYS` (en `.env`) | `14` | Días que `backup.sh` conserva las copias |
 
