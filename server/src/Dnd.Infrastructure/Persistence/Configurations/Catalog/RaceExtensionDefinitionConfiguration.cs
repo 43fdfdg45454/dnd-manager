@@ -18,5 +18,6 @@ internal sealed class RaceExtensionDefinitionConfiguration : IEntityTypeConfigur
         builder.HasOne<RaceDefinition>().WithMany().HasForeignKey(x => x.RaceIndex).OnDelete(DeleteBehavior.Cascade);
         builder.Property(x => x.TraitIndexes).HasJsonListConversion();
         builder.Ignore(x => x.Grants);
+        builder.Ignore(x => x.HeightWeight);
     }
 }

@@ -623,6 +623,7 @@ internal sealed partial class ContentPackValidator
             ChoicesJson = OriginChoices($"{path}.choices", race.Choices),
             Resistances = DamageTypes($"{path}.resistances", race.Resistances),
             GrantsJson = OriginGrants($"{path}.grants", race.Grants),
+            HeightWeightJson = HeightWeight($"{path}.heightWeight", race.HeightWeight),
             Source = _id,
         };
 
@@ -677,6 +678,7 @@ internal sealed partial class ContentPackValidator
         var traitIndexes = Traits($"{path}.traits", race.Traits, rows, raceIndex, subraceIndex: null);
         Subraces(path, race.Subraces, raceIndex, rows);
         var grants = OriginGrants($"{path}.grants", race.Grants);
+        var heightWeight = HeightWeight($"{path}.heightWeight", race.HeightWeight);
         if (raceIndex is null)
         {
             return;
@@ -688,6 +690,7 @@ internal sealed partial class ContentPackValidator
             RaceIndex = raceIndex,
             TraitIndexes = traitIndexes,
             GrantsJson = grants,
+            HeightWeightJson = heightWeight,
             Source = _id,
         });
     }
@@ -705,6 +708,7 @@ internal sealed partial class ContentPackValidator
             var subraceTraits = Traits($"{subracePath}.traits", subrace.Traits, rows, raceIndex: null, subraceIndex);
             var speed = OptionalInt($"{subracePath}.speed", subrace.Speed, 0, 200);
             var grants = OriginGrants($"{subracePath}.grants", subrace.Grants);
+            var heightWeight = HeightWeight($"{subracePath}.heightWeight", subrace.HeightWeight);
             if (subraceIndex is null || raceIndex is null)
             {
                 return;
@@ -723,10 +727,50 @@ internal sealed partial class ContentPackValidator
                 Resistances = DamageTypes($"{subracePath}.resistances", subrace.Resistances),
                 Speed = speed,
                 GrantsJson = grants,
+                HeightWeightJson = heightWeight,
                 Source = _id,
             });
         });
         return subraceIndexes;
+    }
+
+    /// <summary>Height and weight table of a race or subrace (format 2); null when absent or invalid.</summary>
+    private string? HeightWeight(string path, PackHeightWeightJson? table)
+    {
+        if (table is null || !RequireLevelChoicesFormat(path, table))
+        {
+            return null;
+        }
+
+        var baseHeight = RequiredInt($"{path}.baseHeightInches", table.BaseHeightInches, HeightWeightTable.MinBase, HeightWeightTable.MaxBaseHeightInches);
+        var baseWeight = RequiredInt($"{path}.baseWeightPounds", table.BaseWeightPounds, HeightWeightTable.MinBase, HeightWeightTable.MaxBaseWeightPounds);
+        var heightModifier = HeightWeightModifier($"{path}.heightModifier", table.HeightModifier);
+        var weightModifier = HeightWeightModifier($"{path}.weightModifier", table.WeightModifier);
+        if (baseHeight is null || baseWeight is null || heightModifier is null || weightModifier is null)
+        {
+            return null;
+        }
+
+        return new HeightWeightTable(baseHeight.Value, heightModifier, baseWeight.Value, weightModifier).Normalize().ToJson();
+    }
+
+    private string? HeightWeightModifier(string path, string? modifier)
+    {
+        if (string.IsNullOrWhiteSpace(modifier))
+        {
+            AddError(path, "Campo obligatorio.");
+            return null;
+        }
+
+        if (!HeightWeightTable.IsValidModifier(modifier))
+        {
+            AddError(
+                path,
+                $"Expresión no válida: usa NdM (1-{HeightWeightTable.MaxDiceCount} dados de 2-{HeightWeightTable.MaxDieSides} caras) o un entero de 1 a {HeightWeightTable.MaxConstant}.");
+            return null;
+        }
+
+        return modifier;
     }
 
     /// <summary>Grants of a race or subrace (format 2); null when absent.</summary>

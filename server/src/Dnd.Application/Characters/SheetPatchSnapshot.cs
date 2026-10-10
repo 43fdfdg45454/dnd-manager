@@ -41,5 +41,7 @@ public static class SheetPatchSnapshot
         Flaws = patch.Flaws is null ? null : character.Flaws,
         BackgroundDetail = patch.BackgroundDetail is null ? null : character.BackgroundDetail,
         CopperPieces = patch.CopperPieces is null ? null : character.CopperPieces,
+        HeightInches = patch.HeightInches.IsSet ? new Optional<int?>(character.HeightInches) : default,
+        WeightPounds = patch.WeightPounds.IsSet ? new Optional<int?>(character.WeightPounds) : default,
     };
 }

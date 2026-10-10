@@ -319,6 +319,23 @@ internal sealed class PackRaceJson
 
     /// <summary>Fixed proficiencies and spells of the race (same shape as the grants of the options).</summary>
     public PackGrantsJson? Grants { get; set; }
+
+    /// <summary>Random height and weight table (format 2); also allowed with <see cref="Extends"/>.</summary>
+    public PackHeightWeightJson? HeightWeight { get; set; }
+}
+
+/// <summary>Random height and weight table of a race or subrace (normalized to <c>HeightWeightTable</c>).</summary>
+internal sealed class PackHeightWeightJson
+{
+    public int? BaseHeightInches { get; set; }
+
+    /// <summary>Dice expression ("2d10") or a whole number added to the base height, in inches.</summary>
+    public string? HeightModifier { get; set; }
+
+    public int? BaseWeightPounds { get; set; }
+
+    /// <summary>Dice expression ("2d4") or a whole number ("1") that multiplies the height roll, in pounds.</summary>
+    public string? WeightModifier { get; set; }
 }
 
 internal sealed class PackSubraceJson
@@ -341,6 +358,9 @@ internal sealed class PackSubraceJson
     public int? Speed { get; set; }
 
     public PackGrantsJson? Grants { get; set; }
+
+    /// <summary>Random height and weight table that replaces the race's (format 2).</summary>
+    public PackHeightWeightJson? HeightWeight { get; set; }
 }
 
 /// <summary>Decisions of a race, subrace or background (normalized to <c>RaceChoices</c>).</summary>

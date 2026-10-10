@@ -112,8 +112,21 @@ public sealed record SubraceDto(
     /// <summary>Fixed proficiencies and spells (null when none).</summary>
     public OriginGrantsDto? Grants { get; init; }
 
+    /// <summary>The subrace's own height and weight table (it replaces the race's), or null.</summary>
+    public HeightWeightDto? HeightWeight { get; init; }
+
     /// <summary>"srd" or the id of the content pack that added it (also to a race of the SRD).</summary>
     public string Source { get; init; } = "srd";
+}
+
+/// <summary>
+/// Random height and weight table (PHB chapter 4): height = base + height roll (inches); weight = base + height
+/// roll × weight roll (pounds). Modifiers are dice expressions ("2d10") or a whole number ("1").
+/// </summary>
+public sealed record HeightWeightDto(int BaseHeightInches, string HeightModifier, int BaseWeightPounds, string WeightModifier)
+{
+    public static HeightWeightDto? From(HeightWeightTable? table) =>
+        table is null ? null : new HeightWeightDto(table.BaseHeightInches, table.HeightModifier, table.BaseWeightPounds, table.WeightModifier);
 }
 
 /// <summary>A spell a race or subrace grants from a total character level, optionally a number of times per long rest.</summary>
@@ -237,6 +250,12 @@ public sealed record RaceDetailDto(
 
     /// <summary>Fixed proficiencies and spells, with those of the packs that extend the race (null when none).</summary>
     public OriginGrantsDto? Grants { get; init; }
+
+    /// <summary>
+    /// Height and weight table of the race, or of the last pack that extends it with one (null when none, as in the
+    /// SRD). A subrace with its own table replaces it.
+    /// </summary>
+    public HeightWeightDto? HeightWeight { get; init; }
 }
 
 /// <param name="Source">"srd" or the id of the content pack that added it.</param>

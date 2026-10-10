@@ -74,6 +74,28 @@ public sealed record SheetPatch
 
     public int? CopperPieces { get; init; }
 
+    /// <summary>
+    /// Height in inches (1–200); explicit <c>null</c> clears it. No mechanical effect: the owner of an
+    /// active character changes it without approval.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public Optional<int?> HeightInches { get; init; }
+
+    /// <summary>Weight in pounds (1–2000); explicit <c>null</c> clears it. Same rules as <see cref="HeightInches"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public Optional<int?> WeightPounds { get; init; }
+
+    /// <summary>True when the patch changes height or weight.</summary>
+    [JsonIgnore]
+    public bool HasHeightOrWeight => HeightInches.IsSet || WeightPounds.IsSet;
+
+    /// <summary>The same patch without height and weight (what still needs approval for an active character's owner).</summary>
+    public SheetPatch WithoutHeightAndWeight() => this with { HeightInches = default, WeightPounds = default };
+
+    /// <summary>True when the patch changes nothing.</summary>
+    [JsonIgnore]
+    public bool IsEmpty => this == new SheetPatch();
+
     /// <summary>Maps to the domain edit. Call only on a patch accepted by <see cref="SheetPatchValidator"/>.</summary>
     public SheetEdit ToSheetEdit() => new()
     {
@@ -103,7 +125,12 @@ public sealed record SheetPatch
         Flaws = Flaws,
         BackgroundDetail = BackgroundDetail,
         CopperPieces = CopperPieces,
+        HeightInches = ClearableNumber(HeightInches),
+        WeightPounds = ClearableNumber(WeightPounds),
     };
+
+    /// <summary>Absent → null (unchanged); explicit null → 0 (cleared, as <see cref="SheetEdit"/> expects).</summary>
+    private static int? ClearableNumber(Optional<int?> value) => value.IsSet ? value.Value ?? 0 : null;
 
     /// <summary>Absent → null (unchanged); explicit null → "" (cleared, as <see cref="SheetEdit"/> expects).</summary>
     private static string? Clearable(Optional<string?> value) => value.IsSet ? value.Value ?? string.Empty : null;
@@ -277,6 +304,14 @@ public sealed class SheetPatchValidator : AbstractValidator<SheetPatch>
         RuleFor(x => x.CopperPieces).InclusiveBetween(0, Character.MaxCopperPieces)
             .WithMessage($"El dinero debe estar entre 0 y {Character.MaxCopperPieces} pc.")
             .When(x => x.CopperPieces is not null);
+        RuleFor(x => x.HeightInches)
+            .Must(v => !v.IsSet || v.Value is null || v.Value is >= Character.MinHeightInches and <= Character.MaxHeightInches)
+            .WithMessage($"La altura debe estar entre {Character.MinHeightInches} y {Character.MaxHeightInches} pulgadas.")
+            .OverridePropertyName("heightInches");
+        RuleFor(x => x.WeightPounds)
+            .Must(v => !v.IsSet || v.Value is null || v.Value is >= Character.MinWeightPounds and <= Character.MaxWeightPounds)
+            .WithMessage($"El peso debe estar entre {Character.MinWeightPounds} y {Character.MaxWeightPounds} libras.")
+            .OverridePropertyName("weightPounds");
     }
 
     /// <summary>Same ranges the domain enforces (see <see cref="OverrideFields"/>).</summary>

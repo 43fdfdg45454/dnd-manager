@@ -42,6 +42,11 @@ public sealed class RaceDefinition
 
     public OptionGrants Grants => LevelChoiceJson.ParseGrants(GrantsJson);
 
+    /// <summary><see cref="HeightWeightTable"/> JSON (random height and weight), or null when there is none.</summary>
+    public string? HeightWeightJson { get; init; }
+
+    public HeightWeightTable? HeightWeight => HeightWeightTable.Parse(HeightWeightJson);
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = CatalogSources.Srd;
 }
