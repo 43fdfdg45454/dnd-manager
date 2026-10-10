@@ -2,19 +2,38 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/storage/local_preferences.dart';
 
-/// The tabs of a character page, in their order on the tab bar.
-enum CharacterTab { combat, summary, skills, traits, spells, inventory, notes }
+/// The tabs of a character page: [CharacterTab.combat] is the "Combate" view
+/// and the rest are the sub-tabs of "Detalle", in their order on the bar.
+enum CharacterTab {
+  combat,
+  summary,
+  skills,
+  traits,
+  spells,
+  inventory,
+  notes;
 
-/// Preference key of the tab last shown for a character.
+  /// The sub-tabs of "Detalle" (every tab but [combat]).
+  static const detailTabs = [summary, skills, traits, spells, inventory, notes];
+}
+
+/// The two main views of a character page.
+enum CharacterView { combat, detail }
+
+/// Preference key of the "Detalle" sub-tab last shown for a character.
 String characterTabKey(String characterId) => 'character.$characterId.tab';
 
+/// Preference key of the main view (Combate or Detalle) last shown.
+String characterMainViewKey(String characterId) => 'character.$characterId.mainView';
+
 /// Key of the old Detallado / Combate switch: read once so that a character
-/// left in combat still opens on the Combate tab.
+/// left in combat still opens on the Combate view.
 String legacyCharacterViewKey(String characterId) => 'character.$characterId.view';
 
-/// Tab of one character, remembered per character in `shared_preferences`.
-/// Defaults to [CharacterTab.summary] when nothing is stored or there is no
-/// storage (then the choice lasts for the session only).
+/// "Detalle" sub-tab of one character, remembered per character in
+/// `shared_preferences`. Defaults to [CharacterTab.summary] when nothing (or
+/// the old flat "combat" tab) is stored or there is no storage (then the
+/// choice lasts for the session only).
 class CharacterTabController extends Notifier<CharacterTab> {
   CharacterTabController(this.characterId);
 
@@ -22,18 +41,17 @@ class CharacterTabController extends Notifier<CharacterTab> {
 
   @override
   CharacterTab build() {
-    final prefs = ref.read(localPreferencesProvider);
-    final stored = prefs?.getString(characterTabKey(characterId));
-    for (final tab in CharacterTab.values) {
+    final stored = ref.read(localPreferencesProvider)?.getString(characterTabKey(characterId));
+    for (final tab in CharacterTab.detailTabs) {
       if (tab.name == stored) return tab;
     }
-    return prefs?.getString(legacyCharacterViewKey(characterId)) == 'combat'
-        ? CharacterTab.combat
-        : CharacterTab.summary;
+    return CharacterTab.summary;
   }
 
+  /// Remembers a "Detalle" sub-tab; [CharacterTab.combat] is not a sub-tab
+  /// and is ignored.
   void select(CharacterTab tab) {
-    if (tab == state) return;
+    if (tab == state || tab == CharacterTab.combat) return;
     state = tab;
     ref.read(localPreferencesProvider)?.setString(characterTabKey(characterId), tab.name).ignore();
   }
@@ -41,4 +59,61 @@ class CharacterTabController extends Notifier<CharacterTab> {
 
 final characterTabProvider = NotifierProvider.family<CharacterTabController, CharacterTab, String>(
   CharacterTabController.new,
+);
+
+/// Main view (Combate or Detalle) of one character, remembered per character.
+/// Without a stored view it is derived from older preferences: the flat
+/// "combat" tab or the old Combate switch open on Combate; anything else on
+/// Detalle.
+class CharacterViewController extends Notifier<CharacterView> {
+  CharacterViewController(this.characterId);
+
+  final String characterId;
+
+  @override
+  CharacterView build() {
+    final prefs = ref.read(localPreferencesProvider);
+    final stored = prefs?.getString(characterMainViewKey(characterId));
+    for (final view in CharacterView.values) {
+      if (view.name == stored) return view;
+    }
+    final oldTab = prefs?.getString(characterTabKey(characterId));
+    if (oldTab == CharacterTab.combat.name) return CharacterView.combat;
+    if (oldTab != null) return CharacterView.detail;
+    return prefs?.getString(legacyCharacterViewKey(characterId)) == 'combat'
+        ? CharacterView.combat
+        : CharacterView.detail;
+  }
+
+  void select(CharacterView view) {
+    if (view == state) return;
+    state = view;
+    ref
+        .read(localPreferencesProvider)
+        ?.setString(characterMainViewKey(characterId), view.name)
+        .ignore();
+  }
+}
+
+final characterViewProvider =
+    NotifierProvider.family<CharacterViewController, CharacterView, String>(
+      CharacterViewController.new,
+    );
+
+/// Whether "Detalle" of the player's session shows its "Sesión" sub-tab
+/// (true, the default) or the remembered sub-tab of the sheet. Kept in memory
+/// per character.
+class PlayerSessionTabController extends Notifier<bool> {
+  PlayerSessionTabController(this.characterId);
+
+  final String characterId;
+
+  @override
+  bool build() => true;
+
+  void select(bool onSession) => state = onSession;
+}
+
+final playerSessionTabProvider = NotifierProvider.family<PlayerSessionTabController, bool, String>(
+  PlayerSessionTabController.new,
 );

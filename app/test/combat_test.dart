@@ -34,6 +34,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dice_test.dart' show SequenceRandom;
+import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
@@ -436,7 +437,7 @@ void main() {
       // Solo cuenta la clave del propio personaje: abre en Resumen.
       final tabs = tester.widget<TabBar>(find.byKey(const Key('character-tabs')));
       expect((tabs.tabs.first as Tab).text, 'Combate');
-      expect(tabs.tabs, hasLength(7));
+      expect(tabs.tabs, hasLength(2));
       expect(find.byKey(const Key('combat-view')), findsNothing);
       expect(find.byKey(const Key('view-mode')), findsNothing);
 
@@ -444,17 +445,18 @@ void main() {
       expect(find.byKey(const Key('combat-view')), findsOneWidget);
       // La cabecera con sus acciones y las pestañas siguen a la vista.
       expect(find.byKey(const Key('character-status')), findsOneWidget);
-      expect(find.byKey(const Key('tab-summary')), findsOneWidget);
-      expect(prefs.getString('character.ch1.tab'), 'combat');
+      expect(find.byKey(const Key('tab-detail')), findsOneWidget);
+      expect(prefs.getString('character.ch1.mainView'), 'combat');
 
       // Una pantalla nueva con las mismas preferencias abre directamente en Combate.
       await tester.pumpWidget(const SizedBox());
       await _pump(tester, characters: repo, prefs: prefs);
       expect(find.byKey(const Key('combat-view')), findsOneWidget);
 
-      await _tap(tester, 'tab-spells');
+      await openDetailTab(tester, 'tab-spells');
       expect(find.byKey(const Key('combat-view')), findsNothing);
       expect(prefs.getString('character.ch1.tab'), 'spells');
+      expect(prefs.getString('character.ch1.mainView'), 'detail');
     });
 
     testWidgets('un personaje que quedó en el antiguo modo Combate abre en esa pestaña', (
@@ -904,7 +906,7 @@ void main() {
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
 
-      await _tap(tester, 'tab-skills');
+      await openDetailTab(tester, 'tab-skills');
       await _tap(tester, 'skill-athletics');
       expect(find.text('Atletismo'), findsWidgets);
       expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '19');

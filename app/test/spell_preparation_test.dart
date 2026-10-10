@@ -313,7 +313,7 @@ void main() {
         characters: characters,
       );
       await pumpRealApp(tester, location: '/characters/ch1', fakes: fakes);
-      await _tapKey(tester, 'tab-spells');
+      await openDetailTab(tester, 'tab-spells');
 
       expect(
         find.descendant(

@@ -15,7 +15,6 @@ import '../../campaigns/ui/feedback.dart';
 import '../../campaigns/ui/general/campaign_section_page.dart';
 import '../../catalog/data/models.dart' show titleFromIndex;
 import '../../dice/ui/dice_sheet.dart';
-import '../../items/ui/inventory_tab.dart';
 import '../data/characters_controller.dart';
 import '../data/characters_repository.dart';
 import '../data/models.dart';
@@ -24,13 +23,13 @@ import '../domain/character_format.dart';
 import '../domain/class_theme.dart';
 import 'change_owner_dialog.dart';
 import 'character_avatar.dart';
-import 'character_tabs.dart';
+import 'character_detail_tabs.dart';
 import 'combat/combat_view.dart';
 
-/// A character: a header with its actions and a tab bar whose first tab is
-/// the combat view (Combate, Resumen, Habilidades, Rasgos, Hechizos,
-/// Inventario, Notas). The last tab shown is remembered per character. A dice
-/// button floats over every tab.
+/// A character: a header with its actions and two main tabs, "Combate" (the
+/// combat view) and "Detalle" ([CharacterDetailTabs]: Resumen, Habilidades,
+/// Rasgos, Hechizos, Inventario, Notas). The main view and the last sub-tab
+/// are remembered per character. A dice button floats over every tab.
 class CharacterPage extends ConsumerWidget {
   const CharacterPage({super.key, required this.characterId});
 
@@ -70,14 +69,10 @@ class CharacterPage extends ConsumerWidget {
   }
 }
 
+/// The main tabs, in the order of [CharacterView].
 const _tabs = [
   Tab(key: Key('tab-combat'), text: 'Combate'),
-  Tab(key: Key('tab-summary'), text: 'Resumen'),
-  Tab(key: Key('tab-skills'), text: 'Habilidades'),
-  Tab(key: Key('tab-traits'), text: 'Rasgos'),
-  Tab(key: Key('tab-spells'), text: 'Hechizos'),
-  Tab(key: Key('tab-inventory'), text: 'Inventario'),
-  Tab(key: Key('tab-notes'), text: 'Notas'),
+  Tab(key: Key('tab-detail'), text: 'Detalle'),
 ];
 
 class _CharacterView extends ConsumerStatefulWidget {
@@ -98,9 +93,9 @@ class _CharacterViewState extends ConsumerState<_CharacterView>
   @override
   void initState() {
     super.initState();
-    final initial = ref.read(characterTabProvider(widget.character.id));
+    final initial = ref.read(characterViewProvider(widget.character.id));
     _tabController = TabController(length: _tabs.length, initialIndex: initial.index, vsync: this)
-      ..addListener(_rememberTab);
+      ..addListener(_rememberView);
   }
 
   @override
@@ -109,12 +104,12 @@ class _CharacterViewState extends ConsumerState<_CharacterView>
     super.dispose();
   }
 
-  /// Stores the tab once the change settles (not on every animation tick).
-  void _rememberTab() {
+  /// Stores the main view once the change settles (not on every animation tick).
+  void _rememberView() {
     if (_tabController.indexIsChanging) return;
     ref
-        .read(characterTabProvider(character.id).notifier)
-        .select(CharacterTab.values[_tabController.index]);
+        .read(characterViewProvider(character.id).notifier)
+        .select(CharacterView.values[_tabController.index]);
   }
 
   CharacterController _controller(WidgetRef ref) =>
@@ -197,13 +192,7 @@ class _CharacterViewState extends ConsumerState<_CharacterView>
               ],
             ),
         ],
-        bottom: TabBar(
-          key: const Key('character-tabs'),
-          controller: _tabController,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          tabs: _tabs,
-        ),
+        bottom: TabBar(key: const Key('character-tabs'), controller: _tabController, tabs: _tabs),
       ),
       floatingActionButton: FloatingActionButton(
         key: const Key('dice-fab'),
@@ -244,16 +233,7 @@ class _CharacterViewState extends ConsumerState<_CharacterView>
                 canEdit: permissions.canEdit,
                 isDm: permissions.isDm,
               ),
-              SummaryTab(
-                character: character,
-                canEdit: permissions.canEdit,
-                isDm: permissions.isDm,
-              ),
-              SkillsTab(character: character),
-              TraitsTab(character: character),
-              SpellsTab(character: character),
-              InventoryTab(character: character),
-              NotesTab(character: character),
+              CharacterDetailTabs(character: character, permissions: permissions),
             ],
           ),
         ),

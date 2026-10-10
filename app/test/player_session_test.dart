@@ -76,8 +76,9 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _outside(WidgetTester tester) =>
-    _tap(tester, find.byKey(const Key('player-subview-outside')));
+/// "Detalle" opens on its "Sesión" sub-tab by default.
+Future<void> _detail(WidgetTester tester) =>
+    _tap(tester, find.byKey(const Key('player-subview-detail')));
 
 void main() {
   group('isCombatUsable', () {
@@ -132,27 +133,43 @@ void main() {
       expect(find.text('Usado: Potion of Healing.'), findsOneWidget);
     });
 
-    testWidgets('fuera de combate: descansos, secciones, tiendas, botín y mensajes', (
+    testWidgets('detalle: Sesión con descansos, tiendas, botín y mensajes y las seis subpestañas', (
       tester,
     ) async {
       await _pump(tester);
-      await _outside(tester);
+      expect(find.text('Fuera de combate'), findsNothing);
+      await _detail(tester);
 
-      expect(find.byKey(const Key('player-outside')), findsOneWidget);
+      expect(find.byKey(const Key('player-character-name')), findsOneWidget);
+      final tabs = tester.widget<TabBar>(find.byKey(const Key('character-detail-tabs')));
+      expect(
+        [for (final t in tabs.tabs) (t as Tab).text],
+        ['Sesión', 'Resumen', 'Habilidades', 'Rasgos', 'Hechizos', 'Inventario', 'Notas'],
+      );
+      expect(tabs.controller!.index, 0);
+      expect(find.byKey(const Key('player-session')), findsOneWidget);
       expect(find.byKey(const Key('rest-request-short')), findsOneWidget);
       expect(find.byKey(const Key('rest-request-long')), findsOneWidget);
       expect(find.byKey(const Key('rest-short')), findsNothing);
-      for (final key in ['spells', 'traits', 'notes', 'inventory', 'sheet']) {
-        expect(find.byKey(Key('player-open-$key')), findsOneWidget);
-      }
       expect(find.byKey(const Key('player-shops')), findsOneWidget);
       expect(find.byKey(const Key('stash-card')), findsOneWidget);
       expect(find.byKey(const Key('messages-inbox')), findsOneWidget);
       expect(find.byKey(const Key('hp-bar')), findsNothing);
+      expect(find.byKey(const Key('player-open-sheet')), findsNothing);
+      expect(find.byKey(const Key('player-open-inventory')), findsNothing);
 
-      await _tap(tester, find.byKey(const Key('player-open-inventory')));
+      await openDetailTab(tester, 'tab-inventory');
       expect(find.byKey(const Key('inventory-money')), findsOneWidget);
       expect(find.byKey(const Key('inv-item-rope')), findsOneWidget);
+
+      // Al volver a Combate y a Detalle sigue en Inventario.
+      await _tap(tester, find.byKey(const Key('player-subview-combat')));
+      expect(find.byKey(const Key('player-combat')), findsOneWidget);
+      await _detail(tester);
+      expect(find.byKey(const Key('inventory-money')), findsOneWidget);
+
+      await openDetailTab(tester, 'tab-skills');
+      expect(find.text('Atletismo'), findsOneWidget);
     });
 
     testWidgets('nunca enlaza la hoja de otro jugador', (tester) async {
@@ -208,7 +225,7 @@ void main() {
       final navBadge = tester.widget<Badge>(find.byKey(const Key('nav-player-badge')));
       expect(navBadge.isLabelVisible, isTrue);
 
-      await _outside(tester);
+      await _detail(tester);
       final badge = find.byKey(const Key('messages-unread-badge'));
       expect(tester.widget<Badge>(badge).isLabelVisible, isTrue);
       expect(find.descendant(of: badge, matching: find.text('1')), findsOneWidget);
@@ -240,7 +257,7 @@ void main() {
         playersCanTake: true,
       );
       await _pump(tester, inventory: inventory, stash: stash, playersCanTake: true);
-      await _outside(tester);
+      await _detail(tester);
 
       await _tap(tester, find.byKey(const Key('stash-take-st1')));
       await _tap(tester, find.byKey(const Key('quantity-plus')));
@@ -252,12 +269,12 @@ void main() {
 
     testWidgets('sin permiso no hay botón Tomar ni Devolver al grupo', (tester) async {
       await _pump(tester, stash: FakeStashRepository(items: [makeStashItem()]));
-      await _outside(tester);
+      await _detail(tester);
 
       expect(find.byKey(const Key('stash-item-st1')), findsOneWidget);
       expect(find.byKey(const Key('stash-take-st1')), findsNothing);
 
-      await _tap(tester, find.byKey(const Key('player-open-inventory')));
+      await openDetailTab(tester, 'tab-inventory');
       await _tap(tester, find.byKey(const Key('inv-menu-rope')));
       expect(find.text('Devolver al grupo'), findsNothing);
     });
@@ -270,8 +287,8 @@ void main() {
       );
       final stash = FakeStashRepository(inventory: inventory, playersCanTake: true);
       await _pump(tester, inventory: inventory, stash: stash, playersCanTake: true);
-      await _outside(tester);
-      await _tap(tester, find.byKey(const Key('player-open-inventory')));
+      await _detail(tester);
+      await openDetailTab(tester, 'tab-inventory');
 
       await _tap(tester, find.byKey(const Key('inv-menu-rope')));
       await _tap(tester, find.text('Devolver al grupo'));

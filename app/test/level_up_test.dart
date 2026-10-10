@@ -862,7 +862,7 @@ void main() {
         location: '/characters/ch1',
         fakes: AppFakes(characters: characters),
       );
-      await _tapKey(tester, 'tab-traits');
+      await openDetailTab(tester, 'tab-traits');
 
       final section = find.byKey(const Key('sheet-feats'));
       await tester.scrollUntilVisible(
@@ -929,7 +929,7 @@ void main() {
         location: '/characters/ch1',
         fakes: AppFakes(characters: characters),
       );
-      await _tapKey(tester, 'tab-traits');
+      await openDetailTab(tester, 'tab-traits');
 
       final section = find.byKey(const Key('sheet-choices'));
       expect(section, findsOneWidget);
@@ -1233,7 +1233,7 @@ void main() {
         location: '/characters/ch1',
         fakes: AppFakes(characters: FakeCharactersRepository(characters: [character])),
       );
-      await _tapKey(tester, 'tab-traits');
+      await openDetailTab(tester, 'tab-traits');
 
       final section = find.byKey(const Key('sheet-choices'));
       expect(
