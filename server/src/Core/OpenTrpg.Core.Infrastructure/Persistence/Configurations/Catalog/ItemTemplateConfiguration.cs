@@ -29,6 +29,7 @@ internal sealed class ItemTemplateConfiguration : IEntityTypeConfiguration<ItemT
         builder.HasIndex(x => x.Category);
         builder.Property(x => x.Subcategory).HasMaxLength(CatalogColumns.ShortTextMaxLength).IsRequired();
         builder.Property(x => x.Rarity).HasConversion<string>().HasMaxLength(16);
+        builder.Property(x => x.Cost).HasColumnName("CostCp");
         builder.Property(x => x.WeightLb).HasPrecision(10, 2);
         builder.Property(x => x.DamageDice).HasMaxLength(32);
         builder.Property(x => x.DamageType).HasMaxLength(32);

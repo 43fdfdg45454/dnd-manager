@@ -22,7 +22,7 @@ public sealed class ShopItem
     public ItemOverrides Overrides { get; private set; } = ItemOverrides.None();
 
     /// <summary>Unit price in copper pieces.</summary>
-    public int PriceCp { get; private set; }
+    public int Price { get; private set; }
 
     /// <summary>Units left; null = unlimited.</summary>
     public int? Stock { get; private set; }
@@ -41,7 +41,7 @@ public sealed class ShopItem
             ShopId = shopId,
             TemplateId = templateId,
             Overrides = overrides,
-            PriceCp = priceCp,
+            Price = priceCp,
             Stock = stock,
             SortOrder = sortOrder,
         };
@@ -66,7 +66,7 @@ public sealed class ShopItem
             throw DomainException.RuleViolation("Un objeto sin plantilla necesita un nombre.");
         }
 
-        PriceCp = priceCp ?? PriceCp;
+        Price = priceCp ?? Price;
         if (setStock)
         {
             Stock = stock;

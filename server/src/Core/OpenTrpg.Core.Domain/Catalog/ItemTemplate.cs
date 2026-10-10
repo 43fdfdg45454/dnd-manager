@@ -35,7 +35,7 @@ public sealed class ItemTemplate : EntityBase
 
     public bool RequiresAttunement { get; private set; }
 
-    public int? CostCp { get; private set; }
+    public int? Cost { get; private set; }
 
     public decimal? WeightLb { get; private set; }
 
@@ -110,7 +110,7 @@ public sealed class ItemTemplate : EntityBase
         Subcategory = Subcategory,
         Rarity = Rarity,
         RequiresAttunement = RequiresAttunement,
-        CostCp = CostCp,
+        Cost = Cost,
         WeightLb = WeightLb,
         DamageDice = DamageDice,
         DamageType = DamageType,
@@ -159,7 +159,7 @@ public sealed class ItemTemplate : EntityBase
         Subcategory = data.Subcategory;
         Rarity = data.Rarity;
         RequiresAttunement = data.RequiresAttunement;
-        CostCp = data.CostCp;
+        Cost = data.Cost;
         WeightLb = data.WeightLb;
         DamageDice = data.DamageDice;
         DamageType = data.DamageType;

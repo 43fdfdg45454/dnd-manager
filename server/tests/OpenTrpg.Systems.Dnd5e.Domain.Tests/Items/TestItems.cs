@@ -13,7 +13,7 @@ internal static class TestItems
         Name = "Chain Mail",
         Category = ItemCategory.Armor,
         Subcategory = "Heavy Armor",
-        CostCp = 7500,
+        Cost = 7500,
         WeightLb = 55,
         ArmorClassBase = 16,
         AddDexModifier = false,
@@ -26,7 +26,7 @@ internal static class TestItems
         Name = "Leather Armor",
         Category = ItemCategory.Armor,
         Subcategory = "Light Armor",
-        CostCp = 1000,
+        Cost = 1000,
         WeightLb = 10,
         ArmorClassBase = 11,
         AddDexModifier = true,
@@ -37,7 +37,7 @@ internal static class TestItems
         Name = "Shield",
         Category = ItemCategory.Shield,
         Subcategory = "Shield",
-        CostCp = 1000,
+        Cost = 1000,
         WeightLb = 6,
         ArmorClassBase = 2,
     }, Now);
@@ -47,7 +47,7 @@ internal static class TestItems
         Name = "Longsword",
         Category = ItemCategory.Weapon,
         Subcategory = "Martial Melee",
-        CostCp = 1500,
+        Cost = 1500,
         WeightLb = 3,
         DamageDice = "1d8",
         DamageType = "Slashing",
@@ -61,7 +61,7 @@ internal static class TestItems
         Name = "Arrow",
         Category = ItemCategory.AdventuringGear,
         Subcategory = "Ammunition",
-        CostCp = 5,
+        Cost = 5,
         WeightLb = 0.05m,
     }, Now);
 
@@ -70,7 +70,7 @@ internal static class TestItems
         Name = "Rope",
         Category = ItemCategory.AdventuringGear,
         Subcategory = "Standard Gear",
-        CostCp = 100,
+        Cost = 100,
         WeightLb = 10,
     }, Now);
 

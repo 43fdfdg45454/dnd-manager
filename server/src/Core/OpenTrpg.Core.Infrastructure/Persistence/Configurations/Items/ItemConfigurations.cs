@@ -64,6 +64,7 @@ internal sealed class ShopItemConfiguration : IEntityTypeConfiguration<ShopItem>
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).ValueGeneratedNever();
         builder.Property(x => x.Version).IsConcurrencyToken();
+        builder.Property(x => x.Price).HasColumnName("PriceCp");
         builder.OwnsItemOverrides();
 
         builder.HasIndex(x => x.ShopId);
@@ -81,6 +82,7 @@ internal sealed class TransactionConfiguration : IEntityTypeConfiguration<Transa
         builder.Property(x => x.Id).ValueGeneratedNever();
         builder.Property(x => x.Type).HasConversion<string>().HasMaxLength(16).IsRequired();
         builder.Property(x => x.ItemName).HasMaxLength(ItemLimits.NameMaxLength).IsRequired();
+        builder.Property(x => x.Total).HasColumnName("TotalCp");
         builder.Property(x => x.At).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
 

@@ -136,7 +136,7 @@ public sealed class SellHandler(
         var template = InventoryView.TemplateOf(loadedTemplates, item.TemplateId);
         var effective = EffectiveItem.Resolve(template, item.Overrides);
         var matching = shop.FindMatching(item.TemplateId);
-        var referencePrice = matching?.PriceCp ?? template?.CostCp
+        var referencePrice = matching?.Price ?? template?.Cost
             ?? throw AppException.Validation("itemId", "La tienda no puede tasar este objeto: no tiene precio de referencia.");
         var now = clock.UtcNow;
 

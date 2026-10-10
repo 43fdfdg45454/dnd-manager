@@ -278,7 +278,7 @@ public sealed class AddShopItemsBulkHandler(ShopLoader loader, IItemTemplateRepo
         foreach (var entry in request.Items)
         {
             var template = loaded[entry.TemplateId];
-            shop.AddItem(template.Id, ItemOverrides.None(), entry.PriceCp ?? template.CostCp ?? 0, entry.Stock, now);
+            shop.AddItem(template.Id, ItemOverrides.None(), entry.PriceCp ?? template.Cost ?? 0, entry.Stock, now);
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);

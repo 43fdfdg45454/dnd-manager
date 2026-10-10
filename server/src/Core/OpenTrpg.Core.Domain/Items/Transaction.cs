@@ -59,7 +59,7 @@ public sealed class Transaction : EntityBase
     public int Quantity { get; private set; }
 
     /// <summary>Money that changed hands, in copper pieces (always ≥ 0).</summary>
-    public int TotalCp { get; private set; }
+    public int Total { get; private set; }
 
     public DateTimeOffset At { get; private set; }
 
@@ -93,7 +93,7 @@ public sealed class Transaction : EntityBase
             Type = type,
             ItemName = itemName.Length > ItemLimits.NameMaxLength ? itemName[..ItemLimits.NameMaxLength] : itemName,
             Quantity = quantity,
-            TotalCp = (int)totalCp,
+            Total = (int)totalCp,
             At = now,
             CreatedAt = now,
         };

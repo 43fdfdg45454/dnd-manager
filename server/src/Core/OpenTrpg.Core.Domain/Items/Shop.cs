@@ -107,7 +107,7 @@ public sealed class Shop : EntityBase
         var item = FindItem(shopItemId);
         item.TakeStock(quantity);
         UpdatedAt = now;
-        return (long)item.PriceCp * quantity;
+        return (long)item.Price * quantity;
     }
 
     /// <summary>

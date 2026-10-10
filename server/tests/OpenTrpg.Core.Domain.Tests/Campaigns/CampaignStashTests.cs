@@ -15,7 +15,7 @@ public class CampaignStashTests
         var campaign = Campaign.Create("Campaña", null, _owner, Now);
 
         Assert.True(campaign.PlayersCanTakeFromStash);
-        Assert.Equal(0, campaign.StashCopperPieces);
+        Assert.Equal(0, campaign.StashMoney);
     }
 
     [Fact]
@@ -38,10 +38,10 @@ public class CampaignStashTests
         campaign.AdjustStashGold(500, Now);
         campaign.AdjustStashGold(-200, Now);
 
-        Assert.Equal(300, campaign.StashCopperPieces);
+        Assert.Equal(300, campaign.StashMoney);
         Assert.Equal(DomainErrorKind.RuleViolation, Assert.Throws<DomainException>(() => campaign.AdjustStashGold(-301, Now)).Kind);
         Assert.Throws<DomainException>(() => campaign.AdjustStashGold(Campaign.MaxStashCopperPieces, Now));
-        Assert.Equal(300, campaign.StashCopperPieces);
+        Assert.Equal(300, campaign.StashMoney);
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public class CampaignStashTests
 
         var share = campaign.SplitStashGold(3, Now);
 
-        Assert.Equal((333, 1), (share, campaign.StashCopperPieces));
+        Assert.Equal((333, 1), (share, campaign.StashMoney));
     }
 
     [Fact]
@@ -63,6 +63,6 @@ public class CampaignStashTests
 
         Assert.Throws<DomainException>(() => campaign.SplitStashGold(0, Now));
         Assert.Throws<DomainException>(() => campaign.SplitStashGold(3, Now));
-        Assert.Equal(2, campaign.StashCopperPieces);
+        Assert.Equal(2, campaign.StashMoney);
     }
 }

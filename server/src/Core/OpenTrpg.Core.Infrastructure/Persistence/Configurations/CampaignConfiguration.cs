@@ -25,7 +25,8 @@ internal sealed class CampaignConfiguration : IEntityTypeConfiguration<Campaign>
         builder.Property(x => x.PlayersCanTakeFromStash).IsRequired();
 
         // Value-based optimistic concurrency: two stash gold changes computed from the same amount conflict (409).
-        builder.Property(x => x.StashCopperPieces).IsRequired().IsConcurrencyToken();
+        // Money in the minor unit of the system currency; the column keeps its original name.
+        builder.Property(x => x.StashMoney).HasColumnName("StashCopperPieces").IsRequired().IsConcurrencyToken();
 
         // Users are never deleted while they own campaigns (they are deactivated instead).
         builder.HasOne<User>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);

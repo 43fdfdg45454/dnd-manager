@@ -406,7 +406,7 @@ internal sealed partial class ContentPackValidator
             Subcategory = OptionalText($"{path}.subcategory", item.Subcategory, ItemLimits.SubcategoryMaxLength),
             Rarity = rarity,
             RequiresAttunement = item.RequiresAttunement ?? false,
-            CostCp = OptionalInt($"{path}.costCp", item.CostCp, 0, ItemLimits.MaxCostCp),
+            Cost = OptionalInt($"{path}.costCp", item.CostCp, 0, ItemLimits.MaxCostCp),
             WeightLb = OptionalDecimal($"{path}.weightLb", item.WeightLb, 0, ItemLimits.MaxWeightLb),
             DamageDice = NullableText($"{path}.damageDice", item.DamageDice, ItemLimits.DiceMaxLength),
             DamageType = NullableText($"{path}.damageType", item.DamageType, ItemLimits.DamageTypeMaxLength),

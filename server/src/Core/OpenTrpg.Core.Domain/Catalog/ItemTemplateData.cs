@@ -17,7 +17,7 @@ public sealed record ItemTemplateData
     public bool RequiresAttunement { get; init; }
 
     /// <summary>Cost in copper pieces; null when unknown (magic items).</summary>
-    public int? CostCp { get; init; }
+    public int? Cost { get; init; }
 
     public decimal? WeightLb { get; init; }
 

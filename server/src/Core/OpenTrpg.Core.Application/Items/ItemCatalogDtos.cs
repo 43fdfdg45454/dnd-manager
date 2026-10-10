@@ -25,7 +25,7 @@ public sealed record ItemSummaryDto(
     string Source)
 {
     public static ItemSummaryDto From(ItemTemplate i) => new(
-        i.Id, i.Index, i.Name, i.Category.ToString(), i.Subcategory, i.Rarity?.ToString(), i.RequiresAttunement, i.CostCp, i.WeightLb, ItemSources.Of(i));
+        i.Id, i.Index, i.Name, i.Category.ToString(), i.Subcategory, i.Rarity?.ToString(), i.RequiresAttunement, i.Cost, i.WeightLb, ItemSources.Of(i));
 }
 
 public sealed record ItemDetailDto(
@@ -59,7 +59,7 @@ public sealed record ItemDetailDto(
 {
     public static ItemDetailDto From(ItemTemplate i) => new(
         i.Id, i.CampaignId, i.Index, i.Name, i.Category.ToString(), i.Subcategory, i.Rarity?.ToString(), i.RequiresAttunement,
-        i.CostCp, i.WeightLb, i.DamageDice, i.DamageType, i.VersatileDice, i.Properties, i.RangeNormal, i.RangeLong,
+        i.Cost, i.WeightLb, i.DamageDice, i.DamageType, i.VersatileDice, i.Properties, i.RangeNormal, i.RangeLong,
         i.ArmorClassBase, i.AddDexModifier, i.MaxDexBonus, i.StrengthMinimum, i.StealthDisadvantage, i.Description, i.IsSrd, i.CreatedAt,
         i.Effects, ItemSources.Of(i), ItemModifierDto.FromAll(i.Modifiers));
 }

@@ -247,7 +247,7 @@ public sealed record ShopItemDto(
     public static ShopItemDto From(ShopItem item, ItemTemplate? template) => new(
         item.Id,
         item.TemplateId,
-        item.PriceCp,
+        item.Price,
         item.Stock,
         item.SortOrder,
         ItemOverridesDto.From(item.Overrides),
@@ -290,7 +290,7 @@ public sealed record TransactionDto(
         var t = view.Transaction;
         return new TransactionDto(
             t.Id, t.ShopId, view.ShopName, t.CharacterId, view.CharacterName, t.ActorUserId, view.ActorDisplayName,
-            t.Type.ToString(), t.ItemName, t.Quantity, t.TotalCp, t.At);
+            t.Type.ToString(), t.ItemName, t.Quantity, t.Total, t.At);
     }
 }
 

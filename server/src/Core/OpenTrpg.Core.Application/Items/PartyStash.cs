@@ -238,7 +238,7 @@ public sealed class StashSupport(
         var loaded = await InventoryView.LoadTemplatesAsync(templates, items.Select(i => i.TemplateId), cancellationToken);
         var names = await users.GetDisplayNamesAsync(items.Select(i => i.AddedByUserId).Distinct().ToList(), cancellationToken);
         return new PartyStashDto(
-            campaign.StashCopperPieces,
+            campaign.StashMoney,
             campaign.PlayersCanTakeFromStash,
             items.Select(i => ToDto(i, InventoryView.TemplateOf(loaded, i.TemplateId), names.GetValueOrDefault(i.AddedByUserId))).ToList());
     }

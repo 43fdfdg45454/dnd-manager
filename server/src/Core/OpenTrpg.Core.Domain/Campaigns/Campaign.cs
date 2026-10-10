@@ -57,7 +57,7 @@ public sealed class Campaign : EntityBase
     /// Shared gold of the party stash, in copper pieces (≥ 0). Also an optimistic concurrency token:
     /// two concurrent changes computed from the same amount cannot both be saved.
     /// </summary>
-    public long StashCopperPieces { get; private set; }
+    public long StashMoney { get; private set; }
 
     public IReadOnlyCollection<CampaignMember> Members => _members;
 
@@ -159,7 +159,7 @@ public sealed class Campaign : EntityBase
     /// </summary>
     public void AdjustStashGold(long deltaCp, DateTimeOffset now)
     {
-        var result = StashCopperPieces + deltaCp;
+        var result = StashMoney + deltaCp;
         if (result < 0)
         {
             throw DomainException.RuleViolation("No hay tanto oro en el alijo del grupo.");
@@ -170,7 +170,7 @@ public sealed class Campaign : EntityBase
             throw DomainException.RuleViolation($"El oro del alijo no puede superar {MaxStashCopperPieces} pc.");
         }
 
-        StashCopperPieces = result;
+        StashMoney = result;
         UpdatedAt = now;
     }
 
@@ -185,13 +185,13 @@ public sealed class Campaign : EntityBase
             throw DomainException.RuleViolation("No hay personajes entre los que repartir el oro.");
         }
 
-        var share = StashCopperPieces / recipients;
+        var share = StashMoney / recipients;
         if (share == 0)
         {
             throw DomainException.RuleViolation("No hay oro suficiente en el alijo para repartir.");
         }
 
-        StashCopperPieces -= share * recipients;
+        StashMoney -= share * recipients;
         UpdatedAt = now;
         return share;
     }

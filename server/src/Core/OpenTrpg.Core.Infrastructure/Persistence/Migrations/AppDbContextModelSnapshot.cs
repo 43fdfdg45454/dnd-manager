@@ -51,9 +51,10 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.Property<long>("StashCopperPieces")
+                    b.Property<long>("StashMoney")
                         .IsConcurrencyToken()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("StashCopperPieces");
 
                     b.Property<string>("SystemId")
                         .IsRequired()
@@ -229,8 +230,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
-                    b.Property<int?>("CostCp")
-                        .HasColumnType("integer");
+                    b.Property<int?>("Cost")
+                        .HasColumnType("integer")
+                        .HasColumnName("CostCp");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -728,8 +730,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("PriceCp")
-                        .HasColumnType("integer");
+                    b.Property<int>("Price")
+                        .HasColumnType("integer")
+                        .HasColumnName("PriceCp");
 
                     b.Property<Guid>("ShopId")
                         .HasColumnType("uuid");
@@ -787,8 +790,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("ShopId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("TotalCp")
-                        .HasColumnType("integer");
+                    b.Property<int>("Total")
+                        .HasColumnType("integer")
+                        .HasColumnName("TotalCp");
 
                     b.Property<string>("Type")
                         .IsRequired()

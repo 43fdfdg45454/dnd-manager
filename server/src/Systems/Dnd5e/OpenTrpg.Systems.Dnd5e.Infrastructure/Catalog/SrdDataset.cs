@@ -591,7 +591,7 @@ internal static class SrdDataset
             Name = e.Name ?? e.Index,
             Category = category,
             Subcategory = subcategory ?? string.Empty,
-            CostCp = ToCopper(e.Cost?.Quantity, e.Cost?.Unit),
+            Cost = ToCopper(e.Cost?.Quantity, e.Cost?.Unit),
             WeightLb = e.Weight,
             DamageDice = e.Damage?.DamageDice,
             DamageType = e.Damage?.DamageType?.Name,

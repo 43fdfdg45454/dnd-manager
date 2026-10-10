@@ -52,7 +52,7 @@ public class ShopTests
         var tracked = shop.AddItem(Longsword.Id, ItemOverrides.None(), 1500, 2, Now);
 
         var matching = shop.FindMatching(Longsword.Id);
-        var paid = shop.BuyFromCharacter(matching, matching!.PriceCp, 2, Now);
+        var paid = shop.BuyFromCharacter(matching, matching!.Price, 2, Now);
 
         Assert.Same(tracked, matching);
         Assert.Equal(1200, paid);
