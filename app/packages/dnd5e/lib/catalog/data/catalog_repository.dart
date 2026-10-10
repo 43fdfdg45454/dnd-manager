@@ -103,6 +103,7 @@ class CatalogRepository {
     String? search,
     String? category,
     String? rarity,
+    String? group,
     int page = 1,
     int pageSize = 50,
     String? campaignId,
@@ -111,6 +112,7 @@ class CatalogRepository {
     'search': search?.trim(),
     'category': category,
     'rarity': rarity,
+    'group': group,
     'page': page,
     'pageSize': pageSize,
   }, ItemSummary.fromJson);
