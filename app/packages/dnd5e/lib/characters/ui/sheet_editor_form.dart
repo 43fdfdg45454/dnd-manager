@@ -222,8 +222,11 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
     }
     final picked = await Navigator.of(context).push<List<CharacterSpell>>(
       MaterialPageRoute(
-        builder: (_) =>
-            SpellPickerPage(classes: casters, chosen: {for (final s in _spells) s.spellIndex}),
+        builder: (_) => SpellPickerPage(
+          classes: casters,
+          chosen: {for (final s in _spells) s.spellIndex},
+          campaignId: _initial.campaignId,
+        ),
       ),
     );
     if (picked == null || picked.isEmpty) return;
@@ -433,7 +436,8 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
 
   @override
   Widget build(BuildContext context) {
-    final catalogClasses = ref.watch(classesProvider).value ?? const <ClassSummary>[];
+    final catalogClasses =
+        ref.watch(classesProvider(_initial.campaignId)).value ?? const <ClassSummary>[];
     final isActive = _initial.status == CharacterStatus.active;
     // Changes go through the DM's approval only for players; the DM/Owner
     // applies them directly. Hidden until the role is known.
@@ -616,7 +620,7 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
       );
 
   Widget _buildRaceSection() {
-    final races = ref.watch(racesProvider);
+    final races = ref.watch(racesProvider(_initial.campaignId));
     final raceDetail = _raceIndex == null ? null : ref.watch(raceDetailProvider(_raceIndex!));
     return Column(
       children: [
@@ -654,7 +658,7 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
   }
 
   Widget _buildBackgroundAndAlignment() {
-    final backgrounds = ref.watch(backgroundsProvider);
+    final backgrounds = ref.watch(backgroundsProvider(_initial.campaignId));
     return Column(
       children: [
         _CatalogDropdown(

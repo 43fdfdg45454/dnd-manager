@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/cache/stale_data.dart';
+import '../../../core/catalog/catalog_models.dart';
+import '../../../core/catalog/catalog_sources.dart';
 import '../../../core/catalog/compendium_search.dart';
 import '../../../core/systems/game_system_ui.dart';
 import '../../../core/systems/system_registry.dart';
@@ -11,12 +13,20 @@ import '../../../core/ui/offline_widgets.dart';
 
 const searchDebounce = Duration(milliseconds: 300);
 
-/// Compendium of the rules content of the default game system (D&D 5e:
-/// spells, items, classes, races, beasts, conditions and tables) behind one
-/// search box in the app bar. The tabs come from
-/// [GameSystemUi.compendiumTabs]; each one reads [compendiumSearchProvider].
+/// Compendium of the rules content of a game system (D&D 5e: spells, items,
+/// classes, races, beasts, conditions, rules and tables) behind one search box
+/// in the app bar and a source picker. The tabs come from
+/// [GameSystemUi.compendiumTabs]; each one reads [compendiumSearchProvider]
+/// and [compendiumFilterProvider] of its page ([CompendiumScope]).
+///
+/// From the main menu ([campaignId] null) it shows the catalog of the default
+/// system with every content pack. Opened from a campaign, it is the system of
+/// the campaign and "Solo lo activo en la campaña" narrows it to the packs the
+/// campaign enables.
 class CompendiumPage extends ConsumerStatefulWidget {
-  const CompendiumPage({super.key});
+  const CompendiumPage({super.key, this.campaignId});
+
+  final String? campaignId;
 
   @override
   ConsumerState<CompendiumPage> createState() => _CompendiumPageState();
@@ -37,20 +47,26 @@ class _CompendiumPageState extends ConsumerState<CompendiumPage> {
     setState(() {}); // Refreshes the clear button.
     _debounce?.cancel();
     _debounce = Timer(searchDebounce, () {
-      ref.read(compendiumSearchProvider.notifier).set(value);
+      ref.read(compendiumSearchProvider(widget.campaignId).notifier).set(value);
     });
   }
 
   void _clearSearch() {
     _debounce?.cancel();
     _searchController.clear();
-    ref.read(compendiumSearchProvider.notifier).set('');
+    ref.read(compendiumSearchProvider(widget.campaignId).notifier).set('');
     setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final system = ref.watch(defaultGameSystemUiProvider);
+    final campaignId = widget.campaignId;
+    final system = campaignId == null
+        ? ref.watch(defaultGameSystemUiProvider)
+        : ref.watch(campaignSystemUiProvider(campaignId));
+    // The search and the filters live while the page does.
+    ref.watch(compendiumSearchProvider(campaignId));
+    ref.watch(compendiumFilterProvider(campaignId));
     final tabs = system.compendiumTabs();
     return DefaultTabController(
       length: tabs.length,
@@ -85,17 +101,92 @@ class _CompendiumPageState extends ConsumerState<CompendiumPage> {
           children: [
             // Every catalog answer of the system lives below this path.
             OfflineBanner(scopes: [staleTree('/api/v1/systems/${system.id}/catalog')]),
+            _ScopeBar(campaignId: campaignId),
             Expanded(
-              child: TabBarView(
-                children: [
-                  for (final tab in tabs) _KeepAlive(child: Builder(builder: tab.builder)),
-                ],
+              child: CompendiumScope(
+                campaignId: campaignId,
+                child: TabBarView(
+                  children: [
+                    for (final tab in tabs) _KeepAlive(child: Builder(builder: tab.builder)),
+                  ],
+                ),
               ),
             ),
             if (system.attributions.isNotEmpty)
               _AttributionFooter(credit: system.attributions.first),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The source picker ("Todo" or one pack) and, in the compendium of a
+/// campaign, the "Solo lo activo en la campaña" switch.
+class _ScopeBar extends ConsumerWidget {
+  const _ScopeBar({required this.campaignId});
+
+  final String? campaignId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final filter = ref.watch(compendiumFilterProvider(campaignId));
+    final controller = ref.read(compendiumFilterProvider(campaignId).notifier);
+    final all = ref.watch(compendiumSourcesProvider(campaignId)).value ?? const <CatalogSource>[];
+    // With the campaign scope only its packs can be picked.
+    final sources = [
+      for (final s in all)
+        if (!filter.campaignOnly || s.isBase || (s.enabled ?? true)) s,
+    ];
+    final selected = sources.any((s) => s.id == filter.source) ? filter.source : null;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 160, maxWidth: 280),
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'Fuente',
+                isDense: true,
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String?>(
+                  key: const Key('compendium-source'),
+                  value: selected,
+                  isExpanded: true,
+                  isDense: true,
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      key: Key('compendium-source-all'),
+                      value: null,
+                      child: Text('Todo'),
+                    ),
+                    for (final s in sources)
+                      DropdownMenuItem<String?>(
+                        key: Key('compendium-source-${s.id}'),
+                        value: s.id,
+                        child: Text(s.name, overflow: TextOverflow.ellipsis),
+                      ),
+                  ],
+                  onChanged: controller.setSource,
+                ),
+              ),
+            ),
+          ),
+          if (campaignId != null)
+            FilterChip(
+              key: const Key('compendium-campaign-only'),
+              label: const Text('Solo lo activo en la campaña'),
+              selected: filter.campaignOnly,
+              onSelected: controller.setCampaignOnly,
+            ),
+        ],
       ),
     );
   }

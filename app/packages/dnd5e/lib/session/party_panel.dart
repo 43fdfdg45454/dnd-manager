@@ -110,7 +110,7 @@ class _Dnd5ePartyPanelState extends ConsumerState<Dnd5ePartyPanel> {
   Widget build(BuildContext context) {
     final partyAsync = ref.watch(partyControllerProvider(_campaignId));
     final party = partyAsync.value ?? const <PartyMember>[];
-    final conditions = ref.watch(conditionsProvider).value ?? const [];
+    final conditions = ref.watch(conditionsProvider(null)).value ?? const [];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

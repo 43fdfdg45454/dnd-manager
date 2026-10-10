@@ -46,14 +46,23 @@ const _filterDecoration = InputDecoration(
   contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
 );
 
+/// The campaign the compendium of [context] was opened from (null: the main
+/// menu) and the campaign whose catalog its lists ask for (null: the global
+/// one).
+(String?, String?) _scopeOf(BuildContext context, WidgetRef ref) {
+  final page = CompendiumScope.of(context);
+  return (page, ref.watch(compendiumCatalogCampaignProvider(page)));
+}
+
 class CompendiumSpellsTab extends ConsumerWidget {
   const CompendiumSpellsTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final filters = ref.watch(spellFiltersProvider);
-    final filtersController = ref.read(spellFiltersProvider.notifier);
-    final classes = ref.watch(classesProvider).value ?? const <ClassSummary>[];
+    final (page, campaign) = _scopeOf(context, ref);
+    final filters = ref.watch(spellFiltersProvider(page));
+    final filtersController = ref.read(spellFiltersProvider(page).notifier);
+    final classes = ref.watch(classesProvider(campaign)).value ?? const <ClassSummary>[];
     // Only casters can have spells; fall back to all if the flag is missing.
     final casters = classes.where((c) => c.isSpellcaster).toList();
     final classOptions = casters.isEmpty ? classes : casters;
@@ -91,9 +100,9 @@ class CompendiumSpellsTab extends ConsumerWidget {
         Expanded(
           child: _PagedList<SpellSummary>(
             listKey: const Key('spell-list'),
-            value: ref.watch(spellsControllerProvider),
-            onRetry: () => ref.invalidate(spellsControllerProvider),
-            loadMore: ref.read(spellsControllerProvider.notifier).loadMore,
+            value: ref.watch(spellsControllerProvider(page)),
+            onRetry: () => ref.invalidate(spellsControllerProvider(page)),
+            loadMore: ref.read(spellsControllerProvider(page).notifier).loadMore,
             emptyText: 'No se encontraron hechizos.',
             itemBuilder: (context, spell) => ListTile(
               key: Key('spell-${spell.index}'),
@@ -123,7 +132,8 @@ class CompendiumItemsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final category = ref.watch(itemCategoryFilterProvider);
+    final page = CompendiumScope.of(context);
+    final category = ref.watch(itemCategoryFilterProvider(page));
     return Column(
       children: [
         _FilterBar(
@@ -138,16 +148,16 @@ class CompendiumItemsTab extends ConsumerWidget {
                 for (final entry in itemCategories.entries)
                   DropdownMenuItem<String?>(value: entry.key, child: Text(entry.value)),
               ],
-              onChanged: ref.read(itemCategoryFilterProvider.notifier).setCategory,
+              onChanged: ref.read(itemCategoryFilterProvider(page).notifier).setCategory,
             ),
           ],
         ),
         Expanded(
           child: _PagedList<ItemSummary>(
             listKey: const Key('item-list'),
-            value: ref.watch(itemsControllerProvider),
-            onRetry: () => ref.invalidate(itemsControllerProvider),
-            loadMore: ref.read(itemsControllerProvider.notifier).loadMore,
+            value: ref.watch(itemsControllerProvider(page)),
+            onRetry: () => ref.invalidate(itemsControllerProvider(page)),
+            loadMore: ref.read(itemsControllerProvider(page).notifier).loadMore,
             emptyText: 'No se encontraron objetos.',
             itemBuilder: (context, item) => ListTile(
               key: Key('item-${item.id}'),
@@ -224,12 +234,14 @@ class _PagedList<T> extends StatelessWidget {
 
 bool _matches(String name, String search) => name.toLowerCase().contains(search.toLowerCase());
 
-/// List of a small reference collection filtered locally by the shared search.
+/// List of a small reference collection filtered locally by the shared search
+/// and the source picked in the compendium.
 class _LocalList<T> extends ConsumerWidget {
   const _LocalList({
     required this.value,
     required this.onRetry,
     required this.nameOf,
+    required this.sourceOf,
     required this.itemBuilder,
     required this.emptyText,
   });
@@ -237,19 +249,22 @@ class _LocalList<T> extends ConsumerWidget {
   final AsyncValue<List<T>> value;
   final VoidCallback onRetry;
   final String Function(T item) nameOf;
+  final String? Function(T item) sourceOf;
   final Widget Function(BuildContext context, T item) itemBuilder;
   final String emptyText;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final search = ref.watch(compendiumSearchProvider);
+    final page = CompendiumScope.of(context);
+    final search = ref.watch(compendiumSearchProvider(page));
+    final filter = ref.watch(compendiumFilterProvider(page));
     return CatalogAsyncBody<List<T>>(
       value: value,
       onRetry: onRetry,
       builder: (all) {
         final items = [
           for (final e in all)
-            if (_matches(nameOf(e), search)) e,
+            if (_matches(nameOf(e), search) && filter.matchesSource(sourceOf(e))) e,
         ];
         if (items.isEmpty) return Center(child: Text(emptyText));
         return ListView.builder(
@@ -266,14 +281,16 @@ class CompendiumClassesTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final (_, campaign) = _scopeOf(context, ref);
     return _LocalList<ClassSummary>(
-      value: ref.watch(classesProvider),
-      onRetry: () => ref.invalidate(classesProvider),
+      value: ref.watch(classesProvider(campaign)),
+      onRetry: () => ref.invalidate(classesProvider(campaign)),
       nameOf: (c) => c.name,
+      sourceOf: (c) => c.source,
       emptyText: 'No se encontraron clases.',
       itemBuilder: (context, c) => ListTile(
         key: Key('class-${c.index}'),
-        title: Text(c.name),
+        title: NameWithSource(c.name, c.source),
         subtitle: Text(
           [
             if (c.hitDie != null) 'Dado de golpe d${c.hitDie}',
@@ -292,10 +309,12 @@ class CompendiumRacesTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final (_, campaign) = _scopeOf(context, ref);
     return _LocalList<RaceSummary>(
-      value: ref.watch(racesProvider),
-      onRetry: () => ref.invalidate(racesProvider),
+      value: ref.watch(racesProvider(campaign)),
+      onRetry: () => ref.invalidate(racesProvider(campaign)),
       nameOf: (r) => r.name,
+      sourceOf: (r) => r.source,
       emptyText: 'No se encontraron razas.',
       itemBuilder: (context, r) => ListTile(
         key: Key('race-${r.index}'),
@@ -308,19 +327,20 @@ class CompendiumRacesTab extends ConsumerWidget {
   }
 }
 
-/// SRD beasts (wild shapes), ordered by challenge rating.
+/// Creatures of the catalog (the SRD beasts and the creatures of the content
+/// packs), ordered by challenge rating.
 class CompendiumBeastsTab extends ConsumerWidget {
   const CompendiumBeastsTab({super.key});
 
-  static const BeastQuery _all = (maxCr: null, fly: null, swim: null);
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final (_, campaign) = _scopeOf(context, ref);
     return _LocalList<BeastSummary>(
-      value: ref.watch(beastsProvider(_all)),
-      onRetry: () => ref.invalidate(beastsProvider(_all)),
+      value: ref.watch(creaturesProvider(campaign)),
+      onRetry: () => ref.invalidate(creaturesProvider(campaign)),
       nameOf: (b) => b.name,
-      emptyText: 'No se encontraron bestias.',
+      sourceOf: (b) => b.source,
+      emptyText: 'No se encontraron criaturas.',
       itemBuilder: (context, b) => BeastTile(beast: b),
     );
   }
@@ -331,14 +351,16 @@ class CompendiumConditionsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final (_, campaign) = _scopeOf(context, ref);
     return _LocalList<Condition>(
-      value: ref.watch(conditionsProvider),
-      onRetry: () => ref.invalidate(conditionsProvider),
+      value: ref.watch(conditionsProvider(campaign)),
+      onRetry: () => ref.invalidate(conditionsProvider(campaign)),
       nameOf: (c) => c.name,
+      sourceOf: (c) => c.source,
       emptyText: 'No se encontraron condiciones.',
       itemBuilder: (context, c) => ListTile(
         key: Key('condition-${c.index}'),
-        title: Text(c.name),
+        title: NameWithSource(c.name, c.source),
         trailing: const Icon(Icons.info_outline),
         onTap: () => showConditionSheet(context, c),
       ),
@@ -356,6 +378,7 @@ class CompendiumTablesTab extends ConsumerWidget {
       value: ref.watch(rollTablesProvider(null)),
       onRetry: () => ref.invalidate(rollTablesProvider(null)),
       nameOf: (t) => t.name,
+      sourceOf: (t) => t.source,
       emptyText: 'No hay tablas de tirada. Llegan con los paquetes de contenido.',
       itemBuilder: (context, t) => ListTile(
         key: Key('roll-table-${t.key}'),
@@ -371,6 +394,74 @@ class CompendiumTablesTab extends ConsumerWidget {
             Navigator.of(context)
                 .push(MaterialPageRoute<void>(builder: (_) => RollTablePage(table: t))),
       ),
+    );
+  }
+}
+
+/// Rules documents of the content packs (variant rules, firearms...): a
+/// category picker over the list; empty with the SRD only.
+class CompendiumRulesTab extends ConsumerStatefulWidget {
+  const CompendiumRulesTab({super.key});
+
+  @override
+  ConsumerState<CompendiumRulesTab> createState() => _CompendiumRulesTabState();
+}
+
+class _CompendiumRulesTabState extends ConsumerState<CompendiumRulesTab> {
+  String? _category;
+
+  @override
+  Widget build(BuildContext context) {
+    final (_, campaign) = _scopeOf(context, ref);
+    final rules = ref.watch(rulesProvider(campaign));
+    final categories = {
+      for (final r in rules.value ?? const <RuleSummary>[])
+        if (r.category.isNotEmpty) r.category,
+    }.toList()..sort((a, b) => ruleCategoryLabel(a).compareTo(ruleCategoryLabel(b)));
+    final category = categories.contains(_category) ? _category : null;
+    return Column(
+      children: [
+        if (categories.length > 1)
+          _FilterBar(
+            children: [
+              DropdownButtonFormField<String?>(
+                key: const Key('filter-rule-category'),
+                initialValue: category,
+                isExpanded: true,
+                decoration: _filterDecoration.copyWith(labelText: 'Categoría'),
+                items: [
+                  const DropdownMenuItem<String?>(value: null, child: Text('Todas')),
+                  for (final c in categories)
+                    DropdownMenuItem<String?>(value: c, child: Text(ruleCategoryLabel(c))),
+                ],
+                onChanged: (value) => setState(() => _category = value),
+              ),
+            ],
+          ),
+        Expanded(
+          child: _LocalList<RuleSummary>(
+            value: rules.whenData(
+              (list) => [
+                for (final r in list)
+                  if (category == null || r.category == category) r,
+              ],
+            ),
+            onRetry: () => ref.invalidate(rulesProvider(campaign)),
+            nameOf: (r) => '${r.title} ${r.tags.join(' ')}',
+            sourceOf: (r) => r.source,
+            emptyText: 'No hay reglas. Llegan con los paquetes de contenido.',
+            itemBuilder: (context, r) => ListTile(
+              key: Key('rule-${r.index}'),
+              title: NameWithSource(r.title, r.source),
+              subtitle: Text(
+                [if (r.category.isNotEmpty) ruleCategoryLabel(r.category), ...r.tags].join(' · '),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(Dnd5eRoutes.rule(r.index)),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,4 +1,5 @@
-// Beasts of the SRD (`/api/v1/systems/dnd5e/catalog/beasts`): the wild shapes of a druid.
+// Creatures of the catalog (`/api/v1/systems/dnd5e/catalog/beasts`): the SRD beasts
+// (the wild shapes of a druid) and the creatures of the content packs.
 
 Map<String, dynamic> _map(Object? value) =>
     value is Map ? Map<String, dynamic>.from(value) : const {};
@@ -67,6 +68,8 @@ class BeastSummary {
     this.armorClass = 10,
     this.hitPoints = 1,
     this.speeds = const {},
+    this.type = 'beast',
+    this.source,
   });
 
   factory BeastSummary.fromJson(Map<String, dynamic> json) => BeastSummary(
@@ -78,6 +81,8 @@ class BeastSummary {
     armorClass: _int(json['armorClass']) ?? 10,
     hitPoints: _int(json['hitPoints']) ?? 1,
     speeds: _intMap(json['speeds']),
+    type: _str(json['type'], 'beast'),
+    source: _strOrNull(json['source']),
   );
 
   final String index;
@@ -90,6 +95,14 @@ class BeastSummary {
 
   /// Feet by kind ("walk", "fly", "swim", "climb", "burrow").
   final Map<String, int> speeds;
+
+  /// Creature type in lowercase ("beast", "monstrosity"...).
+  final String type;
+
+  /// "srd" or the content pack of the creature; null when not sent.
+  final String? source;
+
+  bool get isBeast => type.toLowerCase() == 'beast';
 
   bool get flies => (speeds['fly'] ?? 0) > 0;
 
@@ -175,6 +188,11 @@ class Beast extends BeastSummary {
     super.armorClass,
     super.hitPoints,
     super.speeds,
+    super.type,
+    super.source,
+    this.subtype,
+    this.reactions = const [],
+    this.legendaryActions = const [],
     this.alignment = '',
     this.xp = 0,
     this.proficiencyBonus = 2,
@@ -207,6 +225,11 @@ class Beast extends BeastSummary {
       armorClass: summary.armorClass,
       hitPoints: summary.hitPoints,
       speeds: summary.speeds,
+      type: summary.type,
+      source: summary.source,
+      subtype: _strOrNull(json['subtype']),
+      reactions: _objects(json['reactions'], BeastAction.fromJson),
+      legendaryActions: _objects(json['legendaryActions'], BeastAction.fromJson),
       alignment: _str(json['alignment']),
       xp: _int(json['xp']) ?? 0,
       proficiencyBonus: _int(json['proficiencyBonus']) ?? 2,
@@ -232,6 +255,10 @@ class Beast extends BeastSummary {
     );
   }
 
+  /// "goblinoid", "shapechanger"... when the creature has one.
+  final String? subtype;
+  final List<BeastAction> reactions;
+  final List<BeastAction> legendaryActions;
   final String alignment;
   final int xp;
   final int proficiencyBonus;

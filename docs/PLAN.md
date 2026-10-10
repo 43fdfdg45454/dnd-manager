@@ -127,7 +127,7 @@ indicado (`Agent` con `model: opus | sonnet | haiku`), dándoles el contrato esc
 
 ## Estado
 
-Fases 0 a 33 y la entrega 34A implementadas y en `master` (cada una con su contrato en `docs/specs/`). Verificado en
+Fases 0 a 33 y las entregas 34A y 34B implementadas y en `master` (cada una con su contrato en `docs/specs/`). Verificado en
 este entorno: servidor compila sin avisos y pasa sus tests (SQLite en memoria); cliente sin
 incidencias de análisis y con sus tests en verde. CI publica en cada push a `master` la imagen
 `ghcr.io/<owner>/opentrpg-api:latest` y una release con el APK firmado. **No verificado aquí**
@@ -180,6 +180,7 @@ jugador en dos móviles; cualquier desviación se corrige sobre los contratos de
 | 33A | División de la app, capas de datos: contrato `GameSystemUi` (`lib/core/systems`) con registro por `campaign.systemId` y `UnsupportedSystemUi`; modelos de personaje, objetos y sesión partidos en núcleo (con `raw`) y 5e (`lib/systems/dnd5e`); repositorio y controlador 5e aparte; rutas y eventos 5e declarados por el módulo; test de capas; paquete Dart `opentrpg`, `OpenTrpgApp` y `applicationId` `com.opentrpg.app` | Ver `docs/specs/fase-33-division-de-la-app.md` |
 | 33B | División de la app, paquetes: todas las páginas del núcleo usan el contrato; workspace de pub con `app` (anfitrión: `main.dart`, `app.dart`, assets y fuentes), `app/packages/core` (`opentrpg_core`) y `app/packages/dnd5e` (`opentrpg_dnd5e`); test de capas por paquete; canal de plataforma `com.opentrpg/trust`; tests del anfitrión (sistemas, rutas 5e, assets y fuentes) | Ver `docs/specs/fase-33-division-de-la-app.md` |
 | 34A | Paquetes por campaña, servidor: `ContentPacks` sustituye a `CatalogImports` (SRD registrado como paquete base), `CampaignContentPacks` con `GET/PUT /api/v1/campaigns/{id}/content-packs` (Owner/DM, `unknown-pack`, `missing-requirement`, evento `campaign.updated`), formato de paquete **v3** único (clases completas con lanzamiento por tabla, dotes, razas, equipo con armas de fuego, conjuros, criaturas, condiciones, reglas y vocabularios; `requires`), tablas `Dnd5eCreatures`, `Dnd5eRules` y `Dnd5eReferenceEntries`, ámbito de catálogo por campaña en hoja, asistente, tienda y compendio (`?campaignId=`, motivo `pack-disabled`), rutas `catalog/rules` y `catalog/reference/{kind}`; `docs/content-packs.md` reescrito | Ver `docs/specs/fase-34-paquetes-por-campana.md` |
+| 34B | Paquetes por campaña, app: paquetes con sistema, formato y marca base en Admin → Contenido; sección "Paquetes de contenido" en Ajustes de campaña (Owner/DM, interruptores y aviso de `requires`; jugadores en solo lectura); compendio desde la campaña con selector de fuente y "Solo lo activo en la campaña"; pestaña Reglas; detalle de clase con recursos, lanzamiento y multiclase; criaturas con reacciones y acciones legendarias; asistente, conjuros, condiciones y editor de hoja limitados a los paquetes activos; motivo `pack-disabled`; recarga por `campaign.updated` | Ver `docs/specs/fase-34-paquetes-por-campana.md` |
 
 ## Verificación end-to-end
 

@@ -12,8 +12,8 @@ import '../models.dart';
 import 'level_up/level_up_widgets.dart';
 
 /// "Sustituye lo que ya no cumples" (`/characters/:id/invalid-choices`): the
-/// options and feats whose prerequisites no longer hold must be replaced by
-/// another one. One card list per invalid pick; the player cannot leave the
+/// options and feats whose prerequisites no longer hold, or whose content pack
+/// the campaign disabled (`pack-disabled`), must be replaced by another one. One card list per invalid pick; the player cannot leave the
 /// page while there are invalid picks.
 class InvalidChoicesPage extends ConsumerStatefulWidget {
   const InvalidChoicesPage({super.key, required this.characterId});
@@ -144,8 +144,15 @@ class _InvalidChoicesPageState extends ConsumerState<InvalidChoicesPage> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             children: [
               Text(
-                'Tus características han cambiado y ya no cumples los requisitos de lo siguiente. '
-                'Elige otra opción para cada uno.',
+                plan.invalid.isNotEmpty && plan.invalid.every((i) => i.packDisabled)
+                    ? 'El DM ha desactivado el paquete de contenido de lo siguiente. '
+                          'Elige otra opción para cada uno.'
+                    : plan.invalid.any((i) => i.packDisabled)
+                    ? 'Ya no cumples los requisitos de lo siguiente o pertenece a un paquete '
+                          'desactivado en la campaña. Elige otra opción para cada uno.'
+                    : 'Tus características han cambiado y ya no cumples los requisitos de lo '
+                          'siguiente. Elige otra opción para cada uno.',
+                key: const Key('invalid-choices-intro'),
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 12),
@@ -203,7 +210,7 @@ class _InvalidChoicesPageState extends ConsumerState<InvalidChoicesPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          LevelUpHeading(choice.name, subtitle: invalid?.reason ?? choice.note),
+          LevelUpHeading(choice.name, subtitle: invalid?.displayReason ?? choice.note),
           if (choice.options.every((o) => !o.eligible) || choice.required == 0)
             Text(
               'No hay ninguna opción válida: se quitará sin sustituirla.',

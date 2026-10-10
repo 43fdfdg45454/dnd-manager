@@ -1570,7 +1570,7 @@ class CharacterWizardController extends Notifier<WizardState> {
   Future<void> loadTrinkets() async {
     List<Trinket> table;
     try {
-      table = await _catalog.trinkets();
+      table = await _catalog.trinkets(campaignId: campaignId);
     } catch (_) {
       table = const [];
     }

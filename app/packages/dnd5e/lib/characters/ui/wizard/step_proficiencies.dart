@@ -61,7 +61,7 @@ class BackgroundStep extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(characterWizardControllerProvider(args));
     final controller = ref.read(characterWizardControllerProvider(args).notifier);
-    final backgrounds = ref.watch(backgroundsProvider);
+    final backgrounds = ref.watch(backgroundsProvider(args.campaignId));
     final theme = Theme.of(context);
     final choices = state.classDetail?.skillChoices;
     final granted = state.backgroundSkills;
@@ -77,8 +77,10 @@ class BackgroundStep extends ConsumerWidget {
 
     return backgrounds.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) =>
-          WizardLoadError(error: error, onRetry: () => ref.invalidate(backgroundsProvider)),
+      error: (error, _) => WizardLoadError(
+        error: error,
+        onRetry: () => ref.invalidate(backgroundsProvider(args.campaignId)),
+      ),
       data: (list) => ListView(
         key: const Key('step-background'),
         padding: stepPadding,

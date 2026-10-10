@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -5,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
+import '../../content_packs/ui/base_pack_chip.dart';
 import '../data/content_packs_controller.dart';
 import '../data/content_packs_repository.dart';
 import '../domain/content_pack.dart';
@@ -104,12 +106,20 @@ class _AdminContentPageState extends ConsumerState<AdminContentPage> {
       await _controller.delete(pack.id);
       if (mounted) _showMessage('Paquete eliminado.');
     } catch (error) {
-      if (mounted) {
-        _showMessage(
-          describeContentError(error, byStatus: const {404: 'El paquete ya no existe.'}),
-        );
-      }
+      if (mounted) _showMessage(_deleteError(error));
     }
+  }
+
+  /// A 409 says why the pack cannot go: it is the base pack (`base-pack`) or
+  /// other packs require it (`required-by`, with their names in the detail).
+  static String _deleteError(Object error) {
+    if (error is DioException && error.response?.statusCode == 409) {
+      return switch (problemCode(error)) {
+        'base-pack' => 'El paquete base del sistema no se puede borrar.',
+        _ => problemDetail(error) ?? 'Otros paquetes lo requieren: bórralos antes.',
+      };
+    }
+    return describeContentError(error, byStatus: const {404: 'El paquete ya no existe.'});
   }
 
   @override
@@ -149,7 +159,7 @@ class _AdminContentPageState extends ConsumerState<AdminContentPage> {
               child: Padding(
                 padding: EdgeInsets.all(24),
                 child: Text(
-                  'No hay paquetes de contenido importados. El contenido del SRD '
+                  'No hay paquetes de contenido. El contenido del SRD '
                   'siempre está disponible.',
                   key: Key('content-empty'),
                   textAlign: TextAlign.center,
@@ -177,22 +187,37 @@ class _PackTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final imported = pack.importedAt;
     final details = [
+      if (pack.systemId.isNotEmpty) 'Sistema ${pack.systemId}',
       'Versión ${pack.version}',
+      pack.formatVersion > 0 ? 'Formato ${pack.formatVersion}' : 'Integrado',
       if (imported != null) 'Importado el ${DateFormat('dd/MM/yyyy').format(imported.toLocal())}',
     ].join(' · ');
     final counts = pack.countsSummary;
+    final requires = pack.requires.isEmpty ? null : 'Requiere: ${pack.requires.join(', ')}';
+    final lines = [details, ?requires, if (counts.isNotEmpty) counts];
     return ListTile(
       key: Key('content-pack-${pack.id}'),
-      leading: const Icon(Icons.inventory_2_outlined),
-      title: Text(pack.name),
-      subtitle: Text(counts.isEmpty ? details : '$details\n$counts'),
-      isThreeLine: counts.isNotEmpty,
-      trailing: IconButton(
-        key: Key('content-delete-${pack.id}'),
-        icon: const Icon(Icons.delete_outline),
-        tooltip: 'Eliminar paquete',
-        onPressed: () => onDelete(pack),
+      leading: Icon(pack.isBase ? Icons.verified_outlined : Icons.inventory_2_outlined),
+      title: Wrap(
+        spacing: 8,
+        runSpacing: 2,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(pack.name),
+          if (pack.isBase) BasePackChip(key: Key('content-base-${pack.id}')),
+        ],
       ),
+      subtitle: Text(lines.join('\n')),
+      isThreeLine: lines.length > 1,
+      // The base pack of a system is always there: it cannot be deleted.
+      trailing: pack.isBase
+          ? null
+          : IconButton(
+              key: Key('content-delete-${pack.id}'),
+              icon: const Icon(Icons.delete_outline),
+              tooltip: 'Eliminar paquete',
+              onPressed: () => onDelete(pack),
+            ),
     );
   }
 }

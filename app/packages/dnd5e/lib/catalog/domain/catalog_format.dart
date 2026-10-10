@@ -62,3 +62,60 @@ String rarityLabel(String? rarity) {
 
 /// "Truco" for level 0, "Nivel N" otherwise.
 String spellLevelLabel(int level) => level == 0 ? 'Truco' : 'Nivel $level';
+
+const _ruleCategories = <String, String>{
+  'variant': 'Variante',
+  'multiclassing': 'Multiclase',
+  'equipment': 'Equipo',
+  'general': 'General',
+  'combat': 'Combate',
+  'spellcasting': 'Magia',
+  'adventuring': 'Aventura',
+};
+
+/// Spanish name of the category of a rules document ("variant" ->
+/// "Variante"); an unknown category is shown capitalised as it comes.
+String ruleCategoryLabel(String category) {
+  final known = _ruleCategories[category.toLowerCase()];
+  if (known != null) return known;
+  return category.isEmpty ? category : '${category[0].toUpperCase()}${category.substring(1)}';
+}
+
+const _spellProgressions = <String, String>{
+  'full': 'Completo',
+  'half': 'Medio',
+  'third': 'Un tercio',
+  'pact': 'Magia de pacto',
+  'table': 'Tabla propia',
+};
+
+/// Spanish name of the spell slot progression of a class ("full" ->
+/// "Completo").
+String spellProgressionLabel(String progression) =>
+    _spellProgressions[progression.toLowerCase()] ?? progression;
+
+/// "Preparados" or "Conocidos" for the way a class readies its spells.
+String spellPreparationLabel(String preparation) => switch (preparation.toLowerCase()) {
+  'prepared' => 'Preparados',
+  'known' => 'Conocidos',
+  _ => preparation,
+};
+
+/// When a resource of a class recharges ("LongRest" -> "Descanso largo").
+String rechargeLabel(String recharge) => switch (recharge.toLowerCase()) {
+  'longrest' => 'Descanso largo',
+  'shortrest' => 'Descanso corto',
+  'dawn' => 'Al amanecer',
+  'none' || '' => 'No se recupera',
+  _ => recharge,
+};
+
+/// The maximum of a resource whose formula is not a table ("mod:wis" ->
+/// "Mod. de Sabiduría"); an unknown formula is shown as it comes.
+String resourceMaxLabel(String max) {
+  final formula = max.trim();
+  if (formula == 'proficiencyBonus') return 'Bonificador de competencia';
+  if (formula.startsWith('mod:')) return 'Mod. de ${abilityLabel(formula.substring(4))}';
+  if (formula.startsWith('level')) return 'Nivel de la clase';
+  return formula;
+}

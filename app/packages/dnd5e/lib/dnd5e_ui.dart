@@ -187,12 +187,13 @@ class Dnd5eUi extends GameSystemUi {
       label: 'Condiciones',
       builder: (_) => const CompendiumConditionsTab(),
     ),
+    CompendiumTab(id: 'rules', label: 'Reglas', builder: (_) => const CompendiumRulesTab()),
     CompendiumTab(id: 'tables', label: 'Tablas', builder: (_) => const CompendiumTablesTab()),
   ];
 
   @override
-  Future<List<CatalogSource>> catalogSources(Ref ref) =>
-      ref.watch(catalogRepositoryProvider).sources();
+  Future<List<CatalogSource>> catalogSources(Ref ref, {String? campaignId}) =>
+      ref.watch(catalogRepositoryProvider).sources(campaignId: campaignId);
 
   @override
   Future<void> openCatalogItem(BuildContext context, String itemId) =>
