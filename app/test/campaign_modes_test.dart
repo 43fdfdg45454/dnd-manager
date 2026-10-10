@@ -1,10 +1,10 @@
-import 'package:dnd_companion/core/router/app_router.dart';
-import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/campaigns/ui/general/campaign_section_page.dart';
-import 'package:dnd_companion/features/catalog/data/models.dart' show Condition, ItemSummary;
-import 'package:dnd_companion/features/characters/data/models.dart';
-import 'package:dnd_companion/features/items/data/models.dart';
-import 'package:dnd_companion/features/session/data/models.dart';
+import 'package:opentrpg/core/router/app_router.dart';
+import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg/features/campaigns/ui/general/campaign_section_page.dart';
+import 'package:opentrpg/features/catalog/data/models.dart' show Condition, ItemSummary;
+import 'package:opentrpg/features/characters/data/models.dart';
+import 'package:opentrpg/features/items/data/models.dart';
+import 'package:opentrpg/features/session/data/models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

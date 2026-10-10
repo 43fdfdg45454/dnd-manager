@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:dnd_companion/core/network/trust_store.dart';
+import 'package:opentrpg/core/network/trust_store.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 

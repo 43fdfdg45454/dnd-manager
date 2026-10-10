@@ -1,4 +1,4 @@
-import 'package:dnd_companion/core/motion/motion_settings.dart';
+import 'package:opentrpg/core/motion/motion_settings.dart';
 import 'package:flutter/widgets.dart';
 
 /// `MaterialApp.builder` that reduces motion, so the looping animations (the

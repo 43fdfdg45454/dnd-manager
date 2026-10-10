@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:dnd_companion/features/admin/data/content_packs_repository.dart';
-import 'package:dnd_companion/features/admin/domain/content_pack.dart';
+import 'package:opentrpg/features/admin/data/content_packs_repository.dart';
+import 'package:opentrpg/features/admin/domain/content_pack.dart';
 
 ContentPack makeContentPack({
   String id = 'reinos-ejemplo',

@@ -1,7 +1,7 @@
-import 'package:dnd_companion/core/realtime/realtime_events.dart';
-import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/characters/data/models.dart';
-import 'package:dnd_companion/features/characters/ui/combat/rest_section.dart'
+import 'package:opentrpg/core/realtime/realtime_events.dart';
+import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg/features/characters/data/models.dart';
+import 'package:opentrpg/features/characters/ui/combat/rest_section.dart'
     show expectedShortRestHealing;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

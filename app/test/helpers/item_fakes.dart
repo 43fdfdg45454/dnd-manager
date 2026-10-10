@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
-import 'package:dnd_companion/features/catalog/data/models.dart';
-import 'package:dnd_companion/features/items/data/campaign_items_repository.dart';
-import 'package:dnd_companion/features/items/data/inventory_repository.dart';
-import 'package:dnd_companion/features/items/data/models.dart';
-import 'package:dnd_companion/features/items/data/shops_repository.dart';
-import 'package:dnd_companion/features/items/domain/items_format.dart';
+import 'package:opentrpg/features/catalog/data/models.dart';
+import 'package:opentrpg/features/items/data/campaign_items_repository.dart';
+import 'package:opentrpg/features/items/data/inventory_repository.dart';
+import 'package:opentrpg/features/items/data/models.dart';
+import 'package:opentrpg/features/items/data/shops_repository.dart';
+import 'package:opentrpg/features/items/domain/items_format.dart';
 
 import 'character_fakes.dart';
 import 'fakes.dart';

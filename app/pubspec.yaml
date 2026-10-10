@@ -1,4 +1,4 @@
-name: dnd_companion
+name: opentrpg
 description: Companion app para campañas de D&D 5e en sesiones presenciales.
 publish_to: 'none'
 # La versión real la calcula GitVersion (GitVersion.yml) y la CI la pasa con --build-name y

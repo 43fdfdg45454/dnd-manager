@@ -1,9 +1,9 @@
-import 'package:dnd_companion/core/auth/auth_controller.dart';
-import 'package:dnd_companion/core/auth/auth_state.dart';
-import 'package:dnd_companion/core/auth/user_dto.dart';
-import 'package:dnd_companion/features/home/data/server_info_repository.dart';
-import 'package:dnd_companion/features/home/ui/home_page.dart';
-import 'package:dnd_companion/features/home/ui/profile_page.dart';
+import 'package:opentrpg/core/auth/auth_controller.dart';
+import 'package:opentrpg/core/auth/auth_state.dart';
+import 'package:opentrpg/core/auth/user_dto.dart';
+import 'package:opentrpg/features/home/data/server_info_repository.dart';
+import 'package:opentrpg/features/home/ui/home_page.dart';
+import 'package:opentrpg/features/home/ui/profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

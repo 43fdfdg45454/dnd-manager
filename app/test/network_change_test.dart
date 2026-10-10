@@ -1,14 +1,14 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:dnd_companion/core/auth/auth_controller.dart';
-import 'package:dnd_companion/core/auth/auth_state.dart';
-import 'package:dnd_companion/core/network/api_client.dart';
-import 'package:dnd_companion/core/network/connectivity.dart';
-import 'package:dnd_companion/core/realtime/connection_diagnostics.dart';
-import 'package:dnd_companion/core/realtime/realtime_hub.dart';
-import 'package:dnd_companion/core/realtime/realtime_provider.dart';
-import 'package:dnd_companion/core/realtime/signalr_realtime_hub.dart';
+import 'package:opentrpg/core/auth/auth_controller.dart';
+import 'package:opentrpg/core/auth/auth_state.dart';
+import 'package:opentrpg/core/network/api_client.dart';
+import 'package:opentrpg/core/network/connectivity.dart';
+import 'package:opentrpg/core/realtime/connection_diagnostics.dart';
+import 'package:opentrpg/core/realtime/realtime_hub.dart';
+import 'package:opentrpg/core/realtime/realtime_provider.dart';
+import 'package:opentrpg/core/realtime/signalr_realtime_hub.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:signalr_netcore/signalr_client.dart';

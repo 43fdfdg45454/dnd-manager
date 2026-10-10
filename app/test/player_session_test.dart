@@ -1,7 +1,7 @@
-import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/items/data/models.dart';
-import 'package:dnd_companion/features/items/domain/combat_usable.dart';
-import 'package:dnd_companion/features/catalog/data/models.dart' show ItemArmor, ItemModifier;
+import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg/features/items/data/models.dart';
+import 'package:opentrpg/features/items/domain/combat_usable.dart';
+import 'package:opentrpg/features/catalog/data/models.dart' show ItemArmor, ItemModifier;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

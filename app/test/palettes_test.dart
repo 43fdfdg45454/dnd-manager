@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:dnd_companion/core/theme/app_theme.dart';
-import 'package:dnd_companion/core/ui/action_type.dart';
+import 'package:opentrpg/core/theme/app_theme.dart';
+import 'package:opentrpg/core/ui/action_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

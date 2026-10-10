@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:dnd_companion/features/characters/data/characters_repository.dart';
-import 'package:dnd_companion/features/characters/data/models.dart';
+import 'package:opentrpg/features/characters/data/characters_repository.dart';
+import 'package:opentrpg/features/characters/data/models.dart';
 
 import 'fakes.dart';
 

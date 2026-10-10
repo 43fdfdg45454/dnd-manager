@@ -1,9 +1,9 @@
 import 'dart:math';
 
-import 'package:dnd_companion/core/storage/local_preferences.dart';
-import 'package:dnd_companion/features/characters/domain/combat_math.dart';
-import 'package:dnd_companion/features/dice/data/dice_controller.dart';
-import 'package:dnd_companion/features/dice/domain/dice_expression.dart';
+import 'package:opentrpg/core/storage/local_preferences.dart';
+import 'package:opentrpg/features/characters/domain/combat_math.dart';
+import 'package:opentrpg/features/dice/data/dice_controller.dart';
+import 'package:opentrpg/features/dice/domain/dice_expression.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';

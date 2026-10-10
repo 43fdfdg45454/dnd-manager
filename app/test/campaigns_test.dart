@@ -1,10 +1,10 @@
-import 'package:dnd_companion/core/auth/auth_controller.dart';
-import 'package:dnd_companion/core/auth/auth_state.dart';
-import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart';
-import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/campaigns/ui/campaigns_page.dart';
-import 'package:dnd_companion/features/characters/data/characters_repository.dart';
-import 'package:dnd_companion/features/systems/domain/game_system.dart';
+import 'package:opentrpg/core/auth/auth_controller.dart';
+import 'package:opentrpg/core/auth/auth_state.dart';
+import 'package:opentrpg/features/campaigns/data/campaigns_repository.dart';
+import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg/features/campaigns/ui/campaigns_page.dart';
+import 'package:opentrpg/features/characters/data/characters_repository.dart';
+import 'package:opentrpg/features/systems/domain/game_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

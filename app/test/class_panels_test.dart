@@ -1,21 +1,21 @@
-import 'package:dnd_companion/core/auth/auth_controller.dart';
-import 'package:dnd_companion/core/auth/auth_state.dart';
-import 'package:dnd_companion/core/router/app_router.dart';
-import 'package:dnd_companion/core/theme/icons.dart';
-import 'package:dnd_companion/core/storage/local_preferences.dart';
-import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart';
-import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
-import 'package:dnd_companion/features/catalog/data/models.dart';
-import 'package:dnd_companion/features/catalog/ui/catalog_detail_links.dart' show DetailInfoButton;
-import 'package:dnd_companion/features/catalog/ui/feature_detail_page.dart';
-import 'package:dnd_companion/features/characters/data/characters_repository.dart';
-import 'package:dnd_companion/features/characters/domain/class_theme.dart';
-import 'package:dnd_companion/features/characters/ui/character_page.dart';
-import 'package:dnd_companion/features/characters/ui/combat/panels/panel_support.dart'
+import 'package:opentrpg/core/auth/auth_controller.dart';
+import 'package:opentrpg/core/auth/auth_state.dart';
+import 'package:opentrpg/core/router/app_router.dart';
+import 'package:opentrpg/core/theme/icons.dart';
+import 'package:opentrpg/core/storage/local_preferences.dart';
+import 'package:opentrpg/features/campaigns/data/campaigns_repository.dart';
+import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
+import 'package:opentrpg/features/catalog/data/models.dart';
+import 'package:opentrpg/features/catalog/ui/catalog_detail_links.dart' show DetailInfoButton;
+import 'package:opentrpg/features/catalog/ui/feature_detail_page.dart';
+import 'package:opentrpg/features/characters/data/characters_repository.dart';
+import 'package:opentrpg/features/characters/domain/class_theme.dart';
+import 'package:opentrpg/features/characters/ui/character_page.dart';
+import 'package:opentrpg/features/characters/ui/combat/panels/panel_support.dart'
     show FeatureReminder;
-import 'package:dnd_companion/features/dice/data/dice_controller.dart';
-import 'package:dnd_companion/features/items/data/inventory_repository.dart';
+import 'package:opentrpg/features/dice/data/dice_controller.dart';
+import 'package:opentrpg/features/items/data/inventory_repository.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -1,5 +1,5 @@
-import 'package:dnd_companion/core/theme/tokens.dart';
-import 'package:dnd_companion/core/ui/action_type.dart';
+import 'package:opentrpg/core/theme/tokens.dart';
+import 'package:opentrpg/core/ui/action_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

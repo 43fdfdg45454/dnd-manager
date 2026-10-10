@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:dnd_companion/core/theme/app_icon.dart';
-import 'package:dnd_companion/core/theme/icons.dart';
+import 'package:opentrpg/core/theme/app_icon.dart';
+import 'package:opentrpg/core/theme/icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

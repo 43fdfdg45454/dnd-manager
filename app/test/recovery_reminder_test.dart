@@ -1,8 +1,8 @@
-import 'package:dnd_companion/core/auth/auth_controller.dart';
-import 'package:dnd_companion/core/auth/auth_state.dart';
-import 'package:dnd_companion/features/characters/data/characters_repository.dart';
-import 'package:dnd_companion/features/characters/data/models.dart';
-import 'package:dnd_companion/features/characters/ui/combat/recovery_reminder.dart';
+import 'package:opentrpg/core/auth/auth_controller.dart';
+import 'package:opentrpg/core/auth/auth_state.dart';
+import 'package:opentrpg/features/characters/data/characters_repository.dart';
+import 'package:opentrpg/features/characters/data/models.dart';
+import 'package:opentrpg/features/characters/ui/combat/recovery_reminder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

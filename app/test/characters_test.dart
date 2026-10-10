@@ -2,16 +2,16 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:dnd_companion/core/network/api_client.dart';
-import 'package:dnd_companion/core/theme/components.dart';
-import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/catalog/data/models.dart';
-import 'package:dnd_companion/features/characters/data/characters_repository.dart';
-import 'package:dnd_companion/features/characters/data/models.dart';
-import 'package:dnd_companion/features/characters/data/view_mode_controller.dart';
-import 'package:dnd_companion/features/characters/domain/character_format.dart';
-import 'package:dnd_companion/features/characters/domain/change_details.dart';
-import 'package:dnd_companion/features/characters/domain/payload_format.dart';
+import 'package:opentrpg/core/network/api_client.dart';
+import 'package:opentrpg/core/theme/components.dart';
+import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg/features/catalog/data/models.dart';
+import 'package:opentrpg/features/characters/data/characters_repository.dart';
+import 'package:opentrpg/features/characters/data/models.dart';
+import 'package:opentrpg/features/characters/data/view_mode_controller.dart';
+import 'package:opentrpg/features/characters/domain/character_format.dart';
+import 'package:opentrpg/features/characters/domain/change_details.dart';
+import 'package:opentrpg/features/characters/domain/payload_format.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_test/flutter_test.dart';
 

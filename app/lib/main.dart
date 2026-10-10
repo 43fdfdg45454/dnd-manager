@@ -33,7 +33,7 @@ Future<void> main() async {
         trustedUserCertificateCountProvider.overrideWithValue(trustStore.certificateCount),
         installedBuildProvider.overrideWithValue(await _installedBuild()),
       ],
-      child: const DndCompanionApp(),
+      child: const OpenTrpgApp(),
     ),
   );
 }
