@@ -83,6 +83,7 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Rastreadora");
 
         // Level 2: no feature yet.
@@ -133,6 +134,7 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var hero = await ActiveRangerWithWolfAsync(s);
 
         var hurt = await HpAsync(s.Player.Client, hero, new { delta = -5 });
@@ -158,6 +160,7 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var hero = await ActiveRangerWithWolfAsync(s);
 
         var renamed = await PutAsync(s.Player.Client, hero, "wolf", "Brasa");

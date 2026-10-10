@@ -88,6 +88,8 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
         Assert.Equal((1, 1, 1), (result.Counts["races"], result.Counts["subraces"], result.Counts["raceExtensions"]));
 
         var s = await factory.CreateCampaignScenarioAsync();
+
+        await s.EnablePacksAsync();
         var dwarf = (await s.Player.Client.GetFromJsonAsync<RaceDetailDto>("/api/v1/systems/dnd5e/catalog/races/dwarf"))!;
         Assert.Equal("srd", dwarf.Source);
         var deepFolk = Assert.Single(dwarf.Subraces, r => r.Index == "folk-ejemplo-deep-folk");
@@ -160,6 +162,8 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
         Assert.True(import.StatusCode == HttpStatusCode.Created, await import.Content.ReadAsStringAsync());
 
         var s = await factory.CreateCampaignScenarioAsync();
+
+        await s.EnablePacksAsync();
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Montañesa");
         var url = $"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet";
         await s.Player.Client.PatchAsJsonAsync(url, new { raceIndex = "folk-ejemplo-mountain-folk", classes = new[] { new { classIndex = "wizard", level = 1 } } });

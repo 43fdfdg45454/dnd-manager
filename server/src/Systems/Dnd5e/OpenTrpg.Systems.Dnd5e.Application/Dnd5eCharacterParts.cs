@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Application.Characters;
+using OpenTrpg.Core.Application.ContentPacks;
 using OpenTrpg.Core.Domain.Characters;
 using OpenTrpg.Core.Application;
 using OpenTrpg.Core.Application.Systems;
@@ -12,8 +13,11 @@ using OpenTrpg.Systems.Dnd5e.Domain.Characters;
 
 namespace OpenTrpg.Systems.Dnd5e.Application;
 
-/// <summary>The D&amp;D 5e part of the characters the core hands over (<see cref="CharacterRef.System"/>), loaded once.</summary>
-public sealed class Dnd5eCharacterParts(IDnd5eCharacterRepository characters)
+/// <summary>
+/// The D&amp;D 5e part of the characters the core hands over (<see cref="CharacterRef.System"/>), loaded once; the
+/// catalog scope of the request becomes the character's campaign.
+/// </summary>
+public sealed class Dnd5eCharacterParts(IDnd5eCharacterRepository characters, CatalogScopeContext scope)
 {
     /// <summary>The tracked 5e character with every child collection.</summary>
     public async Task<Dnd5eCharacter> LoadAsync(CharacterRef reference, CancellationToken cancellationToken)
@@ -24,6 +28,7 @@ public sealed class Dnd5eCharacterParts(IDnd5eCharacterRepository characters)
         }
 
         var character = await characters.GetWithDetailsAsync(reference.Id, cancellationToken) ?? throw CharacterErrors.CharacterNotFound();
+        await scope.UseCampaignAsync(character.CampaignId, cancellationToken);
         reference.System = character;
         return character;
     }

@@ -91,6 +91,7 @@ public class FeatureModifierPackTests(FeatureModifierPackApiFactory factory) : I
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Chispa");
 
         var second = await PatchAsync(s, hero.Id, level: 2, subclass: Subclass);
@@ -114,6 +115,7 @@ public class FeatureModifierPackTests(FeatureModifierPackApiFactory factory) : I
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Marea");
         var detail = await PatchAsync(s, hero.Id, level: 3, subclass: Subclass);
         var tides = Assert.Single(detail.Resources, r => r.Key == "chispas-ejemplo-tides-of-chaos");

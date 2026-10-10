@@ -80,6 +80,8 @@ public class SubclassFeatureResourcePackTests(FeatureResourcePackApiFactory fact
         Assert.True(import.StatusCode == HttpStatusCode.Created, await import.Content.ReadAsStringAsync());
 
         var s = await factory.CreateCampaignScenarioAsync();
+
+        await s.EnablePacksAsync();
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Estratega");
         var below = await PatchAsync(s, hero.Id, level: 2, subclass: null);
         Assert.DoesNotContain(below.Resources, r => r.Key is "tacticos-ejemplo-dados" or "tacticos-ejemplo-escudo");
@@ -111,6 +113,7 @@ public class SubclassFeatureResourcePackTests(FeatureResourcePackApiFactory fact
     public async Task Bardic_inspiration_exposes_its_die()
     {
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var bard = await s.Player.CreateCharacterAsync(s.CampaignId, "Juglar");
         var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(bard.Id)}/sheet", new
         {

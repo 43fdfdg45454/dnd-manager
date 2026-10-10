@@ -123,6 +123,7 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var monk = await LevelAsync(s, "monk", null, 1, "Monja serena");
 
         var choice = Assert.Single((await PlanAsync(s.Player, monk.Id)).Choices, c => c.Key == "tecnica-ejemplo");
@@ -156,6 +157,7 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var cleric = await LevelAsync(s, "cleric", null, 1, "Clériga sabia");
 
         var plan = await PlanAsync(s.Player, cleric.Id);
@@ -183,6 +185,7 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var cleric = await LevelAsync(s, "cleric", Domain, 1, "Clérigo erudito");
 
         var expertise = Assert.Single((await PlanAsync(s.Player, cleric.Id)).Choices, c => c.Key == "pericia-dominio");
@@ -198,6 +201,7 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var fighter = await LevelAsync(s, "fighter", null, 2, "Guerrera letrada");
 
         var plan = await PlanAsync(s.Player, fighter.Id);

@@ -86,6 +86,7 @@ public class ExpandedSpellListPackTests(ExpandedSpellListPackApiFactory factory)
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
 
         var withPatron = await LevelOneAsync(s, "warlock", Patron, "Brujo del bosque");
         var plan = await PlanAsync(s.Player, withPatron.Id);
@@ -124,6 +125,7 @@ public class ExpandedSpellListPackTests(ExpandedSpellListPackApiFactory factory)
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
 
         var withDomain = await LevelOneAsync(s, "cleric", Domain, "Clériga de ejemplo");
         var candidates = Assert.Single((await PreparationAsync(s.Player, withDomain.Id)).Classes).Candidates;

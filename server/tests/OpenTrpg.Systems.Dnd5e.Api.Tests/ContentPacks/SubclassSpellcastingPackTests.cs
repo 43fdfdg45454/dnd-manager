@@ -91,6 +91,7 @@ public class SubclassSpellcastingPackTests(SubclassSpellcastingPackApiFactory fa
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Centinela");
 
         var second = await PatchAsync(s, hero.Id, [("fighter", null, 2)]);
@@ -126,6 +127,7 @@ public class SubclassSpellcastingPackTests(SubclassSpellcastingPackApiFactory fa
     {
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Aprendiz");
         await PatchAsync(s, hero.Id, [("fighter", null, 2)], player: true);
         Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/activate", null)).StatusCode);
