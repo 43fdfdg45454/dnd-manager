@@ -1686,6 +1686,7 @@ class LevelUpOption {
     this.damageType,
     this.cost,
     this.requires,
+    this.setId,
   });
 
   factory LevelUpOption.fromJson(Map<String, dynamic> json) {
@@ -1709,8 +1710,13 @@ class LevelUpOption {
       requires: requires == null
           ? null
           : (choiceKey: _str(requires['choiceKey']), index: _str(requires['index'])),
+      setId: _strOrNull(json['setId']),
     );
   }
+
+  /// Option set of the option ("feats", or a set offered with
+  /// [LevelUpChoice.alsoFrom]); null for non-options.
+  final String? setId;
 
   final String index;
   final String name;
@@ -1764,6 +1770,8 @@ class LevelUpChoice {
     this.options = const [],
     this.known = const [],
     this.warning,
+    this.alsoFrom = const [],
+    this.requires,
   });
 
   factory LevelUpChoice.fromJson(Map<String, dynamic> json) => LevelUpChoice(
@@ -1781,11 +1789,24 @@ class LevelUpChoice {
     options: _objects(json['options'], LevelUpOption.fromJson),
     known: _objects(json['known'], ChoiceItem.fromJson),
     warning: _strOrNull(json['warning']),
+    alsoFrom: _strings(json['alsoFrom']),
+    requires: switch (_map(json['requires'])) {
+      final r? => (choiceKey: _str(r['choiceKey']), index: _str(r['index'])),
+      null => null,
+    },
   );
 
   final String key;
   final String name;
   final LevelChoiceKind kind;
+
+  /// Other option sets offered too (an improvement that also offers class
+  /// options); each option says its own [LevelUpOption.setId].
+  final List<String> alsoFrom;
+
+  /// A choice of an option or a feat: only asked (and only required) when
+  /// [index] is picked in the choice [choiceKey] (also as its feat).
+  final ({String choiceKey, String index})? requires;
   final int choose;
 
   /// Picks needed (fewer than [choose] when not enough options are eligible).

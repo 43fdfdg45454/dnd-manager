@@ -5,6 +5,7 @@ import 'package:opentrpg_core/core/theme/tokens.dart';
 import 'package:opentrpg_core/core/theme/typography.dart';
 
 import '../../../catalog/domain/catalog_format.dart' show abilityLabel, spellLevelLabel;
+import '../../../catalog/data/models.dart' show titleFromIndex;
 import '../../data/level_up_controller.dart';
 import '../../domain/character_format.dart' show abilityAbbreviation;
 import '../../models.dart';
@@ -210,9 +211,12 @@ class _ImprovementPicker extends ConsumerWidget {
         children: [
           TabBar(
             onTap: (i) => controller.setImprovementMode(choice, ImprovementMode.values[i]),
-            tabs: const [
-              Tab(key: Key('levelup-tab-asi'), text: 'Mejora'),
-              Tab(key: Key('levelup-tab-feat'), text: 'Dote'),
+            tabs: [
+              const Tab(key: Key('levelup-tab-asi'), text: 'Mejora'),
+              Tab(
+                key: const Key('levelup-tab-feat'),
+                text: choice.alsoFrom.isEmpty ? 'Dote' : 'Dote u opción',
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -338,16 +342,42 @@ class _FeatPanel extends StatelessWidget {
     }
     final feat = selection.feat == null ? null : choice.option(selection.feat!);
     final increase = feat?.abilityIncrease;
+    Widget card(LevelUpOption option) => LevelUpOptionCard(
+      key: Key('levelup-option-${choice.key}-${option.index}'),
+      option: option,
+      selected: selection.feat == option.index,
+      onTap: () => controller.selectFeat(choice, option.index),
+    );
+    // With `alsoFrom`, the feats first and then the options of each other set.
+    final groups = <String, List<LevelUpOption>>{};
+    for (final option in choice.options) {
+      final set = choice.alsoFrom.contains(option.setId) ? option.setId! : '';
+      (groups[set] ??= []).add(option);
+    }
+    final otherSets = [
+      for (final set in choice.alsoFrom)
+        if (groups[set]?.isNotEmpty ?? false) set,
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final option in choice.options)
-          LevelUpOptionCard(
-            key: Key('levelup-option-${choice.key}-${option.index}'),
-            option: option,
-            selected: selection.feat == option.index,
-            onTap: () => controller.selectFeat(choice, option.index),
-          ),
+        if (otherSets.isEmpty)
+          for (final option in choice.options) card(option)
+        else ...[
+          if (groups['']?.isNotEmpty ?? false) ...[
+            const _GroupHeader('Dotes', key: Key('levelup-group-feats')),
+            for (final option in groups['']!) card(option),
+          ],
+          for (final set in otherSets) ...[
+            _GroupHeader(
+              otherSets.length == 1
+                  ? 'Opciones de clase'
+                  : 'Opciones de clase · ${titleFromIndex(set)}',
+              key: Key('levelup-group-$set'),
+            ),
+            for (final option in groups[set]!) card(option),
+          ],
+        ],
         if (feat != null && increase != null && increase.needsPick) ...[
           const SizedBox(height: 8),
           Text(
@@ -377,4 +407,18 @@ class _FeatPanel extends StatelessWidget {
       ],
     );
   }
+}
+
+/// A heading over a group of options of an improvement ("Dotes", "Opciones de
+/// clase").
+class _GroupHeader extends StatelessWidget {
+  const _GroupHeader(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 8, bottom: 4),
+    child: Text(text, style: Theme.of(context).textTheme.titleSmall),
+  );
 }

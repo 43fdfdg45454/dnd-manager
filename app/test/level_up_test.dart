@@ -673,6 +673,102 @@ void main() {
       expect(find.text('Nada (opcional)'), findsOneWidget);
     });
 
+    testWidgets('la mejora con alsoFrom agrupa dotes y opciones de clase', (tester) async {
+      final plan = _plan(
+        targetLevel: 4,
+        classLevel: 4,
+        choices: [
+          _choice(
+            'asi',
+            'Mejora o señal',
+            'AsiOrFeat',
+            options: [
+              _option('sturdy', 'Sturdy')..['setId'] = 'feats',
+              _option('ejemplo-senal-faro', 'Señal de faro')..['setId'] = 'ejemplo-senales',
+            ],
+          )..['alsoFrom'] = ['ejemplo-senales'],
+        ],
+      );
+      final (:characters, router: _) = await _pump(
+        tester,
+        plan: plan,
+        character: _character(pendingLevelUpTo: 4),
+      );
+      await _next(tester);
+      await _writeHp(tester, '5');
+      await _next(tester);
+      expect(find.text('Dote u opción'), findsOneWidget);
+      await _tapKey(tester, 'levelup-tab-feat');
+
+      expect(find.byKey(const Key('levelup-group-feats')), findsOneWidget);
+      expect(find.text('Opciones de clase'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.byKey(const Key('levelup-option-asi-ejemplo-senal-faro'))).dy,
+        greaterThan(tester.getTopLeft(find.byKey(const Key('levelup-group-ejemplo-senales'))).dy),
+      );
+      await _tapKey(tester, 'levelup-option-asi-ejemplo-senal-faro');
+      await _next(tester);
+      await _tapKey(tester, 'levelup-confirm');
+      expect(characters.levelUpBodies.single['choices'], [
+        {
+          'key': 'asi',
+          'selected': {'feat': 'ejemplo-senal-faro'},
+        },
+      ]);
+    });
+
+    testWidgets('las elecciones de una opción solo se piden si se elige', (tester) async {
+      final plan = _plan(
+        choices: [
+          _choice(
+            'senal',
+            'Señal',
+            'OptionSet',
+            options: [
+              _option('ejemplo-senal-coro', 'Señal de coro'),
+              _option('ejemplo-senal-faro', 'Señal de faro'),
+            ],
+          ),
+          _choice(
+            'ejemplo-senal-coro/arma',
+            'Arma de ejemplo',
+            'Weapon',
+            options: [_option('ejemplo-guadana', 'Guadaña de ejemplo')],
+          )..['requires'] = {'choiceKey': 'senal', 'index': 'ejemplo-senal-coro'},
+        ],
+      );
+      final (:characters, router: _) = await _pump(tester, plan: plan);
+      await _next(tester);
+      await _writeHp(tester, '6');
+      await _next(tester);
+
+      // Picking another option: no nested choice.
+      await _tapKey(tester, 'levelup-option-senal-ejemplo-senal-faro');
+      await _next(tester);
+      expect(find.byKey(const Key('levelup-review')), findsOneWidget);
+
+      await _tapKey(tester, 'levelup-back');
+      await _tapKey(tester, 'levelup-option-senal-ejemplo-senal-faro');
+      await _tapKey(tester, 'levelup-option-senal-ejemplo-senal-coro');
+      await _next(tester);
+      expect(find.byKey(const Key('levelup-choice-ejemplo-senal-coro/arma')), findsOneWidget);
+      await _next(tester);
+      expect(find.byKey(const Key('levelup-review')), findsNothing);
+      await _tapKey(tester, 'levelup-option-ejemplo-senal-coro/arma-ejemplo-guadana');
+      await _next(tester);
+      await _tapKey(tester, 'levelup-confirm');
+      expect(characters.levelUpBodies.single['choices'], [
+        {
+          'key': 'senal',
+          'selected': ['ejemplo-senal-coro'],
+        },
+        {
+          'key': 'ejemplo-senal-coro/arma',
+          'selected': ['ejemplo-guadana'],
+        },
+      ]);
+    });
+
     testWidgets('Mejora: reparte 2 puntos con el tope de 20 en vivo', (tester) async {
       await _pump(tester, plan: _improvementPlan(), character: _character(pendingLevelUpTo: 4));
       await _next(tester);
