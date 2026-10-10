@@ -64,4 +64,10 @@ public sealed record SheetEdit
     public string? BackgroundDetail { get; init; }
 
     public int? CopperPieces { get; init; }
+
+    /// <summary>Height in inches; 0 clears it.</summary>
+    public int? HeightInches { get; init; }
+
+    /// <summary>Weight in pounds; 0 clears it.</summary>
+    public int? WeightPounds { get; init; }
 }

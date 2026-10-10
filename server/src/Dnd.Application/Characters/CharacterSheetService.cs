@@ -317,6 +317,8 @@ public sealed class CharacterSheetService(
             Bonds = character.Bonds,
             Flaws = character.Flaws,
             BackgroundDetail = character.BackgroundDetail,
+            HeightInches = character.HeightInches,
+            WeightPounds = character.WeightPounds,
             PortraitFileId = character.PortraitFileId,
             PortraitUrl = FileUrls.For(character.PortraitFileId),
             CreatedAt = character.CreatedAt,

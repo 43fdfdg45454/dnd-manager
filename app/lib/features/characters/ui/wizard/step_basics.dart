@@ -14,6 +14,7 @@ import '../../../catalog/ui/catalog_detail_links.dart';
 import '../../data/character_wizard_controller.dart';
 import '../../domain/character_format.dart';
 import '../../domain/class_theme.dart';
+import '../height_weight_fields.dart';
 
 const _npcValue = '__npc__';
 const _noAlignment = '__none__';
@@ -214,6 +215,16 @@ class RaceStep extends ConsumerWidget {
                 subtitle: const Text('Se suman a las puntuaciones base.'),
                 value: state.applyRacialBonuses,
                 onChanged: controller.setApplyRacialBonuses,
+              ),
+              const SizedBox(height: 8),
+              HeightWeightFields(
+                key: const Key('basics-height-weight'),
+                keyPrefix: 'basics',
+                initialHeight: state.heightText,
+                initialWeight: state.weightText,
+                table: state.heightWeightTable,
+                onHeightChanged: controller.setHeightText,
+                onWeightChanged: controller.setWeightText,
               ),
             ],
           ],

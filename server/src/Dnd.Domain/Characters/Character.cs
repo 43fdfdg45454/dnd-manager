@@ -35,6 +35,12 @@ public sealed partial class Character : EntityBase
     public const int ConditionNoteMaxLength = 200;
     public const int MaxCopperPieces = 1_000_000_000;
 
+    /// <summary>Height and weight (PHB chapter 4): free data without mechanical effect.</summary>
+    public const int MinHeightInches = 1;
+    public const int MaxHeightInches = 200;
+    public const int MinWeightPounds = 1;
+    public const int MaxWeightPounds = 2000;
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly List<CharacterClassLevel> _classes = [];
@@ -120,6 +126,12 @@ public sealed partial class Character : EntityBase
 
     /// <summary>Result of the optional table of the background (specialty, scheme, origin...).</summary>
     public string BackgroundDetail { get; private set; } = string.Empty;
+
+    /// <summary>Height in inches (null when not given). No mechanical effect.</summary>
+    public int? HeightInches { get; private set; }
+
+    /// <summary>Weight in pounds (null when not given). No mechanical effect.</summary>
+    public int? WeightPounds { get; private set; }
 
     public Guid? PortraitFileId { get; private set; }
 
@@ -321,6 +333,9 @@ public sealed partial class Character : EntityBase
             ValidateCopper(copper);
         }
 
+        var height = edit.HeightInches is null ? HeightInches : NormalizeHeight(edit.HeightInches.Value);
+        var weight = edit.WeightPounds is null ? WeightPounds : NormalizeWeight(edit.WeightPounds.Value);
+
         DropStaleOriginChoices(race, subrace, background);
         Name = name;
         RaceIndex = race;
@@ -368,8 +383,37 @@ public sealed partial class Character : EntityBase
         Flaws = flaws;
         BackgroundDetail = backgroundDetail;
         CopperPieces = edit.CopperPieces ?? CopperPieces;
+        HeightInches = height;
+        WeightPounds = weight;
         Touch(now);
     }
+
+    /// <summary>
+    /// Sets height and weight (null keeps the value, 0 clears it). They have no mechanical effect, so the
+    /// owner changes them without approval even on an active character.
+    /// </summary>
+    public void SetHeightAndWeight(int? heightInches, int? weightPounds, DateTimeOffset now)
+    {
+        var height = heightInches is null ? HeightInches : NormalizeHeight(heightInches.Value);
+        var weight = weightPounds is null ? WeightPounds : NormalizeWeight(weightPounds.Value);
+        HeightInches = height;
+        WeightPounds = weight;
+        Touch(now);
+    }
+
+    /// <summary>0 clears; otherwise between <see cref="MinHeightInches"/> and <see cref="MaxHeightInches"/>.</summary>
+    private static int? NormalizeHeight(int value) => value == 0
+        ? null
+        : value is >= MinHeightInches and <= MaxHeightInches
+            ? value
+            : throw DomainException.RuleViolation($"La altura debe estar entre {MinHeightInches} y {MaxHeightInches} pulgadas.");
+
+    /// <summary>0 clears; otherwise between <see cref="MinWeightPounds"/> and <see cref="MaxWeightPounds"/>.</summary>
+    private static int? NormalizeWeight(int value) => value == 0
+        ? null
+        : value is >= MinWeightPounds and <= MaxWeightPounds
+            ? value
+            : throw DomainException.RuleViolation($"El peso debe estar entre {MinWeightPounds} y {MaxWeightPounds} libras.");
 
     public void Rename(string name, DateTimeOffset now)
     {

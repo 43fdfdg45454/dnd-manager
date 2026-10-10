@@ -1167,6 +1167,8 @@ class CharacterDetail {
     this.bonds = '',
     this.flaws = '',
     this.backgroundDetail = '',
+    this.heightInches,
+    this.weightPounds,
     this.portraitUrl,
     this.classes = const [],
     this.proficiencies = const [],
@@ -1235,6 +1237,8 @@ class CharacterDetail {
       bonds: _str(json['bonds']),
       flaws: _str(json['flaws']),
       backgroundDetail: _str(json['backgroundDetail']),
+      heightInches: _int(json['heightInches']),
+      weightPounds: _int(json['weightPounds']),
       portraitUrl: _strOrNull(json['portraitUrl']),
       classes: _objects(json['classes'], CharacterClass.fromJson),
       proficiencies: _objects(json['proficiencies'], CharacterProficiency.fromJson),
@@ -1315,6 +1319,11 @@ class CharacterDetail {
   /// True when any personality field has text.
   bool get hasPersonality =>
       [personalityTraits, ideals, bonds, flaws, backgroundDetail].any((t) => t.trim().isNotEmpty);
+
+  /// Height in inches and weight in pounds (phase 29); null when not given.
+  /// Free data without mechanical effect.
+  final int? heightInches;
+  final int? weightPounds;
   final String? portraitUrl;
   final List<CharacterClass> classes;
   final List<CharacterProficiency> proficiencies;
@@ -1504,6 +1513,8 @@ class SheetPatch {
     this.flaws,
     this.backgroundDetail,
     this.copperPieces,
+    this.heightInches,
+    this.weightPounds,
     this.clear = const {},
   });
 
@@ -1528,7 +1539,13 @@ class SheetPatch {
   final String? backgroundDetail;
   final int? copperPieces;
 
-  /// Nullable keys to send as `null`: raceIndex, subraceIndex, backgroundIndex, alignment.
+  /// Height in inches and weight in pounds; the owner changes them without
+  /// approval. Clear them with `clear: {'heightInches'}` / `{'weightPounds'}`.
+  final int? heightInches;
+  final int? weightPounds;
+
+  /// Nullable keys to send as `null`: raceIndex, subraceIndex, backgroundIndex,
+  /// alignment, heightInches, weightPounds.
   final Set<String> clear;
 
   bool get isEmpty => toJson().isEmpty;
@@ -1554,6 +1571,8 @@ class SheetPatch {
     'flaws': ?flaws,
     'backgroundDetail': ?backgroundDetail,
     'copperPieces': ?copperPieces,
+    'heightInches': ?heightInches,
+    'weightPounds': ?weightPounds,
     for (final key in clear) key: null,
   };
 }

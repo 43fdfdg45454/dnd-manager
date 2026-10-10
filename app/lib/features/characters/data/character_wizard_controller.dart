@@ -13,6 +13,7 @@ import '../../catalog/data/models.dart'
         ClassDetail,
         ClassLevel,
         EquipmentCategoryItem,
+        HeightWeightTable,
         LanguagePick,
         RaceDetail,
         StartingEquipment,
@@ -24,6 +25,7 @@ import '../../catalog/data/models.dart'
 import '../../items/data/inventory_repository.dart';
 import '../../items/data/models.dart' show ItemOverrides;
 import '../domain/character_format.dart';
+import '../domain/height_weight.dart';
 import 'characters_controller.dart';
 import 'characters_repository.dart';
 import 'models.dart';
@@ -227,6 +229,8 @@ class WizardState {
       PersonalityKind.flaw: [''],
     },
     this.backgroundDetail = '',
+    this.heightText = '',
+    this.weightText = '',
   });
 
   /// Index in [steps].
@@ -323,6 +327,37 @@ class WizardState {
 
   /// Result of the optional table of the background, or free text.
   final String backgroundDetail;
+
+  /// Height in inches and weight in pounds as typed (or rolled); optional.
+  final String heightText;
+  final String weightText;
+
+  /// Height in inches; null when empty or invalid (see [heightWeightError]).
+  int? get heightInches => parseMeasure(heightText, min: minHeightInches, max: maxHeightInches);
+
+  /// Weight in pounds; null when empty or invalid (see [heightWeightError]).
+  int? get weightPounds => parseMeasure(weightText, min: minWeightPounds, max: maxWeightPounds);
+
+  /// Spanish error of the typed height or weight, or null when both are valid
+  /// or empty.
+  String? get heightWeightError =>
+      measureError(
+        heightText,
+        min: minHeightInches,
+        max: maxHeightInches,
+        label: 'La altura',
+        unit: 'pulgadas',
+      ) ??
+      measureError(
+        weightText,
+        min: minWeightPounds,
+        max: maxWeightPounds,
+        label: 'El peso',
+        unit: 'libras',
+      );
+
+  /// Height and weight table of the chosen race or subrace, or null.
+  HeightWeightTable? get heightWeightTable => race?.heightWeightFor(subraceIndex);
 
   List<CharacterSpell> get spells => [...cantrips, ...leveledSpells];
 
@@ -833,6 +868,8 @@ class WizardState {
     String? trinketText,
     Map<PersonalityKind, List<String>>? personality,
     String? backgroundDetail,
+    String? heightText,
+    String? weightText,
   }) => WizardState(
     step: step ?? this.step,
     name: name ?? this.name,
@@ -879,6 +916,8 @@ class WizardState {
     trinketText: trinketText ?? this.trinketText,
     personality: personality ?? this.personality,
     backgroundDetail: backgroundDetail ?? this.backgroundDetail,
+    heightText: heightText ?? this.heightText,
+    weightText: weightText ?? this.weightText,
   );
 
   // -- Validation ----------------------------------------------------------------
@@ -898,7 +937,7 @@ class WizardState {
         final race = this.race;
         if (race == null) return loadError ?? 'Cargando la raza…';
         if (race.subraces.isNotEmpty && subraceIndex == null) return 'Elige una subraza';
-        return null;
+        return heightWeightError;
       case WizardStep.classChoice:
         if (classIndex == null) return 'Elige una clase';
         if (classDetail == null) return loadError ?? 'Cargando la clase…';
@@ -1043,11 +1082,15 @@ class WizardState {
       flaws: personalityText(PersonalityKind.flaw),
       backgroundDetail: backgroundDetail.trim().isEmpty ? null : backgroundDetail.trim(),
       copperPieces: startingCopper > 0 ? startingCopper : null,
+      heightInches: heightInches,
+      weightPounds: weightPounds,
       // Going back to change the race may leave an earlier draft with a subrace
       // or background the character no longer has.
       clear: {
         if (subraceIndex == null) 'subraceIndex',
         if (backgroundIndex == null) 'backgroundIndex',
+        if (heightInches == null) 'heightInches',
+        if (weightPounds == null) 'weightPounds',
       },
     );
   }
@@ -1238,6 +1281,10 @@ class CharacterWizardController extends Notifier<WizardState> {
   }
 
   void setApplyRacialBonuses(bool value) => state = state.copyWith(applyRacialBonuses: value);
+
+  void setHeightText(String text) => state = state.copyWith(heightText: text);
+
+  void setWeightText(String text) => state = state.copyWith(weightText: text);
 
   // -- Step 3: class -------------------------------------------------------------
 

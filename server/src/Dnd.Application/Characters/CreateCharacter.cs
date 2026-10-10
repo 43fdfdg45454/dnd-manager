@@ -19,6 +19,12 @@ public sealed record CreateCharacterRequest
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public Optional<Guid?> OwnerUserId { get; init; }
+
+    /// <summary>Optional height in inches (1–200). No mechanical effect.</summary>
+    public int? HeightInches { get; init; }
+
+    /// <summary>Optional weight in pounds (1–2000). No mechanical effect.</summary>
+    public int? WeightPounds { get; init; }
 }
 
 public sealed class CreateCharacterRequestValidator : AbstractValidator<CreateCharacterRequest>
@@ -29,6 +35,12 @@ public sealed class CreateCharacterRequestValidator : AbstractValidator<CreateCh
             .Must(n => !string.IsNullOrWhiteSpace(n)).WithMessage("Indica el nombre del personaje.")
             .Must(n => n is null || n.Trim().Length <= Character.NameMaxLength)
             .WithMessage($"El nombre no puede superar los {Character.NameMaxLength} caracteres.");
+        RuleFor(x => x.HeightInches).InclusiveBetween(Character.MinHeightInches, Character.MaxHeightInches)
+            .WithMessage($"La altura debe estar entre {Character.MinHeightInches} y {Character.MaxHeightInches} pulgadas.")
+            .When(x => x.HeightInches is not null);
+        RuleFor(x => x.WeightPounds).InclusiveBetween(Character.MinWeightPounds, Character.MaxWeightPounds)
+            .WithMessage($"El peso debe estar entre {Character.MinWeightPounds} y {Character.MaxWeightPounds} libras.")
+            .When(x => x.WeightPounds is not null);
     }
 }
 
@@ -70,6 +82,11 @@ public sealed class CreateCharacterHandler(
         }
 
         var character = Character.Create(campaignId, owner, request.Name, clock.UtcNow);
+        if (request.HeightInches is not null || request.WeightPounds is not null)
+        {
+            character.SetHeightAndWeight(request.HeightInches, request.WeightPounds, clock.UtcNow);
+        }
+
         await sheets.RecalculateAsync(character, cancellationToken);
         characters.Add(character);
         await unitOfWork.SaveChangesAsync(cancellationToken);

@@ -423,11 +423,17 @@ class FakeCharactersRepository implements CharactersRepository {
     _fail();
     patches.add(patch);
     final json = _json(id);
-    if (json['status'] == 'Active' && !isDm) {
+    // Like the server, height and weight (no mechanical effect) always apply
+    // directly; only the rest of the patch needs approval.
+    final payload = patch.toJson();
+    for (final key in const ['heightInches', 'weightPounds']) {
+      if (payload.containsKey(key)) json[key] = payload.remove(key);
+    }
+    if (json['status'] == 'Active' && !isDm && payload.isNotEmpty) {
       final request = makeChangeRequest(
         id: 'cr${requests.length + 1}',
         requestedByUserId: currentUserId,
-        payload: patch.toJson(),
+        payload: payload,
       );
       requests.add(request);
       return PendingApproval(request);
