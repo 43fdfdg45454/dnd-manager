@@ -35,7 +35,7 @@ public static class SheetCalculator
     /// <summary>Failed death saving throws that kill a character without features.</summary>
     public const int DefaultDeathSaveFailures = 3;
 
-    /// <summary>Breakdown key prefix of the class save DCs ("classSaveDc.alchemist").</summary>
+    /// <summary>Breakdown key prefix of the class save DCs ("classSaveDc.tejedor").</summary>
     public const string ClassSaveDcPrefix = "classSaveDc.";
 
     /// <summary>Breakdown keys of the passive Investigation and Insight.</summary>
