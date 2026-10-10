@@ -84,6 +84,28 @@ public sealed class ClassDefinition
     public ClassSpellList? SpellList => ClassSpellList.Parse(SpellListJson);
 
     /// <summary>
+    /// Auxiliary level (content packs): a one-level class taken instead of a class level after level 1, once, without
+    /// the ability prerequisites of multiclassing but with its own <see cref="Prerequisites"/>. Never a starting class.
+    /// </summary>
+    public bool IsAuxiliary { get; init; }
+
+    /// <summary>Structured prerequisites of an auxiliary class (<see cref="OptionPrerequisites"/> JSON), or null.</summary>
+    public string? PrerequisitesJson { get; init; }
+
+    public OptionPrerequisites Prerequisites => LevelChoiceJson.ParsePrerequisites(PrerequisitesJson);
+
+    public const int PrerequisitesTextMaxLength = 2000;
+
+    /// <summary>Literal (or narrative) prerequisites of an auxiliary class, shown as they are.</summary>
+    public string? PrerequisitesText { get; init; }
+
+    /// <summary>
+    /// An auxiliary class with spellcasting: counts as one more level of the character's caster class for its spell
+    /// slots (not for spells known or prepared).
+    /// </summary>
+    public bool CountsAsCasterLevel { get; init; }
+
+    /// <summary>
     /// A subclass may give the class spellcasting (<see cref="SubclassDefinition.Spellcasting"/>): the class adds nothing
     /// to the multiclass spellcaster level, has no Pact Magic and no table of its own (it does not cast, or only knows
     /// cantrips; the importer checks that its levels have no slots).

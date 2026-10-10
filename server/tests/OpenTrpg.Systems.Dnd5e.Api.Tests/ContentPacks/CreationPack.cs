@@ -21,7 +21,7 @@ internal static class CreationPack
         ["id"] = Id,
         ["name"] = "Crónicas del vacío (prueba)",
         ["version"] = "1.0.0",
-        ["classes"] = new JsonArray(Herald(), Keeper(), Penitent(), Scribe(), Smith(), Lookout()),
+        ["classes"] = new JsonArray(Herald(), Keeper(), Penitent(), Scribe(), Smith(), Lookout(), Veil(), Tamer()),
         ["optionSets"] = new JsonArray(Signals(), Tactics(), Heritages()),
         ["feats"] = Feats(),
         ["races"] = Races(),
@@ -214,6 +214,29 @@ internal static class CreationPack
             ["description"] = new JsonArray("Subclase ficticia."),
             ["spellcasting"] = new JsonObject { ["progression"] = "third", ["ability"] = "int", ["fromLevel"] = 3, ["spellList"] = "wizard", ["spellsKnown"] = new JsonObject { ["3"] = 3, ["4"] = 4 } },
         }),
+    });
+
+    /// <summary>H14: "Iniciado del velo", an auxiliary level for casters that counts as a caster level for slots.</summary>
+    private static JsonObject Veil() => Class("velo", "Iniciado del velo", 6, new JsonObject
+    {
+        ["auxiliary"] = true,
+        ["prerequisites"] = new JsonObject { ["classFeature"] = "spellcasting" },
+        ["countsAsCasterLevel"] = true,
+        ["multiclassing"] = new JsonObject { ["proficiencies"] = new JsonObject { ["tools"] = new JsonArray("Kit de ejemplo") } },
+        ["levels"] = new JsonArray(new JsonObject
+        {
+            ["level"] = 1,
+            ["features"] = new JsonArray(new JsonObject { ["index"] = I("velo-tenue"), ["name"] = "Velo tenue", ["description"] = new JsonArray("Texto de ejemplo.") }),
+        }),
+    });
+
+    /// <summary>H14: "Domador de ecos", an auxiliary level from total level 3 with a narrative prerequisite.</summary>
+    private static JsonObject Tamer() => Class("domador", "Domador de ecos", 10, new JsonObject
+    {
+        ["auxiliary"] = true,
+        ["prerequisites"] = new JsonObject { ["characterLevel"] = 3 },
+        ["prerequisitesText"] = "Nivel 3 y haber escuchado un eco (texto ficticio).",
+        ["levels"] = new JsonArray(new JsonObject { ["level"] = 1 }),
     });
 
     private static JsonObject Tactics() => new()

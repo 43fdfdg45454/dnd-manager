@@ -381,6 +381,10 @@ existente** (con `extends`).
 | `subclasses` | `Subclass[]?` | Subclases de la clase. |
 | `levelChoices` | `LevelChoice[]?` | Elecciones por nivel ([ver abajo](#levelchoices)); se suman a las generadas. |
 | `features` | `Feature[]?` | Rasgos de la clase que **no** aparecen en la lista de ningún nivel (los que solo cita una opción o una elección, como los dados de Inspiración bárdica que mejoran). Cada uno lleva `level` (1–20). |
+| `auxiliary` | `bool?` | `true`: **nivel auxiliar** (ver abajo): un solo nivel que se toma al subir de nivel en lugar de un nivel de clase. |
+| `prerequisites` | `Prerequisites?` | Solo con `auxiliary`: requisitos estructurados ([como los de las opciones](#option)). |
+| `prerequisitesText` | `string?` | Solo con `auxiliary`, ≤ 2000: requisitos literales o narrativos, que la app muestra tal cual. |
+| `countsAsCasterLevel` | `bool?` | Solo con `auxiliary`: cuenta como un nivel más de la clase lanzadora para los **espacios** (no para conocidos ni preparados). |
 
 **`ClassLevel`**: `level` (**obligatorio**, 1–20), `profBonus` (`int?`, 2–6; si falta, la tabla
 estándar), `features` (`Feature[]?`), `abilityScoreImprovement` (`bool?`) y `classSpecific` (objeto
@@ -445,6 +449,33 @@ Una clase con `spellcastingAbility` sin `spellSlots` en ningún nivel (solo truc
 
 Para el multiclase, `full` cuenta el nivel completo, `half` la mitad y `third` un tercio (como en el
 SRD); `pact` y `table` no suman al nivel de lanzador conjunto: aportan sus propios espacios.
+
+**Niveles auxiliares (`auxiliary: true`).** Con aprobación del DM (que concede el nivel), al subir de nivel
+**después del 1.º** se puede tomar un nivel auxiliar en lugar de un nivel de clase:
+
+- `levels` tiene solo el nivel 1 (otro nivel es un error) y no admite `spellcasting`, `spellcastingAbility`,
+  `subclasses`, `subclassLevel` ni `multiclassing.prerequisites`. Las competencias que da van en
+  `multiclassing.proficiencies` y se ganan al tomarlo, como en cualquier multiclase.
+- Da PG y dado de golpe como una clase (`hitDie`). El bonificador de competencia sigue el nivel total.
+- El plan de subida (`GET .../level-up`) lo lista en `classes` con `auxiliary: true` y `prerequisitesText`; se
+  toma **una sola vez** ("Un nivel auxiliar se toma una sola vez."), sin los requisitos de característica de la
+  multiclase pero con sus `prerequisites` (motivo en `reason`). El narrativo (`prerequisitesText`) lo valora el DM.
+- No puede ser la clase inicial ni tener más de un nivel (400 en `PATCH .../sheet`); el catálogo lo marca con
+  `auxiliary: true` en `GET /catalog/classes` y en el detalle (`auxiliary`, `prerequisitesText`,
+  `countsAsCasterLevel`).
+- `countsAsCasterLevel`: con una sola clase lanzadora, sus espacios son los de un nivel más de esa clase (mago 2 +
+  nivel auxiliar = espacios de mago 3); con varias, suma 1 al nivel de lanzador multiclase.
+
+```json
+{
+  "index": "reinos-ejemplo-iniciado", "name": "Iniciado de ejemplo", "hitDie": 6, "auxiliary": true,
+  "prerequisites": { "classFeature": "spellcasting" },
+  "prerequisitesText": "Haber estudiado con un maestro (texto ficticio).",
+  "countsAsCasterLevel": true,
+  "multiclassing": { "proficiencies": { "tools": ["Kit de ejemplo"] } },
+  "levels": [{ "level": 1, "features": [{ "index": "reinos-ejemplo-velo", "name": "Velo", "description": ["..."] }] }]
+}
+```
 
 **`Multiclassing`**: `prerequisites` (`{ "int": 13 }`: puntuación mínima por característica; todas
 deben cumplirse) y `proficiencies` (`armor`, `weapons`, `tools` como en la clase y `skills`: número

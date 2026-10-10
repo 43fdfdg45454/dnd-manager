@@ -536,21 +536,49 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         foreach (var entry in current)
         {
             var definition = allClasses.FirstOrDefault(c => c.Index == entry.ClassIndex);
+            var maxLevel = definition?.IsAuxiliary == true ? 1 : 20;
             result.Add(new LevelUpClassDto(
                 entry.ClassIndex,
                 definition?.Name ?? entry.ClassIndex,
-                definition is not null && entry.Level < 20,
-                definition is null ? "La clase ya no está en el catálogo." : entry.Level >= 20 ? "La clase ya está en el nivel 20." : null,
+                definition is not null && entry.Level < maxLevel,
+                definition is null ? "La clase ya no está en el catálogo."
+                    : entry.Level < maxLevel ? null
+                    : maxLevel == 1 ? "Un nivel auxiliar se toma una sola vez." : "La clase ya está en el nivel 20.",
                 definition?.HitDie ?? 0,
                 false,
                 entry.Level,
-                entry.SubclassIndex));
+                entry.SubclassIndex)
+            {
+                Auxiliary = definition?.IsAuxiliary == true,
+                PrerequisitesText = definition?.PrerequisitesText,
+            });
         }
 
+        var names = allClasses.ToDictionary(c => c.Index, c => c.Name, StringComparer.Ordinal);
+        var picks = character.ActivePicks().Select(p => p.Item.Index).ToHashSet(StringComparer.Ordinal);
         foreach (var definition in allClasses.Where(c => current.All(e => e.ClassIndex != c.Index)))
         {
-            var reason = current.Count == 0 ? null : MulticlassRules.WhyNot(definition.Index, current.Select(c => c.ClassIndex), Score, index => allClasses.FirstOrDefault(c => c.Index == index)?.Multiclassing);
-            result.Add(new LevelUpClassDto(definition.Index, definition.Name, reason is null, reason, definition.HitDie, true, 0, null));
+            // Auxiliary levels (H14): after level 1, without the multiclass ability prerequisites, with their own.
+            var reason = definition.IsAuxiliary
+                ? current.Count == 0
+                    ? "Un nivel auxiliar no se toma al crear el personaje."
+                    : PrerequisiteEvaluator.WhyNot(definition.Prerequisites, new PrerequisiteFacts
+                    {
+                        Character = character,
+                        Sheet = sheet,
+                        CharacterLevel = character.TotalLevel + 1,
+                        ClassLevel = character.TotalLevel + 1,
+                        Picks = picks,
+                        IsPactClass = index => allClasses.FirstOrDefault(c => c.Index == index)?.IsPactCaster ?? index == "warlock",
+                        Name = index => names.GetValueOrDefault(index, index),
+                        Detailed = true,
+                    })
+                : current.Count == 0 ? null : MulticlassRules.WhyNot(definition.Index, current.Select(c => c.ClassIndex), Score, index => allClasses.FirstOrDefault(c => c.Index == index)?.Multiclassing);
+            result.Add(new LevelUpClassDto(definition.Index, definition.Name, reason is null, reason, definition.HitDie, true, 0, null)
+            {
+                Auxiliary = definition.IsAuxiliary,
+                PrerequisitesText = definition.PrerequisitesText,
+            });
         }
 
         return result;

@@ -625,6 +625,92 @@ public class ContentPackCreationTests(ContentPackCreationApiFactory factory) : I
         Assert.Contains(errors, e => e.StartsWith($"classes[{smithIndex}].subclasses[1].spellcasting.slots:", StringComparison.Ordinal));
     }
 
+    // ---- H14: auxiliary levels ---------------------------------------------------------------------------
+
+    [Fact]
+    public async Task Auxiliary_levels_are_taken_once_after_level_one_with_their_own_prerequisites()
+    {
+        var s = await ScenarioAsync();
+        var veil = I("velo");
+        var tamer = I("domador");
+        var classes = await GetAsync<List<ClassSummaryDto>>(s.Player.Client, $"{CatalogUrl}/classes");
+        Assert.True(classes.Single(c => c.Index == veil).Auxiliary);
+        Assert.False(classes.Single(c => c.Index == "fighter").Auxiliary);
+
+        // Never a starting class, and never more than one level.
+        var draft = await s.Player.CreateCharacterAsync(s.CampaignId, "Auxiliar");
+        var start = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(draft.Id)}/sheet", new { classes = new[] { new { classIndex = veil, level = 1 } } });
+        Assert.Equal(HttpStatusCode.BadRequest, start.StatusCode);
+
+        var fighter = await DraftAsync(s, "fighter", 1, new { str = 15, dex = 12, con = 14, @int = 10, wis = 10, cha = 8 });
+        await GrantAsync(s, fighter.Id);
+        var early = (await PlanAsync(s.Player, fighter.Id)).Classes;
+        var tamerOption = early.Single(c => c.ClassIndex == tamer);
+        Assert.True(tamerOption.Auxiliary);
+        Assert.False(tamerOption.Allowed);
+        Assert.Equal("Nivel 3 y haber escuchado un eco (texto ficticio).", tamerOption.PrerequisitesText);
+        Assert.False(early.Single(c => c.ClassIndex == veil).Allowed);
+
+        // A wizard 2 takes the veil: wizard 2 + an auxiliary caster level = the slots of a wizard 3.
+        var wizard = await DraftAsync(s, "wizard", 2, new { str = 8, dex = 14, con = 14, @int = 16, wis = 12, cha = 10 });
+        await GrantAsync(s, wizard.Id);
+        var plan = await PlanAsync(s.Player, wizard.Id, veil);
+        Assert.True(plan.Classes.Single(c => c.ClassIndex == veil).Allowed, plan.Classes.Single(c => c.ClassIndex == veil).Reason);
+        wizard = await ApplyAsync(s.Player, wizard.Id, new { classIndex = veil, hitPointsRolled = 4, choices = Answers(plan, wizard) });
+        Assert.Equal(3, wizard.Sheet.TotalLevel);
+        Assert.Equal((4, 2), (wizard.SpellSlots.Single(slot => slot.Level == 1).Max, wizard.SpellSlots.Single(slot => slot.Level == 2).Max));
+        Assert.Contains(wizard.Proficiencies, p => p is { Type: "Tool", Key: "Kit de ejemplo" });
+
+        await GrantAsync(s, wizard.Id);
+        var again = (await PlanAsync(s.Player, wizard.Id)).Classes.Single(c => c.ClassIndex == veil);
+        Assert.Equal((false, "Un nivel auxiliar se toma una sola vez."), (again.Allowed, again.Reason));
+    }
+
+    [Fact]
+    public async Task Auxiliary_levels_are_validated()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        var pack = Renamed(Build(), "vacio-malo-h14");
+        var classes = pack["classes"]!.AsArray();
+        var veil = classes.Single(c => c!["index"]!.GetValue<string>() == "vacio-malo-h14-velo")!;
+        veil["levels"]!.AsArray().Add(new JsonObject { ["level"] = 2 });
+        var herald = classes[0]!;
+        herald["countsAsCasterLevel"] = true;
+
+        var errors = await ImportErrorsAsync(admin, pack);
+
+        Assert.Contains(errors, e => e.StartsWith($"classes[{classes.IndexOf(veil)}].levels:", StringComparison.Ordinal));
+        Assert.Contains(errors, e => e.StartsWith("classes[0].countsAsCasterLevel:", StringComparison.Ordinal));
+    }
+
+    // ---- Flow: a hit-point caster from level 1 to 20 with an auxiliary level -------------------------------
+
+    [Fact]
+    public async Task A_hit_point_caster_reaches_level_twenty_through_the_api_taking_an_auxiliary_level()
+    {
+        var s = await ScenarioAsync();
+        var penitent = I("penitente");
+        var tamer = I("domador");
+        var hero = await DraftAsync(s, penitent, 1, new { str = 10, dex = 12, con = 14, @int = 10, wis = 16, cha = 8 });
+        for (var level = 2; level <= 20; level++)
+        {
+            await GrantAsync(s, hero.Id);
+            var classIndex = level == 6 ? tamer : penitent;
+            var plan = await PlanAsync(s.Player, hero.Id, classIndex);
+            var selected = plan.Classes.Single(c => c.ClassIndex == classIndex);
+            Assert.True(selected.Allowed, $"Nivel {level}: {selected.Reason}");
+            hero = await ApplyAsync(s.Player, hero.Id, new { classIndex, hitPointsRolled = 4, choices = Answers(plan, hero) });
+            Assert.Empty(hero.InvalidChoices);
+        }
+
+        Assert.Equal(20, hero.Sheet.TotalLevel);
+        Assert.Equal([(penitent, 19), (tamer, 1)], hero.Classes.Select(c => (c.ClassIndex, c.Level)).ToList());
+        var casting = hero.Sheet.Spellcasting.Single(c => c.ClassIndex == penitent);
+        Assert.Equal(("hitPoints", 5), (casting.Progression, casting.MaxSpellLevel));
+        Assert.Equal([5, 10, 20, 30, 45], casting.HitPointCost);
+        Assert.Equal(8, hero.Resources.Single(r => r.Key == I("plegarias")).Max);
+    }
+
     private static string OriginUrl(Guid id) => $"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/origin-choices";
 
     /// <summary>A draft (origin choices still open) of <paramref name="race"/> and <paramref name="classIndex"/> at <paramref name="level"/>.</summary>

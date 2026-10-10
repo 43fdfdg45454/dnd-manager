@@ -26,8 +26,14 @@ public sealed record ClassSummaryDto(
     string SubclassFlavor,
     string Source)
 {
+    /// <summary>Auxiliary level (content packs): taken after level 1 instead of a class level; never a starting class.</summary>
+    public bool Auxiliary { get; init; }
+
     public static ClassSummaryDto From(ClassDefinition c) => new(
-        c.Index, c.Name, c.HitDie, c.SavingThrows, c.SpellcastingAbility, c.IsSpellcaster, c.SpellcastingLevel, c.IsPactCaster, c.SubclassFlavor, c.Source);
+        c.Index, c.Name, c.HitDie, c.SavingThrows, c.SpellcastingAbility, c.IsSpellcaster, c.SpellcastingLevel, c.IsPactCaster, c.SubclassFlavor, c.Source)
+    {
+        Auxiliary = c.IsAuxiliary,
+    };
 }
 
 public sealed record FeatureDto(
@@ -97,6 +103,15 @@ public sealed record ClassDetailDto(
 
     /// <summary>Spellcasting of a content pack class, or null (the SRD classes use fixed tables).</summary>
     public ClassSpellcastingDto? Spellcasting { get; init; }
+
+    /// <summary>Auxiliary level (content packs): one level taken after level 1 instead of a class level.</summary>
+    public bool Auxiliary { get; init; }
+
+    /// <summary>Prerequisites of an auxiliary level as text (the pack's, or generated from the structured ones).</summary>
+    public string? PrerequisitesText { get; init; }
+
+    /// <summary>An auxiliary level that counts as one more level of the caster class for spell slots.</summary>
+    public bool CountsAsCasterLevel { get; init; }
 
     /// <summary>Multiclassing of a content pack class, or null (the SRD classes use the fixed SRD table).</summary>
     public ClassMulticlassingDto? Multiclassing { get; init; }

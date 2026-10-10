@@ -1500,12 +1500,18 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<bool>("CountsAsCasterLevel")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<int>("HitDie")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("IsAuxiliary")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsPactCaster")
                         .HasColumnType("boolean");
@@ -1520,6 +1526,13 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("PrerequisitesJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PrerequisitesText")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<string>("ProficiencyNames")
                         .IsRequired()

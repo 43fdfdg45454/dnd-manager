@@ -50,7 +50,14 @@ public sealed record LevelUpClassDto(
     int HitDie,
     bool IsNew,
     int CurrentLevel,
-    string? SubclassIndex);
+    string? SubclassIndex)
+{
+    /// <summary>Auxiliary level (content packs): one level only, offered apart ("Nivel auxiliar").</summary>
+    public bool Auxiliary { get; init; }
+
+    /// <summary>Literal prerequisites of an auxiliary level (narrative ones included), or null.</summary>
+    public string? PrerequisitesText { get; init; }
+}
 
 /// <summary>A feature gained automatically at the new level. <see cref="SubclassIndex"/> is set for subclass features.</summary>
 public sealed record LevelUpFeatureDto(string ClassIndex, string? SubclassIndex, int Level, LevelUpFeatureInfoDto Feature);

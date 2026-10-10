@@ -59,6 +59,9 @@ public sealed record ClassInfo
     /// <summary>Spellcasting details of a pack class (progression, maximum spell level without slots...), or null.</summary>
     public ClassSpellcastingInfo? Casting { get; init; }
 
+    /// <summary>Auxiliary level that counts as one more level of the caster class for spell slots.</summary>
+    public bool CountsAsCasterLevel { get; init; }
+
     /// <summary>Whether the class casts spells at a class level.</summary>
     public bool CastsAt(int classLevel) => SpellcastingAbility is not null && classLevel >= SpellcastingFromLevel;
 
@@ -106,6 +109,7 @@ public sealed record ClassInfo
             IsPactCaster = definition.IsPactCaster,
             PreparesSpells = definition.PreparesSpells,
             Casting = definition.Spellcasting,
+            CountsAsCasterLevel = definition.IsAuxiliary && definition.CountsAsCasterLevel,
             SpellSlotsByLevel = levels
                 .Where(l => l.ClassIndex == definition.Index)
                 .GroupBy(l => l.Level)

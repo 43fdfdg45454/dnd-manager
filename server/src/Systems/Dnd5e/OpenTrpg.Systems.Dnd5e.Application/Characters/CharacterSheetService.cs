@@ -224,6 +224,17 @@ public sealed class CharacterSheetService(
                 throw AppException.Validation("classes", $"La clase '{disabledClass}' {DisabledPack}.");
             }
 
+            // Auxiliary levels (content packs): one level, never the starting class.
+            if (classes.FirstOrDefault(c => definitions[c.ClassIndex.Trim()].IsAuxiliary && c.Level > 1) is { } longAuxiliary)
+            {
+                throw AppException.Validation("classes", $"'{definitions[longAuxiliary.ClassIndex.Trim()].Name}' es un nivel auxiliar: solo tiene un nivel.");
+            }
+
+            if (definitions[classes[0].ClassIndex.Trim()].IsAuxiliary)
+            {
+                throw AppException.Validation("classes", $"'{definitions[classes[0].ClassIndex.Trim()].Name}' es un nivel auxiliar: no puede ser la clase inicial.");
+            }
+
             var subclassIndexes = classes
                 .Select(c => c.SubclassIndex?.Trim())
                 .Where(s => !string.IsNullOrEmpty(s))

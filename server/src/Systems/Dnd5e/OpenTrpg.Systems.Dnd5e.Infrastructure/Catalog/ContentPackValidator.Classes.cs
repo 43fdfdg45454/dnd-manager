@@ -99,6 +99,45 @@ internal sealed partial class ContentPackValidator
         var spellcasting = definition.Spellcasting is { } casting ? ClassSpellcasting($"{path}.spellcasting", casting) : null;
         var table = SpellcastingTable(path, definition);
 
+        // H14: auxiliary levels (one level, after level 1, with their own prerequisites).
+        var auxiliary = definition.Auxiliary == true;
+        string? auxiliaryPrerequisites = null;
+        string? auxiliaryText = null;
+        if (auxiliary)
+        {
+            auxiliaryPrerequisites = Prerequisites($"{path}.prerequisites", definition.Prerequisites);
+            auxiliaryText = NullableText($"{path}.prerequisitesText", definition.PrerequisitesText, ClassDefinition.PrerequisitesTextMaxLength);
+            foreach (var (field, present) in new[]
+                     {
+                         ("spellcasting", definition.Spellcasting is not null),
+                         ("spellcastingAbility", definition.SpellcastingAbility is not null),
+                         ("subclasses", definition.Subclasses is { Count: > 0 }),
+                         ("subclassLevel", definition.SubclassLevel is not null),
+                         ("multiclassing.prerequisites", definition.Multiclassing?.Prerequisites is { Count: > 0 }),
+                     })
+            {
+                if (present)
+                {
+                    AddError($"{path}.{field}", "No se admite en un nivel auxiliar.");
+                }
+            }
+        }
+        else
+        {
+            foreach (var (field, present) in new[]
+                     {
+                         ("prerequisites", definition.Prerequisites is not null),
+                         ("prerequisitesText", definition.PrerequisitesText is not null),
+                         ("countsAsCasterLevel", definition.CountsAsCasterLevel is not null),
+                     })
+            {
+                if (present)
+                {
+                    AddError($"{path}.{field}", "Solo se admite con \"auxiliary\": true.");
+                }
+            }
+        }
+
         if (index is null)
         {
             return;
@@ -118,10 +157,16 @@ internal sealed partial class ContentPackValidator
                 AddError($"{levelPath}.level", "Nivel duplicado en la clase.");
             }
         });
-        var missing = Enumerable.Range(1, MaxLevels).Where(l => !levels.ContainsKey(l)).ToList();
-        if (missing.Count > 0)
+        var missing = Enumerable.Range(1, auxiliary ? 1 : MaxLevels).Where(l => !levels.ContainsKey(l)).ToList();
+        if (auxiliary && levels.Keys.Any(l => l > 1))
         {
-            AddError($"{path}.levels", $"Faltan niveles: {string.Join(", ", missing)} (una clase cubre del 1 al 20).");
+            AddError($"{path}.levels", "Un nivel auxiliar solo tiene el nivel 1.");
+        }
+        else if (missing.Count > 0)
+        {
+            AddError($"{path}.levels", auxiliary
+                ? "Un nivel auxiliar necesita su nivel 1."
+                : $"Faltan niveles: {string.Join(", ", missing)} (una clase cubre del 1 al 20).");
         }
 
         var asiMarked = levels.Values.Any(l => l.Level.AbilityScoreImprovement is not null);
@@ -228,6 +273,10 @@ internal sealed partial class ContentPackValidator
             MulticlassJson = multiclassing?.ToJson(),
             ResourcesJson = resources.Count == 0 ? null : $"[{string.Join(",", resources)}]",
             SpellListJson = spellList?.ToJson(),
+            IsAuxiliary = auxiliary,
+            PrerequisitesJson = auxiliaryPrerequisites,
+            PrerequisitesText = auxiliaryText,
+            CountsAsCasterLevel = auxiliary && definition.CountsAsCasterLevel == true,
         });
 
         // A class that only knows cantrips (or casts without slots) may get spellcasting from a subclass (H04).

@@ -185,6 +185,18 @@ internal sealed class PackClassJson
 
     /// <summary>Level choices of the class (on top of those generated from the levels and the spellcasting tables).</summary>
     public List<PackLevelChoiceJson?>? LevelChoices { get; set; }
+
+    /// <summary>Auxiliary level: a one-level class taken after level 1 instead of a class level.</summary>
+    public bool? Auxiliary { get; set; }
+
+    /// <summary>Auxiliary classes: structured prerequisites.</summary>
+    public PackPrerequisitesJson? Prerequisites { get; set; }
+
+    /// <summary>Auxiliary classes: literal or narrative prerequisites.</summary>
+    public string? PrerequisitesText { get; set; }
+
+    /// <summary>Auxiliary classes: counts as one level of the caster class for its slots.</summary>
+    public bool? CountsAsCasterLevel { get; set; }
 }
 
 internal sealed class PackClassProficienciesJson

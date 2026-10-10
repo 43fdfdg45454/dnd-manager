@@ -642,20 +642,26 @@ public static class SheetCalculator
     /// and the multiclass table; a class with its own slot table and no multiclass contribution (content packs,
     /// <c>"progression": "table"</c>) adds its own slots on top.
     /// </summary>
+    /// <remarks>
+    /// Auxiliary levels that count as a caster level (content packs) add one level to the only caster class (its own
+    /// table one level higher) or, with several, one to the multiclass spellcaster level.
+    /// </remarks>
     private static (IReadOnlyList<int> Slots, int CasterLevel) CalculateSpellSlots(List<ResolvedClass> classes)
     {
         var casters = classes
             .Where(c => !IsPact(c.Info) && c.Level.Level >= c.Info.SpellcastingFromLevel
                 && (c.Info.SpellcastingLevel > 0 || (c.Info.SpellcastingAbility is not null && c.Info.SlotsByLevel(c.Level.Level).Any(s => s > 0))))
             .ToList();
+        var auxiliary = classes.Count(c => c.Info.CountsAsCasterLevel);
         switch (casters.Count)
         {
             case 0:
                 return (new int[9], 0);
             case 1:
-                return ([.. casters[0].Info.SlotsByLevel(casters[0].Level.Level)], 0);
+                var single = casters[0];
+                return ([.. single.Info.SlotsByLevel(Math.Min(single.Level.Level + auxiliary, AbilityRules.MaxLevel))], 0);
             default:
-                var casterLevel = casters.Where(c => c.Info.SpellcastingLevel > 0).Sum(c => c.Level.Level / c.Info.SpellcastingLevel);
+                var casterLevel = casters.Where(c => c.Info.SpellcastingLevel > 0).Sum(c => c.Level.Level / c.Info.SpellcastingLevel) + auxiliary;
                 var slots = SpellSlotTables.MulticlassSlots(Math.Min(casterLevel, AbilityRules.MaxLevel)).ToArray();
                 foreach (var own in casters.Where(c => c.Info.SpellcastingLevel == 0))
                 {

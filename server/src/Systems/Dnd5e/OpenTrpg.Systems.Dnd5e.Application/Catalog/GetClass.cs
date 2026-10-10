@@ -70,6 +70,11 @@ public sealed class GetClassHandler(ICatalogRepository catalog)
             Spellcasting = definition.Spellcasting is { } spellcasting ? ClassSpellcastingDto.From(spellcasting) : null,
             Multiclassing = definition.Multiclassing is { } multiclassing ? ClassMulticlassingDto.From(multiclassing, definition.Index) : null,
             Resources = definition.Resources.Select(ClassResourceDto.From).ToList(),
+            Auxiliary = definition.IsAuxiliary,
+            PrerequisitesText = definition.IsAuxiliary
+                ? definition.PrerequisitesText ?? PrerequisiteEvaluator.Text(definition.Prerequisites, index => index, null)
+                : null,
+            CountsAsCasterLevel = definition.CountsAsCasterLevel,
         };
     }
 

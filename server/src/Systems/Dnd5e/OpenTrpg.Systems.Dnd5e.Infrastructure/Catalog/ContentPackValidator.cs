@@ -431,6 +431,10 @@ internal sealed partial class ContentPackValidator
                      ("levels", extension.Levels is not null),
                      ("resources", extension.Resources is not null),
                      ("spellList", extension.SpellList is { ValueKind: not JsonValueKind.Null }),
+                     ("auxiliary", extension.Auxiliary is not null),
+                     ("prerequisites", extension.Prerequisites is not null),
+                     ("prerequisitesText", extension.PrerequisitesText is not null),
+                     ("countsAsCasterLevel", extension.CountsAsCasterLevel is not null),
                  })
         {
             if (present)
