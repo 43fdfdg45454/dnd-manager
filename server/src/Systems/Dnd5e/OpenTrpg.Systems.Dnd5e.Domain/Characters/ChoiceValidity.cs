@@ -17,7 +17,8 @@ namespace OpenTrpg.Systems.Dnd5e.Domain.Characters;
 /// <param name="Code"><see cref="InvalidChoiceCodes.Prerequisites"/> or <see cref="InvalidChoiceCodes.PackDisabled"/>.</param>
 public sealed record InvalidChoice(string? ClassIndex, string Key, int Level, string Kind, string SetId, ChoiceItem Item, string Reason, string Code = InvalidChoiceCodes.Prerequisites)
 {
-    public bool IsFeat => SetId == OptionSets.Feats;
+    /// <summary>The pick is the feat of an ability improvement or an origin (or the option an improvement took instead).</summary>
+    public bool IsFeat => SetId == OptionSets.Feats || Kind is nameof(LevelChoiceKind.AsiOrFeat) or OriginChoiceKeys.FeatKind;
 }
 
 /// <summary>Why a pick is invalid.</summary>

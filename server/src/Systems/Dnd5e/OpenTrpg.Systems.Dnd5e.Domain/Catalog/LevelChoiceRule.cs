@@ -95,10 +95,18 @@ public sealed class LevelChoiceRule
     /// </summary>
     public string? After { get; init; }
 
+    /// <summary>
+    /// JSON array of other option sets whose options are offered too (content packs): an ability improvement that may
+    /// be swapped for an option of a class set, or an option choice that also draws from another set. Null = none.
+    /// </summary>
+    public string? AlsoFromJson { get; init; }
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = Dnd5eCatalogSources.Srd;
 
     public IReadOnlyList<string>? From => LevelChoiceJson.ParseStringList(FromJson);
+
+    public IReadOnlyList<string> AlsoFrom => LevelChoiceJson.ParseStringList(AlsoFromJson) ?? [];
 
     public ChoiceFilter Filter => LevelChoiceJson.ParseFilter(FilterJson);
 

@@ -802,11 +802,33 @@ internal sealed partial class ContentPackValidator
         ForEachText($"{path}.from", rule.From, (fromPath, value) =>
         {
             from.Add(value);
+            // Any option of the catalog or the pack may be named: a set can reuse options of other sets.
             if (setId is not null && kind is LevelChoiceKind.OptionSet or LevelChoiceKind.Custom)
             {
-                _optionReferences.Add((fromPath, setId, value));
+                _optionReferences.Add((fromPath, null, value));
             }
         });
+
+        var alsoFrom = new List<string>();
+        if (rule.AlsoFrom is not null && kind is not (LevelChoiceKind.AsiOrFeat or LevelChoiceKind.OptionSet))
+        {
+            AddError($"{path}.alsoFrom", "Solo se admite en las elecciones AsiOrFeat y OptionSet.");
+        }
+        else
+        {
+            ForEachText($"{path}.alsoFrom", rule.AlsoFrom, (alsoPath, value) =>
+            {
+                if (value == setId || (kind == LevelChoiceKind.AsiOrFeat && value == OptionSets.Feats))
+                {
+                    AddError(alsoPath, "Ya es el conjunto de la elección.");
+                }
+                else if (!alsoFrom.Contains(value))
+                {
+                    alsoFrom.Add(value);
+                    _setReferences.Add((alsoPath, value));
+                }
+            });
+        }
 
         // Spell choices of a subclass with spellcasting may leave "choose" out: the increase of its known table is used.
         var knownTable = kind switch
@@ -864,6 +886,7 @@ internal sealed partial class ContentPackValidator
             Cumulative = rule.Cumulative ?? false,
             Note = note,
             After = after,
+            AlsoFromJson = alsoFrom.Count == 0 ? null : LevelChoiceJson.Serialize(alsoFrom),
             Source = _id,
         });
     }

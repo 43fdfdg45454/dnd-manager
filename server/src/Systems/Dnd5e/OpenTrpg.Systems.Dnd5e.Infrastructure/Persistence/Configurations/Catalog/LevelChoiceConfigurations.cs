@@ -72,6 +72,7 @@ internal sealed class LevelChoiceRuleConfiguration : IEntityTypeConfiguration<Le
         builder.HasIndex(x => x.Source);
 
         builder.Ignore(x => x.From);
+        builder.Ignore(x => x.AlsoFrom);
         builder.Ignore(x => x.Filter);
     }
 }

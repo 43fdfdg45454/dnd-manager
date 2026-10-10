@@ -1276,6 +1276,9 @@ internal sealed class PackLevelChoiceJson
 
     /// <summary>Key of another choice of the same level that is resolved before this one.</summary>
     public string? After { get; set; }
+
+    /// <summary>AsiOrFeat and OptionSet: other option sets whose options are offered too.</summary>
+    public List<string?>? AlsoFrom { get; set; }
 }
 
 internal sealed class PackChoiceFilterJson

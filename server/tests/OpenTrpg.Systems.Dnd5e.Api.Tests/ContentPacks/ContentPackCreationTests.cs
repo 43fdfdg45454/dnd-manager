@@ -198,6 +198,73 @@ public class ContentPackCreationTests(ContentPackCreationApiFactory factory) : I
         Assert.True(errors.Any(e => e.StartsWith("classes[1].subclasses[1].prerequisites.characterLevel:", StringComparison.Ordinal)), all);
     }
 
+    // ---- H20/H10: options of other sets and ability improvements that also offer options ---------------
+
+    [Fact]
+    public async Task A_set_choice_may_reuse_options_of_other_sets()
+    {
+        var s = await ScenarioAsync();
+        var herald = I("heraldo");
+        var hero = await DraftAsync(s, herald, 1, new { str = 14, dex = 12, con = 14, @int = 10, wis = 10, cha = 14 });
+        await GrantAsync(s, hero.Id);
+
+        var tactics = (await PlanAsync(s.Player, hero.Id, herald)).Choices.Single(c => c.Key == "tacticas");
+        Assert.Equivalent(new[] { I("tactica-niebla"), "fighting-style-defense", I("senal-basica") }, tactics.Options.Select(o => o.Index).ToArray());
+        Assert.Equal("fighting-styles", tactics.Options.Single(o => o.Index == "fighting-style-defense").SetId);
+
+        hero = await ApplyAsync(s.Player, hero.Id, new { classIndex = herald, hitPointsRolled = 6, choices = new[] { new { key = "tacticas", selected = new[] { "fighting-style-defense" } } } });
+
+        // The reused fighting style is recorded as a pick of the choice and is not offered again.
+        Assert.Contains(hero.Classes, c => c.ClassIndex == herald && c.Level == 2);
+        var picked = hero.Choices.Single(c => c.Key == "tacticas");
+        Assert.Equal("fighting-style-defense", Assert.Single(picked.Selected).Index);
+    }
+
+    [Fact]
+    public async Task An_ability_improvement_may_take_an_option_of_another_set()
+    {
+        var s = await ScenarioAsync();
+        var keeper = I("guardian");
+        var hero = await DraftAsync(s, keeper, 3, new { str = 14, dex = 12, con = 14, @int = 10, wis = 14, cha = 8 }, I("orden-llama"));
+        await GrantAsync(s, hero.Id);
+
+        var plan = await PlanAsync(s.Player, hero.Id, keeper);
+        var asi = plan.Choices.Single(c => c.Key == "asi");
+        Assert.Equal("AsiOrFeat", asi.Kind);
+        Assert.Equal([I("senales")], asi.AlsoFrom);
+        Assert.Contains(asi.Options, o => o.Index == I("senal-basica") && o.SetId == I("senales") && o.Eligible);
+        Assert.Contains(asi.Options, o => o.SetId == "feats");
+
+        hero = await ApplyAsync(s.Player, hero.Id, new { classIndex = keeper, hitPointsRolled = 6, choices = new[] { new { key = "asi", selected = (object)new { feat = I("senal-basica") } } } });
+
+        // The signal counts as an option the character has: the double signal becomes eligible later.
+        await GrantAsync(s, hero.Id);
+        var fifth = await PlanAsync(s.Player, hero.Id, keeper);
+        var signals = fifth.Choices.Single(c => c.Key == "senales-5").Options;
+        Assert.DoesNotContain(signals, o => o.Index == I("senal-basica"));
+        Assert.True(signals.Single(o => o.Index == I("senal-doble")).Eligible);
+    }
+
+    [Fact]
+    public async Task Also_from_is_only_accepted_by_improvements_and_set_choices()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        var pack = Renamed(Build(), "vacio-malo-h10");
+        var choices = pack["classes"]![1]!["levelChoices"]!.AsArray();
+        choices[0]!["kind"] = "Skill";
+        choices[0]!["setId"] = null;
+        choices[0]!["alsoFrom"] = new JsonArray("vacio-malo-h10-senales");
+        choices[3]!["alsoFrom"] = new JsonArray("vacio-malo-h10-no-existe");
+        pack["classes"]![0]!["levelChoices"]![0]!["from"] = new JsonArray("vacio-malo-h10-ninguna");
+
+        var errors = await ImportErrorsAsync(admin, pack);
+        var all = string.Join("\n", errors);
+
+        Assert.True(errors.Any(e => e.StartsWith("classes[1].levelChoices[0].alsoFrom:", StringComparison.Ordinal)), all);
+        Assert.True(errors.Any(e => e.StartsWith("classes[1].levelChoices[3].alsoFrom[0]:", StringComparison.Ordinal)), all);
+        Assert.True(errors.Any(e => e.StartsWith("classes[0].levelChoices[0].from[0]:", StringComparison.Ordinal)), all);
+    }
+
     // ---- Helpers ---------------------------------------------------------------------------------------
 
     /// <summary>Imports the pack once per database.</summary>

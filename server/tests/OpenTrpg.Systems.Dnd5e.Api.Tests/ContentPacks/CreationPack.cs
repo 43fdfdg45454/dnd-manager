@@ -22,7 +22,7 @@ internal static class CreationPack
         ["name"] = "Crónicas del vacío (prueba)",
         ["version"] = "1.0.0",
         ["classes"] = new JsonArray(Herald(), Keeper()),
-        ["optionSets"] = new JsonArray(Signals()),
+        ["optionSets"] = new JsonArray(Signals(), Tactics()),
         ["items"] = Items(),
     };
 
@@ -88,7 +88,25 @@ internal static class CreationPack
                 ["3"] = new JsonObject { ["armor"] = new JsonArray("exotic") },
             },
         },
+        // H20: its tactics reuse an SRD fighting style and a signal of another set.
+        ["levelChoices"] = new JsonArray(new JsonObject
+        {
+            ["level"] = 2,
+            ["key"] = "tacticas",
+            ["name"] = "Tácticas",
+            ["kind"] = "OptionSet",
+            ["setId"] = I("tacticas"),
+            ["choose"] = 1,
+            ["from"] = new JsonArray(I("tactica-niebla"), "fighting-style-defense", I("senal-basica")),
+        }),
     });
+
+    private static JsonObject Tactics() => new()
+    {
+        ["setId"] = I("tacticas"),
+        ["name"] = "Tácticas",
+        ["options"] = new JsonArray(Option("tactica-niebla", "Táctica de niebla", null), Option("tactica-oculta", "Táctica oculta", null)),
+    };
 
     /// <summary>
     /// H08/H09: "Guardián de faros", with a "Señales" choice at levels 2, 5 and 9 and two orders at level 3, one of
@@ -101,7 +119,9 @@ internal static class CreationPack
         ["levelChoices"] = new JsonArray(
             new JsonObject { ["level"] = 2, ["key"] = "senales", ["name"] = "Señales", ["kind"] = "OptionSet", ["setId"] = I("senales"), ["choose"] = 1 },
             new JsonObject { ["level"] = 5, ["key"] = "senales-5", ["name"] = "Señales", ["kind"] = "OptionSet", ["setId"] = I("senales"), ["choose"] = 1 },
-            new JsonObject { ["level"] = 9, ["key"] = "senales-9", ["name"] = "Señales", ["kind"] = "OptionSet", ["setId"] = I("senales"), ["choose"] = 1 }),
+            new JsonObject { ["level"] = 9, ["key"] = "senales-9", ["name"] = "Señales", ["kind"] = "OptionSet", ["setId"] = I("senales"), ["choose"] = 1 },
+            // H10: the ability improvement of level 4 may be swapped for a signal.
+            new JsonObject { ["level"] = 4, ["key"] = "asi", ["name"] = "Mejora o señal", ["kind"] = "AsiOrFeat", ["choose"] = 1, ["alsoFrom"] = new JsonArray(I("senales")) }),
         ["subclasses"] = new JsonArray(
             new JsonObject
             {

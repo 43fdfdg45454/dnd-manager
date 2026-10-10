@@ -431,7 +431,7 @@ public sealed class ApplyLevelUpHandler(
         {
             Kind = rule.Kind.ToString(),
             Name = rule.Name,
-            SetId = OptionSets.Feats,
+            SetId = feat.Definition?.SetId ?? OptionSets.Feats,
             Feat = new ChoiceItem(feat.Index, feat.Name),
             Ability = raised,
         };

@@ -158,7 +158,8 @@ public sealed partial class Dnd5eCharacter
 
     /// <summary>
     /// What the character currently has from its level choices: for each class and key, the picks of every
-    /// level in order, minus the ones replaced later. Feats count as picks of the <c>feats</c> set.
+    /// level in order, minus the ones replaced later. Feats count as picks of the <c>feats</c> set (or of the set of the
+    /// option an ability improvement took instead, with <c>alsoFrom</c>).
     /// </summary>
     public IReadOnlyList<ActivePick> ActivePicks()
     {
@@ -177,7 +178,7 @@ public sealed partial class Dnd5eCharacter
                 active.AddRange(selection.Selected.Select(item => new ActivePick(choice.ClassIndex, choice.Key, choice.Level, selection.Kind, selection.SetId, item)));
                 if (selection.Feat is { } feat)
                 {
-                    active.Add(new ActivePick(choice.ClassIndex, choice.Key, choice.Level, selection.Kind, OptionSets.Feats, feat));
+                    active.Add(new ActivePick(choice.ClassIndex, choice.Key, choice.Level, selection.Kind, selection.SetId ?? OptionSets.Feats, feat));
                 }
             }
 

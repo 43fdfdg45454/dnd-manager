@@ -76,10 +76,14 @@ public sealed record PlannedChoice(LevelChoiceRule Rule, int Required, bool Free
             {
                 Cost = o.Cost,
                 Requires = o.Requires,
+                SetId = o.Definition?.SetId,
             })
             .ToList(),
         Known.Select(ChoiceItemDto.From).ToList(),
-        Warning);
+        Warning)
+    {
+        AlsoFrom = Rule.AlsoFrom,
+    };
 }
 
 /// <summary>The level-up of a character in one class, as computed by <see cref="LevelUpPlanner"/>.</summary>
@@ -213,13 +217,29 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         // Skills (picked, or granted by the subclass or an option) are resolved before the expertise of the same level.
         rules = LevelChoiceOrder.Sort(rules);
 
-        var setIds = rules.Select(r => r.Kind == LevelChoiceKind.AsiOrFeat ? OptionSets.Feats : r.SetId).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        var setIds = rules.Select(r => r.Kind == LevelChoiceKind.AsiOrFeat ? OptionSets.Feats : r.SetId).OfType<string>()
+            .Concat(rules.SelectMany(r => r.AlsoFrom))
+            .ToHashSet(StringComparer.Ordinal);
         if (setIds.Count > 0)
         {
             setIds.Add(OptionSets.PactBoons);
         }
 
-        var options = await catalog.ListOptionsBySetAsync(setIds, cancellationToken);
+        var options = (await catalog.ListOptionsBySetAsync(setIds, cancellationToken)).ToList();
+
+        // "from" may name options of other sets (a set that reuses options of another one).
+        var loaded = options.Select(o => o.Index).ToHashSet(StringComparer.Ordinal);
+        var named = rules.Where(r => r.SetId is not null && r.Kind is LevelChoiceKind.OptionSet or LevelChoiceKind.Custom)
+            .SelectMany(r => r.From ?? [])
+            .Select(NormalizeIndex)
+            .Where(i => !loaded.Contains(i))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (named.Count > 0)
+        {
+            options.AddRange(await catalog.ListOptionsByIndexAsync(named, cancellationToken));
+        }
+
         var prerequisites = options.Select(o => o.Prerequisites)
             .Concat(rules.Any(r => r.Kind == LevelChoiceKind.Subclass) ? subclasses.Select(s => s.Prerequisites) : [])
             .Where(p => !p.IsEmpty)
@@ -707,13 +727,13 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                     list = subclasses.Select(SubclassOption).ToList();
                     break;
                 case LevelChoiceKind.AsiOrFeat:
-                    list = SetOptions(OptionSets.Feats, null);
+                    list = SetOptions(OptionSets.Feats, null, rule.AlsoFrom);
                     break;
                 case LevelChoiceKind.OptionSet:
-                    list = rule.SetId is null ? [] : SetOptions(rule.SetId, rule.From);
+                    list = rule.SetId is null ? [] : SetOptions(rule.SetId, rule.From, rule.AlsoFrom);
                     break;
                 case LevelChoiceKind.Custom when rule.SetId is not null:
-                    list = SetOptions(rule.SetId, rule.From);
+                    list = SetOptions(rule.SetId, rule.From, []);
                     break;
                 case LevelChoiceKind.Custom when filter.Source is ChoiceFilter.SpellbookSource or ChoiceFilter.KnownSource:
                     list = character.Spells
@@ -754,13 +774,17 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             return new PlannedChoice(rule, required, freeText, list, rule.Replaces ? Known(rule) : []);
         }
 
-        /// <summary>Options of a set (or the <paramref name="from"/> subset), without the ones the character already has.</summary>
-        private List<PlannedOption> SetOptions(string setId, IReadOnlyList<string>? from)
+        /// <summary>
+        /// Options of a set (or the <paramref name="from"/> options, of any set) plus those of the <paramref name="alsoFrom"/>
+        /// sets, without the ones the character already has.
+        /// </summary>
+        private List<PlannedOption> SetOptions(string setId, IReadOnlyList<string>? from, IReadOnlyList<string> alsoFrom)
         {
             var allowed = from?.Select(NormalizeIndex).ToHashSet(StringComparer.Ordinal);
             var taken = _active.Select(p => p.Item.Index).ToHashSet(StringComparer.Ordinal);
             return options
-                .Where(o => o.SetId == setId && (allowed is null || allowed.Contains(o.Index)) && !taken.Contains(o.Index))
+                .Where(o => (allowed is null ? o.SetId == setId : allowed.Contains(o.Index)) || alsoFrom.Contains(o.SetId, StringComparer.Ordinal))
+                .Where(o => !taken.Contains(o.Index))
                 .Select(o =>
                 {
                     var reason = WhyNot(o);

@@ -1389,14 +1389,16 @@ En `classes[].levelChoices` (elecciones de la clase, completa o ampliada con `ex
 | `kind` | `string` | **Obligatorio**: `Subclass`, `OptionSet`, `AsiOrFeat`, `Expertise`, `Skill`, `Language`, `Tool`, `CantripsKnown`, `SpellsKnown`, `SpellbookSpells` o `Custom`. |
 | `setId` | `string?` | Conjunto de donde salen las opciones; **obligatorio** en `OptionSet`. Puede ser del SRD, de otro paquete o del propio paquete. |
 | `choose` | `int` | **Obligatorio**, 0–20: cuántas elecciones da este nivel. En `SpellsKnown`/`CantripsKnown` de una subclase con `spellcasting` puede omitirse: se toma el aumento de su tabla `spellsKnown`/`cantripsKnown` respecto al nivel anterior. |
-| `from` | `string[]?` | Subconjunto permitido del conjunto (índices de opciones que deben existir en él) o, en `Language`/`Tool`, los valores posibles. Sin `from`, todo el conjunto (o texto libre). |
+| `from` | `string[]?` | Opciones permitidas o, en `Language`/`Tool`, los valores posibles. Sin `from`, todo el conjunto (o texto libre). En `OptionSet` y `Custom` con `setId`, los índices pueden ser de **cualquier** conjunto del catálogo o del paquete: un conjunto puede reutilizar opciones de otro (estilos de combate del SRD junto a los propios). |
+| `alsoFrom` | `string[]?` | Solo `AsiOrFeat` y `OptionSet`: otros conjuntos cuyas opciones se ofrecen **también**. En `AsiOrFeat`, el jugador puede tomar una opción de esos conjuntos en lugar de la mejora o la dote (se envía como `{"feat": "<índice>"}`). |
 | `replaces` | `bool?` | Desde este nivel, en cada nivel de la clase se puede sustituir una elección ya hecha. |
 | `cumulative` | `bool?` | Se suma a lo elegido en niveles anteriores. |
 | `note` | `string?` | ≤ 2000. Aclaración para la interfaz. |
 | `filter` | `Filter?` | Conjuros: `spellList` (clase o `any`), `spellLevels` (`[1, 2]`), `maxSpellLevelBySlots`, `source` (`list`, `spellbook` o `known`), `cantripsOnly`, `schools`, `schoolsExceptAt`. |
 | `after` | `string?` | Key de otra elección de la misma clase y nivel (del paquete, de la clase base o de la misma subclase, o del catálogo) que se resuelve **antes** que esta. Ver "Orden de las elecciones". |
 
-`AsiOrFeat` ofrece siempre la mejora de característica y las dotes del conjunto `feats`. Las
+`AsiOrFeat` ofrece siempre la mejora de característica y las dotes del conjunto `feats` (más las
+opciones de `alsoFrom`; cada opción del plan lleva su `setId` para que la app las agrupe). Las
 elecciones `Custom` se validan solo por número. En `Expertise`, `from` limita las habilidades que se
 pueden elegir (`["arcana", "nature"]`).
 
@@ -1431,6 +1433,16 @@ elección, ninguna elección con esa key en la misma clase y nivel, o un ciclo e
 
 El asistente las muestra en el orden habilidad → idioma → pericia, y la pericia ofrece la habilidad
 elegida en el primer paso.
+
+```json
+"levelChoices": [
+  { "level": 4, "key": "asi", "name": "Mejora o señal", "kind": "AsiOrFeat", "choose": 1, "alsoFrom": ["mipaquete-senales"] },
+  { "level": 2, "key": "tacticas", "name": "Tácticas", "kind": "OptionSet", "setId": "mipaquete-tacticas", "choose": 1,
+    "from": ["mipaquete-tactica-niebla", "fighting-style-defense"] }
+]
+```
+
+Una `AsiOrFeat` explícita en un nivel de mejora sustituye a la generada por la clase.
 
 **Filtro por escuela.** `filter.schools` (`["abjuration", "evocation"]`, índices de escuela del SRD en
 minúsculas: `abjuration`, `conjuration`, `divination`, `enchantment`, `evocation`, `illusion`,

@@ -1799,6 +1799,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("AlsoFromJson")
+                        .HasColumnType("text");
+
                     b.Property<int>("Choose")
                         .HasColumnType("integer");
 
