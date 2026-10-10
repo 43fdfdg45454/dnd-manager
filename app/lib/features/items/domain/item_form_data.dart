@@ -1,5 +1,6 @@
 import '../../catalog/data/models.dart' show ItemDetail, ItemModifier;
 import '../data/models.dart';
+import '../../../systems/dnd5e/items/dnd5e_item.dart';
 
 bool _sameList<T>(List<T> a, List<T> b) {
   if (a.length != b.length) return false;
@@ -140,7 +141,7 @@ class ItemFormData {
       return value.isEmpty ? null : value;
     }
 
-    return ItemOverrides(
+    return dnd5eItemOverrides(
       name: text(name, b?.name),
       description: list(description, b?.description ?? const []),
       category: b != null && category == b.category ? null : category,

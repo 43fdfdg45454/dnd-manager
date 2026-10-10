@@ -1,4 +1,5 @@
 import '../data/models.dart';
+import '../../../systems/dnd5e/items/dnd5e_item.dart';
 
 /// Modifier kinds that change attack or damage rolls.
 const _attackKinds = {'attackbonus', 'damagebonus'};

@@ -1,9 +1,9 @@
-import 'package:dnd_companion/app.dart';
-import 'package:dnd_companion/core/auth/auth_repository.dart';
-import 'package:dnd_companion/core/auth/auth_state.dart';
-import 'package:dnd_companion/core/auth/token_storage.dart';
-import 'package:dnd_companion/core/auth/user_dto.dart';
-import 'package:dnd_companion/core/router/app_router.dart';
+import 'package:opentrpg/app.dart';
+import 'package:opentrpg/core/auth/auth_repository.dart';
+import 'package:opentrpg/core/auth/auth_state.dart';
+import 'package:opentrpg/core/auth/token_storage.dart';
+import 'package:opentrpg/core/auth/user_dto.dart';
+import 'package:opentrpg/core/router/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,7 +25,7 @@ Future<void> _pumpApp(
         fakeServerConfigOverride(),
         fakeCampaignsOverride,
       ],
-      child: const DndCompanionApp(),
+      child: const OpenTrpgApp(),
     ),
   );
   await tester.pumpAndSettle();

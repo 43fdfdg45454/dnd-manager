@@ -9,8 +9,8 @@ import 'core/theme/app_theme.dart';
 import 'core/update/update_ui.dart';
 import 'features/settings/data/appearance_controller.dart';
 
-class DndCompanionApp extends ConsumerWidget {
-  const DndCompanionApp({super.key});
+class OpenTrpgApp extends ConsumerWidget {
+  const OpenTrpgApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

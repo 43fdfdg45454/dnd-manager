@@ -2,16 +2,16 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:dnd_companion/core/network/api_client.dart';
-import 'package:dnd_companion/core/theme/components.dart';
-import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/catalog/data/models.dart';
-import 'package:dnd_companion/features/characters/data/characters_repository.dart';
-import 'package:dnd_companion/features/characters/data/models.dart';
-import 'package:dnd_companion/features/characters/data/view_mode_controller.dart';
-import 'package:dnd_companion/features/characters/domain/character_format.dart';
-import 'package:dnd_companion/features/characters/domain/change_details.dart';
-import 'package:dnd_companion/features/characters/domain/payload_format.dart';
+import 'package:opentrpg/core/network/api_client.dart';
+import 'package:opentrpg/core/theme/components.dart';
+import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg/features/catalog/data/models.dart';
+import 'package:opentrpg/features/characters/data/characters_repository.dart';
+import 'package:opentrpg/features/characters/data/models.dart';
+import 'package:opentrpg/systems/dnd5e/characters/character_tab.dart';
+import 'package:opentrpg/features/characters/domain/character_format.dart';
+import 'package:opentrpg/features/characters/domain/change_details.dart';
+import 'package:opentrpg/features/characters/domain/payload_format.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,6 +19,7 @@ import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
+import 'package:opentrpg/systems/dnd5e/characters/dnd5e_characters_repository.dart';
 
 FakeCatalogRepository _catalog() => FakeCatalogRepository(
   classList: [
@@ -1569,21 +1570,22 @@ void main() {
   group('CharactersRepository', () {
     late _StatusAdapter adapter;
     late CharactersRepository repository;
+    late Dnd5eCharactersRepository dnd5e;
 
     setUp(() {
       adapter = _StatusAdapter();
-      repository = CharactersRepository(
-        ApiClient(
-          baseUrl: 'http://localhost',
-          dio: Dio(BaseOptions(baseUrl: 'http://localhost'))..httpClientAdapter = adapter,
-        ),
+      final client = ApiClient(
+        baseUrl: 'http://localhost',
+        dio: Dio(BaseOptions(baseUrl: 'http://localhost'))..httpClientAdapter = adapter,
       );
+      repository = CharactersRepository(client);
+      dnd5e = Dnd5eCharactersRepository(client);
     });
 
     test('PATCH sheet: 200 es Saved y 202 es PendingApproval', () async {
       adapter.status = 200;
       adapter.body = makeCharacterJson();
-      final saved = await repository.patchSheet('ch1', const SheetPatch(name: 'X'));
+      final saved = await dnd5e.patchSheet('ch1', const SheetPatch(name: 'X'));
       expect(saved, isA<Saved>());
       expect(adapter.requests.last.path, '/api/v1/systems/dnd5e/characters/ch1/sheet');
       expect(adapter.requests.last.method, 'PATCH');
@@ -1591,7 +1593,7 @@ void main() {
 
       adapter.status = 202;
       adapter.body = makeChangeRequestJson();
-      final pending = await repository.patchSheet('ch1', const SheetPatch(name: 'X'));
+      final pending = await dnd5e.patchSheet('ch1', const SheetPatch(name: 'X'));
       expect(pending, isA<PendingApproval>());
       expect((pending as PendingApproval).changeRequest.id, 'cr1');
     });

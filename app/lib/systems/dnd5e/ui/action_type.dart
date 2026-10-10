@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_icon.dart';
-import '../theme/contrast.dart';
-import '../theme/icons.dart';
-import '../theme/tokens.dart';
+import '../../../core/theme/app_icon.dart';
+import '../../../core/theme/contrast.dart';
+import '../../../core/theme/icons.dart';
+import '../../../core/theme/tokens.dart';
 
 /// What a spell or a feature costs on the character's turn (SRD casting time
 /// or the feature's own text): an action, a bonus action, a reaction or

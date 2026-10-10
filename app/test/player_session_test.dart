@@ -1,7 +1,6 @@
-import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/items/data/models.dart';
-import 'package:dnd_companion/features/items/domain/combat_usable.dart';
-import 'package:dnd_companion/features/catalog/data/models.dart' show ItemArmor, ItemModifier;
+import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg/features/items/domain/combat_usable.dart';
+import 'package:opentrpg/systems/dnd5e/items/dnd5e_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -87,7 +86,11 @@ void main() {
       expect(isCombatUsable(makeEffective(category: 'Shield', damageDice: null)), isTrue);
       expect(
         isCombatUsable(
-          const EffectiveItem(name: 'Chain Mail', category: 'Armor', armor: ItemArmor(baseAc: 16)),
+          dnd5eEffectiveItem(
+            name: 'Chain Mail',
+            category: 'Armor',
+            armor: const ItemArmor(baseAc: 16),
+          ),
         ),
         isTrue,
       );

@@ -11,7 +11,7 @@ import '../../../characters/data/models.dart' show RestKind, classesLabel;
 import '../../../characters/domain/character_format.dart';
 import '../../../characters/domain/class_theme.dart';
 import '../../../characters/ui/character_tabs.dart' show titleFromSpellIndex;
-import '../../data/models.dart';
+import '../../../../systems/dnd5e/session/party_models.dart';
 
 /// The party at a glance for the DM: one row per active character. Tapping a
 /// row calls [onOpen]; its checkbox toggles it in

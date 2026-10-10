@@ -12,9 +12,10 @@ import '../../../catalog/ui/catalog_detail_links.dart' show DetailInfoButton;
 import '../../data/characters_controller.dart';
 import '../../data/models.dart';
 import 'combat_support.dart';
+import '../../../../systems/dnd5e/characters/dnd5e_characters_controller.dart';
 
-CharacterController _controller(WidgetRef ref, CharacterDetail character) =>
-    ref.read(characterControllerProvider(character.id).notifier);
+Dnd5eCharacterController _controller(WidgetRef ref, CharacterDetail character) =>
+    ref.read(dnd5eCharacterControllerProvider(character.id).notifier);
 
 /// Spell slots to show: the combat summary's, or the sheet's when the server
 /// does not send `combat`. Level 0 (pact magic) is excluded.
@@ -464,11 +465,10 @@ class ConsumablesSection extends ConsumerWidget {
   /// character (its quick consumables) and the inventory tab.
   Future<void> _use(BuildContext context, WidgetRef ref, QuickConsumable item) async {
     final inventory = ref.read(inventoryRepositoryProvider);
-    final controller = _controller(ref, character);
     await runCombat(context, () async {
       await inventory.use(character.id, item.itemId);
       if (context.mounted) ref.invalidate(inventoryControllerProvider(character.id));
-      await controller.reload();
+      await ref.read(characterControllerProvider(character.id).notifier).reload();
     }, success: 'Usado: ${item.name}.');
   }
 

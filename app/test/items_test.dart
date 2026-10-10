@@ -1,25 +1,25 @@
-import 'package:dnd_companion/core/auth/auth_controller.dart';
-import 'package:dnd_companion/core/auth/auth_state.dart';
-import 'package:dnd_companion/core/network/api_error.dart';
-import 'package:dnd_companion/core/router/app_router.dart';
-import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart';
-import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
-import 'package:dnd_companion/features/catalog/data/models.dart' hide Page;
-import 'package:dnd_companion/features/catalog/domain/item_modifier_format.dart';
-import 'package:dnd_companion/features/characters/data/characters_repository.dart';
-import 'package:dnd_companion/features/characters/ui/character_page.dart';
-import 'package:dnd_companion/features/items/data/campaign_items_repository.dart';
-import 'package:dnd_companion/features/items/data/inventory_repository.dart';
-import 'package:dnd_companion/features/items/data/models.dart';
-import 'package:dnd_companion/features/items/data/shops_repository.dart';
-import 'package:dnd_companion/features/items/domain/item_form_data.dart';
-import 'package:dnd_companion/features/items/domain/items_format.dart';
-import 'package:dnd_companion/features/items/ui/attunement_dialog.dart' show isAttunementLimit;
-import 'package:dnd_companion/features/items/ui/shop_catalog_page.dart';
-import 'package:dnd_companion/features/items/ui/shop_page.dart';
-import 'package:dnd_companion/features/items/ui/transactions_page.dart';
-import 'package:dnd_companion/features/session/data/messages_repository.dart';
+import 'package:opentrpg/core/auth/auth_controller.dart';
+import 'package:opentrpg/core/auth/auth_state.dart';
+import 'package:opentrpg/core/network/api_error.dart';
+import 'package:opentrpg/core/router/app_router.dart';
+import 'package:opentrpg/features/campaigns/data/campaigns_repository.dart';
+import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
+import 'package:opentrpg/features/catalog/data/models.dart' hide Page;
+import 'package:opentrpg/features/catalog/domain/item_modifier_format.dart';
+import 'package:opentrpg/features/characters/ui/character_page.dart';
+import 'package:opentrpg/features/items/data/campaign_items_repository.dart';
+import 'package:opentrpg/features/items/data/inventory_repository.dart';
+import 'package:opentrpg/features/items/data/models.dart';
+import 'package:opentrpg/features/items/data/shops_repository.dart';
+import 'package:opentrpg/features/items/domain/item_form_data.dart';
+import 'package:opentrpg/features/items/domain/items_format.dart';
+import 'package:opentrpg/features/items/ui/attunement_dialog.dart' show isAttunementLimit;
+import 'package:opentrpg/features/items/ui/shop_catalog_page.dart';
+import 'package:opentrpg/features/items/ui/shop_page.dart';
+import 'package:opentrpg/features/items/ui/transactions_page.dart';
+import 'package:opentrpg/features/session/data/messages_repository.dart';
+import 'package:opentrpg/systems/dnd5e/items/dnd5e_item.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -126,7 +126,7 @@ Future<void> _pumpApp(
         campaignsRepositoryProvider.overrideWithValue(
           FakeCampaignsRepository(campaigns: [makeCampaign(myRole: role)]),
         ),
-        charactersRepositoryProvider.overrideWithValue(
+        ...fakeCharactersOverrides(
           FakeCharactersRepository(
             characters: [makeCharacterJson(status: 'Active')],
             isDm: role.isAtLeastDm,
@@ -187,20 +187,18 @@ void main() {
 
     test('canEquip admite objetos sin categoría de equipo que hacen algo', () {
       const bonus = ItemModifier(kind: 'AbilityBonus', target: 'str', value: 2);
-      expect(canEquip(const EffectiveItem(name: 'Espada', category: 'Weapon')), isTrue);
+      expect(canEquip(dnd5eEffectiveItem(name: 'Espada', category: 'Weapon')), isTrue);
       expect(
-        canEquip(const EffectiveItem(name: 'Amuleto', category: 'Other', modifiers: [bonus])),
+        canEquip(dnd5eEffectiveItem(name: 'Amuleto', category: 'Other', modifiers: [bonus])),
         isTrue,
       );
       expect(
-        canEquip(
-          const EffectiveItem(name: 'Broche', category: 'AdventuringGear', effects: ['Luz']),
-        ),
+        canEquip(dnd5eEffectiveItem(name: 'Broche', category: 'AdventuringGear', effects: ['Luz'])),
         isTrue,
       );
-      expect(canEquip(const EffectiveItem(name: 'Cuerda', category: 'AdventuringGear')), isFalse);
+      expect(canEquip(dnd5eEffectiveItem(name: 'Cuerda', category: 'AdventuringGear')), isFalse);
       expect(
-        canEquip(const EffectiveItem(name: 'Elixir', category: 'Consumable', modifiers: [bonus])),
+        canEquip(dnd5eEffectiveItem(name: 'Elixir', category: 'Consumable', modifiers: [bonus])),
         isFalse,
       );
     });
@@ -212,7 +210,7 @@ void main() {
 
     test('ItemOverrides.toJson solo envía los campos definidos', () {
       expect(const ItemOverrides().toJson(), isEmpty);
-      const overrides = ItemOverrides(damageDice: '1d10', stealthDisadvantage: false);
+      final overrides = dnd5eItemOverrides(damageDice: '1d10', stealthDisadvantage: false);
       expect(overrides.toJson(), {'damageDice': '1d10', 'stealthDisadvantage': false});
       expect(overrides.definedFields, {'damageDice', 'stealthDisadvantage'});
       expect(ItemOverrides.fromJson({'name': 'X', 'effects': <String>[]}).toJson(), {
@@ -284,8 +282,8 @@ void main() {
       expect(remove.toJson(), {'modifiers': <Object>[]});
       expect(remove.definedFields, {'modifiers'});
 
-      const some = ItemOverrides(
-        modifiers: [ItemModifier(kind: 'AbilitySet', target: 'str', value: 19)],
+      final some = dnd5eItemOverrides(
+        modifiers: const [ItemModifier(kind: 'AbilitySet', target: 'str', value: 19)],
       );
       expect(some.toJson(), {
         'modifiers': [
@@ -423,7 +421,7 @@ void main() {
           'ch1': [
             makeCharacterItem(
               id: 'mod',
-              overrides: const ItemOverrides(damageDice: '1d10'),
+              overrides: dnd5eItemOverrides(damageDice: '1d10'),
               effective: makeEffective(name: 'Longsword +1', damageDice: '1d10'),
             ),
             makeCharacterItem(id: 'plain', templateId: 't-dagger'),
@@ -907,8 +905,8 @@ void main() {
           'ch1': [
             makeCharacterItem(
               id: 'gloves',
-              overrides: const ItemOverrides(
-                modifiers: [ItemModifier(kind: 'AbilityBonus', target: 'dex', value: 3)],
+              overrides: dnd5eItemOverrides(
+                modifiers: const [ItemModifier(kind: 'AbilityBonus', target: 'dex', value: 3)],
               ),
               effective: makeEffective(
                 name: 'Guantes ágiles',

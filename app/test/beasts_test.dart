@@ -1,11 +1,10 @@
-import 'package:dnd_companion/core/router/app_router.dart';
-import 'package:dnd_companion/core/storage/local_preferences.dart';
-import 'package:dnd_companion/features/catalog/data/beast_models.dart';
-import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
-import 'package:dnd_companion/features/catalog/ui/beast_page.dart';
-import 'package:dnd_companion/features/catalog/ui/compendium_page.dart';
-import 'package:dnd_companion/features/characters/ui/combat/panels/druid.dart';
-import 'package:dnd_companion/features/dice/data/dice_controller.dart';
+import 'package:opentrpg/core/storage/local_preferences.dart';
+import 'package:opentrpg/features/catalog/data/beast_models.dart';
+import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
+import 'package:opentrpg/features/catalog/ui/beast_page.dart';
+import 'package:opentrpg/features/catalog/ui/compendium_page.dart';
+import 'package:opentrpg/features/characters/ui/combat/panels/druid.dart';
+import 'package:opentrpg/features/dice/data/dice_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,6 +14,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dice_test.dart' show SequenceRandom;
 import 'helpers/catalog_fakes.dart';
 import 'helpers/motion.dart';
+
+import 'package:opentrpg/systems/dnd5e/dnd5e_routes.dart';
 
 const _wolf = Beast(
   index: 'wolf',
@@ -78,7 +79,7 @@ Future<void> _pump(WidgetTester tester, Widget home, FakeCatalogRepository catal
     routes: [
       GoRoute(path: '/', builder: (_, _) => home),
       GoRoute(
-        path: AppRoutes.beastDetail,
+        path: Dnd5eRoutes.beastDetail,
         builder: (_, state) => BeastPage(index: state.pathParameters['index']!),
       ),
     ],

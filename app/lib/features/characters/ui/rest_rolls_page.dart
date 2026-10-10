@@ -10,6 +10,7 @@ import '../data/characters_controller.dart';
 import '../data/models.dart';
 import 'combat/resources_section.dart' show resourcesOf;
 import 'level_up/level_up_widgets.dart' show LevelUpHeading;
+import '../../../systems/dnd5e/characters/dnd5e_characters_controller.dart';
 
 /// Resources the player still has to roll for after a rest.
 List<CharacterResource> pendingRollResources(CharacterDetail character) => [
@@ -51,8 +52,8 @@ class _RestRollsPageState extends ConsumerState<RestRollsPage> {
 
   String? _error;
 
-  CharacterController get _controller =>
-      ref.read(characterControllerProvider(widget.characterId).notifier);
+  Dnd5eCharacterController get _controller =>
+      ref.read(dnd5eCharacterControllerProvider(widget.characterId).notifier);
 
   /// The value typed, or null when it is not a whole number in 1..[sides].
   int? _value(String resourceId, int index, int sides) {

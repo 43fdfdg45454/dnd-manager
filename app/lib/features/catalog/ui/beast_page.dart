@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/router/app_router.dart';
 import '../../characters/domain/character_format.dart' show skillLabel;
 import '../../dice/domain/dice_expression.dart';
 import '../../dice/ui/dice_sheet.dart';
@@ -10,6 +9,7 @@ import '../data/beast_models.dart';
 import '../data/catalog_controllers.dart';
 import '../domain/catalog_format.dart';
 import 'detail_widgets.dart';
+import '../../../systems/dnd5e/dnd5e_routes.dart';
 
 const _abilityOrder = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
@@ -54,7 +54,7 @@ class BeastTile extends StatelessWidget {
         ].where((e) => e.isNotEmpty).join(' · '),
       ),
       trailing: const Icon(Icons.chevron_right),
-      onTap: () => context.push(AppRoutes.beast(beast.index)),
+      onTap: () => context.push(Dnd5eRoutes.beast(beast.index)),
     );
   }
 }

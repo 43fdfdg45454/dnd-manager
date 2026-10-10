@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../core/ui/action_type.dart';
+import '../../../../../systems/dnd5e/ui/action_type.dart';
 
 import '../../../../catalog/data/catalog_controllers.dart';
 import '../../../../catalog/data/models.dart' show RollTable;

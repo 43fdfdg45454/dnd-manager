@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/ui/spell_category.dart';
+import '../../../../systems/dnd5e/ui/spell_category.dart';
 import '../../../catalog/ui/catalog_detail_links.dart';
 
 import '../../data/character_wizard_controller.dart';

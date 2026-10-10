@@ -23,6 +23,7 @@ import '../../characters/data/characters_repository.dart';
 import '../../characters/data/models.dart';
 import '../../session/data/party_repository.dart';
 import '../../session/data/session_controllers.dart';
+import '../../../systems/dnd5e/dnd5e_events.dart';
 import '../data/campaigns_controller.dart';
 import '../data/campaigns_repository.dart';
 import '../domain/campaign_models.dart';
@@ -188,8 +189,10 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
   }
 
   /// Banner for players (the DM is the one who caused these events).
-  void _onRealtimeEvent(CampaignEvent event) {
-    if (!mounted || !event.isFor(campaignId)) return;
+  void _onRealtimeEvent(CampaignEvent received) {
+    if (!mounted || !received.isFor(campaignId)) return;
+    // Pending 33B: the D&D 5e banners will come from the game system.
+    final event = dnd5eEventOf(received);
     if (event is MembershipRemoved) {
       _onMembershipRemoved();
       return;

@@ -1,12 +1,12 @@
-import 'package:dnd_companion/core/router/app_router.dart';
-import 'package:dnd_companion/core/ui/source_chip.dart';
-import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
-import 'package:dnd_companion/features/catalog/data/models.dart';
-import 'package:dnd_companion/features/catalog/domain/catalog_format.dart';
-import 'package:dnd_companion/features/catalog/ui/class_detail_page.dart';
-import 'package:dnd_companion/features/catalog/ui/compendium_page.dart';
-import 'package:dnd_companion/features/catalog/ui/item_detail_page.dart';
-import 'package:dnd_companion/features/catalog/ui/spell_detail_page.dart';
+import 'package:opentrpg/core/router/app_router.dart';
+import 'package:opentrpg/core/ui/source_chip.dart';
+import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
+import 'package:opentrpg/features/catalog/data/models.dart';
+import 'package:opentrpg/features/catalog/domain/catalog_format.dart';
+import 'package:opentrpg/features/catalog/ui/class_detail_page.dart';
+import 'package:opentrpg/features/catalog/ui/compendium_page.dart';
+import 'package:opentrpg/features/catalog/ui/item_detail_page.dart';
+import 'package:opentrpg/features/catalog/ui/spell_detail_page.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +14,8 @@ import 'package:go_router/go_router.dart';
 
 import 'helpers/catalog_fakes.dart';
 import 'helpers/fakes.dart';
+
+import 'package:opentrpg/systems/dnd5e/dnd5e_routes.dart';
 
 final _wizard = ClassSummary(
   index: 'wizard',
@@ -121,7 +123,7 @@ const _fighterJson = <String, dynamic>{
 };
 
 Widget _scope(FakeCatalogRepository repository, Widget child) => ProviderScope(
-  overrides: [catalogRepositoryProvider.overrideWithValue(repository)],
+  overrides: [catalogRepositoryProvider.overrideWithValue(repository), dnd5eSystemsOverride()],
   child: child,
 );
 
@@ -438,7 +440,7 @@ void main() {
         routes: [
           GoRoute(path: AppRoutes.compendium, builder: (_, _) => const CompendiumPage()),
           GoRoute(
-            path: AppRoutes.spellDetail,
+            path: Dnd5eRoutes.spellDetail,
             builder: (_, state) => SpellDetailPage(index: state.pathParameters['index']!),
           ),
         ],

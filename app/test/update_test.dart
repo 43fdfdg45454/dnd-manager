@@ -2,16 +2,16 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:dnd_companion/app.dart';
-import 'package:dnd_companion/core/auth/auth_controller.dart';
-import 'package:dnd_companion/core/auth/auth_state.dart';
-import 'package:dnd_companion/core/network/api_client.dart';
-import 'package:dnd_companion/core/server/server_config.dart';
-import 'package:dnd_companion/core/server/server_config_repository.dart';
-import 'package:dnd_companion/core/storage/local_preferences.dart';
-import 'package:dnd_companion/core/update/app_release.dart';
-import 'package:dnd_companion/core/update/app_update_repository.dart';
-import 'package:dnd_companion/core/update/update_controller.dart';
+import 'package:opentrpg/app.dart';
+import 'package:opentrpg/core/auth/auth_controller.dart';
+import 'package:opentrpg/core/auth/auth_state.dart';
+import 'package:opentrpg/core/network/api_client.dart';
+import 'package:opentrpg/core/server/server_config.dart';
+import 'package:opentrpg/core/server/server_config_repository.dart';
+import 'package:opentrpg/core/storage/local_preferences.dart';
+import 'package:opentrpg/core/update/app_release.dart';
+import 'package:opentrpg/core/update/app_update_repository.dart';
+import 'package:opentrpg/core/update/update_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -102,7 +102,7 @@ Future<void> _pumpApp(WidgetTester tester, List<Override> overrides) async {
         fakeServerInfoOverride,
         sessionsOverride(FakeSessionsRepository()),
       ],
-      child: const DndCompanionApp(),
+      child: const OpenTrpgApp(),
     ),
   );
   await tester.pumpAndSettle();
@@ -366,7 +366,7 @@ void main() {
             installedBuildProvider.overrideWithValue(1),
             fakeServerInfoOverride,
           ],
-          child: const DndCompanionApp(),
+          child: const OpenTrpgApp(),
         ),
       );
       await tester.pumpAndSettle();

@@ -11,13 +11,13 @@ import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/domain/catalog_format.dart' show abilityLabel;
 import '../../../catalog/ui/beast_page.dart' show BeastRollChips;
 import '../../../catalog/ui/catalog_detail_links.dart';
-import '../../data/characters_controller.dart';
 import '../../data/models.dart';
 import '../../domain/character_format.dart' show formatModifier, skillLabel;
 import 'combat_support.dart';
+import '../../../../systems/dnd5e/characters/dnd5e_characters_controller.dart';
 
-CharacterController _controller(WidgetRef ref, CharacterDetail character) =>
-    ref.read(characterControllerProvider(character.id).notifier);
+Dnd5eCharacterController _controller(WidgetRef ref, CharacterDetail character) =>
+    ref.read(dnd5eCharacterControllerProvider(character.id).notifier);
 
 /// Animal companion (phase 25, block 6): "Elegir compañero" while the feature
 /// is reached and no beast is chosen; afterwards the companion's statblock

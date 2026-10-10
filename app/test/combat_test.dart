@@ -2,33 +2,32 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:dnd_companion/core/auth/auth_controller.dart';
-import 'package:dnd_companion/core/auth/auth_state.dart';
-import 'package:dnd_companion/core/network/api_client.dart';
-import 'package:dnd_companion/core/router/app_router.dart';
-import 'package:dnd_companion/core/storage/local_preferences.dart';
-import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart';
-import 'package:dnd_companion/features/campaigns/domain/campaign_models.dart';
-import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
-import 'package:dnd_companion/features/catalog/data/models.dart';
-import 'package:dnd_companion/features/catalog/ui/spell_detail_page.dart';
-import 'package:dnd_companion/features/characters/data/characters_repository.dart';
-import 'package:dnd_companion/features/characters/data/models.dart';
-import 'package:dnd_companion/features/characters/domain/spell_combat.dart';
-import 'package:dnd_companion/features/characters/ui/character_page.dart';
-import 'package:dnd_companion/features/characters/ui/combat/class_panels.dart';
-import 'package:dnd_companion/features/characters/ui/combat/combat_support.dart' show Pip;
-import 'package:dnd_companion/features/characters/ui/combat/panels/critical_damage_roll.dart';
-import 'package:dnd_companion/features/characters/ui/combat/resources_section.dart'
+import 'package:opentrpg/core/auth/auth_controller.dart';
+import 'package:opentrpg/core/auth/auth_state.dart';
+import 'package:opentrpg/core/network/api_client.dart';
+import 'package:opentrpg/core/router/app_router.dart';
+import 'package:opentrpg/core/storage/local_preferences.dart';
+import 'package:opentrpg/features/campaigns/data/campaigns_repository.dart';
+import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
+import 'package:opentrpg/features/catalog/data/models.dart';
+import 'package:opentrpg/features/catalog/ui/spell_detail_page.dart';
+import 'package:opentrpg/features/characters/data/models.dart';
+import 'package:opentrpg/features/characters/domain/spell_combat.dart';
+import 'package:opentrpg/features/characters/ui/character_page.dart';
+import 'package:opentrpg/features/characters/ui/combat/class_panels.dart';
+import 'package:opentrpg/features/characters/ui/combat/combat_support.dart' show Pip;
+import 'package:opentrpg/features/characters/ui/combat/panels/critical_damage_roll.dart';
+import 'package:opentrpg/features/characters/ui/combat/resources_section.dart'
     show canRestoreResource;
-import 'package:dnd_companion/features/characters/ui/combat/vitals_section.dart'
+import 'package:opentrpg/features/characters/ui/combat/vitals_section.dart'
     show ConditionsCard, StatsCard;
-import 'package:dnd_companion/features/characters/ui/combat/wild_magic_surge.dart'
+import 'package:opentrpg/features/characters/ui/combat/wild_magic_surge.dart'
     show isWildMagicSurgeKey;
-import 'package:dnd_companion/features/dice/data/dice_controller.dart';
-import 'package:dnd_companion/features/session/data/models.dart' show PartyAdjustment;
-import 'package:dnd_companion/features/session/data/party_repository.dart';
-import 'package:dnd_companion/features/items/data/inventory_repository.dart';
+import 'package:opentrpg/features/dice/data/dice_controller.dart';
+import 'package:opentrpg/systems/dnd5e/session/party_models.dart' show PartyAdjustment;
+import 'package:opentrpg/features/session/data/party_repository.dart';
+import 'package:opentrpg/features/items/data/inventory_repository.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -42,6 +41,8 @@ import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
 import 'helpers/item_fakes.dart';
 import 'helpers/motion.dart';
+
+import 'package:opentrpg/systems/dnd5e/characters/dnd5e_characters_repository.dart';
 
 /// Opens `/characters/ch1` (or [location]) with the fakes. [face] is what every
 /// die shows. The view is tall so the whole combat screen is built.
@@ -84,7 +85,7 @@ Future<void> _pump(
         campaignsRepositoryProvider.overrideWithValue(
           FakeCampaignsRepository(campaigns: [makeCampaign(myRole: role)]),
         ),
-        charactersRepositoryProvider.overrideWithValue(characters),
+        ...fakeCharactersOverrides(characters),
         inventoryRepositoryProvider.overrideWithValue(inventory ?? FakeInventoryRepository()),
         catalogRepositoryProvider.overrideWithValue(catalog ?? FakeCatalogRepository()),
         diceRandomProvider.overrideWithValue(SequenceRandom.always(face)),
@@ -196,7 +197,7 @@ void main() {
 
     test('classAction y divineSmite usan los endpoints del contrato', () async {
       final adapter = _Adapter();
-      final repository = CharactersRepository(
+      final repository = Dnd5eCharactersRepository(
         ApiClient(
           baseUrl: 'http://localhost',
           dio: Dio(BaseOptions(baseUrl: 'http://localhost'))..httpClientAdapter = adapter,
@@ -227,9 +228,9 @@ void main() {
   });
 
   group('endpoints de la fase 19', () {
-    Future<(CharactersRepository, _Adapter)> repo() async {
+    Future<(Dnd5eCharactersRepository, _Adapter)> repo() async {
       final adapter = _Adapter();
-      final repository = CharactersRepository(
+      final repository = Dnd5eCharactersRepository(
         ApiClient(
           baseUrl: 'http://localhost',
           dio: Dio(BaseOptions(baseUrl: 'http://localhost'))..httpClientAdapter = adapter,

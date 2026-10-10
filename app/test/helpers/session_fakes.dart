@@ -1,6 +1,6 @@
-import 'package:dnd_companion/features/catalog/data/models.dart' show Page;
-import 'package:dnd_companion/features/sessions/data/models.dart';
-import 'package:dnd_companion/features/sessions/data/sessions_repository.dart';
+import 'package:opentrpg/features/catalog/data/models.dart' show Page;
+import 'package:opentrpg/features/sessions/data/models.dart';
+import 'package:opentrpg/features/sessions/data/sessions_repository.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 
 import 'fakes.dart';

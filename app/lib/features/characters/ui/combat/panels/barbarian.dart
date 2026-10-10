@@ -5,7 +5,7 @@ import '../../../../../core/motion/flames.dart';
 import '../../../../../core/theme/app_icon.dart';
 import '../../../../../core/theme/components.dart';
 import '../../../../../core/theme/icons.dart';
-import '../../../../../core/ui/action_type.dart';
+import '../../../../../systems/dnd5e/ui/action_type.dart';
 import '../../../../../core/theme/tokens.dart';
 import '../combat_state.dart';
 import '../combat_support.dart';

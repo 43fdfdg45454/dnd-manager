@@ -28,6 +28,7 @@ import '../domain/character_format.dart';
 import '../domain/height_weight.dart';
 import 'characters_controller.dart';
 import 'characters_repository.dart';
+import '../../../systems/dnd5e/characters/dnd5e_characters_repository.dart';
 import 'models.dart';
 
 /// Ways of setting the six base ability scores.
@@ -1169,6 +1170,8 @@ class CharacterWizardController extends Notifier<WizardState> {
 
   CharactersRepository get _characters => ref.read(charactersRepositoryProvider);
 
+  Dnd5eCharactersRepository get _dnd5e => ref.read(dnd5eCharactersRepositoryProvider);
+
   // -- Navigation ----------------------------------------------------------------
 
   void goTo(int step) {
@@ -1643,7 +1646,7 @@ class CharacterWizardController extends Notifier<WizardState> {
       id = created.id;
       _createdId = id;
     }
-    await _characters.patchSheet(
+    await _dnd5e.patchSheet(
       id,
       SheetPatch(
         name: s.name.trim(),
@@ -1677,7 +1680,7 @@ class CharacterWizardController extends Notifier<WizardState> {
     state = state.copyWith(originLoading: true, originError: null);
     try {
       final id = await _ensureDraft();
-      final plan = await _characters.originChoices(id);
+      final plan = await _dnd5e.originChoices(id);
       if (!ref.mounted || request != _originRequest) return;
       final answers = <String, OriginAnswer>{};
       for (final c in plan.choices) {
@@ -1754,7 +1757,7 @@ class CharacterWizardController extends Notifier<WizardState> {
   Future<void> _saveOrigin() async {
     final id = _createdId ?? await _ensureDraft();
     final answers = state.toOriginAnswers();
-    final result = await _characters.saveOriginChoices(id, answers);
+    final result = await _dnd5e.saveOriginChoices(id, answers);
     if (ref.mounted) state = state.copyWith(originPlan: result);
   }
 
@@ -1781,12 +1784,12 @@ class CharacterWizardController extends Notifier<WizardState> {
       _createdId = id;
     }
     if (!_sheetSaved) {
-      await characters.patchSheet(id, s.toPatch());
+      await _dnd5e.patchSheet(id, s.toPatch());
       _sheetSaved = true;
     }
     // The full sheet replaces the lists the origin choices add to: answer them again.
     if (!_originSaved && s.toOriginAnswers().isNotEmpty) {
-      await characters.saveOriginChoices(id, s.toOriginAnswers());
+      await _dnd5e.saveOriginChoices(id, s.toOriginAnswers());
       _originSaved = true;
     }
     final lines = s.allEquipment;

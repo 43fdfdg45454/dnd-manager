@@ -1,6 +1,6 @@
-import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
-import 'package:dnd_companion/features/catalog/data/models.dart' show Condition;
-import 'package:dnd_companion/features/characters/ui/combat/vitals_section.dart';
+import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
+import 'package:opentrpg/features/catalog/data/models.dart' show Condition;
+import 'package:opentrpg/features/characters/ui/combat/vitals_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -2,17 +2,17 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:dnd_companion/core/content/content_visibility.dart';
-import 'package:dnd_companion/core/files/file_disk_cache.dart';
-import 'package:dnd_companion/core/files/files_repository.dart';
-import 'package:dnd_companion/core/files/stored_file.dart';
-import 'package:dnd_companion/features/library/data/library_repository.dart';
-import 'package:dnd_companion/features/library/data/library_storage.dart';
-import 'package:dnd_companion/features/library/data/models.dart';
-import 'package:dnd_companion/features/lore/data/lore_repository.dart';
-import 'package:dnd_companion/features/lore/data/models.dart';
-import 'package:dnd_companion/features/maps/data/maps_repository.dart';
-import 'package:dnd_companion/features/maps/data/models.dart';
+import 'package:opentrpg/core/content/content_visibility.dart';
+import 'package:opentrpg/core/files/file_disk_cache.dart';
+import 'package:opentrpg/core/files/files_repository.dart';
+import 'package:opentrpg/core/files/stored_file.dart';
+import 'package:opentrpg/features/library/data/library_repository.dart';
+import 'package:opentrpg/features/library/data/library_storage.dart';
+import 'package:opentrpg/features/library/data/models.dart';
+import 'package:opentrpg/features/lore/data/lore_repository.dart';
+import 'package:opentrpg/features/lore/data/models.dart';
+import 'package:opentrpg/features/maps/data/maps_repository.dart';
+import 'package:opentrpg/features/maps/data/models.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:image_picker/image_picker.dart';
 

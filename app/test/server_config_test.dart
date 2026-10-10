@@ -4,20 +4,20 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:dnd_companion/app.dart';
-import 'package:dnd_companion/core/auth/auth_controller.dart';
-import 'package:dnd_companion/core/auth/auth_repository.dart';
-import 'package:dnd_companion/core/auth/auth_state.dart';
-import 'package:dnd_companion/core/auth/token_storage.dart';
-import 'package:dnd_companion/core/network/api_client.dart';
-import 'package:dnd_companion/core/network/api_error.dart';
-import 'package:dnd_companion/core/router/app_router.dart';
-import 'package:dnd_companion/core/server/certificate_pinning.dart';
-import 'package:dnd_companion/core/server/server_config.dart';
-import 'package:dnd_companion/core/server/server_config_controller.dart';
-import 'package:dnd_companion/core/server/server_config_repository.dart';
-import 'package:dnd_companion/core/server/server_probe.dart';
-import 'package:dnd_companion/core/server/server_url.dart';
+import 'package:opentrpg/app.dart';
+import 'package:opentrpg/core/auth/auth_controller.dart';
+import 'package:opentrpg/core/auth/auth_repository.dart';
+import 'package:opentrpg/core/auth/auth_state.dart';
+import 'package:opentrpg/core/auth/token_storage.dart';
+import 'package:opentrpg/core/network/api_client.dart';
+import 'package:opentrpg/core/network/api_error.dart';
+import 'package:opentrpg/core/router/app_router.dart';
+import 'package:opentrpg/core/server/certificate_pinning.dart';
+import 'package:opentrpg/core/server/server_config.dart';
+import 'package:opentrpg/core/server/server_config_controller.dart';
+import 'package:opentrpg/core/server/server_config_repository.dart';
+import 'package:opentrpg/core/server/server_probe.dart';
+import 'package:opentrpg/core/server/server_url.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -50,7 +50,7 @@ Future<FakeServerProbe> _pumpApp(
         fakeServerInfoOverride,
         fakeCampaignsOverride,
       ],
-      child: const DndCompanionApp(),
+      child: const OpenTrpgApp(),
     ),
   );
   await tester.pumpAndSettle();
@@ -617,7 +617,7 @@ void main() {
             fakeServerInfoOverride,
             fakeCampaignsOverride,
           ],
-          child: const DndCompanionApp(),
+          child: const OpenTrpgApp(),
         ),
       );
       await tester.pumpAndSettle();

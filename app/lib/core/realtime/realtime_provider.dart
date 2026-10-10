@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/campaigns/data/campaigns_controller.dart';
+import '../../features/characters/data/character_refresh.dart';
 import '../../features/characters/data/characters_controller.dart';
 import '../../features/items/data/items_controllers.dart';
 import '../../features/session/data/session_controllers.dart';
@@ -15,6 +16,7 @@ import '../auth/token_storage.dart';
 import '../network/connectivity.dart';
 import '../server/server_config_controller.dart';
 import '../server/server_url.dart';
+import '../systems/system_registry.dart';
 import 'realtime_events.dart';
 import 'realtime_hub.dart';
 import 'signalr_realtime_hub.dart';
@@ -228,8 +230,6 @@ class CampaignRealtime extends Notifier<RealtimeState> {
     switch (event) {
       case CharacterUpdated(:final characterId):
         _refreshCharacters(characterId);
-      case PartyRest():
-        _refreshCharacters(null);
       case ShopUpdated(:final entityId):
         ref.invalidate(shopsControllerProvider(campaignId));
         entityId == null
@@ -259,29 +259,19 @@ class CampaignRealtime extends Notifier<RealtimeState> {
         // The DM's petitions, and the pending rest of the sheet and the roster.
         ref.invalidate(restRequestsControllerProvider(campaignId));
         _refreshCharacters(characterId);
-      case LevelUpGranted(:final characterId):
-        // The player banner is shown by the campaign shell.
-        _refreshCharacters(characterId);
       case MembershipRemoved():
         // The shell leaves the campaign; its list must not show it any more.
         ref.invalidate(campaignsControllerProvider);
-      case Unknown():
-        break;
+      case UnknownCampaignEvent():
+        // Events of the game system of the campaign (D&D 5e: party rests and
+        // granted levels); ignored when the system does not know them.
+        ref.read(campaignSystemUiProvider(campaignId)).onRealtimeEvent(ref, event);
     }
   }
 
-  /// [characterId] null: every character of the campaign (a party rest).
-  void _refreshCharacters(String? characterId) {
-    if (characterId == null) {
-      ref.invalidate(characterControllerProvider);
-      ref.invalidate(inventoryControllerProvider);
-    } else {
-      ref.invalidate(characterControllerProvider(characterId));
-      ref.invalidate(inventoryControllerProvider(characterId));
-    }
-    ref.invalidate(campaignCharactersControllerProvider(campaignId));
-    ref.invalidate(partyControllerProvider(campaignId));
-  }
+  /// [characterId] null: every character of the campaign.
+  void _refreshCharacters(String? characterId) =>
+      refreshCampaignCharacters(ref, campaignId, characterId);
 
   void _refreshSessions(String? sessionId) {
     ref.invalidate(sessionsControllerProvider(campaignId));

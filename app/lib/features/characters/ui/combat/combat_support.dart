@@ -5,7 +5,7 @@ import '../../../../core/network/api_error.dart';
 import '../../../../core/theme/textures.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/theme/typography.dart';
-import '../../../../core/ui/action_type.dart';
+import '../../../../systems/dnd5e/ui/action_type.dart';
 import '../../../campaigns/ui/feedback.dart';
 import '../../../catalog/ui/catalog_detail_links.dart' show DetailInfoButton, openFeatureDetail;
 

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/catalog/data/catalog_controllers.dart';
-import '../../features/catalog/data/models.dart' show CatalogSource;
+import '../catalog/catalog_models.dart';
+import '../catalog/catalog_sources.dart';
 
 /// The label shown for the content [source] ("srd", "homebrew" or the id of a
 /// content pack), or null when nothing should be shown (the SRD, or an unknown

@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../catalog/data/models.dart' show ItemDetail, ItemSummary, Page;
-import 'models.dart';
+import '../../../systems/dnd5e/items/dnd5e_item.dart';
 
 /// Which templates a campaign item search covers.
 enum ItemSource {

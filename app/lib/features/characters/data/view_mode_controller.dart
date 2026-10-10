@@ -2,21 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/storage/local_preferences.dart';
 
-/// The tabs of a character page: [CharacterTab.combat] is the "Combate" view
-/// and the rest are the sub-tabs of "Detalle", in their order on the bar.
-enum CharacterTab {
-  combat,
-  summary,
-  skills,
-  traits,
-  spells,
-  inventory,
-  notes;
-
-  /// The sub-tabs of "Detalle" (every tab but [combat]).
-  static const detailTabs = [summary, skills, traits, spells, inventory, notes];
-}
-
 /// The two main views of a character page.
 enum CharacterView { combat, detail }
 
@@ -30,34 +15,29 @@ String characterMainViewKey(String characterId) => 'character.$characterId.mainV
 /// left in combat still opens on the Combate view.
 String legacyCharacterViewKey(String characterId) => 'character.$characterId.view';
 
-/// "Detalle" sub-tab of one character, remembered per character in
-/// `shared_preferences`. Defaults to [CharacterTab.summary] when nothing (or
-/// the old flat "combat" tab) is stored or there is no storage (then the
-/// choice lasts for the session only).
-class CharacterTabController extends Notifier<CharacterTab> {
+/// "Detalle" sub-tab of one character (the id of the tab), remembered per
+/// character in `shared_preferences`. Null when nothing is stored or there is
+/// no storage (then the choice lasts for the session only); the page then
+/// opens on its first sub-tab, as it does for an id it does not know (an old
+/// flat "combat" tab, or a tab of another version). The sub-tabs themselves
+/// come from the game system (`GameSystemUi.detailTabs`) and the core.
+class CharacterTabController extends Notifier<String?> {
   CharacterTabController(this.characterId);
 
   final String characterId;
 
   @override
-  CharacterTab build() {
-    final stored = ref.read(localPreferencesProvider)?.getString(characterTabKey(characterId));
-    for (final tab in CharacterTab.detailTabs) {
-      if (tab.name == stored) return tab;
-    }
-    return CharacterTab.summary;
-  }
+  String? build() => ref.read(localPreferencesProvider)?.getString(characterTabKey(characterId));
 
-  /// Remembers a "Detalle" sub-tab; [CharacterTab.combat] is not a sub-tab
-  /// and is ignored.
-  void select(CharacterTab tab) {
-    if (tab == state || tab == CharacterTab.combat) return;
-    state = tab;
-    ref.read(localPreferencesProvider)?.setString(characterTabKey(characterId), tab.name).ignore();
+  /// Remembers the "Detalle" sub-tab [tabId].
+  void select(String tabId) {
+    if (tabId == state) return;
+    state = tabId;
+    ref.read(localPreferencesProvider)?.setString(characterTabKey(characterId), tabId).ignore();
   }
 }
 
-final characterTabProvider = NotifierProvider.family<CharacterTabController, CharacterTab, String>(
+final characterTabProvider = NotifierProvider.family<CharacterTabController, String?, String>(
   CharacterTabController.new,
 );
 
@@ -78,7 +58,7 @@ class CharacterViewController extends Notifier<CharacterView> {
       if (view.name == stored) return view;
     }
     final oldTab = prefs?.getString(characterTabKey(characterId));
-    if (oldTab == CharacterTab.combat.name) return CharacterView.combat;
+    if (oldTab == 'combat') return CharacterView.combat;
     if (oldTab != null) return CharacterView.detail;
     return prefs?.getString(legacyCharacterViewKey(characterId)) == 'combat'
         ? CharacterView.combat

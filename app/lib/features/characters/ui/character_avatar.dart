@@ -7,7 +7,7 @@ import '../../../core/files/stored_file.dart';
 import '../../../core/network/api_error.dart';
 import '../../campaigns/ui/feedback.dart';
 import '../data/characters_controller.dart';
-import '../data/models.dart';
+import '../../../core/characters/models.dart';
 
 enum _PortraitAction { pick, remove }
 

@@ -1,19 +1,18 @@
-import 'package:dnd_companion/core/auth/auth_controller.dart';
-import 'package:dnd_companion/core/auth/auth_state.dart';
-import 'package:dnd_companion/core/auth/user_dto.dart';
-import 'package:dnd_companion/core/router/app_router.dart';
-import 'package:dnd_companion/core/theme/app_theme.dart';
-import 'package:dnd_companion/features/campaigns/data/campaigns_repository.dart';
-import 'package:dnd_companion/features/catalog/data/catalog_repository.dart';
-import 'package:dnd_companion/features/characters/data/characters_repository.dart';
-import 'package:dnd_companion/features/items/data/campaign_items_repository.dart';
-import 'package:dnd_companion/features/items/data/inventory_repository.dart';
-import 'package:dnd_companion/features/items/data/shops_repository.dart';
-import 'package:dnd_companion/features/session/data/messages_repository.dart';
-import 'package:dnd_companion/features/session/data/party_repository.dart';
-import 'package:dnd_companion/features/session/data/rest_requests_repository.dart';
-import 'package:dnd_companion/features/session/data/stash_repository.dart';
-import 'package:dnd_companion/features/sessions/data/sessions_controllers.dart';
+import 'package:opentrpg/core/auth/auth_controller.dart';
+import 'package:opentrpg/core/auth/auth_state.dart';
+import 'package:opentrpg/core/auth/user_dto.dart';
+import 'package:opentrpg/core/router/app_router.dart';
+import 'package:opentrpg/core/theme/app_theme.dart';
+import 'package:opentrpg/features/campaigns/data/campaigns_repository.dart';
+import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
+import 'package:opentrpg/features/items/data/campaign_items_repository.dart';
+import 'package:opentrpg/features/items/data/inventory_repository.dart';
+import 'package:opentrpg/features/items/data/shops_repository.dart';
+import 'package:opentrpg/features/session/data/messages_repository.dart';
+import 'package:opentrpg/features/session/data/party_repository.dart';
+import 'package:opentrpg/features/session/data/rest_requests_repository.dart';
+import 'package:opentrpg/features/session/data/stash_repository.dart';
+import 'package:opentrpg/features/sessions/data/sessions_controllers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -88,7 +87,7 @@ class AppFakes {
 
   List<Override> get overrides => [
     campaignsRepositoryProvider.overrideWithValue(campaigns),
-    charactersRepositoryProvider.overrideWithValue(characters),
+    ...fakeCharactersOverrides(characters),
     inventoryRepositoryProvider.overrideWithValue(inventory),
     shopsRepositoryProvider.overrideWithValue(shops),
     campaignItemsRepositoryProvider.overrideWithValue(campaignItems),
@@ -100,6 +99,7 @@ class AppFakes {
     messagesRepositoryProvider.overrideWithValue(messages),
     restRequestsRepositoryProvider.overrideWithValue(restRequests),
     fakeSystemsOverride(),
+    dnd5eSystemsOverride(),
   ];
 }
 

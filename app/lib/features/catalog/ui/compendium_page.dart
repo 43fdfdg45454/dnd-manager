@@ -5,11 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/cache/stale_data.dart';
-import '../../../core/router/app_router.dart';
 import '../../../core/ui/infinite_scroll_list.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../../core/ui/source_chip.dart';
-import '../../../core/ui/spell_category.dart';
+import '../../../systems/dnd5e/ui/spell_category.dart';
 import '../data/beast_models.dart';
 import '../data/catalog_controllers.dart';
 import '../data/catalog_repository.dart';
@@ -19,6 +18,7 @@ import 'beast_page.dart';
 import 'condition_sheet.dart';
 import 'detail_widgets.dart';
 import 'roll_table_widgets.dart';
+import '../../../systems/dnd5e/dnd5e_routes.dart';
 
 const searchDebounce = Duration(milliseconds: 300);
 
@@ -106,13 +106,13 @@ class _CompendiumPageState extends ConsumerState<CompendiumPage> {
             const Expanded(
               child: TabBarView(
                 children: [
-                  _KeepAlive(child: _SpellsTab()),
-                  _KeepAlive(child: _ItemsTab()),
-                  _KeepAlive(child: _ClassesTab()),
-                  _KeepAlive(child: _RacesTab()),
-                  _KeepAlive(child: _BeastsTab()),
-                  _KeepAlive(child: _ConditionsTab()),
-                  _KeepAlive(child: _TablesTab()),
+                  _KeepAlive(child: CompendiumSpellsTab()),
+                  _KeepAlive(child: CompendiumItemsTab()),
+                  _KeepAlive(child: CompendiumClassesTab()),
+                  _KeepAlive(child: CompendiumRacesTab()),
+                  _KeepAlive(child: CompendiumBeastsTab()),
+                  _KeepAlive(child: CompendiumConditionsTab()),
+                  _KeepAlive(child: CompendiumTablesTab()),
                 ],
               ),
             ),
@@ -205,8 +205,8 @@ const _filterDecoration = InputDecoration(
   contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
 );
 
-class _SpellsTab extends ConsumerWidget {
-  const _SpellsTab();
+class CompendiumSpellsTab extends ConsumerWidget {
+  const CompendiumSpellsTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -268,7 +268,7 @@ class _SpellsTab extends ConsumerWidget {
                 ].join(' · '),
               ),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.push(AppRoutes.spell(spell.index)),
+              onTap: () => context.push(Dnd5eRoutes.spell(spell.index)),
             ),
           ),
         ),
@@ -277,8 +277,8 @@ class _SpellsTab extends ConsumerWidget {
   }
 }
 
-class _ItemsTab extends ConsumerWidget {
-  const _ItemsTab();
+class CompendiumItemsTab extends ConsumerWidget {
+  const CompendiumItemsTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -319,7 +319,7 @@ class _ItemsTab extends ConsumerWidget {
                 ].where((e) => e.isNotEmpty).join(' · '),
               ),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.push(AppRoutes.item(item.id)),
+              onTap: () => context.push(Dnd5eRoutes.item(item.id)),
             ),
           ),
         ),
@@ -420,8 +420,8 @@ class _LocalList<T> extends ConsumerWidget {
   }
 }
 
-class _ClassesTab extends ConsumerWidget {
-  const _ClassesTab();
+class CompendiumClassesTab extends ConsumerWidget {
+  const CompendiumClassesTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -440,14 +440,14 @@ class _ClassesTab extends ConsumerWidget {
           ].join(' · '),
         ),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () => context.push(AppRoutes.dndClass(c.index)),
+        onTap: () => context.push(Dnd5eRoutes.dndClass(c.index)),
       ),
     );
   }
 }
 
-class _RacesTab extends ConsumerWidget {
-  const _RacesTab();
+class CompendiumRacesTab extends ConsumerWidget {
+  const CompendiumRacesTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -461,15 +461,15 @@ class _RacesTab extends ConsumerWidget {
         title: NameWithSource(r.name, r.source),
         subtitle: Text([if (r.speed != null) 'Velocidad ${r.speed} pies', ?r.size].join(' · ')),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () => context.push(AppRoutes.race(r.index)),
+        onTap: () => context.push(Dnd5eRoutes.race(r.index)),
       ),
     );
   }
 }
 
 /// SRD beasts (wild shapes), ordered by challenge rating.
-class _BeastsTab extends ConsumerWidget {
-  const _BeastsTab();
+class CompendiumBeastsTab extends ConsumerWidget {
+  const CompendiumBeastsTab({super.key});
 
   static const BeastQuery _all = (maxCr: null, fly: null, swim: null);
 
@@ -485,8 +485,8 @@ class _BeastsTab extends ConsumerWidget {
   }
 }
 
-class _ConditionsTab extends ConsumerWidget {
-  const _ConditionsTab();
+class CompendiumConditionsTab extends ConsumerWidget {
+  const CompendiumConditionsTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -506,8 +506,8 @@ class _ConditionsTab extends ConsumerWidget {
 }
 
 /// Roll tables of the content packs (wild magic surge…); empty with the SRD only.
-class _TablesTab extends ConsumerWidget {
-  const _TablesTab();
+class CompendiumTablesTab extends ConsumerWidget {
+  const CompendiumTablesTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

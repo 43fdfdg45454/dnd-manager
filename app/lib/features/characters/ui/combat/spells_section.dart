@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/components.dart';
-import '../../../../core/ui/action_type.dart';
-import '../../../../core/ui/spell_category.dart';
+import '../../../../systems/dnd5e/ui/action_type.dart';
+import '../../../../systems/dnd5e/ui/spell_category.dart';
 import '../../../../core/ui/stat_value.dart';
 import '../../../catalog/data/models.dart' show RollTable, SpellDetail;
 import '../../../catalog/domain/catalog_format.dart' show spellLevelLabel;
 import '../../../catalog/ui/catalog_detail_links.dart';
 import '../../../dice/domain/dice_expression.dart';
 import '../../../dice/ui/dice_sheet.dart';
-import '../../data/characters_controller.dart';
 import '../../data/models.dart';
 import '../../domain/character_format.dart';
 import '../../domain/spell_combat.dart';
@@ -20,6 +19,7 @@ import 'combat_support.dart';
 import 'concentration_flow.dart' show confirmReplaceConcentration;
 import 'resources_section.dart' show pactSlotsOf, regularSlots;
 import 'wild_magic_surge.dart';
+import '../../../../systems/dnd5e/characters/dnd5e_characters_controller.dart';
 
 /// A castable spell with its catalog detail.
 typedef _CombatSpell = ({CharacterSpell spell, SpellDetail detail});
@@ -199,7 +199,7 @@ class _SpellCardState extends ConsumerState<SpellCard> {
       return;
     }
     if (!mounted) return;
-    final controller = ref.read(characterControllerProvider(widget.character.id).notifier);
+    final controller = ref.read(dnd5eCharacterControllerProvider(widget.character.id).notifier);
     final spent = await runCombat(
       context,
       () => controller.spendSpellSlot(slotLevel),
@@ -224,7 +224,7 @@ class _SpellCardState extends ConsumerState<SpellCard> {
     await runCombat(
       context,
       () => ref
-          .read(characterControllerProvider(widget.character.id).notifier)
+          .read(dnd5eCharacterControllerProvider(widget.character.id).notifier)
           .setConcentration(_index),
       success: 'Concentrándote en ${_detail.name}.',
     );

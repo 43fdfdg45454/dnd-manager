@@ -4,6 +4,8 @@ import 'dart:convert';
 // missing or null fields fall back to empty values and a few fields accept more
 // than one wire shape (for example a string or an object with a `name`).
 
+export '../../../core/catalog/catalog_models.dart';
+
 Map<String, dynamic>? _map(Object? value) => value is Map ? Map<String, dynamic>.from(value) : null;
 
 String _str(Object? value, [String fallback = '']) {
@@ -71,40 +73,6 @@ List<String> _nameList(Object? value) => value is List
       ]
     : const [];
 
-/// Generic `{ items, total, page, pageSize }` envelope.
-class Page<T> {
-  const Page({
-    required this.items,
-    required this.total,
-    required this.page,
-    required this.pageSize,
-  });
-
-  factory Page.fromJson(Map<String, dynamic> json, T Function(Map<String, dynamic>) parse) {
-    final items = _objects(json['items'], parse);
-    return Page(
-      items: items,
-      total: _int(json['total']) ?? items.length,
-      page: _int(json['page']) ?? 1,
-      pageSize: _int(json['pageSize']) ?? items.length,
-    );
-  }
-
-  final List<T> items;
-  final int total;
-  final int page;
-  final int pageSize;
-
-  bool get hasMore => items.length < total;
-
-  Page<T> copyWith({List<T>? items, int? total, int? page}) => Page(
-    items: items ?? this.items,
-    total: total ?? this.total,
-    page: page ?? this.page,
-    pageSize: pageSize,
-  );
-}
-
 /// `GET /attribution`.
 class Attribution {
   const Attribution({required this.ruleset, required this.license, required this.text});
@@ -118,22 +86,6 @@ class Attribution {
   final String ruleset;
   final String license;
   final String text;
-}
-
-/// A source of catalog content (`GET /catalog/sources`): "srd" or a content
-/// pack imported by the administrator.
-class CatalogSource {
-  const CatalogSource({required this.id, required this.name, this.version});
-
-  factory CatalogSource.fromJson(Map<String, dynamic> json) => CatalogSource(
-    id: _str(json['id']),
-    name: _str(json['name'], _str(json['id'])),
-    version: _strOrNull(json['version']),
-  );
-
-  final String id;
-  final String name;
-  final String? version;
 }
 
 class AbilityBonus {

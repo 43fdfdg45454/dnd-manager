@@ -9,6 +9,7 @@ import '../data/characters_controller.dart';
 import '../data/models.dart';
 import '../domain/character_format.dart' show abilityAbbreviation;
 import 'level_up/level_up_widgets.dart';
+import '../../../systems/dnd5e/characters/dnd5e_characters_controller.dart';
 
 /// "Sustituye lo que ya no cumples" (`/characters/:id/invalid-choices`): the
 /// options and feats whose prerequisites no longer hold must be replaced by
@@ -32,8 +33,8 @@ class _InvalidChoicesPageState extends ConsumerState<InvalidChoicesPage> {
   bool _busy = false;
   String? _error;
 
-  CharacterController get _controller =>
-      ref.read(characterControllerProvider(widget.characterId).notifier);
+  Dnd5eCharacterController get _controller =>
+      ref.read(dnd5eCharacterControllerProvider(widget.characterId).notifier);
 
   bool _answered(LevelUpChoice choice) {
     if (choice.required == 0) return true;

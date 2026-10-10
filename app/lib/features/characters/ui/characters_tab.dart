@@ -13,6 +13,7 @@ import '../../campaigns/ui/feedback.dart';
 import '../data/characters_controller.dart';
 import '../data/models.dart';
 import 'new_character_dialog.dart';
+import '../../../systems/dnd5e/dnd5e_routes.dart';
 
 /// "Personajes" section of a campaign: summary cards plus the "new character"
 /// button. A player opens only their own characters; the others show name,
@@ -23,7 +24,7 @@ class CharactersTab extends ConsumerWidget {
   final CampaignDetail campaign;
 
   /// Opens the guided creation wizard.
-  void _openWizard(BuildContext context) => context.push(AppRoutes.characterNew(campaign.id));
+  void _openWizard(BuildContext context) => context.push(Dnd5eRoutes.characterWizard(campaign.id));
 
   /// DM shortcut: name and player only (an NPC by default).
   Future<void> _createQuick(BuildContext context, WidgetRef ref, String myUserId) async {
