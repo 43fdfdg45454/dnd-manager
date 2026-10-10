@@ -1033,6 +1033,9 @@ public sealed partial class Dnd5eCharacter
     private void ApplyClasses(List<ClassEntry> classes)
     {
         _classes.RemoveAll(c => !classes.Any(e => e.ClassIndex == c.ClassIndex));
+
+        // The level choices of a class the character no longer has stop applying (a draft whose class changed).
+        _choices.RemoveAll(c => c.ClassIndex is not null && !classes.Any(e => e.ClassIndex == c.ClassIndex));
         for (var order = 0; order < classes.Count; order++)
         {
             var entry = classes[order];

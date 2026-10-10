@@ -151,7 +151,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
             applyRacialBonuses = false,
         });
         Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(cleric.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(cleric.Id)).StatusCode);
         await GrantAsync(s, cleric.Id);
         var clericPlan = await PlanAsync(s.Player, cleric.Id);
         Assert.DoesNotContain(clericPlan.Choices, c => c.Key == "recurso-destello-protector");
@@ -182,7 +182,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
             Assert.Equal(("fighter", "int", 12, 3, 2), (knightCasting.ClassIndex, knightCasting.Ability, knightCasting.SaveDc, knightCasting.SpellsKnownMax, knightCasting.CantripsKnownMax));
             Assert.Equal(2, knightSheet.SpellSlots.Single(sl => sl.Level == 1).Max);
 
-            Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(knight.Id)}/activate", null)).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(knight.Id)).StatusCode);
             await GrantAsync(s, knight.Id);
             var knightPlan = await PlanAsync(s.Player, knight.Id);
             var level4Spells = Assert.Single(knightPlan.Choices, c => c.Key == "conjuros");
@@ -213,7 +213,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
                 applyRacialBonuses = false,
             });
             Assert.Equal(HttpStatusCode.OK, monkPatch.StatusCode);
-            Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(monk.Id)}/activate", null)).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(monk.Id)).StatusCode);
             await GrantAsync(s, monk.Id);
             var disciplines = Assert.Single((await PlanAsync(s.Player, monk.Id)).Choices, c => c.Key == "disciplinas");
             var thunders = disciplines.Options.Single(o => o.Index == $"{PackId}-ed-fist-of-four-thunders");
@@ -227,7 +227,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
                 applyRacialBonuses = false,
             });
             Assert.Equal(HttpStatusCode.OK, sagePatch.StatusCode);
-            Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(sage2.Id)}/activate", null)).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(sage2.Id)).StatusCode);
             await GrantAsync(s, sage2.Id);
             var sagePlan = await PlanAsync(s.Player, sage2.Id);
             var knowledgeExpertise = Assert.Single(sagePlan.Choices, c => c.Key == "pericia-del-conocimiento");
@@ -282,7 +282,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
             proficiencies = new[] { new { type = "Armor", key = "light-armor", expertise = false } },
         });
         Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(character.Id)).StatusCode);
         await GrantAsync(s, character.Id);
         return character;
     }

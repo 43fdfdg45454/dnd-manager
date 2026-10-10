@@ -155,6 +155,11 @@ Map<String, dynamic> makeOriginChoiceJson({
   String note = '',
   List<Map<String, dynamic>>? options,
   List<Map<String, dynamic>> selected = const [],
+  String? classIndex,
+  int? level,
+  String? setId,
+  Map<String, String>? requires,
+  String? warning,
 }) => {
   'key': key,
   'name': name,
@@ -172,6 +177,11 @@ Map<String, dynamic> makeOriginChoiceJson({
         {'index': 'perception', 'name': 'Percepción', 'eligible': true, 'description': <String>[]},
       ],
   'selected': selected,
+  'classIndex': ?classIndex,
+  'level': ?level,
+  'setId': ?setId,
+  'requires': ?requires,
+  'warning': ?warning,
 };
 
 /// An `OriginChoicesDto` as JSON.

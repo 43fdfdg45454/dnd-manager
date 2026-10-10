@@ -319,7 +319,7 @@ public class SpellPreparationEndpointsTests(CatalogApiFactory factory, ITestOutp
             spells = spells.Select(sp => new { spellIndex = sp.Index, classIndex, isPrepared = sp.Prepared }).ToArray(),
         });
         Assert.True(patch.StatusCode == HttpStatusCode.OK, await patch.Content.ReadAsStringAsync());
-        var activate = await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/activate", null);
+        var activate = await s.Dm.ActivateAsync(character.Id);
         Assert.Equal(HttpStatusCode.OK, activate.StatusCode);
         return await s.Player.GetCharacterAsync(character.Id);
     }

@@ -2522,8 +2522,13 @@ enum OriginChoiceKind {
 /// (`campaign.starterFeat`).
 const starterFeatChoiceKey = 'campaign.starterFeat';
 
-/// A decision of the race, subrace or background (`OriginChoiceDto`).
-/// [required] picks block the activation; optional ones (languages) have 0.
+/// Source of the level-1 choices of the first class in `origin-choices`.
+const classChoiceSource = 'class';
+
+/// A decision of the race, subrace or background (`OriginChoiceDto`), or a
+/// level-1 choice of the first class (fighting style, expertise...: [source]
+/// "class", "class." keys). [required] picks block the activation; optional
+/// ones (languages) have 0.
 class OriginChoice {
   const OriginChoice({
     required this.key,
@@ -2540,10 +2545,17 @@ class OriginChoice {
     this.feat,
     this.ability,
     this.removedSavingThrows = const [],
+    this.kindName,
+    this.classIndex,
+    this.level,
+    this.setId,
+    this.requires,
+    this.warning,
   });
 
   factory OriginChoice.fromJson(Map<String, dynamic> json) {
     final feat = _map(json['feat']);
+    final requires = _map(json['requires']);
     return OriginChoice(
       key: _str(json['key']),
       name: _str(json['name'], _str(json['key'])),
@@ -2559,14 +2571,48 @@ class OriginChoice {
       feat: feat == null ? null : ChoiceItem.fromJson(feat),
       ability: _strOrNull(json['ability']),
       removedSavingThrows: _strings(json['removedSavingThrows']),
+      kindName: _strOrNull(json['kind']),
+      classIndex: _strOrNull(json['classIndex']),
+      level: _int(json['level']),
+      setId: _strOrNull(json['setId']),
+      requires: requires == null
+          ? null
+          : (choiceKey: _str(requires['choiceKey']), index: _str(requires['index'])),
+      warning: _strOrNull(json['warning']),
     );
   }
 
   final String key;
   final String name;
+
+  /// Kind of the choice. A class choice of a kind without its own origin kind
+  /// (OptionSet, Expertise, Weapon, SpellbookSpells...) is a list of picks
+  /// ([OriginChoiceKind.traitOption]); [kindName] keeps the server's name.
   final OriginChoiceKind kind;
 
-  /// "race", "subrace" or "background".
+  /// Kind as the server sent it ("OptionSet", "Expertise"...).
+  final String? kindName;
+
+  /// Class of a level-1 choice of the first class; null for the origin ones.
+  final String? classIndex;
+
+  /// Class level of a class choice (1); null for the origin ones.
+  final int? level;
+
+  /// Option set of a class choice of options.
+  final String? setId;
+
+  /// Choice of an option of another class choice: only asked when
+  /// [requires].index is picked in the choice [requires].choiceKey.
+  final ({String choiceKey, String index})? requires;
+
+  /// Why fewer picks than the class gives are required, or null.
+  final String? warning;
+
+  /// A level-1 choice of the first class (source "class").
+  bool get isClassChoice => source == classChoiceSource;
+
+  /// "race", "subrace", "background", "campaign" (starter feat) or "class".
   final String source;
   final int choose;
   final int required;

@@ -97,7 +97,7 @@ public class ItemModifierEndpointsTests(CatalogApiFactory factory)
         });
         var amulet = await s.Player.AddItemAsync(character.Id, new { templateId = template.Id, quantity = 1 });
         Assert.Equal(HttpStatusCode.OK, (await s.Player.PatchItemAsync(character.Id, amulet.Id, new { equipped = true })).StatusCode);
-        var activated = await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/activate", null);
+        var activated = await s.Dm.ActivateAsync(character.Id);
         Assert.Equal(HttpStatusCode.OK, activated.StatusCode);
         var active = (await activated.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
         Assert.Equal((20, 20), (active.Sheet.HitPointsMax, active.HitPointsCurrent));
@@ -253,7 +253,7 @@ public class ItemModifierEndpointsTests(CatalogApiFactory factory)
     {
         var s = await factory.CreateCampaignScenarioAsync();
         var draft = await SetupAsync(s.Player, s.CampaignId, str: 14);
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(draft.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(draft.Id)).StatusCode);
         await s.Dm.GiveMoneyAsync(draft.Id, 1000);
         var shop = await s.Dm.CreateShopAsync(s.CampaignId);
         var offer = await s.Dm.AddShopItemAsync(shop.Id, new { overrides = new { name = "Brazal del oso", modifiers = StrengthBonus }, priceCp = 500 });

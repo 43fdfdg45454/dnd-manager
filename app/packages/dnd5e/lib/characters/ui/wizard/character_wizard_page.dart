@@ -35,6 +35,10 @@ extension WizardStepInfo on WizardStep {
     WizardStep.review => 'Revisión',
   };
 
+  /// [title] for the wizard in [state]: the origin step names what it asks
+  /// (the race and background, the class, or both).
+  String titleIn(WizardState state) => this == WizardStep.origin ? state.originStepLabel : title;
+
   AppIcons get icon => switch (this) {
     WizardStep.name => AppIcons.quill,
     WizardStep.race => AppIcons.hood,
@@ -193,6 +197,7 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
             _ProgressRail(
               steps: steps,
               current: step,
+              label: (s) => s.titleIn(state),
               onTap: (i) {
                 if (i < step) _controller.goTo(i);
               },
@@ -202,7 +207,7 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Paso ${step + 1} de ${steps.length} · ${current.title}',
+                  'Paso ${step + 1} de ${steps.length} · ${current.titleIn(state)}',
                   key: const Key('wizard-step-title'),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
@@ -307,10 +312,18 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
 /// Row of dots (one icon per step); completed and current ones are highlighted
 /// and earlier ones can be tapped to go back.
 class _ProgressRail extends StatelessWidget {
-  const _ProgressRail({required this.steps, required this.current, required this.onTap});
+  const _ProgressRail({
+    required this.steps,
+    required this.current,
+    required this.label,
+    required this.onTap,
+  });
 
   final List<WizardStep> steps;
   final int current;
+
+  /// Name of a step (the origin step names what it asks).
+  final String Function(WizardStep step) label;
   final ValueChanged<int> onTap;
 
   @override
@@ -327,7 +340,7 @@ class _ProgressRail extends StatelessWidget {
               onTap: () => onTap(i),
               radius: 22,
               child: Semantics(
-                label: steps[i].title,
+                label: label(steps[i]),
                 selected: i == current,
                 child: CircleAvatar(
                   radius: 16,

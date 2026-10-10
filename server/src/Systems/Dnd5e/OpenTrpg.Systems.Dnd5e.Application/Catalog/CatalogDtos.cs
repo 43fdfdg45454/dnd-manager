@@ -101,6 +101,12 @@ public sealed record ClassDetailDto(
     /// <summary>Level at which the subclass is chosen (0 when the class does not say: the SRD ones).</summary>
     public int SubclassLevel { get; init; }
 
+    /// <summary>
+    /// The class asks for choices at level 1 besides the subclass (fighting style, expertise...): the creation wizard
+    /// asks them with the origin choices (<c>class.*</c> keys of <c>origin-choices</c>).
+    /// </summary>
+    public bool HasLevelOneChoices { get; init; }
+
     /// <summary>Spellcasting of a content pack class, or null (the SRD classes use fixed tables).</summary>
     public ClassSpellcastingDto? Spellcasting { get; init; }
 

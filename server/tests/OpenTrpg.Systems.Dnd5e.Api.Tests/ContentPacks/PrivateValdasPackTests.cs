@@ -106,7 +106,7 @@ public class PrivateValdasPackTests(PrivateValdasPackApiFactory factory, ITestOu
             problems.AddRange(classProblems);
             if (id is { } walkedId)
             {
-                // Level 1 choices of the first class (fighting style, expertise...) are not asked by the creation wizard.
+                // Level 1 choices of the first class (fighting style, expertise...) are answered with the origin choices.
                 var answered = (await DetailAsync(s.Player, walkedId)).System().Choices.Select(c => c.Key).ToHashSet(StringComparer.Ordinal);
                 var levelOne = classes.Single(c => c["index"]!.GetValue<string>() == classIndex)["levelChoices"]?.AsArray()
                     .Select(c => c!.AsObject())
@@ -116,7 +116,7 @@ public class PrivateValdasPackTests(PrivateValdasPackApiFactory factory, ITestOu
                     .ToList() ?? [];
                 if (levelOne.Count > 0)
                 {
-                    _notes.Add($"clase {classIndex}: elecciones de nivel 1 que el asistente de creación no pide: {string.Join(", ", levelOne)}.");
+                    problems.Add($"clase {classIndex}: elecciones de nivel 1 sin responder en la creación: {string.Join(", ", levelOne)}.");
                 }
             }
 
@@ -280,7 +280,7 @@ public class PrivateValdasPackTests(PrivateValdasPackApiFactory factory, ITestOu
         Assert.True(patch.StatusCode == HttpStatusCode.OK, $"{label}: hoja {(int)patch.StatusCode} {await patch.Content.ReadAsStringAsync()}");
 
         var origin = await GetAsync<OriginChoicesDto>(s.Player.Client, OriginUrl(character.Id));
-        var originAnswers = OriginAnswers(origin, await DetailAsync(s.Player, character.Id), problems, $"{label}, origen");
+        var originAnswers = OriginAnswers(origin, await DetailAsync(s.Player, character.Id), problems, _notes, $"{label}, origen");
         if (originAnswers.Count > 0)
         {
             var saved = await s.Player.Client.PutAsJsonAsync(OriginUrl(character.Id), new { choices = originAnswers });
@@ -535,50 +535,96 @@ public class PrivateValdasPackTests(PrivateValdasPackApiFactory factory, ITestOu
         return answers;
     }
 
-    /// <summary>The first valid answer of every origin choice (required or not), as the wizard's origin and language steps send them.</summary>
-    private static List<object> OriginAnswers(OriginChoicesDto plan, CharacterDetailDto hero, List<string> problems, string where)
+    /// <summary>
+    /// The first valid answer of every origin choice (required or not), as the wizard's origin and language steps send them,
+    /// including the level-1 choices of the first class ("class." keys): the choices of an option once it is picked, the
+    /// options that need another pick of the same request, and an option of a set taken once.
+    /// </summary>
+    private static List<object> OriginAnswers(OriginChoicesDto plan, CharacterDetailDto hero, List<string> problems, List<string> notes, string where)
     {
         var scores = hero.System().Sheet.Abilities.ToDictionary(a => a.Key, a => a.Value.Score);
         var answers = new List<object>();
-        foreach (var choice in plan.Choices.Where(c => c.Choose > 0))
+        var picked = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var taken = new HashSet<string>(StringComparer.Ordinal);
+        bool Met(OptionRequirementDto? requires) => requires is null || (picked.TryGetValue(requires.ChoiceKey, out var parent) && parent.Contains(requires.Index));
+        var pending = plan.Choices.Where(c => c.Choose > 0).ToList();
+        bool progress;
+        do
         {
-            if (choice.Kind == "Feat")
+            progress = false;
+            foreach (var choice in pending.ToList())
             {
-                var feat = choice.Options.FirstOrDefault(o => o.Eligible);
-                if (feat is null)
+                if (!Met(choice.Requires))
                 {
-                    if (choice.Required > 0)
-                    {
-                        problems.Add($"{where}: {choice.Key} no tiene ninguna dote elegible.");
-                    }
-
                     continue;
                 }
 
-                var ability = feat.AbilityIncrease is { } increase
-                    ? (increase.From.Count > 0 ? increase.From : Abilities).Select(a => a.ToLowerInvariant()).FirstOrDefault(a => scores.GetValueOrDefault(a) < 20)
-                    : null;
-                var removed = feat.RemoveSavingThrows is { } remove && remove.From.Count != remove.Choose
-                    ? (remove.From.Count > 0 ? remove.From : hero.System().Proficiencies.Where(p => p.Type == "SavingThrow").Select(p => p.Key)).Take(remove.Choose).ToArray()
-                    : null;
-                answers.Add(new { key = choice.Key, selected = FeatAnswer(feat.Index, ability, removed) });
-                continue;
-            }
+                pending.Remove(choice);
+                progress = true;
+                if (choice.Source == OriginChoicesPlanner.ClassSource && choice.Required < choice.Choose)
+                {
+                    (choice.Kind is "Skill" or "Expertise" ? notes : problems).Add($"{where}: {choice.Key} ({choice.Kind}) pide {choice.Choose} y solo admite {choice.Required}: {choice.Warning}");
+                }
 
-            if (choice.FreeText)
-            {
-                answers.Add(new { key = choice.Key, selected = Enumerable.Range(1, choice.Choose).Select(n => $"Texto libre {n}").ToArray() });
-                continue;
-            }
+                if (choice.Kind is "Feat" or "AsiOrFeat")
+                {
+                    var feat = choice.Options.FirstOrDefault(o => o.Eligible && Met(o.Requires) && !taken.Contains(o.Index));
+                    if (feat is null)
+                    {
+                        if (choice.Kind == "AsiOrFeat" && choice.Required > 0)
+                        {
+                            var lowest = scores.Where(a => a.Value < 20).OrderBy(a => a.Value).ThenBy(a => a.Key).Take(2).Select(a => a.Key).ToList();
+                            answers.Add(new { key = choice.Key, selected = new { asi = lowest.ToDictionary(a => a, _ => 1) } });
+                        }
+                        else if (choice.Required > 0)
+                        {
+                            problems.Add($"{where}: {choice.Key} no tiene ninguna dote elegible.");
+                        }
 
-            var picks = choice.Options.Where(o => o.Eligible).Take(choice.Choose).Select(o => o.Index).ToArray();
-            if (picks.Length < choice.Required)
-            {
-                problems.Add($"{where}: {choice.Key} ({choice.Kind}) requiere {choice.Required} y solo hay {picks.Length} opciones elegibles.");
-            }
+                        picked[choice.Key] = [];
+                        continue;
+                    }
 
-            answers.Add(new { key = choice.Key, selected = picks });
+                    var ability = feat.AbilityIncrease is { } increase
+                        ? (increase.From.Count > 0 ? increase.From : Abilities).Select(a => a.ToLowerInvariant()).FirstOrDefault(a => scores.GetValueOrDefault(a) < 20)
+                        : null;
+                    var removed = feat.RemoveSavingThrows is { } remove && remove.From.Count != remove.Choose
+                        ? (remove.From.Count > 0 ? remove.From : hero.System().Proficiencies.Where(p => p.Type == "SavingThrow").Select(p => p.Key)).Take(remove.Choose).ToArray()
+                        : null;
+                    answers.Add(new { key = choice.Key, selected = FeatAnswer(feat.Index, ability, removed) });
+                    picked[choice.Key] = [feat.Index];
+                    taken.Add(feat.Index);
+                    continue;
+                }
+
+                if (choice.FreeText)
+                {
+                    var texts = Enumerable.Range(1, choice.Choose).Select(n => $"Texto libre {n}").ToArray();
+                    answers.Add(new { key = choice.Key, selected = texts });
+                    picked[choice.Key] = [.. texts];
+                    continue;
+                }
+
+                var count = choice.Source == OriginChoicesPlanner.ClassSource ? choice.Required : choice.Choose;
+                var picks = choice.Options
+                    .Where(o => o.Eligible && Met(o.Requires) && (choice.SetId is null || !taken.Contains(o.Index)))
+                    .Take(count)
+                    .Select(o => o.Index)
+                    .ToList();
+                if (picks.Count < choice.Required)
+                {
+                    problems.Add($"{where}: {choice.Key} ({choice.Kind}) requiere {choice.Required} y solo hay {picks.Count} opciones elegibles.");
+                }
+
+                answers.Add(new { key = choice.Key, selected = picks.ToArray() });
+                picked[choice.Key] = picks;
+                if (choice.SetId is not null)
+                {
+                    taken.UnionWith(picks);
+                }
+            }
         }
+        while (progress && pending.Count > 0);
 
         return answers;
     }
@@ -622,7 +668,7 @@ public class PrivateValdasPackTests(PrivateValdasPackApiFactory factory, ITestOu
             },
         });
         Assert.True(patch.StatusCode == HttpStatusCode.OK, await patch.Content.ReadAsStringAsync());
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(character.Id)).StatusCode);
         return character.Id;
     }
 

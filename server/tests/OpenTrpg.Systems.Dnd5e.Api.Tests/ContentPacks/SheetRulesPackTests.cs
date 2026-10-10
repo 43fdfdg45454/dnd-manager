@@ -467,7 +467,7 @@ public class SheetRulesPackTests(SheetRulesPackApiFactory factory) : IClassFixtu
             proficiencies = Saves(classIndex),
         });
         Assert.True(patch.StatusCode == HttpStatusCode.OK, await patch.Content.ReadAsStringAsync());
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(character.Id)).StatusCode);
         return await s.Player.GetCharacterAsync(character.Id);
     }
 

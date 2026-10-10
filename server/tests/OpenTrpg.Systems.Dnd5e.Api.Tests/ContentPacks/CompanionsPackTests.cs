@@ -200,7 +200,7 @@ public class CompanionsPackTests(CompanionsPackApiFactory factory) : IClassFixtu
     {
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Titiritera");
         await PatchAsync(s, hero.Id, level);
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(hero.Id)).StatusCode);
         return await s.Player.GetCharacterAsync(hero.Id);
     }
 

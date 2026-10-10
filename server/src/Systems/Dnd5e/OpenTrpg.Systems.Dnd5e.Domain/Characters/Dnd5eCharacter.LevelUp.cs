@@ -146,6 +146,69 @@ public sealed partial class Dnd5eCharacter
         return choice;
     }
 
+    /// <summary>The answer recorded for a level choice of a class at a class level, or null.</summary>
+    public CharacterChoice? LevelChoice(string classIndex, int level, string key) =>
+        _choices.FirstOrDefault(c => c.ClassIndex == classIndex && c.Level == level && c.Key == key);
+
+    /// <summary>
+    /// Removes the answer to a level choice of a class (re-answering the level-1 choices of the first class) and undoes
+    /// its stored effects: expertise, proficiencies (source Class) and spells of the class. Options act through the
+    /// sheet; the caller syncs their grants. False when it is not a level choice of the character.
+    /// </summary>
+    public bool RemoveLevelChoice(CharacterChoice choice, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(choice);
+        if (choice.ClassIndex is not { } classIndex || !_choices.Remove(choice))
+        {
+            return false;
+        }
+
+        var selection = choice.Selection;
+        foreach (var item in selection.Selected)
+        {
+            switch (selection.Kind)
+            {
+                case nameof(LevelChoiceKind.Expertise):
+                    var type = FindProficiency(ProficiencyType.Skill, item.Index) is not null ? ProficiencyType.Skill : ProficiencyType.Tool;
+                    if (FindProficiency(type, item.Index) is { Expertise: true } expert)
+                    {
+                        expert.Update(new ProficiencyEntry(expert.Type, expert.Key, false, expert.Source));
+                    }
+
+                    break;
+                case nameof(LevelChoiceKind.Skill):
+                    RemoveClassProficiency(ProficiencyType.Skill, item.Index);
+                    break;
+                case nameof(LevelChoiceKind.SavingThrow):
+                    RemoveClassProficiency(ProficiencyType.SavingThrow, item.Index);
+                    break;
+                case nameof(LevelChoiceKind.Weapon):
+                    RemoveClassProficiency(ProficiencyType.Weapon, item.Index);
+                    break;
+                case nameof(LevelChoiceKind.Language):
+                    RemoveClassProficiency(ProficiencyType.Language, item.Index);
+                    break;
+                case nameof(LevelChoiceKind.Tool):
+                    RemoveClassProficiency(ProficiencyType.Tool, item.Index);
+                    break;
+                case nameof(LevelChoiceKind.CantripsKnown) or nameof(LevelChoiceKind.SpellsKnown) or nameof(LevelChoiceKind.SpellbookSpells):
+                    _spells.RemoveAll(s => s.SpellIndex == item.Index && s.ClassIndex == classIndex && !s.AlwaysPrepared);
+                    break;
+            }
+        }
+
+        Touch(now);
+        return true;
+    }
+
+    private void RemoveClassProficiency(ProficiencyType type, string key)
+    {
+        if (FindProficiency(type, key) is { Source: ProficiencySource.Class } proficiency)
+        {
+            _proficiencies.Remove(proficiency);
+        }
+    }
+
     /// <summary>Hit points rolled per (class, class level) at level-ups.</summary>
     public IReadOnlyDictionary<(string ClassIndex, int Level), int> HitPointRolls() =>
         _choices

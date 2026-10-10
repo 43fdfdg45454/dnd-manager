@@ -44,7 +44,7 @@ public static class Dnd5eCharacterEndpoints
         group.MapGet("/origin-choices", async (Guid id, ClaimsPrincipal user, OriginChoicesHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.GetAsync(user.GetUserId(), id, ct)))
             .WithName("GetOriginChoices")
-            .WithSummary("Elecciones de raza, subraza y trasfondo del personaje (bonos de característica, habilidades, idiomas, herramientas, truco, dote, rasgos como el linaje dracónico) con sus opciones, lo ya elegido y si están completas.");
+            .WithSummary("Elecciones de raza, subraza y trasfondo del personaje (bonos de característica, habilidades, idiomas, herramientas, truco, dote, rasgos como el linaje dracónico) y las de nivel 1 de su clase inicial (key class.<key>, source class) con sus opciones, lo ya elegido y si están completas.");
 
         group.MapPut("/origin-choices", async (Guid id, SaveOriginChoicesRequest request, ClaimsPrincipal user, OriginChoicesHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.SaveAsync(user.GetUserId(), id, request, ct)))
