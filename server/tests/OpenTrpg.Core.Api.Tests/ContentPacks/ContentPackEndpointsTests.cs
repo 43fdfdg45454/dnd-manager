@@ -11,6 +11,7 @@ using OpenTrpg.Core.Application.ContentPacks;
 using OpenTrpg.Core.Domain.Catalog;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTrpg.Core.Application.Items;
 
 namespace OpenTrpg.Core.Api.Tests.ContentPacks;
 

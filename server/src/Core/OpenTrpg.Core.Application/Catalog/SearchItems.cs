@@ -2,6 +2,7 @@ using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Application.Common;
 using OpenTrpg.Core.Domain.Catalog;
 using FluentValidation;
+using OpenTrpg.Core.Application.Items;
 
 namespace OpenTrpg.Core.Application.Catalog;
 

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using OpenTrpg.Core.Application.Catalog;
 using OpenTrpg.Core.Application.Common;
+using OpenTrpg.Core.Application.Items;
 
 namespace OpenTrpg.Core.Api.Tests.Items;
 

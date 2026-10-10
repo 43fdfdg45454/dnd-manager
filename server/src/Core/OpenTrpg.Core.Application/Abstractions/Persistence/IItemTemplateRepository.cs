@@ -1,5 +1,6 @@
 using OpenTrpg.Core.Application.Catalog;
 using OpenTrpg.Core.Domain.Catalog;
+using OpenTrpg.Core.Application.Items;
 
 namespace OpenTrpg.Core.Application.Abstractions.Persistence;
 

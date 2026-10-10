@@ -96,19 +96,6 @@ public sealed record DamageOutcomeDto(
 /// <summary>Result of <c>POST /characters/{id}/damage</c>: the updated character and the damage outcome.</summary>
 public sealed record DamageResultDto(CharacterDetailDto Character, DamageOutcomeDto Outcome);
 
-/// <summary>Uses to spend or restore (default 1). The body is optional.</summary>
-public sealed record AmountRequest(int Amount = 1);
-
-public sealed class AmountRequestValidator : AbstractValidator<AmountRequest>
-{
-    public const int MaxAmount = 999;
-
-    public AmountRequestValidator()
-    {
-        RuleFor(x => x.Amount).InclusiveBetween(1, MaxAmount).WithMessage($"La cantidad debe estar entre 1 y {MaxAmount}.");
-    }
-}
-
 /// <summary>Values rolled for a resource that rolls after resting (e.g. [14, 3] for two d20).</summary>
 public sealed record ResourceRollsRequest(IReadOnlyList<int>? Values);
 

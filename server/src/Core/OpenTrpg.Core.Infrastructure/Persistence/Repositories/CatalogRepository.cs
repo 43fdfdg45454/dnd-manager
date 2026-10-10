@@ -2,6 +2,7 @@ using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Application.Catalog;
 using OpenTrpg.Core.Domain.Catalog;
 using Microsoft.EntityFrameworkCore;
+using OpenTrpg.Core.Application.Items;
 
 namespace OpenTrpg.Core.Infrastructure.Persistence.Repositories;
 

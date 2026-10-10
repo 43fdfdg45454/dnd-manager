@@ -166,6 +166,7 @@ app.MapInvitationEndpoints();
 app.MapCatalogEndpoints();
 app.MapSystemEndpoints();
 app.MapCharacterEndpoints();
+app.MapDnd5eCharacterEndpoints();
 app.MapChangeRequestEndpoints();
 app.MapItemEndpoints();
 app.MapInventoryEndpoints();

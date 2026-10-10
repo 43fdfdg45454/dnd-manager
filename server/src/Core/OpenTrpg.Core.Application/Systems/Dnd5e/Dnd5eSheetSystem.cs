@@ -141,6 +141,13 @@ public sealed class Dnd5eSheetSystem(
     {
         var parsed = Parse(patch);
         var validation = await patchValidator.ValidateAsync(parsed, cancellationToken);
+        if (!validation.IsValid && errorField is null)
+        {
+            throw AppException.Validation(validation.Errors
+                .GroupBy(e => JsonNamingPolicy.CamelCase.ConvertName(e.PropertyName))
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).Distinct().ToArray()));
+        }
+
         if (!validation.IsValid)
         {
             var error = validation.Errors[0];

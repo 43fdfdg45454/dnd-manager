@@ -35,6 +35,10 @@ public sealed class AppException : Exception
     public static AppException Validation(string field, string message, string? code = null) =>
         new(AppErrorKind.Validation, message, new Dictionary<string, string[]> { [field] = [message] }, code);
 
+    /// <summary>Several field errors at once (keys in camelCase); the message is the first one.</summary>
+    public static AppException Validation(IReadOnlyDictionary<string, string[]> errors) =>
+        new(AppErrorKind.Validation, errors.Values.First()[0], errors);
+
     public static AppException Unauthorized(string message) => new(AppErrorKind.Unauthorized, message, null);
 
     public static AppException Forbidden(string message) => new(AppErrorKind.Forbidden, message, null);

@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using OpenTrpg.Core.Application.Catalog;
 using OpenTrpg.Core.Application.Characters;
+using OpenTrpg.Core.Application.Items;
 
 namespace OpenTrpg.Core.Api.Tests.Items;
 
