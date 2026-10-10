@@ -1,10 +1,10 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:opentrpg/core/network/connectivity.dart';
-import 'package:opentrpg/core/realtime/connection_diagnostics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/core/network/connectivity.dart';
+import 'package:opentrpg_core/core/realtime/connection_diagnostics.dart';
 
 import 'helpers/app_pump.dart';
 import 'helpers/fake_realtime_hub.dart';

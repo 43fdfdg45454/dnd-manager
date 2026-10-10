@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:opentrpg/core/theme/app_icon.dart';
-import 'package:opentrpg/core/theme/icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/core/theme/app_icon.dart';
+import 'package:opentrpg_core/core/theme/icons.dart';
 
 Widget _host(Widget child) => MaterialApp(
   home: Scaffold(body: Center(child: child)),

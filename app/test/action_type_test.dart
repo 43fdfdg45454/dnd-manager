@@ -1,7 +1,7 @@
-import 'package:opentrpg/core/theme/tokens.dart';
-import 'package:opentrpg/systems/dnd5e/ui/action_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/core/theme/tokens.dart';
+import 'package:opentrpg_dnd5e/ui/action_type.dart';
 
 void main() {
   group('ActionKind.fromCastingTime', () {

@@ -1,8 +1,8 @@
-import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
-import 'package:opentrpg/features/items/domain/combat_usable.dart';
-import 'package:opentrpg/systems/dnd5e/items/dnd5e_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg_dnd5e/items/dnd5e_item.dart';
+import 'package:opentrpg_dnd5e/items/domain/combat_usable.dart';
 
 import 'helpers/app_pump.dart';
 import 'helpers/character_fakes.dart';

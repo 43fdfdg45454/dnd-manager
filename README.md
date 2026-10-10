@@ -13,7 +13,9 @@ calendario. El servidor es ASP.NET Core y se autohospeda con Docker.
 | Carpeta | Contenido |
 |---------|-----------|
 | `server/` | Solución .NET 10 (`OpenTrpg.slnx`): núcleo en `src/Core` (`OpenTrpg.Core.*`), módulo D&D 5e en `src/Systems/Dnd5e` (`OpenTrpg.Systems.Dnd5e.*`) y tests |
-| `app/` | Cliente Flutter (Android) |
+| `app/` | Cliente Flutter (Android), workspace de pub: anfitrión `opentrpg` (`lib/main.dart`, assets y fuentes) y tests en `app/test` |
+| `app/packages/core/` | Paquete `opentrpg_core`: núcleo genérico (red, caché, tema, campañas, sesiones, inventario) y contrato `GameSystemUi` |
+| `app/packages/dnd5e/` | Paquete `opentrpg_dnd5e`: módulo D&D 5e (catálogo, hoja, asistente, subida de nivel, grupo) |
 | `deploy/` | Docker Compose con `api` y `postgres`; reverse proxy y SMTP a cargo del operador |
 | `docs/` | Plan y ADR |
 

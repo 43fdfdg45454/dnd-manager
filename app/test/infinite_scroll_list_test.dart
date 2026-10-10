@@ -1,6 +1,6 @@
-import 'package:opentrpg/core/ui/infinite_scroll_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/core/ui/infinite_scroll_list.dart';
 
 /// A paged source of numbered rows driving an [InfiniteScrollList].
 class _Pager extends StatefulWidget {

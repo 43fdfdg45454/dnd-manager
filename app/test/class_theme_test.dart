@@ -1,8 +1,8 @@
-import 'package:opentrpg/core/theme/app_theme.dart';
-import 'package:opentrpg/features/characters/data/models.dart';
-import 'package:opentrpg/features/characters/domain/class_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/core/theme/app_theme.dart';
+import 'package:opentrpg_dnd5e/characters/domain/class_theme.dart';
+import 'package:opentrpg_dnd5e/characters/models.dart';
 
 import 'helpers/character_fakes.dart';
 

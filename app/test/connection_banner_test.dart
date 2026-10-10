@@ -1,11 +1,11 @@
-import 'package:opentrpg/core/realtime/connection_banner.dart';
-import 'package:opentrpg/core/realtime/realtime_hub.dart';
-import 'package:opentrpg/core/realtime/realtime_provider.dart';
-import 'package:opentrpg/core/realtime/realtime_status_icon.dart';
-import 'package:opentrpg/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/core/realtime/connection_banner.dart';
+import 'package:opentrpg_core/core/realtime/realtime_hub.dart';
+import 'package:opentrpg_core/core/realtime/realtime_provider.dart';
+import 'package:opentrpg_core/core/realtime/realtime_status_icon.dart';
+import 'package:opentrpg_core/core/theme/app_theme.dart';
 
 /// [CampaignRealtime] that holds a fixed state and records [retryNow].
 class _FixedRealtime extends CampaignRealtime {

@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:opentrpg/core/realtime/realtime_events.dart';
-import 'package:opentrpg/core/realtime/realtime_hub.dart';
-import 'package:opentrpg/core/realtime/realtime_provider.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:opentrpg_core/core/realtime/realtime_events.dart';
+import 'package:opentrpg_core/core/realtime/realtime_hub.dart';
+import 'package:opentrpg_core/core/realtime/realtime_provider.dart';
 
 /// In-memory [RealtimeHub]: records the calls and lets the test [emit] events
 /// and status changes. [failConnect] makes `connect` throw.

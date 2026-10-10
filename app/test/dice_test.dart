@@ -1,11 +1,11 @@
 import 'dart:math';
 
-import 'package:opentrpg/core/storage/local_preferences.dart';
-import 'package:opentrpg/features/characters/domain/combat_math.dart';
-import 'package:opentrpg/features/dice/data/dice_controller.dart';
-import 'package:opentrpg/features/dice/domain/dice_expression.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/core/storage/local_preferences.dart';
+import 'package:opentrpg_core/features/dice/data/dice_controller.dart';
+import 'package:opentrpg_core/features/dice/domain/dice_expression.dart';
+import 'package:opentrpg_dnd5e/characters/domain/combat_math.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'helpers/fakes.dart';

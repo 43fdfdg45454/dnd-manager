@@ -1,11 +1,11 @@
 import 'package:dio/dio.dart';
-import 'package:opentrpg/features/catalog/data/models.dart';
-import 'package:opentrpg/features/items/data/campaign_items_repository.dart';
-import 'package:opentrpg/features/items/data/inventory_repository.dart';
-import 'package:opentrpg/features/items/data/models.dart';
-import 'package:opentrpg/features/items/data/shops_repository.dart';
-import 'package:opentrpg/features/items/domain/items_format.dart';
-import 'package:opentrpg/systems/dnd5e/items/dnd5e_item.dart';
+import 'package:opentrpg_core/features/items/data/campaign_items_repository.dart';
+import 'package:opentrpg_core/features/items/data/inventory_repository.dart';
+import 'package:opentrpg_core/features/items/data/models.dart';
+import 'package:opentrpg_core/features/items/data/shops_repository.dart';
+import 'package:opentrpg_core/features/items/domain/items_format.dart';
+import 'package:opentrpg_dnd5e/catalog/data/models.dart';
+import 'package:opentrpg_dnd5e/items/dnd5e_item.dart';
 
 import 'character_fakes.dart';
 import 'fakes.dart';
@@ -227,8 +227,8 @@ class FakeCampaignItemsRepository implements CampaignItemsRepository {
   Object? deleteError;
   final List<ItemSource> sources = [];
   final List<({String? category, String? subcategory, List<String>? indexes})> queries = [];
-  final List<ItemTemplateInput> created = [];
-  final List<({String id, ItemTemplateInput input})> updated = [];
+  final List<Map<String, dynamic>> created = [];
+  final List<({String id, Map<String, dynamic> input})> updated = [];
   final List<String> deleted = [];
 
   @override
@@ -262,19 +262,33 @@ class FakeCampaignItemsRepository implements CampaignItemsRepository {
   }
 
   @override
-  Future<ItemDetail> create(String campaignId, ItemTemplateInput input) async {
+  Future<ItemSummary> create(String campaignId, Map<String, dynamic> input) async {
     created.add(input);
     final id = 'hb${created.length}';
-    homebrew.add(ItemSummary(id: id, name: input.name, category: input.category));
-    return ItemDetail(id: id, name: input.name, category: input.category);
+    homebrew.add(
+      ItemSummary(id: id, name: input['name'] as String, category: input['category'] as String),
+    );
+    return ItemDetail(id: id, name: input['name'] as String, category: input['category'] as String);
   }
 
   @override
-  Future<ItemDetail> update(String campaignId, String templateId, ItemTemplateInput input) async {
+  Future<ItemSummary> update(
+    String campaignId,
+    String templateId,
+    Map<String, dynamic> input,
+  ) async {
     updated.add((id: templateId, input: input));
     final index = homebrew.indexWhere((i) => i.id == templateId);
-    homebrew[index] = ItemSummary(id: templateId, name: input.name, category: input.category);
-    return ItemDetail(id: templateId, name: input.name, category: input.category);
+    homebrew[index] = ItemSummary(
+      id: templateId,
+      name: input['name'] as String,
+      category: input['category'] as String,
+    );
+    return ItemDetail(
+      id: templateId,
+      name: input['name'] as String,
+      category: input['category'] as String,
+    );
   }
 
   @override

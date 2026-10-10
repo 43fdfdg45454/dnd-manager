@@ -21,7 +21,10 @@ en `.gitignore`.
 ```
 server/   solución .NET: núcleo en src/Core (OpenTrpg.Core.*), módulo 5e en src/Systems/Dnd5e
           (OpenTrpg.Systems.Dnd5e.*, con seed/srd) y tests/
-app/      proyecto Flutter (lib/core, lib/features/<feature>)
+app/      proyecto Flutter, workspace de pub con un solo pubspec.lock:
+          app/ (anfitrión `opentrpg`: lib/main.dart, assets, fuentes y TODOS los tests en test/),
+          packages/core (`opentrpg_core`: lib/core y lib/features/<feature>; no depende de 5e) y
+          packages/dnd5e (`opentrpg_dnd5e`: catálogo, hoja, asistente, subida de nivel, grupo)
 deploy/   docker-compose.yml, .env.sample, backup.sh, README.md (reverse proxy del operador)
 docs/     PLAN.md (plan maestro) y ADR/ (decisiones de arquitectura)
 ```
@@ -35,7 +38,9 @@ cd server && dotnet run --project src/Core/OpenTrpg.Core.Api   # http://localhos
 cd server && dotnet ef migrations add <Nombre> -p src/Core/OpenTrpg.Core.Infrastructure -s src/Core/OpenTrpg.Core.Api
 
 # Cliente
-cd app && flutter pub get && flutter analyze && flutter test
+cd app && flutter pub get && flutter analyze && flutter test   # analyze recorre los 3 paquetes;
+                                                               # los tests viven todos en app/test
+cd app/packages/core && dart run build_runner build --delete-conflicting-outputs   # caché drift
 cd app && flutter run   # la URL del servidor se configura dentro de la app (pantalla "Servidor")
 cd app && flutter build apk --release --dart-define=API_BASE_URL=https://dnd.example.com
 
@@ -74,9 +79,10 @@ cd deploy && cp .env.sample .env && docker compose pull && docker compose up -d
 - Fuentes e iconos empaquetados: Almendra, Cinzel e IM Fell English (títulos) y Source Sans 3,
   Atkinson Hyperlegible Next y Lora (texto), todas SIL OFL con su aviso de licencia en
   `app/assets/licenses/`, e iconos **propios** dibujados en `app/assets/icons/` (licencia del
-  proyecto). Seis paletas con variante oscura y clara (`app/lib/core/theme/palettes.dart`, contraste
-  AA verificado por test; Obsidiana y brasa por defecto, Grafito sin naranja); el usuario elige
-  paleta, modo y fuentes en "Personalización". Ningún color fijo fuera de los tokens.
+  proyecto). Seis paletas con variante oscura y clara
+  (`app/packages/core/lib/core/theme/palettes.dart`, contraste AA verificado por test; Obsidiana
+  y brasa por defecto, Grafito sin naranja); el usuario elige paleta, modo y fuentes en
+  "Personalización". Ningún color fijo fuera de los tokens.
 - Descansos corto y largo los **pide** el jugador y los aprueba el DM; el nivel lo **concede** el DM
   y el jugador completa el asistente de subida (PG por tirada física; dotes siempre disponibles).
 
@@ -103,7 +109,10 @@ cd deploy && cp .env.sample .env && docker compose pull && docker compose up -d
 - Migraciones EF con nombre descriptivo en PascalCase. Seed del SRD idempotente.
 - Tests: xUnit. Cálculos de hoja en `OpenTrpg.Systems.Dnd5e.Domain.Tests`; integración con SQLite en
   memoria en `OpenTrpg.Core.Api.Tests` (y `OpenTrpg.Systems.Dnd5e.Api.Tests` para las rutas del módulo).
-- Flutter: `lib/core` (http, auth, caché, tema, i18n) y `lib/features/<feature>/{data,domain,ui}`.
+- Flutter: núcleo en `app/packages/core/lib/core` (http, auth, caché, tema, i18n) y
+  `app/packages/core/lib/features/<feature>/{data,domain,ui}`; lo de D&D 5e en
+  `app/packages/dnd5e/lib/<feature>/...`, conectado por el contrato `GameSystemUi`. Entre paquetes,
+  `package:opentrpg_core/...` y `package:opentrpg_dnd5e/...`; dentro de un paquete, relativas.
   Riverpod para estado, `dio` para HTTP, `drift` para caché. Textos de UI en `lib/l10n`.
 - Nombres de código, entidades y endpoints en inglés; textos visibles al usuario en español.
 - Commits en imperativo, descriptivos, sin identificadores de modelos de IA.

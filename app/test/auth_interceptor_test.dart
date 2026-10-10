@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:opentrpg/core/auth/auth_interceptor.dart';
-import 'package:opentrpg/core/auth/auth_response.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/core/auth/auth_interceptor.dart';
+import 'package:opentrpg_core/core/auth/auth_response.dart';
 
 import 'helpers/fakes.dart';
 

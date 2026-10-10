@@ -1,7 +1,7 @@
-import 'package:opentrpg/features/catalog/data/models.dart' show Page;
-import 'package:opentrpg/features/sessions/data/models.dart';
-import 'package:opentrpg/features/sessions/data/sessions_repository.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:opentrpg_core/features/sessions/data/models.dart';
+import 'package:opentrpg_core/features/sessions/data/sessions_repository.dart';
+import 'package:opentrpg_dnd5e/catalog/data/models.dart' show Page;
 
 import 'fakes.dart';
 

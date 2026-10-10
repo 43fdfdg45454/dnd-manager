@@ -1,12 +1,12 @@
-import 'package:opentrpg/core/router/app_router.dart';
-import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
-import 'package:opentrpg/features/campaigns/ui/general/campaign_section_page.dart';
-import 'package:opentrpg/features/catalog/data/models.dart' show Condition, ItemSummary;
-import 'package:opentrpg/features/characters/data/models.dart';
-import 'package:opentrpg/features/items/data/models.dart';
-import 'package:opentrpg/systems/dnd5e/session/party_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opentrpg_core/core/router/app_router.dart';
+import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
+import 'package:opentrpg_core/features/campaigns/ui/general/campaign_section_page.dart';
+import 'package:opentrpg_core/features/items/data/models.dart';
+import 'package:opentrpg_dnd5e/catalog/data/models.dart' show Condition, ItemSummary;
+import 'package:opentrpg_dnd5e/characters/models.dart';
+import 'package:opentrpg_dnd5e/session/party_models.dart';
 
 import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';
