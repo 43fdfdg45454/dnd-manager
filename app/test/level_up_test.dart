@@ -3,7 +3,6 @@ import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
 import 'package:opentrpg/features/catalog/data/models.dart' show SpellDetail;
 import 'package:opentrpg/features/catalog/ui/catalog_detail_links.dart';
 import 'package:opentrpg/features/catalog/ui/spell_detail_page.dart';
-import 'package:opentrpg/features/characters/data/characters_repository.dart';
 import 'package:opentrpg/features/characters/data/level_up_controller.dart';
 import 'package:opentrpg/features/characters/data/models.dart';
 import 'package:opentrpg/features/characters/ui/level_up/hit_points_step.dart';
@@ -347,7 +346,7 @@ void main() {
       final characters = FakeCharactersRepository(characters: [_character()]);
       characters.levelUpPlans[''] = plan;
       final container = ProviderContainer(
-        overrides: [charactersRepositoryProvider.overrideWithValue(characters)],
+        overrides: [...fakeCharactersOverrides(characters)],
       );
       addTearDown(container.dispose);
       container.listen(levelUpControllerProvider('ch1'), (_, _) {});

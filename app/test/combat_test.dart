@@ -12,7 +12,6 @@ import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
 import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
 import 'package:opentrpg/features/catalog/data/models.dart';
 import 'package:opentrpg/features/catalog/ui/spell_detail_page.dart';
-import 'package:opentrpg/features/characters/data/characters_repository.dart';
 import 'package:opentrpg/features/characters/data/models.dart';
 import 'package:opentrpg/features/characters/domain/spell_combat.dart';
 import 'package:opentrpg/features/characters/ui/character_page.dart';
@@ -42,6 +41,7 @@ import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
 import 'helpers/item_fakes.dart';
 import 'helpers/motion.dart';
+import 'package:opentrpg/systems/dnd5e/characters/dnd5e_characters_repository.dart';
 
 /// Opens `/characters/ch1` (or [location]) with the fakes. [face] is what every
 /// die shows. The view is tall so the whole combat screen is built.
@@ -84,7 +84,7 @@ Future<void> _pump(
         campaignsRepositoryProvider.overrideWithValue(
           FakeCampaignsRepository(campaigns: [makeCampaign(myRole: role)]),
         ),
-        charactersRepositoryProvider.overrideWithValue(characters),
+        ...fakeCharactersOverrides(characters),
         inventoryRepositoryProvider.overrideWithValue(inventory ?? FakeInventoryRepository()),
         catalogRepositoryProvider.overrideWithValue(catalog ?? FakeCatalogRepository()),
         diceRandomProvider.overrideWithValue(SequenceRandom.always(face)),
@@ -196,7 +196,7 @@ void main() {
 
     test('classAction y divineSmite usan los endpoints del contrato', () async {
       final adapter = _Adapter();
-      final repository = CharactersRepository(
+      final repository = Dnd5eCharactersRepository(
         ApiClient(
           baseUrl: 'http://localhost',
           dio: Dio(BaseOptions(baseUrl: 'http://localhost'))..httpClientAdapter = adapter,
@@ -227,9 +227,9 @@ void main() {
   });
 
   group('endpoints de la fase 19', () {
-    Future<(CharactersRepository, _Adapter)> repo() async {
+    Future<(Dnd5eCharactersRepository, _Adapter)> repo() async {
       final adapter = _Adapter();
-      final repository = CharactersRepository(
+      final repository = Dnd5eCharactersRepository(
         ApiClient(
           baseUrl: 'http://localhost',
           dio: Dio(BaseOptions(baseUrl: 'http://localhost'))..httpClientAdapter = adapter,

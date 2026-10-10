@@ -7,7 +7,6 @@ import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
 import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
 import 'package:opentrpg/features/catalog/data/models.dart' hide Page;
 import 'package:opentrpg/features/catalog/domain/item_modifier_format.dart';
-import 'package:opentrpg/features/characters/data/characters_repository.dart';
 import 'package:opentrpg/features/characters/ui/character_page.dart';
 import 'package:opentrpg/features/items/data/campaign_items_repository.dart';
 import 'package:opentrpg/features/items/data/inventory_repository.dart';
@@ -126,7 +125,7 @@ Future<void> _pumpApp(
         campaignsRepositoryProvider.overrideWithValue(
           FakeCampaignsRepository(campaigns: [makeCampaign(myRole: role)]),
         ),
-        charactersRepositoryProvider.overrideWithValue(
+        ...fakeCharactersOverrides(
           FakeCharactersRepository(
             characters: [makeCharacterJson(status: 'Active')],
             isDm: role.isAtLeastDm,

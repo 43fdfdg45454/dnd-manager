@@ -21,7 +21,6 @@ import 'package:opentrpg/core/ui/markdown_view.dart';
 import 'package:opentrpg/features/campaigns/data/campaigns_repository.dart';
 import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
 import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
-import 'package:opentrpg/features/characters/data/characters_repository.dart';
 import 'package:opentrpg/features/characters/ui/character_page.dart';
 import 'package:opentrpg/features/items/data/inventory_repository.dart';
 import 'package:opentrpg/features/library/data/library_controllers.dart';
@@ -135,7 +134,7 @@ Future<void> _pumpApp(
         filesRepositoryProvider.overrideWithValue(
           files ?? FakeFilesRepository(storage: fakeStorage),
         ),
-        charactersRepositoryProvider.overrideWithValue(
+        ...fakeCharactersOverrides(
           characters ?? FakeCharactersRepository(isDm: role.isAtLeastDm),
         ),
         inventoryRepositoryProvider.overrideWithValue(FakeInventoryRepository()),

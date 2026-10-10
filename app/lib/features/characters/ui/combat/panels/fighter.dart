@@ -11,6 +11,7 @@ import '../../../data/models.dart';
 import '../../../domain/combat_math.dart';
 import '../combat_support.dart';
 import 'panel_support.dart';
+import '../../../../../systems/dnd5e/characters/dnd5e_characters_controller.dart';
 
 /// Attacks per Attack action by fighter level (SRD Extra Attack).
 int fighterAttacks(int level) => level >= 20
@@ -40,7 +41,7 @@ class FighterPanel extends ConsumerWidget {
         .roll(container.read(diceRandomProvider));
     var healed = 0;
     final done = await runCombat(context, () async {
-      final controller = container.read(characterControllerProvider(c.id).notifier);
+      final controller = container.read(dnd5eCharacterControllerProvider(c.id).notifier);
       await controller.spendResource(resource.id);
       final current = container.read(characterControllerProvider(c.id)).value ?? c;
       final next = applyHealing(

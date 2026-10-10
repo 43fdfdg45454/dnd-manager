@@ -1,6 +1,5 @@
 import 'package:opentrpg/core/auth/auth_controller.dart';
 import 'package:opentrpg/core/auth/auth_state.dart';
-import 'package:opentrpg/features/characters/data/characters_repository.dart';
 import 'package:opentrpg/features/characters/data/models.dart';
 import 'package:opentrpg/features/characters/ui/combat/recovery_reminder.dart';
 import 'package:flutter/material.dart';
@@ -41,7 +40,7 @@ Future<FakeCharactersRepository> _pump(WidgetTester tester, Map<String, dynamic>
     ProviderScope(
       overrides: [
         authControllerProvider.overrideWith(() => FixedAuthController(AuthSignedIn(makeUser()))),
-        charactersRepositoryProvider.overrideWithValue(repo),
+        ...fakeCharactersOverrides(repo),
       ],
       child: MaterialApp(
         home: Scaffold(

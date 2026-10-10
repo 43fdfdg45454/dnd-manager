@@ -14,6 +14,7 @@ import 'combat_state.dart';
 import 'combat_support.dart';
 import 'recovery_reminder.dart';
 import 'rest_celebration.dart';
+import '../../../../systems/dnd5e/characters/dnd5e_characters_controller.dart';
 
 /// "Descansos". The DM (and the Owner) rests the character directly: "Descanso
 /// corto" asks for the hit dice to spend and "Descanso largo" confirms. A
@@ -40,8 +41,10 @@ class RestSection extends ConsumerStatefulWidget {
 class _RestSectionState extends ConsumerState<RestSection> {
   CharacterDetail get _character => widget.character;
 
-  CharacterController get _controller =>
-      ref.read(characterControllerProvider(_character.id).notifier);
+  Dnd5eCharacterController get _controller =>
+      ref.read(dnd5eCharacterControllerProvider(_character.id).notifier);
+
+  CharacterController get _core => ref.read(characterControllerProvider(_character.id).notifier);
 
   // -- Direct rests (DM) ------------------------------------------------------
 
@@ -89,7 +92,7 @@ class _RestSectionState extends ConsumerState<RestSection> {
     if (spent == null || !mounted) return;
     await runCombat(
       context,
-      () => _controller.requestRest(RestKind.short, hitDice: spent),
+      () => _core.requestRest(RestKind.short, hitDice: spent),
       success: 'Petición de descanso corto enviada al DM.',
     );
   }
@@ -106,7 +109,7 @@ class _RestSectionState extends ConsumerState<RestSection> {
     if (!confirmed || !mounted) return;
     await runCombat(
       context,
-      () => _controller.requestRest(RestKind.long),
+      () => _core.requestRest(RestKind.long),
       success: 'Petición de descanso largo enviada al DM.',
     );
   }
@@ -116,7 +119,7 @@ class _RestSectionState extends ConsumerState<RestSection> {
     try {
       await runCombat(
         context,
-        () => _controller.cancelRestRequest(),
+        () => _core.cancelRestRequest(),
         success: 'Petición de descanso cancelada.',
       );
     } finally {

@@ -9,7 +9,6 @@ import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
 import 'package:opentrpg/features/catalog/data/models.dart';
 import 'package:opentrpg/features/catalog/ui/catalog_detail_links.dart' show DetailInfoButton;
 import 'package:opentrpg/features/catalog/ui/feature_detail_page.dart';
-import 'package:opentrpg/features/characters/data/characters_repository.dart';
 import 'package:opentrpg/features/characters/domain/class_theme.dart';
 import 'package:opentrpg/features/characters/ui/character_page.dart';
 import 'package:opentrpg/features/characters/ui/combat/panels/panel_support.dart'
@@ -59,7 +58,7 @@ Future<void> _pump(
         campaignsRepositoryProvider.overrideWithValue(
           FakeCampaignsRepository(campaigns: [makeCampaign(myRole: role)]),
         ),
-        charactersRepositoryProvider.overrideWithValue(characters),
+        ...fakeCharactersOverrides(characters),
         inventoryRepositoryProvider.overrideWithValue(FakeInventoryRepository()),
         catalogRepositoryProvider.overrideWithValue(catalog ?? FakeCatalogRepository()),
         diceRandomProvider.overrideWithValue(SequenceRandom.always(face)),

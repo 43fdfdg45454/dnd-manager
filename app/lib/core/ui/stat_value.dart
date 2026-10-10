@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../features/characters/data/models.dart' show BreakdownPart, ValueBreakdown;
-import '../../features/characters/domain/character_format.dart' show formatModifier;
+import 'breakdown.dart';
 import '../../features/characters/domain/class_theme.dart' show classThemes;
 import '../theme/app_icon.dart';
 import '../theme/icons.dart';

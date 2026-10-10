@@ -2,18 +2,12 @@ import '../../catalog/data/models.dart' show ItemModifier;
 import '../../catalog/domain/item_modifier_format.dart';
 import '../../items/data/models.dart' show ItemOverrides;
 import '../../items/domain/items_format.dart';
+import '../../../core/characters/change_detail.dart';
 import '../data/models.dart';
 import 'character_format.dart';
 import 'payload_format.dart';
 
-/// One field of a sheet edit: what it was and what it would become.
-typedef FieldChange = ({String label, String? before, String after});
-
-/// Readable detail of a change request, shaped by its type. The UI renders
-/// each variant differently (a table for sheet edits, a card for an item...).
-sealed class ChangeDetail {
-  const ChangeDetail();
-}
+export '../../../core/characters/change_detail.dart';
 
 /// Sheet edit: one row per changed field, with the previous value when the
 /// server stored a snapshot (null for requests older than that feature).
@@ -23,86 +17,25 @@ final class SheetChangeDetail extends ChangeDetail {
   final List<FieldChange> fields;
 }
 
-/// An item to add: its resolved name and what defines it.
-final class ItemChangeDetail extends ChangeDetail {
-  const ItemChangeDetail({
-    required this.name,
-    required this.quantity,
-    required this.custom,
-    required this.lines,
-    required this.modifiers,
-  });
+/// Builds the detail of [request]: the D&D 5e types first
+/// ([describeDnd5eChange]) and then the ones of the core.
+ChangeDetail describeChange(ChangeRequest request) =>
+    describeDnd5eChange(request) ?? describeCoreChange(request)!;
 
-  final String name;
-  final int quantity;
-
-  /// True for a custom item or a catalog item changed by hand.
-  final bool custom;
-
-  /// "label: value" facts (category, damage, armor, properties...).
-  final List<PayloadLine> lines;
-
-  /// Readable modifiers ("+2 Fuerza", "+1 CA").
-  final List<String> modifiers;
-}
-
-/// Removing [quantity] of an item; [had] and [left] come from the snapshot.
-final class RemoveItemDetail extends ChangeDetail {
-  const RemoveItemDetail({required this.name, required this.quantity, this.had});
-
-  final String name;
-  final int quantity;
-  final int? had;
-
-  int? get left => had == null ? null : had! - quantity;
-}
-
-/// Money change with the balance before and after when known.
-final class MoneyChangeDetail extends ChangeDetail {
-  const MoneyChangeDetail({required this.deltaCp, this.beforeCp, this.reason});
-
-  final int deltaCp;
-  final int? beforeCp;
-  final String? reason;
-
-  int? get afterCp => beforeCp == null ? null : beforeCp! + deltaCp;
-}
-
-/// Nothing to detail (activation, unknown types).
-final class PlainChangeDetail extends ChangeDetail {
-  const PlainChangeDetail(this.lines);
-
-  final List<PayloadLine> lines;
-}
-
-/// Builds the detail of [request] from its payload and snapshot.
-ChangeDetail describeChange(ChangeRequest request) {
+/// The detail of the request types D&D 5e describes (sheet edits, companion,
+/// items to add, activation and other), or null for the ones of the core.
+ChangeDetail? describeDnd5eChange(ChangeRequest request) {
   final payload = request.payload;
   final before = request.before;
-  switch (request.type) {
-    case ChangeRequestType.editSheet:
-      return SheetChangeDetail(_sheetFields(payload, before));
-    case ChangeRequestType.addItem || ChangeRequestType.customItem:
-      return _itemDetail(payload, before);
-    case ChangeRequestType.removeItem:
-      return RemoveItemDetail(
-        name: '${payload['itemName'] ?? 'Objeto'}',
-        quantity: _int(payload['quantity']) ?? 1,
-        had: _int(before?['quantity']),
-      );
-    case ChangeRequestType.adjustMoney:
-      return MoneyChangeDetail(
-        deltaCp: _int(payload['deltaCp']) ?? 0,
-        beforeCp: _int(before?['copperPieces']),
-        reason: payload['reason'] is String && '${payload['reason']}'.isNotEmpty
-            ? '${payload['reason']}'
-            : null,
-      );
-    case ChangeRequestType.companion:
-      return SheetChangeDetail(_companionFields(payload, before));
-    case ChangeRequestType.activate || ChangeRequestType.other:
-      return PlainChangeDetail(describePayload(payload));
-  }
+  return switch (request.type) {
+    ChangeRequestType.editSheet => SheetChangeDetail(_sheetFields(payload, before)),
+    ChangeRequestType.addItem || ChangeRequestType.customItem => _itemDetail(payload, before),
+    ChangeRequestType.companion => SheetChangeDetail(_companionFields(payload, before)),
+    ChangeRequestType.activate || ChangeRequestType.other => PlainChangeDetail(
+      describePayload(payload),
+    ),
+    ChangeRequestType.removeItem || ChangeRequestType.adjustMoney => null,
+  };
 }
 
 /// "Bestia: Wolf → Panther" and "Nombre: Ceniza → Sombra".

@@ -5,12 +5,12 @@ import '../../../../../core/theme/app_icon.dart';
 import '../../../../../core/theme/components.dart';
 import '../../../../../core/theme/icons.dart';
 import '../../../../../core/ui/spell_category.dart';
-import '../../../data/characters_controller.dart';
 import '../../../data/models.dart';
 import '../../character_tabs.dart' show titleFromSpellIndex;
 import '../combat_support.dart';
 import '../resources_section.dart' show regularSlots;
 import 'panel_support.dart';
+import '../../../../../systems/dnd5e/characters/dnd5e_characters_controller.dart';
 
 class WizardPanel extends ConsumerWidget {
   const WizardPanel({super.key, required this.panel});

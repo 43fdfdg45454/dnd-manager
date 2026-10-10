@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:opentrpg/features/characters/data/characters_repository.dart';
 import 'package:opentrpg/features/characters/data/models.dart';
+import 'package:opentrpg/systems/dnd5e/characters/dnd5e_characters_repository.dart';
 
 import 'fakes.dart';
 
@@ -339,7 +341,13 @@ ChangeRequest makeChangeRequest({
 
 /// In-memory characters backend. [isDm] decides whether a sheet edit on an
 /// Active character is applied (200) or becomes a change request (202).
-class FakeCharactersRepository implements CharactersRepository {
+/// [repo] as the core characters repository and as the D&D 5e one.
+List<Override> fakeCharactersOverrides(FakeCharactersRepository repo) => [
+  charactersRepositoryProvider.overrideWithValue(repo),
+  dnd5eCharactersRepositoryProvider.overrideWithValue(repo),
+];
+
+class FakeCharactersRepository implements CharactersRepository, Dnd5eCharactersRepository {
   FakeCharactersRepository({
     List<Map<String, dynamic>> characters = const [],
     List<ChangeRequest> requests = const [],

@@ -3,7 +3,6 @@ import 'package:opentrpg/core/auth/auth_state.dart';
 import 'package:opentrpg/features/campaigns/data/campaigns_repository.dart';
 import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
 import 'package:opentrpg/features/campaigns/ui/campaigns_page.dart';
-import 'package:opentrpg/features/characters/data/characters_repository.dart';
 import 'package:opentrpg/features/systems/domain/game_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,7 +28,7 @@ Widget _providerScope(
   overrides: [
     authControllerProvider.overrideWith(() => FixedAuthController(AuthSignedIn(makeUser()))),
     campaignsRepositoryProvider.overrideWithValue(repository),
-    charactersRepositoryProvider.overrideWithValue(FakeCharactersRepository()),
+    ...fakeCharactersOverrides(FakeCharactersRepository()),
     fakeSystemsOverride(systems),
   ],
   child: child,

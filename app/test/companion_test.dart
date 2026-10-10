@@ -7,7 +7,6 @@ import 'package:opentrpg/features/campaigns/domain/campaign_models.dart';
 import 'package:opentrpg/features/catalog/data/beast_models.dart';
 import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
 import 'package:opentrpg/features/catalog/ui/beast_page.dart';
-import 'package:opentrpg/features/characters/data/characters_repository.dart';
 import 'package:opentrpg/features/characters/data/models.dart';
 import 'package:opentrpg/features/characters/domain/change_details.dart';
 import 'package:opentrpg/features/characters/ui/character_page.dart';
@@ -128,7 +127,7 @@ Future<void> _pump(
         campaignsRepositoryProvider.overrideWithValue(
           FakeCampaignsRepository(campaigns: [makeCampaign(myRole: role)]),
         ),
-        charactersRepositoryProvider.overrideWithValue(characters),
+        ...fakeCharactersOverrides(characters),
         inventoryRepositoryProvider.overrideWithValue(FakeInventoryRepository()),
         catalogRepositoryProvider.overrideWithValue(
           catalog ?? FakeCatalogRepository(beastList: const [_wolf, _cat, _boar, _bear]),

@@ -5,7 +5,6 @@ import 'package:opentrpg/core/router/app_router.dart';
 import 'package:opentrpg/core/theme/app_theme.dart';
 import 'package:opentrpg/features/campaigns/data/campaigns_repository.dart';
 import 'package:opentrpg/features/catalog/data/catalog_repository.dart';
-import 'package:opentrpg/features/characters/data/characters_repository.dart';
 import 'package:opentrpg/features/items/data/campaign_items_repository.dart';
 import 'package:opentrpg/features/items/data/inventory_repository.dart';
 import 'package:opentrpg/features/items/data/shops_repository.dart';
@@ -88,7 +87,7 @@ class AppFakes {
 
   List<Override> get overrides => [
     campaignsRepositoryProvider.overrideWithValue(campaigns),
-    charactersRepositoryProvider.overrideWithValue(characters),
+    ...fakeCharactersOverrides(characters),
     inventoryRepositoryProvider.overrideWithValue(inventory),
     shopsRepositoryProvider.overrideWithValue(shops),
     campaignItemsRepositoryProvider.overrideWithValue(campaignItems),

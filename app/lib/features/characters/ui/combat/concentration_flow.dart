@@ -7,6 +7,7 @@ import '../../data/characters_controller.dart';
 import '../../data/models.dart';
 import '../character_tabs.dart' show titleFromSpellIndex;
 import 'combat_support.dart';
+import '../../../../systems/dnd5e/characters/dnd5e_characters_controller.dart';
 
 /// Name of the spell [index]: the catalog's, or one derived from the index when
 /// the catalog cannot answer.
@@ -108,7 +109,7 @@ Future<void> resolveDamageOutcome(
   try {
     await runCombat(
       context,
-      () => ref.read(characterControllerProvider(characterId).notifier).setConcentration(null),
+      () => ref.read(dnd5eCharacterControllerProvider(characterId).notifier).setConcentration(null),
       success: '${who}Pierdes la concentración en $spell.',
     );
   } finally {

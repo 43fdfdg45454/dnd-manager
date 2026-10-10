@@ -9,6 +9,7 @@ import '../combat_support.dart';
 import '../concentration_flow.dart';
 import 'critical_damage_roll.dart';
 import 'panel_support.dart';
+import '../../../../../systems/dnd5e/characters/models.dart';
 
 /// Spell index of Hunter's Mark in the SRD catalog.
 const huntersMarkIndex = 'hunters-mark';

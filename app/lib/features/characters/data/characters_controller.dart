@@ -1,9 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../catalog/data/catalog_repository.dart';
-import '../../catalog/data/models.dart' show SpellSummary;
+import '../../../core/characters/models.dart';
 import 'characters_repository.dart';
-import 'models.dart';
 
 /// Errors are shown with a retry button instead of being retried silently.
 Duration? _noRetry(int retryCount, Object error) => null;
@@ -38,7 +36,7 @@ final campaignCharactersControllerProvider = AsyncNotifierProvider.autoDispose
       retry: _noRetry,
     );
 
-/// One character with its computed sheet.
+/// One character (its core fields and, in `raw`, the sheet of its game system).
 class CharacterController extends AsyncNotifier<CharacterDetail> {
   CharacterController(this.id);
 
@@ -60,22 +58,11 @@ class CharacterController extends AsyncNotifier<CharacterDetail> {
     _invalidateLists(detail.campaignId);
   }
 
-  void _apply(CharacterDetail detail) {
+  /// Shows [detail] (the answer of a write) and refreshes the lists that
+  /// derive from it. Game system modules call it after their own writes.
+  void apply(CharacterDetail detail) {
     state = AsyncData(detail);
     _invalidateLists(detail.campaignId);
-  }
-
-  /// Saves a sheet edit: [Saved] when applied, [PendingApproval] when the DM
-  /// has to approve it.
-  Future<SheetSaveResult> saveSheet(SheetPatch patch) async {
-    final result = await _repository.patchSheet(id, patch);
-    switch (result) {
-      case Saved(:final detail):
-        _apply(detail);
-      case PendingApproval():
-        await reload();
-    }
-    return result;
   }
 
   /// Asks the DM to activate the character (owner, Draft).
@@ -85,104 +72,21 @@ class CharacterController extends AsyncNotifier<CharacterDetail> {
     return request;
   }
 
-  /// Prepares the spells ([classes]: class index -> spell indexes) and clears
-  /// the pending preparation. Errors are rethrown for the UI.
-  Future<void> prepareSpells(Map<String, List<String>> classes) async =>
-      _apply(await _repository.prepareSpells(id, classes));
-
-  /// Keeps the previous preparation.
-  Future<void> keepSpellPreparation() async => _apply(await _repository.keepSpellPreparation(id));
-
-  Future<void> activate() async => _apply(await _repository.activate(id));
+  Future<void> activate() async => apply(await _repository.activate(id));
 
   /// Sets the portrait to the uploaded `Portrait` file [fileId] (null removes it).
   Future<void> setPortrait(String? fileId) async =>
-      _apply(await _repository.setPortrait(id, fileId));
+      apply(await _repository.setPortrait(id, fileId));
 
   /// DM only: hands the character to the player [ownerUserId] (null: NPC).
   Future<void> setOwner(String? ownerUserId) async =>
-      _apply(await _repository.setOwner(id, ownerUserId));
+      apply(await _repository.setOwner(id, ownerUserId));
 
   Future<void> delete() async {
     final campaignId = state.value?.campaignId;
     await _repository.delete(id);
     if (campaignId != null) _invalidateLists(campaignId);
   }
-
-  // Combat tracking (no approval).
-
-  Future<void> patchCombat(CombatPatch patch) async =>
-      _apply(await _repository.patchCombat(id, patch));
-
-  /// Applies [amount] of damage through the server and reloads the sheet.
-  /// Returns what it meant for the concentration (a Constitution save to make,
-  /// or the concentration ended by itself).
-  Future<DamageOutcome> applyDamage(int amount) async {
-    final result = await _repository.applyDamage(id, amount);
-    _apply(result.character);
-    return result.outcome;
-  }
-
-  /// Chooses or renames the animal companion: [Saved] when applied,
-  /// [PendingApproval] when the DM has to approve a change of beast.
-  Future<SheetSaveResult> setCompanion({required String beastIndex, required String name}) async {
-    final result = await _repository.setCompanion(id, beastIndex: beastIndex, name: name);
-    switch (result) {
-      case Saved(:final detail):
-        _apply(detail);
-      case PendingApproval():
-        await reload();
-    }
-    return result;
-  }
-
-  /// Moves the companion's hit points by [delta] or sets them to [current].
-  Future<void> trackCompanionHp({int? delta, int? current}) async =>
-      _apply(await _repository.trackCompanionHp(id, delta: delta, current: current));
-
-  /// DM only: removes the companion.
-  Future<void> deleteCompanion() async {
-    await _repository.deleteCompanion(id);
-    await reload();
-  }
-
-  /// Writes the dice rolled after a rest for the resource [resourceId].
-  Future<void> saveResourceRolls(String resourceId, List<int> values) async =>
-      _apply(await _repository.saveResourceRolls(id, resourceId, values));
-
-  /// Replaces the invalid picks (`replace.<index>` answers).
-  Future<void> replaceInvalidChoices(List<LevelUpChoiceAnswer> answers) async =>
-      _apply(await _repository.replaceInvalidChoices(id, answers));
-
-  Future<void> setConcentration(String? spellIndex) async {
-    await _repository.setConcentration(id, spellIndex);
-    await reload();
-  }
-
-  Future<void> spendSpellSlot(int level, {int amount = 1}) async {
-    await _repository.spendSpellSlot(id, level, amount: amount);
-    await reload();
-  }
-
-  Future<void> restoreSpellSlot(int level, {int amount = 1}) async {
-    await _repository.restoreSpellSlot(id, level, amount: amount);
-    await reload();
-  }
-
-  Future<void> spendResource(String resourceId, {int amount = 1}) async {
-    await _repository.spendResource(id, resourceId, amount: amount);
-    await reload();
-  }
-
-  Future<void> restoreResource(String resourceId, {int amount = 1}) async {
-    await _repository.restoreResource(id, resourceId, amount: amount);
-    await reload();
-  }
-
-  Future<void> shortRest({Map<String, int> hitDice = const {}}) async =>
-      _apply(await _repository.shortRest(id, hitDice: hitDice));
-
-  Future<void> longRest() async => _apply(await _repository.longRest(id));
 
   /// Asks the DM for a rest (the owner) and refreshes the sheet, which then
   /// carries the pending request.
@@ -197,31 +101,6 @@ class CharacterController extends AsyncNotifier<CharacterDetail> {
     await reload();
   }
 
-  // Class actions (phase 6).
-
-  Future<void> classAction(String action, [Map<String, dynamic> body = const {}]) async =>
-      _apply(await _repository.classAction(id, action, body));
-
-  Future<void> rage() => classAction('rage');
-
-  /// [note] (e.g. "Curar a Fulano") is recorded with the action when healing
-  /// someone else.
-  Future<void> layOnHands(int amount, {bool targetSelf = true, String? note}) =>
-      classAction('lay-on-hands', {'amount': amount, 'targetSelf': targetSelf, 'note': ?note});
-
-  Future<void> arcaneRecovery(List<int> slotLevels) =>
-      classAction('arcane-recovery', {'slotLevels': slotLevels});
-
-  /// Circle of the Land druid: same body and rules as the arcane recovery.
-  Future<void> naturalRecovery(List<int> slotLevels) =>
-      classAction('natural-recovery', {'slotLevels': slotLevels});
-
-  /// Spends a slot of [slotLevel] and returns the extra damage dice ("2d8").
-  Future<String> divineSmite(int slotLevel) async {
-    final result = await _repository.divineSmite(id, slotLevel);
-    _apply(result.character);
-    return result.damageDice;
-  }
 }
 
 final characterControllerProvider = AsyncNotifierProvider.autoDispose
@@ -282,39 +161,3 @@ final pendingChangeRequestCountProvider = Provider.autoDispose.family<int, Strin
   );
   return pending.value?.length ?? 0;
 });
-
-/// Name and level of spells by index, resolved from the catalog. The key is the
-/// indexes joined by commas (see [spellInfoKey]). Spells that cannot be loaded
-/// are left out.
-final spellInfoProvider = FutureProvider.autoDispose.family<Map<String, SpellSummary>, String>((
-  ref,
-  key,
-) async {
-  final catalog = ref.watch(catalogRepositoryProvider);
-  final indexes = key.isEmpty ? const <String>[] : key.split(',');
-  final found = await Future.wait(
-    indexes.map((index) async {
-      try {
-        return await catalog.spellDetail(index);
-      } catch (_) {
-        return null;
-      }
-    }),
-  );
-  return {for (final spell in found) ?spell?.index: spell!};
-}, retry: _noRetry);
-
-/// Stable family key for [spellInfoProvider].
-String spellInfoKey(Iterable<String> indexes) => (indexes.toSet().toList()..sort()).join(',');
-
-/// The invalid picks of a character and their replacement choices.
-final invalidChoicesProvider = FutureProvider.autoDispose.family<InvalidChoices, String>(
-  (ref, id) => ref.watch(charactersRepositoryProvider).invalidChoices(id),
-  retry: _noRetry,
-);
-
-/// What a character can prepare (`GET /characters/{id}/spell-preparation`).
-final spellPreparationProvider = FutureProvider.autoDispose.family<SpellPreparation, String>(
-  (ref, id) => ref.watch(charactersRepositoryProvider).spellPreparation(id),
-  retry: _noRetry,
-);

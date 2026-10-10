@@ -1,8 +1,8 @@
 import '../../catalog/data/models.dart' show titleFromIndex;
+import '../../../core/characters/change_detail.dart' show PayloadLine;
 import 'character_format.dart';
 
-/// One line of the readable diff of a change request.
-typedef PayloadLine = ({String label, String value});
+export '../../../core/characters/change_detail.dart' show PayloadLine;
 
 const _fieldLabels = <String, String>{
   'name': 'Nombre',

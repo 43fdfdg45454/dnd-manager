@@ -18,7 +18,6 @@ import '../../catalog/ui/catalog_detail_links.dart';
 import '../../catalog/ui/detail_widgets.dart';
 import '../../dice/domain/dice_expression.dart';
 import '../../dice/ui/dice_sheet.dart';
-import '../data/characters_controller.dart';
 import '../data/models.dart';
 import '../domain/character_format.dart';
 import '../domain/class_theme.dart';
@@ -26,6 +25,7 @@ import '../domain/height_weight.dart' show formatHeightAndWeight;
 import 'combat/companion_section.dart';
 import 'level_up/character_choices_section.dart';
 import 'skill_rolls.dart' show rollSkill, rollSkillWithMode;
+import '../../../systems/dnd5e/characters/dnd5e_characters_controller.dart';
 
 /// Icon with the note of an override, shown on long press. Renders nothing for
 /// values that were not overridden.

@@ -11,6 +11,7 @@ import '../../catalog/domain/catalog_format.dart';
 import '../../catalog/ui/catalog_detail_links.dart';
 import '../data/characters_controller.dart';
 import '../data/models.dart';
+import '../../../systems/dnd5e/characters/dnd5e_characters_controller.dart';
 
 /// "Prepara tus conjuros" (`/characters/:id/prepare-spells`): per class that
 /// prepares, choose up to the maximum of the class list (the spellbook for
@@ -30,8 +31,8 @@ class _PrepareSpellsPageState extends ConsumerState<PrepareSpellsPage> {
   bool _busy = false;
   String? _error;
 
-  CharacterController get _controller =>
-      ref.read(characterControllerProvider(widget.characterId).notifier);
+  Dnd5eCharacterController get _controller =>
+      ref.read(dnd5eCharacterControllerProvider(widget.characterId).notifier);
 
   void _init(SpellPreparation prep) {
     _selected ??= {

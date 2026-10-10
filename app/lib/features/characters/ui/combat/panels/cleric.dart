@@ -7,6 +7,7 @@ import '../../../../dice/ui/dice_sheet.dart';
 
 import '../combat_support.dart';
 import 'panel_support.dart';
+import '../../../../../systems/dnd5e/characters/models.dart';
 
 /// Highest challenge rating destroyed by Destroy Undead (SRD); null below 5.
 String? destroyUndeadCr(int level) => level >= 17
