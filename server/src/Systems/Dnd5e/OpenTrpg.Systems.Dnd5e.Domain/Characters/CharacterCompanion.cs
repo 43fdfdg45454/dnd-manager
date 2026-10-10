@@ -6,7 +6,8 @@ namespace OpenTrpg.Systems.Dnd5e.Domain.Characters;
 
 /// <summary>
 /// The animal companion of a character (a beast of the catalog chosen through a subclass feature with a
-/// <see cref="Catalog.CompanionRule"/>). At most one per character. Its statblock is calculated
+/// <see cref="Catalog.CompanionRule"/>, or a creature of its closed list). As many per character as the rule allows
+/// (<see cref="Catalog.CompanionRule.MaxCount"/>, one by default). Its statblock is calculated
 /// (<see cref="CompanionCalculator"/>); only the beast, the name and the current hit points are stored.
 /// Hit points are tracked without approval, like the character's.
 /// </summary>

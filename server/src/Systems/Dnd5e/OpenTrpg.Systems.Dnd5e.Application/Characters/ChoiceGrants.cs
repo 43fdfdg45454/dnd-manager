@@ -30,7 +30,7 @@ public static class ChoiceGrants
             if (options.TryGetValue(replaced, out var option))
             {
                 var classIndexes = character.Choices.Where(c => c.Selection.Replaced.Any(r => r.Index == replaced)).Select(c => c.ClassIndex ?? CharacterSpell.OriginClassIndex);
-                foreach (var classIndex in classIndexes.Distinct(StringComparer.Ordinal))
+                foreach (var classIndex in classIndexes.Append(replaced).Distinct(StringComparer.Ordinal))
                 {
                     foreach (var spell in option.Grants.Spells.Select(s => s.Index).Concat(option.Grants.Cantrips))
                     {
@@ -44,9 +44,9 @@ public static class ChoiceGrants
         }
 
         var grants = picks
-            .Select(p => (ClassIndex: p.ClassIndex ?? CharacterSpell.OriginClassIndex, Grants: options.GetValueOrDefault(p.Item.Index)?.Grants))
+            .Select(p => (ClassIndex: p.ClassIndex ?? CharacterSpell.OriginClassIndex, Source: p.Item.Index, Grants: options.GetValueOrDefault(p.Item.Index)?.Grants))
             .Where(g => g.Grants is { IsEmpty: false })
-            .Select(g => (g.ClassIndex, Grants: g.Grants!))
+            .Select(g => (g.ClassIndex, g.Source, Grants: g.Grants!))
             .ToList();
 
         var subclassIndexes = character.Classes.Select(c => c.SubclassIndex).OfType<string>().ToList();
@@ -55,12 +55,14 @@ public static class ChoiceGrants
             var owner = character.Classes.FirstOrDefault(c => c.SubclassIndex == subclassLevel.SubclassIndex);
             if (owner is not null && subclassLevel.Level <= owner.Level && subclassLevel.Grants is { IsEmpty: false } subclassGrants)
             {
-                grants.Add((owner.ClassIndex, subclassGrants));
+                grants.Add((owner.ClassIndex, subclassLevel.SubclassIndex, subclassGrants));
             }
         }
 
-        foreach (var (classIndex, granted) in grants)
+        foreach (var (classIndex, source, granted) in grants)
         {
+            // Spells granted with their own ability are cast as the source (the option or subclass), not as the class.
+            var spellClass = ChoiceEffects.SpellClassIndex(granted, source, classIndex);
             var level = classIndex == CharacterSpell.OriginClassIndex ? character.TotalLevel : levels.GetValueOrDefault(classIndex);
             foreach (var skill in granted.Skills)
             {
@@ -81,12 +83,12 @@ public static class ChoiceGrants
 
             foreach (var cantrip in granted.Cantrips)
             {
-                character.AddSpell(cantrip, classIndex, isPrepared: true, alwaysPrepared: true);
+                character.AddSpell(cantrip, spellClass, isPrepared: true, alwaysPrepared: true);
             }
 
             foreach (var spell in granted.Spells.Where(s => (s.MinLevel ?? 0) <= level))
             {
-                character.AddSpell(spell.Index, classIndex, isPrepared: true, alwaysPrepared: true);
+                character.AddSpell(spell.Index, spellClass, isPrepared: true, alwaysPrepared: true);
             }
         }
     }

@@ -263,6 +263,17 @@ public sealed class OptionDefinition
     /// </summary>
     public bool Starter { get; init; }
 
+    /// <summary>Repeatable feat: an Ability Score Improvement offers it again after it is taken (each pick counts on its own).</summary>
+    public bool Repeatable { get; init; }
+
+    /// <summary>
+    /// What the option does to the inventory entry it is applied to (<see cref="Catalog.ItemEffects"/>); null for options that
+    /// are not item enhancements.
+    /// </summary>
+    public string? ItemEffectsJson { get; init; }
+
+    public ItemEffects? ItemEffects => Catalog.ItemEffects.Parse(ItemEffectsJson);
+
     public OptionPrerequisites Prerequisites => LevelChoiceJson.ParsePrerequisites(PrerequisitesJson);
 
     public IReadOnlyList<ChoiceModifier> Modifiers => LevelChoiceJson.ParseModifiers(ModifiersJson);

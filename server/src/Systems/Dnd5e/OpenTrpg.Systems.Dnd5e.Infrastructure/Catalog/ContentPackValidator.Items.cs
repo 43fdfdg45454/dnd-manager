@@ -259,6 +259,11 @@ internal sealed partial class ContentPackValidator
             }
         }
 
+        if (item.Graft is { } graft && GraftSlot($"{path}.graft", graft) is { } slot)
+        {
+            systemData["graft"] = new Dictionary<string, object?> { ["slot"] = slot };
+        }
+
         return systemData.Count == 0 ? data : data with { SystemDataJson = JsonSerializer.Serialize(systemData, SystemDataOptions) };
     }
 }

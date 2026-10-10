@@ -158,6 +158,7 @@ public static class SheetCalculator
 
         featureModifiers = [.. choices.Modifiers.Where(m => m.Kind != ItemModifierKind.Speed).Select(m => Resolve(m, 0))];
         var lostSaves = LostSavingThrows(input.Race, input.Subrace, choices);
+        var lostSkills = LostSkills(input.Race, input.Subrace, choices);
 
         var savingThrows = Abilities.All.ToDictionary(
             a => a,
@@ -177,7 +178,7 @@ public static class SheetCalculator
 
         SkillValue Skill(string index, string name, string ability)
         {
-            var proficiency = FindProficiency(character, ProficiencyType.Skill, index, SkillProficiencyPrefix);
+            var proficiency = lostSkills.Any(l => l.Value == index) ? null : FindProficiency(character, ProficiencyType.Skill, index, SkillProficiencyPrefix);
             var expertise = proficiency?.Expertise ?? false;
             var field = OverrideFields.Skill(index);
             var builder = FromAbility(ability);
@@ -299,6 +300,13 @@ public static class SheetCalculator
             return (dc, attack, cantripDc, cantripAttack);
         }
 
+        // H41: the ability of a spellcasting entry can be overridden (spellcastingAbility.<entry>, 1 = str … 6 = cha).
+        string CastingAbility(string key, string ability) =>
+            overrides.TryGetValue(OverrideFields.SpellcastingAbility(key), out var chosen) && OverrideFields.AbilityOf(chosen.Value) is { } overridden
+                ? overridden
+                : ability;
+        bool CastingOverridden(string key) => overrides.ContainsKey(OverrideFields.SpellcastingAbility(key));
+
         var spellCritical = featureModifiers
             .Where(m => m.Kind == ItemModifierKind.CriticalRange && (m.Target is null or ModifierTargets.Spell) && m.Condition is null && m.Value is >= 2 and < DefaultCriticalRange)
             .OrderBy(m => m.Value)
@@ -308,13 +316,15 @@ public static class SheetCalculator
             .Where(c => c.Info.SpellcastingAbility is { } ability && Abilities.IsValid(ability) && c.Info.CastsAt(c.Level.Level))
             .Select(c =>
             {
-                var ability = c.Info.SpellcastingAbility!;
                 var classIndex = c.Level.ClassIndex;
+                var ability = CastingAbility(classIndex, c.Info.SpellcastingAbility!);
                 var (saveDc, attackBonus, cantripDc, cantripAttack) = SpellNumbers(classIndex, ability);
                 var maxSpellLevel = c.Info.Casting?.MaxSpellLevelAt(c.Level.Level) ?? MaxSpellLevel(c.Info.SlotsByLevel(c.Level.Level));
                 IReadOnlyList<int> noCost = Array.Empty<int>();
-                return new SpellcastingValue(classIndex, ability, saveDc, attackBonus, PreparedMax(c.Info, c.Level.Level, Mod))
+                var preparedMax = PreparedMax(c.Info, c.Level.Level, a => Mod(a == c.Info.SpellcastingAbility ? ability : a));
+                return new SpellcastingValue(classIndex, ability, saveDc, attackBonus, preparedMax)
                 {
+                    AbilityOverridden = CastingOverridden(classIndex),
                     MaxSpellLevel = maxSpellLevel,
                     SpellsKnownMax = c.Info.SubclassSpellcasting?.SpellsKnownAt(c.Level.Level),
                     CantripsKnownMax = c.Info.SubclassSpellcasting?.CantripsKnownAt(c.Level.Level),
@@ -329,12 +339,30 @@ public static class SheetCalculator
             })
             .ToList();
 
-        if (RacialSpellcastingAbility(input.Race, input.Subrace) is { } racialAbility)
+        if (RacialSpellcastingAbility(input.Race, input.Subrace) is { } originalRacialAbility)
         {
             const string raceIndex = CharacterSpell.OriginClassIndex;
+            var racialAbility = CastingAbility(raceIndex, originalRacialAbility);
             var (saveDc, attackBonus, cantripDc, cantripAttack) = SpellNumbers(raceIndex, racialAbility);
             spellcasting.Add(new SpellcastingValue(raceIndex, racialAbility, saveDc, attackBonus, null)
             {
+                AbilityOverridden = CastingOverridden(raceIndex),
+                CantripSaveDc = cantripDc,
+                CantripAttackBonus = cantripAttack,
+                CriticalRange = spellCritical?.Value ?? DefaultCriticalRange,
+                CriticalRangeSource = spellCritical?.Label,
+            });
+        }
+
+        // Options, feats and subclass levels that grant spells cast with their own ability (content packs).
+        foreach (var granted in choices.GrantedSpellcasting.Where(g => Abilities.IsValid(g.Ability) && spellcasting.All(s => s.ClassIndex != g.Key)))
+        {
+            var grantedAbility = CastingAbility(granted.Key, granted.Ability);
+            var (saveDc, attackBonus, cantripDc, cantripAttack) = SpellNumbers(granted.Key, grantedAbility);
+            spellcasting.Add(new SpellcastingValue(granted.Key, grantedAbility, saveDc, attackBonus, null)
+            {
+                Name = granted.Name,
+                AbilityOverridden = CastingOverridden(granted.Key),
                 CantripSaveDc = cantripDc,
                 CantripAttackBonus = cantripAttack,
                 CriticalRange = spellCritical?.Value ?? DefaultCriticalRange,
@@ -351,6 +379,7 @@ public static class SheetCalculator
             .Select(r => new ResourceTemplate(r.Resource.Key, r.Resource.Name, r.Breakdown!.Total, r.Resource.Recharge)
             {
                 RollOnRest = r.Resource.RollOnRest,
+                RechargeRoll = r.Resource.RechargeRoll,
                 Dice = r.Resource.DiceAt(r.ClassLevel),
                 Source = r.Label,
                 Breakdown = r.Breakdown,
@@ -435,6 +464,7 @@ public static class SheetCalculator
             BreathWeapon = breathWeapon,
             Immunities = defenses.Immunities,
             ConditionImmunities = defenses.ConditionImmunities,
+            LostSkills = lostSkills,
             LostSavingThrows = lostSaves,
             ClassSaveDcs = classSaveDcs,
             PassiveInvestigation = passiveInvestigation,
@@ -488,6 +518,34 @@ public static class SheetCalculator
             foreach (var ability in lost.Where(a => Abilities.IsValid(a) && result.All(r => r.Value != a)))
             {
                 result.Add(new SourcedValue(ability, source, label));
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>Skill proficiencies lost by the race, the subrace, options and feats (<c>grants.removeSkills</c>).</summary>
+    private static List<SourcedValue> LostSkills(RaceInfo? race, SubraceInfo? subrace, ChoiceEffects choices)
+    {
+        var sources = new List<(string Source, string Label, IReadOnlyList<string> Lost)>();
+        if (race?.Grants.RemoveSkills is { Count: > 0 } raceLost)
+        {
+            sources.Add((BreakdownSources.Race, race.Name.Length > 0 ? race.Name : BreakdownLabels.Race, raceLost));
+        }
+
+        if (subrace?.Grants.RemoveSkills is { Count: > 0 } subraceLost)
+        {
+            sources.Add((BreakdownSources.Subrace, subrace.Name.Length > 0 ? subrace.Name : BreakdownLabels.Subrace, subraceLost));
+        }
+
+        sources.AddRange(choices.Grants.Where(g => g.Grants.RemoveSkills.Count > 0).Select(g => (g.Source, g.Label, g.Grants.RemoveSkills)));
+
+        var result = new List<SourcedValue>();
+        foreach (var (source, label, lost) in sources)
+        {
+            foreach (var skill in lost.Where(s => result.All(r => r.Value != s)))
+            {
+                result.Add(new SourcedValue(skill, source, label));
             }
         }
 

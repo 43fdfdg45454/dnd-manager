@@ -73,6 +73,7 @@ internal sealed partial class ContentPackValidator
                     _traitOwnerReferences.Add((subracePath, subraceIndex, true));
                 }
             });
+            var resource = Resource($"{path}.resource", trait.Resource);
             if (index is null)
             {
                 return;
@@ -86,6 +87,7 @@ internal sealed partial class ContentPackValidator
                 Description = description,
                 RaceIndexes = races,
                 SubraceIndexes = subraces,
+                ResourceJson = resource,
                 Source = _id,
             });
         });

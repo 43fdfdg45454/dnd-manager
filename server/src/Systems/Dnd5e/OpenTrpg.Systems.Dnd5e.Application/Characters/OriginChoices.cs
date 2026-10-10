@@ -677,7 +677,7 @@ public sealed class OriginChoicesHandler(
     /// The saving throws a feat with <c>grants.removeSavingThrows</c> takes away, when the player chooses them
     /// (<c>removedSavingThrows</c>: exactly <c>choose</c> abilities of <c>from</c>); null when nothing is chosen.
     /// </summary>
-    private static List<string>? RemovedSavingThrowsOf(PlannedOption feat, List<string>? removed)
+    internal static List<string>? RemovedSavingThrowsOf(PlannedOption feat, List<string>? removed)
     {
         var rule = feat.Definition?.Grants.RemoveSavingThrows;
         if (rule is null || rule.Fixed.Count > 0)

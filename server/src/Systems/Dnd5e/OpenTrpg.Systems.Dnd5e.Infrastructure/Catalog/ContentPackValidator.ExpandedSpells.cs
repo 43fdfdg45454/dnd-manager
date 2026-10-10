@@ -17,9 +17,27 @@ internal sealed partial class ContentPackValidator
     private string? ExpandedSpellList(string path, List<PackExpandedSpellJson?> list)
     {
         var spells = new List<ExpandedSpell>();
+        var tags = new List<string>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         ForEach(path, list, (spellPath, spell) =>
         {
+            // { "tags": [...] }: every spell with one of those tags (resolved when the list is used).
+            if (spell.Tags is not null)
+            {
+                if (spell.Index is not null || spell.Level is not null)
+                {
+                    AddError(spellPath, "Usa index y level, o tags, pero no ambos.");
+                    return;
+                }
+
+                foreach (var tag in SpellTagList($"{spellPath}.tags", spell.Tags).Where(t => !tags.Contains(t)))
+                {
+                    tags.Add(tag);
+                }
+
+                return;
+            }
+
             var index = Reference($"{spellPath}.index", spell.Index);
             var level = RequiredInt($"{spellPath}.level", spell.Level, 0, 9);
             if (index is null)
@@ -45,7 +63,7 @@ internal sealed partial class ContentPackValidator
             }
         });
 
-        return ExpandedSpell.ToJson(spells);
+        return ExpandedSpell.ToJson(spells, tags);
     }
 
     /// <summary>Checks that the spells of the expanded lists exist (catalog of other sources or the pack) with that level.</summary>

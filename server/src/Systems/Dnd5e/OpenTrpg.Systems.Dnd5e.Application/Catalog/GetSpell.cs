@@ -10,7 +10,7 @@ public sealed class GetSpellHandler(ICatalogRepository catalog)
     public async Task<SpellDetailDto> HandleAsync(string index, CancellationToken cancellationToken = default)
     {
         var s = await catalog.GetSpellAsync(index, cancellationToken) ?? throw CatalogErrors.SpellNotFound();
-        var expansions = SpellExpansionDto.Lookup(await catalog.ListSubclassesWithExpandedSpellsAsync(cancellationToken));
+        var expansions = SpellExpansionDto.Lookup(await catalog.ListSubclassesWithExpandedSpellsAsync(cancellationToken), [s]);
         var ritualFor = (await catalog.ListClassesAsync(cancellationToken))
             .Where(c => c.Spellcasting?.TreatAsRitual?.Contains(s.Index, StringComparer.Ordinal) ?? false)
             .Select(c => c.Index)
@@ -40,6 +40,7 @@ public sealed class GetSpellHandler(ICatalogRepository catalog)
             expansions[s.Index].ToList())
         {
             RitualForClasses = ritualFor,
+            Tags = s.Tags,
         };
     }
 }

@@ -84,6 +84,9 @@ public sealed record PlannedChoice(LevelChoiceRule Rule, int Required, bool Free
                 Cost = o.Cost,
                 Requires = o.Requires,
                 SetId = o.Definition?.SetId,
+                RemoveSavingThrows = o.Definition?.Grants.RemoveSavingThrows is { } remove
+                    ? new RemoveSavingThrowsDto(remove.Choose, remove.From)
+                    : null,
             })
             .ToList(),
         Known.Select(ChoiceItemDto.From).ToList(),
@@ -892,7 +895,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
 
         /// <summary>
         /// Options of a set (or the <paramref name="from"/> options, of any set) plus those of the <paramref name="alsoFrom"/>
-        /// sets, without the ones the character already has.
+        /// sets, without the ones the character already has (repeatable feats are offered again).
         /// </summary>
         private List<PlannedOption> SetOptions(string setId, IReadOnlyList<string>? from, IReadOnlyList<string> alsoFrom)
         {
@@ -900,7 +903,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             var taken = _active.Select(p => p.Item.Index).ToHashSet(StringComparer.Ordinal);
             return options
                 .Where(o => (allowed is null ? o.SetId == setId : allowed.Contains(o.Index)) || alsoFrom.Contains(o.SetId, StringComparer.Ordinal))
-                .Where(o => !taken.Contains(o.Index) && !o.CreationOnly)
+                .Where(o => (!taken.Contains(o.Index) || o.Repeatable) && !o.CreationOnly)
                 .Select(o =>
                 {
                     var reason = WhyNot(o);
@@ -1094,9 +1097,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             var classList = casting?.SpellList ?? definition.Index;
             var list = filter.SpellList ?? classList;
             // The subclass's expanded list counts as part of the class's own list (not of another list a filter names).
-            var expanded = list == classList
-                ? subclasses.FirstOrDefault(s => s.Index == subclassIndex)?.ExpandedSpellIndexes ?? new HashSet<string>()
-                : new HashSet<string>();
+            var expanding = list == classList ? subclasses.FirstOrDefault(s => s.Index == subclassIndex) : null;
             var maxSpellLevel = casting is not null ? SheetCalculator.MaxSpellLevel(casting.SlotsAt(newLevel)) : ClassMaxSpellLevel(definition, classLevel);
             IReadOnlyList<int> levels = rule.Kind == LevelChoiceKind.CantripsKnown || filter.CantripsOnly
                 ? [0]
@@ -1107,8 +1108,9 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             var schoolsReason = filter.Schools.Count > 0 ? filter.SchoolsReason() : null;
             return spells
                 .Where(s => levels.Contains(s.Level) && !known.Contains(s.Index))
-                .Where(s => list == ChoiceFilter.AnyList || s.ClassIndexes.Contains(list, StringComparer.Ordinal) || expanded.Contains(s.Index))
+                .Where(s => list == ChoiceFilter.AnyList || s.ClassIndexes.Contains(list, StringComparer.Ordinal) || expanding?.Expands(s) == true)
                 .Where(s => !filter.RitualOnly || (definition.Spellcasting?.CastsAsRitual(s.Index, s.Ritual) ?? s.Ritual))
+                .Where(filter.AllowsTags)
                 .Select(s => filter.AllowsSchool(s.School, newLevel) ? SpellOption(s) : SpellOption(s) with { Eligible = false, Reason = schoolsReason })
                 .OrderBy(o => o.Eligible ? 0 : 1)
                 .ToList();
@@ -1175,6 +1177,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             ItemModifierKind.Speed when target is not null => (SheetCalculator.SpeedKey(target), $"Velocidad de {ModifierTargets.SpeedLabel(target)}", null),
             ItemModifierKind.DeathSaveFailures => (null, "Fallos de salvación contra muerte para morir", null),
             ItemModifierKind.HitDiceRecovery => (null, "Recupera todos los dados de golpe en descanso largo", null),
+            ItemModifierKind.ResourceMaxBonus => (null, $"Usos máximos de {target}", null),
             _ => (null, modifier.Kind.ToString(), null),
         };
 

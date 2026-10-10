@@ -1790,6 +1790,64 @@ void main() {
       expect(repo.resourceSpends.last, (id: 'r2', amount: 10));
     });
 
+    testWidgets('recuperar al tirar iniciativa y tirar la recarga de un recurso', (tester) async {
+      final repo = _repo(
+        combat: makeCombatJson(
+          resources: [
+            {
+              'id': 'r1',
+              'name': 'Chispa de ejemplo',
+              'max': 2,
+              'used': 2,
+              'recharge': 'Initiative',
+            },
+            {
+              'id': 'r2',
+              'name': 'Aliento de ejemplo',
+              'max': 1,
+              'used': 1,
+              'recharge': 'Manual',
+              'rechargeRoll': {'dice': 'd6', 'min': 5},
+            },
+          ],
+        ),
+      );
+      await _pump(tester, characters: repo);
+      expect(find.text('Recuperar al tirar iniciativa'), findsOneWidget);
+      expect(find.text('Tirar recarga (d6 ≥ 5)'), findsOneWidget);
+
+      await _tap(tester, 'resources-initiative');
+      expect(repo.initiativeRecharges, 1);
+
+      // A 3 does not bring it back; a 6 does.
+      await _tap(tester, 'resource-r2-recharge-roll');
+      await tester.enterText(find.byKey(const Key('number-field')), '3');
+      await _tap(tester, 'number-confirm');
+      expect(repo.rechargeRolls, [(id: 'r2', value: 3)]);
+      expect(find.text('Aliento de ejemplo no se recupera esta vez.'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      await _tap(tester, 'resource-r2-recharge-roll');
+      await tester.enterText(find.byKey(const Key('number-field')), '6');
+      await _tap(tester, 'number-confirm');
+      expect(repo.rechargeRolls.last, (id: 'r2', value: 6));
+      expect(find.text('Aliento de ejemplo se recupera.'), findsOneWidget);
+    });
+
+    testWidgets('sin recursos de iniciativa no aparece el botón', (tester) async {
+      final repo = _repo(
+        combat: makeCombatJson(
+          resources: [
+            {'id': 'r1', 'name': 'Second Wind', 'max': 1, 'used': 0, 'recharge': 'ShortRest'},
+          ],
+        ),
+      );
+      await _pump(tester, characters: repo);
+      expect(find.byKey(const Key('resources-initiative')), findsNothing);
+      expect(find.byKey(const Key('resource-r1-recharge-roll')), findsNothing);
+    });
+
     testWidgets('las opciones con coste salen junto a su recurso con "Usar"', (tester) async {
       final repo = _repo(
         combat: makeCombatJson(

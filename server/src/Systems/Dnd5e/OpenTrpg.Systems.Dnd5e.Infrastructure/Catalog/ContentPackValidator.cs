@@ -54,6 +54,12 @@ internal sealed record ContentPackContext(
     /// <summary>Extra vocabulary entries (kind → indexes) of the SRD and the required packs (languages, damage types...).</summary>
     public IReadOnlyDictionary<string, IReadOnlySet<string>>? Vocabularies { get; init; }
 
+    /// <summary>Conditions of the required packs (<c>conditions[]</c>), for condition immunities.</summary>
+    public IReadOnlySet<string>? Conditions { get; init; }
+
+    /// <summary>Creatures of the SRD and the required packs, for the closed lists of companions.</summary>
+    public IReadOnlySet<string>? Creatures { get; init; }
+
     /// <summary>Contents of the equipment packs of the base pack by item index ("explorers-pack" → backpack, bedroll...).</summary>
     public IReadOnlyDictionary<string, IReadOnlyList<StartingItem>>? ItemContents { get; init; }
 
@@ -117,6 +123,9 @@ internal sealed class ContentPackRows
 
     /// <summary>Equipment categories with their items (<c>reference.equipmentCategories</c>).</summary>
     public List<EquipmentCategory> EquipmentCategories { get; } = [];
+
+    /// <summary>Spells tagged by the pack (<c>spells[].tags</c> and <c>reference.spellTags[].spells</c>).</summary>
+    public List<SpellTag> SpellTags { get; } = [];
 
     public Dictionary<string, int> Counts() => new()
     {
@@ -312,6 +321,14 @@ internal sealed partial class ContentPackValidator
             }
         }
 
+        foreach (var tag in pack.Reference?.SpellTags ?? [])
+        {
+            if (tag?.Index?.Trim() is { Length: > 0 } tagIndex)
+            {
+                _packSpellTags.Add(tagIndex);
+            }
+        }
+
         foreach (var condition in pack.Conditions ?? [])
         {
             if (condition?.Index?.Trim() is { Length: > 0 } conditionIndex)
@@ -388,6 +405,8 @@ internal sealed partial class ContentPackValidator
         CheckCostReferences(rows);
         CheckAfterReferences(rows);
         CheckExpandedSpellReferences(rows);
+        CheckTaggedSpellReferences(rows);
+        CheckCompanionCreatureReferences(rows);
         CheckStartingEquipmentReferences(rows);
         CheckSharedTraitReferences(rows);
         return rows;
@@ -547,6 +566,7 @@ internal sealed partial class ContentPackValidator
             var featureResource = feature.Resource is not null ? Resource($"{featurePath}.resource", feature.Resource) : null;
             var featureCompanion = feature.Companion is not null ? Companion($"{featurePath}.companion", feature.Companion) : null;
             var featureModifiers = feature.Modifiers is not null ? ChoiceModifiers($"{featurePath}.modifiers", feature.Modifiers, "Un rasgo") : null;
+            var featureEnhancement = feature.ItemEnhancement is not null ? ItemEnhancement($"{featurePath}.itemEnhancement", feature.ItemEnhancement) : null;
             if (unlisted)
             {
                 level = RequiredInt($"{featurePath}.level", feature.Level, 1, MaxLevels);
@@ -573,6 +593,7 @@ internal sealed partial class ContentPackValidator
                 ResourceJson = featureResource,
                 CompanionJson = featureCompanion,
                 ModifiersJson = featureModifiers is null or "[]" ? null : featureModifiers,
+                ItemEnhancementJson = featureEnhancement,
                 Source = _id,
             });
         });
@@ -788,9 +809,11 @@ internal sealed partial class ContentPackValidator
             Source = _id,
         };
 
+        var tags = SpellTagList($"{path}.tags", spell.Tags);
         if (index is not null)
         {
             rows.Spells.Add(definition);
+            rows.SpellTags.AddRange(tags.Select(tag => new SpellTag { Tag = tag, SpellIndex = index, Source = _id }));
         }
     }
 
@@ -1077,6 +1100,7 @@ internal sealed partial class ContentPackValidator
             var index = Index($"{traitPath}.index", "traits", trait.Index);
             var name = RequiredText($"{traitPath}.name", trait.Name, NameMaxLength);
             var description = Paragraphs($"{traitPath}.description", trait.Description);
+            var resource = Resource($"{traitPath}.resource", trait.Resource);
             if (index is null)
             {
                 return;
@@ -1090,6 +1114,7 @@ internal sealed partial class ContentPackValidator
                 Description = description,
                 RaceIndexes = raceIndex is null ? [] : [raceIndex],
                 SubraceIndexes = subraceIndex is null ? [] : [subraceIndex],
+                ResourceJson = resource,
                 Source = _id,
             });
         });

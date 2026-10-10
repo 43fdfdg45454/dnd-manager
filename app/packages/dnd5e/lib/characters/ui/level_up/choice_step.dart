@@ -406,6 +406,30 @@ class _FeatPanel extends StatelessWidget {
             ],
           ),
         ],
+        if (feat?.removeSavingThrows case final remove? when remove.asks) ...[
+          const SizedBox(height: 8),
+          Text(
+            remove.choose == 1
+                ? 'Con ${feat!.name} pierdes la competencia en 1 salvación:'
+                : 'Con ${feat!.name} pierdes la competencia en ${remove.choose} salvaciones:',
+            key: const Key('levelup-removed-saves-title'),
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final ability in remove.from.isEmpty ? abilityKeys : remove.from)
+                FilterChip(
+                  key: Key('levelup-removed-save-$ability'),
+                  label: Text(abilityAbbreviation(ability)),
+                  selected: selection.removedSavingThrows.contains(ability),
+                  onSelected: (_) => controller.toggleRemovedSave(choice, ability),
+                ),
+            ],
+          ),
+        ],
       ],
     );
   }

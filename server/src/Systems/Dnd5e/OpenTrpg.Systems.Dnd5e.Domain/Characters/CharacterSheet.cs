@@ -19,6 +19,15 @@ public sealed record HitDiceValue(string ClassIndex, int Die, int Total, int Rem
 public sealed record SpellcastingValue(string ClassIndex, string Ability, int SaveDc, int AttackBonus, int? PreparedMax)
 {
     /// <summary>
+    /// Name of an entry that is not a class: the option, feat or subclass whose granted spells are cast with their own
+    /// ability (<see cref="ClassIndex"/> is then its index); null for classes and the racial entry.
+    /// </summary>
+    public string? Name { get; init; }
+
+    /// <summary>True when <see cref="Ability"/> comes from a <c>spellcastingAbility.&lt;entry&gt;</c> override.</summary>
+    public bool AbilityOverridden { get; init; }
+
+    /// <summary>
     /// Highest spell level with slots in the class's own table at its level (0 without slots, e.g. a level 1
     /// paladin). Multiclassed characters prepare each class as if single-classed (PHB, multiclassing).
     /// </summary>
@@ -173,6 +182,9 @@ public sealed record CharacterSheet
 
     /// <summary>Saving throw proficiencies the character lost (origin feats), the ability in <see cref="SourcedValue.Value"/>.</summary>
     public IReadOnlyList<SourcedValue> LostSavingThrows { get; init; } = [];
+
+    /// <summary>Skill proficiencies lost (<c>grants.removeSkills</c>), with their origin.</summary>
+    public IReadOnlyList<SourcedValue> LostSkills { get; init; } = [];
 
     /// <summary>Save DCs of the classes besides the spell one (content packs).</summary>
     public IReadOnlyList<ClassSaveDcValue> ClassSaveDcs { get; init; } = [];

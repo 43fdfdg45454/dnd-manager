@@ -281,4 +281,109 @@ void main() {
     expect(find.byKey(const Key('companion-beast-wolf')), findsOneWidget);
     expect(characters.companionChoices, isEmpty);
   });
+
+  group('varios compañeros con lista cerrada', () {
+    Map<String, dynamic> creature(String index, String name, double cr, String text) => {
+      'index': index,
+      'name': name,
+      'type': 'construct',
+      'size': 'Small',
+      'challengeRating': cr,
+      'challengeRatingText': text,
+    };
+
+    FakeCharactersRepository repo() => FakeCharactersRepository(
+      characters: [
+        {
+          ...makeCharacterJson(status: 'Active', combat: makeCombatJson()),
+          'companionFeature': {
+            ...makeCompanionFeatureJson(),
+            'maxCount': 2,
+            'challengeBudget': 1.0,
+            'challengeBudgetText': '1',
+            'creatures': [
+              creature('sequito-ejemplo-titere', 'Títere de ejemplo', 0.25, '1/4'),
+              creature('sequito-ejemplo-penumbra', 'Penumbra de ejemplo', 0.5, '1/2'),
+              creature('sequito-ejemplo-mole', 'Mole de ejemplo', 1, '1'),
+            ],
+          },
+          'companionPending': false,
+          'companions': [
+            {
+              ...makeCompanionJson(
+                beastIndex: 'sequito-ejemplo-titere',
+                beastName: 'Títere de ejemplo',
+                name: 'Uno',
+              ),
+              'type': 'construct',
+              'features': [
+                {'level': 3, 'text': 'Obedece órdenes sencillas.'},
+              ],
+            },
+          ],
+        },
+      ],
+    );
+
+    testWidgets('añade otro dentro del presupuesto de VD y lo sigue por su id', (tester) async {
+      final characters = repo();
+      await _pump(tester, characters: characters);
+
+      expect(find.text('1 de 2 compañeros · VD total máx. 1'), findsOneWidget);
+      expect(find.byKey(const Key('companion-feature-3')), findsOneWidget);
+      await _tap(tester, 'companion-add');
+      expect(find.text('VD disponible: 0,75.'), findsOneWidget);
+      // 1/4 already used: the CR 1 creature does not fit.
+      expect(
+        tester
+            .widget<ListTile>(find.byKey(const Key('companion-creature-sequito-ejemplo-mole')))
+            .enabled,
+        isFalse,
+      );
+      await tester.tap(find.byKey(const Key('companion-creature-sequito-ejemplo-penumbra')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('companion-name')), 'Dos');
+      await tester.tap(find.byKey(const Key('companion-name-save')));
+      await tester.pumpAndSettle();
+
+      expect(characters.companionAdds.single, (
+        beastIndex: 'sequito-ejemplo-penumbra',
+        name: 'Dos',
+      ));
+      expect(find.byKey(const Key('companion-card-1')), findsOneWidget);
+      expect(find.text('Compañero: Dos'), findsOneWidget);
+      expect(find.byKey(const Key('companion-add')), findsNothing);
+
+      final second = find.byKey(const Key('companion-card-1'));
+      await tester.enterText(
+        find.descendant(of: second, matching: find.byKey(const Key('companion-hp-amount'))),
+        '3',
+      );
+      final minus = find.descendant(
+        of: second,
+        matching: find.byKey(const Key('companion-hp-minus')),
+      );
+      await tester.ensureVisible(minus);
+      await tester.tap(minus);
+      await tester.pumpAndSettle();
+      expect(characters.companionHpCalls.single, (delta: -3, current: null));
+      expect(characters.companionIdCalls, ['cp2']);
+    });
+
+    testWidgets('el jugador despide a uno de sus compañeros', (tester) async {
+      final characters = repo();
+      await _pump(tester, characters: characters);
+
+      await _tap(tester, 'companion-menu');
+      expect(find.text('Cambiar criatura'), findsOneWidget);
+      await tester.tap(find.text('Quitar compañero'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Quitar'));
+      await tester.pumpAndSettle();
+
+      expect(characters.companionIdCalls, ['cp1']);
+      expect(find.byKey(const Key('companion-pending')), findsOneWidget);
+      expect(find.text('Vínculo de ejemplo: elige una criatura de la lista.'), findsOneWidget);
+    });
+  });
 }

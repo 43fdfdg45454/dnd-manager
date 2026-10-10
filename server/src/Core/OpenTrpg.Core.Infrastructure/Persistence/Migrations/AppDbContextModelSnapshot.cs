@@ -1773,6 +1773,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ItemEnhancementJson")
+                        .HasColumnType("text");
+
                     b.Property<int>("Level")
                         .HasColumnType("integer");
 
@@ -1916,6 +1919,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                     b.Property<string>("GrantsJson")
                         .HasColumnType("text");
 
+                    b.Property<string>("ItemEffectsJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("LevelChoicesJson")
                         .HasColumnType("text");
 
@@ -1934,6 +1940,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                     b.Property<string>("PrerequisitesText")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
+
+                    b.Property<bool>("Repeatable")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("ResourceJson")
                         .HasColumnType("text");
@@ -2325,6 +2334,27 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                     b.ToTable("CatalogSpells", (string)null);
                 });
 
+            modelBuilder.Entity("OpenTrpg.Systems.Dnd5e.Domain.Catalog.SpellTag", b =>
+                {
+                    b.Property<string>("Source")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("Tag")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("SpellIndex")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Source", "Tag", "SpellIndex");
+
+                    b.HasIndex("SpellIndex");
+
+                    b.ToTable("CatalogSpellTags", (string)null);
+                });
+
             modelBuilder.Entity("OpenTrpg.Systems.Dnd5e.Domain.Catalog.SubclassDefinition", b =>
                 {
                     b.Property<string>("Index")
@@ -2494,6 +2524,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ResourceJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(60)
@@ -2628,8 +2661,7 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CharacterId")
-                        .IsUnique();
+                    b.HasIndex("CharacterId");
 
                     b.ToTable("CharacterCompanions", (string)null);
                 });
@@ -2644,8 +2676,8 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Field")
                         .IsRequired()
-                        .HasMaxLength(116)
-                        .HasColumnType("character varying(116)");
+                        .HasMaxLength(132)
+                        .HasColumnType("character varying(132)");
 
                     b.Property<string>("Note")
                         .HasMaxLength(500)
@@ -2856,6 +2888,12 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
 
                     b.Property<bool>("Inspiration")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("ItemEnhancementsJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("{}");
 
                     b.Property<DateTimeOffset?>("LevelGrantedAt")
                         .HasColumnType("timestamp with time zone");

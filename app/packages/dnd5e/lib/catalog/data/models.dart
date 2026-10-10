@@ -848,9 +848,11 @@ class SpellSummary {
     this.source,
     this.category,
     this.expandedBy = const [],
+    this.tags = const [],
   });
 
   factory SpellSummary.fromJson(Map<String, dynamic> json) => SpellSummary(
+    tags: _strList(json['tags']),
     index: _str(json['index']),
     name: _str(json['name'], _str(json['index'])),
     level: _int(json['level']) ?? 0,
@@ -890,6 +892,9 @@ class SpellSummary {
   /// Subclasses whose expanded spell list (content packs) adds the spell to
   /// their class's list.
   final List<SpellExpansion> expandedBy;
+
+  /// Tags of the content packs (`reference.spellTags`).
+  final List<String> tags;
 }
 
 /// A subclass whose expanded spell list adds a spell to its class's list for
@@ -957,6 +962,7 @@ class SpellDetail extends SpellSummary {
     super.source,
     super.category,
     super.expandedBy,
+    super.tags,
     this.range,
     this.components = const [],
     this.material,
@@ -987,6 +993,7 @@ class SpellDetail extends SpellSummary {
       source: summary.source,
       category: summary.category,
       expandedBy: summary.expandedBy,
+      tags: summary.tags,
       range: _strOrNull(json['range']),
       components: _strList(json['components']),
       material: _strOrNull(json['material']),
@@ -1326,6 +1333,7 @@ abstract final class ReferenceKinds {
   static const damageTypes = 'damageTypes';
   static const magicSchools = 'magicSchools';
   static const tools = 'tools';
+  static const spellTags = 'spellTags';
 }
 
 /// An entry of a vocabulary of the catalog (`ReferenceEntryDto`): a

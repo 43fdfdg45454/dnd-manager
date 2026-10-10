@@ -51,6 +51,7 @@ internal sealed class OptionDefinitionConfiguration : IEntityTypeConfiguration<O
         builder.Ignore(x => x.Cost);
         builder.Ignore(x => x.Choices);
         builder.Ignore(x => x.LevelChoices);
+        builder.Ignore(x => x.ItemEffects);
     }
 }
 

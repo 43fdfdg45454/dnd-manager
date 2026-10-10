@@ -1,5 +1,5 @@
 import '../../characters/domain/character_format.dart' show formatModifier, skillLabel, skillLabels;
-import '../data/models.dart' show ItemModifier;
+import '../data/models.dart' show ItemModifier, titleFromIndex;
 import 'catalog_format.dart' show abilityLabel;
 
 /// Spanish names of the modifier kinds (item form and detail lines).
@@ -62,6 +62,8 @@ String describeItemModifier(ItemModifier m) {
       return '$value PG máximos';
     case 'InitiativeBonus':
       return '$value a la iniciativa';
+    case 'ResourceMaxBonus':
+      return '$value a los usos máximos de ${target == null ? 'un recurso' : titleFromIndex(target)}';
     default:
       return '${m.kind} $value';
   }

@@ -11,8 +11,11 @@ namespace OpenTrpg.Systems.Dnd5e.Application.Abstractions.Persistence;
 
 public interface ICharacterCompanionRepository
 {
-    /// <summary>Tracked companion of a character, or null.</summary>
+    /// <summary>Tracked first (oldest) companion of a character, or null.</summary>
     Task<CharacterCompanion?> GetByCharacterAsync(Guid characterId, CancellationToken cancellationToken = default);
+
+    /// <summary>Tracked companions of a character, oldest first.</summary>
+    Task<IReadOnlyList<CharacterCompanion>> ListByCharacterAsync(Guid characterId, CancellationToken cancellationToken = default);
 
     /// <summary>Tracked companions of the given characters.</summary>
     Task<IReadOnlyList<CharacterCompanion>> ListByCharactersAsync(IReadOnlyCollection<Guid> characterIds, CancellationToken cancellationToken = default);

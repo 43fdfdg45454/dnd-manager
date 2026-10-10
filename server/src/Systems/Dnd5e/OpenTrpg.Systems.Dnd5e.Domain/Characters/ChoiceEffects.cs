@@ -50,6 +50,12 @@ public sealed record GrantEffect(string Label, string Source, OptionGrants Grant
     public IReadOnlyList<string> RemovedSavingThrows { get; init; } = [];
 }
 
+/// <summary>
+/// Spells granted by an option, a feat or a subclass level with their own spellcasting ability: they are cast as the
+/// spellcasting entry <see cref="Key"/> (the index of the option or subclass) named <see cref="Name"/>.
+/// </summary>
+public sealed record GrantedSpellcasting(string Key, string Name, string Ability);
+
 /// <summary>A damage resistance the player chose in a <c>Resistance</c> choice of an option or a feat.</summary>
 public sealed record ChosenResistance(string Label, string DamageType);
 
@@ -90,6 +96,54 @@ public sealed record ChoiceEffects(
     /// <summary>Resistances chosen in <c>Resistance</c> choices.</summary>
     public IReadOnlyList<ChosenResistance> ChosenResistances { get; init; } = [];
 
+    /// <summary>Spellcasting entries of the options, feats and subclass levels that grant spells with their own ability.</summary>
+    public IReadOnlyList<GrantedSpellcasting> GrantedSpellcasting { get; init; } = [];
+
+    /// <summary>
+    /// Key of the spellcasting entry (and <see cref="CharacterSpell.ClassIndex"/>) of the spells granted by
+    /// <paramref name="grants"/> from <paramref name="sourceIndex"/>: the source itself when the grants have their own
+    /// ability, else <paramref name="classIndex"/>.
+    /// </summary>
+    public static string SpellClassIndex(OptionGrants grants, string sourceIndex, string classIndex)
+    {
+        ArgumentNullException.ThrowIfNull(grants);
+        return grants.SpellcastingAbility is not null ? sourceIndex : classIndex;
+    }
+
+    /// <summary>
+    /// Resources of the spells granted with a number of casts per long rest (<c>usesPerLongRest</c>), tied to
+    /// <paramref name="classIndex"/> (null: the character level) from the spell's <c>minLevel</c>: key
+    /// <c>&lt;spell class index&gt;.&lt;spell&gt;</c>, named after the spell.
+    /// </summary>
+    public static IEnumerable<ChoiceResourceEffect> SpellUseResources(OptionGrants grants, string spellClassIndex, string? classIndex, string label, Func<string, string?> spellName)
+    {
+        ArgumentNullException.ThrowIfNull(grants);
+        ArgumentNullException.ThrowIfNull(spellName);
+        foreach (var spell in grants.Spells)
+        {
+            if (spell.UsesPerLongRest is not { } uses || uses <= 0)
+            {
+                continue;
+            }
+
+            var key = $"{spellClassIndex}.{spell.Index}";
+            var name = spellName(spell.Index) ?? spell.Index;
+            yield return new ChoiceResourceEffect(
+                classIndex,
+                new OptionResource(
+                    key.Length > Dnd5eCharacter.IndexMaxLength ? key[..Dnd5eCharacter.IndexMaxLength] : key,
+                    name.Length > CharacterResource.NameMaxLength ? name[..CharacterResource.NameMaxLength] : name,
+                    "1",
+                    ResourceRecharge.LongRest)
+                {
+                    MaxByLevel = new Dictionary<int, int> { [Math.Max(1, spell.MinLevel ?? 1)] = Math.Min(uses, CharacterResource.MaxUses) },
+                })
+            {
+                Label = label,
+            };
+        }
+    }
+
     /// <summary>Label of an origin effect: "Grappler (raza)", "Grappler (trasfondo)", "Grappler (dote inicial)".</summary>
     public static string OriginLabel(string name, string key) =>
         $"{name} ({(key == OriginChoiceKeys.StarterFeat ? "dote inicial" : OriginChoiceKeys.IsBackground(key) ? "trasfondo" : OriginChoiceKeys.IsSubrace(key) ? "subraza" : "raza")})";
@@ -108,10 +162,12 @@ public sealed record ChoiceEffects(
     /// Effects of the character's current picks (<see cref="Character.ActivePicks"/>) and feats, looking up the
     /// options with <paramref name="findOption"/> (missing ones are skipped).
     /// </summary>
-    public static ChoiceEffects Build(Dnd5eCharacter character, Func<string, OptionDefinition?> findOption)
+    public static ChoiceEffects Build(Dnd5eCharacter character, Func<string, OptionDefinition?> findOption, Func<string, string?>? spellName = null)
     {
         ArgumentNullException.ThrowIfNull(character);
         ArgumentNullException.ThrowIfNull(findOption);
+        spellName ??= _ => null;
+        var spellcasting = new List<GrantedSpellcasting>();
 
         var modifiers = new List<FeatureModifier>();
         var increases = new List<AbilityIncreaseEffect>();
@@ -140,6 +196,14 @@ public sealed record ChoiceEffects(
             {
                 resources.Add(new ChoiceResourceEffect(classIndex, resource) { Label = label });
             }
+
+            var spellClass = SpellClassIndex(option.Grants, option.Index, classIndex ?? CharacterSpell.OriginClassIndex);
+            if (option.Grants is { SpellcastingAbility: { } castingAbility, HasSpells: true } && spellcasting.All(g => g.Key != option.Index))
+            {
+                spellcasting.Add(new GrantedSpellcasting(option.Index, option.Name, castingAbility));
+            }
+
+            resources.AddRange(SpellUseResources(option.Grants, spellClass, classIndex, label, spellName));
         }
 
         // A feat swapped out later (forced replacement of an invalid feat) no longer counts.
@@ -209,6 +273,7 @@ public sealed record ChoiceEffects(
             OriginAbilityBonuses = originBonuses,
             Grants = grants,
             ChosenResistances = resistances,
+            GrantedSpellcasting = spellcasting,
         };
     }
 

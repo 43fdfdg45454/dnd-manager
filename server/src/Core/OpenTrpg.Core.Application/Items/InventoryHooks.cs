@@ -2,6 +2,7 @@ using OpenTrpg.Core.Application.Systems;
 using OpenTrpg.Core.Domain.Catalog;
 using OpenTrpg.Core.Domain.Characters;
 using OpenTrpg.Core.Domain.Common;
+using OpenTrpg.Core.Domain.Items;
 
 namespace OpenTrpg.Core.Application.Items;
 
@@ -19,6 +20,16 @@ public sealed class InventoryHooks(CampaignSystems systems)
     {
         var system = await systems.ForCharacterAsync(character, cancellationToken);
         if (await system.Items.AttunementProblemAsync(new CharacterRef(character), template, cancellationToken) is { } problem)
+        {
+            throw DomainException.RuleViolation(problem);
+        }
+    }
+
+    /// <summary>Throws a rule violation when the game system does not let the character equip <paramref name="item"/>.</summary>
+    public async Task EnsureCanEquipAsync(Character character, CharacterItem item, IReadOnlyDictionary<Guid, ItemTemplate> templates, CancellationToken cancellationToken)
+    {
+        var system = await systems.ForCharacterAsync(character, cancellationToken);
+        if (await system.Items.EquipProblemAsync(new CharacterRef(character), item, templates, cancellationToken) is { } problem)
         {
             throw DomainException.RuleViolation(problem);
         }

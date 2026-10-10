@@ -1187,6 +1187,34 @@ void main() {
       ]);
     });
 
+    testWidgets('la característica de conjuros se puede sobrescribir por clase', (tester) async {
+      final repository = FakeCharactersRepository(
+        characters: [
+          makeCharacterJson(
+            classes: [
+              {'classIndex': 'wizard', 'className': 'Wizard', 'level': 3},
+            ],
+            spellcasting: [
+              {'classIndex': 'wizard', 'ability': 'wis', 'saveDc': 11, 'attackBonus': 3},
+            ],
+            overrides: [
+              {'field': 'spellcastingAbility.wizard', 'value': 5, 'note': 'Regla de mesa'},
+            ],
+          ),
+        ],
+      );
+      await _pumpApp(tester, characters: repository, location: '/characters/ch1/edit');
+
+      expect(find.text('Característica de conjuros (Wizard)'), findsOneWidget);
+      expect(find.textContaining('5 Sabiduría'), findsOneWidget);
+      await tester.enterText(find.byKey(const Key('override-value-0')), '4');
+      await _tap(tester, find.byKey(const Key('editor-save-bottom')));
+
+      expect(repository.patches.single.toJson()['overrides'], [
+        {'field': 'spellcastingAbility.wizard', 'value': 4, 'note': 'Regla de mesa'},
+      ]);
+    });
+
     testWidgets('el buscador de hechizos filtra por nivel máximo y añade el elegido', (
       tester,
     ) async {

@@ -180,4 +180,35 @@ public class CompanionTests
         Assert.Equal(("pantera-ejemplo", "Sombra", 13), (companion.BeastIndex, companion.Name, companion.HitPointsCurrent));
         Assert.Equal(10, companion.CurrentWithin(10));
     }
+    [Fact]
+    public void A_hit_point_formula_sums_its_terms_and_the_rule_round_trips_its_extensions()
+    {
+        Assert.Null(CompanionRule.ParseHitPointsFormula("beast+beast"));
+        Assert.Null(CompanionRule.ParseHitPointsFormula("mod:suerte"));
+        var terms = CompanionRule.ParseHitPointsFormula("beast + 2*classLevel + mod:int + 1")!;
+        var rule = new CompanionRule(30, [], null, false, false)
+        {
+            CreatureIndexes = ["lobo-ejemplo"],
+            MaxCountIsProficiencyBonus = true,
+            ChallengeBudgetByLevel = new Dictionary<int, double> { [3] = 0.5, [7] = 1 },
+            HitPointsTerms = terms,
+            Bonuses = new CompanionBonuses("1", CompanionBonuses.ProficiencyBonus, null, "2"),
+            FeaturesByLevel = new Dictionary<int, string> { [3] = "Texto uno.", [7] = "Texto dos." },
+        };
+        var parsed = CompanionRule.Parse(rule.ToJson())!;
+        Assert.Equal((3, 0.5, 1.0, null as double?), (parsed.MaxCountFor(3), parsed.ChallengeBudgetAt(5), parsed.ChallengeBudgetAt(7)!.Value, new CompanionRule(1, [], null, false, false).ChallengeBudgetAt(5)));
+        Assert.Single(parsed.FeaturesAt(5));
+        Assert.True(parsed.AllowsCreature("lobo-ejemplo", false, 2, "Huge"));
+        Assert.False(parsed.AllowsCreature("otro-ejemplo", true, 0, "Small"));
+
+        var block = CompanionCalculator.Calculate(Wolf, parsed, "ranger", 4, 2, null, new CompanionContext(6, a => a == "int" ? 3 : 0));
+
+        // 11 + 2 × 4 + 3 + 1; AC 13 + 1 (bonus); damage +2 of the beast + 2 of the feature.
+        Assert.Equal(23, block.HitPointsMax.Total);
+        Assert.Equal([11, 8, 3, 1], block.HitPointsMax.Parts.Select(p => p.Value));
+        Assert.Equal(14, block.ArmorClass.Total);
+        Assert.Equal(6, block.SavingThrows.Count);
+        Assert.Equal(6, block.SavingThrows["dex"].Total);
+        Assert.Equal("2d4+4", Assert.Single(block.Attacks, a => a.Name == "Bite").Damage[0].Dice);
+    }
 }

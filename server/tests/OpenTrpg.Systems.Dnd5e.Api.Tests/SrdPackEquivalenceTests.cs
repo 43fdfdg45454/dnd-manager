@@ -193,6 +193,13 @@ internal static class SrdSnapshot
         {
             var before = expectedCounts[table]?.GetValue<int>();
             var after = actualCounts[table]?.GetValue<int>();
+
+            // Catalog tables added after the capture that the SRD leaves empty (spell tags of content packs).
+            if (before is null && after == 0)
+            {
+                continue;
+            }
+
             if (before != after)
             {
                 differences.Add($"count {table}: {before?.ToString() ?? "-"} before, {after?.ToString() ?? "-"} now");

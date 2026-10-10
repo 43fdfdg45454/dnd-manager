@@ -60,6 +60,9 @@ public sealed record CharacterResourceDto(Guid Id, string? Key, string Name, int
     /// <summary>Chosen options that spend this resource (by its key), each with its amount: the "Usar" buttons of the Combat tab.</summary>
     public IReadOnlyList<CharacterOptionCostDto> Options { get; init; } = [];
 
+    /// <summary>Die rolled to get the uses back (<c>POST …/resources/{id}/recharge-roll</c>), or null.</summary>
+    public RechargeRollDto? RechargeRoll { get; init; }
+
     /// <param name="template">Current template of an automatic resource (its die, origin and breakdown), if any.</param>
     public static CharacterResourceDto From(CharacterResource r, ResourceTemplate? template = null) => new(r.Id, r.Key, r.Name, r.Max, r.Used, r.Recharge.ToString(), r.IsAuto)
     {
@@ -69,8 +72,12 @@ public sealed record CharacterResourceDto(Guid Id, string? Key, string Name, int
         Dice = template?.Dice,
         Source = template?.Source,
         Breakdown = template?.Breakdown is { } breakdown && breakdown.Total == r.Max ? ValueBreakdownDto.From(breakdown) : null,
+        RechargeRoll = template?.RechargeRoll is { } recharge ? new RechargeRollDto(recharge.Dice, recharge.Min) : null,
     };
 }
+
+/// <summary>The uses come back with <see cref="Min"/> or more on a <see cref="Dice"/> ("d6").</summary>
+public sealed record RechargeRollDto(string Dice, int Min);
 
 /// <summary>Dice rolled after a rest: <see cref="Count"/> × <see cref="Dice"/> ("d20") after a <see cref="Rest"/> ("short" or "long") rest.</summary>
 public sealed record RollOnRestDto(string Dice, int Count, string Rest);
@@ -90,6 +97,12 @@ public sealed record HitDiceDto(string ClassIndex, int Die, int Total, int Remai
 
 public sealed record SpellcastingDto(string ClassIndex, string Ability, int SaveDc, int AttackBonus, int? PreparedMax)
 {
+    /// <summary>Name of an entry of an option, feat or subclass that grants spells with its own ability (its index is <see cref="ClassIndex"/>); null for classes and "race".</summary>
+    public string? Name { get; init; }
+
+    /// <summary>True when the ability was chosen by an override (<c>spellcastingAbility.&lt;classIndex&gt;</c>, 1 = str … 6 = cha): the app marks it.</summary>
+    public bool AbilityOverridden { get; init; }
+
     /// <summary>Spells known allowed at the class level (subclass casters from content packs); null when the class has no fixed number.</summary>
     public int? SpellsKnownMax { get; init; }
 
@@ -166,6 +179,9 @@ public sealed record CharacterSheetDto(
 
     /// <summary>Saving throw proficiencies lost by an origin feat; <see cref="DefenseDto.Type"/> is the ability.</summary>
     public IReadOnlyList<DefenseDto> LostSavingThrows { get; init; } = [];
+
+    /// <summary>Skill proficiencies the character loses (<c>grants.removeSkills</c>), with their origin.</summary>
+    public IReadOnlyList<DefenseDto> LostSkills { get; init; } = [];
 
     /// <summary>Save DCs of the classes besides the spell one, each with its breakdown key.</summary>
     public IReadOnlyList<ClassSaveDcDto> ClassSaveDcs { get; init; } = [];
@@ -330,8 +346,20 @@ public sealed record Dnd5eCharacterDetailDto
     /// <summary>Chosen options (and feats) whose use spends a resource ("2 Ki"), in the order they were chosen.</summary>
     public IReadOnlyList<CharacterOptionCostDto> OptionCosts { get; init; } = [];
 
-    /// <summary>The animal companion with its recalculated statblock; null when the character has none.</summary>
+    /// <summary>The first (oldest) companion with its recalculated statblock; null when the character has none.</summary>
     public CharacterCompanionDto? Companion { get; init; }
+
+    /// <summary>Every companion of the character, oldest first (several when the feature's <c>maxCount</c> allows it).</summary>
+    public IReadOnlyList<CharacterCompanionDto> Companions { get; init; } = [];
+
+    /// <summary>Inventory entries with enhancements (phase 35B3): their options, changed fields and breakdowns.</summary>
+    public IReadOnlyList<Items.CharacterItemEnhancementDto> ItemEnhancements { get; init; } = [];
+
+    /// <summary>The item enhancement feature the character has reached (options per item and which ones), or null.</summary>
+    public Items.ItemEnhancementFeatureDto? ItemEnhancementFeature { get; init; }
+
+    /// <summary>Grafts of the inventory (items with <c>graft.slot</c>), by slot.</summary>
+    public IReadOnlyList<Items.CharacterGraftDto> Grafts { get; init; } = [];
 
     /// <summary>The companion feature the character has reached (which beasts qualify); null when it has none.</summary>
     public CompanionFeatureDto? CompanionFeature { get; init; }
@@ -355,7 +383,38 @@ public sealed record CompanionFeatureDto(
     IReadOnlyList<string> Sizes,
     string HitPoints,
     bool ProficiencyBonusFromCharacter,
-    bool AttackBonusFromCharacter);
+    bool AttackBonusFromCharacter)
+{
+    /// <summary>Closed list of creatures (any type) of the feature; empty when the companion is a beast of the filter.</summary>
+    public IReadOnlyList<string> CreatureIndexes { get; init; } = [];
+
+    /// <summary>The creatures of <see cref="CreatureIndexes"/> found in the catalog, for the chooser.</summary>
+    public IReadOnlyList<CompanionCreatureDto> Creatures { get; init; } = [];
+
+    /// <summary>How many companions the character may have at its level (1 by default).</summary>
+    public int MaxCount { get; init; } = 1;
+
+    /// <summary>Highest total challenge rating of all the companions at the class level, or null when the feature has no budget.</summary>
+    public double? ChallengeBudget { get; init; }
+
+    /// <summary><see cref="ChallengeBudget"/> as text ("1/2"), or null.</summary>
+    public string? ChallengeBudgetText { get; init; }
+
+    /// <summary>Bonuses the character gives to its companions, or null.</summary>
+    public CompanionBonusesDto? Bonuses { get; init; }
+
+    /// <summary>What the companions gain up to the class level (texts of <c>featuresByLevel</c>).</summary>
+    public IReadOnlyList<CompanionFeatureTextDto> Features { get; init; } = [];
+}
+
+/// <summary>A creature of a companion feature's closed list.</summary>
+public sealed record CompanionCreatureDto(string Index, string Name, string Type, string Size, double ChallengeRating, string ChallengeRatingText);
+
+/// <summary>Bonuses to the companions: each a number ("2") or "proficiencyBonus"; null when none.</summary>
+public sealed record CompanionBonusesDto(string? ArmorClass, string? SavingThrows, string? Attack, string? Damage);
+
+/// <summary>A text of what the companions gain at a level of the feature's class.</summary>
+public sealed record CompanionFeatureTextDto(int Level, string Text);
 
 /// <summary>A damage component of a companion attack, with the character's bonus already folded into the dice ("2d4+4").</summary>
 public sealed record CompanionDamageDto(string Dice, string? Type);
@@ -398,7 +457,14 @@ public sealed record CharacterCompanionDto(
     IReadOnlyList<Catalog.BeastTraitDto> Traits,
     IReadOnlyList<CompanionAttackDto> Attacks,
     IReadOnlyDictionary<string, ValueBreakdownDto> Breakdowns,
-    bool BeastMissing);
+    bool BeastMissing)
+{
+    /// <summary>Creature type ("beast", "undead"...).</summary>
+    public string Type { get; init; } = Catalog.BeastDto.BeastType;
+
+    /// <summary>What the companion has gained up to the class level of the feature (texts).</summary>
+    public IReadOnlyList<CompanionFeatureTextDto> Features { get; init; } = [];
+}
 
 /// <summary>
 /// A feat of the character, for the "Rasgos" tab of the sheet: the catalog description, the literal prerequisite

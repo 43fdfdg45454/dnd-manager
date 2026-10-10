@@ -1,3 +1,4 @@
+using OpenTrpg.Core.Domain.Items;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using FluentValidation;
@@ -98,5 +99,20 @@ public sealed class Dnd5eItemSystem(
 
         var names = (await catalog.ListClassesByIndexAsync(allowed, cancellationToken)).ToDictionary(c => c.Index, c => c.Name, StringComparer.Ordinal);
         return $"Solo pueden sintonizar este objeto personajes de estas clases: {string.Join(", ", allowed.Select(i => names.GetValueOrDefault(i, i)))}.";
+    }
+
+    /// <summary>Grafts (<c>items[].graft.slot</c>): one equipped graft per body slot.</summary>
+    public Task<string?> EquipProblemAsync(CharacterRef character, CharacterItem item, IReadOnlyDictionary<Guid, ItemTemplate> templates, CancellationToken cancellationToken = default)
+    {
+        if (WeaponRules.Parse(InventoryView.TemplateOf(templates, item.TemplateId)?.SystemDataJson).GraftSlot is not { } slot)
+        {
+            return Task.FromResult<string?>(null);
+        }
+
+        var other = character.Character.Items.FirstOrDefault(i => i.Id != item.Id && i.Equipped
+            && string.Equals(WeaponRules.Parse(InventoryView.TemplateOf(templates, i.TemplateId)?.SystemDataJson).GraftSlot, slot, StringComparison.OrdinalIgnoreCase));
+        return Task.FromResult(other is null
+            ? null
+            : $"Ya llevas un injerto en el espacio \"{slot}\": {InventoryView.Resolve(templates, other).Name}. Quítatelo antes.");
     }
 }

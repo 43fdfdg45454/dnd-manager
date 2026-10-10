@@ -8,11 +8,13 @@ import 'package:opentrpg_core/core/characters/models.dart';
 import 'package:opentrpg_core/core/ui/breakdown.dart';
 
 import 'data/companion_models.dart';
+import 'data/item_enhancement_models.dart';
 
 export 'package:opentrpg_core/core/characters/models.dart';
 export 'package:opentrpg_core/core/ui/breakdown.dart' show BreakdownPart, ValueBreakdown;
 
 export 'data/companion_models.dart';
+export 'data/item_enhancement_models.dart';
 
 /// Ability keys in display order.
 const abilityKeys = <String>['str', 'dex', 'con', 'int', 'wis', 'cha'];
@@ -123,7 +125,10 @@ enum Recharge {
   shortRest('ShortRest', 'Descanso corto'),
   longRest('LongRest', 'Descanso largo'),
   dawn('Dawn', 'Amanecer'),
-  manual('Manual', 'Manual');
+  manual('Manual', 'Manual'),
+
+  /// Comes back when initiative is rolled (and with any rest).
+  initiative('Initiative', 'Al tirar iniciativa');
 
   const Recharge(this.apiValue, this.label);
 
@@ -286,10 +291,12 @@ class CharacterResource {
     this.source,
     this.breakdown,
     this.options = const [],
+    this.rechargeRoll,
   });
 
   factory CharacterResource.fromJson(Map<String, dynamic> json) {
     final roll = _map(json['rollOnRest']);
+    final rechargeRoll = _map(json['rechargeRoll']);
     return CharacterResource(
       id: _str(json['id']),
       key: _strOrNull(json['key']),
@@ -305,8 +312,12 @@ class CharacterResource {
       source: _strOrNull(json['source']),
       breakdown: ValueBreakdown.maybeFromJson(json['breakdown']),
       options: _objects(json['options'], CharacterOptionCost.fromJson),
+      rechargeRoll: rechargeRoll == null ? null : RechargeRoll.fromJson(rechargeRoll),
     );
   }
+
+  /// Die that brings the resource back ("d6", 5 or more), or null.
+  final RechargeRoll? rechargeRoll;
 
   /// Chosen options that spend this resource ("Golpe sereno", 2): the
   /// "Usar" buttons of the Combat tab.
@@ -337,6 +348,24 @@ class CharacterResource {
   final int used;
   final Recharge recharge;
   final bool isAuto;
+}
+
+/// A die the player rolls to get a resource back: [min] or more on [dice]
+/// recovers it whole (`rechargeRoll`).
+class RechargeRoll {
+  const RechargeRoll({required this.dice, required this.min});
+
+  factory RechargeRoll.fromJson(Map<String, dynamic> json) =>
+      RechargeRoll(dice: _str(json['dice'], 'd6'), min: _int(json['min']) ?? 1);
+
+  final String dice;
+  final int min;
+
+  /// Faces of [dice] ("d6" -> 6).
+  int get faces => int.tryParse(dice.replaceFirst('d', '')) ?? 6;
+
+  /// "d6 ≥ 5".
+  String get label => '$dice ≥ $min';
 }
 
 /// What using an option costs (`OptionCostDto`): [amount] uses of the
@@ -532,10 +561,14 @@ class Spellcasting {
     this.cantripAttackBonus,
     this.criticalRange = 20,
     this.criticalRangeSource,
+    this.name,
+    this.abilityOverridden = false,
   });
 
   factory Spellcasting.fromJson(Map<String, dynamic> json) => Spellcasting(
     classIndex: _str(json['classIndex']),
+    name: _strOrNull(json['name']),
+    abilityOverridden: json['abilityOverridden'] == true,
     ability: _str(json['ability']),
     saveDc: _int(json['saveDc']) ?? 0,
     attackBonus: _int(json['attackBonus']) ?? 0,
@@ -560,6 +593,13 @@ class Spellcasting {
   final int saveDc;
   final int attackBonus;
   final int? preparedMax;
+
+  /// Name of a feat, option or subclass that grants spells cast with its own
+  /// ability ([classIndex] is its index); null for classes and the race.
+  final String? name;
+
+  /// The ability was chosen by an override (`spellcastingAbility.<classIndex>`).
+  final bool abilityOverridden;
 
   /// Spells known allowed at the class level (classes that cast through a
   /// subclass of a content pack); null when the class has no fixed number.
@@ -730,6 +770,7 @@ class CharacterSheet {
     this.immunities = const [],
     this.conditionImmunities = const [],
     this.lostSavingThrows = const [],
+    this.lostSkills = const [],
     this.classSaveDcs = const [],
     this.passiveInvestigation = 10,
     this.passiveInsight = 10,
@@ -779,6 +820,7 @@ class CharacterSheet {
       immunities: _objects(json['immunities'], SheetDefense.fromJson),
       conditionImmunities: _objects(json['conditionImmunities'], SheetDefense.fromJson),
       lostSavingThrows: _objects(json['lostSavingThrows'], SheetDefense.fromJson),
+      lostSkills: _objects(json['lostSkills'], SheetDefense.fromJson),
       classSaveDcs: _objects(json['classSaveDcs'], ClassSaveDc.fromJson),
       passiveInvestigation: _int(json['passiveInvestigation']) ?? 10,
       passiveInsight: _int(json['passiveInsight']) ?? 10,
@@ -832,6 +874,10 @@ class CharacterSheet {
 
   /// Saving throw proficiencies taken away by the race or a feat.
   final List<SheetDefense> lostSavingThrows;
+
+  /// Skill proficiencies taken away (`grants.removeSkills`); [SheetDefense.type]
+  /// is the skill index.
+  final List<SheetDefense> lostSkills;
 
   /// Save DCs of the class features (8 + proficiency + ability).
   final List<ClassSaveDc> classSaveDcs;
@@ -1112,8 +1158,12 @@ class Dnd5eCharacter {
     this.feats = const [],
     this.optionCosts = const [],
     this.companion,
+    this.companions = const [],
     this.companionFeature,
     this.companionPending = false,
+    this.itemEnhancements = const [],
+    this.itemEnhancementFeature,
+    this.grafts = const [],
     this.raceCatalogMissing = false,
     this.backgroundCatalogMissing = false,
     this.catalogMissing = false,
@@ -1163,10 +1213,21 @@ class Dnd5eCharacter {
       companion: _map(json['companion']) == null
           ? null
           : CharacterCompanion.fromJson(_map(json['companion'])!),
+      companions: json['companions'] is List
+          ? _objects(json['companions'], CharacterCompanion.fromJson)
+          : [
+              if (_map(json['companion']) case final Map<String, dynamic> one)
+                CharacterCompanion.fromJson(one),
+            ],
       companionFeature: _map(json['companionFeature']) == null
           ? null
           : CompanionFeature.fromJson(_map(json['companionFeature'])!),
       companionPending: _bool(json['companionPending']),
+      itemEnhancements: _objects(json['itemEnhancements'], CharacterItemEnhancement.fromJson),
+      itemEnhancementFeature: _map(json['itemEnhancementFeature']) == null
+          ? null
+          : ItemEnhancementFeature.fromJson(_map(json['itemEnhancementFeature'])!),
+      grafts: _objects(json['grafts'], CharacterGraft.fromJson),
       raceCatalogMissing: _bool(json['raceCatalogMissing']),
       backgroundCatalogMissing: _bool(json['backgroundCatalogMissing']),
       catalogMissing: _bool(json['catalogMissing']),
@@ -1239,11 +1300,24 @@ class Dnd5eCharacter {
   /// The animal companion, or null (phase 25, block 6).
   final CharacterCompanion? companion;
 
+  /// Every companion, oldest first (several when the feature allows it);
+  /// `[companion]` when the server does not send the list.
+  final List<CharacterCompanion> companions;
+
   /// The companion feature the character has reached, or null.
   final CompanionFeature? companionFeature;
 
   /// The companion feature is reached and no beast is chosen yet.
   final bool companionPending;
+
+  /// Enhanced inventory entries, with their breakdowns.
+  final List<CharacterItemEnhancement> itemEnhancements;
+
+  /// The item enhancement feature the character has reached, or null.
+  final ItemEnhancementFeature? itemEnhancementFeature;
+
+  /// Grafts of the inventory with their body slot.
+  final List<CharacterGraft> grafts;
 
   /// The race (or subrace) is gone from the catalog (a deleted content pack).
   final bool raceCatalogMissing;
@@ -1328,8 +1402,12 @@ extension Dnd5eCharacterDetail on CharacterDetail {
   List<CharacterFeat> get feats => dnd5e.feats;
   List<CharacterOptionCost> get optionCosts => dnd5e.optionCosts;
   CharacterCompanion? get companion => dnd5e.companion;
+  List<CharacterCompanion> get companions => dnd5e.companions;
   CompanionFeature? get companionFeature => dnd5e.companionFeature;
   bool get companionPending => dnd5e.companionPending;
+  List<CharacterItemEnhancement> get itemEnhancements => dnd5e.itemEnhancements;
+  ItemEnhancementFeature? get itemEnhancementFeature => dnd5e.itemEnhancementFeature;
+  List<CharacterGraft> get grafts => dnd5e.grafts;
   bool get raceCatalogMissing => dnd5e.raceCatalogMissing;
   bool get backgroundCatalogMissing => dnd5e.backgroundCatalogMissing;
   bool get catalogMissing => dnd5e.catalogMissing;

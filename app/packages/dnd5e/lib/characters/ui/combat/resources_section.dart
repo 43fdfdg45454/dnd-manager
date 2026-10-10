@@ -183,6 +183,20 @@ class ResourcesSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader('Recursos', padding: combatSectionPadding),
+        if (canEdit && resources.any((r) => r.recharge == Recharge.initiative))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: FilledButton.tonalIcon(
+              key: const Key('resources-initiative'),
+              onPressed: () => runCombat(
+                context,
+                () => _controller(ref, character).rechargeOnInitiative(),
+                success: 'Recursos recuperados al tirar iniciativa.',
+              ),
+              icon: const Icon(Icons.bolt_outlined),
+              label: const Text('Recuperar al tirar iniciativa'),
+            ),
+          ),
         for (final resource in resources)
           ResourceTile(
             key: Key('resource-${resource.id}'),
@@ -267,6 +281,30 @@ class ResourceTile extends ConsumerWidget {
     );
     if (!spent || !context.mounted) return;
     await rollAndShow(context, '1$dice', label: resource.name);
+  }
+
+  /// Asks for the value rolled on the recharge die and sends it.
+  Future<void> _rechargeRoll(BuildContext context, WidgetRef ref, RechargeRoll roll) async {
+    final value = await promptNumber(
+      context,
+      title: 'Recarga de ${resource.name}',
+      label: 'Resultado del ${roll.dice} (se recupera con ${roll.min} o más)',
+      initial: 1,
+      min: 1,
+      max: roll.faces,
+    );
+    if (value == null || !context.mounted) return;
+    var recharged = false;
+    final done = await runCombat(
+      context,
+      () async => recharged = await _controller(ref, character).rechargeRoll(resource.id, value),
+    );
+    if (done && context.mounted) {
+      showCombatMessage(
+        context,
+        recharged ? '${resource.name} se recupera.' : '${resource.name} no se recupera esta vez.',
+      );
+    }
   }
 
   Future<void> _editPool(BuildContext context, WidgetRef ref) async {
@@ -373,6 +411,16 @@ class ResourceTile extends ConsumerWidget {
             onPressed: canEdit && remaining > 0 ? () => _spendAndRoll(context, ref, dice) : null,
             icon: const Icon(Icons.casino_outlined),
             label: Text('Tirar 1$dice'),
+          ),
+        ),
+      if (r.rechargeRoll case final roll?)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: OutlinedButton.icon(
+            key: Key('resource-${r.id}-recharge-roll'),
+            onPressed: canEdit && r.used > 0 ? () => _rechargeRoll(context, ref, roll) : null,
+            icon: const Icon(Icons.replay_outlined),
+            label: Text('Tirar recarga (${roll.label})'),
           ),
         ),
       if (r.source != null || r.breakdown != null)

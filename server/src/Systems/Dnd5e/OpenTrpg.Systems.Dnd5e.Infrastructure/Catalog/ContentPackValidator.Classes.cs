@@ -926,7 +926,8 @@ internal sealed partial class ContentPackValidator
                 Choices = feat.Choices,
             }, OptionSets.Feats, rows, NullableText($"{path}.category", feat.Category, OptionDefinition.CategoryMaxLength),
             creationOnly: feat.CreationOnly == true || feat.Starter == true,
-            starter: feat.Starter == true);
+            starter: feat.Starter == true,
+            repeatable: feat.Repeatable == true);
         });
         rows.Feats = rows.Options.Count(o => o.SetId == OptionSets.Feats);
     }
@@ -1149,6 +1150,18 @@ internal sealed partial class ContentPackValidator
                     AddError($"{path}.items", "Solo las categorías de equipo (equipmentCategories) tienen objetos.");
                 }
 
+                if (kind == ReferenceEntry.SpellTags)
+                {
+                    if (index is not null)
+                    {
+                        TaggedSpells($"{path}.spells", index, entry.Spells, rows);
+                    }
+                }
+                else if (entry.Spells is not null)
+                {
+                    AddError($"{path}.spells", "Solo las etiquetas de conjuro (spellTags) tienen conjuros.");
+                }
+
                 if (index is not null && kind == ReferenceEntry.EquipmentCategories)
                 {
                     rows.EquipmentCategories.Add(new EquipmentCategory { Index = index, Name = name, ItemIndexes = items, Source = _id });
@@ -1177,5 +1190,7 @@ internal sealed partial class ContentPackValidator
         (ReferenceEntry.DamageTypes, reference.DamageTypes),
         (ReferenceEntry.MagicSchools, reference.MagicSchools),
         (ReferenceEntry.Tools, reference.Tools),
+        (ReferenceEntry.SpellTags, reference.SpellTags),
+        (ReferenceEntry.ArmorProperties, reference.ArmorProperties),
     ];
 }

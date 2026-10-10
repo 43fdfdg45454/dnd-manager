@@ -66,6 +66,10 @@ class CompendiumSpellsTab extends ConsumerWidget {
     // Only casters can have spells; fall back to all if the flag is missing.
     final casters = classes.where((c) => c.isSpellcaster).toList();
     final classOptions = casters.isEmpty ? classes : casters;
+    // Tags only exist with content packs that declare them.
+    final tags =
+        ref.watch(referenceProvider(ReferenceKinds.spellTags)).value?.values.toList() ??
+        const <ReferenceEntry>[];
 
     return Column(
       children: [
@@ -95,6 +99,19 @@ class CompendiumSpellsTab extends ConsumerWidget {
               ],
               onChanged: filtersController.setClass,
             ),
+            if (tags.isNotEmpty)
+              DropdownButtonFormField<String?>(
+                key: const Key('filter-spell-tag'),
+                initialValue: filters.tag,
+                isExpanded: true,
+                decoration: _filterDecoration.copyWith(labelText: 'Etiqueta'),
+                items: [
+                  const DropdownMenuItem<String?>(value: null, child: Text('Todas')),
+                  for (final t in tags)
+                    DropdownMenuItem<String?>(value: t.index, child: Text(t.name)),
+                ],
+                onChanged: filtersController.setTag,
+              ),
           ],
         ),
         Expanded(

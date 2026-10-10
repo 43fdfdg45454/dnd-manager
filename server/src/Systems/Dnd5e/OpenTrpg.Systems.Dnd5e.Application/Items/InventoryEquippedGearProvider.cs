@@ -1,3 +1,4 @@
+using OpenTrpg.Core.Domain.Items;
 using OpenTrpg.Core.Application.Abstractions;
 using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Domain.Characters;
@@ -17,7 +18,10 @@ namespace OpenTrpg.Systems.Dnd5e.Application.Items;
 /// </summary>
 public sealed class InventoryEquippedGearProvider(ICharacterRepository characters, IItemTemplateRepository templates) : IEquippedGearProvider
 {
-    public async Task<IReadOnlyDictionary<Guid, EquippedGear>> GetAsync(IReadOnlyCollection<Guid> characterIds, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyDictionary<Guid, EquippedGear>> GetAsync(
+        IReadOnlyCollection<Guid> characterIds,
+        CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<Guid, Func<CharacterItem, IReadOnlyList<AppliedEnhancement>>>? enhancements = null)
     {
         if (characterIds.Count == 0)
         {
@@ -35,6 +39,6 @@ public sealed class InventoryEquippedGearProvider(ICharacterRepository character
             .GroupBy(i => i.CharacterId)
             .ToDictionary(
                 g => g.Key,
-                g => Dnd5eInventory.Gear(g, loaded));
+                g => Dnd5eInventory.Gear(g, loaded, enhancements?.GetValueOrDefault(g.Key)));
     }
 }

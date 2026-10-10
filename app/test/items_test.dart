@@ -306,6 +306,7 @@ void main() {
       expect(d('SkillBonus', 1), '+1 a todas las habilidades');
       expect(d('SpeedBonus', 10), '+10 pies de velocidad');
       expect(d('HitPointsMaxBonus', -2), '-2 PG máximos');
+      expect(d('ResourceMaxBonus', 1, 'ki'), '+1 a los usos máximos de Ki');
     });
 
     test('ItemFormData: modificadores iguales a la plantilla no se envían; quitarlos envía []', () {

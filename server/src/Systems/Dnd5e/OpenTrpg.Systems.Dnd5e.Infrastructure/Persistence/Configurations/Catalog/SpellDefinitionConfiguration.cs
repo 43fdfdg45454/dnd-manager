@@ -32,6 +32,7 @@ internal sealed class SpellDefinitionConfiguration : IEntityTypeConfiguration<Sp
         builder.Property(x => x.HigherLevel).HasJsonListConversion();
         builder.Property(x => x.ClassIndexes).HasJsonListConversion();
         builder.Property(x => x.SubclassIndexes).HasJsonListConversion();
+        builder.Ignore(x => x.Tags);
         builder.Property(x => x.AttackType).HasMaxLength(16);
         builder.Property(x => x.DcAbility).HasMaxLength(8);
         builder.Property(x => x.Category).HasConversion<string>().HasMaxLength(SpellCategories.MaxLength).IsRequired();

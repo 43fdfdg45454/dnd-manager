@@ -15,7 +15,8 @@ namespace OpenTrpg.Systems.Dnd5e.Application;
 public sealed class Dnd5eChangeRequestSystem(
     Dnd5eCharacterParts parts,
     Dnd5eSheetSystem sheet,
-    CompanionPlanner companions) : IChangeRequestSystem
+    CompanionPlanner companions,
+    Items.SetItemEnhancementsHandler enhancements) : IChangeRequestSystem
 {
     public IReadOnlyList<string> Types => Dnd5eChangeRequestTypes.All;
 
@@ -34,6 +35,9 @@ public sealed class Dnd5eChangeRequestSystem(
             case Dnd5eChangeRequestTypes.Companion:
                 var loaded = await parts.LoadAsync(character, cancellationToken);
                 await companions.ApplyApprovedAsync(loaded, payload.GetRawText(), now, cancellationToken);
+                break;
+            case Dnd5eChangeRequestTypes.ItemEnhancement:
+                await enhancements.ApplyApprovedAsync(await parts.LoadAsync(character, cancellationToken), payload.GetRawText(), now, cancellationToken);
                 break;
             default:
                 throw AppException.Conflict("Este tipo de solicitud todavía no está soportado.");

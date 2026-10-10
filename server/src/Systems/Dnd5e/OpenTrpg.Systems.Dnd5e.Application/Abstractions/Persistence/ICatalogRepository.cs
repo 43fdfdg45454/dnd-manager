@@ -85,6 +85,9 @@ public interface ICatalogRepository
     /// Features that grant a limited-use resource, an animal companion or sheet modifiers (content packs): the class
     /// features of <paramref name="classIndexes"/> and the subclass features of <paramref name="subclassIndexes"/>.
     /// </summary>
+    /// <summary>Racial traits (of any race) that give a limited-use resource.</summary>
+    Task<IReadOnlyList<TraitDefinition>> ListTraitResourcesAsync(CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<FeatureDefinition>> ListFeatureEffectsAsync(IReadOnlyCollection<string> classIndexes, IReadOnlyCollection<string> subclassIndexes, CancellationToken cancellationToken = default);
 
     // Level choices (phase 16c).

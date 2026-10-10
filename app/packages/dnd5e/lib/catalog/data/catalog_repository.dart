@@ -81,11 +81,13 @@ class CatalogRepository {
     String? school,
     bool? ritual,
     bool? concentration,
+    String? tag,
     int page = 1,
     int pageSize = 50,
     String? campaignId,
   }) => _page('spells', {
     'campaignId': campaignId,
+    'tag': tag,
     'search': search?.trim(),
     'level': level,
     'class': classIndex,

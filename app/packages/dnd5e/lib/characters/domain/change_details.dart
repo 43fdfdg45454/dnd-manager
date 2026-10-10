@@ -25,6 +25,7 @@ ChangeDetail? describeDnd5eChange(ChangeRequest request) {
     ChangeRequestType.editSheet => SheetChangeDetail(_sheetFields(payload, before)),
     ChangeRequestType.addItem || ChangeRequestType.customItem => _itemDetail(payload, before),
     ChangeRequestType.companion => SheetChangeDetail(_companionFields(payload, before)),
+    ChangeRequestType.itemEnhancement => SheetChangeDetail(_enhancementFields(payload, before)),
     ChangeRequestType.activate ||
     ChangeRequestType.other => PlainChangeDetail(describePayload(payload)),
     ChangeRequestType.removeItem || ChangeRequestType.adjustMoney => null,
@@ -41,6 +42,28 @@ List<FieldChange> _companionFields(Map<String, dynamic> payload, Map<String, dyn
       after: text(payload['beastName']) ?? text(payload['beastIndex']) ?? '—',
     ),
     (label: 'Nombre', before: text(before?['name']), after: text(payload['name']) ?? '—'),
+  ];
+}
+
+/// "Mejoras de Espada larga: — → Afilado, Ardiente" (option indexes as the
+/// payload carries them, shown as titles).
+List<FieldChange> _enhancementFields(Map<String, dynamic> payload, Map<String, dynamic>? before) {
+  String list(Object? value) {
+    final options = [
+      if (value is List)
+        for (final o in value)
+          if (o is String && o.isNotEmpty) o[0].toUpperCase() + o.substring(1).replaceAll('-', ' '),
+    ];
+    return options.isEmpty ? '—' : options.join(', ');
+  }
+
+  final item = payload['itemName'] is String ? payload['itemName'] as String : 'objeto';
+  return [
+    (
+      label: 'Mejoras de $item',
+      before: before == null ? null : list(before['options']),
+      after: list(payload['options']),
+    ),
   ];
 }
 

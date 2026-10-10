@@ -24,6 +24,7 @@ import '../domain/class_theme.dart';
 import '../domain/height_weight.dart' show formatHeightAndWeight;
 import '../models.dart';
 import 'combat/companion_section.dart';
+import 'item_enhancements_section.dart';
 import 'level_up/character_choices_section.dart';
 import 'skill_rolls.dart' show rollSkill, rollSkillWithMode;
 
@@ -205,6 +206,8 @@ class SummaryTab extends StatelessWidget {
         const SectionTitle('Salvaciones'),
         for (final key in abilityKeys) _SavingThrowRow(character: c, abilityKey: key),
         if (_hasDefenses(sheet)) _DefensesSection(sheet: sheet),
+        if (ItemEnhancementsSection.shows(c))
+          ItemEnhancementsSection(character: c, canEdit: canEdit),
         if (sheet.breathWeapon != null) _BreathWeaponCard(character: c),
         if (sheet.itemEffects.isNotEmpty) ...[
           const SectionTitle('Efectos de objetos'),
@@ -226,7 +229,8 @@ bool _hasDefenses(CharacterSheet sheet) =>
     sheet.resistances.isNotEmpty ||
     sheet.immunities.isNotEmpty ||
     sheet.conditionImmunities.isNotEmpty ||
-    sheet.lostSavingThrows.isNotEmpty;
+    sheet.lostSavingThrows.isNotEmpty ||
+    sheet.lostSkills.isNotEmpty;
 
 /// "Defensas": resistances, damage and condition immunities and the saving
 /// throw proficiencies taken away, each chip with what grants it.
@@ -277,6 +281,11 @@ class _DefensesSection extends StatelessWidget {
           group('Sin competencia en salvación', 'lost-saves', [
             for (final l in sheet.lostSavingThrows)
               chip('lost-save-${l.type}', abilityLabel(l.type), l.label),
+          ]),
+        if (sheet.lostSkills.isNotEmpty)
+          group('Sin competencia en habilidad', 'lost-skills', [
+            for (final l in sheet.lostSkills)
+              chip('lost-skill-${l.type}', skillLabel(l.type), l.label),
           ]),
       ],
     );
@@ -882,8 +891,23 @@ class SpellsTab extends ConsumerWidget {
         return byLevel != 0 ? byLevel : nameOf(a).compareTo(nameOf(b));
       });
 
+    // Spells granted by a feat, option or subclass with their own ability:
+    // one section per entry, named after it.
+    final granted = [
+      for (final sc in c.sheet.spellcasting)
+        if (sc.name != null && sc.classIndex != raceSpellClassIndex) sc,
+    ];
+    final grantedIndexes = {for (final g in granted) g.classIndex};
+    List<CharacterSpell> spellsOf(String classIndex) =>
+        c.spells.where((s) => s.classIndex == classIndex).toList()..sort((a, b) {
+          final byLevel = levelOf(a).compareTo(levelOf(b));
+          return byLevel != 0 ? byLevel : nameOf(a).compareTo(nameOf(b));
+        });
+
     final byLevel = <int, List<CharacterSpell>>{};
-    for (final s in c.spells.where((s) => s.classIndex != raceSpellClassIndex)) {
+    for (final s in c.spells.where(
+      (s) => s.classIndex != raceSpellClassIndex && !grantedIndexes.contains(s.classIndex),
+    )) {
       byLevel.putIfAbsent(levelOf(s), () => []).add(s);
     }
     final levels = byLevel.keys.toList()..sort((a, b) => a == -1 ? 1 : (b == -1 ? -1 : a - b));
@@ -894,7 +918,7 @@ class SpellsTab extends ConsumerWidget {
     return _TabList(
       children: [
         for (final sc in c.sheet.spellcasting)
-          if (sc.classIndex != raceSpellClassIndex)
+          if (sc.classIndex != raceSpellClassIndex && !grantedIndexes.contains(sc.classIndex))
             _SpellcastingRow(character: c, spellcasting: sc),
         if (concentrating != null)
           FactRow(
@@ -932,13 +956,41 @@ class SpellsTab extends ConsumerWidget {
                   title: Text(nameOf(s)),
                   subtitle: CastingTimeSubtitle(
                     castingTime: info?[s.spellIndex]?.castingTime,
-                    text: _racialSpellDetail(c, s, levelOf(s)),
+                    text: _grantedSpellDetail(c, raceSpellClassIndex, s, levelOf(s)),
                   ),
                   onTap: () => openSpellDetail(context, s.spellIndex),
                   trailing: const Chip(
                     label: Text('Siempre preparado'),
                     visualDensity: VisualDensity.compact,
                   ),
+                ),
+            ],
+          ),
+        for (final g in granted)
+          Column(
+            key: Key('spells-granted-${g.classIndex}'),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SectionTitle(g.name!),
+              _SpellcastingRow(character: c, spellcasting: g),
+              for (final s in spellsOf(g.classIndex))
+                ListTile(
+                  key: Key('spell-${g.classIndex}-${s.spellIndex}'),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: SpellCategoryIcon(s.category ?? info?[s.spellIndex]?.category),
+                  title: Text(nameOf(s)),
+                  subtitle: CastingTimeSubtitle(
+                    castingTime: info?[s.spellIndex]?.castingTime,
+                    text: _grantedSpellDetail(c, g.classIndex, s, levelOf(s)),
+                  ),
+                  onTap: () => openSpellDetail(context, s.spellIndex),
+                  trailing: s.alwaysPrepared
+                      ? const Chip(
+                          label: Text('Siempre preparado'),
+                          visualDensity: VisualDensity.compact,
+                        )
+                      : null,
                 ),
             ],
           ),
@@ -975,13 +1027,17 @@ class SpellsTab extends ConsumerWidget {
 /// "Raza" spellcasting of the sheet).
 const raceSpellClassIndex = 'race';
 
-/// "Truco", or "Nivel 3 · 1 de 1 usos por descanso largo" when the race gives
-/// the spell a number of casts per long rest (resource `race.<spell>`).
-String _racialSpellDetail(CharacterDetail character, CharacterSpell spell, int level) {
+/// "Truco", or "Nivel 3 · 1 de 1 usos por descanso largo" when the race (or
+/// the feat, option or subclass [entry]) gives the spell a number of casts per
+/// long rest (resource `<entry>.<spell>`).
+String _grantedSpellDetail(
+  CharacterDetail character,
+  String entry,
+  CharacterSpell spell,
+  int level,
+) {
   final label = level < 0 ? 'Conjuro' : spellLevelLabel(level);
-  final uses = character.resources
-      .where((r) => r.key == '$raceSpellClassIndex.${spell.spellIndex}')
-      .firstOrNull;
+  final uses = character.resources.where((r) => r.key == '$entry.${spell.spellIndex}').firstOrNull;
   if (uses == null) return label;
   final left = (uses.max - uses.used).clamp(0, uses.max);
   return '$label · $left de ${uses.max} ${uses.max == 1 ? 'uso' : 'usos'} por descanso largo';
@@ -1003,7 +1059,7 @@ class _SpellcastingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sc = spellcasting;
-    final className = spellcastingLabel(sc.classIndex);
+    final className = sc.name ?? spellcastingLabel(sc.classIndex);
     final sheet = character.sheet;
     final style = Theme.of(context).textTheme.bodyMedium;
     final bold = style?.copyWith(fontWeight: FontWeight.w600);
@@ -1050,6 +1106,14 @@ class _SpellcastingRow extends StatelessWidget {
               breakdown: sheet.breakdown('spellAttackBonus.${sc.classIndex}.cantrip'),
               style: style,
             ),
+          ],
+          if (sc.abilityOverridden) ...[
+            Text(
+              ' · ${abilityName(sc.ability)}',
+              key: Key('sheet-spell-ability-${sc.classIndex}'),
+              style: style,
+            ),
+            OverrideMark(character: character, field: 'spellcastingAbility.${sc.classIndex}'),
           ],
           if (sc.criticalRange < 20)
             Text(

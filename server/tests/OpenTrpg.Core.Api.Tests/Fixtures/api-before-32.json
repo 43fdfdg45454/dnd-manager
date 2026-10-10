@@ -1643,7 +1643,8 @@
           ],
           "source": "srd",
           "category": "Damage",
-          "expandedBy": []
+          "expandedBy": [],
+          "tags": []
         },
         {
           "index": "faerie-fire",
@@ -1663,7 +1664,8 @@
           ],
           "source": "srd",
           "category": "Control",
-          "expandedBy": []
+          "expandedBy": [],
+          "tags": []
         },
         {
           "index": "fireball",
@@ -1686,7 +1688,8 @@
           ],
           "source": "srd",
           "category": "Damage",
-          "expandedBy": []
+          "expandedBy": [],
+          "tags": []
         },
         {
           "index": "fire-shield",
@@ -1708,7 +1711,8 @@
           ],
           "source": "srd",
           "category": "Defense",
-          "expandedBy": []
+          "expandedBy": [],
+          "tags": []
         },
         {
           "index": "wall-of-fire",
@@ -1732,7 +1736,8 @@
           ],
           "source": "srd",
           "category": "Damage",
-          "expandedBy": []
+          "expandedBy": [],
+          "tags": []
         },
         {
           "index": "delayed-blast-fireball",
@@ -1755,7 +1760,8 @@
           ],
           "source": "srd",
           "category": "Damage",
-          "expandedBy": []
+          "expandedBy": [],
+          "tags": []
         },
         {
           "index": "fire-storm",
@@ -1778,7 +1784,8 @@
           ],
           "source": "srd",
           "category": "Damage",
-          "expandedBy": []
+          "expandedBy": [],
+          "tags": []
         }
       ],
       "total": 7,
@@ -1832,7 +1839,8 @@
       "source": "srd",
       "category": "Damage",
       "expandedBy": [],
-      "ritualForClasses": []
+      "ritualForClasses": [],
+      "tags": []
     }
   },
   {
@@ -3281,6 +3289,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 10,
         "passiveInsight": 10,
@@ -3367,6 +3376,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -3538,7 +3551,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -3799,6 +3813,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -4277,6 +4293,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -4369,7 +4386,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -4414,6 +4432,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -5529,7 +5551,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -5790,6 +5813,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -6268,6 +6293,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -6360,7 +6386,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -6425,6 +6452,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -6749,7 +6780,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -7010,6 +7042,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -7488,6 +7522,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -7580,7 +7615,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -7645,6 +7681,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -8005,7 +8045,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -8266,6 +8307,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -8751,6 +8794,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -8843,7 +8887,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -8908,6 +8953,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -9097,7 +9146,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -9358,6 +9408,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -9843,6 +9895,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -9935,7 +9988,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -10000,6 +10054,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -10189,7 +10247,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -10450,6 +10509,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -10935,6 +10996,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -11027,7 +11089,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -11092,6 +11155,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -11282,7 +11349,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "spellSlots": [
@@ -11543,6 +11611,8 @@
               "saveDc": 12,
               "attackBonus": 4,
               "preparedMax": 3,
+              "name": null,
+              "abilityOverridden": false,
               "spellsKnownMax": null,
               "cantripsKnownMax": null,
               "maxSpellLevel": 1,
@@ -12028,6 +12098,7 @@
           "immunities": [],
           "conditionImmunities": [],
           "lostSavingThrows": [],
+          "lostSkills": [],
           "classSaveDcs": [],
           "passiveInvestigation": 12,
           "passiveInsight": 11,
@@ -12120,7 +12191,8 @@
               "dice": null,
               "source": null,
               "breakdown": null,
-              "options": []
+              "options": [],
+              "rechargeRoll": null
             }
           ],
           "quickConsumables": [],
@@ -12185,6 +12257,10 @@
         "feats": [],
         "optionCosts": [],
         "companion": null,
+        "companions": [],
+        "itemEnhancements": [],
+        "itemEnhancementFeature": null,
+        "grafts": [],
         "companionFeature": null,
         "companionPending": false
       },
@@ -12383,7 +12459,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -12644,6 +12721,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -13129,6 +13208,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -13221,7 +13301,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -13286,6 +13367,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -13475,7 +13560,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -13736,6 +13822,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -14221,6 +14309,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -14313,7 +14402,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -14378,6 +14468,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -14567,7 +14661,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -14828,6 +14923,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -15313,6 +15410,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -15405,7 +15503,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -15470,6 +15569,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -15659,7 +15762,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -15920,6 +16024,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -16405,6 +16511,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -16497,7 +16604,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -16562,6 +16670,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -16751,7 +16863,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -17012,6 +17125,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -17497,6 +17612,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -17589,7 +17705,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -17654,6 +17771,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -17698,7 +17819,8 @@
       "dice": null,
       "source": null,
       "breakdown": null,
-      "options": []
+      "options": [],
+      "rechargeRoll": null
     }
   },
   {
@@ -17886,7 +18008,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         },
         {
           "id": "<id53>",
@@ -17902,7 +18025,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -18163,6 +18287,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -18648,6 +18774,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -18740,7 +18867,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           },
           {
             "id": "<id53>",
@@ -18756,7 +18884,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -18821,6 +18950,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -19010,7 +19143,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         },
         {
           "id": "<id53>",
@@ -19026,7 +19160,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -19287,6 +19422,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -19772,6 +19909,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -19864,7 +20002,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           },
           {
             "id": "<id53>",
@@ -19880,7 +20019,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -19945,6 +20085,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -20164,7 +20308,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -20425,6 +20570,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -20910,6 +21057,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -21002,7 +21150,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -21067,6 +21216,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -21256,7 +21409,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -21517,6 +21671,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -22002,6 +22158,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -22094,7 +22251,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -22159,6 +22317,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -22472,7 +22634,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -22733,6 +22896,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -23218,6 +23383,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -23310,7 +23476,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -23375,6 +23542,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -23564,7 +23735,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -23825,6 +23997,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -24310,6 +24484,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -24402,7 +24577,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -24467,6 +24643,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -24656,7 +24836,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -24917,6 +25098,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -25402,6 +25585,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -25494,7 +25678,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -25559,6 +25744,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -27712,7 +27901,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -27973,6 +28163,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -28458,6 +28650,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -28550,7 +28743,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -28659,6 +28853,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -28870,7 +29068,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -29131,6 +29330,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -29616,6 +29817,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -29708,7 +29910,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -29817,6 +30020,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -30796,7 +31003,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -31057,6 +31265,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -31542,6 +31752,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -31750,7 +31961,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [
@@ -31866,6 +32078,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -32305,7 +32521,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -32566,6 +32783,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -33051,6 +33270,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -33259,7 +33479,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [
@@ -33375,6 +33596,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -34905,7 +35130,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -35166,6 +35392,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -35651,6 +35879,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -35946,7 +36175,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [
@@ -36062,6 +36292,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -36964,7 +37198,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -37225,6 +37460,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -37710,6 +37947,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -38005,7 +38243,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [
@@ -38121,6 +38360,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -38355,7 +38598,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -38616,6 +38860,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -39101,6 +39347,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -39396,7 +39643,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [
@@ -39512,6 +39760,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -39746,7 +39998,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -40007,6 +40260,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -40492,6 +40747,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -40787,7 +41043,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [
@@ -40903,6 +41160,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -41165,7 +41426,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -41426,6 +41688,8 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
             "cantripsKnownMax": null,
             "maxSpellLevel": 1,
@@ -41911,6 +42175,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 12,
         "passiveInsight": 11,
@@ -42206,7 +42471,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [
@@ -42322,6 +42588,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -43027,6 +43297,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 10,
         "passiveInsight": 10,
@@ -43113,6 +43384,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -43818,6 +44093,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 10,
         "passiveInsight": 10,
@@ -43904,6 +44180,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -44609,6 +44889,7 @@
         "immunities": [],
         "conditionImmunities": [],
         "lostSavingThrows": [],
+        "lostSkills": [],
         "classSaveDcs": [],
         "passiveInvestigation": 10,
         "passiveInsight": 10,
@@ -44695,6 +44976,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }

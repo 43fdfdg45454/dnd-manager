@@ -40,6 +40,11 @@ public sealed class FeatureDefinition
 
     public IReadOnlyList<ChoiceModifier> Modifiers => LevelChoiceJson.ParseModifiers(ModifiersJson);
 
+    /// <summary>Lets the character enhance items of its inventory (<see cref="ItemEnhancementRule.ToJson"/>); null when it does not.</summary>
+    public string? ItemEnhancementJson { get; init; }
+
+    public ItemEnhancementRule? ItemEnhancement => ItemEnhancementRule.Parse(ItemEnhancementJson);
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = Dnd5eCatalogSources.Srd;
 }

@@ -91,6 +91,50 @@ public static class Dnd5eCharacterEndpoints
             .WithName("DeleteCharacterCompanion")
             .WithSummary("Quita el compañero animal. Solo un DM.");
 
+        group.MapPost("/companions", async (Guid id, SetCompanionRequest request, ClaimsPrincipal user, SetCompanionHandler handler, CancellationToken ct) =>
+                TypedResults.Ok((await handler.HandleAsync(user.GetUserId(), id, request, ct, add: true)).Character!))
+            .WithName("AddCharacterCompanion")
+            .WithSummary("Añade un compañero ({ beastIndex, name }) sin aprobación, dentro del máximo (maxCount) y del VD total (crBudgetByLevel) del rasgo. 409 si ya tiene el máximo.")
+            .ProducesValidationProblem();
+
+        group.MapPut("/companions/{companionId:guid}", async Task<Results<Ok<CharacterDetailDto>, Accepted<ChangeRequestDto>>> (
+                Guid id, Guid companionId, SetCompanionRequest request, ClaimsPrincipal user, SetCompanionHandler handler, CancellationToken ct) =>
+            {
+                var result = await handler.HandleAsync(user.GetUserId(), id, request, ct, companionId);
+                return result.ChangeRequest is { } changeRequest
+                    ? TypedResults.Accepted($"/api/v1/change-requests/{changeRequest.Id}", changeRequest)
+                    : TypedResults.Ok(result.Character!);
+            })
+            .WithName("SetCharacterCompanionById")
+            .WithSummary("Renombra un compañero o cambia su criatura; como PUT /companion (202 si un jugador cambia la criatura de un personaje activo).")
+            .ProducesValidationProblem();
+
+        group.MapPost("/companions/{companionId:guid}/hp", async (Guid id, Guid companionId, CompanionHpRequest request, ClaimsPrincipal user, CompanionTrackingHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.TrackHitPointsAsync(user.GetUserId(), id, request, ct, companionId)))
+            .WithName("TrackCompanionHitPointsById")
+            .WithSummary("PG de un compañero sin aprobación: { delta } o { current }, entre 0 y el máximo.")
+            .ProducesValidationProblem();
+
+        group.MapDelete("/companions/{companionId:guid}", async (Guid id, Guid companionId, ClaimsPrincipal user, CompanionTrackingHandler handler, CancellationToken ct) =>
+            {
+                await handler.DeleteAsync(user.GetUserId(), id, ct, companionId);
+                return TypedResults.NoContent();
+            })
+            .WithName("DeleteCharacterCompanionById")
+            .WithSummary("Despide un compañero: el dueño o un DM, sin aprobación.");
+
+        group.MapPut("/items/{itemId:guid}/enhancements", async Task<Results<Ok<CharacterDetailDto>, Accepted<ChangeRequestDto>>> (
+                Guid id, Guid itemId, Application.Items.SetItemEnhancementsRequest request, ClaimsPrincipal user, Application.Items.SetItemEnhancementsHandler handler, CancellationToken ct) =>
+            {
+                var result = await handler.HandleAsync(user.GetUserId(), id, itemId, request, ct);
+                return result.ChangeRequest is { } changeRequest
+                    ? TypedResults.Accepted($"/api/v1/change-requests/{changeRequest.Id}", changeRequest)
+                    : TypedResults.Ok(result.Character!);
+            })
+            .WithName("SetItemEnhancements")
+            .WithSummary("Mejoras de un objeto del inventario ({ options: [...] }, vacía para quitarlas). Con el rasgo de mejora, el dueño las aplica directamente dentro de sus límites; sin él, 202 con una solicitud para el DM. Un DM las aplica directamente.")
+            .ProducesValidationProblem();
+
         group.MapPost("/concentration",async (Guid id, ConcentrationRequest request, ClaimsPrincipal user, SetConcentrationHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, request, ct)))
             .WithName("SetCharacterConcentration")
@@ -126,6 +170,16 @@ public static class Dnd5eCharacterEndpoints
             .WithName("RestoreCharacterResource")
             .WithSummary("Recupera usos gastados de un recurso.")
             .ProducesValidationProblem();
+
+        group.MapPost("/resources/initiative", async (Guid id, ClaimsPrincipal user, ResourceHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.RechargeOnInitiativeAsync(user.GetUserId(), id, ct)))
+            .WithName("RechargeResourcesOnInitiative")
+            .WithSummary("Recupera los recursos que vuelven al tirar iniciativa (dueño o DM, sin aprobación).");
+
+        group.MapPost("/resources/{resourceId:guid}/recharge-roll", async (Guid id, Guid resourceId, RechargeRollRequest request, ClaimsPrincipal user, ResourceHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.RollRechargeAsync(user.GetUserId(), id, resourceId, request, ct)))
+            .WithName("RollResourceRecharge")
+            .WithSummary("Registra la tirada de recarga de un recurso: con el mínimo o más recupera todos sus usos.");
 
         group.MapPost("/resources/{resourceId:guid}/rolls", async (Guid id, Guid resourceId, ResourceRollsRequest request, ClaimsPrincipal user, ResourceHandler handler, CancellationToken ct) =>
                 TypedResults.Ok(await handler.RecordRollsAsync(user.GetUserId(), id, resourceId, request, ct)))

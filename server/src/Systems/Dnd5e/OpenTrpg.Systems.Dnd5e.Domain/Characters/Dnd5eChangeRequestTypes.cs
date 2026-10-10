@@ -11,5 +11,8 @@ public static class Dnd5eChangeRequestTypes
     /// <summary>A player changes the beast of the animal companion (payload <c>{ beastIndex, name }</c>).</summary>
     public const string Companion = "Companion";
 
-    public static IReadOnlyList<string> All { get; } = [EditSheet, Companion];
+    /// <summary>A player without the enhancement feature changes the enhancements of an item (payload <c>{ itemId, itemName, options }</c>).</summary>
+    public const string ItemEnhancement = "ItemEnhancement";
+
+    public static IReadOnlyList<string> All { get; } = [EditSheet, Companion, ItemEnhancement];
 }
