@@ -5,6 +5,7 @@ import 'catalog/ui/beast_page.dart';
 import 'catalog/ui/class_detail_page.dart';
 import 'catalog/ui/item_detail_page.dart';
 import 'catalog/ui/race_detail_page.dart';
+import 'catalog/ui/rule_page.dart';
 import 'catalog/ui/spell_detail_page.dart';
 import 'characters/ui/invalid_choices_page.dart';
 import 'characters/ui/level_up/level_up_page.dart';
@@ -25,6 +26,7 @@ abstract final class Dnd5eRoutes {
   static const classDetail = '/compendium/classes/:index';
   static const raceDetail = '/compendium/races/:index';
   static const beastDetail = '/compendium/beasts/:index';
+  static const ruleDetail = '/compendium/rules/:index';
 
   /// Creation wizard of a new character; DMs may preselect the owner.
   static String characterWizard(String campaignId, {String? ownerUserId}) =>
@@ -52,6 +54,8 @@ abstract final class Dnd5eRoutes {
   static String race(String index) => '/compendium/races/${Uri.encodeComponent(index)}';
 
   static String beast(String index) => '/compendium/beasts/${Uri.encodeComponent(index)}';
+
+  static String rule(String index) => '/compendium/rules/${Uri.encodeComponent(index)}';
 }
 
 /// The [GoRoute]s of [Dnd5eRoutes].
@@ -98,5 +102,9 @@ List<RouteBase> dnd5eRoutes(GlobalKey<NavigatorState> rootNavigatorKey) => [
   GoRoute(
     path: Dnd5eRoutes.beastDetail,
     builder: (context, state) => BeastPage(index: state.pathParameters['index']!),
+  ),
+  GoRoute(
+    path: Dnd5eRoutes.ruleDetail,
+    builder: (context, state) => RulePage(index: state.pathParameters['index']!),
   ),
 ];

@@ -149,6 +149,7 @@ class ClassSummary {
     this.hitDie,
     this.isSpellcaster = false,
     this.spellcastingAbility,
+    this.source,
   });
 
   factory ClassSummary.fromJson(Map<String, dynamic> json) => ClassSummary(
@@ -157,6 +158,7 @@ class ClassSummary {
     hitDie: _hitDie(json['hitDie']),
     isSpellcaster: _bool(json['isSpellcaster']) || json['spellcastingAbility'] != null,
     spellcastingAbility: _strOrNull(json['spellcastingAbility']),
+    source: _strOrNull(json['source']),
   );
 
   final String index;
@@ -164,6 +166,9 @@ class ClassSummary {
   final int? hitDie;
   final bool isSpellcaster;
   final String? spellcastingAbility;
+
+  /// "srd" or the id of the content pack that added it; null when not sent.
+  final String? source;
 }
 
 class ClassLevel {
@@ -315,6 +320,106 @@ class SkillChoices {
   final List<String> from;
 }
 
+/// How a class of a content pack casts spells (`ClassSpellcastingDto`).
+class ClassSpellcasting {
+  const ClassSpellcasting({
+    this.progression = '',
+    this.preparation = '',
+    this.ritual = false,
+    this.focus,
+  });
+
+  factory ClassSpellcasting.fromJson(Map<String, dynamic> json) => ClassSpellcasting(
+    progression: _str(json['progression']),
+    preparation: _str(json['preparation']),
+    ritual: _bool(json['ritual']),
+    focus: _strOrNull(json['focus']),
+  );
+
+  /// "full", "half", "third", "pact" or "table" (own slots table).
+  final String progression;
+
+  /// "prepared" or "known".
+  final String preparation;
+  final bool ritual;
+
+  /// Index of the spellcasting focus ("alchemists-supplies"), if any.
+  final String? focus;
+}
+
+/// What multiclassing into a class of a content pack asks and gives
+/// (`ClassMulticlassingDto`).
+class ClassMulticlassing {
+  const ClassMulticlassing({
+    this.prerequisites = const {},
+    this.armor = const [],
+    this.weapons = const [],
+    this.tools = const [],
+    this.skills = 0,
+  });
+
+  factory ClassMulticlassing.fromJson(Map<String, dynamic> json) => ClassMulticlassing(
+    prerequisites: {
+      for (final e in (_map(json['prerequisites']) ?? const <String, dynamic>{}).entries)
+        if (_int(e.value) case final int v) e.key: v,
+    },
+    armor: _strList(json['armor']),
+    weapons: _strList(json['weapons']),
+    tools: _strList(json['tools']),
+    skills: _int(json['skills']) ?? 0,
+  );
+
+  /// Minimum score by ability index ("int": 13).
+  final Map<String, int> prerequisites;
+  final List<String> armor;
+  final List<String> weapons;
+  final List<String> tools;
+
+  /// Skills of the class list gained when multiclassing into it.
+  final int skills;
+}
+
+/// A resource of a class of a content pack (`ClassResourceDto`).
+class ClassResource {
+  const ClassResource({
+    required this.key,
+    required this.name,
+    this.max = '',
+    this.maxByLevel,
+    this.recharge = '',
+  });
+
+  factory ClassResource.fromJson(Map<String, dynamic> json) {
+    final byLevel = _map(json['maxByLevel']);
+    return ClassResource(
+      key: _str(json['key']),
+      name: _str(json['name'], _str(json['key'])),
+      max: _str(json['max']),
+      maxByLevel: byLevel == null
+          ? null
+          : {
+              for (final e in byLevel.entries)
+                if ((int.tryParse(e.key), _int(e.value)) case (final int level, final int v))
+                  level: v,
+            },
+      recharge: _str(json['recharge']),
+    );
+  }
+
+  final String key;
+  final String name;
+
+  /// Formula of the maximum when it is not a table ("proficiencyBonus",
+  /// "mod:wis"...).
+  final String max;
+
+  /// Maximum by class level when it comes from the level table.
+  final Map<int, int>? maxByLevel;
+
+  /// "ShortRest", "LongRest"... as the server spells it.
+  final String recharge;
+}
+
 class ClassDetail extends ClassSummary {
   const ClassDetail({
     required super.index,
@@ -322,6 +427,12 @@ class ClassDetail extends ClassSummary {
     super.hitDie,
     super.isSpellcaster,
     super.spellcastingAbility,
+    super.source,
+    this.description = const [],
+    this.subclassLevel = 0,
+    this.spellcasting,
+    this.multiclassing,
+    this.resources = const [],
     this.spellcastingLevel = 0,
     this.savingThrows = const [],
     this.proficiencies = const [],
@@ -357,6 +468,12 @@ class ClassDetail extends ClassSummary {
       hitDie: summary.hitDie,
       isSpellcaster: summary.isSpellcaster,
       spellcastingAbility: summary.spellcastingAbility,
+      source: summary.source,
+      description: _strList(json['description']),
+      subclassLevel: _int(json['subclassLevel']) ?? 0,
+      spellcasting: _map(json['spellcasting']).let(ClassSpellcasting.fromJson),
+      multiclassing: _map(json['multiclassing']).let(ClassMulticlassing.fromJson),
+      resources: _objects(json['resources'], ClassResource.fromJson),
       spellcastingLevel: _int(json['spellcastingLevel']) ?? 0,
       savingThrows: _nameList(json['savingThrows']),
       proficiencies: _nameList(json['proficiencyNames'] ?? json['proficiencies']),
@@ -371,6 +488,21 @@ class ClassDetail extends ClassSummary {
   }
 
   final int spellcastingLevel;
+
+  /// Description paragraphs (classes of content packs; empty for the SRD).
+  final List<String> description;
+
+  /// Level at which the subclass is chosen (0 when the class does not say).
+  final int subclassLevel;
+
+  /// Spellcasting of a class of a content pack (null for the SRD classes).
+  final ClassSpellcasting? spellcasting;
+
+  /// Multiclassing of a class of a content pack (null for the SRD classes).
+  final ClassMulticlassing? multiclassing;
+
+  /// Resources of a class of a content pack (bombs, grit...).
+  final List<ClassResource> resources;
 
   /// Ability slugs ("str", "con", ...).
   final List<String> savingThrows;
@@ -905,6 +1037,7 @@ class ItemDetail extends ItemSummary {
     this.description = const [],
     this.effects = const [],
     this.modifiers = const [],
+    this.systemData = const {},
   });
 
   factory ItemDetail.fromJson(Map<String, dynamic> json) {
@@ -962,10 +1095,28 @@ class ItemDetail extends ItemSummary {
       description: _strList(json['description']),
       effects: _strList(json['effects']),
       modifiers: ItemModifier.listFromJson(json['modifiers']),
+      systemData: _map(json['systemData']) ?? const {},
     );
   }
 
   final String? rarity;
+
+  /// Rules data of the item without a column of its own (`systemData`):
+  /// `special`, `tool`, `ammunition` and `firearm: { reload, misfire }`.
+  final Map<String, dynamic> systemData;
+
+  /// Text of the special property of a weapon of a content pack.
+  String? get special => _strOrNull(systemData['special']);
+
+  bool get isTool => _bool(systemData['tool']);
+
+  bool get isAmmunition => _bool(systemData['ammunition']);
+
+  /// Shots between reloads of a firearm (null: not a firearm or no reload).
+  int? get firearmReload => _int(_map(systemData['firearm'])?['reload']);
+
+  /// Highest d20 result that jams a firearm (null: not a firearm).
+  int? get firearmMisfire => _int(_map(systemData['firearm'])?['misfire']);
 
   final bool requiresAttunement;
 
@@ -1040,17 +1191,116 @@ bool? _boolOrNull(Object? value) => value == null ? null : _bool(value);
 // ---------------------------------------------------------------------------
 
 class Condition {
-  const Condition({required this.index, required this.name, this.description = const []});
+  const Condition({
+    required this.index,
+    required this.name,
+    this.description = const [],
+    this.source,
+  });
 
   factory Condition.fromJson(Map<String, dynamic> json) => Condition(
     index: _str(json['index']),
     name: _str(json['name'], _str(json['index'])),
     description: _strList(json['description']),
+    source: _strOrNull(json['source']),
   );
 
   final String index;
   final String name;
   final List<String> description;
+
+  /// "srd" or the content pack of the condition; null when not sent.
+  final String? source;
+}
+
+/// A rules document of a content pack in the list (`RuleSummaryDto`).
+class RuleSummary {
+  const RuleSummary({
+    required this.index,
+    required this.title,
+    this.category = '',
+    this.tags = const [],
+    this.source,
+  });
+
+  factory RuleSummary.fromJson(Map<String, dynamic> json) => RuleSummary(
+    index: _str(json['index']),
+    title: _str(json['title'], _str(json['index'])),
+    category: _str(json['category']),
+    tags: _strList(json['tags']),
+    source: _strOrNull(json['source']),
+  );
+
+  final String index;
+  final String title;
+
+  /// "variant", "multiclassing", "equipment", "general"...
+  final String category;
+  final List<String> tags;
+  final String? source;
+}
+
+/// A rules document with its body (`RuleDto`): paragraphs in light Markdown.
+class Rule extends RuleSummary {
+  const Rule({
+    required super.index,
+    required super.title,
+    super.category,
+    super.tags,
+    super.source,
+    this.body = const [],
+  });
+
+  factory Rule.fromJson(Map<String, dynamic> json) {
+    final summary = RuleSummary.fromJson(json);
+    return Rule(
+      index: summary.index,
+      title: summary.title,
+      category: summary.category,
+      tags: summary.tags,
+      source: summary.source,
+      body: _strList(json['body']),
+    );
+  }
+
+  final List<String> body;
+}
+
+/// Kinds of vocabulary of `GET /catalog/reference/{kind}`.
+abstract final class ReferenceKinds {
+  static const languages = 'languages';
+  static const weaponProperties = 'weaponProperties';
+  static const equipmentCategories = 'equipmentCategories';
+  static const damageTypes = 'damageTypes';
+  static const magicSchools = 'magicSchools';
+  static const tools = 'tools';
+}
+
+/// An entry of a vocabulary of the catalog (`ReferenceEntryDto`): a
+/// language, weapon property, equipment category, damage type, magic school
+/// or tool, from the SRD or a content pack.
+class ReferenceEntry {
+  const ReferenceEntry({
+    required this.kind,
+    required this.index,
+    required this.name,
+    this.description = const [],
+    this.source,
+  });
+
+  factory ReferenceEntry.fromJson(Map<String, dynamic> json) => ReferenceEntry(
+    kind: _str(json['kind']),
+    index: _str(json['index']),
+    name: _str(json['name'], _str(json['index'])),
+    description: _strList(json['description']),
+    source: _strOrNull(json['source']),
+  );
+
+  final String kind;
+  final String index;
+  final String name;
+  final List<String> description;
+  final String? source;
 }
 
 class Skill {
