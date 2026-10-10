@@ -371,6 +371,60 @@ public class SheetRulesPackTests(SheetRulesPackApiFactory factory) : IClassFixtu
         Assert.Contains(errors, e => e.StartsWith("items[3].modifiers[0]", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task A_firearm_without_misfire_imports_and_attunement_takes_a_base_class()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        var pack = Build();
+        pack["id"] = "reglas-sueltas";
+        pack.Remove("classes");
+        pack.Remove("races");
+        pack.Remove("feats");
+        var pistol = pack["items"]![0]!;
+        pistol["index"] = "reglas-sueltas-pistola";
+        pistol["name"] = "Pistola sin fallo";
+        pistol["firearm"] = new JsonObject { ["reload"] = 6 };
+        var amulet = pack["items"]![3]!;
+        amulet["index"] = "reglas-sueltas-amuleto";
+        amulet["name"] = "Amuleto del mago";
+        amulet["attunementClasses"] = new JsonArray("wizard");
+        pack["items"] = new JsonArray(pistol.DeepClone(), amulet.DeepClone());
+
+        var response = await admin.PostAsync(PacksUrl, Json(pack));
+        Assert.True(response.StatusCode == HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+
+        var gun = Assert.Single((await GetAsync<PagedResult<ItemSummaryDto>>(admin, $"{CatalogUrl}/items?search=pistola%20sin%20fallo")).Items);
+        var gunDetail = await GetAsync<ItemDetailDto>(admin, $"{CatalogUrl}/items/{gun.Id}");
+        Assert.Contains("firearm", gunDetail.Properties);
+        var firearm = gunDetail.SystemData!.Value.GetProperty("firearm");
+        Assert.Equal(6, firearm.GetProperty("reload").GetInt32());
+        Assert.False(firearm.TryGetProperty("misfire", out _));
+
+        var charm = Assert.Single((await GetAsync<PagedResult<ItemSummaryDto>>(admin, $"{CatalogUrl}/items?search=amuleto%20del%20mago")).Items);
+        var charmDetail = await GetAsync<ItemDetailDto>(admin, $"{CatalogUrl}/items/{charm.Id}");
+        Assert.Equal(["wizard"], charmDetail.SystemData!.Value.GetProperty("attunementClasses").EnumerateArray().Select(c => c.GetString()));
+    }
+
+    [Fact]
+    public async Task Attunement_classes_must_exist_in_the_pack_or_the_base_packs()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        var pack = Build();
+        pack["id"] = "reglas-sintonia";
+        pack.Remove("races");
+        pack.Remove("feats");
+        pack.Remove("classes");
+        var amulet = pack["items"]![3]!.DeepClone();
+        amulet["index"] = "reglas-sintonia-amuleto";
+        amulet["attunementClasses"] = new JsonArray("wizard", "reglas-sintonia-fantasma");
+        pack["items"] = new JsonArray(amulet);
+
+        var errors = await ImportErrorsAsync(admin, pack);
+
+        Assert.Contains(errors, e => e.StartsWith("items[0].attunementClasses[1]:", StringComparison.Ordinal) && e.Contains("reglas-sintonia-fantasma", StringComparison.Ordinal));
+        Assert.DoesNotContain(errors, e => e.StartsWith("items[0].attunementClasses[0]", StringComparison.Ordinal));
+    }
+
     // ---- Helpers ---------------------------------------------------------------------------------------
 
     private async Task ImportAsync(HttpClient admin)

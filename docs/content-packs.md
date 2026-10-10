@@ -621,7 +621,7 @@ Mismos campos que los objetos homebrew de una campaña.
 | `description` | `string[]?` | Párrafos. |
 | `effects` | `string[]?` | ≤ 50 efectos en texto libre de ≤ 500. |
 | `modifiers` | `Modifier[]?` | ≤ 10 efectos estructurados sobre la hoja (ver abajo). |
-| `attunementClasses` | `string[]?` | Con `requiresAttunement: true`: índices de las clases que pueden sintonizarlo (`["mipaquete-vigia"]`). Un personaje sin nivel en ninguna recibe un 400 al sintonizar ("Solo pueden sintonizar este objeto personajes de estas clases: …"). |
+| `attunementClasses` | `string[]?` | Con `requiresAttunement: true`: índices de las clases que pueden sintonizarlo (`["mipaquete-vigia"]`), del propio paquete o de los paquetes base; una clase que no existe es un error. Un personaje sin nivel en ninguna recibe un 400 al sintonizar ("Solo pueden sintonizar este objeto personajes de estas clases: …"). |
 | `contents` | `StartingItem[]?` | Contenido de un paquete de equipo (`explorers-pack` → mochila, saco de dormir...): la API lo muestra con el equipo inicial. Cada entrada como un [`StartingItem`](#startingequipment). |
 
 **`Modifier`** (igual que `ItemModifier` de la fase 11, activo mientras el objeto está equipado y,
@@ -644,7 +644,7 @@ deduce de ellas si falta (`Weapon`, `Armor` o `Shield`, `Tool`, `Consumable` par
 | `armor` | `category` (**obligatorio**: `light`, `medium`, `heavy` o `shield`), `baseAc` (**obligatorio**), `dexBonus` (por defecto, sí salvo las pesadas), `maxDexBonus` (por defecto 2 en las intermedias), `strMin`, `stealthDisadvantage` y `exotic` (`true`: armadura exótica; conserva su categoría de peso y añade la propiedad `exotic`; no admitido en escudos). |
 | `tool` | `true`: el objeto es una herramienta. |
 | `ammunition` | `true`: el objeto es munición (subcategoría "Ammunition"). |
-| `firearm` | `{ "reload": 1-100?, "misfire": 1-20, "era": "renaissance"? }`: arma de fuego con su recarga (disparos entre recargas), su fallo (resultado del d20 igual o inferior con el que se encasquilla) y su época (texto ≤ 100, en minúsculas). Son informativos: la app los muestra en el detalle del arma y no los tira. Necesita `weapon` y añade la propiedad `firearm`. |
+| `firearm` | `{ "reload": 1-100?, "misfire": 1-20?, "era": "renaissance"? }`: arma de fuego con su recarga (disparos entre recargas), su fallo (resultado del d20 igual o inferior con el que se encasquilla; sin `misfire`, el arma no se encasquilla) y su época (texto ≤ 100, en minúsculas). Son informativos: la app los muestra en el detalle del arma y no los tira. Necesita `weapon` y añade la propiedad `firearm`. |
 
 `weapon` y los campos sueltos de arma (`damageDice`, `properties`...) no se pueden combinar, ni
 `armor` con los sueltos de armadura, ni `weapon` con `armor`. Lo que no tiene columna propia

@@ -229,7 +229,12 @@ internal sealed partial class ContentPackValidator
                 firearmData["reload"] = reload;
             }
 
-            firearmData["misfire"] = RequiredInt($"{path}.firearm.misfire", firearm.Misfire, 1, 20);
+            // Without "misfire" the firearm never misfires (not every firearm has the property).
+            if (OptionalInt($"{path}.firearm.misfire", firearm.Misfire, 1, 20) is { } misfire)
+            {
+                firearmData["misfire"] = misfire;
+            }
+
             if (NullableText($"{path}.firearm.era", firearm.Era, ShortTextMaxLength) is { } era)
             {
                 firearmData["era"] = era.ToLowerInvariant();
@@ -248,7 +253,17 @@ internal sealed partial class ContentPackValidator
             var classes = new List<string>();
             ForEachText($"{path}.attunementClasses", item.AttunementClasses, (classPath, value) =>
             {
-                if (Reference(classPath, value.ToLowerInvariant()) is { } index && !classes.Contains(index))
+                if (Reference(classPath, value.ToLowerInvariant()) is not { } index)
+                {
+                    return;
+                }
+
+                // Like the other class references: a class of this pack or of the base packs.
+                if (!_classes.ContainsKey(index))
+                {
+                    AddError(classPath, $"La clase '{index}' no existe en el catálogo.");
+                }
+                else if (!classes.Contains(index))
                 {
                     classes.Add(index);
                 }

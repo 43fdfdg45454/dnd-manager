@@ -766,7 +766,7 @@ internal sealed class PackItemJson
     /// <summary>Format 3: the item is ammunition (category Consumable, subcategory "Ammunition").</summary>
     public bool? Ammunition { get; set; }
 
-    /// <summary>Format 3: a firearm (with <see cref="Weapon"/>): reload and misfire scores.</summary>
+    /// <summary>Format 3: a firearm (with <see cref="Weapon"/>): reload and (optional) misfire scores.</summary>
     public PackFirearmJson? Firearm { get; set; }
 
     /// <summary>Contents of an equipment pack (explorer's pack...), given with the item in the starting equipment.</summary>
@@ -857,7 +857,7 @@ internal sealed class PackFirearmJson
     /// <summary>Shots before reloading.</summary>
     public int? Reload { get; set; }
 
-    /// <summary>Attack roll at or below which the firearm misfires.</summary>
+    /// <summary>Attack roll at or below which the firearm misfires; null = the firearm never misfires.</summary>
     public int? Misfire { get; set; }
 
     /// <summary>Era of the firearm ("renaissance", "modern"...): informative data.</summary>
