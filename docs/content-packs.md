@@ -378,6 +378,7 @@ existente** (con `extends`).
 | `description` | `string[]?` | Párrafos. |
 | `levels` | `ClassLevel[]` | **Obligatorio**: los niveles 1 a 20, cada uno una vez. |
 | `resources` | `Resource[]?` | Recursos de la clase (usos por descanso), [como los de los rasgos](#levelsfeaturesresource), con un máximo más: `"classSpecific:<clave>"` (ver abajo). |
+| `saveDc` | `ClassSaveDc` o `ClassSaveDc[]` | CD de salvación de los rasgos de la clase, distinta de la de conjuros: `{ "name": "CD de maniobras de ejemplo", "ability": "wis" }` (`name` ≤ 100, **obligatorio**; `ability` `str`...`cha`). La hoja la muestra como 8 + competencia + modificador, con su desglose (`classSaveDc.<clase>`; la segunda, `classSaveDc.<clase>.1`...). No se admite con `extends`. |
 | `subclasses` | `Subclass[]?` | Subclases de la clase. |
 | `levelChoices` | `LevelChoice[]?` | Elecciones por nivel ([ver abajo](#levelchoices)); se suman a las generadas. |
 | `features` | `Feature[]?` | Rasgos de la clase que **no** aparecen en la lista de ningún nivel (los que solo cita una opción o una elección, como los dados de Inspiración bárdica que mejoran). Cada uno lleva `level` (1–20). |
@@ -570,6 +571,12 @@ demás. Se responde como cualquier dote de origen (`{ "feat": "...", "ability": 
 ajuste apagado, la API la rechaza (400, `code: starter-feat-not-allowed`); una respuesta ya dada se conserva y se
 puede quitar.
 
+Si la dote trae `grants.removeSavingThrows` con elección (ver [Grants de hoja](#grants-de-hoja)), la respuesta lleva
+además las salvaciones que se pierden: `{ "feat": "...", "removedSavingThrows": ["con"] }` (exactamente `choose`
+de `from`). Cada opción de dote del plan trae `removeSavingThrows` (`{ choose, from }` o `null`) y
+`skillChoicesDelta`, y la respuesta guardada, `removedSavingThrows`. Esta pregunta solo existe en las dotes de origen
+(inicial, de raza o de trasfondo); en una dote de subida de nivel solo se aplica la forma fija.
+
 En la app, el interruptor "Dotes iniciales" está en Ajustes de la campaña → "Contenido y reglas" (la misma sección se
 abre como paso "Contenido" justo después de crear una campaña), y el asistente de creación añade el paso opcional
 "Dote inicial" tras las elecciones de raza y trasfondo cuando la campaña la ofrece.
@@ -613,6 +620,7 @@ Mismos campos que los objetos homebrew de una campaña.
 | `description` | `string[]?` | Párrafos. |
 | `effects` | `string[]?` | ≤ 50 efectos en texto libre de ≤ 500. |
 | `modifiers` | `Modifier[]?` | ≤ 10 efectos estructurados sobre la hoja (ver abajo). |
+| `attunementClasses` | `string[]?` | Con `requiresAttunement: true`: índices de las clases que pueden sintonizarlo (`["mipaquete-vigia"]`). Un personaje sin nivel en ninguna recibe un 400 al sintonizar ("Solo pueden sintonizar este objeto personajes de estas clases: …"). |
 | `contents` | `StartingItem[]?` | Contenido de un paquete de equipo (`explorers-pack` → mochila, saco de dormir...): la API lo muestra con el equipo inicial. Cada entrada como un [`StartingItem`](#startingequipment). |
 
 **`Modifier`** (igual que `ItemModifier` de la fase 11, activo mientras el objeto está equipado y,
@@ -620,7 +628,7 @@ si lo requiere, sintonizado):
 
 | Campo | Tipo | Reglas |
 | --- | --- | --- |
-| `kind` | `string` | **Obligatorio**: `AbilityBonus`, `AbilitySet`, `SaveBonus`, `SkillBonus`, `ArmorClassBonus`, `AttackBonus`, `DamageBonus`, `SpeedBonus`, `HitPointsMaxBonus` o `InitiativeBonus`. |
+| `kind` | `string` | **Obligatorio**: `AbilityBonus`, `AbilitySet`, `SaveBonus`, `SkillBonus`, `ArmorClassBonus`, `AttackBonus`, `DamageBonus`, `SpeedBonus`, `HitPointsMaxBonus` o `InitiativeBonus`. Los tipos de [reglas de la hoja](#modificadores-de-reglas-de-la-hoja) (`ArmorClassFormula`, `CriticalRange`...) solo valen en opciones, dotes y rasgos: en un objeto dan error en `items[i].modifiers[j]`. |
 | `target` | `string?` | Característica (`str`...`cha`) obligatoria en `AbilityBonus` y `AbilitySet`; característica o `null` (todas) en `SaveBonus`; índice de habilidad o `null` (todas) en `SkillBonus`, ≤ 64; `null` en el resto. |
 | `value` | `int` | **Obligatorio**. −10 a 30; en `AbilitySet`, 1 a 30. |
 
@@ -631,11 +639,11 @@ deduce de ellas si falta (`Weapon`, `Armor` o `Shield`, `Tool`, `Consumable` par
 
 | Sección | Campos |
 | --- | --- |
-| `weapon` | `category` (**obligatorio**: `simple`, `martial` o `exotic`), `range` (**obligatorio**: `melee` o `ranged`), `damage` (**obligatorio**, dados), `damageType` (**obligatorio**), `versatileDamage`, `properties` (`string[]`), `rangeNormal`, `rangeLong` y `special` (texto de una propiedad especial, ≤ 10 000). La subcategoría por defecto es "Martial Ranged", "Simple Melee"... |
+| `weapon` | `category` (**obligatorio**: `simple`, `martial` o `exotic`), `range` (**obligatorio**: `melee` o `ranged`), `damage` (**obligatorio**, dados), `damageType` (**obligatorio**), `versatileDamage`, `properties` (`string[]`), `rangeNormal`, `rangeLong`, `special` (texto de una propiedad especial, ≤ 10 000), `addAbilityToDamage`, `requires` y `alternate` (ver abajo). La subcategoría por defecto es "Martial Ranged", "Simple Melee"... |
 | `armor` | `category` (**obligatorio**: `light`, `medium`, `heavy` o `shield`), `baseAc` (**obligatorio**), `dexBonus` (por defecto, sí salvo las pesadas), `maxDexBonus` (por defecto 2 en las intermedias), `strMin`, `stealthDisadvantage` y `exotic` (`true`: armadura exótica; conserva su categoría de peso y añade la propiedad `exotic`; no admitido en escudos). |
 | `tool` | `true`: el objeto es una herramienta. |
 | `ammunition` | `true`: el objeto es munición (subcategoría "Ammunition"). |
-| `firearm` | `{ "reload": 1-100?, "misfire": 1-20 }`: arma de fuego con su recarga (disparos entre recargas) y su fallo (resultado del d20 igual o inferior con el que se encasquilla). Son informativos: la app los muestra en el detalle del arma y no los tira. Necesita `weapon` y añade la propiedad `firearm`. |
+| `firearm` | `{ "reload": 1-100?, "misfire": 1-20, "era": "renaissance"? }`: arma de fuego con su recarga (disparos entre recargas), su fallo (resultado del d20 igual o inferior con el que se encasquilla) y su época (texto ≤ 100, en minúsculas). Son informativos: la app los muestra en el detalle del arma y no los tira. Necesita `weapon` y añade la propiedad `firearm`. |
 
 `weapon` y los campos sueltos de arma (`damageDice`, `properties`...) no se pueden combinar, ni
 `armor` con los sueltos de armadura, ni `weapon` con `armor`. Lo que no tiene columna propia
@@ -663,6 +671,33 @@ competencias de la hoja:
 
 El tipo de arma de fuego es la propia `weapon.category` (un trabuco `exotic` con `firearm` pide
 `exotic-firearms`).
+
+**Reglas del arma** (en `weapon`, todas opcionales; viajan en `systemData`):
+
+| Campo | Efecto en los ataques de la hoja |
+| --- | --- |
+| `addAbilityToDamage` | `bool`. Si el daño suma el modificador de característica. Por defecto sí, **salvo las armas de fuego**, que no lo suman si no se pone `true`. |
+| `requires` | Puntuaciones mínimas para usarla sin penalización: `{ "str": 15 }` (1–30). Por debajo, el ataque lleva el aviso "Requiere Fuerza 15; tienes 12." en `warnings`. |
+| `alternate` | Segundo perfil (armas dobles o de cambio): `{ "name"?, "range"?, "damage", "damageType"?, "versatileDamage"?, "properties"?, "rangeNormal"?, "rangeLong"? }`. La hoja muestra un segundo ataque con el mismo `itemId`, llamado `name` o "<arma> (perfil alternativo)"; lo que falta se toma del arma. |
+
+Las armas `heavy` añaden el aviso "Desventaja: arma pesada y tamaño pequeño." a los personajes de
+tamaño `tiny` o `small` (ver `grants.size`).
+
+```json
+{"index": "mipaquete-pistola", "name": "Pistola de ejemplo",
+ "weapon": {"category": "martial", "range": "ranged", "damage": "1d8", "damageType": "piercing", "rangeNormal": 30, "rangeLong": 90, "requires": {"dex": 13}},
+ "firearm": {"misfire": 1, "era": "renaissance"}},
+{"index": "mipaquete-maza-doble", "name": "Maza doble",
+ "weapon": {"category": "exotic", "range": "melee", "damage": "1d8", "damageType": "bludgeoning", "properties": ["heavy"],
+            "alternate": {"name": "Maza doble (mango)", "damage": "1d4", "properties": ["light"]}}},
+{"index": "mipaquete-amuleto", "name": "Amuleto del vigía", "category": "MagicItem", "rarity": "Uncommon",
+ "requiresAttunement": true, "attunementClasses": ["mipaquete-vigia"]}
+```
+
+**Filtro del catálogo.** `GET /api/v1/systems/dnd5e/catalog/items?group=<grupo>` filtra por grupo:
+`simple`, `martial` (armas de esa categoría), `exotic` (armas exóticas y armaduras con `exotic`),
+`firearm` (propiedad `firearm`) y `bomb` (propiedad `bomb`); otro valor da 400. El compendio de la app
+lo ofrece como desplegable "Grupo" junto a la categoría.
 
 ### `Spell`
 
@@ -1374,6 +1409,7 @@ con los tipos `OptionSet`, `Skill`, `Expertise`, `Tool`, `Language`, `CantripsKn
 | --- | --- | --- |
 | `SavingThrow` | Las seis características (o las de `from`); no elegibles las que ya tienen competencia. | Competencia en esa salvación. |
 | `Weapon` | Armas del catálogo de la campaña: `from` (índices) o `filter.weaponCategories` (`simple`, `martial`, `exotic`) y `filter.firearms` (`true` solo armas de fuego, `false` ninguna). | Competencia con esa arma (por índice). |
+| `Resistance` | Tipos de daño: los de `from` (del SRD o del vocabulario `reference.damageTypes`) o los 13 del SRD; no elegibles los que ya resiste. Se muestran en español ("Frío"). | Resistencia a ese tipo, en `resistances` de la hoja con el nombre de la opción ("Aguante elemental (nivel 4)"). |
 
 En el plan de subida, cada elección de `choices` aparece con la key `<índice de la opción>/<key>` y
 `requires: { "choiceKey", "index" }`: solo se pide (y solo es obligatoria) si se elige esa opción en
@@ -1407,6 +1443,9 @@ Las elecciones de una dote de origen (raza, subraza o trasfondo) no se piden en 
 | `oneHandedMeleeNoOtherWeapon` | arma cuerpo a cuerpo sin la propiedad "two-handed" y ninguna otra arma equipada (no se suma al daño a dos manos de una versátil) | ataques |
 | `twoHandedMelee` | arma cuerpo a cuerpo "two-handed", o el daño a dos manos de una versátil | ataques |
 | `twoWeaponFighting` | segunda arma al combatir con dos armas | solo texto (no hay línea de ataque de la segunda arma) |
+| `noArmor` | no lleva armadura (el escudo no cuenta) | hoja |
+| `firearm` | ataca con un arma de fuego (propiedad `firearm`) | ataques |
+| `cantrip` | solo en `SpellSaveDcBonus` y `SpellAttackBonus`: la CD y el ataque de los trucos | hoja |
 
 Los bonos aparecen en los desgloses con el nombre de la opción y el nivel: "Juramento del Muro (nivel 3)".
 
@@ -1418,6 +1457,71 @@ conjuros y trucos deben existir en el SRD o en el paquete. En razas y subrazas (
 `subraces[].grants`) se admiten además `spellcastingAbility` y `spells[].usesPerLongRest`, y
 `minLevel` es el nivel total ([ver Race](#grants-de-raza-y-subraza)); fuera de ellas esos dos campos
 dan error.
+
+#### Modificadores de reglas de la hoja
+
+En opciones, dotes y rasgos de clase o subclase (no en objetos), `value` puede ser una **fórmula** en
+texto en lugar de un número: términos `characterLevel`, `halfCharacterLevel`, `classLevel`,
+`halfClassLevel` (nivel en la clase de la elección o del rasgo), `proficiencyBonus`, `mod:<característica>`
+y constantes, unidos con `+` y con factor opcional (`2*classLevel`). El desglose muestra cada término
+con el origen: "Robusto (nivel 4): nivel de personaje". No se admiten fórmulas en `AbilityBonus`,
+`AbilitySet`, `AbilityMax`, `ArmorClassFormula`, `CriticalRange`, `DeathSaveFailures` ni `HitDiceRecovery`.
+
+Además de los tipos de los objetos, se admiten estos `kind`:
+
+| `kind` | `target` | `value` | Efecto |
+| --- | --- | --- | --- |
+| `ArmorClassFormula` | — | Base, 0–30 | CA = base + modificadores de `abilities` (≤ 3 características) + escudo si `allowShield` (por defecto `true`). Compite con la CA de la armadura y la defensa sin armadura del SRD: gana la más alta (en empate, la normal) y el desglose dice cuál. `condition` solo `noArmor`. |
+| `CriticalRange` | `weapon`, `spell` o ninguno (ambos) | 2–19 | Tirada mínima de crítico. Los ataques llevan `criticalRange` y `criticalRangeSource`, y la app resalta el crítico al tirar. En armas admite `rangedWeapon`, `firearm`, `oneHandedMeleeNoOtherWeapon` y `twoHandedMelee`. |
+| `SpellSaveDcBonus`, `SpellAttackBonus` | Índice de clase o ninguno (todas) | −10 a 30 o fórmula | Suma a la CD o al ataque de conjuros. Con `condition: "cantrip"` solo a los trucos: la hoja da `cantripSaveDc` y `cantripAttackBonus` (desgloses `spellSaveDc.<clase>.cantrip`, `spellAttackBonus.<clase>.cantrip`). |
+| `PassiveBonus` | `perception`, `investigation` o `insight` | −10 a 30 o fórmula | Suma a esa puntuación pasiva (la hoja calcula también Investigación y Perspicacia pasivas). |
+| `AbilityMax` | Característica | 1–30 | Máximo de esa característica en lugar de 20 (gana el más bajo si hay varios). Lo respetan las mejoras de característica. |
+| `Speed` | `swim`, `climb` o `fly` | 0–200, fórmula o `"walk"` (igual a la velocidad caminando) | Otra velocidad, en `speeds` de la hoja (gana la más alta) con su desglose `speed.<modo>`. |
+| `DeathSaveFailures` | — | 3–10 | Fallos de salvación de muerte que matan (`deathSaveFailuresToDie`; la app pinta esas casillas). |
+| `HitDiceRecovery` | `all` | — (sin `value`) | El descanso largo recupera **todos** los dados de golpe en lugar de la mitad. |
+
+```json
+"modifiers": [
+  {"kind": "ArmorClassFormula", "value": 10, "abilities": ["dex", "wis"], "condition": "noArmor"},
+  {"kind": "HitPointsMaxBonus", "value": "characterLevel"},
+  {"kind": "CriticalRange", "target": "weapon", "value": 19},
+  {"kind": "SpellSaveDcBonus", "value": 1, "condition": "cantrip"},
+  {"kind": "PassiveBonus", "target": "investigation", "value": 5},
+  {"kind": "AbilityMax", "target": "con", "value": 22},
+  {"kind": "Speed", "target": "swim", "value": "walk"},
+  {"kind": "DeathSaveFailures", "value": 4},
+  {"kind": "HitDiceRecovery", "target": "all"}
+]
+```
+
+Errores con ruta: `...modifiers[0].value` (fórmula no válida o no admitida), `...modifiers[0]` (objetivo
+o valor fuera de rango), `...modifiers[0].condition` (condición no admitida en ese tipo) y
+`...modifiers[0].abilities[1]`.
+
+#### Grants de hoja
+
+`grants` (de opciones, dotes, razas, subrazas y niveles de subclase) admite también:
+
+| Campo | Efecto |
+| --- | --- |
+| `resistances`, `immunities` | Tipos de daño (SRD o `reference.damageTypes`). Aparecen en la sección "Defensas" de la hoja con su origen. |
+| `conditionImmunities` | Estados del SRD (`charmed`, `poisoned`...) o de `conditions[]` del propio paquete. |
+| `size` | `tiny`, `small`, `medium`, `large`, `huge` o `gargantuan`: sustituye al tamaño de la raza (el último gana). Cambia la capacidad de carga (×½ diminuto, ×2 grande, ×4 enorme, ×8 gargantuesco) y avisa al usar armas pesadas siendo pequeño o diminuto. |
+| `removeSavingThrows` | `{ "choose": 1-6, "from": ["str", "dex"] }`: competencias en salvaciones que se pierden. Si `from` tiene exactamente `choose`, se pierden sin preguntar; si no, el jugador elige (solo en dotes de origen, ver [Dotes iniciales](#dotes-iniciales)). La hoja las lista en `lostSavingThrows`. |
+| `skillChoicesDelta` | −10 a 10: cambio en las habilidades de clase que se eligen al crear el personaje (−1: una menos). Lo aplica el asistente de creación. |
+| `naturalWeapons` | Armas naturales: `{ "name", "damage"?, "damageByCharacterLevel"?: {"5": "1d8"}, "damageType", "finesse"?, "reach"?: 5-30 }` (`damage` o la tabla por nivel, dados `NdM` o fijo). Aparecen como ataques con competencia (`natural: true`), Fuerza o, si son sutiles, la mejor de Fuerza y Destreza, y su `attackBreakdown`. |
+
+Una `Resistance` a elegir se declara como elección de la opción o dote (`choices`, ver arriba).
+
+```json
+"grants": {
+  "resistances": ["fire"], "immunities": ["poison"], "conditionImmunities": ["charmed"],
+  "size": "small",
+  "removeSavingThrows": {"choose": 1, "from": ["str", "con"]},
+  "skillChoicesDelta": -1,
+  "naturalWeapons": [{"name": "Garras de ejemplo", "damage": "1d4", "damageByCharacterLevel": {"5": "1d6"}, "damageType": "slashing", "finesse": true}]
+}
+```
 
 `grants.options` (opciones, dotes y `levels[].grants` de subclase; no en razas, subrazas ni
 trasfondos): índices de opciones de **cualquier** conjunto que el personaje recibe sin gastar una
