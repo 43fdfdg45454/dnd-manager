@@ -7,7 +7,7 @@ namespace OpenTrpg.Core.Domain.Characters;
 /// <summary>
 /// Character aggregate of the core: identity, campaign, owner, lifecycle, portrait, free texts, height and
 /// weight, money and inventory. What the game system stores (the sheet, combat state…) lives in the
-/// system's own entity, mapped on the same row (table splitting) and loaded by the system.
+/// system's own entity, stored in its own table keyed by the character and loaded by the system.
 /// Campaign roles are resolved outside the aggregate: permission helpers take <c>actorIsDm</c>
 /// (true when the actor is at least DM in the campaign).
 /// Every change goes through <see cref="Touch"/>, which bumps <see cref="Version"/> (optimistic

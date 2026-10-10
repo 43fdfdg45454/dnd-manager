@@ -15,20 +15,19 @@ using OpenTrpg.Systems.Dnd5e.Infrastructure.Persistence.Configurations.Character
 namespace OpenTrpg.Systems.Dnd5e.Infrastructure.Persistence.Configurations.Characters;
 
 /// <summary>
-/// The D&amp;D 5e part of a character, on the same row of <c>Characters</c> as the core <see cref="Character"/>
-/// (table splitting: same key, required 1:1), with the child tables of the sheet.
+/// The D&amp;D 5e part of a character, in its own table <c>Dnd5eCharacters</c> keyed by the core
+/// <see cref="Character"/> (<c>CharacterId</c>, required 1:1, deleted with it), with the child tables of the sheet.
 /// </summary>
 internal sealed class Dnd5eCharacterConfiguration : IEntityTypeConfiguration<Dnd5eCharacter>
 {
+    public const string TableName = "Dnd5eCharacters";
+
     public void Configure(EntityTypeBuilder<Dnd5eCharacter> builder)
     {
-        builder.ToTable("Characters");
+        builder.ToTable(TableName);
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.HasOne(x => x.Character).WithOne().HasForeignKey<Dnd5eCharacter>(x => x.Id).OnDelete(DeleteBehavior.Cascade);
-
-        // Every character has its sheet: the columns keep their nullability (no optional dependent).
-        builder.Metadata.FindNavigation(nameof(Dnd5eCharacter.Character))!.ForeignKey.IsRequiredDependent = true;
+        builder.Property(x => x.Id).HasColumnName("CharacterId").ValueGeneratedNever();
+        builder.HasOne(x => x.Character).WithOne().HasForeignKey<Dnd5eCharacter>(x => x.Id).IsRequired().OnDelete(DeleteBehavior.Cascade);
 
         builder.Property(x => x.RaceIndex).HasMaxLength(Dnd5eCharacter.IndexMaxLength);
         builder.Property(x => x.SubraceIndex).HasMaxLength(Dnd5eCharacter.IndexMaxLength);

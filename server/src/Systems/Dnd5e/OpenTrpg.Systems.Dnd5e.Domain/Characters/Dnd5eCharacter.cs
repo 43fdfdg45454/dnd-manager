@@ -12,8 +12,8 @@ namespace OpenTrpg.Systems.Dnd5e.Domain.Characters;
 
 /// <summary>
 /// D&amp;D 5e part of a character: stored sheet data, combat tracking state and its child collections
-/// (classes, proficiencies, spells, spent slots, resources, overrides, choices). It shares the row (and the
-/// key) of the core <see cref="Characters.Character"/> (table splitting), which keeps identity, owner,
+/// (classes, proficiencies, spells, spent slots, resources, overrides, choices). It is stored in its own
+/// table, keyed by the core <see cref="Characters.Character"/> (required 1:1), which keeps identity, owner,
 /// lifecycle, texts, money and inventory. Calculated values live in <see cref="CharacterSheet"/> (see
 /// <see cref="SheetCalculator"/>); operations that need one of them (maximum hit points, slot maxima, hit
 /// die sizes) take it as a parameter. Every change calls <see cref="Characters.Character.Touch"/> on the core
@@ -45,7 +45,7 @@ public sealed partial class Dnd5eCharacter
     {
     }
 
-    /// <summary>Same key as the core character (table splitting).</summary>
+    /// <summary>Same key as the core character (<c>CharacterId</c>).</summary>
     public Guid Id { get; private set; }
 
     /// <summary>The core character this sheet belongs to (identity, owner, lifecycle, texts, money and inventory).</summary>

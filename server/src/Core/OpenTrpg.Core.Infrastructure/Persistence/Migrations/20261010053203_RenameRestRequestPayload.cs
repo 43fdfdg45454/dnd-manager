@@ -11,7 +11,7 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
     /// <remarks>
     /// The differ also proposes making the D&amp;D 5e columns of <c>Characters</c> NOT NULL: the snapshot cannot express
     /// that the 5e part is a required dependent of the shared table, but the columns already are NOT NULL in the
-    /// database, so those operations are left out.
+    /// database, so those operations are left out. MoveDnd5eCharacterColumns later moves them to their own table.
     /// </remarks>
     public partial class RenameRestRequestPayload : Migration
     {
