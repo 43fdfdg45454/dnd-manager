@@ -118,11 +118,13 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
         var spells = sources.Any(s => s.Choices.Cantrip is not null) ? await catalog.ListAllSpellsAsync(cancellationToken) : [];
         var feats = sources.Any(s => s.Choices.Feats is not null) ? await catalog.ListOptionsBySetAsync([OptionSets.Feats], cancellationToken) : [];
         var sheet = feats.Count > 0 ? await sheets.CalculateAsync(character, cancellationToken) : null;
+        var toolIndexes = sources.SelectMany(s => s.Choices.Tools?.From ?? []).Select(o => o.Index).Distinct(StringComparer.Ordinal).ToList();
+        var tools = toolIndexes.Count > 0 ? await catalog.ListCatalogItemsByIndexAsync(toolIndexes, cancellationToken) : [];
 
         var result = new List<PlannedOriginChoice>();
         foreach (var (prefix, source, choices) in sources)
         {
-            result.AddRange(Plan(character, prefix, source, choices, skills, spells, feats, sheet));
+            result.AddRange(Plan(character, prefix, source, choices, skills, spells, feats, tools, sheet));
         }
 
         return result;
@@ -200,8 +202,11 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
         IReadOnlyList<SkillDefinition> skills,
         IReadOnlyList<SpellDefinition> spells,
         IReadOnlyList<OptionDefinition> feats,
+        IReadOnlyList<ItemTemplate> tools,
         CharacterSheet? sheet)
     {
+        // Every option carries a description (phase 29): the catalog text or, when it has none, one built here
+        // (OriginOptionDescriptions).
         var origin = source == BreakdownSources.Background ? "trasfondo" : source == BreakdownSources.Subrace ? "subraza" : "raza";
 
         // A proficiency the character already has from elsewhere cannot be picked again (this choice's own picks can).
@@ -227,15 +232,18 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
                 bonuses.Amount,
                 false,
                 $"+{bonuses.Amount} a {bonuses.Choose} características distintas.",
-                bonuses.From.Select(o => new PlannedOption(o.Index, BreakdownLabels.Ability(o.Index), [], null, true, null, null, null, [])).ToList());
+                bonuses.From.Select(o => new PlannedOption(o.Index, BreakdownLabels.Ability(o.Index), OriginOptionDescriptions.Ability(o.Index), null, true, null, null, null, [])).ToList());
         }
 
         if (choices.Skills is { } skillChoice)
         {
             var key = prefix + OriginChoiceKeys.Skills;
             var allowed = skillChoice.From.Count == 0
-                ? skills.Select(s => (s.Index, s.Name, s.Description)).ToList()
-                : skillChoice.From.Select(o => (o.Index, Name: skills.FirstOrDefault(s => s.Index == o.Index)?.Name ?? o.Name, Description: skills.FirstOrDefault(s => s.Index == o.Index)?.Description ?? [])).ToList();
+                ? skills.Select(s => (s.Index, s.Name, Description: OriginOptionDescriptions.Skill(s, s.Name))).ToList()
+                : skillChoice.From
+                    .Select(o => (Option: o, Skill: skills.FirstOrDefault(s => s.Index == o.Index)))
+                    .Select(p => (p.Option.Index, Name: p.Skill?.Name ?? p.Option.Name, Description: OriginOptionDescriptions.Skill(p.Skill, p.Skill?.Name ?? p.Option.Name)))
+                    .ToList();
             var options = allowed.Select(s => Proficiency(key, ProficiencyType.Skill, s.Index, s.Name, s.Description)).ToList();
             yield return Picks(key, $"Habilidades ({origin})", OriginChoiceKeys.SkillKind, skillChoice, options, false, Math.Min(skillChoice.Choose, options.Count(o => o.Eligible)), string.Empty);
         }
@@ -243,7 +251,9 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
         if (choices.Tools is { } toolChoice)
         {
             var key = prefix + OriginChoiceKeys.Tools;
-            var options = toolChoice.From.Select(o => Proficiency(key, ProficiencyType.Tool, o.Index, o.Name, [])).ToList();
+            var options = toolChoice.From
+                .Select(o => Proficiency(key, ProficiencyType.Tool, o.Index, o.Name, OriginOptionDescriptions.Tool(tools.FirstOrDefault(t => t.Index == o.Index))))
+                .ToList();
             var required = options.Count == 0 ? toolChoice.Choose : Math.Min(toolChoice.Choose, options.Count(o => o.Eligible));
             yield return Picks(key, $"Herramientas ({origin})", OriginChoiceKeys.ToolKind, toolChoice, options, options.Count == 0, required, string.Empty);
         }
@@ -252,7 +262,7 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
         {
             var key = prefix + OriginChoiceKeys.Languages;
             var names = languageChoice.From.Count == 0 ? SrdLanguages.All : languageChoice.From.Select(o => o.Index).ToList();
-            var options = names.Select(n => Proficiency(key, ProficiencyType.Language, n, n, [])).ToList();
+            var options = names.Select(n => Proficiency(key, ProficiencyType.Language, n, n, OriginOptionDescriptions.Language(n))).ToList();
             yield return Picks(
                 key,
                 $"Idiomas ({origin})",
@@ -271,7 +281,7 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
                 .Where(s => s.Level == 0)
                 .Where(s => allowed.Count > 0 ? allowed.Contains(s.Index) : cantrip.SpellList == ChoiceFilter.AnyList || s.ClassIndexes.Contains(cantrip.SpellList, StringComparer.Ordinal))
                 .OrderBy(s => s.Name, StringComparer.Ordinal)
-                .Select(s => new PlannedOption(s.Index, s.Name, s.Description.Take(1).ToList(), null, true, null, 0, null, [], s.Category.ToString()))
+                .Select(s => new PlannedOption(s.Index, s.Name, s.Description.Count > 0 ? s.Description.Take(1).ToList() : ["Truco."], null, true, null, 0, null, [], s.Category.ToString()))
                 .ToList();
             yield return new PlannedOriginChoice(
                 prefix + OriginChoiceKeys.Cantrip,
