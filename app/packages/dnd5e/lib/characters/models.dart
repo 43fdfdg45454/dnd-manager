@@ -8,11 +8,13 @@ import 'package:opentrpg_core/core/characters/models.dart';
 import 'package:opentrpg_core/core/ui/breakdown.dart';
 
 import 'data/companion_models.dart';
+import 'data/item_enhancement_models.dart';
 
 export 'package:opentrpg_core/core/characters/models.dart';
 export 'package:opentrpg_core/core/ui/breakdown.dart' show BreakdownPart, ValueBreakdown;
 
 export 'data/companion_models.dart';
+export 'data/item_enhancement_models.dart';
 
 /// Ability keys in display order.
 const abilityKeys = <String>['str', 'dex', 'con', 'int', 'wis', 'cha'];
@@ -1159,6 +1161,9 @@ class Dnd5eCharacter {
     this.companions = const [],
     this.companionFeature,
     this.companionPending = false,
+    this.itemEnhancements = const [],
+    this.itemEnhancementFeature,
+    this.grafts = const [],
     this.raceCatalogMissing = false,
     this.backgroundCatalogMissing = false,
     this.catalogMissing = false,
@@ -1218,6 +1223,11 @@ class Dnd5eCharacter {
           ? null
           : CompanionFeature.fromJson(_map(json['companionFeature'])!),
       companionPending: _bool(json['companionPending']),
+      itemEnhancements: _objects(json['itemEnhancements'], CharacterItemEnhancement.fromJson),
+      itemEnhancementFeature: _map(json['itemEnhancementFeature']) == null
+          ? null
+          : ItemEnhancementFeature.fromJson(_map(json['itemEnhancementFeature'])!),
+      grafts: _objects(json['grafts'], CharacterGraft.fromJson),
       raceCatalogMissing: _bool(json['raceCatalogMissing']),
       backgroundCatalogMissing: _bool(json['backgroundCatalogMissing']),
       catalogMissing: _bool(json['catalogMissing']),
@@ -1299,6 +1309,15 @@ class Dnd5eCharacter {
 
   /// The companion feature is reached and no beast is chosen yet.
   final bool companionPending;
+
+  /// Enhanced inventory entries, with their breakdowns.
+  final List<CharacterItemEnhancement> itemEnhancements;
+
+  /// The item enhancement feature the character has reached, or null.
+  final ItemEnhancementFeature? itemEnhancementFeature;
+
+  /// Grafts of the inventory with their body slot.
+  final List<CharacterGraft> grafts;
 
   /// The race (or subrace) is gone from the catalog (a deleted content pack).
   final bool raceCatalogMissing;
@@ -1386,6 +1405,9 @@ extension Dnd5eCharacterDetail on CharacterDetail {
   List<CharacterCompanion> get companions => dnd5e.companions;
   CompanionFeature? get companionFeature => dnd5e.companionFeature;
   bool get companionPending => dnd5e.companionPending;
+  List<CharacterItemEnhancement> get itemEnhancements => dnd5e.itemEnhancements;
+  ItemEnhancementFeature? get itemEnhancementFeature => dnd5e.itemEnhancementFeature;
+  List<CharacterGraft> get grafts => dnd5e.grafts;
   bool get raceCatalogMissing => dnd5e.raceCatalogMissing;
   bool get backgroundCatalogMissing => dnd5e.backgroundCatalogMissing;
   bool get catalogMissing => dnd5e.catalogMissing;

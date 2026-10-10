@@ -130,6 +130,26 @@ class Dnd5eCharactersRepository {
     );
   }
 
+  // -- Item enhancements (phase 35) ------------------------------------------
+
+  /// `PUT /characters/{id}/items/{itemId}/enhancements`: the options the item
+  /// carries (empty removes them). [Saved] when applied; [PendingApproval]
+  /// when the DM has to approve it.
+  Future<SheetSaveResult> setItemEnhancements(
+    String id,
+    String itemId,
+    List<String> options,
+  ) async {
+    final response = await _client.dio.put<Map<String, dynamic>>(
+      '$_dnd5e/characters/$id/items/$itemId/enhancements',
+      data: {'options': options},
+    );
+    if (response.statusCode == 202) {
+      return PendingApproval(ChangeRequest.fromJson(response.data!));
+    }
+    return Saved(CharacterDetail.fromJson(response.data!));
+  }
+
   // -- Animal companion (phase 25, block 6) ----------------------------------
 
   /// `PUT /characters/{id}/companion` (or `/companions/{companionId}`):

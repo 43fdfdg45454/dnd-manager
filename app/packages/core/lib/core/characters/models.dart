@@ -66,7 +66,8 @@ enum ChangeRequestType {
   customItem('CustomItem', 'Objeto personalizado'),
   adjustMoney('AdjustMoney', 'Ajuste de dinero'),
   other('Other', 'Otro'),
-  companion('Companion', 'Compañero animal');
+  companion('Companion', 'Compañero animal'),
+  itemEnhancement('ItemEnhancement', 'Mejora de objeto');
 
   const ChangeRequestType(this.apiValue, this.label);
 

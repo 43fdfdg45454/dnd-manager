@@ -24,6 +24,7 @@ import '../domain/class_theme.dart';
 import '../domain/height_weight.dart' show formatHeightAndWeight;
 import '../models.dart';
 import 'combat/companion_section.dart';
+import 'item_enhancements_section.dart';
 import 'level_up/character_choices_section.dart';
 import 'skill_rolls.dart' show rollSkill, rollSkillWithMode;
 
@@ -205,6 +206,8 @@ class SummaryTab extends StatelessWidget {
         const SectionTitle('Salvaciones'),
         for (final key in abilityKeys) _SavingThrowRow(character: c, abilityKey: key),
         if (_hasDefenses(sheet)) _DefensesSection(sheet: sheet),
+        if (ItemEnhancementsSection.shows(c))
+          ItemEnhancementsSection(character: c, canEdit: canEdit),
         if (sheet.breathWeapon != null) _BreathWeaponCard(character: c),
         if (sheet.itemEffects.isNotEmpty) ...[
           const SectionTitle('Efectos de objetos'),

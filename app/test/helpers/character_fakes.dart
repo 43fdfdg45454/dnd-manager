@@ -671,6 +671,53 @@ class FakeCharactersRepository implements CharactersRepository, Dnd5eCharactersR
     json['combat'] = combat;
   }
 
+  // Item enhancements (phase 35).
+
+  /// Bodies of `PUT /items/{itemId}/enhancements`.
+  final List<({String itemId, List<String> options})> enhancementCalls = [];
+
+  @override
+  Future<SheetSaveResult> setItemEnhancements(
+    String id,
+    String itemId,
+    List<String> options,
+  ) async {
+    _fail();
+    enhancementCalls.add((itemId: itemId, options: options));
+    final json = _json(id);
+    final feature = json['itemEnhancementFeature'] as Map<String, dynamic>?;
+    if (feature == null && !isDm) {
+      final request = makeChangeRequest(
+        id: 'cr${requests.length + 1}',
+        requestedByUserId: currentUserId,
+        type: 'ItemEnhancement',
+        payload: {'itemId': itemId, 'itemName': itemId, 'options': options},
+      );
+      requests.add(request);
+      return PendingApproval(request);
+    }
+    final names = {
+      for (final o in (feature?['options'] as List? ?? const []).cast<Map<String, dynamic>>())
+        o['index']: o['name'],
+    };
+    final list = [
+      for (final e in (json['itemEnhancements'] as List? ?? const []).cast<Map<String, dynamic>>())
+        if (e['itemId'] != itemId) e,
+      if (options.isNotEmpty)
+        {
+          'itemId': itemId,
+          'itemName': itemId,
+          'options': [
+            for (final o in options) {'index': o, 'name': names[o] ?? o},
+          ],
+          'properties': <String>[],
+          'breakdowns': <String, dynamic>{},
+        },
+    ];
+    json['itemEnhancements'] = list;
+    return Saved(await get(id));
+  }
+
   // Animal companion (phase 25, block 6).
 
   final List<({String beastIndex, String name})> companionChoices = [];

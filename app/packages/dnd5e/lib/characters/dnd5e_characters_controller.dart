@@ -92,6 +92,18 @@ class Dnd5eCharacterController extends Notifier<void> {
     return result;
   }
 
+  /// Sets the enhancement options of the inventory entry [itemId].
+  Future<SheetSaveResult> setItemEnhancements(String itemId, List<String> options) async {
+    final result = await _repository.setItemEnhancements(id, itemId, options);
+    switch (result) {
+      case Saved(:final detail):
+        _core.apply(detail);
+      case PendingApproval():
+        await _core.reload();
+    }
+    return result;
+  }
+
   /// Adds one more companion (features that allow several).
   Future<void> addCompanion({required String beastIndex, required String name}) async =>
       _core.apply(await _repository.addCompanion(id, beastIndex: beastIndex, name: name));
