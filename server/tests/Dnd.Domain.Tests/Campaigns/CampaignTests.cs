@@ -20,9 +20,43 @@ public class CampaignTests
         Assert.Equal("Nombre", campaign.Name);
         Assert.Equal(string.Empty, campaign.Description);
         Assert.Equal(_owner, campaign.OwnerId);
+        Assert.Equal(Campaign.DefaultSystemId, campaign.SystemId);
         Assert.Equal(Now, campaign.UpdatedAt);
         var member = Assert.Single(campaign.Members);
         Assert.Equal((campaign.Id, _owner, CampaignRole.Owner, Now), (member.CampaignId, member.UserId, member.Role, member.JoinedAt));
+    }
+
+    [Theory]
+    [InlineData(null, "dnd5e")]
+    [InlineData("", "dnd5e")]
+    [InlineData("   ", "dnd5e")]
+    [InlineData("dnd5e", "dnd5e")]
+    [InlineData("  DnD5e ", "dnd5e")]
+    [InlineData("my-system-2", "my-system-2")]
+    public void Create_normalizes_the_game_system(string? systemId, string expected)
+    {
+        var campaign = Campaign.Create("Nombre", null, _owner, Now, systemId: systemId);
+
+        Assert.Equal(expected, campaign.SystemId);
+    }
+
+    [Theory]
+    [InlineData("dnd 5e")]
+    [InlineData("dnd_5e")]
+    [InlineData("dñd5e")]
+    [InlineData("a234567890123456789012345678901234")]
+    public void Create_rejects_malformed_game_systems(string systemId)
+    {
+        var error = Assert.Throws<DomainException>(() => Campaign.Create("Nombre", null, _owner, Now, systemId: systemId));
+        Assert.Equal(DomainErrorKind.RuleViolation, error.Kind);
+    }
+
+    [Fact]
+    public void Create_accepts_a_game_system_of_the_maximum_length()
+    {
+        var systemId = new string('a', Campaign.SystemIdMaxLength);
+
+        Assert.Equal(systemId, Campaign.Create("Nombre", null, _owner, Now, systemId: systemId).SystemId);
     }
 
     [Theory]

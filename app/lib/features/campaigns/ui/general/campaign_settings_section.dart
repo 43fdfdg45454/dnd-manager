@@ -34,6 +34,7 @@ class CampaignSettingsSection extends ConsumerWidget {
         submitLabel: 'Guardar',
         initialName: campaign.name,
         initialDescription: campaign.description,
+        fixedSystemId: campaign.systemId,
       ),
     );
     if (data == null || !context.mounted) return;

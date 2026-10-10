@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Dnd.Application.Abstractions;
 using Dnd.Application.Files;
+using Dnd.Application.Systems.Dnd5e;
 using Dnd.Domain.Files;
 using Dnd.Domain.Library;
 using Dnd.Infrastructure.Persistence;
@@ -21,10 +22,10 @@ public sealed class SystemDocumentSeeder(
     IDateTimeProvider clock,
     ILogger<SystemDocumentSeeder> logger)
 {
-    public const string SrdFileName = "SRD_CC_v5.1.pdf";
+    public const string SrdFileName = Dnd5eSystem.SrdFileName;
     public const string SrdStoragePath = "system/" + SrdFileName;
-    public const string SrdTitle = "SRD 5.1 (Systems Reference Document)";
-    public const string SrdDescription = "Reglas básicas de D&D 5e, © Wizards of the Coast LLC, publicadas bajo licencia CC-BY 4.0.";
+    public const string SrdTitle = Dnd5eSystem.SrdTitle;
+    public const string SrdDescription = Dnd5eSystem.SrdDescription;
 
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {

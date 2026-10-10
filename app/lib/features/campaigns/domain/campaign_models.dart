@@ -1,3 +1,5 @@
+import '../../systems/domain/game_system.dart';
+
 /// Role of a user inside one campaign, as sent by the API.
 ///
 /// Declared from highest to lowest privilege so [index] can be compared.
@@ -83,6 +85,7 @@ class CampaignSummary {
     required this.myRole,
     required this.memberCount,
     required this.createdAt,
+    this.systemId = defaultGameSystemId,
   });
 
   factory CampaignSummary.fromJson(Map<String, dynamic> json) => CampaignSummary(
@@ -94,6 +97,7 @@ class CampaignSummary {
     myRole: CampaignRole.fromApi(json['myRole'] as String),
     memberCount: json['memberCount'] as int,
     createdAt: DateTime.parse(json['createdAt'] as String),
+    systemId: json['systemId'] as String? ?? defaultGameSystemId,
   );
 
   final String id;
@@ -104,6 +108,9 @@ class CampaignSummary {
   final CampaignRole myRole;
   final int memberCount;
   final DateTime createdAt;
+
+  /// Game system of the campaign (`dnd5e` when the server does not send it).
+  final String systemId;
 }
 
 /// Used when the server does not send the campaign's time zone.
@@ -126,6 +133,7 @@ class CampaignDetail {
     this.timeZoneId = defaultCampaignTimeZone,
     this.reminderOffsetsMinutes = defaultReminderOffsets,
     this.playersCanTakeFromStash = false,
+    this.systemId = defaultGameSystemId,
   });
 
   factory CampaignDetail.fromJson(Map<String, dynamic> json) => CampaignDetail(
@@ -146,6 +154,7 @@ class CampaignDetail {
         (o as num).toInt(),
     ],
     playersCanTakeFromStash: json['playersCanTakeFromStash'] as bool? ?? false,
+    systemId: json['systemId'] as String? ?? defaultGameSystemId,
   );
 
   final String id;
@@ -166,6 +175,9 @@ class CampaignDetail {
 
   /// Whether players take items from the party stash (and give them back) by themselves.
   final bool playersCanTakeFromStash;
+
+  /// Game system of the campaign (`dnd5e` when the server does not send it); it never changes.
+  final String systemId;
 
   CampaignDetail copyWith({
     String? name,
@@ -190,6 +202,7 @@ class CampaignDetail {
     timeZoneId: timeZoneId ?? this.timeZoneId,
     reminderOffsetsMinutes: reminderOffsetsMinutes ?? this.reminderOffsetsMinutes,
     playersCanTakeFromStash: playersCanTakeFromStash ?? this.playersCanTakeFromStash,
+    systemId: systemId,
   );
 }
 

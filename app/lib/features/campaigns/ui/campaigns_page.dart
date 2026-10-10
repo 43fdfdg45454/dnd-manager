@@ -26,7 +26,7 @@ class CampaignsPage extends ConsumerWidget {
       context,
       () => ref
           .read(campaignsControllerProvider.notifier)
-          .create(name: data.name, description: data.description),
+          .create(name: data.name, description: data.description, systemId: data.systemId),
       success: 'Campaña creada.',
       errors: const {400: 'Datos no válidos. Revisa el nombre y la descripción.'},
     );
