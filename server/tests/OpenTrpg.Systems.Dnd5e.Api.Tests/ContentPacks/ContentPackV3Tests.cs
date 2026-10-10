@@ -271,6 +271,11 @@ public class ContentPackV3Tests(ContentPackV3ApiFactory factory) : IClassFixture
         Assert.Equal(HttpStatusCode.OK, both.StatusCode);
         var classes = await GetAsync<ClassDetailDto>(s.Player.Client, $"{CatalogUrl}/classes/{Weaver}?campaignId={s.CampaignId}");
         Assert.Equal(2, classes.Subclasses.Count);
+
+        // A pack other packs require cannot be deleted before them.
+        var required = await admin.DeleteAsync($"{PacksUrl}/{PackId}");
+        Assert.Equal(HttpStatusCode.Conflict, required.StatusCode);
+        Assert.Contains("ecos-ocaso", await required.Content.ReadAsStringAsync(), StringComparison.Ordinal);
     }
 
     [Fact]

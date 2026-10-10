@@ -24,6 +24,9 @@ internal sealed class ContentPackRegistry(
 {
     public const string BasePackCode = "base-pack";
 
+    /// <summary>Code of the 409 when other packs require the one being deleted.</summary>
+    public const string RequiredByCode = "required-by";
+
     public async Task<ContentPackImportResultDto> ImportAsync(Stream json, CancellationToken cancellationToken = default)
     {
         var buffered = json as MemoryStream ?? await CopyAsync(json, cancellationToken);
@@ -111,6 +114,16 @@ internal sealed class ContentPackRegistry(
         if (pack.IsBase || CatalogSources.IsReserved(id) || systems.All.Any(s => s.Catalog.IsReservedSource(id)))
         {
             throw AppException.Conflict("El paquete base del sistema no se puede borrar.", BasePackCode);
+        }
+
+        var dependants = (await db.ContentPacks.AsNoTracking().Where(x => x.SystemId == pack.SystemId && x.Id != id).ToListAsync(cancellationToken))
+            .Where(p => p.Requires.Contains(id, StringComparer.Ordinal))
+            .Select(p => p.Id)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+        if (dependants.Count > 0)
+        {
+            throw AppException.Conflict($"Otros paquetes lo requieren ({string.Join(", ", dependants)}): bórralos antes.", RequiredByCode);
         }
 
         var system = systems.Find(pack.SystemId) ?? systems.Default;

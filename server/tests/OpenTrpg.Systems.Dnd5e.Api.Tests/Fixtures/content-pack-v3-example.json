@@ -9,337 +9,107 @@
       "index": "ecos-ejemplo-tejedor",
       "name": "Tejedor de ecos",
       "hitDie": 8,
-      "savingThrows": [
-        "int",
-        "cha"
-      ],
-      "proficiencies": {
-        "armor": [
-          "Light Armor"
-        ],
-        "weapons": [
-          "Simple Weapons"
-        ],
-        "tools": []
-      },
-      "skillChoices": {
-        "choose": 2,
-        "from": [
-          "arcana",
-          "history",
-          "insight",
-          "perception",
-          "performance"
-        ]
-      },
+      "savingThrows": ["int", "cha"],
+      "proficiencies": {"armor": ["Light Armor"], "weapons": ["Simple Weapons"], "tools": []},
+      "skillChoices": {"choose": 2, "from": ["arcana", "history", "insight", "perception", "performance"]},
       "startingEquipmentText": "Una daga, una flauta y un paquete de explorador.",
-      "multiclassing": {
-        "prerequisites": {
-          "int": 13
-        },
-        "proficiencies": {
-          "armor": [
-            "Light Armor"
-          ],
-          "skills": 1
-        }
-      },
+      "multiclassing": {"prerequisites": {"int": 13}, "proficiencies": {"armor": ["Light Armor"], "skills": 1}},
       "spellcasting": {
         "ability": "int",
         "progression": "table",
         "preparation": "prepared",
         "ritual": true,
         "focus": "Un diapasón",
-        "cantripsKnown": {
-          "1": 2,
-          "4": 3,
-          "10": 4
-        },
+        "cantripsKnown": {"1": 2, "4": 3, "10": 4},
         "slots": {
-          "1": [
-            2
-          ],
-          "2": [
-            3
-          ],
-          "3": [
-            4,
-            2
-          ],
-          "5": [
-            4,
-            3,
-            2
-          ],
-          "7": [
-            4,
-            3,
-            3,
-            1
-          ],
-          "9": [
-            4,
-            3,
-            3,
-            2,
-            1
-          ],
-          "11": [
-            4,
-            3,
-            3,
-            3,
-            2
-          ],
-          "13": [
-            4,
-            3,
-            3,
-            3,
-            2,
-            1
-          ],
-          "15": [
-            4,
-            3,
-            3,
-            3,
-            2,
-            1,
-            1
-          ],
-          "17": [
-            4,
-            3,
-            3,
-            3,
-            2,
-            1,
-            1,
-            1
-          ],
-          "19": [
-            4,
-            3,
-            3,
-            3,
-            3,
-            2,
-            1,
-            1,
-            1
-          ]
+          "1": [2],
+          "2": [3],
+          "3": [4, 2],
+          "5": [4, 3, 2],
+          "7": [4, 3, 3, 1],
+          "9": [4, 3, 3, 2, 1],
+          "11": [4, 3, 3, 3, 2],
+          "13": [4, 3, 3, 3, 2, 1],
+          "15": [4, 3, 3, 3, 2, 1, 1],
+          "17": [4, 3, 3, 3, 2, 1, 1, 1],
+          "19": [4, 3, 3, 3, 3, 2, 1, 1, 1]
         }
       },
-      "spellList": [
-        "ecos-ejemplo-susurro",
-        "ecos-ejemplo-onda",
-        {
-          "class": "wizard"
-        }
-      ],
+      "spellList": ["ecos-ejemplo-susurro", "ecos-ejemplo-onda", {"class": "wizard"}],
       "subclassFlavor": "Coro",
       "subclassLevel": 2,
-      "description": [
-        "Clase ficticia: músicos que guardan ecos y los devuelven como magia."
-      ],
+      "description": ["Clase ficticia: músicos que guardan ecos y los devuelven como magia."],
       "levels": [
         {
           "level": 1,
-          "classSpecific": {
-            "ecos": 2
-          },
+          "classSpecific": {"ecos": 2},
           "features": [
             {
               "index": "ecos-ejemplo-eco-resonante",
               "name": "Eco resonante",
-              "description": [
-                "Texto de ejemplo: repites el último sonido que oíste con tu propia voz."
-              ]
+              "description": ["Texto de ejemplo: repites el último sonido que oíste con tu propia voz."]
             }
           ]
         },
         {
           "level": 2,
-          "classSpecific": {
-            "ecos": 2
-          },
+          "classSpecific": {"ecos": 2},
           "features": [
             {
               "index": "ecos-ejemplo-sintonia",
               "name": "Sintonía",
-              "description": [
-                "Texto de ejemplo: eliges el coro con el que resuenas."
-              ]
+              "description": ["Texto de ejemplo: eliges el coro con el que resuenas."]
             }
           ]
         },
         {
           "level": 3,
-          "classSpecific": {
-            "ecos": 2
-          },
+          "classSpecific": {"ecos": 2},
           "features": [
             {
               "index": "ecos-ejemplo-pulso",
               "name": "Pulso",
-              "description": [
-                "Texto de ejemplo: gastas un eco para ganar +1 a la CA hasta tu siguiente turno."
-              ],
-              "modifiers": [
-                {
-                  "kind": "InitiativeBonus",
-                  "value": 1
-                }
-              ]
+              "description": ["Texto de ejemplo: sientes el pulso del combate: +1 a la iniciativa."],
+              "modifiers": [{"kind": "InitiativeBonus", "value": 1}]
             }
           ]
         },
-        {
-          "level": 4,
-          "classSpecific": {
-            "ecos": 2
-          }
-        },
-        {
-          "level": 5,
-          "classSpecific": {
-            "ecos": 3
-          }
-        },
+        {"level": 4, "classSpecific": {"ecos": 2}},
+        {"level": 5, "classSpecific": {"ecos": 3}},
         {
           "level": 6,
-          "classSpecific": {
-            "ecos": 3
-          },
-          "features": [
-            {
-              "index": "ecos-ejemplo-eco-doble",
-              "name": "Eco doble",
-              "description": [
-                "Texto de ejemplo."
-              ]
-            }
-          ]
+          "classSpecific": {"ecos": 3},
+          "features": [{"index": "ecos-ejemplo-eco-doble", "name": "Eco doble", "description": ["Texto de ejemplo."]}]
         },
-        {
-          "level": 7,
-          "classSpecific": {
-            "ecos": 3
-          }
-        },
-        {
-          "level": 8,
-          "classSpecific": {
-            "ecos": 3
-          }
-        },
-        {
-          "level": 9,
-          "classSpecific": {
-            "ecos": 3
-          }
-        },
-        {
-          "level": 10,
-          "classSpecific": {
-            "ecos": 3
-          }
-        },
+        {"level": 7, "classSpecific": {"ecos": 3}},
+        {"level": 8, "classSpecific": {"ecos": 3}},
+        {"level": 9, "classSpecific": {"ecos": 3}},
+        {"level": 10, "classSpecific": {"ecos": 3}},
         {
           "level": 11,
-          "classSpecific": {
-            "ecos": 4
-          },
-          "features": [
-            {
-              "index": "ecos-ejemplo-eco-mayor",
-              "name": "Eco mayor",
-              "description": [
-                "Texto de ejemplo."
-              ]
-            }
-          ]
+          "classSpecific": {"ecos": 4},
+          "features": [{"index": "ecos-ejemplo-eco-mayor", "name": "Eco mayor", "description": ["Texto de ejemplo."]}]
         },
-        {
-          "level": 12,
-          "classSpecific": {
-            "ecos": 4
-          }
-        },
-        {
-          "level": 13,
-          "classSpecific": {
-            "ecos": 4
-          }
-        },
-        {
-          "level": 14,
-          "classSpecific": {
-            "ecos": 4
-          }
-        },
-        {
-          "level": 15,
-          "classSpecific": {
-            "ecos": 4
-          }
-        },
-        {
-          "level": 16,
-          "classSpecific": {
-            "ecos": 4
-          }
-        },
-        {
-          "level": 17,
-          "classSpecific": {
-            "ecos": 5
-          }
-        },
-        {
-          "level": 18,
-          "classSpecific": {
-            "ecos": 5
-          }
-        },
-        {
-          "level": 19,
-          "classSpecific": {
-            "ecos": 5
-          }
-        },
+        {"level": 12, "classSpecific": {"ecos": 4}},
+        {"level": 13, "classSpecific": {"ecos": 4}},
+        {"level": 14, "classSpecific": {"ecos": 4}},
+        {"level": 15, "classSpecific": {"ecos": 4}},
+        {"level": 16, "classSpecific": {"ecos": 4}},
+        {"level": 17, "classSpecific": {"ecos": 5}},
+        {"level": 18, "classSpecific": {"ecos": 5}},
+        {"level": 19, "classSpecific": {"ecos": 5}},
         {
           "level": 20,
-          "classSpecific": {
-            "ecos": 5
-          },
-          "features": [
-            {
-              "index": "ecos-ejemplo-voz-eterna",
-              "name": "Voz eterna",
-              "description": [
-                "Texto de ejemplo."
-              ]
-            }
-          ]
+          "classSpecific": {"ecos": 5},
+          "features": [{"index": "ecos-ejemplo-voz-eterna", "name": "Voz eterna", "description": ["Texto de ejemplo."]}]
         }
       ],
-      "resources": [
-        {
-          "key": "ecos-ejemplo-ecos",
-          "name": "Ecos",
-          "max": "classSpecific:ecos",
-          "recharge": "ShortRest"
-        }
-      ],
+      "resources": [{"key": "ecos-ejemplo-ecos", "name": "Ecos", "max": "classSpecific:ecos", "recharge": "ShortRest"}],
       "subclasses": [
         {
           "index": "ecos-ejemplo-coro-del-alba",
           "name": "Coro del Alba",
-          "description": [
-            "Subclase ficticia."
-          ],
+          "description": ["Subclase ficticia."],
           "levels": [
             {
               "level": 2,
@@ -347,9 +117,7 @@
                 {
                   "index": "ecos-ejemplo-voz-del-alba",
                   "name": "Voz del Alba",
-                  "description": [
-                    "Texto de ejemplo."
-                  ]
+                  "description": ["Texto de ejemplo."]
                 }
               ]
             }
@@ -363,15 +131,8 @@
       "index": "ecos-ejemplo-oido-fino",
       "name": "Oído fino",
       "category": "Sentidos",
-      "description": [
-        "Texto de ejemplo: +2 a la iniciativa."
-      ],
-      "modifiers": [
-        {
-          "kind": "InitiativeBonus",
-          "value": 2
-        }
-      ]
+      "description": ["Texto de ejemplo: +2 a la iniciativa."],
+      "modifiers": [{"kind": "InitiativeBonus", "value": 2}]
     }
   ],
   "races": [
@@ -380,22 +141,13 @@
       "name": "Resonante",
       "speed": 30,
       "size": "Medium",
-      "abilityBonuses": [
-        {
-          "ability": "int",
-          "bonus": 2
-        }
-      ],
-      "languages": [
-        "Common"
-      ],
+      "abilityBonuses": [{"ability": "int", "bonus": 2}],
+      "languages": ["Common"],
       "traits": [
         {
           "index": "ecos-ejemplo-oido-de-cristal",
           "name": "Oído de cristal",
-          "description": [
-            "Texto de ejemplo."
-          ]
+          "description": ["Texto de ejemplo."]
         }
       ]
     }
@@ -407,33 +159,20 @@
       "rarity": "Common",
       "costCp": 25000,
       "weightLb": 3,
-      "description": [
-        "Arma de fuego ficticia."
-      ],
+      "description": ["Arma de fuego ficticia."],
       "weapon": {
         "category": "martial",
         "range": "ranged",
         "damage": "1d10",
         "damageType": "piercing",
-        "properties": [
-          "loading"
-        ],
+        "properties": ["loading"],
         "rangeNormal": 30,
         "rangeLong": 90,
         "special": "Texto de ejemplo: se encasquilla con un 1 o un 2."
       },
-      "firearm": {
-        "reload": 1,
-        "misfire": 2
-      }
+      "firearm": {"reload": 1, "misfire": 2}
     },
-    {
-      "index": "ecos-ejemplo-bala",
-      "name": "Bala de eco",
-      "costCp": 20,
-      "weightLb": 0.1,
-      "ammunition": true
-    }
+    {"index": "ecos-ejemplo-bala", "name": "Bala de eco", "costCp": 20, "weightLb": 0.1, "ammunition": true}
   ],
   "spells": [
     {
@@ -443,13 +182,9 @@
       "school": "enchantment",
       "castingTime": "1 action",
       "range": "30 feet",
-      "components": [
-        "V"
-      ],
+      "components": ["V"],
       "duration": "Instantaneous",
-      "description": [
-        "Truco ficticio: tu voz llega a una criatura que elijas."
-      ]
+      "description": ["Truco ficticio: tu voz llega a una criatura que elijas."]
     },
     {
       "index": "ecos-ejemplo-onda",
@@ -458,14 +193,9 @@
       "school": "evocation",
       "castingTime": "1 action",
       "range": "Self (15-foot cone)",
-      "components": [
-        "V",
-        "S"
-      ],
+      "components": ["V", "S"],
       "duration": "Instantaneous",
-      "description": [
-        "Conjuro ficticio: una onda de sonido empuja a las criaturas del cono."
-      ]
+      "description": ["Conjuro ficticio: una onda de sonido empuja a las criaturas del cono."]
     }
   ],
   "creatures": [
@@ -478,85 +208,35 @@
       "armorClass": 12,
       "hitPoints": 3,
       "hitDice": "1d4+1",
-      "speed": {
-        "walk": 5,
-        "fly": 30
-      },
-      "abilities": {
-        "str": 2,
-        "dex": 15,
-        "con": 12,
-        "int": 2,
-        "wis": 12,
-        "cha": 4
-      },
-      "senses": {
-        "blindsight": "60 ft."
-      },
+      "speed": {"walk": 5, "fly": 30},
+      "abilities": {"str": 2, "dex": 15, "con": 12, "int": 2, "wis": 12, "cha": 4},
+      "senses": {"blindsight": "60 ft."},
       "passivePerception": 11,
       "challengeRating": 0,
       "xp": 10,
-      "traits": [
-        {
-          "name": "Ecolocalización",
-          "description": "Texto de ejemplo."
-        }
-      ],
+      "traits": [{"name": "Ecolocalización", "description": "Texto de ejemplo."}],
       "actions": [
         {
           "name": "Mordisco",
           "description": "Texto de ejemplo.",
           "attackBonus": 0,
-          "damage": [
-            {
-              "dice": "1",
-              "type": "piercing"
-            }
-          ]
+          "damage": [{"dice": "1", "type": "piercing"}]
         }
       ]
     }
   ],
-  "conditions": [
-    {
-      "index": "ecos-ejemplo-resonando",
-      "name": "Resonando",
-      "description": [
-        "Condición ficticia."
-      ]
-    }
-  ],
+  "conditions": [{"index": "ecos-ejemplo-resonando", "name": "Resonando", "description": ["Condición ficticia."]}],
   "rules": [
     {
       "index": "ecos-ejemplo-resonancia",
       "title": "Resonancia",
       "category": "variant",
-      "body": [
-        "Regla ficticia: los ecos se recuperan con un descanso corto."
-      ],
-      "tags": [
-        "ecos"
-      ]
+      "body": ["Regla ficticia: los ecos se recuperan con un descanso corto."],
+      "tags": ["ecos"]
     }
   ],
   "reference": {
-    "languages": [
-      {
-        "index": "ecos-ejemplo-lengua-del-eco",
-        "name": "Lengua del eco",
-        "description": [
-          "Idioma ficticio."
-        ]
-      }
-    ],
-    "damageTypes": [
-      {
-        "index": "ecos-ejemplo-sonico",
-        "name": "Sónico",
-        "description": [
-          "Tipo de daño ficticio."
-        ]
-      }
-    ]
+    "languages": [{"index": "ecos-ejemplo-lengua-del-eco", "name": "Lengua del eco", "description": ["Idioma ficticio."]}],
+    "damageTypes": [{"index": "ecos-ejemplo-sonico", "name": "Sónico", "description": ["Tipo de daño ficticio."]}]
   }
 }
