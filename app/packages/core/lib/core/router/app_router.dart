@@ -70,11 +70,16 @@ abstract final class AppRoutes {
   static const campaignSessionEdit = '/campaigns/:id/sessions/:sessionId/edit';
   static const campaignSessionSummary = '/campaigns/:id/sessions/:sessionId/summary';
   static const campaignLibrary = '/campaigns/:id/library';
+  static const campaignCompendiumPath = '/campaigns/:id/compendium';
   static const library = '/library';
   static const libraryViewer = '/library/:docId/view';
   static const compendium = '/compendium';
   static const dice = '/dice';
   static const profile = '/profile';
+
+  /// The compendium opened from the campaign [id]: it can narrow the
+  /// catalog to the content packs the campaign enables.
+  static String campaignCompendium(String id) => '/campaigns/$id/compendium';
 
   /// Location of the campaign with the given [id]: the router sends it to
   /// "Mi sesión" or "Mesa del DM" according to the role, or to "Campaña"
@@ -408,6 +413,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.campaignLibrary,
         builder: (context, state) => LibraryPage(campaignId: state.pathParameters['id']),
+      ),
+      GoRoute(
+        path: AppRoutes.campaignCompendiumPath,
+        builder: (context, state) => CompendiumPage(campaignId: state.pathParameters['id']),
       ),
       GoRoute(
         path: AppRoutes.libraryViewer,

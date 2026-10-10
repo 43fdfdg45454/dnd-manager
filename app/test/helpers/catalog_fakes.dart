@@ -56,7 +56,10 @@ class FakeCatalogRepository implements CatalogRepository {
     this.rollTableList = const [],
     this.beastList = const [],
     this.featureDetails = const {},
-  });
+    this.ruleList = const [],
+    this.referenceEntries = const [],
+    Map<String, Set<String>>? enabledPacks,
+  }) : enabledPacks = enabledPacks ?? {};
 
   final List<SpellSummary> spellList;
   final List<ItemSummary> itemList;
@@ -79,6 +82,35 @@ class FakeCatalogRepository implements CatalogRepository {
   /// Full statblocks; the list endpoint answers their summaries.
   final List<Beast> beastList;
   final List<BeastQuery> beastCalls = [];
+
+  /// Rules documents (the list answers them without body).
+  final List<Rule> ruleList;
+  final List<ReferenceEntry> referenceEntries;
+
+  /// Packs each campaign enables: asked with a `campaignId` found here, the
+  /// lists keep only the base content ("srd" or no source), the homebrew and
+  /// the content of these packs, like the server. Campaigns not in the map
+  /// see everything.
+  final Map<String, Set<String>> enabledPacks;
+
+  /// The `campaignId` of every list call, in order (null: global catalog).
+  final List<String?> campaignCalls = [];
+  final List<({String? type, String? campaignId})> beastScopes = [];
+
+  bool _visible(String? source, String? campaignId) {
+    final enabled = campaignId == null ? null : enabledPacks[campaignId];
+    if (enabled == null || source == null || source == 'srd' || source == 'homebrew') return true;
+    return enabled.contains(source);
+  }
+
+  List<T> _scoped<T>(List<T> all, String? Function(T) sourceOf, String? campaignId) {
+    campaignCalls.add(campaignId);
+    return [
+      for (final e in all)
+        if (_visible(sourceOf(e), campaignId)) e,
+    ];
+  }
+
   Object? error;
   final List<SpellCall> spellCalls = [];
   final List<({String? search, String? category, int page})> itemCalls = [];
@@ -88,14 +120,23 @@ class FakeCatalogRepository implements CatalogRepository {
   }
 
   @override
-  Future<List<BeastSummary>> beasts({double? maxCr, bool? fly, bool? swim, String? search}) async {
+  Future<List<BeastSummary>> beasts({
+    double? maxCr,
+    bool? fly,
+    bool? swim,
+    String? search,
+    String? type,
+    String? campaignId,
+  }) async {
     _fail();
     beastCalls.add((maxCr: maxCr, fly: fly, swim: swim));
+    beastScopes.add((type: type, campaignId: campaignId));
     return [
-      for (final b in beastList)
+      for (final b in _scoped(beastList, (b) => b.source, campaignId))
         if ((maxCr == null || b.challengeRating <= maxCr) &&
             (fly == null || b.flies == fly) &&
-            (swim == null || b.swims == swim))
+            (swim == null || b.swims == swim) &&
+            (type == null || b.type == type))
           b,
     ];
   }
@@ -113,9 +154,22 @@ class FakeCatalogRepository implements CatalogRepository {
   }
 
   @override
-  Future<List<CatalogSource>> sources() async {
+  Future<List<CatalogSource>> sources({String? campaignId}) async {
     _fail();
-    return sourceList;
+    campaignCalls.add(campaignId);
+    final enabled = campaignId == null ? null : enabledPacks[campaignId];
+    return [
+      for (final s in sourceList)
+        CatalogSource(
+          id: s.id,
+          name: s.name,
+          version: s.version,
+          isBase: s.isBase || s.id == 'srd',
+          enabled: campaignId == null
+              ? s.enabled
+              : s.id == 'srd' || s.isBase || (enabled?.contains(s.id) ?? s.enabled ?? false),
+        ),
+    ];
   }
 
   @override
@@ -132,6 +186,7 @@ class FakeCatalogRepository implements CatalogRepository {
     bool? concentration,
     int page = 1,
     int pageSize = 50,
+    String? campaignId,
   }) async {
     _fail();
     spellCalls.add((
@@ -142,7 +197,7 @@ class FakeCatalogRepository implements CatalogRepository {
       pageSize: pageSize,
     ));
     final q = (search ?? '').toLowerCase();
-    final filtered = spellList
+    final filtered = _scoped(spellList, (s) => s.source, campaignId)
         .where((s) => (level == null || s.level == level) && s.name.toLowerCase().contains(q))
         .toList();
     return _slice(filtered, page, pageSize);
@@ -161,11 +216,12 @@ class FakeCatalogRepository implements CatalogRepository {
     String? rarity,
     int page = 1,
     int pageSize = 50,
+    String? campaignId,
   }) async {
     _fail();
     itemCalls.add((search: search, category: category, page: page));
     final q = (search ?? '').toLowerCase();
-    final filtered = itemList
+    final filtered = _scoped(itemList, (i) => i.source, campaignId)
         .where(
           (i) => (category == null || i.category == category) && i.name.toLowerCase().contains(q),
         )
@@ -180,9 +236,9 @@ class FakeCatalogRepository implements CatalogRepository {
   }
 
   @override
-  Future<List<ClassSummary>> classes() async {
+  Future<List<ClassSummary>> classes({String? campaignId}) async {
     _fail();
-    return classList;
+    return _scoped(classList, (c) => c.source, campaignId);
   }
 
   @override
@@ -192,9 +248,9 @@ class FakeCatalogRepository implements CatalogRepository {
   }
 
   @override
-  Future<List<RaceSummary>> races() async {
+  Future<List<RaceSummary>> races({String? campaignId}) async {
     _fail();
-    return raceList;
+    return _scoped(raceList, (r) => r.source, campaignId);
   }
 
   @override
@@ -204,34 +260,66 @@ class FakeCatalogRepository implements CatalogRepository {
   }
 
   @override
-  Future<List<Condition>> conditions() async {
+  Future<List<Condition>> conditions({String? campaignId}) async {
     _fail();
-    return conditionList;
+    return _scoped(conditionList, (c) => c.source, campaignId);
+  }
+
+  @override
+  Future<List<RuleSummary>> rules({String? search, String? category, String? campaignId}) async {
+    _fail();
+    final q = (search ?? '').toLowerCase();
+    return [
+      for (final r in _scoped(ruleList, (r) => r.source, campaignId))
+        if ((category == null || r.category == category) && r.title.toLowerCase().contains(q))
+          RuleSummary(
+            index: r.index,
+            title: r.title,
+            category: r.category,
+            tags: r.tags,
+            source: r.source,
+          ),
+    ];
+  }
+
+  @override
+  Future<Rule> rule(String index) async {
+    _fail();
+    return ruleList.firstWhere((r) => r.index == index, orElse: () => throw dioError(404));
+  }
+
+  @override
+  Future<List<ReferenceEntry>> reference(String kind, {String? campaignId}) async {
+    _fail();
+    return [
+      for (final e in _scoped(referenceEntries, (e) => e.source, campaignId))
+        if (e.kind == kind) e,
+    ];
   }
 
   @override
   Future<List<Skill>> skills() async => const [];
 
   @override
-  Future<List<Background>> backgrounds() async {
+  Future<List<Background>> backgrounds({String? campaignId}) async {
     _fail();
-    return backgroundList;
+    return _scoped(backgroundList, (b) => b.source, campaignId);
   }
 
   @override
-  Future<EquipmentCategory> equipmentCategory(String index) async {
+  Future<EquipmentCategory> equipmentCategory(String index, {String? campaignId}) async {
     _fail();
     return equipmentCategories[index] ?? (throw dioError(404));
   }
 
   @override
-  Future<List<Trinket>> trinkets() async {
+  Future<List<Trinket>> trinkets({String? campaignId}) async {
     _fail();
     return trinketList;
   }
 
   @override
-  Future<List<RollTable>> rollTables({String? subclass}) async {
+  Future<List<RollTable>> rollTables({String? subclass, String? campaignId}) async {
     _fail();
     return [
       for (final t in rollTableList)

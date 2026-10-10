@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:opentrpg_core/features/dice/domain/dice_expression.dart';
+import 'package:opentrpg_core/core/ui/source_chip.dart';
 import 'package:opentrpg_core/features/dice/ui/dice_sheet.dart';
 
 import '../../characters/domain/character_format.dart' show skillLabel;
@@ -29,6 +30,27 @@ const _senseLabels = {
   'truesight': 'Visión verdadera',
 };
 
+const _creatureTypes = {
+  'aberration': 'aberración',
+  'beast': 'bestia',
+  'celestial': 'celestial',
+  'construct': 'constructo',
+  'dragon': 'dragón',
+  'elemental': 'elemental',
+  'fey': 'feérico',
+  'fiend': 'infernal',
+  'giant': 'gigante',
+  'humanoid': 'humanoide',
+  'monstrosity': 'monstruosidad',
+  'ooze': 'cieno',
+  'plant': 'planta',
+  'undead': 'muerto viviente',
+};
+
+/// The creature type in Spanish ("bestia", "monstruosidad"...); an unknown
+/// type is shown as it comes.
+String creatureTypeLabel(String type) => _creatureTypes[type.toLowerCase()] ?? type;
+
 String _signed(int value) => value >= 0 ? '+$value' : '$value';
 
 int _modifier(int score) => ((score - 10) / 2).floor();
@@ -44,9 +66,10 @@ class BeastTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       key: Key('beast-${beast.index}'),
-      title: Text(beast.name),
+      title: NameWithSource(beast.name, beast.source),
       subtitle: Text(
         [
+          if (!beast.isBeast) creatureTypeLabel(beast.type),
           'VD ${beast.challengeRatingText}',
           'CA ${beast.armorClass}',
           '${beast.hitPoints} PG',
@@ -59,8 +82,9 @@ class BeastTile extends StatelessWidget {
   }
 }
 
-/// Statblock of an SRD beast: characteristics, AC, HP, speeds, senses, traits
-/// and actions whose attack and damage can be rolled.
+/// Statblock of a creature (an SRD beast or a creature of a content pack):
+/// characteristics, AC, HP, speeds, senses, traits, actions whose attack and
+/// damage can be rolled, reactions and legendary actions.
 class BeastPage extends ConsumerWidget {
   const BeastPage({super.key, required this.index});
 
@@ -70,14 +94,21 @@ class BeastPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(beastDetailProvider(index));
     return Scaffold(
-      appBar: AppBar(title: Text(detail.value?.name ?? 'Bestia')),
+      appBar: AppBar(title: Text(detail.value?.name ?? 'Criatura')),
       body: CatalogAsyncBody<Beast>(
         value: detail,
         onRetry: () => ref.invalidate(beastDetailProvider(index)),
         builder: (b) => DetailList(
           children: [
+            Align(alignment: Alignment.centerLeft, child: SourceChip(b.source)),
             Text(
-              [b.size, 'bestia', if (b.alignment.isNotEmpty) b.alignment].join(' · '),
+              [
+                b.size,
+                b.subtype == null
+                    ? creatureTypeLabel(b.type)
+                    : '${creatureTypeLabel(b.type)} (${b.subtype})',
+                if (b.alignment.isNotEmpty) b.alignment,
+              ].join(' · '),
               key: const Key('beast-type'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
@@ -141,12 +172,25 @@ class BeastPage extends ConsumerWidget {
               const SectionTitle('Acciones'),
               for (final (i, a) in b.actions.indexed) _ActionCard(action: a, position: i),
             ],
+            // Reactions and legendary actions number after the actions, so
+            // every roll chip keeps a key of its own.
+            if (b.reactions.isNotEmpty) ...[
+              const SectionTitle('Reacciones'),
+              for (final (i, a) in b.reactions.indexed)
+                _ActionCard(action: a, position: b.actions.length + i),
+            ],
+            if (b.legendaryActions.isNotEmpty) ...[
+              const SectionTitle('Acciones legendarias'),
+              for (final (i, a) in b.legendaryActions.indexed)
+                _ActionCard(action: a, position: b.actions.length + b.reactions.length + i),
+            ],
             if (b.description != null) ...[const SectionTitle('Descripción'), Text(b.description!)],
             const SizedBox(height: 12),
-            Text(
-              'Contenido del SRD 5.1 (CC-BY 4.0). Los textos de las bestias están en inglés.',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            if (b.source == null || b.source == 'srd')
+              Text(
+                'Contenido del SRD 5.1 (CC-BY 4.0). Los textos de las bestias están en inglés.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
           ],
         ),
       ),

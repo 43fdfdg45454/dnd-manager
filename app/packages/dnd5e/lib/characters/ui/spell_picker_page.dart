@@ -31,7 +31,12 @@ class SpellPickerPage extends ConsumerStatefulWidget {
     this.maxLevel,
     this.limit,
     this.title = 'Añadir hechizos',
+    this.campaignId,
   });
+
+  /// The campaign of the character: only the spells of its content packs are
+  /// offered (null: the global catalog).
+  final String? campaignId;
 
   final List<SpellPickerClass> classes;
 
@@ -127,6 +132,7 @@ class _SpellPickerPageState extends ConsumerState<SpellPickerPage> {
       classIndex: _class.classIndex,
       page: page,
       pageSize: _pageSize,
+      campaignId: widget.campaignId,
     );
     if (generation != _generation || !mounted) return;
     setState(() {

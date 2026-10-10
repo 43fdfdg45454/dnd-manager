@@ -134,6 +134,7 @@ class _DmCharacterSheetState extends ConsumerState<DmCharacterSheet> {
       context,
       // Exhaustion has levels: the full sheet handles it.
       taken: {'exhaustion', for (final c in m.conditions) c.index},
+      campaignId: widget.campaignId,
     );
     if (picked == null || !mounted) return;
     await _adjust(
@@ -183,7 +184,8 @@ class _DmCharacterSheetState extends ConsumerState<DmCharacterSheet> {
     final theme = Theme.of(context);
     final tokens = context.tokens;
     final names = {
-      for (final c in ref.watch(conditionsProvider).value ?? const <Condition>[]) c.index: c.name,
+      for (final c in ref.watch(conditionsProvider(null)).value ?? const <Condition>[])
+        c.index: c.name,
     };
     final hasValue = _value != null && _value! > 0;
 

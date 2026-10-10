@@ -4,6 +4,10 @@ class ContentPack {
     required this.id,
     required this.name,
     required this.version,
+    this.systemId = '',
+    this.formatVersion = 0,
+    this.isBase = false,
+    this.requires = const [],
     this.importedAt,
     this.counts = const {},
   });
@@ -12,6 +16,10 @@ class ContentPack {
     id: json['id'] as String? ?? '',
     name: json['name'] as String? ?? json['id'] as String? ?? '',
     version: json['version'] as String? ?? '',
+    systemId: json['systemId'] as String? ?? '',
+    formatVersion: (json['formatVersion'] as num?)?.toInt() ?? 0,
+    isBase: json['isBase'] as bool? ?? false,
+    requires: parseContentPackIds(json['requires']),
     importedAt: DateTime.tryParse(json['importedAt'] as String? ?? ''),
     counts: parseContentPackCounts(json['counts']),
   );
@@ -19,6 +27,19 @@ class ContentPack {
   final String id;
   final String name;
   final String version;
+
+  /// Game system that understands the pack (`dnd5e`).
+  final String systemId;
+
+  /// Version of the pack format: 3 for imported packs, 0 for the base pack
+  /// the server loads by itself.
+  final int formatVersion;
+
+  /// The base pack of its system (the SRD): always active, never deleted.
+  final bool isBase;
+
+  /// Ids of the packs this one references; a campaign enables them together.
+  final List<String> requires;
   final DateTime? importedAt;
 
   /// Definitions per type (`subclasses`, `items`, `spells`...).
@@ -29,6 +50,14 @@ class ContentPack {
   String get countsSummary => contentPackCountsSummary(counts);
 }
 
+/// A list of pack ids (`requires`); anything else gives an empty list.
+List<String> parseContentPackIds(Object? json) => json is List
+    ? [
+        for (final e in json)
+          if (e is String && e.isNotEmpty) e,
+      ]
+    : const [];
+
 Map<String, int> parseContentPackCounts(Object? json) => json is Map
     ? {
         for (final entry in json.entries)
@@ -37,6 +66,7 @@ Map<String, int> parseContentPackCounts(Object? json) => json is Map
     : const {};
 
 const _countLabels = <String, (String, String)>{
+  'classes': ('clase', 'clases'),
   'subclasses': ('subclase', 'subclases'),
   'features': ('rasgo de clase', 'rasgos de clase'),
   'items': ('objeto', 'objetos'),
@@ -46,6 +76,11 @@ const _countLabels = <String, (String, String)>{
   'raceExtensions': ('raza ampliada', 'razas ampliadas'),
   'traits': ('rasgo racial', 'rasgos raciales'),
   'backgrounds': ('trasfondo', 'trasfondos'),
+  'feats': ('dote', 'dotes'),
+  'creatures': ('criatura', 'criaturas'),
+  'conditions': ('condición', 'condiciones'),
+  'rules': ('regla', 'reglas'),
+  'reference': ('entrada de vocabulario', 'entradas de vocabulario'),
   'trinkets': ('baratija', 'baratijas'),
 };
 

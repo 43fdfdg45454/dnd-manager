@@ -527,7 +527,9 @@ class _CategoryPickerPage extends ConsumerWidget {
         ) ??
         const <EquipmentCategoryItem>[];
     final controller = ref.read(characterWizardControllerProvider(args).notifier);
-    final category = ref.watch(equipmentCategoryProvider(pick.category));
+    final category = ref.watch(
+      equipmentCategoryProvider((index: pick.category, campaignId: args.campaignId)),
+    );
     return Scaffold(
       key: const Key('equipment-category-picker'),
       appBar: AppBar(
@@ -544,7 +546,9 @@ class _CategoryPickerPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => WizardLoadError(
           error: error,
-          onRetry: () => ref.invalidate(equipmentCategoryProvider(pick.category)),
+          onRetry: () => ref.invalidate(
+            equipmentCategoryProvider((index: pick.category, campaignId: args.campaignId)),
+          ),
         ),
         data: (data) => Column(
           children: [

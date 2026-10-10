@@ -6,6 +6,7 @@ import '../../../../core/auth/auth_controller.dart';
 import '../../../../core/auth/auth_state.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/ui/offline_widgets.dart';
+import '../../../content_packs/ui/campaign_content_packs_section.dart';
 import '../../../sessions/domain/sessions_format.dart';
 import '../../../sessions/ui/calendar_settings_dialog.dart';
 import '../../../sessions/ui/session_widgets.dart';
@@ -19,8 +20,9 @@ import '../transfer_ownership_dialog.dart';
 CampaignDetailController _controllerOf(WidgetRef ref, String id) =>
     ref.read(campaignDetailControllerProvider(id).notifier);
 
-/// "Ajustes" section of a campaign: description, calendar settings and the
-/// edit, transfer, delete and leave actions allowed to the user's role.
+/// "Ajustes" section of a campaign: description, calendar settings, the
+/// content packs it enables (Owner/DM) and the edit, transfer, delete and
+/// leave actions allowed to the user's role.
 class CampaignSettingsSection extends ConsumerWidget {
   const CampaignSettingsSection({super.key, required this.campaign});
 
@@ -175,6 +177,10 @@ class CampaignSettingsSection extends ConsumerWidget {
                 : null,
           ),
         ),
+        if (role.isAtLeastDm) ...[
+          const SizedBox(height: 16),
+          CampaignContentPacksSection(campaignId: campaign.id, editable: true),
+        ],
         const SizedBox(height: 16),
         Align(
           alignment: Alignment.centerLeft,

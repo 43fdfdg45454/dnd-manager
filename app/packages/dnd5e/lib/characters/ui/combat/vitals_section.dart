@@ -642,6 +642,7 @@ class ConditionsCard extends ConsumerWidget {
     final picked = await showConditionPicker(
       context,
       taken: {for (final k in character.conditions) k.index},
+      campaignId: character.campaignId,
     );
     if (picked == null || !context.mounted) return;
     if (picked.index == 'exhaustion') {
@@ -689,7 +690,7 @@ class ConditionsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = character;
     final names = {
-      for (final cond in ref.watch(conditionsProvider).value ?? const <Condition>[])
+      for (final cond in ref.watch(conditionsProvider(null)).value ?? const <Condition>[])
         cond.index: cond.name,
     };
     // Concentration is a state of the character too: it goes first, as a chip.
@@ -787,7 +788,11 @@ class ConditionsCard extends ConsumerWidget {
 
 /// Opens the [ConditionPicker] in a draggable bottom sheet (like the other long
 /// pickers of the app) and returns the picked condition, or null.
-Future<Condition?> showConditionPicker(BuildContext context, {required Set<String> taken}) {
+Future<Condition?> showConditionPicker(
+  BuildContext context, {
+  required Set<String> taken,
+  String? campaignId,
+}) {
   return showModalBottomSheet<Condition>(
     context: context,
     isScrollControlled: true,
@@ -797,7 +802,8 @@ Future<Condition?> showConditionPicker(BuildContext context, {required Set<Strin
       initialChildSize: 0.7,
       minChildSize: 0.4,
       maxChildSize: 0.95,
-      builder: (_, controller) => ConditionPicker(taken: taken, scrollController: controller),
+      builder: (_, controller) =>
+          ConditionPicker(taken: taken, campaignId: campaignId, scrollController: controller),
     ),
   );
 }
@@ -805,14 +811,18 @@ Future<Condition?> showConditionPicker(BuildContext context, {required Set<Strin
 /// Picks one condition of the SRD list that is not in [taken]; every row has a
 /// [DetailInfoButton] with the rules of the condition (the picker stays open).
 class ConditionPicker extends ConsumerWidget {
-  const ConditionPicker({super.key, required this.taken, this.scrollController});
+  const ConditionPicker({super.key, required this.taken, this.campaignId, this.scrollController});
 
   final Set<String> taken;
+
+  /// The campaign whose catalog offers the conditions (its content packs);
+  /// null for the global catalog.
+  final String? campaignId;
   final ScrollController? scrollController;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final conditions = ref.watch(conditionsProvider);
+    final conditions = ref.watch(conditionsProvider(campaignId));
     final theme = Theme.of(context);
     final Widget body = conditions.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -821,7 +831,7 @@ class ConditionPicker extends ConsumerWidget {
         children: [
           const Text('No se pudo cargar la lista de condiciones.'),
           TextButton(
-            onPressed: () => ref.invalidate(conditionsProvider),
+            onPressed: () => ref.invalidate(conditionsProvider(campaignId)),
             child: const Text('Reintentar'),
           ),
         ],

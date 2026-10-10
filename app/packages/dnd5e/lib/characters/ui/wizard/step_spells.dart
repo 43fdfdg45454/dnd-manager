@@ -37,6 +37,7 @@ class SpellsStep extends ConsumerWidget {
               : state.hasSpellbook
               ? 'Elegir hechizos del libro'
               : 'Elegir hechizos',
+          campaignId: args.campaignId,
         ),
       ),
     );

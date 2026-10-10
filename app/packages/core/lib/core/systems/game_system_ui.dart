@@ -31,7 +31,9 @@ class SheetTab {
 }
 
 /// One tab of the compendium (D&D 5e: Hechizos, Objetos, Clases, Razas,
-/// Bestias, Condiciones, Tablas). Each tab reads the shared search box itself.
+/// Bestias, Condiciones, Reglas, Tablas). Each tab reads the shared search
+/// box and the scope of the page itself (`CompendiumScope`,
+/// `compendiumSearchProvider`, `compendiumFilterProvider`).
 @immutable
 class CompendiumTab {
   const CompendiumTab({required this.id, required this.label, required this.builder});
@@ -285,8 +287,10 @@ abstract class GameSystemUi {
   List<CompendiumTab> compendiumTabs();
 
   /// The content packs and other sources of the catalog of the system, for
-  /// the source chips. [ref] is the one of the provider that asks.
-  Future<List<CatalogSource>> catalogSources(Ref ref);
+  /// the source chips and the source picker of the compendium. With
+  /// [campaignId] each source says whether that campaign enables it. [ref] is
+  /// the one of the provider that asks.
+  Future<List<CatalogSource>> catalogSources(Ref ref, {String? campaignId});
 
   /// Opens the catalog page of the item template [itemId].
   Future<void> openCatalogItem(BuildContext context, String itemId);

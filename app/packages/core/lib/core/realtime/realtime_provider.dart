@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/campaigns/data/campaigns_controller.dart';
 import '../../features/characters/data/character_refresh.dart';
 import '../../features/characters/data/characters_controller.dart';
+import '../../features/content_packs/data/campaign_content_packs_controller.dart';
 import '../../features/items/data/items_controllers.dart';
 import '../../features/session/data/session_controllers.dart';
 import '../../features/sessions/data/sessions_controllers.dart';
@@ -13,6 +14,7 @@ import '../auth/auth_controller.dart';
 import '../auth/auth_repository.dart';
 import '../auth/auth_state.dart';
 import '../auth/token_storage.dart';
+import '../catalog/catalog_sources.dart';
 import '../network/connectivity.dart';
 import '../server/server_config_controller.dart';
 import '../server/server_url.dart';
@@ -262,11 +264,21 @@ class CampaignRealtime extends Notifier<RealtimeState> {
       case MembershipRemoved():
         // The shell leaves the campaign; its list must not show it any more.
         ref.invalidate(campaignsControllerProvider);
+      case CampaignUpdated():
+        _refreshContentPacks();
       case UnknownCampaignEvent():
         // Events of the game system of the campaign (D&D 5e: party rests and
         // granted levels); ignored when the system does not know them.
         ref.read(campaignSystemUiProvider(campaignId)).onRealtimeEvent(ref, event);
     }
+  }
+
+  /// The packs of the campaign changed: its pack list, its catalog (wizard,
+  /// shops, compendium) and the sheets (a pick may now be of a disabled pack).
+  void _refreshContentPacks() {
+    ref.invalidate(campaignContentPacksControllerProvider(campaignId));
+    ref.read(campaignCatalogRevisionProvider(campaignId).notifier).bump();
+    _refreshCharacters(null);
   }
 
   /// [characterId] null: every character of the campaign.
@@ -292,6 +304,8 @@ class CampaignRealtime extends Notifier<RealtimeState> {
     ref.invalidate(messagesControllerProvider(campaignId));
     ref.invalidate(unreadMessagesCountProvider(campaignId));
     _refreshSessions(null);
+    ref.invalidate(campaignContentPacksControllerProvider(campaignId));
+    ref.read(campaignCatalogRevisionProvider(campaignId).notifier).bump();
   }
 }
 

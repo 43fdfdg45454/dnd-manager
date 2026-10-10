@@ -54,6 +54,7 @@ sealed class CampaignEvent {
     SessionUpdated.type: SessionUpdated.new,
     RestRequestUpdated.type: RestRequestUpdated.new,
     MembershipRemoved.type: MembershipRemoved.new,
+    CampaignUpdated.type: CampaignUpdated.new,
   };
 
   final String campaignId;
@@ -169,6 +170,14 @@ final class MembershipRemoved extends CampaignEvent {
   const MembershipRemoved({required super.campaignId, super.characterId, super.entityId, super.at});
 
   static const type = 'membership.removed';
+}
+
+/// The campaign changed its settings: today, the content packs it enables
+/// (the catalog of the campaign must be loaded again).
+final class CampaignUpdated extends CampaignEvent {
+  const CampaignUpdated({required super.campaignId, super.characterId, super.entityId, super.at});
+
+  static const type = 'campaign.updated';
 }
 
 /// An event type the core does not know: the events of a game system (D&D
