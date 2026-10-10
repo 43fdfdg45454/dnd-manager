@@ -18,19 +18,19 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
 
         await factory.WithDbAsync(async db =>
         {
-            Assert.Equal(12, await db.CatalogClasses.CountAsync());
-            Assert.Equal(12, await db.CatalogSubclasses.CountAsync());
-            Assert.Equal(240, await db.CatalogClassLevels.CountAsync());
-            Assert.Equal(50, await db.CatalogSubclassLevels.CountAsync());
-            Assert.Equal(290, await db.CatalogClassLevels.CountAsync() + await db.CatalogSubclassLevels.CountAsync());
-            Assert.Equal(407, await db.CatalogFeatures.CountAsync());
-            Assert.Equal(9, await db.CatalogRaces.CountAsync());
-            Assert.Equal(4, await db.CatalogSubraces.CountAsync());
-            Assert.Equal(38, await db.CatalogTraits.CountAsync());
-            Assert.Equal(319, await db.CatalogSpells.CountAsync());
-            Assert.Equal(15, await db.CatalogConditions.CountAsync());
-            Assert.Equal(18, await db.CatalogSkills.CountAsync());
-            Assert.Equal(1, await db.CatalogBackgrounds.CountAsync());
+            Assert.Equal(12, await db.Set<ClassDefinition>().CountAsync());
+            Assert.Equal(12, await db.Set<SubclassDefinition>().CountAsync());
+            Assert.Equal(240, await db.Set<ClassLevel>().CountAsync());
+            Assert.Equal(50, await db.Set<SubclassLevel>().CountAsync());
+            Assert.Equal(290, await db.Set<ClassLevel>().CountAsync() + await db.Set<SubclassLevel>().CountAsync());
+            Assert.Equal(407, await db.Set<FeatureDefinition>().CountAsync());
+            Assert.Equal(9, await db.Set<RaceDefinition>().CountAsync());
+            Assert.Equal(4, await db.Set<SubraceDefinition>().CountAsync());
+            Assert.Equal(38, await db.Set<TraitDefinition>().CountAsync());
+            Assert.Equal(319, await db.Set<SpellDefinition>().CountAsync());
+            Assert.Equal(15, await db.Set<ConditionDefinition>().CountAsync());
+            Assert.Equal(18, await db.Set<SkillDefinition>().CountAsync());
+            Assert.Equal(1, await db.Set<BackgroundDefinition>().CountAsync());
 
             var srdItems = await db.ItemTemplates.CountAsync(x => x.CampaignId == null);
             Assert.True(srdItems >= 590, $"Expected at least 590 SRD items, got {srdItems}.");
@@ -63,15 +63,15 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
 
         await factory.WithDbAsync(async db =>
         {
-            Assert.Equal(13, await db.CatalogOptionSets.CountAsync(x => x.Source == Dnd5eCatalogSources.Srd));
-            Assert.Equal(99, await db.CatalogOptions.CountAsync(x => x.Source == Dnd5eCatalogSources.Srd));
-            Assert.Equal(197, await db.CatalogLevelChoiceRules.CountAsync(x => x.Source == Dnd5eCatalogSources.Srd));
+            Assert.Equal(13, await db.Set<OptionSetDefinition>().CountAsync(x => x.Source == Dnd5eCatalogSources.Srd));
+            Assert.Equal(99, await db.Set<OptionDefinition>().CountAsync(x => x.Source == Dnd5eCatalogSources.Srd));
+            Assert.Equal(197, await db.Set<LevelChoiceRule>().CountAsync(x => x.Source == Dnd5eCatalogSources.Srd));
 
-            var defense = await db.CatalogOptions.SingleAsync(x => x.Index == "fighting-style-defense");
+            var defense = await db.Set<OptionDefinition>().SingleAsync(x => x.Index == "fighting-style-defense");
             Assert.Equal([new ChoiceModifier(ItemModifierKind.ArmorClassBonus, null, 1, ModifierConditions.WearingArmor)], defense.Modifiers);
-            var rule = await db.CatalogLevelChoiceRules.SingleAsync(x => x.Id == "warlock/-/2/eldritch-invocations");
+            var rule = await db.Set<LevelChoiceRule>().SingleAsync(x => x.Id == "warlock/-/2/eldritch-invocations");
             Assert.Equal((LevelChoiceKind.OptionSet, 2, true, true), (rule.Kind, rule.Choose, rule.Replaces, rule.Cumulative));
-            Assert.True((await db.CatalogLevelChoiceRules.SingleAsync(x => x.Id == "wizard/-/2/spellbook")).Filter.MaxSpellLevelBySlots);
+            Assert.True((await db.Set<LevelChoiceRule>().SingleAsync(x => x.Id == "wizard/-/2/spellbook")).Filter.MaxSpellLevelBySlots);
             Assert.Contains("\"levelChoiceRules\":197", (await db.CatalogImports.SingleAsync()).CountsJson);
         });
     }
@@ -111,7 +111,7 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
         await factory.WithDbAsync(async db =>
         {
             Assert.Equal(1, await db.CatalogImports.CountAsync());
-            Assert.Equal(319, await db.CatalogSpells.CountAsync());
+            Assert.Equal(319, await db.Set<SpellDefinition>().CountAsync());
             Assert.Equal(599, await db.ItemTemplates.CountAsync(x => x.CampaignId == null));
         });
     }
@@ -137,8 +137,8 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
         await factory.WithDbAsync(async db =>
         {
             Assert.Equal(1, await db.CatalogImports.CountAsync());
-            Assert.Equal(12, await db.CatalogClasses.CountAsync());
-            Assert.Equal(319, await db.CatalogSpells.CountAsync());
+            Assert.Equal(12, await db.Set<ClassDefinition>().CountAsync());
+            Assert.Equal(319, await db.Set<SpellDefinition>().CountAsync());
             var idsAfter = await db.ItemTemplates.Where(x => x.Index != null).ToDictionaryAsync(x => x.Index!, x => x.Id);
             Assert.Equal(idsBefore.OrderBy(x => x.Key), idsAfter.OrderBy(x => x.Key));
         });

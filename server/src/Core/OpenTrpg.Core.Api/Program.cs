@@ -18,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using Serilog;
+using OpenTrpg.Core.Infrastructure.Catalog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,8 +30,10 @@ builder.Logging.ClearProviders();
 builder.Host.UseSerilog((context, _, logger) => LoggingSetup.Configure(context, logger), preserveStaticLogger: true, writeToProviders: true);
 
 builder.Services.AddApplication();
-builder.Services.AddGameSystem<Dnd5eSystem>();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddGameSystem<Dnd5eSystem>();
+builder.Services.AddDnd5eApplication();
+builder.Services.AddDnd5eInfrastructure();
 
 // Realtime campaign events (ADR 0006): the SignalR hub replaces the no-op notifier of the application layer.
 builder.Services.AddSignalR(options =>

@@ -121,7 +121,7 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         await factory.WithDbAsync(async db =>
         {
             Assert.Equal(1, await db.CatalogImports.CountAsync(x => x.Ruleset == CatalogSources.PackRuleset(id)));
-            Assert.Equal(1, await db.CatalogSubclasses.CountAsync(x => x.Source == id));
+            Assert.Equal(1, await db.Set<SubclassDefinition>().CountAsync(x => x.Source == id));
             Assert.Equal(1, await db.ItemTemplates.CountAsync(x => x.Source == id));
         });
     }
@@ -281,15 +281,15 @@ public class ContentPackEndpointsTests(ContentPackApiFactory factory) : IClassFi
         Assert.Contains(fighter.Subclasses, x => x.Index == "champion");
         await factory.WithDbAsync(async db =>
         {
-            Assert.Equal(12, await db.CatalogClasses.CountAsync());
-            Assert.Equal(12, await db.CatalogSubclasses.CountAsync(x => x.Source == Dnd5eCatalogSources.Srd));
-            Assert.Equal(319, await db.CatalogSpells.CountAsync(x => x.Source == Dnd5eCatalogSources.Srd));
+            Assert.Equal(12, await db.Set<ClassDefinition>().CountAsync());
+            Assert.Equal(12, await db.Set<SubclassDefinition>().CountAsync(x => x.Source == Dnd5eCatalogSources.Srd));
+            Assert.Equal(319, await db.Set<SpellDefinition>().CountAsync(x => x.Source == Dnd5eCatalogSources.Srd));
             Assert.Equal(itemId, (await db.ItemTemplates.SingleAsync(x => x.Source == id)).Id);
-            Assert.True(await db.CatalogSpells.AnyAsync(x => x.Source == id));
-            Assert.True(await db.CatalogRaces.AnyAsync(x => x.Source == id));
-            Assert.True(await db.CatalogSubraces.AnyAsync(x => x.Source == id));
-            Assert.Equal(2, await db.CatalogTraits.CountAsync(x => x.Source == id));
-            Assert.True(await db.CatalogBackgrounds.AnyAsync(x => x.Source == id));
+            Assert.True(await db.Set<SpellDefinition>().AnyAsync(x => x.Source == id));
+            Assert.True(await db.Set<RaceDefinition>().AnyAsync(x => x.Source == id));
+            Assert.True(await db.Set<SubraceDefinition>().AnyAsync(x => x.Source == id));
+            Assert.Equal(2, await db.Set<TraitDefinition>().CountAsync(x => x.Source == id));
+            Assert.True(await db.Set<BackgroundDefinition>().AnyAsync(x => x.Source == id));
             Assert.True(await db.CatalogImports.AnyAsync(x => x.Ruleset == CatalogSources.PackRuleset(id)));
         });
     }

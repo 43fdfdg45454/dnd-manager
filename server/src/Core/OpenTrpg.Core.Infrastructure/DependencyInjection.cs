@@ -36,12 +36,9 @@ public static class DependencyInjection
         services.AddScoped<IPasswordTokenRepository, PasswordTokenRepository>();
         services.AddScoped<ICampaignRepository, CampaignRepository>();
         services.AddScoped<ICampaignAccess, CampaignAccess>();
-        services.AddScoped<ICatalogRepository, CatalogRepository>();
         services.AddScoped<ICharacterRepository, CharacterRepository>();
-        services.AddScoped<IDnd5eCharacterRepository, Dnd5eCharacterRepository>();
         services.AddScoped<IChangeRequestRepository, ChangeRequestRepository>();
         services.AddScoped<IRestRequestRepository, RestRequestRepository>();
-        services.AddScoped<ICharacterCompanionRepository, CharacterCompanionRepository>();
         services.AddScoped<IItemTemplateRepository, ItemTemplateRepository>();
         services.AddScoped<IShopRepository, ShopRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
@@ -54,9 +51,7 @@ public static class DependencyInjection
         services.AddScoped<ISessionRepository, SessionRepository>();
         services.AddScoped<IReleaseRepository, ReleaseRepository>();
         services.AddScoped<IInstanceStatsRepository, InstanceStatsRepository>();
-        services.AddScoped<ISrdSeeder, SrdSeeder>();
         services.AddScoped<IContentPackImporter, ContentPackRegistry>();
-        services.AddScoped<IDnd5eCatalogSystem, Dnd5eCatalogSystem>();
         services.AddScoped<SystemDocumentSeeder>();
 
         services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
@@ -86,7 +81,6 @@ public static class DependencyInjection
         services.AddSingleton<ISessionLinkTokens, SessionLinkTokens>();
         services.AddScoped<ISessionEmailService, SessionEmailService>();
         services.AddSingleton<ICampaignDefaults, CampaignDefaults>();
-        services.AddSingleton<IBeastCatalog, SrdBeastCatalog>();
 
         return services;
     }

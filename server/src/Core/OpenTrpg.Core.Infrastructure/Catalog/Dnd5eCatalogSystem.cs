@@ -70,24 +70,24 @@ internal sealed partial class Dnd5eCatalogSystem(
         // The pack's races are updated in place: other packs may have added subraces to them (races[].extends).
         var raceIndexes = rows.Races.Select(r => r.Index).ToList();
         await DeleteDefinitionsAsync(id, raceIndexes, cancellationToken);
-        var existingRaces = (await db.CatalogRaces.AsNoTracking().Where(x => x.Source == id).Select(x => x.Index).ToListAsync(cancellationToken))
+        var existingRaces = (await db.Set<RaceDefinition>().AsNoTracking().Where(x => x.Source == id).Select(x => x.Index).ToListAsync(cancellationToken))
             .ToHashSet(StringComparer.Ordinal);
 
-        db.CatalogSubclasses.AddRange(rows.Subclasses);
-        db.CatalogSubclassLevels.AddRange(rows.SubclassLevels);
-        db.CatalogFeatures.AddRange(rows.Features);
-        db.CatalogRaces.UpdateRange(rows.Races.Where(r => existingRaces.Contains(r.Index)));
-        db.CatalogRaces.AddRange(rows.Races.Where(r => !existingRaces.Contains(r.Index)));
-        db.CatalogSubraces.AddRange(rows.Subraces);
-        db.CatalogRaceExtensions.AddRange(rows.RaceExtensions);
-        db.CatalogTraits.AddRange(rows.Traits);
-        db.CatalogSpells.AddRange(rows.Spells);
-        db.CatalogBackgrounds.AddRange(rows.Backgrounds);
-        db.CatalogOptionSets.AddRange(rows.OptionSets);
-        db.CatalogOptions.AddRange(rows.Options);
-        db.CatalogLevelChoiceRules.AddRange(rows.LevelChoiceRules);
-        db.CatalogTrinkets.AddRange(rows.Trinkets);
-        db.CatalogRollTables.AddRange(rows.RollTables);
+        db.Set<SubclassDefinition>().AddRange(rows.Subclasses);
+        db.Set<SubclassLevel>().AddRange(rows.SubclassLevels);
+        db.Set<FeatureDefinition>().AddRange(rows.Features);
+        db.Set<RaceDefinition>().UpdateRange(rows.Races.Where(r => existingRaces.Contains(r.Index)));
+        db.Set<RaceDefinition>().AddRange(rows.Races.Where(r => !existingRaces.Contains(r.Index)));
+        db.Set<SubraceDefinition>().AddRange(rows.Subraces);
+        db.Set<RaceExtensionDefinition>().AddRange(rows.RaceExtensions);
+        db.Set<TraitDefinition>().AddRange(rows.Traits);
+        db.Set<SpellDefinition>().AddRange(rows.Spells);
+        db.Set<BackgroundDefinition>().AddRange(rows.Backgrounds);
+        db.Set<OptionSetDefinition>().AddRange(rows.OptionSets);
+        db.Set<OptionDefinition>().AddRange(rows.Options);
+        db.Set<LevelChoiceRule>().AddRange(rows.LevelChoiceRules);
+        db.Set<TrinketEntry>().AddRange(rows.Trinkets);
+        db.Set<RollTable>().AddRange(rows.RollTables);
         await db.SaveChangesAsync(cancellationToken);
         db.ChangeTracker.Clear();
 
@@ -151,27 +151,27 @@ internal sealed partial class Dnd5eCatalogSystem(
 
     private async Task<ContentPackContext> LoadContextAsync(CancellationToken cancellationToken)
     {
-        var classes = await db.CatalogClasses.AsNoTracking()
+        var classes = await db.Set<ClassDefinition>().AsNoTracking()
             .Select(x => new { x.Index, x.SubclassFlavor })
             .ToDictionaryAsync(x => x.Index, x => x.SubclassFlavor, StringComparer.Ordinal, cancellationToken);
-        var subclasses = await db.CatalogSubclasses.AsNoTracking()
+        var subclasses = await db.Set<SubclassDefinition>().AsNoTracking()
             .Where(x => x.Source == Dnd5eCatalogSources.Srd)
             .Select(x => new { x.Index, x.ClassIndex })
             .ToDictionaryAsync(x => x.Index, x => x.ClassIndex, StringComparer.Ordinal, cancellationToken);
-        var packSubclasses = await db.CatalogSubclasses.AsNoTracking()
+        var packSubclasses = await db.Set<SubclassDefinition>().AsNoTracking()
             .Where(x => x.Source != Dnd5eCatalogSources.Srd)
             .Select(x => new { x.Index, x.ClassIndex, x.Source })
             .ToDictionaryAsync(x => x.Index, x => (x.ClassIndex, x.Source), StringComparer.Ordinal, cancellationToken);
-        var skills = await db.CatalogSkills.AsNoTracking()
+        var skills = await db.Set<SkillDefinition>().AsNoTracking()
             .Select(x => new { x.Index, x.Name })
             .ToDictionaryAsync(x => x.Index, x => x.Name, StringComparer.Ordinal, cancellationToken);
-        var optionSets = await db.CatalogOptionSets.AsNoTracking()
+        var optionSets = await db.Set<OptionSetDefinition>().AsNoTracking()
             .Select(x => new { x.SetId, x.Source })
             .ToDictionaryAsync(x => x.SetId, x => x.Source, StringComparer.Ordinal, cancellationToken);
-        var options = await db.CatalogOptions.AsNoTracking()
+        var options = await db.Set<OptionDefinition>().AsNoTracking()
             .Select(x => new { x.Index, x.SetId, x.Source })
             .ToDictionaryAsync(x => x.Index, x => (x.SetId, x.Source), StringComparer.Ordinal, cancellationToken);
-        var spellRows = await db.CatalogSpells.AsNoTracking()
+        var spellRows = await db.Set<SpellDefinition>().AsNoTracking()
             .Select(x => new { x.Index, x.Source, x.Level })
             .ToListAsync(cancellationToken);
         var spells = spellRows.ToDictionary(x => x.Index, x => x.Source, StringComparer.Ordinal);
@@ -179,23 +179,23 @@ internal sealed partial class Dnd5eCatalogSystem(
             .Where(x => x.CampaignId == null && x.Source == Dnd5eCatalogSources.Srd && x.Index != null)
             .Select(x => x.Index!)
             .ToListAsync(cancellationToken);
-        var categories = await db.CatalogEquipmentCategories.AsNoTracking().Select(x => x.Index).ToListAsync(cancellationToken);
-        var casterClasses = await db.CatalogClasses.AsNoTracking()
+        var categories = await db.Set<EquipmentCategory>().AsNoTracking().Select(x => x.Index).ToListAsync(cancellationToken);
+        var casterClasses = await db.Set<ClassDefinition>().AsNoTracking()
             .Where(x => x.SpellcastingAbility != null || x.SpellcastingLevel > 0)
             .Select(x => x.Index)
             .ToListAsync(cancellationToken);
-        var races = await db.CatalogRaces.AsNoTracking()
+        var races = await db.Set<RaceDefinition>().AsNoTracking()
             .Select(x => new { x.Index, x.Source })
             .ToDictionaryAsync(x => x.Index, x => x.Source, StringComparer.Ordinal, cancellationToken);
-        var resourceRows = await db.CatalogOptions.AsNoTracking()
+        var resourceRows = await db.Set<OptionDefinition>().AsNoTracking()
             .Where(x => x.ResourceJson != null)
             .Select(x => new { x.ResourceJson, x.Source })
             .ToListAsync(cancellationToken);
-        resourceRows.AddRange(await db.CatalogFeatures.AsNoTracking()
+        resourceRows.AddRange(await db.Set<FeatureDefinition>().AsNoTracking()
             .Where(x => x.ResourceJson != null)
             .Select(x => new { x.ResourceJson, x.Source })
             .ToListAsync(cancellationToken));
-        var ruleRows = await db.CatalogLevelChoiceRules.AsNoTracking()
+        var ruleRows = await db.Set<LevelChoiceRule>().AsNoTracking()
             .Select(x => new { x.ClassIndex, x.Level, x.Key, x.SetId, x.Source })
             .ToListAsync(cancellationToken);
         return new ContentPackContext(
@@ -240,46 +240,46 @@ internal sealed partial class Dnd5eCatalogSystem(
         static List<(string, string)> Pairs<T>(IEnumerable<T> rows, Func<T, (string, string)> map) => rows.Select(map).ToList();
 
         await CheckAsync("subclasses", async keys => Pairs(
-            await db.CatalogSubclasses.AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
+            await db.Set<SubclassDefinition>().AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
             x => (x.Index, x.Source)));
         await CheckAsync("subclassLevels", async keys => Pairs(
-            await db.CatalogSubclassLevels.AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
+            await db.Set<SubclassLevel>().AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
             x => (x.Index, x.Source)));
         await CheckAsync("features", async keys => Pairs(
-            await db.CatalogFeatures.AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
+            await db.Set<FeatureDefinition>().AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
             x => (x.Index, x.Source)));
         await CheckAsync("spells", async keys => Pairs(
-            await db.CatalogSpells.AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
+            await db.Set<SpellDefinition>().AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
             x => (x.Index, x.Source)));
         await CheckAsync("races", async keys => Pairs(
-            await db.CatalogRaces.AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
+            await db.Set<RaceDefinition>().AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
             x => (x.Index, x.Source)));
         await CheckAsync("subraces", async keys => Pairs(
-            await db.CatalogSubraces.AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
+            await db.Set<SubraceDefinition>().AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
             x => (x.Index, x.Source)));
         await CheckAsync("traits", async keys => Pairs(
-            await db.CatalogTraits.AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
+            await db.Set<TraitDefinition>().AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
             x => (x.Index, x.Source)));
         await CheckAsync("backgrounds", async keys => Pairs(
-            await db.CatalogBackgrounds.AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
+            await db.Set<BackgroundDefinition>().AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
             x => (x.Index, x.Source)));
         await CheckAsync("items", async keys => Pairs(
             await db.ItemTemplates.AsNoTracking().Where(x => x.Source != id && x.Index != null && keys.Contains(x.Index)).Select(x => new { Index = x.Index!, x.Source }).ToListAsync(cancellationToken),
             x => (x.Index, x.Source)));
 
         await CheckAsync("optionSets", async keys => Pairs(
-            await db.CatalogOptionSets.AsNoTracking().Where(x => x.Source != id && keys.Contains(x.SetId)).Select(x => new { x.SetId, x.Source }).ToListAsync(cancellationToken),
+            await db.Set<OptionSetDefinition>().AsNoTracking().Where(x => x.Source != id && keys.Contains(x.SetId)).Select(x => new { x.SetId, x.Source }).ToListAsync(cancellationToken),
             x => (x.SetId, x.Source)));
         await CheckAsync("options", async keys => Pairs(
-            await db.CatalogOptions.AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
+            await db.Set<OptionDefinition>().AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Index)).Select(x => new { x.Index, x.Source }).ToListAsync(cancellationToken),
             x => (x.Index, x.Source)));
         await CheckAsync("levelChoiceRules", async keys => Pairs(
-            await db.CatalogLevelChoiceRules.AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Id)).Select(x => new { x.Id, x.Source }).ToListAsync(cancellationToken),
+            await db.Set<LevelChoiceRule>().AsNoTracking().Where(x => x.Source != id && keys.Contains(x.Id)).Select(x => new { x.Id, x.Source }).ToListAsync(cancellationToken),
             x => (x.Id, x.Source)));
 
         // Classes are not extended by packs, but a subclass or feature must not hide a class index either.
         await CheckAsync("subclasses", async keys => Pairs(
-            await db.CatalogClasses.AsNoTracking().Where(x => keys.Contains(x.Index)).Select(x => x.Index).ToListAsync(cancellationToken),
+            await db.Set<ClassDefinition>().AsNoTracking().Where(x => keys.Contains(x.Index)).Select(x => x.Index).ToListAsync(cancellationToken),
             x => (x, Dnd5eCatalogSources.Srd)));
     }
 
@@ -290,19 +290,19 @@ internal sealed partial class Dnd5eCatalogSystem(
     /// </summary>
     private async Task DeleteDefinitionsAsync(string id, IReadOnlyCollection<string> keptRaces, CancellationToken cancellationToken)
     {
-        await db.CatalogTrinkets.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogRollTables.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogLevelChoiceRules.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogOptions.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogOptionSets.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogFeatures.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogSubclassLevels.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogSubclasses.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogSubraces.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogRaceExtensions.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogRaces.Where(x => x.Source == id && !keptRaces.Contains(x.Index)).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogTraits.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogSpells.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogBackgrounds.Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<TrinketEntry>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<RollTable>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<LevelChoiceRule>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<OptionDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<OptionSetDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<FeatureDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<SubclassLevel>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<SubclassDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<SubraceDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<RaceExtensionDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<RaceDefinition>().Where(x => x.Source == id && !keptRaces.Contains(x.Index)).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<TraitDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<SpellDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<BackgroundDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
     }
 }

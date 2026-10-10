@@ -69,25 +69,6 @@ public static class DependencyInjection
         services.AddScoped<TransferOwnershipHandler>();
 
         services.AddScoped<ListSystemsHandler>();
-        services.AddScoped<GetAttributionHandler>();
-        services.AddScoped<ListClassesHandler>();
-        services.AddScoped<GetClassHandler>();
-        services.AddScoped<GetFeatureHandler>();
-        services.AddScoped<ListRacesHandler>();
-        services.AddScoped<GetRaceHandler>();
-        services.AddScoped<SearchSpellsHandler>();
-        services.AddScoped<GetSpellHandler>();
-        services.AddScoped<SearchBeastsHandler>();
-        services.AddScoped<GetBeastHandler>();
-        services.AddScoped<SearchItemsHandler>();
-        services.AddScoped<GetItemHandler>();
-        services.AddScoped<ListConditionsHandler>();
-        services.AddScoped<ListSkillsHandler>();
-        services.AddScoped<ListBackgroundsHandler>();
-        services.AddScoped<GetEquipmentCategoryHandler>();
-        services.AddScoped<ListCatalogSourcesHandler>();
-        services.AddScoped<ListTrinketsHandler>();
-        services.AddScoped<ListRollTablesHandler>();
 
         services.AddScoped<ListContentPacksHandler>();
         services.AddScoped<ImportContentPackHandler>();
@@ -97,53 +78,20 @@ public static class DependencyInjection
         services.AddSingleton<ICampaignNotifier, NoopCampaignNotifier>();
         services.AddSingleton<IRealtimeConnections, NoopRealtimeConnections>();
 
-        services.AddScoped<IEquippedGearProvider, InventoryEquippedGearProvider>();
         services.AddSingleton<IDiceRoller>(RandomDiceRoller.Instance);
-        services.AddScoped<ICharacterSheetService, CharacterSheetService>();
         services.AddScoped<CharacterLoader>();
-        services.AddScoped<Dnd5eCharacterLoader>();
         services.AddScoped<CharacterViews>();
         services.AddScoped<CharacterActivation>();
         services.AddScoped<InventoryHooks>();
-        services.AddScoped<Dnd5eCharacterParts>();
-        services.AddScoped<Dnd5eSheetSystem>();
-        services.AddScoped<Dnd5eCreationSystem>();
-        services.AddScoped<Dnd5eProgressionSystem>();
-        services.AddScoped<Dnd5eCombatSystem>();
-        services.AddScoped<Dnd5eRestSystem>();
-        services.AddScoped<Dnd5eChoiceSystem>();
-        services.AddScoped<Dnd5ePartySystem>();
-        services.AddScoped<Dnd5eItemSystem>();
-        services.AddScoped<Dnd5eChangeRequestSystem>();
-        services.AddScoped<CharacterTracker>();
         services.AddScoped<ListCharactersHandler>();
         services.AddScoped<CharacterOwnerRules>();
         services.AddScoped<CreateCharacterHandler>();
         services.AddScoped<SetCharacterOwnerHandler>();
         services.AddScoped<GetCharacterHandler>();
         services.AddScoped<UpdateSheetHandler>();
-        services.AddScoped<CompanionPlanner>();
-        services.AddScoped<SetCompanionHandler>();
-        services.AddScoped<CompanionTrackingHandler>();
         services.AddScoped<SubmitCharacterHandler>();
         services.AddScoped<ActivateCharacterHandler>();
         services.AddScoped<DeleteCharacterHandler>();
-        services.AddScoped<UpdateCombatHandler>();
-        services.AddScoped<SetConcentrationHandler>();
-        services.AddScoped<ApplyDamageHandler>();
-        services.AddScoped<OriginChoicesPlanner>();
-        services.AddScoped<OriginChoicesHandler>();
-        services.AddScoped<InvalidChoicesPlanner>();
-        services.AddScoped<InvalidChoicesHandler>();
-        services.AddScoped<SpellSlotHandler>();
-        services.AddScoped<ResourceHandler>();
-        services.AddScoped<RestHandler>();
-        services.AddScoped<ClassActionHandler>();
-        services.AddScoped<LevelUpPlanner>();
-        services.AddScoped<GetLevelUpPlanHandler>();
-        services.AddScoped<ApplyLevelUpHandler>();
-        services.AddScoped<SpellPreparationPlanner>();
-        services.AddScoped<SpellPreparationHandler>();
 
         services.AddScoped<ChangeRequestLoader>();
         services.AddScoped<ListChangeRequestsHandler>();
@@ -198,11 +146,6 @@ public static class DependencyInjection
         services.AddScoped<SplitStashGoldHandler>();
 
         services.AddScoped<PartyLoader>();
-        services.AddScoped<Dnd5ePartyLoader>();
-        services.AddScoped<GetPartyHandler>();
-        services.AddScoped<PartyRestHandler>();
-        services.AddScoped<PartyAdjustHandler>();
-        services.AddScoped<PartyLevelHandler>();
 
         services.AddScoped<SendMessageHandler>();
         services.AddScoped<ListMessagesHandler>();

@@ -9,57 +9,57 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Repositories;
 internal sealed class CatalogRepository(AppDbContext db) : ICatalogRepository
 {
     public async Task<IReadOnlyList<ClassDefinition>> ListClassesAsync(CancellationToken cancellationToken = default) =>
-        await db.CatalogClasses.AsNoTracking().OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
+        await db.Set<ClassDefinition>().AsNoTracking().OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
 
     public Task<ClassDefinition?> GetClassAsync(string index, CancellationToken cancellationToken = default) =>
-        db.CatalogClasses.AsNoTracking().FirstOrDefaultAsync(x => x.Index == index, cancellationToken);
+        db.Set<ClassDefinition>().AsNoTracking().FirstOrDefaultAsync(x => x.Index == index, cancellationToken);
 
     public async Task<IReadOnlyList<ClassLevel>> ListClassLevelsAsync(string classIndex, CancellationToken cancellationToken = default) =>
-        await db.CatalogClassLevels.AsNoTracking().Where(x => x.ClassIndex == classIndex).OrderBy(x => x.Level).ToListAsync(cancellationToken);
+        await db.Set<ClassLevel>().AsNoTracking().Where(x => x.ClassIndex == classIndex).OrderBy(x => x.Level).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<SubclassDefinition>> ListSubclassesAsync(string classIndex, CancellationToken cancellationToken = default) =>
-        await db.CatalogSubclasses.AsNoTracking().Where(x => x.ClassIndex == classIndex).OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
+        await db.Set<SubclassDefinition>().AsNoTracking().Where(x => x.ClassIndex == classIndex).OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<SubclassLevel>> ListSubclassLevelsAsync(IReadOnlyCollection<string> subclassIndexes, CancellationToken cancellationToken = default) =>
         subclassIndexes.Count == 0
             ? []
-            : await db.CatalogSubclassLevels.AsNoTracking()
+            : await db.Set<SubclassLevel>().AsNoTracking()
                 .Where(x => subclassIndexes.Contains(x.SubclassIndex))
                 .OrderBy(x => x.SubclassIndex)
                 .ThenBy(x => x.Level)
                 .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<FeatureDefinition>> ListFeaturesByClassAsync(string classIndex, CancellationToken cancellationToken = default) =>
-        await db.CatalogFeatures.AsNoTracking().Where(x => x.ClassIndex == classIndex).ToListAsync(cancellationToken);
+        await db.Set<FeatureDefinition>().AsNoTracking().Where(x => x.ClassIndex == classIndex).ToListAsync(cancellationToken);
 
     public Task<FeatureDefinition?> GetFeatureAsync(string index, CancellationToken cancellationToken = default) =>
-        db.CatalogFeatures.AsNoTracking().FirstOrDefaultAsync(x => x.Index == index, cancellationToken);
+        db.Set<FeatureDefinition>().AsNoTracking().FirstOrDefaultAsync(x => x.Index == index, cancellationToken);
 
     public async Task<IReadOnlyList<RaceDefinition>> ListRacesAsync(CancellationToken cancellationToken = default) =>
-        await db.CatalogRaces.AsNoTracking().OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
+        await db.Set<RaceDefinition>().AsNoTracking().OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
 
     public Task<RaceDefinition?> GetRaceAsync(string index, CancellationToken cancellationToken = default) =>
-        db.CatalogRaces.AsNoTracking().FirstOrDefaultAsync(x => x.Index == index, cancellationToken);
+        db.Set<RaceDefinition>().AsNoTracking().FirstOrDefaultAsync(x => x.Index == index, cancellationToken);
 
     public async Task<IReadOnlyList<SubraceDefinition>> ListSubracesAsync(string raceIndex, CancellationToken cancellationToken = default) =>
-        await db.CatalogSubraces.AsNoTracking().Where(x => x.RaceIndex == raceIndex).OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
+        await db.Set<SubraceDefinition>().AsNoTracking().Where(x => x.RaceIndex == raceIndex).OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<SubraceDefinition>> ListAllSubracesAsync(CancellationToken cancellationToken = default) =>
-        await db.CatalogSubraces.AsNoTracking().OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
+        await db.Set<SubraceDefinition>().AsNoTracking().OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<RaceExtensionDefinition>> ListRaceExtensionsAsync(IReadOnlyCollection<string> raceIndexes, CancellationToken cancellationToken = default) =>
         raceIndexes.Count == 0
             ? []
-            : await db.CatalogRaceExtensions.AsNoTracking().Where(x => raceIndexes.Contains(x.RaceIndex)).OrderBy(x => x.Source).ToListAsync(cancellationToken);
+            : await db.Set<RaceExtensionDefinition>().AsNoTracking().Where(x => raceIndexes.Contains(x.RaceIndex)).OrderBy(x => x.Source).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<TraitDefinition>> ListTraitsAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
         indexes.Count == 0
             ? []
-            : await db.CatalogTraits.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+            : await db.Set<TraitDefinition>().AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
 
     public async Task<(IReadOnlyList<SpellDefinition> Items, int Total)> SearchSpellsAsync(SpellFilter filter, int skip, int take, CancellationToken cancellationToken = default)
     {
-        var query = db.CatalogSpells.AsNoTracking();
+        var query = db.Set<SpellDefinition>().AsNoTracking();
         if (filter.Search is { } search)
         {
             query = query.Where(x => x.Name.ToLower().Contains(search));
@@ -103,7 +103,7 @@ internal sealed class CatalogRepository(AppDbContext db) : ICatalogRepository
     }
 
     public Task<SpellDefinition?> GetSpellAsync(string index, CancellationToken cancellationToken = default) =>
-        db.CatalogSpells.AsNoTracking().FirstOrDefaultAsync(x => x.Index == index, cancellationToken);
+        db.Set<SpellDefinition>().AsNoTracking().FirstOrDefaultAsync(x => x.Index == index, cancellationToken);
 
     public async Task<(IReadOnlyList<ItemTemplate> Items, int Total)> SearchSrdItemsAsync(ItemFilter filter, int skip, int take, CancellationToken cancellationToken = default)
     {
@@ -129,78 +129,78 @@ internal sealed class CatalogRepository(AppDbContext db) : ICatalogRepository
     }
 
     public async Task<IReadOnlyList<ConditionDefinition>> ListConditionsAsync(CancellationToken cancellationToken = default) =>
-        await db.CatalogConditions.AsNoTracking().OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
+        await db.Set<ConditionDefinition>().AsNoTracking().OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<SkillDefinition>> ListSkillsAsync(CancellationToken cancellationToken = default) =>
-        await db.CatalogSkills.AsNoTracking().OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
+        await db.Set<SkillDefinition>().AsNoTracking().OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<BackgroundDefinition>> ListBackgroundsAsync(CancellationToken cancellationToken = default) =>
-        await db.CatalogBackgrounds.AsNoTracking().OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
+        await db.Set<BackgroundDefinition>().AsNoTracking().OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<ClassDefinition>> ListClassesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
-        indexes.Count == 0 ? [] : await db.CatalogClasses.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+        indexes.Count == 0 ? [] : await db.Set<ClassDefinition>().AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<ClassLevel>> ListClassLevelsByClassAsync(IReadOnlyCollection<string> classIndexes, CancellationToken cancellationToken = default) =>
         classIndexes.Count == 0
             ? []
-            : await db.CatalogClassLevels.AsNoTracking()
+            : await db.Set<ClassLevel>().AsNoTracking()
                 .Where(x => classIndexes.Contains(x.ClassIndex))
                 .OrderBy(x => x.ClassIndex)
                 .ThenBy(x => x.Level)
                 .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<SubclassDefinition>> ListSubclassesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
-        indexes.Count == 0 ? [] : await db.CatalogSubclasses.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+        indexes.Count == 0 ? [] : await db.Set<SubclassDefinition>().AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<SubclassDefinition>> ListSubclassesWithExpandedSpellsAsync(CancellationToken cancellationToken = default) =>
-        await db.CatalogSubclasses.AsNoTracking()
+        await db.Set<SubclassDefinition>().AsNoTracking()
             .Where(x => x.ExpandedSpellListJson != null)
             .OrderBy(x => x.Name)
             .ThenBy(x => x.Index)
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<RaceDefinition>> ListRacesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
-        indexes.Count == 0 ? [] : await db.CatalogRaces.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+        indexes.Count == 0 ? [] : await db.Set<RaceDefinition>().AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<SubraceDefinition>> ListSubracesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
-        indexes.Count == 0 ? [] : await db.CatalogSubraces.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+        indexes.Count == 0 ? [] : await db.Set<SubraceDefinition>().AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<BackgroundDefinition>> ListBackgroundsByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
-        indexes.Count == 0 ? [] : await db.CatalogBackgrounds.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+        indexes.Count == 0 ? [] : await db.Set<BackgroundDefinition>().AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<SpellDefinition>> ListSpellsByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
-        indexes.Count == 0 ? [] : await db.CatalogSpells.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+        indexes.Count == 0 ? [] : await db.Set<SpellDefinition>().AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<FeatureDefinition>> ListFeaturesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
-        indexes.Count == 0 ? [] : await db.CatalogFeatures.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+        indexes.Count == 0 ? [] : await db.Set<FeatureDefinition>().AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<FeatureDefinition>> ListSubclassFeatureResourcesAsync(IReadOnlyCollection<string> subclassIndexes, CancellationToken cancellationToken = default) =>
         subclassIndexes.Count == 0
             ? []
-            : await db.CatalogFeatures.AsNoTracking()
+            : await db.Set<FeatureDefinition>().AsNoTracking()
                 .Where(x => x.SubclassIndex != null && subclassIndexes.Contains(x.SubclassIndex) && (x.ResourceJson != null || x.CompanionJson != null || x.ModifiersJson != null))
                 .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<SpellDefinition>> ListAllSpellsAsync(CancellationToken cancellationToken = default) =>
-        await db.CatalogSpells.AsNoTracking().OrderBy(x => x.Level).ThenBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
+        await db.Set<SpellDefinition>().AsNoTracking().OrderBy(x => x.Level).ThenBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<LevelChoiceRule>> ListLevelChoiceRulesAsync(string classIndex, CancellationToken cancellationToken = default) =>
-        await db.CatalogLevelChoiceRules.AsNoTracking()
+        await db.Set<LevelChoiceRule>().AsNoTracking()
             .Where(x => x.ClassIndex == classIndex)
             .OrderBy(x => x.Level)
             .ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<OptionSetDefinition>> ListOptionSetsAsync(IReadOnlyCollection<string> setIds, CancellationToken cancellationToken = default) =>
-        setIds.Count == 0 ? [] : await db.CatalogOptionSets.AsNoTracking().Where(x => setIds.Contains(x.SetId)).ToListAsync(cancellationToken);
+        setIds.Count == 0 ? [] : await db.Set<OptionSetDefinition>().AsNoTracking().Where(x => setIds.Contains(x.SetId)).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<OptionDefinition>> ListOptionsBySetAsync(IReadOnlyCollection<string> setIds, CancellationToken cancellationToken = default) =>
         setIds.Count == 0
             ? []
-            : await db.CatalogOptions.AsNoTracking().Where(x => setIds.Contains(x.SetId)).OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
+            : await db.Set<OptionDefinition>().AsNoTracking().Where(x => setIds.Contains(x.SetId)).OrderBy(x => x.Name).ThenBy(x => x.Index).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<OptionDefinition>> ListOptionsByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
-        indexes.Count == 0 ? [] : await db.CatalogOptions.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+        indexes.Count == 0 ? [] : await db.Set<OptionDefinition>().AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<ItemTemplate>> ListCatalogItemsByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
         indexes.Count == 0
@@ -211,14 +211,14 @@ internal sealed class CatalogRepository(AppDbContext db) : ICatalogRepository
                 .ToListAsync(cancellationToken);
 
     public Task<EquipmentCategory?> GetEquipmentCategoryAsync(string index, CancellationToken cancellationToken = default) =>
-        db.CatalogEquipmentCategories.AsNoTracking().FirstOrDefaultAsync(x => x.Index == index, cancellationToken);
+        db.Set<EquipmentCategory>().AsNoTracking().FirstOrDefaultAsync(x => x.Index == index, cancellationToken);
 
     public async Task<IReadOnlyList<EquipmentCategory>> ListEquipmentCategoriesByIndexAsync(IReadOnlyCollection<string> indexes, CancellationToken cancellationToken = default) =>
-        indexes.Count == 0 ? [] : await db.CatalogEquipmentCategories.AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
+        indexes.Count == 0 ? [] : await db.Set<EquipmentCategory>().AsNoTracking().Where(x => indexes.Contains(x.Index)).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<TrinketEntry>> ListTrinketsAsync(CancellationToken cancellationToken = default)
     {
-        var entries = await db.CatalogTrinkets.AsNoTracking().ToListAsync(cancellationToken);
+        var entries = await db.Set<TrinketEntry>().AsNoTracking().ToListAsync(cancellationToken);
         if (entries.Count == 0)
         {
             return [];
@@ -237,7 +237,7 @@ internal sealed class CatalogRepository(AppDbContext db) : ICatalogRepository
 
     public async Task<IReadOnlyList<RollTable>> ListRollTablesAsync(CancellationToken cancellationToken = default)
     {
-        var tables = await db.CatalogRollTables.AsNoTracking().ToListAsync(cancellationToken);
+        var tables = await db.Set<RollTable>().AsNoTracking().ToListAsync(cancellationToken);
         if (tables.Count == 0)
         {
             return [];

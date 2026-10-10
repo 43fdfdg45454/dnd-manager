@@ -189,9 +189,9 @@ public class RaceExtensionPackTests(RaceExtensionPackApiFactory factory) : IClas
 
         await factory.WithDbAsync(async db =>
         {
-            Assert.True(await db.CatalogSubraces.AnyAsync(x => x.Index == "folk-ejemplo-deep-folk" && x.RaceIndex == "dwarf"));
-            Assert.True(await db.CatalogRaceExtensions.AnyAsync(x => x.Source == PackId && x.RaceIndex == "dwarf"));
-            Assert.Contains("battleaxes", (await db.CatalogRaces.SingleAsync(x => x.Index == "dwarf")).GrantsJson);
+            Assert.True(await db.Set<SubraceDefinition>().AnyAsync(x => x.Index == "folk-ejemplo-deep-folk" && x.RaceIndex == "dwarf"));
+            Assert.True(await db.Set<RaceExtensionDefinition>().AnyAsync(x => x.Source == PackId && x.RaceIndex == "dwarf"));
+            Assert.Contains("battleaxes", (await db.Set<RaceDefinition>().SingleAsync(x => x.Index == "dwarf")).GrantsJson);
         });
     }
 

@@ -32,69 +32,15 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<CampaignInvitation> CampaignInvitations => Set<CampaignInvitation>();
 
-    public DbSet<ClassDefinition> CatalogClasses => Set<ClassDefinition>();
-
-    public DbSet<ClassLevel> CatalogClassLevels => Set<ClassLevel>();
-
-    public DbSet<SubclassDefinition> CatalogSubclasses => Set<SubclassDefinition>();
-
-    public DbSet<SubclassLevel> CatalogSubclassLevels => Set<SubclassLevel>();
-
-    public DbSet<FeatureDefinition> CatalogFeatures => Set<FeatureDefinition>();
-
-    public DbSet<RaceDefinition> CatalogRaces => Set<RaceDefinition>();
-
-    public DbSet<SubraceDefinition> CatalogSubraces => Set<SubraceDefinition>();
-
-    public DbSet<RaceExtensionDefinition> CatalogRaceExtensions => Set<RaceExtensionDefinition>();
-
-    public DbSet<TraitDefinition> CatalogTraits => Set<TraitDefinition>();
-
-    public DbSet<SpellDefinition> CatalogSpells => Set<SpellDefinition>();
-
     public DbSet<ItemTemplate> ItemTemplates => Set<ItemTemplate>();
-
-    public DbSet<ConditionDefinition> CatalogConditions => Set<ConditionDefinition>();
-
-    public DbSet<SkillDefinition> CatalogSkills => Set<SkillDefinition>();
-
-    public DbSet<BackgroundDefinition> CatalogBackgrounds => Set<BackgroundDefinition>();
 
     public DbSet<CatalogImport> CatalogImports => Set<CatalogImport>();
 
-    public DbSet<EquipmentCategory> CatalogEquipmentCategories => Set<EquipmentCategory>();
-
-    public DbSet<OptionSetDefinition> CatalogOptionSets => Set<OptionSetDefinition>();
-
-    public DbSet<OptionDefinition> CatalogOptions => Set<OptionDefinition>();
-
-    public DbSet<LevelChoiceRule> CatalogLevelChoiceRules => Set<LevelChoiceRule>();
-
-    public DbSet<TrinketEntry> CatalogTrinkets => Set<TrinketEntry>();
-
-    public DbSet<RollTable> CatalogRollTables => Set<RollTable>();
-
     public DbSet<Character> Characters => Set<Character>();
-
-    public DbSet<CharacterClassLevel> CharacterClassLevels => Set<CharacterClassLevel>();
-
-    public DbSet<CharacterProficiency> CharacterProficiencies => Set<CharacterProficiency>();
-
-    public DbSet<CharacterSpell> CharacterSpells => Set<CharacterSpell>();
-
-    public DbSet<SpellSlotState> CharacterSpellSlots => Set<SpellSlotState>();
-
-    public DbSet<CharacterResource> CharacterResources => Set<CharacterResource>();
-
-    public DbSet<CharacterOverride> CharacterOverrides => Set<CharacterOverride>();
-
-    public DbSet<CharacterChoice> CharacterChoices => Set<CharacterChoice>();
 
     public DbSet<ChangeRequest> ChangeRequests => Set<ChangeRequest>();
 
     public DbSet<RestRequest> RestRequests => Set<RestRequest>();
-
-    public DbSet<CharacterCompanion> CharacterCompanions => Set<CharacterCompanion>();
 
     public DbSet<CharacterItem> CharacterItems => Set<CharacterItem>();
 

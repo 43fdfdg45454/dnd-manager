@@ -97,20 +97,20 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
     private async Task DeleteDefinitionsAsync(CancellationToken cancellationToken)
     {
         const string srd = Dnd5eCatalogSources.Srd;
-        await db.CatalogFeatures.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogSubclassLevels.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogSubclasses.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogClassLevels.ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogSubraces.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogTraits.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogSpells.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogConditions.ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogSkills.ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogBackgrounds.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogEquipmentCategories.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogLevelChoiceRules.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogOptions.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
-        await db.CatalogOptionSets.Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<FeatureDefinition>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<SubclassLevel>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<SubclassDefinition>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<ClassLevel>().ExecuteDeleteAsync(cancellationToken);
+        await db.Set<SubraceDefinition>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<TraitDefinition>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<SpellDefinition>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<ConditionDefinition>().ExecuteDeleteAsync(cancellationToken);
+        await db.Set<SkillDefinition>().ExecuteDeleteAsync(cancellationToken);
+        await db.Set<BackgroundDefinition>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<EquipmentCategory>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<LevelChoiceRule>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<OptionDefinition>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<OptionSetDefinition>().Where(x => x.Source == srd).ExecuteDeleteAsync(cancellationToken);
     }
 
     /// <summary>
@@ -121,12 +121,12 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
     {
         const string srd = Dnd5eCatalogSources.Srd;
         var indexes = races.Select(r => r.Index).ToList();
-        await db.CatalogRaces.Where(x => x.Source == srd && !indexes.Contains(x.Index)).ExecuteDeleteAsync(cancellationToken);
-        var existing = (await db.CatalogRaces.AsNoTracking().Where(x => x.Source == srd).Select(x => x.Index).ToListAsync(cancellationToken))
+        await db.Set<RaceDefinition>().Where(x => x.Source == srd && !indexes.Contains(x.Index)).ExecuteDeleteAsync(cancellationToken);
+        var existing = (await db.Set<RaceDefinition>().AsNoTracking().Where(x => x.Source == srd).Select(x => x.Index).ToListAsync(cancellationToken))
             .ToHashSet(StringComparer.Ordinal);
 
-        db.CatalogRaces.UpdateRange(races.Where(r => existing.Contains(r.Index)));
-        db.CatalogRaces.AddRange(races.Where(r => !existing.Contains(r.Index)));
+        db.Set<RaceDefinition>().UpdateRange(races.Where(r => existing.Contains(r.Index)));
+        db.Set<RaceDefinition>().AddRange(races.Where(r => !existing.Contains(r.Index)));
         await db.SaveChangesAsync(cancellationToken);
         db.ChangeTracker.Clear();
         return races.Count;
@@ -139,11 +139,11 @@ internal sealed class SrdSeeder(AppDbContext db, IDateTimeProvider clock, ILogge
     private async Task<int> UpsertClassesAsync(IReadOnlyList<ClassDefinition> classes, CancellationToken cancellationToken)
     {
         var indexes = classes.Select(c => c.Index).ToList();
-        await db.CatalogClasses.Where(x => !indexes.Contains(x.Index)).ExecuteDeleteAsync(cancellationToken);
-        var existing = (await db.CatalogClasses.AsNoTracking().Select(x => x.Index).ToListAsync(cancellationToken)).ToHashSet(StringComparer.Ordinal);
+        await db.Set<ClassDefinition>().Where(x => !indexes.Contains(x.Index)).ExecuteDeleteAsync(cancellationToken);
+        var existing = (await db.Set<ClassDefinition>().AsNoTracking().Select(x => x.Index).ToListAsync(cancellationToken)).ToHashSet(StringComparer.Ordinal);
 
-        db.CatalogClasses.UpdateRange(classes.Where(c => existing.Contains(c.Index)));
-        db.CatalogClasses.AddRange(classes.Where(c => !existing.Contains(c.Index)));
+        db.Set<ClassDefinition>().UpdateRange(classes.Where(c => existing.Contains(c.Index)));
+        db.Set<ClassDefinition>().AddRange(classes.Where(c => !existing.Contains(c.Index)));
         await db.SaveChangesAsync(cancellationToken);
         db.ChangeTracker.Clear();
         return classes.Count;
