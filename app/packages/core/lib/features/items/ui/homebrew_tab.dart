@@ -6,14 +6,17 @@ import '../../../core/systems/system_registry.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/domain/campaign_models.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
+import '../../content_packs/ui/campaign_content_packs_section.dart';
 import '../data/campaign_items_repository.dart';
 import '../data/items_controllers.dart';
 import '../data/models.dart' show ItemSummary;
 import 'item_feedback.dart';
 import 'item_search_list.dart';
 
-/// "Objetos" tab of a campaign: the SRD and homebrew items with search and a
-/// source toggle. At least a DM creates, edits and deletes the homebrew ones.
+/// "Contenido" section of a campaign: the SRD and homebrew items with search
+/// and a source toggle. At least a DM creates, edits and deletes the homebrew
+/// ones; the players also see, read-only, the content packs the campaign
+/// enables (the DMs change them in "Ajustes").
 class HomebrewTab extends ConsumerWidget {
   const HomebrewTab({super.key, required this.campaign});
 
@@ -55,30 +58,44 @@ class HomebrewTab extends ConsumerWidget {
               label: const Text('Nuevo objeto'),
             )
           : null,
-      body: ItemSearchList(
-        campaignId: campaign.id,
-        initialSource: ItemSource.all,
-        showSourceFilter: true,
-        onSelected: (item) =>
-            ref.read(campaignSystemUiProvider(campaign.id)).openCatalogItem(context, item.id),
-        // Only the campaign's own items can be edited; SRD items are read-only.
-        trailingBuilder: isDm
-            ? (context, item) => !item.isHomebrew
-                  ? null
-                  : PopupMenuButton<String>(
-                      key: Key('homebrew-menu-${item.id}'),
-                      onSelected: (value) => value == 'edit'
-                          ? _openForm(context, editing: item)
-                          : _delete(context, ref, item),
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(value: 'edit', child: Text('Editar')),
-                        PopupMenuItem(value: 'delete', child: Text('Borrar')),
-                      ],
-                    )
-            : null,
+      body: Column(
+        children: [
+          if (!isDm)
+            ExpansionTile(
+              key: const Key('content-packs-expander'),
+              leading: const Icon(Icons.inventory_2_outlined),
+              title: const Text('Paquetes de contenido'),
+              childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              children: [CampaignContentPacksSection(campaignId: campaign.id, editable: false)],
+            ),
+          Expanded(child: _items(context, ref, isDm)),
+        ],
       ),
     );
   }
+
+  Widget _items(BuildContext context, WidgetRef ref, bool isDm) => ItemSearchList(
+    campaignId: campaign.id,
+    initialSource: ItemSource.all,
+    showSourceFilter: true,
+    onSelected: (item) =>
+        ref.read(campaignSystemUiProvider(campaign.id)).openCatalogItem(context, item.id),
+    // Only the campaign's own items can be edited; SRD items are read-only.
+    trailingBuilder: isDm
+        ? (context, item) => !item.isHomebrew
+              ? null
+              : PopupMenuButton<String>(
+                  key: Key('homebrew-menu-${item.id}'),
+                  onSelected: (value) => value == 'edit'
+                      ? _openForm(context, editing: item)
+                      : _delete(context, ref, item),
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'edit', child: Text('Editar')),
+                    PopupMenuItem(value: 'delete', child: Text('Borrar')),
+                  ],
+                )
+        : null,
+  );
 }
 
 /// Create or edit a homebrew item with the item form of the game system

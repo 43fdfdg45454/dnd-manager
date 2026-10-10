@@ -120,7 +120,7 @@ class UnsupportedSystemUi extends GameSystemUi {
   ];
 
   @override
-  Future<List<CatalogSource>> catalogSources(Ref ref) async => const [];
+  Future<List<CatalogSource>> catalogSources(Ref ref, {String? campaignId}) async => const [];
 
   @override
   Future<void> openCatalogItem(BuildContext context, String itemId) async {

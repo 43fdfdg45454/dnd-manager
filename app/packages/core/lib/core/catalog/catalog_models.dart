@@ -62,15 +62,30 @@ class Page<T> {
 /// A source of catalog content (`GET /catalog/sources`): "srd" or a content
 /// pack imported by the administrator.
 class CatalogSource {
-  const CatalogSource({required this.id, required this.name, this.version});
+  const CatalogSource({
+    required this.id,
+    required this.name,
+    this.version,
+    this.isBase = false,
+    this.enabled,
+  });
 
   factory CatalogSource.fromJson(Map<String, dynamic> json) => CatalogSource(
     id: _str(json['id']),
     name: _str(json['name'], _str(json['id'])),
     version: _strOrNull(json['version']),
+    isBase: json['isBase'] == true,
+    enabled: json['enabled'] is bool ? json['enabled'] as bool : null,
   );
 
   final String id;
   final String name;
   final String? version;
+
+  /// The base pack of the system (the SRD): always enabled.
+  final bool isBase;
+
+  /// Asked for a campaign: whether the campaign enables it (always for the
+  /// base pack). Null when the sources were asked without a campaign.
+  final bool? enabled;
 }
