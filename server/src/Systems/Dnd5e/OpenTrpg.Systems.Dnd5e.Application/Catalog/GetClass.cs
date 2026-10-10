@@ -5,6 +5,8 @@ using OpenTrpg.Systems.Dnd5e.Application;
 using OpenTrpg.Systems.Dnd5e.Application.Abstractions.Persistence;
 using OpenTrpg.Systems.Dnd5e.Domain.Catalog;
 
+using OpenTrpg.Systems.Dnd5e.Domain.Characters;
+
 namespace OpenTrpg.Systems.Dnd5e.Application.Catalog;
 
 /// <summary>Class detail with its 20 levels (slots and features) and its subclasses with their features per level.</summary>
@@ -56,7 +58,10 @@ public sealed class GetClassHandler(ICatalogRepository catalog)
                         .OrderBy(l => l.Level)
                         .Select(l => new SubclassLevelDto(l.Level, Features(l.FeatureIndexes, features)))
                         .ToList(),
-                    s.Source))
+                    s.Source)
+                {
+                    PrerequisitesText = s.PrerequisitesText ?? PrerequisiteEvaluator.Text(s.Prerequisites, index => index == definition.Index ? definition.Name : index, definition.Index),
+                })
                 .ToList())
         {
             Source = definition.Source,

@@ -494,6 +494,12 @@ internal sealed class PackSubclassJson
 
     /// <summary>Format 2: spells added to the class's spell list for the characters with this subclass (not granted).</summary>
     public List<PackExpandedSpellJson?>? ExpandedSpellList { get; set; }
+
+    /// <summary>Format 3: what the character needs to choose the subclass (same fields as an option's).</summary>
+    public PackPrerequisitesJson? Prerequisites { get; set; }
+
+    /// <summary>Format 3: prerequisites in words (narrative ones, or a text for the structured ones).</summary>
+    public string? PrerequisitesText { get; set; }
 }
 
 internal sealed class PackExpandedSpellJson
@@ -1127,6 +1133,28 @@ internal sealed class PackPrerequisitesJson
 
     /// <summary>The character must be able to cast at least one spell.</summary>
     public bool? Spellcasting { get; set; }
+
+    /// <summary>Subclass indexes, one of which the character must have.</summary>
+    public List<string?>? Subclasses { get; set; }
+
+    /// <summary>Option indexes (any set, feats included) the character must have, all of them.</summary>
+    public List<string?>? Options { get; set; }
+
+    /// <summary>Alternatives, one of which must be met entirely (one level deep).</summary>
+    public List<PackPrerequisitesJson?>? AnyOf { get; set; }
+
+    /// <summary>"spellcasting" or "pactMagic".</summary>
+    public string? ClassFeature { get; set; }
+
+    /// <summary>Class indexes, one of which the character must have (with <see cref="ClassFeature"/> when given).</summary>
+    public List<string?>? Classes { get; set; }
+
+    public int? CharacterLevel { get; set; }
+
+    public int? SpellcastingAbilityMin { get; set; }
+
+    /// <summary>Race sizes ("small", "medium"...), one of which the character must have.</summary>
+    public List<string?>? Sizes { get; set; }
 }
 
 /// <summary>Proficiencies required, all of them: armor keys ("light", "medium", "heavy", "shields") and weapon keys ("simple", "martial" or a weapon index).</summary>

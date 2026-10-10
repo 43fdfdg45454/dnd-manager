@@ -23,6 +23,8 @@ internal sealed partial class ContentPackValidator
     private readonly List<(string Path, string? SetId, string Index)> _optionReferences = [];
     private readonly List<(string Path, string Index)> _spellReferences = [];
     private readonly List<(string Path, string Index)> _raceReferences = [];
+    private readonly List<(string Path, string Index)> _classReferences = [];
+    private readonly List<(string Path, string Index)> _subclassReferences = [];
     private readonly HashSet<string> _declaredSets = new(StringComparer.Ordinal);
 
     /// <summary>True when <paramref name="value"/> is given and the pack declares format 2; reports an error when it is given without it.</summary>
@@ -104,12 +106,11 @@ internal sealed partial class ContentPackValidator
         }
     }
 
-    private string? Prerequisites(string path, PackPrerequisitesJson? prerequisites)
+    private string? Prerequisites(string path, PackPrerequisitesJson? prerequisites) =>
+        prerequisites is null ? null : LevelChoiceJson.Serialize(PrerequisitesObject(path, prerequisites, nested: false));
+
+    private Dictionary<string, object?> PrerequisitesObject(string path, PackPrerequisitesJson prerequisites, bool nested)
     {
-        if (prerequisites is null)
-        {
-            return null;
-        }
 
         var minLevel = OptionalInt($"{path}.minLevel", prerequisites.MinLevel, 1, 20);
         var pactBoon = Reference($"{path}.pactBoon", prerequisites.PactBoon);
@@ -174,7 +175,100 @@ internal sealed partial class ContentPackValidator
         });
 
         var spellcasting = prerequisites.Spellcasting == true;
-        return LevelChoiceJson.Serialize(new { minLevel, pactBoon, cantrip, abilities, races, proficiency = new { armor, weapon }, spellcasting });
+        var result = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["minLevel"] = minLevel,
+            ["pactBoon"] = pactBoon,
+            ["cantrip"] = cantrip,
+            ["abilities"] = abilities,
+            ["races"] = races,
+            ["proficiency"] = new { armor, weapon },
+            ["spellcasting"] = spellcasting,
+        };
+
+        var subclasses = new List<string>();
+        ForEachText($"{path}.subclasses", prerequisites.Subclasses, (subclassPath, value) =>
+        {
+            if (Reference(subclassPath, value) is { } index && !subclasses.Contains(index))
+            {
+                subclasses.Add(index);
+                _subclassReferences.Add((subclassPath, index));
+            }
+        });
+
+        var options = new List<string>();
+        ForEachText($"{path}.options", prerequisites.Options, (optionPath, value) =>
+        {
+            if (Reference(optionPath, value) is { } index && !options.Contains(index))
+            {
+                options.Add(index);
+                _optionReferences.Add((optionPath, null, index));
+            }
+        });
+
+        var classes = new List<string>();
+        ForEachText($"{path}.classes", prerequisites.Classes, (classPath, value) =>
+        {
+            if (Reference(classPath, value) is { } index && !classes.Contains(index))
+            {
+                classes.Add(index);
+                _classReferences.Add((classPath, index));
+            }
+        });
+
+        string? classFeature = null;
+        if (prerequisites.ClassFeature?.Trim() is { Length: > 0 } feature)
+        {
+            if (ClassFeatures.All.Contains(feature))
+            {
+                classFeature = feature;
+            }
+            else
+            {
+                AddError($"{path}.classFeature", "Valores admitidos: spellcasting, pactMagic.");
+            }
+        }
+
+        var sizes = new List<string>();
+        ForEachText($"{path}.sizes", prerequisites.Sizes, (sizePath, value) =>
+        {
+            var size = value.ToLowerInvariant();
+            if (!Sizes.Contains(size, StringComparer.OrdinalIgnoreCase))
+            {
+                AddError(sizePath, $"Tamaño desconocido. Valores admitidos: {string.Join(", ", Sizes.Select(z => z.ToLowerInvariant()))}.");
+            }
+            else if (!sizes.Contains(size))
+            {
+                sizes.Add(size);
+            }
+        });
+
+        var anyOf = new List<object>();
+        if (prerequisites.AnyOf is { } alternatives)
+        {
+            if (nested)
+            {
+                AddError($"{path}.anyOf", "Las alternativas no pueden tener a su vez \"anyOf\".");
+            }
+            else if (alternatives.Count < 2)
+            {
+                AddError($"{path}.anyOf", "Necesita al menos dos alternativas.");
+            }
+            else
+            {
+                ForEach($"{path}.anyOf", alternatives, (alternativePath, alternative) => anyOf.Add(PrerequisitesObject(alternativePath, alternative, nested: true)));
+            }
+        }
+
+        result["subclasses"] = subclasses;
+        result["options"] = options;
+        result["classes"] = classes;
+        result["classFeature"] = classFeature;
+        result["characterLevel"] = OptionalInt($"{path}.characterLevel", prerequisites.CharacterLevel, 1, 20);
+        result["spellcastingAbilityMin"] = OptionalInt($"{path}.spellcastingAbilityMin", prerequisites.SpellcastingAbilityMin, 1, 30);
+        result["sizes"] = sizes;
+        result["anyOf"] = anyOf;
+        return result;
     }
 
     private string ChoiceModifiers(string path, List<PackChoiceModifierJson?>? modifiers, string owner = "Una opción")
@@ -906,6 +1000,18 @@ internal sealed partial class ContentPackValidator
         foreach (var (path, index) in _raceReferences.Where(r => !races.Contains(r.Index)))
         {
             AddError(path, $"La raza '{index}' no existe en el catálogo ni en el paquete.");
+        }
+
+        var classes = _context.Classes.Keys.Concat(rows.Classes.Select(c => c.Index)).ToHashSet(StringComparer.Ordinal);
+        foreach (var (path, index) in _classReferences.Where(r => !classes.Contains(r.Index)))
+        {
+            AddError(path, $"La clase '{index}' no existe en el catálogo ni en el paquete.");
+        }
+
+        var subclasses = _context.SrdSubclasses.Keys.Concat(rows.Subclasses.Select(c => c.Index)).ToHashSet(StringComparer.Ordinal);
+        foreach (var (path, index) in _subclassReferences.Where(r => !subclasses.Contains(r.Index)))
+        {
+            AddError(path, $"La subclase '{index}' no existe en el catálogo ni en el paquete.");
         }
     }
 }

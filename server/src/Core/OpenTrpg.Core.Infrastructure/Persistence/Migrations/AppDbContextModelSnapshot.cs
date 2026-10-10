@@ -2318,6 +2318,13 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("PrerequisitesJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PrerequisitesText")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(60)

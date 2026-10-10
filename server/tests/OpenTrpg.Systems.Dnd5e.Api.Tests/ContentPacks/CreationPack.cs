@@ -21,7 +21,8 @@ internal static class CreationPack
         ["id"] = Id,
         ["name"] = "Crónicas del vacío (prueba)",
         ["version"] = "1.0.0",
-        ["classes"] = new JsonArray(Herald()),
+        ["classes"] = new JsonArray(Herald(), Keeper()),
+        ["optionSets"] = new JsonArray(Signals()),
         ["items"] = Items(),
     };
 
@@ -88,6 +89,67 @@ internal static class CreationPack
             },
         },
     });
+
+    /// <summary>
+    /// H08/H09: "Guardián de faros", with a "Señales" choice at levels 2, 5 and 9 and two orders at level 3, one of
+    /// which needs Strength 15.
+    /// </summary>
+    private static JsonObject Keeper() => Class("guardian", "Guardián de faros", 10, new JsonObject
+    {
+        ["subclassFlavor"] = "Orden",
+        ["subclassLevel"] = 3,
+        ["levelChoices"] = new JsonArray(
+            new JsonObject { ["level"] = 2, ["key"] = "senales", ["name"] = "Señales", ["kind"] = "OptionSet", ["setId"] = I("senales"), ["choose"] = 1 },
+            new JsonObject { ["level"] = 5, ["key"] = "senales-5", ["name"] = "Señales", ["kind"] = "OptionSet", ["setId"] = I("senales"), ["choose"] = 1 },
+            new JsonObject { ["level"] = 9, ["key"] = "senales-9", ["name"] = "Señales", ["kind"] = "OptionSet", ["setId"] = I("senales"), ["choose"] = 1 }),
+        ["subclasses"] = new JsonArray(
+            new JsonObject
+            {
+                ["index"] = I("orden-llama"),
+                ["name"] = "Orden de la Llama",
+                ["description"] = new JsonArray("Subclase ficticia."),
+            },
+            new JsonObject
+            {
+                ["index"] = I("orden-yunque"),
+                ["name"] = "Orden del Yunque",
+                ["description"] = new JsonArray("Subclase ficticia."),
+                ["prerequisites"] = new JsonObject { ["abilities"] = new JsonObject { ["str"] = 15 } },
+            }),
+    });
+
+    /// <summary>Options with the prerequisites of H08: another option, a subclass, a class feature, alternatives, level, size...</summary>
+    private static JsonObject Signals() => new()
+    {
+        ["setId"] = I("senales"),
+        ["name"] = "Señales",
+        ["options"] = new JsonArray(
+            Option("senal-basica", "Señal básica", null),
+            Option("senal-doble", "Señal doble", new JsonObject { ["options"] = new JsonArray(I("senal-basica")) }),
+            Option("faro-del-yunque", "Faro del yunque", new JsonObject { ["subclasses"] = new JsonArray(I("orden-yunque")) }),
+            Option("luz-arcana", "Luz arcana", new JsonObject { ["classFeature"] = "spellcasting" }),
+            Option("destello", "Destello", new JsonObject
+            {
+                ["anyOf"] = new JsonArray(
+                    new JsonObject { ["abilities"] = new JsonObject { ["int"] = 14 } },
+                    new JsonObject { ["abilities"] = new JsonObject { ["wis"] = 14 } }),
+            }),
+            Option("veterano", "Veterano del faro", new JsonObject { ["characterLevel"] = 5 }),
+            Option("foco-firme", "Foco firme", new JsonObject { ["spellcastingAbilityMin"] = 15 }),
+            Option("farolillo", "Farolillo", new JsonObject { ["sizes"] = new JsonArray("small") }),
+            Option("del-heraldo", "Eco del heraldo", new JsonObject { ["classes"] = new JsonArray(I("heraldo")) })),
+    };
+
+    private static JsonObject Option(string index, string name, JsonObject? prerequisites)
+    {
+        var option = new JsonObject { ["index"] = I(index), ["name"] = name, ["description"] = new JsonArray("Opción ficticia.") };
+        if (prerequisites is not null)
+        {
+            option["prerequisites"] = prerequisites;
+        }
+
+        return option;
+    }
 
     private static JsonArray Items() =>
     [

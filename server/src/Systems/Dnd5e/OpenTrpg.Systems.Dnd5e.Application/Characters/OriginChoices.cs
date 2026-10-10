@@ -132,7 +132,7 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
         var result = new List<PlannedOriginChoice>();
         foreach (var (prefix, source, choices) in sources)
         {
-            result.AddRange(Plan(character, prefix, source, choices, skills, spells, feats, tools, sheet));
+            result.AddRange(Plan(character, prefix, source, choices, skills, spells, feats, tools, sheet, race?.Size));
         }
 
         return result;
@@ -211,7 +211,8 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
         IReadOnlyList<SpellDefinition> spells,
         IReadOnlyList<OptionDefinition> feats,
         IReadOnlyList<ItemTemplate> tools,
-        CharacterSheet? sheet)
+        CharacterSheet? sheet,
+        string? size = null)
     {
         // Every option carries a description (phase 29): the catalog text or, when it has none, one built here
         // (OriginOptionDescriptions).
@@ -310,11 +311,16 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
                 .OrderBy(f => f.Name, StringComparer.Ordinal)
                 .Select(f =>
                 {
-                    var reasons = f.Prerequisites.Abilities
-                        .Where(a => Abilities.IsValid(a.Key) && sheet is not null && sheet.Abilities[a.Key].Score < a.Value)
-                        .Select(a => $"Requiere {BreakdownLabels.Ability(a.Key)} {a.Value}.")
-                        .ToList();
-                    var reason = reasons.Count == 0 ? null : string.Join(" ", reasons);
+                    // At creation only what the origin decides counts: abilities, race and size.
+                    var originPrerequisites = new OptionPrerequisites(null, null, null, f.Prerequisites.Abilities) { Races = f.Prerequisites.Races, Sizes = f.Prerequisites.Sizes };
+                    var reason = sheet is null ? null : PrerequisiteEvaluator.WhyNot(originPrerequisites, new PrerequisiteFacts
+                    {
+                        Character = character,
+                        Sheet = sheet,
+                        CharacterLevel = character.TotalLevel,
+                        ClassLevel = character.TotalLevel,
+                        Size = size,
+                    });
                     return new PlannedOption(f.Index, f.Name, f.Description, f.PrerequisitesText, reason is null, reason, null, f, []);
                 })
                 .ToList();

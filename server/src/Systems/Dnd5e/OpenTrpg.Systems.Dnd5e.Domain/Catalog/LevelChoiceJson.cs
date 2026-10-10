@@ -29,9 +29,64 @@ public sealed record OptionPrerequisites(int? MinLevel, string? PactBoon, string
     /// <summary>The character must be able to cast at least one spell (a spellcasting class, or a spell from any source).</summary>
     public bool Spellcasting { get; init; }
 
+    /// <summary>Subclass indexes, one of which the character must have (in any class).</summary>
+    public IReadOnlyList<string> Subclasses { get; init; } = [];
+
+    /// <summary>Option indexes (of any set, feats included) the character must have chosen, all of them.</summary>
+    public IReadOnlyList<string> Options { get; init; } = [];
+
+    /// <summary>Alternatives: one of them must be met entirely, besides the other fields.</summary>
+    public IReadOnlyList<OptionPrerequisites> AnyOf { get; init; } = [];
+
+    /// <summary>
+    /// <see cref="ClassFeatures.Spellcasting"/> or <see cref="ClassFeatures.PactMagic"/>: a class of the character (one of
+    /// <see cref="Classes"/> when given) must have that feature; null = none.
+    /// </summary>
+    public string? ClassFeature { get; init; }
+
+    /// <summary>Class indexes, one of which the character must have a level in (with <see cref="ClassFeature"/> when given).</summary>
+    public IReadOnlyList<string> Classes { get; init; } = [];
+
+    /// <summary>Minimum total character level (unlike <see cref="MinLevel"/>, which counts the class of the choice).</summary>
+    public int? CharacterLevel { get; init; }
+
+    /// <summary>Minimum score of the spellcasting ability of one of the character's spellcasting classes.</summary>
+    public int? SpellcastingAbilityMin { get; init; }
+
+    /// <summary>Sizes, one of which the character's race must have ("small", "medium"); empty = any size.</summary>
+    public IReadOnlyList<string> Sizes { get; init; } = [];
+
     public bool IsEmpty =>
         MinLevel is null && PactBoon is null && Cantrip is null && Abilities.Count == 0
-        && Races.Count == 0 && ArmorProficiencies.Count == 0 && WeaponProficiencies.Count == 0 && !Spellcasting;
+        && Races.Count == 0 && ArmorProficiencies.Count == 0 && WeaponProficiencies.Count == 0 && !Spellcasting
+        && Subclasses.Count == 0 && Options.Count == 0 && AnyOf.Count == 0 && ClassFeature is null && Classes.Count == 0
+        && CharacterLevel is null && SpellcastingAbilityMin is null && Sizes.Count == 0;
+
+    /// <summary>Option indexes named anywhere (pact boon, options, alternatives).</summary>
+    public IEnumerable<string> ReferencedOptions =>
+        (PactBoon is null ? Options : Options.Append(PactBoon)).Concat(AnyOf.SelectMany(a => a.ReferencedOptions));
+
+    /// <summary>Subclass indexes named anywhere.</summary>
+    public IEnumerable<string> ReferencedSubclasses => Subclasses.Concat(AnyOf.SelectMany(a => a.ReferencedSubclasses));
+
+    /// <summary>Spell indexes named anywhere.</summary>
+    public IEnumerable<string> ReferencedSpells =>
+        (Cantrip is null ? [] : new[] { Cantrip }).Concat(AnyOf.SelectMany(a => a.ReferencedSpells));
+
+    /// <summary>Race indexes named anywhere.</summary>
+    public IEnumerable<string> ReferencedRaces => Races.Concat(AnyOf.SelectMany(a => a.ReferencedRaces));
+}
+
+/// <summary>Values of <see cref="OptionPrerequisites.ClassFeature"/>.</summary>
+public static class ClassFeatures
+{
+    /// <summary>A class that casts spells with slots of its own or shared (not the pact magic).</summary>
+    public const string Spellcasting = "spellcasting";
+
+    /// <summary>A class with pact magic.</summary>
+    public const string PactMagic = "pactMagic";
+
+    public static IReadOnlyList<string> All { get; } = [Spellcasting, PactMagic];
 }
 
 /// <summary>Catalog keys of the armor and weapon proficiencies, as the SRD classes list them.</summary>
@@ -459,50 +514,64 @@ public static class LevelChoiceJson
     }
 
     public static OptionPrerequisites ParsePrerequisites(string? json) =>
-        Parse(json, root =>
+        Parse(json, root => PrerequisitesOf(root, 0)) ?? OptionPrerequisites.None;
+
+    private static OptionPrerequisites PrerequisitesOf(JsonElement root, int depth)
+    {
+        if (root.ValueKind != JsonValueKind.Object)
         {
-            if (root.ValueKind != JsonValueKind.Object)
-            {
-                return OptionPrerequisites.None;
-            }
+            return OptionPrerequisites.None;
+        }
 
-            var abilities = new Dictionary<string, int>(StringComparer.Ordinal);
-            if (Property(root, "abilities") is { ValueKind: JsonValueKind.Object } scores)
+        var abilities = new Dictionary<string, int>(StringComparer.Ordinal);
+        if (Property(root, "abilities") is { ValueKind: JsonValueKind.Object } scores)
+        {
+            foreach (var score in scores.EnumerateObject())
             {
-                foreach (var score in scores.EnumerateObject())
+                if (score.Value.ValueKind == JsonValueKind.Number && score.Value.TryGetInt32(out var minimum))
                 {
-                    if (score.Value.ValueKind == JsonValueKind.Number && score.Value.TryGetInt32(out var minimum))
-                    {
-                        abilities[score.Name.ToLowerInvariant()] = minimum;
-                    }
+                    abilities[score.Name.ToLowerInvariant()] = minimum;
                 }
             }
+        }
 
-            var armor = new List<string>();
-            var weapons = new List<string>();
-            if (Property(root, "proficiency") is { ValueKind: JsonValueKind.Object } proficiency)
+        var armor = new List<string>();
+        var weapons = new List<string>();
+        if (Property(root, "proficiency") is { ValueKind: JsonValueKind.Object } proficiency)
+        {
+            if (Property(proficiency, "armor") is { ValueKind: JsonValueKind.Array } armorList)
             {
-                if (Property(proficiency, "armor") is { ValueKind: JsonValueKind.Array } armorList)
-                {
-                    armor.AddRange(Strings(armorList).Select(ProficiencyKeys.NormalizeArmor).OfType<string>().Distinct(StringComparer.Ordinal));
-                }
-
-                if (Property(proficiency, "weapon") is { ValueKind: JsonValueKind.Array } weaponList)
-                {
-                    weapons.AddRange(Strings(weaponList).Select(ProficiencyKeys.NormalizeWeapon).Distinct(StringComparer.Ordinal));
-                }
+                armor.AddRange(Strings(armorList).Select(ProficiencyKeys.NormalizeArmor).OfType<string>().Distinct(StringComparer.Ordinal));
             }
 
-            return new OptionPrerequisites(Int(Property(root, "minLevel")), Text(Property(root, "pactBoon")), Text(Property(root, "cantrip")), abilities)
+            if (Property(proficiency, "weapon") is { ValueKind: JsonValueKind.Array } weaponList)
             {
-                Races = Property(root, "races") is { ValueKind: JsonValueKind.Array } races
-                    ? Strings(races).Select(r => r.ToLowerInvariant()).Distinct(StringComparer.Ordinal).ToList()
-                    : [],
-                ArmorProficiencies = armor,
-                WeaponProficiencies = weapons,
-                Spellcasting = Bool(Property(root, "spellcasting")),
-            };
-        }) ?? OptionPrerequisites.None;
+                weapons.AddRange(Strings(weaponList).Select(ProficiencyKeys.NormalizeWeapon).Distinct(StringComparer.Ordinal));
+            }
+        }
+
+        return new OptionPrerequisites(Int(Property(root, "minLevel")), Text(Property(root, "pactBoon")), Text(Property(root, "cantrip")), abilities)
+        {
+            Races = Property(root, "races") is { ValueKind: JsonValueKind.Array } races
+                ? Strings(races).Select(r => r.ToLowerInvariant()).Distinct(StringComparer.Ordinal).ToList()
+                : [],
+            ArmorProficiencies = armor,
+            WeaponProficiencies = weapons,
+            Spellcasting = Bool(Property(root, "spellcasting")),
+            Subclasses = Property(root, "subclasses") is { ValueKind: JsonValueKind.Array } subclasses ? Strings(subclasses).Distinct(StringComparer.Ordinal).ToList() : [],
+            Options = Property(root, "options") is { ValueKind: JsonValueKind.Array } picked ? Strings(picked).Distinct(StringComparer.Ordinal).ToList() : [],
+            AnyOf = depth == 0 && Property(root, "anyOf") is { ValueKind: JsonValueKind.Array } alternatives
+                ? alternatives.EnumerateArray().Select(a => PrerequisitesOf(a, depth + 1)).Where(a => !a.IsEmpty).ToList()
+                : [],
+            ClassFeature = Text(Property(root, "classFeature")) is { } feature && ClassFeatures.All.Contains(feature) ? feature : null,
+            Classes = Property(root, "classes") is { ValueKind: JsonValueKind.Array } classes ? Strings(classes).Distinct(StringComparer.Ordinal).ToList() : [],
+            CharacterLevel = Int(Property(root, "characterLevel")),
+            SpellcastingAbilityMin = Int(Property(root, "spellcastingAbilityMin")),
+            Sizes = Property(root, "sizes") is { ValueKind: JsonValueKind.Array } sizes
+                ? Strings(sizes).Select(z => z.ToLowerInvariant()).Distinct(StringComparer.Ordinal).ToList()
+                : [],
+        };
+    }
 
     public static IReadOnlyList<ChoiceModifier> ParseModifiers(string? json) =>
         Parse<IReadOnlyList<ChoiceModifier>>(json, root =>

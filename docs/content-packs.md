@@ -463,6 +463,8 @@ con extends"). Las subclases de una clase del propio paquete van en su definici�
 | `features` | `Feature[]?` | Rasgos de la subclase fuera de la lista de sus niveles, cada uno con `level` (como los `features` de la clase). |
 | `spellcasting` | `SubclassSpellcasting?` | La subclase convierte en lanzadora a una clase que no lanza conjuros (ver [`subclasses[].spellcasting`](#subclassesspellcasting)). |
 | `expandedSpellList` | `ExpandedSpell[]?` | Conjuros que se añaden a la lista de la clase para los personajes con esta subclase, sin concederlos (ver [`subclasses[].expandedSpellList`](#subclassesexpandedspelllist)). |
+| `prerequisites` | `Prerequisites?` | Lo que el personaje necesita para elegirla (los mismos campos que en las opciones). El asistente la muestra como no elegible, con el motivo ("Requiere Fuerza 15; tienes 14"). |
+| `prerequisitesText` | `string?` | ≤ 2000. Texto del requisito (también los narrativos, que la app solo muestra). Sin él, se genera a partir de `prerequisites`. |
 
 **`SubclassLevel`**: `level` (`int`, **obligatorio**, 1–20, sin repetir dentro de la subclase),
 `features` (`Feature[]?`) y `grants` (`Grants?`, ver [`levels[].grants`](#levelsgrants)).
@@ -1241,12 +1243,32 @@ si se elige, también el "Juramento"; al subir a nivel 4, la dote aparece junto 
 | `races` | Índices de raza (del SRD o de un paquete); basta con ser **una** de ellas: `["elf", "half-elf"]`. |
 | `proficiency` | `{ "armor": ["heavy"], "weapon": ["martial"] }`. Competencias que el personaje debe tener, **todas**. Armadura: `light`, `medium`, `heavy`, `shields` o `exotic` (`all-armor` del guerrero y el paladín cubre las tres armaduras, no los escudos ni las exóticas). Arma: `simple`, `martial`, `exotic`, `bombs`, `simple-firearms`, `martial-firearms`, `exotic-firearms` o el índice de un arma (`longswords`). |
 | `spellcasting` | `true`: poder lanzar al menos un conjuro (una clase lanzadora con espacios o un conjuro de cualquier origen, trucos raciales incluidos). |
+| `characterLevel` | 1–20, nivel **total** del personaje (a diferencia de `minLevel`, que cuenta la clase de la elección). |
+| `subclasses` | Índices de subclase (de cualquier clase); basta con tener **una**. |
+| `options` | Índices de opciones de cualquier conjunto (dotes incluidas) que el personaje debe tener, **todas**. Cuentan las elegidas en la misma subida. |
+| `classFeature` | `spellcasting` (una clase del personaje lanza conjuros sin magia de pacto) o `pactMagic` (una clase con magia de pacto). Con `classes`, la clase debe ser una de ellas. |
+| `classes` | Índices de clase; el personaje debe tener nivel en **una** (y, con `classFeature`, ese rasgo en ella). |
+| `spellcastingAbilityMin` | 1–30: la característica de lanzamiento de alguna de sus clases lanzadoras (de `classes`, si se da) llega a ese valor. |
+| `sizes` | Tamaños de la raza (`tiny`, `small`, `medium`, `large`, `huge`, `gargantuan`); basta con **uno**. Sin raza no se comprueba. |
+| `anyOf` | Lista de **al menos dos** alternativas con estos mismos campos (sin `anyOf` dentro); basta con cumplir **una** entera, además del resto de campos. |
+
+```json
+"prerequisites": {
+  "options": ["mipaquete-senal-basica"],
+  "anyOf": [{"abilities": {"int": 14}}, {"abilities": {"wis": 14}}],
+  "classFeature": "spellcasting",
+  "classes": ["wizard", "mipaquete-tejedor"]
+}
+```
 
 Las opciones sin cumplir aparecen en el asistente como no elegibles, con el motivo, que dice qué
 falta y qué tiene el personaje ("Requiere Fuerza 13; tienes 10", "Requiere ser Elf o Half-Elf; eres
 Human", "Requiere competencia con armadura pesada; no la tienes"). Si la opción no trae
 `prerequisitesText`, el asistente muestra uno generado a partir de estos campos ("Fuerza 13,
 competencia con armadura pesada").
+
+En las dotes de origen (`choices.feats` de raza, subraza o trasfondo) solo cuentan `abilities`,
+`races` y `sizes`: el resto depende de clases que el personaje aún no tiene.
 
 **`Modifier`**: `kind`, `target` y `value` como en los objetos, más `condition` opcional:
 

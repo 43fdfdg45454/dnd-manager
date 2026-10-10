@@ -63,7 +63,11 @@ public sealed record SubclassDto(
     string Flavor,
     IReadOnlyList<string> Description,
     IReadOnlyList<SubclassLevelDto> Levels,
-    string Source);
+    string Source)
+{
+    /// <summary>What the character needs to choose it (Spanish), or null.</summary>
+    public string? PrerequisitesText { get; init; }
+}
 
 public sealed record ClassDetailDto(
     string Index,

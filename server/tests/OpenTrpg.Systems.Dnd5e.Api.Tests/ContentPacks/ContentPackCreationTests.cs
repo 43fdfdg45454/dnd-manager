@@ -123,6 +123,81 @@ public class ContentPackCreationTests(ContentPackCreationApiFactory factory) : I
         Assert.Contains(errors, e => e.StartsWith("classes[0].multiclassing.proficienciesByLevel.1:", StringComparison.Ordinal));
     }
 
+    // ---- H08/H09: option and subclass prerequisites ------------------------------------------------------
+
+    [Fact]
+    public async Task Option_prerequisites_check_options_subclasses_class_features_alternatives_level_and_size()
+    {
+        var s = await ScenarioAsync();
+        var keeper = I("guardian");
+        var hero = await DraftAsync(s, keeper, 1, new { str = 14, dex = 12, con = 14, @int = 10, wis = 14, cha = 8 });
+        await GrantAsync(s, hero.Id);
+
+        var plan = await PlanAsync(s.Player, hero.Id, keeper);
+        var signals = plan.Choices.Single(c => c.Key == "senales").Options.ToDictionary(o => o.Index);
+
+        Assert.True(signals[I("senal-basica")].Eligible);
+        Assert.Equal("Requiere Señal básica; no lo tienes.", signals[I("senal-doble")].Reason);
+        Assert.Equal("Señal básica", signals[I("senal-doble")].PrerequisitesText);
+        Assert.Equal("Requiere la subclase Orden del Yunque.", signals[I("faro-del-yunque")].Reason);
+        Assert.Equal("Requiere el rasgo Lanzamiento de conjuros.", signals[I("luz-arcana")].Reason);
+        Assert.True(signals[I("destello")].Eligible); // Wisdom 14 meets the second alternative.
+        Assert.Equal("Requiere nivel de personaje 5; tienes 2.", signals[I("veterano")].Reason);
+        Assert.Equal("Requiere 15 en tu característica de lanzamiento; no lanzas conjuros.", signals[I("foco-firme")].Reason);
+        Assert.True(signals[I("farolillo")].Eligible); // No race: the size is not checked.
+        Assert.Equal("Requiere un nivel de Heraldo de bruma.", signals[I("del-heraldo")].Reason);
+
+        // An option picked in the same request meets the prerequisite of another one; an ineligible pick is refused.
+        var refused = await s.Player.Client.PostAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/level-up", new
+        {
+            classIndex = keeper,
+            hitPointsRolled = 6,
+            choices = new[] { new { key = "senales", selected = new[] { I("senal-doble") } } },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        hero = await ApplyAsync(s.Player, hero.Id, new { classIndex = keeper, hitPointsRolled = 6, choices = new[] { new { key = "senales", selected = new[] { I("senal-basica") } } } });
+
+        // Level 3: the order of the Anvil needs Strength 15.
+        await GrantAsync(s, hero.Id);
+        var third = await PlanAsync(s.Player, hero.Id, keeper);
+        var orders = third.Choices.Single(c => c.Kind == "Subclass").Options.ToDictionary(o => o.Index);
+        Assert.True(orders[I("orden-llama")].Eligible);
+        Assert.False(orders[I("orden-yunque")].Eligible);
+        Assert.Equal("Requiere Fuerza 15; tienes 14.", orders[I("orden-yunque")].Reason);
+        Assert.Equal("Fuerza 15", orders[I("orden-yunque")].PrerequisitesText);
+        var detail = await GetAsync<ClassDetailDto>(s.Dm.Client, $"{CatalogUrl}/classes/{keeper}");
+        Assert.Equal("Fuerza 15", detail.Subclasses.Single(x => x.Index == I("orden-yunque")).PrerequisitesText);
+    }
+
+    [Fact]
+    public async Task Option_prerequisites_reject_unknown_references_and_nested_alternatives()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        var pack = Renamed(Build(), "vacio-malo-h08");
+        var options = pack["optionSets"]![0]!["options"]!.AsArray();
+        options[1]!["prerequisites"] = new JsonObject { ["options"] = new JsonArray("vacio-malo-h08-no-existe") };
+        options[2]!["prerequisites"] = new JsonObject { ["subclasses"] = new JsonArray("vacio-malo-h08-tampoco") };
+        options[3]!["prerequisites"] = new JsonObject { ["classFeature"] = "magiaRara" };
+        options[4]!["prerequisites"] = new JsonObject
+        {
+            ["anyOf"] = new JsonArray(new JsonObject { ["anyOf"] = new JsonArray() }, new JsonObject { ["characterLevel"] = 3 }),
+        };
+        options[7]!["prerequisites"] = new JsonObject { ["sizes"] = new JsonArray("colosal") };
+        options[8]!["prerequisites"] = new JsonObject { ["classes"] = new JsonArray("vacio-malo-h08-sin-clase") };
+        pack["classes"]![1]!["subclasses"]![1]!["prerequisites"] = new JsonObject { ["characterLevel"] = 30 };
+
+        var errors = await ImportErrorsAsync(admin, pack);
+        var all = string.Join("\n", errors);
+
+        Assert.True(errors.Any(e => e.StartsWith("optionSets[0].options[1].prerequisites.options[0]:", StringComparison.Ordinal)), all);
+        Assert.True(errors.Any(e => e.StartsWith("optionSets[0].options[2].prerequisites.subclasses[0]:", StringComparison.Ordinal)), all);
+        Assert.True(errors.Any(e => e.StartsWith("optionSets[0].options[3].prerequisites.classFeature:", StringComparison.Ordinal)), all);
+        Assert.True(errors.Any(e => e.StartsWith("optionSets[0].options[4].prerequisites.anyOf[0].anyOf:", StringComparison.Ordinal)), all);
+        Assert.True(errors.Any(e => e.StartsWith("optionSets[0].options[7].prerequisites.sizes[0]:", StringComparison.Ordinal)), all);
+        Assert.True(errors.Any(e => e.StartsWith("optionSets[0].options[8].prerequisites.classes[0]:", StringComparison.Ordinal)), all);
+        Assert.True(errors.Any(e => e.StartsWith("classes[1].subclasses[1].prerequisites.characterLevel:", StringComparison.Ordinal)), all);
+    }
+
     // ---- Helpers ---------------------------------------------------------------------------------------
 
     /// <summary>Imports the pack once per database.</summary>

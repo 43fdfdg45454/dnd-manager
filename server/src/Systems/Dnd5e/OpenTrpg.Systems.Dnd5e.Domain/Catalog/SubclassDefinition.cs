@@ -34,6 +34,14 @@ public sealed class SubclassDefinition
     /// <summary>Indexes of the spells of <see cref="ExpandedSpellList"/>.</summary>
     public IReadOnlySet<string> ExpandedSpellIndexes => ExpandedSpellList.Select(s => s.Index).ToHashSet(StringComparer.Ordinal);
 
+    /// <summary>What the character needs to choose the subclass (<see cref="OptionPrerequisites"/> as JSON); null = nothing.</summary>
+    public string? PrerequisitesJson { get; init; }
+
+    public OptionPrerequisites Prerequisites => LevelChoiceJson.ParsePrerequisites(PrerequisitesJson);
+
+    /// <summary>Prerequisites in words (narrative ones the app shows as they are), or null.</summary>
+    public string? PrerequisitesText { get; init; }
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = Dnd5eCatalogSources.Srd;
 }

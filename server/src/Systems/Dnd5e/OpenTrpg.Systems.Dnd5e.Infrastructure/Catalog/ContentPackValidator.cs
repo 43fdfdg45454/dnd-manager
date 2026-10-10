@@ -474,6 +474,8 @@ internal sealed partial class ContentPackValidator
                 Description = description,
                 SpellcastingJson = spellcasting?.ToJson(),
                 ExpandedSpellListJson = expandedSpellList,
+                PrerequisitesJson = Prerequisites($"{subclassPath}.prerequisites", subclass.Prerequisites),
+                PrerequisitesText = NullableText($"{subclassPath}.prerequisitesText", subclass.PrerequisitesText, LevelChoiceRule.NoteMaxLength),
                 Source = _id,
             });
 
