@@ -823,13 +823,13 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                     list = subclasses.Select(SubclassOption).ToList();
                     break;
                 case LevelChoiceKind.AsiOrFeat:
-                    list = SetOptions(OptionSets.Feats, null, rule.AlsoFrom);
+                    list = SetOptions(OptionSets.Feats, null, rule.AlsoFrom, rule.SubclassIndex);
                     break;
                 case LevelChoiceKind.OptionSet:
-                    list = rule.SetId is null ? [] : SetOptions(rule.SetId, rule.From, rule.AlsoFrom);
+                    list = rule.SetId is null ? [] : SetOptions(rule.SetId, rule.From, rule.AlsoFrom, rule.SubclassIndex);
                     break;
                 case LevelChoiceKind.Custom when rule.SetId is not null:
-                    list = SetOptions(rule.SetId, rule.From, []);
+                    list = SetOptions(rule.SetId, rule.From, [], rule.SubclassIndex);
                     break;
                 case LevelChoiceKind.Custom when filter.Source is ChoiceFilter.SpellbookSource or ChoiceFilter.KnownSource:
                     list = character.Spells
@@ -895,10 +895,15 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
 
         /// <summary>
         /// Options of a set (or the <paramref name="from"/> options, of any set) plus those of the <paramref name="alsoFrom"/>
-        /// sets, without the ones the character already has (repeatable feats are offered again).
+        /// sets, without the ones the character already has (repeatable feats are offered again). The choice of a
+        /// <paramref name="subclass"/> only applies with it, so its options are checked as if it were chosen (it may be
+        /// picked at this same level).
         /// </summary>
-        private List<PlannedOption> SetOptions(string setId, IReadOnlyList<string>? from, IReadOnlyList<string> alsoFrom)
+        private List<PlannedOption> SetOptions(string setId, IReadOnlyList<string>? from, IReadOnlyList<string> alsoFrom, string? subclass = null)
         {
+            var facts = subclass is null || Facts.Pending.Contains(subclass) || character.Classes.Any(c => c.SubclassIndex == subclass)
+                ? Facts
+                : Facts with { Pending = Facts.Pending.Append(subclass).ToHashSet(StringComparer.Ordinal) };
             var allowed = from?.Select(NormalizeIndex).ToHashSet(StringComparer.Ordinal);
             var taken = _active.Select(p => p.Item.Index).ToHashSet(StringComparer.Ordinal);
             return options
@@ -906,7 +911,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                 .Where(o => (!taken.Contains(o.Index) || o.Repeatable) && !o.CreationOnly)
                 .Select(o =>
                 {
-                    var reason = WhyNot(o);
+                    var reason = PrerequisiteEvaluator.WhyNot(o.Prerequisites, facts);
                     return new PlannedOption(o.Index, o.Name, o.Description, o.PrerequisitesText ?? PrerequisitesText(o.Prerequisites), reason is null, reason, null, o, Preview(o))
                     {
                         Cost = OptionCosts.Of(o, character, options),
@@ -965,9 +970,6 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                 ?? pendingPicks.Select(p => _options.GetValueOrDefault(p)).FirstOrDefault(o => o?.SetId == OptionSets.PactBoons)?.Name,
             Detailed = true,
         };
-
-        /// <summary>Why the option cannot be taken now, naming what is required and what the character has; null when it can.</summary>
-        private string? WhyNot(OptionDefinition option) => PrerequisiteEvaluator.WhyNot(option.Prerequisites, Facts);
 
         /// <summary>A subclass of the choice, not eligible while its prerequisites fail.</summary>
         private PlannedOption SubclassOption(SubclassDefinition subclass)

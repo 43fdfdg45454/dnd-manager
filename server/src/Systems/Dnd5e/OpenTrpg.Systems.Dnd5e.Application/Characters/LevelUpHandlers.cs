@@ -312,7 +312,29 @@ public sealed class ApplyLevelUpHandler(
             throw AppException.Validation("choices", $"La elección '{unknown}' no corresponde a esta subida de nivel.");
         }
 
+        EnsureOptionsPickedOnce(result, answers);
         return result;
+    }
+
+    /// <summary>
+    /// An option (or feat) offered by two choices of the same level-up (an improvement that also offers a set and a
+    /// choice of that set) is taken in one of them only, unless it is repeatable.
+    /// </summary>
+    private static void EnsureOptionsPickedOnce(List<(PlannedChoice Choice, ChoiceSelection Selection)> resolved, Dictionary<string, Answer> answers)
+    {
+        var picked = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (choice, _) in resolved)
+        {
+            var answer = answers[choice.Rule.Key];
+            var picks = answer.Feat is { } feat ? [.. answer.Selected, feat] : answer.Selected;
+            foreach (var option in picks.Select(p => choice.Options.FirstOrDefault(o => o.Index == p)).OfType<PlannedOption>())
+            {
+                if (option.Definition is { Repeatable: false } && !picked.Add(option.Index))
+                {
+                    throw AppException.Validation("choices", $"«{option.Name}» solo puede elegirse una vez en esta subida de nivel.");
+                }
+            }
+        }
     }
 
     private static ChoiceSelection? ResolvePicks(PlannedChoice choice, Answer answer)
