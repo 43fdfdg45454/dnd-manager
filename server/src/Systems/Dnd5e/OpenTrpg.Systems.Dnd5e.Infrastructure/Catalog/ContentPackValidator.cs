@@ -312,6 +312,14 @@ internal sealed partial class ContentPackValidator
             }
         }
 
+        foreach (var condition in pack.Conditions ?? [])
+        {
+            if (condition?.Index?.Trim() is { Length: > 0 } conditionIndex)
+            {
+                _packConditions.Add(conditionIndex);
+            }
+        }
+
         // The pack's own equipment categories and equipment pack contents are used by the starting equipment of its
         // classes and backgrounds (validated with their sections).
         foreach (var category in pack.Reference?.EquipmentCategories ?? [])
@@ -435,6 +443,7 @@ internal sealed partial class ContentPackValidator
                      ("prerequisites", extension.Prerequisites is not null),
                      ("prerequisitesText", extension.PrerequisitesText is not null),
                      ("countsAsCasterLevel", extension.CountsAsCasterLevel is not null),
+                     ("saveDc", extension.SaveDc is not null),
                  })
         {
             if (present)
@@ -617,9 +626,9 @@ internal sealed partial class ContentPackValidator
                     return;
                 }
 
-                if (!EnumNames.TryParse<ItemModifierKind>(modifier.Kind.Trim(), out var kind))
+                if (!EnumNames.TryParse<ItemModifierKind>(modifier.Kind.Trim(), out var kind) || !ItemModifier.IsItemKind(kind))
                 {
-                    AddError($"{modifierPath}.kind", $"Tipo de modificador desconocido. Valores admitidos: {string.Join(", ", Enum.GetNames<ItemModifierKind>())}.");
+                    AddError($"{modifierPath}.kind", $"Tipo de modificador desconocido. Valores admitidos: {string.Join(", ", Enum.GetValues<ItemModifierKind>().Where(ItemModifier.IsItemKind))}.");
                     return;
                 }
 

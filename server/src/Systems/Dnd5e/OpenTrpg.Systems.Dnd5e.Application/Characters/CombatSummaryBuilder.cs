@@ -43,10 +43,19 @@ public static class CombatSummaryBuilder
         var attacks = CombatCalculator.Attacks(
                 character,
                 sheet,
-                equipped.Select(i => new EquippedWeapon(i.Entry.Id, i.Template?.Index, i.Effective, i.Entry.Attuned)))
+                equipped.Select(i => new EquippedWeapon(i.Entry.Id, i.Template?.Index, i.Effective, i.Entry.Attuned)
+                {
+                    Rules = WeaponRules.Parse(i.Template?.SystemDataJson),
+                }))
             .Select(a => new AttackDto(
                 a.ItemId, a.Name, a.AttackBonus, a.Damage, a.DamageType, a.VersatileDamage, a.Range, a.Properties, a.Notes,
-                ValueBreakdownDto.From(a.AttackBreakdown), ValueBreakdownDto.From(a.DamageBreakdown)))
+                ValueBreakdownDto.From(a.AttackBreakdown), ValueBreakdownDto.From(a.DamageBreakdown))
+            {
+                CriticalRange = a.CriticalRange,
+                CriticalRangeSource = a.CriticalRangeSource,
+                Warnings = a.Warnings,
+                Natural = a.Natural,
+            })
             .ToList();
 
         var spellSlots = Enumerable.Range(1, 9)

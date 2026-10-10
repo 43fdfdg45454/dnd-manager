@@ -316,6 +316,12 @@ public sealed class UpdateInventoryItemHandler(
         character.EnsureCanTrack(currentUserId, loaded.IsDm);
 
         var templates = await reader.TemplatesAsync(character, cancellationToken);
+        if (request.Attuned == true && character.FindItem(itemId) is { Attuned: false } target
+            && InventoryView.TemplateOf(templates, target.TemplateId) is { } template)
+        {
+            await hooks.EnsureCanAttuneAsync(character, template, cancellationToken);
+        }
+
         var item = character.UpdateItem(
             itemId,
             new ItemUpdate

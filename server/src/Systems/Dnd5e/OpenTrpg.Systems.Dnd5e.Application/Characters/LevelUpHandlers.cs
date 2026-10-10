@@ -386,9 +386,10 @@ public sealed class ApplyLevelUpHandler(
 
         void EnsureLimit(string ability, int amount)
         {
-            if (Natural(ability) + amount > SheetCalculator.ImprovementMaxScore)
+            var max = plan.Sheet.AbilityMaxScores.GetValueOrDefault(ability, SheetCalculator.ImprovementMaxScore);
+            if (Natural(ability) + amount > max)
             {
-                throw AppException.Validation("choices", $"La mejora no puede subir {BreakdownLabels.Ability(ability)} por encima de {SheetCalculator.ImprovementMaxScore}.");
+                throw AppException.Validation("choices", $"La mejora no puede subir {BreakdownLabels.Ability(ability)} por encima de {max}.");
             }
         }
 
@@ -483,6 +484,9 @@ public sealed class ApplyLevelUpHandler(
                     character.AddProficiency(ProficiencyType.Weapon, item.Index, ProficiencySource.Class);
                 }
 
+                break;
+            case LevelChoiceKind.Resistance:
+                // Read from the stored selection by the sheet (ChoiceEffects.ChosenResistances).
                 break;
             case LevelChoiceKind.Language or LevelChoiceKind.Tool:
                 var type = choice.Rule.Kind == LevelChoiceKind.Language ? ProficiencyType.Language : ProficiencyType.Tool;

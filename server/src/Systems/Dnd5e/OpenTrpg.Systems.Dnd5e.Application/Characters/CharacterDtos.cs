@@ -111,6 +111,17 @@ public sealed record SpellcastingDto(string ClassIndex, string Ability, int Save
 
     /// <summary>"hitPoints": key of the class resource each spell spends.</summary>
     public string? UsesResource { get; init; }
+
+    /// <summary>Save DC of the cantrips when a feature changes it (breakdown "spellSaveDc.&lt;class&gt;.cantrip"); null otherwise.</summary>
+    public int? CantripSaveDc { get; init; }
+
+    /// <summary>Spell attack bonus of the cantrips when a feature changes it ("spellAttackBonus.&lt;class&gt;.cantrip"); null otherwise.</summary>
+    public int? CantripAttackBonus { get; init; }
+
+    /// <summary>Lowest d20 roll of a spell attack that is a critical hit (20 by default).</summary>
+    public int CriticalRange { get; init; } = 20;
+
+    public string? CriticalRangeSource { get; init; }
 }
 
 /// <param name="PactSlotLevel">Spell level of the Pact Magic slots (null without them).</param>
@@ -146,7 +157,53 @@ public sealed record CharacterSheetDto(
 
     /// <summary>Breath weapon of the chosen draconic ancestry (DC breakdown in <c>breakdowns["breathWeapon.dc"]</c>), or null.</summary>
     public BreathWeaponValueDto? BreathWeapon { get; init; }
+
+    /// <summary>Damage immunities (content packs); <see cref="DefenseDto.Type"/> is a damage type.</summary>
+    public IReadOnlyList<DefenseDto> Immunities { get; init; } = [];
+
+    /// <summary>Condition immunities (content packs); <see cref="DefenseDto.Type"/> is a condition index.</summary>
+    public IReadOnlyList<DefenseDto> ConditionImmunities { get; init; } = [];
+
+    /// <summary>Saving throw proficiencies lost by an origin feat; <see cref="DefenseDto.Type"/> is the ability.</summary>
+    public IReadOnlyList<DefenseDto> LostSavingThrows { get; init; } = [];
+
+    /// <summary>Save DCs of the classes besides the spell one, each with its breakdown key.</summary>
+    public IReadOnlyList<ClassSaveDcDto> ClassSaveDcs { get; init; } = [];
+
+    /// <summary>Passive Investigation (breakdown "passiveInvestigation").</summary>
+    public int PassiveInvestigation { get; init; }
+
+    /// <summary>Passive Insight (breakdown "passiveInsight").</summary>
+    public int PassiveInsight { get; init; }
+
+    /// <summary>Highest score of each ability (20 unless a feature changes it).</summary>
+    public IReadOnlyDictionary<string, int> AbilityMaxScores { get; init; } = new Dictionary<string, int>();
+
+    /// <summary>"tiny", "small", "medium"...; empty without race.</summary>
+    public string Size { get; init; } = string.Empty;
+
+    /// <summary>The race, or the feature that changed the size.</summary>
+    public string? SizeSource { get; init; }
+
+    /// <summary>Swimming, climbing and flying speeds by mode ("swim" → 30); breakdowns "speed.&lt;mode&gt;".</summary>
+    public IReadOnlyDictionary<string, int> Speeds { get; init; } = new Dictionary<string, int>();
+
+    /// <summary>Failed death saves that kill the character (3 unless a feature changes it).</summary>
+    public int DeathSaveFailuresToDie { get; init; } = 3;
+
+    public string? DeathSaveFailuresSource { get; init; }
+
+    /// <summary>A long rest recovers every hit die (instead of half).</summary>
+    public bool RecoversAllHitDice { get; init; }
+
+    public string? HitDiceRecoverySource { get; init; }
 }
+
+/// <summary>An immunity, condition immunity or lost saving throw with what grants it.</summary>
+public sealed record DefenseDto(string Type, string Source, string Label);
+
+/// <summary>A class save DC ("CD de ejemplo" = 8 + proficiency + ability) and the key of its breakdown.</summary>
+public sealed record ClassSaveDcDto(string ClassIndex, string Name, string Ability, int Dc, string BreakdownKey);
 
 /// <summary>A resisted damage type; <see cref="Source"/> is "race", "subrace" or "background", <see cref="Label"/> what grants it.</summary>
 public sealed record ResistanceDto(string DamageType, string Source, string Label);
@@ -420,7 +477,11 @@ public sealed record CharacterChoiceDto(
 
 // ---- Combat view (phase 6) -------------------------------------------------------------------
 
-/// <summary>One attack: equipped weapon (with <see cref="ItemId"/>) or the unarmed strike. Damage like "1d8+3".</summary>
+/// <summary>
+/// One attack: equipped weapon (with <see cref="ItemId"/>; a second profile of the same item is a second attack), a
+/// natural weapon (<see cref="Natural"/>, <see cref="Notes"/> says what grants it) or the unarmed strike. Damage like
+/// "1d8+3".
+/// </summary>
 public sealed record AttackDto(
     Guid? ItemId,
     string Name,
@@ -432,7 +493,19 @@ public sealed record AttackDto(
     IReadOnlyList<string> Properties,
     string? Notes,
     ValueBreakdownDto AttackBreakdown,
-    ValueBreakdownDto DamageBreakdown);
+    ValueBreakdownDto DamageBreakdown)
+{
+    /// <summary>Lowest d20 roll that is a critical hit (20 unless a feature lowers it).</summary>
+    public int CriticalRange { get; init; } = 20;
+
+    /// <summary>What lowered <see cref="CriticalRange"/>, or null.</summary>
+    public string? CriticalRangeSource { get; init; }
+
+    /// <summary>Problems wielding it ("Requiere Fuerza 16; tienes 14.").</summary>
+    public IReadOnlyList<string> Warnings { get; init; } = [];
+
+    public bool Natural { get; init; }
+}
 
 /// <summary>A consumable of the inventory (potions, scrolls, ammunition...) for the quick-use list.</summary>
 public sealed record QuickConsumableDto(Guid ItemId, string Name, int Quantity, int? Charges);

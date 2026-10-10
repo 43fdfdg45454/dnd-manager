@@ -303,6 +303,10 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("PropertyTags")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int?>("RangeLong")
                         .HasColumnType("integer");
 
@@ -1539,6 +1543,9 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("ResourcesJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SaveDcsJson")
                         .HasColumnType("text");
 
                     b.Property<string>("SavingThrows")

@@ -47,6 +47,12 @@ public sealed class ItemTemplate : EntityBase
 
     public IReadOnlyList<string> Properties { get; private set; } = [];
 
+    /// <summary>
+    /// <see cref="Properties"/> in lower case between bars ("|finesse|light|"; empty without properties): a plain text
+    /// column the catalog filters by property with <see cref="TagOf"/> ("|firearm|").
+    /// </summary>
+    public string PropertyTags { get; private set; } = string.Empty;
+
     public int? RangeNormal { get; private set; }
 
     public int? RangeLong { get; private set; }
@@ -169,6 +175,7 @@ public sealed class ItemTemplate : EntityBase
         DamageType = data.DamageType;
         VersatileDice = data.VersatileDice;
         Properties = data.Properties;
+        PropertyTags = TagsOf(data.Properties);
         RangeNormal = data.RangeNormal;
         RangeLong = data.RangeLong;
         ArmorClassBase = data.ArmorClassBase;
@@ -181,4 +188,14 @@ public sealed class ItemTemplate : EntityBase
         Modifiers = modifiers;
         SystemDataJson = data.SystemDataJson;
     }
+
+    /// <summary>"|finesse|light|" for ["Finesse", "light"]; empty for no properties.</summary>
+    public static string TagsOf(IEnumerable<string> properties)
+    {
+        var tags = properties.Select(p => p.Trim().ToLowerInvariant()).Where(p => p.Length > 0).Distinct(StringComparer.Ordinal).ToList();
+        return tags.Count == 0 ? string.Empty : $"|{string.Join('|', tags)}|";
+    }
+
+    /// <summary>The text a property is found by in <see cref="PropertyTags"/>: "|firearm|".</summary>
+    public static string TagOf(string property) => $"|{property.Trim().ToLowerInvariant()}|";
 }

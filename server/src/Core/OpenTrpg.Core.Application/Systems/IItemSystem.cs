@@ -1,3 +1,4 @@
+using OpenTrpg.Core.Domain.Catalog;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using OpenTrpg.Core.Domain.Items;
@@ -21,6 +22,13 @@ public interface IItemSystem
 
     /// <summary>How much the character can carry, in pounds (shown with the inventory).</summary>
     Task<int> CarryingCapacityAsync(CharacterRef character, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Why the character may not attune to an item of <paramref name="template"/> (items restricted to some classes), as
+    /// a user-facing message, or null when it may.
+    /// </summary>
+    Task<string?> AttunementProblemAsync(CharacterRef character, ItemTemplate template, CancellationToken cancellationToken = default) =>
+        Task.FromResult<string?>(null);
 }
 
 /// <summary>A resolved item (template plus overrides) handed to the system.</summary>

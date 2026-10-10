@@ -856,6 +856,15 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                 case LevelChoiceKind.Weapon:
                     list = WeaponOptions(rule, filter);
                     break;
+                case LevelChoiceKind.Resistance:
+                    list = (rule.From is { Count: > 0 } types ? types.Select(t => t.ToLowerInvariant()) : DamageTypes.All)
+                        .Select(t =>
+                        {
+                            var has = sheet.Resistances.Any(r => r.DamageType == t);
+                            return new PlannedOption(t, DamageTypes.Spanish(t), [], null, !has, has ? "Ya tienes esta resistencia." : null, null, null, []);
+                        })
+                        .ToList();
+                    break;
                 case LevelChoiceKind.Skill:
                     list = skills
                         .Where(s => character.FindProficiency(ProficiencyType.Skill, s.Index) is null)
@@ -1155,16 +1164,36 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             ItemModifierKind.SkillBonus => (null, "Habilidades", null),
             ItemModifierKind.AttackBonus => ("attacks", "Ataque", null),
             ItemModifierKind.DamageBonus => ("attacks", "Daño", null),
+            ItemModifierKind.PassiveBonus when target == ModifierTargets.Perception => ("passivePerception", "Percepción pasiva", sheet.PassivePerception),
+            ItemModifierKind.PassiveBonus when target == ModifierTargets.Investigation => (SheetCalculator.PassiveInvestigationKey, "Investigación pasiva", sheet.PassiveInvestigation),
+            ItemModifierKind.PassiveBonus => (SheetCalculator.PassiveInsightKey, "Perspicacia pasiva", sheet.PassiveInsight),
+            ItemModifierKind.SpellSaveDcBonus => (null, "CD de conjuros", null),
+            ItemModifierKind.SpellAttackBonus => (null, "Ataque de conjuro", null),
+            ItemModifierKind.ArmorClassFormula => ("armorClass", "CA alternativa (base)", null),
+            ItemModifierKind.CriticalRange => (null, "Crítico desde", null),
+            ItemModifierKind.AbilityMax when target is not null => ($"ability.{target}", $"Máximo de {BreakdownLabels.Ability(target)}", null),
+            ItemModifierKind.Speed when target is not null => (SheetCalculator.SpeedKey(target), $"Velocidad de {ModifierTargets.SpeedLabel(target)}", null),
+            ItemModifierKind.DeathSaveFailures => (null, "Fallos de salvación contra muerte para morir", null),
+            ItemModifierKind.HitDiceRecovery => (null, "Recupera todos los dados de golpe en descanso largo", null),
             _ => (null, modifier.Kind.ToString(), null),
         };
-        var holds = modifier.Condition is null || (modifier.Condition == ModifierConditions.WearingArmor && sheet.WearsArmor);
+
+        // A formula is shown with its value now (the class level counted as the character level).
+        var value = modifier.Formula is { } formula
+            ? ModifierFormula.Parts(formula, string.Empty, new ModifierFormula.Context(sheet.ProficiencyBonus, sheet.TotalLevel, sheet.TotalLevel, sheet.Modifier, sheet.Speed))?.Sum(p => p.Value) ?? 0
+            : modifier.Value;
+        var additive = modifier.Kind is not (ItemModifierKind.ArmorClassFormula or ItemModifierKind.CriticalRange or ItemModifierKind.AbilityMax
+            or ItemModifierKind.Speed or ItemModifierKind.DeathSaveFailures or ItemModifierKind.HitDiceRecovery);
+        var holds = modifier.Condition is null
+            || (modifier.Condition == ModifierConditions.WearingArmor && sheet.WearsArmor)
+            || (modifier.Condition == ModifierConditions.NoArmor && !sheet.WearsArmor);
         return new EffectPreviewDto(
             BreakdownSources.Feature,
             affected.Label,
-            modifier.Value,
+            value,
             affected.Field,
-            affected.Before,
-            affected.Before is { } before ? before + (holds ? modifier.Value : 0) : null,
+            additive ? affected.Before : null,
+            additive && affected.Before is { } before ? before + (holds ? value : 0) : null,
             modifier.Condition is null ? null : ModifierConditions.Describe(modifier.Condition));
     }
 }
