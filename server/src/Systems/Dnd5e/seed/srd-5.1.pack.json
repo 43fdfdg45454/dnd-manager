@@ -3,7 +3,7 @@
   "system": "dnd5e",
   "id": "srd",
   "name": "SRD 5.1",
-  "version": "5.1.2",
+  "version": "5.1.3",
   "attribution": "This work includes material taken from the System Reference Document 5.1 (“SRD 5.1”) by Wizards of the Coast LLC and available at https://dnd.wizards.com/resources/systems-reference-document. The SRD 5.1 is licensed under the Creative Commons Attribution 4.0 International License available at https://creativecommons.org/licenses/by/4.0/legalcode.",
   "skills": [
     {
@@ -2045,6 +2045,19 @@
         "A creature suffers the effect of its current level of exhaustion as well as all lower levels. For example, a creature suffering level 2 exhaustion has its speed halved and has disadvantage on ability checks.",
         "An effect that removes exhaustion reduces its level as specified in the effect's description, with all exhaustion effects ending if a creature's exhaustion level is reduced below 1.",
         "Finishing a long rest reduces a creature's exhaustion level by 1, provided that the creature has also ingested some food and drink."
+      ]
+    },
+    {
+      "index": "concentration",
+      "name": "Concentration",
+      "description": [
+        "Some spells require you to maintain concentration in order to keep their magic active. If you lose concentration, such a spell ends.",
+        "If a spell must be maintained with concentration, that fact appears in its Duration entry, and the spell specifies how long you can concentrate on it. You can end concentration at any time (no action required).",
+        "Normal activity, such as moving and attacking, doesn't interfere with concentration. The following factors can break concentration:",
+        "- Casting another spell that requires concentration. You lose concentration on a spell if you cast another spell that requires concentration. You can't concentrate on two spells at once.",
+        "- Taking damage. Whenever you take damage while you are concentrating on a spell, you must make a Constitution saving throw to maintain your concentration. The DC equals 10 or half the damage you take, whichever number is higher. If you take damage from multiple sources, such as an arrow and a dragon's breath, you make a separate saving throw for each source of damage.",
+        "- Being incapacitated or killed. You lose concentration on a spell if you are incapacitated or if you die.",
+        "The GM might also decide that certain environmental phenomena, such as a wave crashing over you while you're on a storm-tossed ship, require you to succeed on a DC 10 Constitution saving throw to maintain concentration on a spell."
       ]
     }
   ],

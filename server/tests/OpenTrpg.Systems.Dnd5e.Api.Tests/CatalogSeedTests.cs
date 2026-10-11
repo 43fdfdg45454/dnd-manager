@@ -33,7 +33,7 @@ public class CatalogSeedTests(CatalogApiFactory factory, ITestOutputHelper outpu
             Assert.Equal(4, await db.Set<SubraceDefinition>().CountAsync());
             Assert.Equal(38, await db.Set<TraitDefinition>().CountAsync());
             Assert.Equal(319, await db.Set<SpellDefinition>().CountAsync());
-            Assert.Equal(15, await db.Set<ConditionDefinition>().CountAsync());
+            Assert.Equal(16, await db.Set<ConditionDefinition>().CountAsync());
             Assert.Equal(18, await db.Set<SkillDefinition>().CountAsync());
             Assert.Equal(1, await db.Set<BackgroundDefinition>().CountAsync());
 
