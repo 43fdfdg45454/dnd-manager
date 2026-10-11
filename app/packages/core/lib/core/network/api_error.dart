@@ -81,6 +81,41 @@ String? problemDetail(Object error) {
   return detail is String && detail.trim().isNotEmpty ? detail.trim() : null;
 }
 
+/// The `errors` map of a ProblemDetails response body (field -> messages),
+/// as ASP.NET validation sends it; empty when the server gave none.
+Map<String, List<String>> problemErrors(Object error) {
+  if (error is! DioException) return const {};
+  final data = error.response?.data;
+  if (data is! Map) return const {};
+  final errors = data['errors'];
+  if (errors is! Map) return const {};
+  return {
+    for (final e in errors.entries)
+      if (e.value case final List messages)
+        '${e.key}': [
+          for (final m in messages)
+            if (m is String && m.trim().isNotEmpty) m.trim(),
+        ]
+      else if (e.value case final String message when message.trim().isNotEmpty)
+        '${e.key}': [message.trim()],
+  };
+}
+
+/// What the server explained about a failed request, one line per message:
+/// the ProblemDetails `detail` followed by each validation error of `errors`
+/// (without repeating the detail). Null when it explained nothing.
+String? problemMessage(Object error) {
+  final lines = <String>[];
+  final detail = problemDetail(error);
+  if (detail != null) lines.add(detail);
+  for (final messages in problemErrors(error).values) {
+    for (final m in messages) {
+      if (!lines.contains(m)) lines.add(m);
+    }
+  }
+  return lines.isEmpty ? null : lines.join('\n');
+}
+
 /// The machine-readable `code` of a ProblemDetails response body (for example
 /// `attunement-limit` or `origin-choices-incomplete`), when the server sent one.
 String? problemCode(Object error) {

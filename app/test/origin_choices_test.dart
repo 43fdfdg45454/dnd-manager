@@ -379,6 +379,51 @@ void main() {
       expect(find.text('Longsword'), findsWidgets);
     });
 
+    testWidgets('una elección de herramientas muestra la nota una vez y el detalle de cada una', (
+      tester,
+    ) async {
+      const note = 'Eliges competencia con 1 de estas herramientas.';
+      await _toBackground(
+        tester,
+        choices: [
+          makeOriginChoiceJson(
+            key: 'background.tools',
+            name: 'Herramientas (trasfondo)',
+            kind: 'Tool',
+            source: 'background',
+            note: note,
+            options: [
+              {
+                'index': 'smiths-tools',
+                'name': "Smith's Tools",
+                'eligible': true,
+                'description': ['Para forjar y reparar metal.'],
+                'itemId': 'longsword',
+              },
+              {
+                'index': 'brewers-supplies',
+                'name': "Brewer's Supplies",
+                'eligible': true,
+                'description': ['Para fermentar bebidas.'],
+                'itemId': 'longsword',
+              },
+            ],
+          ),
+        ],
+      );
+      await _next(tester);
+
+      expect(find.text(note), findsOneWidget, reason: 'la nota va una vez en la cabecera');
+      expect(find.text("Smith's Tools"), findsOneWidget);
+      expect(find.textContaining('Para forjar y reparar metal.'), findsOneWidget);
+      expect(find.textContaining('Para fermentar bebidas.'), findsOneWidget);
+      expect(find.byKey(const Key('detail-item-smiths-tools')), findsOneWidget);
+      expect(find.byKey(const Key('detail-item-brewers-supplies')), findsOneWidget);
+
+      await _tap(tester, find.byKey(const Key('detail-item-smiths-tools')));
+      expect(find.byType(ItemDetailPage), findsOneWidget);
+    });
+
     testWidgets('al enviar se vuelven a guardar las elecciones tras la hoja completa', (
       tester,
     ) async {

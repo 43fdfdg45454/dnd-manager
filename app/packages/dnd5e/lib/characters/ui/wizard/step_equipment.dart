@@ -522,11 +522,10 @@ class _CategoryPickerPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final picked =
-        ref.watch(
-          characterWizardControllerProvider(args).select((s) => s.categoryPicks[pickKey]),
-        ) ??
-        const <EquipmentCategoryItem>[];
+    // The whole state: a kit limited to the tools the character is proficient
+    // with follows the class, background and tool choices made so far.
+    final state = ref.watch(characterWizardControllerProvider(args));
+    final picked = state.categoryPicks[pickKey] ?? const <EquipmentCategoryItem>[];
     final controller = ref.read(characterWizardControllerProvider(args).notifier);
     final category = ref.watch(
       equipmentCategoryProvider((index: pick.category, campaignId: args.campaignId)),
@@ -551,43 +550,58 @@ class _CategoryPickerPage extends ConsumerWidget {
             equipmentCategoryProvider((index: pick.category, campaignId: args.campaignId)),
           ),
         ),
-        data: (data) => Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Elige ${pick.choose}: ${picked.length} de ${pick.choose}',
-                key: const Key('equipment-category-counter'),
+        data: (data) {
+          final items = state.offeredCategoryItems(pick, data.items);
+          if (items.isEmpty && pick.proficientOnly) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'No tienes competencia con ningún kit todavía.',
+                  key: Key('equipment-category-none-proficient'),
+                  textAlign: TextAlign.center,
+                ),
               ),
-            ),
-            Expanded(
-              child: ListView(
-                children: [
-                  for (final item in data.items)
-                    ListTile(
-                      key: Key('equipment-category-item-${item.index}'),
-                      title: Text(item.name),
-                      onTap: () => controller.toggleCategoryItem(pickKey, pick.choose, item),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          DetailInfoButton(
-                            key: Key('detail-item-${item.templateId}'),
-                            onPressed: () => openItemDetail(context, item.templateId),
-                          ),
-                          Checkbox(
-                            value: picked.any((e) => e.templateId == item.templateId),
-                            onChanged: (_) =>
-                                controller.toggleCategoryItem(pickKey, pick.choose, item),
-                          ),
-                        ],
+            );
+          }
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Elige ${pick.choose}: ${picked.length} de ${pick.choose}',
+                  key: const Key('equipment-category-counter'),
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  children: [
+                    for (final item in items)
+                      ListTile(
+                        key: Key('equipment-category-item-${item.index}'),
+                        title: Text(item.name),
+                        onTap: () => controller.toggleCategoryItem(pickKey, pick.choose, item),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            DetailInfoButton(
+                              key: Key('detail-item-${item.templateId}'),
+                              onPressed: () => openItemDetail(context, item.templateId),
+                            ),
+                            Checkbox(
+                              value: picked.any((e) => e.templateId == item.templateId),
+                              onChanged: (_) =>
+                                  controller.toggleCategoryItem(pickKey, pick.choose, item),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          );
+        },
       ),
     );
   }
