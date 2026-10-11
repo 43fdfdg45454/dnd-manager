@@ -129,7 +129,13 @@ void main() {
         await openCombatSection(tester, section);
         expect(header, findsOneWidget, reason: section);
         expect(find.byKey(const Key('hp-minus')), findsOneWidget, reason: section);
-        expect(find.byKey(const Key('condition-add')), findsOneWidget, reason: section);
+        expect(find.byKey(const Key('states-summary')), findsOneWidget, reason: section);
+        // The conditions are edited in their own tab, under the summary.
+        expect(
+          find.byKey(const Key('condition-add')),
+          section == 'status' ? findsOneWidget : findsNothing,
+          reason: section,
+        );
         // The six stats live in their own tab, never in the header.
         expect(
           find.descendant(of: header, matching: find.byKey(const Key('combat-stats-grid'))),
@@ -163,14 +169,16 @@ void main() {
         expect(hp.right <= bar.left, isTrue, reason: '$width');
         expect(bar.right <= temp.left, isTrue, reason: '$width');
         expect((hp.center.dy - temp.center.dy).abs(), lessThan(8), reason: '$width');
-        // Second row: the damage and healing controls, then the states.
+        // Second row: the damage and healing controls, then the summary of
+        // the states on one line.
         final minus = rect('hp-minus');
         final plus = rect('hp-plus');
-        final conditions = rect('conditions-card');
+        final states = rect('states-summary');
         expect(minus.top >= bar.bottom, isTrue, reason: '$width');
-        expect(plus.right <= conditions.left, isTrue, reason: '$width');
-        expect((minus.center.dy - conditions.center.dy).abs(), lessThan(8), reason: '$width');
-        expect(rect('condition-add').right <= rect('combat-status').right, isTrue);
+        expect(plus.right <= states.left, isTrue, reason: '$width');
+        expect((minus.center.dy - states.center.dy).abs(), lessThan(8), reason: '$width');
+        expect(states.right <= rect('combat-status').right, isTrue);
+        expect(find.byKey(const Key('conditions-card')), findsNothing);
         expect(rect('combat-status').height, lessThanOrEqualTo(110), reason: '$width');
         expect(tester.takeException(), isNull);
       }
@@ -409,7 +417,10 @@ void main() {
         find.text('Uso de Hold Person gastado (quedan 1). Concentrándote en Hold Person.'),
         findsOneWidget,
       );
-      expect(find.byKey(const Key('concentration-chip')), findsOneWidget);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('states-summary'))).data,
+        'Concentración: Hold Person',
+      );
     });
   });
 

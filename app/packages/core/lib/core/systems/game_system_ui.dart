@@ -218,13 +218,17 @@ abstract class GameSystemUi {
 
   /// The "Combate" view of a character. [inSession] is the player's own view
   /// in "Mi sesión" (what the system asks the player first, no rests: those
-  /// live in the "Sesión" sub-tab).
+  /// live in the "Sesión" sub-tab). [scrollingHeader] (the app bar of the
+  /// page, on a short screen) goes on top of the view and scrolls away with
+  /// its content, coming back with the status of the character as soon as
+  /// the user scrolls up a little.
   Widget combatView(
     BuildContext context,
     CharacterDetail character, {
     required bool canEdit,
     bool isDm = false,
     bool inSession = false,
+    Widget? scrollingHeader,
   });
 
   /// The sub-tabs of "Detalle" that belong to the system.

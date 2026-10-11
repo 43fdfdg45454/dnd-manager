@@ -11,6 +11,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/systems/game_system_ui.dart';
 import '../../../core/systems/system_registry.dart';
 import '../../../core/ui/offline_widgets.dart';
+import '../../../core/ui/short_screen.dart';
 import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
 import '../../campaigns/ui/feedback.dart';
@@ -29,7 +30,9 @@ import 'character_detail_tabs.dart';
 /// and "Detalle" (the header with the status and the actions of the
 /// character over [CharacterDetailTabs]: the sub-tabs of the system,
 /// Inventario and Notas). The main view and the last sub-tab are remembered
-/// per character. A dice button floats over every tab.
+/// per character. A dice button floats over every tab. On a short screen (a
+/// phone in landscape, [isShortScreen]) the app bar scrolls away with the
+/// content and comes back as soon as the user scrolls up a little.
 class CharacterPage extends ConsumerWidget {
   const CharacterPage({super.key, required this.characterId});
 
@@ -176,51 +179,83 @@ class _CharacterViewState extends ConsumerState<_CharacterView>
     );
     final system = ref.watch(campaignSystemUiProvider(character.campaignId));
     final onDetail = _tabController.index == CharacterView.detail.index;
-    final headline = system.characterHeadline(character, compact: true);
+    // On a short screen (a phone in landscape) the app bar scrolls away with
+    // the content of each main view and comes back as soon as the user
+    // scrolls up a little; in portrait it stays over both.
+    final short = isShortScreen(context);
+    final title = _title(context, system);
+    final actions = _actions(context, permissions);
+    final tabBar = TabBar(
+      key: const Key('character-tabs'),
+      controller: _tabController,
+      tabs: _tabs,
+    );
+    final detailHeader = SliverToBoxAdapter(
+      child: _Header(
+        system: system,
+        character: character,
+        permissions: permissions,
+        onSubmit: () => runAction(
+          context,
+          () async {
+            await _controller(ref).submit();
+          },
+          success: 'Enviado al DM para aprobación',
+          describe: describeCharacterError,
+        ),
+        onActivate: () => runAction(
+          context,
+          () => _controller(ref).activate(),
+          success: 'Personaje activado.',
+          describe: describeCharacterError,
+        ),
+      ),
+    );
+    final combat = system.combatView(
+      context,
+      character,
+      canEdit: permissions.canEdit,
+      isDm: permissions.isDm,
+      scrollingHeader: short ? AppBar(title: title, actions: actions, bottom: tabBar) : null,
+    );
+    final detail = CharacterDetailTabs(character: character, permissions: permissions);
+
+    final Widget body;
+    if (short) {
+      // Each main view carries the app bar in its own scroll: the combat view
+      // floats it with the status of the character; "Detalle" with its header.
+      body = SafeArea(
+        bottom: false,
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            combat,
+            NestedScrollView(
+              floatHeaderSlivers: true,
+              headerSliverBuilder: (context, _) => [
+                SliverAppBar(
+                  floating: true,
+                  snap: true,
+                  title: title,
+                  actions: actions,
+                  bottom: tabBar,
+                ),
+                detailHeader,
+              ],
+              body: detail,
+            ),
+          ],
+        ),
+      );
+    } else {
+      body = NestedScrollView(
+        headerSliverBuilder: (context, _) => [if (onDetail) detailHeader],
+        body: TabBarView(controller: _tabController, children: [combat, detail]),
+      );
+    }
 
     return Scaffold(
-      appBar: AppBar(
-        title: system.characterAccent(
-          character,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                character.name,
-                key: const Key('character-title'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (headline != null)
-                DefaultTextStyle.merge(
-                  key: const Key('character-headline'),
-                  style: Theme.of(context).textTheme.bodySmall,
-                  child: headline,
-                ),
-            ],
-          ),
-        ),
-        actions: [
-          if (permissions.canDelete || permissions.isDm)
-            PopupMenuButton<String>(
-              key: const Key('character-menu'),
-              onSelected: (value) =>
-                  value == 'owner' ? _changeOwner(context, ref) : _delete(context, ref),
-              itemBuilder: (_) => [
-                if (permissions.isDm)
-                  const PopupMenuItem(
-                    key: Key('character-menu-owner'),
-                    value: 'owner',
-                    child: Text('Cambiar jugador'),
-                  ),
-                if (permissions.canDelete)
-                  const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
-              ],
-            ),
-        ],
-        bottom: TabBar(key: const Key('character-tabs'), controller: _tabController, tabs: _tabs),
-      ),
+      appBar: short ? null : AppBar(title: title, actions: actions, bottom: tabBar),
       floatingActionButton: FloatingActionButton(
         key: const Key('dice-fab'),
         tooltip: 'Dados',
@@ -229,47 +264,55 @@ class _CharacterViewState extends ConsumerState<_CharacterView>
       ),
       body: OfflineBannerLayout(
         scopes: [staleTree(CharactersRepository.characterPath(character.id))],
-        child: NestedScrollView(
-          headerSliverBuilder: (context, _) => [
-            if (onDetail)
-              SliverToBoxAdapter(
-                child: _Header(
-                  system: system,
-                  character: character,
-                  permissions: permissions,
-                  onSubmit: () => runAction(
-                    context,
-                    () async {
-                      await _controller(ref).submit();
-                    },
-                    success: 'Enviado al DM para aprobación',
-                    describe: describeCharacterError,
-                  ),
-                  onActivate: () => runAction(
-                    context,
-                    () => _controller(ref).activate(),
-                    success: 'Personaje activado.',
-                    describe: describeCharacterError,
-                  ),
-                ),
-              ),
-          ],
-          body: TabBarView(
-            controller: _tabController,
-            children: [
-              system.combatView(
-                context,
-                character,
-                canEdit: permissions.canEdit,
-                isDm: permissions.isDm,
-              ),
-              CharacterDetailTabs(character: character, permissions: permissions),
-            ],
-          ),
-        ),
+        child: body,
       ),
     );
   }
+
+  /// The name and the compact headline of the app bar.
+  Widget _title(BuildContext context, GameSystemUi system) {
+    final headline = system.characterHeadline(character, compact: true);
+    return system.characterAccent(
+      character,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            character.name,
+            key: const Key('character-title'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (headline != null)
+            DefaultTextStyle.merge(
+              key: const Key('character-headline'),
+              style: Theme.of(context).textTheme.bodySmall,
+              child: headline,
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// The menu of the app bar: "Cambiar jugador" (DM) and "Eliminar".
+  List<Widget> _actions(BuildContext context, CharacterPermissions permissions) => [
+    if (permissions.canDelete || permissions.isDm)
+      PopupMenuButton<String>(
+        key: const Key('character-menu'),
+        onSelected: (value) =>
+            value == 'owner' ? _changeOwner(context, ref) : _delete(context, ref),
+        itemBuilder: (_) => [
+          if (permissions.isDm)
+            const PopupMenuItem(
+              key: Key('character-menu-owner'),
+              value: 'owner',
+              child: Text('Cambiar jugador'),
+            ),
+          if (permissions.canDelete) const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+        ],
+      ),
+  ];
 }
 
 class _Header extends StatelessWidget {

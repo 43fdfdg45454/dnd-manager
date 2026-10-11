@@ -26,7 +26,7 @@ import 'package:opentrpg_dnd5e/characters/ui/combat/class_panels.dart';
 import 'package:opentrpg_dnd5e/characters/ui/combat/combat_support.dart' show Pip;
 import 'package:opentrpg_dnd5e/characters/ui/combat/panels/critical_damage_roll.dart';
 import 'package:opentrpg_dnd5e/characters/ui/combat/resources_section.dart' show canRestoreResource;
-import 'package:opentrpg_dnd5e/characters/ui/combat/vitals_section.dart' show ConditionsStrip;
+import 'package:opentrpg_dnd5e/characters/ui/combat/vitals_section.dart' show ConditionsPanel;
 import 'package:opentrpg_dnd5e/characters/ui/combat/wild_magic_surge.dart' show isWildMagicSurgeKey;
 import 'package:opentrpg_dnd5e/session/data/party_repository.dart';
 import 'package:opentrpg_dnd5e/session/party_models.dart' show PartyAdjustment;
@@ -94,6 +94,14 @@ Future<void> _pump(
   );
   await tester.pumpAndSettle();
 }
+
+/// The one-line summary of the states in the status header.
+String _states(WidgetTester tester) =>
+    tester.widget<Text>(find.byKey(const Key('states-summary'))).data ?? '';
+
+/// A chip of the "Estado" tab ([ConditionsPanel]) by its key.
+Finder _chip(String key) =>
+    find.descendant(of: find.byType(ConditionsPanel), matching: find.byKey(Key(key)));
 
 FakeCharactersRepository _repo({
   Map<String, dynamic>? combat,
@@ -377,7 +385,7 @@ void main() {
       );
       await _tap(tester, 'concentration-save-yes');
       expect(repo.concentrationCalls, isEmpty);
-      expect(find.byKey(const Key('concentration-chip')), findsOneWidget);
+      expect(_states(tester), 'Concentración: Bless');
     });
 
     testWidgets('"No" termina la concentración', (tester) async {
@@ -387,7 +395,7 @@ void main() {
       await _tap(tester, 'concentration-save-no');
 
       expect(repo.concentrationCalls, [null]);
-      expect(find.byKey(const Key('concentration-chip')), findsNothing);
+      expect(_states(tester), 'Sin estados');
       expect(find.text('Pierdes la concentración en Bless.'), findsOneWidget);
     });
 
@@ -544,22 +552,18 @@ void main() {
       await _tap(tester, 'number-confirm');
       expect(withConcentration.combatPatches.last.temporaryHitPoints, 7);
 
-      expect(find.text('Concentración: Bless'), findsOneWidget);
-      // The chip lives with the other states of the header.
-      expect(
-        find.descendant(
-          of: find.byType(ConditionsStrip),
-          matching: find.byKey(const Key('concentration-chip')),
-        ),
-        findsOneWidget,
-      );
+      // The header sums the states up; the chip lives in the "Estado" tab.
+      expect(_states(tester), 'Concentración: Bless');
+      expect(find.byKey(const Key('concentration-chip')), findsNothing);
+      // The inspiration lives there too, not in the header.
+      expect(find.byKey(const Key('inspiration')), findsNothing);
+      await openCombatSection(tester, 'status');
+      expect(_chip('concentration-chip'), findsOneWidget);
       await _tap(tester, 'concentration-lose');
       expect(withConcentration.concentrationCalls, [null]);
       expect(find.byKey(const Key('concentration-chip')), findsNothing);
+      expect(_states(tester), 'Sin estados');
 
-      // The inspiration lives in the "Estado" tab, not in the header.
-      expect(find.byKey(const Key('inspiration')), findsNothing);
-      await openCombatSection(tester, 'status');
       // La fixture arranca con inspiración: se quita.
       await _tap(tester, 'inspiration');
       expect(withConcentration.combatPatches.last.inspiration, isFalse);
@@ -706,14 +710,22 @@ void main() {
     testWidgets('se añade desde el catálogo y se quita', (tester) async {
       final repo = _repo();
       await _pump(tester, characters: repo, catalog: catalog);
+      // The header sums the states up; the chips live in the "Estado" tab.
+      expect(_states(tester), 'Sin estados');
+      expect(find.byKey(const Key('condition-add')), findsNothing);
+      await openCombatSection(tester, 'status');
       // Sin condiciones, el chip de añadir dice "Condición".
       expect(find.text('Condición'), findsOneWidget);
 
       await _tap(tester, 'condition-add');
       await _tap(tester, 'pick-condition-poisoned');
       expect(repo.combatPatches.last.conditions?.map((c) => c.index), ['poisoned']);
-      expect(find.byKey(const Key('condition-poisoned')), findsOneWidget);
-      expect(find.text('Envenenado'), findsOneWidget);
+      expect(_chip('condition-poisoned'), findsOneWidget);
+      expect(
+        find.descendant(of: _chip('condition-poisoned'), matching: find.text('Envenenado')),
+        findsOneWidget,
+      );
+      expect(_states(tester), 'Envenenado');
 
       // Las ya puestas no se ofrecen otra vez.
       await _tap(tester, 'condition-add');
@@ -731,6 +743,37 @@ void main() {
       await tester.pumpAndSettle();
       expect(repo.combatPatches.last.conditions, isEmpty);
       expect(find.byKey(const Key('condition-poisoned')), findsNothing);
+      expect(_states(tester), 'Sin estados');
+    });
+
+    testWidgets('el resumen de la cabecera abre la pestaña Estado', (tester) async {
+      final repo = FakeCharactersRepository(
+        characters: [
+          makeCharacterJson(
+              status: 'Active',
+              combat: makeCombatJson(),
+              concentratingOnSpellIndex: 'bless',
+            )
+            ..['conditions'] = [
+              {'index': 'poisoned'},
+            ],
+        ],
+      );
+      await _pump(tester, characters: repo, catalog: catalog);
+      expect(_states(tester), 'Concentración: Bless · Envenenado');
+      expect(find.byKey(const Key('condition-add')), findsNothing);
+      expect(find.byKey(const Key('combat-section-actions')), findsOneWidget);
+
+      await _tap(tester, 'states-summary');
+      expect(find.byKey(const Key('combat-section-status')), findsOneWidget);
+      expect(find.byKey(const Key('condition-add')), findsOneWidget);
+      expect(_chip('concentration-chip'), findsOneWidget);
+      expect(_chip('condition-poisoned'), findsOneWidget);
+      // The conditions come before the six stats.
+      expect(
+        tester.getBottomLeft(find.byKey(const Key('combat-conditions'))).dy,
+        lessThanOrEqualTo(tester.getTopLeft(find.byKey(const Key('combat-stats-grid'))).dy),
+      );
     });
 
     testWidgets(
@@ -746,14 +789,13 @@ void main() {
           ],
         );
         await _pump(tester, characters: repo, catalog: catalog);
+        await openCombatSection(tester, 'status');
 
-        Finder inConditions(String key) =>
-            find.descendant(of: find.byType(ConditionsStrip), matching: find.byKey(Key(key)));
-        expect(inConditions('concentration-chip'), findsOneWidget);
-        expect(inConditions('concentration-lose'), findsOneWidget);
+        expect(_chip('concentration-chip'), findsOneWidget);
+        expect(_chip('concentration-lose'), findsOneWidget);
         expect(find.text('Condición'), findsNothing);
 
-        await _tap(tester, inConditions('concentration-lose'));
+        await _tap(tester, _chip('concentration-lose'));
         expect(repo.concentrationCalls, [null]);
         expect(find.byKey(const Key('concentration-chip')), findsNothing);
         expect(find.text('Condición'), findsOneWidget);
@@ -783,11 +825,19 @@ void main() {
         ],
       );
       await _pump(tester, characters: repo, catalog: withConcentration);
+      expect(_states(tester), 'Concentración: Bless · Derribado');
+      await openCombatSection(tester, 'status');
       // One chip for the concentration, named after the spell; no second one
       // for the condition behind it.
-      expect(find.text('Concentración: Bless'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: _chip('concentration-chip'),
+          matching: find.text('Concentración: Bless'),
+        ),
+        findsOneWidget,
+      );
       expect(find.byKey(const Key('condition-concentration')), findsNothing);
-      expect(find.byKey(const Key('condition-prone')), findsOneWidget);
+      expect(_chip('condition-prone'), findsOneWidget);
 
       await _tap(tester, 'concentration-lose');
       expect(repo.concentrationCalls, [null]);
@@ -799,7 +849,11 @@ void main() {
       await _tap(tester, 'pick-condition-concentration');
       expect(repo.concentrationCalls, [null]);
       expect(repo.combatPatches.last.conditions?.map((c) => c.index), ['prone', 'concentration']);
-      expect(find.text('Concentración'), findsOneWidget);
+      expect(
+        find.descendant(of: _chip('concentration-chip'), matching: find.text('Concentración')),
+        findsOneWidget,
+      );
+      expect(_states(tester), 'Concentración · Derribado');
       await _tap(tester, 'concentration-lose');
       expect(repo.concentrationCalls, [null]);
       expect(repo.combatPatches.last.conditions?.map((c) => c.index), ['prone']);
@@ -834,11 +888,12 @@ void main() {
       await _tap(tester, 'spell-spend-bless');
       expect(repo.concentrationCalls, ['bless']);
       expect(repo.combatPatches.last.conditions?.map((c) => c.index), ['concentration']);
-      expect(find.text('Concentración: Bless'), findsOneWidget);
+      expect(_states(tester), 'Concentración: Bless');
     });
 
     testWidgets('el selector las ordena por su nombre en español', (tester) async {
       await _pump(tester, characters: _repo(), catalog: catalog);
+      await openCombatSection(tester, 'status');
       await _tap(tester, 'condition-add');
 
       final titles = [
@@ -872,6 +927,7 @@ void main() {
         },
       );
       await _pump(tester, characters: repo, catalog: withSpells);
+      await openCombatSection(tester, 'status');
       await _tap(tester, 'condition-add');
 
       // No special entry: every row is a catalog condition, in alphabetical
@@ -905,12 +961,17 @@ void main() {
     testWidgets('el agotamiento pide el nivel', (tester) async {
       final repo = _repo();
       await _pump(tester, characters: repo, catalog: catalog);
+      await openCombatSection(tester, 'status');
       await _tap(tester, 'condition-add');
       await _tap(tester, 'pick-condition-exhaustion');
       await _tap(tester, 'exhaustion-level-2');
       expect(repo.combatPatches.last.exhaustionLevel, 2);
       expect(repo.combatPatches.last.conditions, isNull);
-      expect(find.text('Agotamiento 2'), findsOneWidget);
+      expect(
+        find.descendant(of: _chip('condition-exhaustion'), matching: find.text('Agotamiento 2')),
+        findsOneWidget,
+      );
+      expect(_states(tester), 'Agotamiento 2');
 
       await tester.tap(
         find.descendant(
@@ -921,6 +982,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(repo.combatPatches.last.exhaustionLevel, 0);
       expect(find.byKey(const Key('condition-exhaustion')), findsNothing);
+      expect(_states(tester), 'Sin estados');
     });
   });
 
@@ -2766,7 +2828,7 @@ void main() {
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
       expect(repo.concentrationCalls, [null]);
-      expect(find.byKey(const Key('concentration-chip')), findsNothing);
+      expect(_states(tester), 'Sin estados');
     });
   });
 

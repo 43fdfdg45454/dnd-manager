@@ -12,16 +12,46 @@ import '../../dnd5e_characters_controller.dart';
 import '../../models.dart';
 import 'combat_rows.dart';
 import 'combat_support.dart';
+import 'vitals_section.dart' show ConditionsPanel;
 
 Dnd5eCharacterController _controller(WidgetRef ref, CharacterDetail character) =>
     ref.read(dnd5eCharacterControllerProvider(character.id).notifier);
 
-/// The "Estado" tab of the combat view: one row per stat with its full name,
-/// armor class, initiative (with its roll), speed, passive perception,
-/// proficiency bonus and inspiration (a tap toggles it). Each value opens its
-/// breakdown ([StatValue]).
+/// The "Estado" tab of the combat view: first the states of the character
+/// ("Condiciones", [ConditionsPanel]: the chips with "+" to add one), then
+/// one row per stat with its full name, armor class, initiative (with its
+/// roll), speed, passive perception, proficiency bonus and inspiration (a tap
+/// toggles it). Each value opens its breakdown ([StatValue]).
 class CombatStatusSection extends ConsumerWidget {
   const CombatStatusSection({super.key, required this.character, required this.canEdit});
+
+  final CharacterDetail character;
+  final bool canEdit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        CombatGroup(
+          key: const Key('combat-conditions'),
+          title: 'Condiciones',
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: ConditionsPanel(character: character, canEdit: canEdit),
+            ),
+          ],
+        ),
+        _StatsGroup(character: character, canEdit: canEdit),
+      ],
+    );
+  }
+}
+
+/// The six stats of the "Estado" tab.
+class _StatsGroup extends ConsumerWidget {
+  const _StatsGroup({required this.character, required this.canEdit});
 
   final CharacterDetail character;
   final bool canEdit;
@@ -131,7 +161,13 @@ class _StatRow extends StatelessWidget {
         children: [
           Expanded(child: Text(label, style: theme.textTheme.bodyLarge)),
           ?trailing,
-          StatValue(statKey: statKey, title: label, text: value, breakdown: breakdown, style: style),
+          StatValue(
+            statKey: statKey,
+            title: label,
+            text: value,
+            breakdown: breakdown,
+            style: style,
+          ),
         ],
       ),
     );

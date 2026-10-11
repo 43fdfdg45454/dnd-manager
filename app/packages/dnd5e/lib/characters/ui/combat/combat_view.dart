@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:opentrpg_core/core/motion/vignette.dart';
 import 'package:opentrpg_core/core/storage/local_preferences.dart';
+import 'package:opentrpg_core/core/systems/game_system_ui.dart' show GameSystemUi;
+import 'package:opentrpg_core/core/ui/short_screen.dart';
 
 import '../../../session/level_up_card.dart';
 import '../../../session/ui/player/combat_items_section.dart';
@@ -46,20 +50,29 @@ List<CombatSection> combatSectionsOf(CharacterDetail character) => [
   CombatSection.more,
 ];
 
-/// The combat screen of a character: a compact status header that never
-/// scrolls (two rows: hit points with the death saves at 0, then the quick
-/// damage and healing with the conditions) over one row of five tabs that
-/// scrolls sideways, the last one chosen remembered per character:
+/// Height of the row of section chips.
+const _sectionBarHeight = 48.0;
+
+/// The combat screen of a character: a compact status header (two rows: hit
+/// points with the death saves at 0, then the quick damage and healing with
+/// the one-line summary of the states) over one row of five tabs that scrolls
+/// sideways, the last one chosen remembered per character:
 ///
 /// - "Acciones": attacks, the spells it can cast in one tap and what each
 ///   class does on its turn.
 /// - "Conjuros": slots, the spells by level ("Preparados" / "Todos"), rituals
 ///   and "Preparar conjuros".
 /// - "Recursos": every limited use with its pips, recharge and origin.
-/// - "Estado": armor class, initiative, speed, passive perception,
+/// - "Estado": the conditions (a tap on the summary of the header opens
+///   them), then armor class, initiative, speed, passive perception,
 ///   proficiency bonus and inspiration, each with its breakdown.
 /// - "Más": companions, consumables, what the classes need to remember,
 ///   recoveries and rests.
+///
+/// In portrait the header and the tabs never scroll. On a short screen (a
+/// phone in landscape, [isShortScreen]) only the tabs stay pinned: the header
+/// (with [scrollingHeader] over it, the app bar of the page) scrolls away
+/// with the content and snaps back as soon as the user scrolls up a little.
 ///
 /// A tab with nothing to show loses its chip. Every action calls the server
 /// and then refreshes the character; nothing changes locally when a request
@@ -79,6 +92,7 @@ class CombatView extends ConsumerStatefulWidget {
     required this.canEdit,
     this.isDm = false,
     this.inSession = false,
+    this.scrollingHeader,
   });
 
   final CharacterDetail character;
@@ -86,12 +100,23 @@ class CombatView extends ConsumerStatefulWidget {
   final bool isDm;
   final bool inSession;
 
+  /// Goes over the status header and scrolls with it (see
+  /// [GameSystemUi.combatView]).
+  final Widget? scrollingHeader;
+
   @override
   ConsumerState<CombatView> createState() => _CombatViewState();
 }
 
-class _CombatViewState extends ConsumerState<CombatView> {
+class _CombatViewState extends ConsumerState<CombatView> with SingleTickerProviderStateMixin {
   CombatSection? _section;
+
+  /// How the floating header snaps in or out when a drag ends.
+  final _snap = FloatingHeaderSnapConfiguration();
+
+  /// Height of the status header when it floats (a short screen), measured
+  /// from the header itself; an estimate until the first layout.
+  double _headerHeight = 96;
 
   String get _preference => combatSectionPreference(widget.character.id);
 
@@ -113,32 +138,96 @@ class _CombatViewState extends ConsumerState<CombatView> {
     }
   }
 
+  void _headerMeasured(Size size) {
+    if (size.height == _headerHeight) return;
+    // Reported during layout: the extent changes on the next frame.
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _headerHeight = size.height);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = widget.character;
     final sections = combatSectionsOf(c);
     final wanted = _section ??= _stored();
     final section = sections.contains(wanted) ? wanted! : sections.first;
-    final body = Column(
-      key: Key(widget.inSession ? 'player-combat' : 'combat-view'),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        CombatStatusHeader(character: c, canEdit: widget.canEdit),
-        _SectionBar(sections: sections, selected: section, onSelected: _select),
-        Expanded(
-          child: ListView(
-            key: Key('combat-section-${section.name}'),
-            padding: EdgeInsets.fromLTRB(16, 0, 16, 96 + MediaQuery.paddingOf(context).bottom),
-            children: [
-              if (widget.inSession && c.pendingLevelUpTo != null) LevelUpCard(character: c),
-              ..._children(section),
-            ],
+    final status = CombatStatusHeader(
+      character: c,
+      canEdit: widget.canEdit,
+      onShowStates: () => _select(CombatSection.status),
+    );
+    final header = switch (widget.scrollingHeader) {
+      null => status,
+      // An app bar has no height of its own: it gets its preferred one (plus
+      // the status bar it covers).
+      final PreferredSizeWidget top => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: top.preferredSize.height + MediaQuery.paddingOf(context).top,
+            child: top,
           ),
-        ),
-      ],
+          status,
+        ],
+      ),
+      final top => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [top, status],
+      ),
+    };
+    final bar = _SectionBar(sections: sections, selected: section, onSelected: _select);
+    final padding = EdgeInsets.fromLTRB(16, 0, 16, 96 + MediaQuery.paddingOf(context).bottom);
+    final children = [
+      if (widget.inSession && c.pendingLevelUpTo != null) LevelUpCard(character: c),
+      ..._children(section),
+    ];
+    // Keyed by section: a new tab starts at the top (the header in view).
+    final sectionKey = Key('combat-section-${section.name}');
+    final Widget body;
+    if (isShortScreen(context)) {
+      body = CustomScrollView(
+        key: sectionKey,
+        slivers: [
+          SliverPersistentHeader(
+            floating: true,
+            delegate: _FixedExtentHeader(
+              extent: _headerHeight,
+              child: _MeasuredBox(onSize: _headerMeasured, child: header),
+              vsync: this,
+              snapConfiguration: _snap,
+            ),
+          ),
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _FixedExtentHeader(extent: _sectionBarHeight, child: bar),
+          ),
+          SliverPadding(
+            padding: padding,
+            sliver: SliverList.list(children: children),
+          ),
+        ],
+      );
+    } else {
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          header,
+          bar,
+          Expanded(
+            child: ListView(key: sectionKey, padding: padding, children: children),
+          ),
+        ],
+      );
+    }
+    final keyed = KeyedSubtree(
+      key: Key(widget.inSession ? 'player-combat' : 'combat-view'),
+      child: body,
     );
     // "Mi sesión" darkens its own edges.
-    return widget.inSession ? body : DarkVignette(active: c.hitPointsCurrent == 0, child: body);
+    return widget.inSession ? keyed : DarkVignette(active: c.hitPointsCurrent == 0, child: keyed);
   }
 
   List<Widget> _children(CombatSection section) {
@@ -182,7 +271,8 @@ class _CombatViewState extends ConsumerState<CombatView> {
 }
 
 /// One chip per tab of the combat view, keyed `combat-tab-<section>`, in a
-/// single row that scrolls sideways when the chips do not fit.
+/// single row that scrolls sideways when the chips do not fit. Opaque, since
+/// on a short screen the content scrolls under it.
 class _SectionBar extends StatelessWidget {
   const _SectionBar({required this.sections, required this.selected, required this.onSelected});
 
@@ -192,28 +282,115 @@ class _SectionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: SingleChildScrollView(
-        key: const Key('combat-tabs'),
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            for (final section in sections)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  key: Key('combat-tab-${section.name}'),
-                  label: Text(section.label),
-                  selected: section == selected,
-                  showCheckmark: false,
-                  onSelected: (_) => onSelected(section),
+    return ColoredBox(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: SizedBox(
+        height: _sectionBarHeight,
+        child: SingleChildScrollView(
+          key: const Key('combat-tabs'),
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              for (final section in sections)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    key: Key('combat-tab-${section.name}'),
+                    label: Text(section.label),
+                    selected: section == selected,
+                    showCheckmark: false,
+                    onSelected: (_) => onSelected(section),
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
+  }
+}
+
+/// A persistent header of a fixed [extent] that shows [child].
+class _FixedExtentHeader extends SliverPersistentHeaderDelegate {
+  const _FixedExtentHeader({
+    required this.extent,
+    required this.child,
+    this.vsync,
+    this.snapConfiguration,
+  });
+
+  final double extent;
+  final Widget child;
+
+  /// Both set, a floating header snaps fully in or out when the drag ends.
+  @override
+  final TickerProvider? vsync;
+
+  @override
+  final FloatingHeaderSnapConfiguration? snapConfiguration;
+
+  @override
+  double get minExtent => extent;
+
+  @override
+  double get maxExtent => extent;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => child;
+
+  @override
+  bool shouldRebuild(_FixedExtentHeader oldDelegate) =>
+      oldDelegate.extent != extent ||
+      oldDelegate.child != child ||
+      oldDelegate.vsync != vsync ||
+      oldDelegate.snapConfiguration != snapConfiguration;
+}
+
+/// Lays [child] out at its own height, whatever the height given, and reports
+/// that height ([onSize]) whenever it changes; the floating header takes its
+/// extent from it.
+class _MeasuredBox extends StatelessWidget {
+  const _MeasuredBox({required this.onSize, required this.child});
+
+  final ValueChanged<Size> onSize;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => OverflowBox(
+    alignment: Alignment.topCenter,
+    minHeight: 0,
+    maxHeight: double.infinity,
+    child: _SizeReporter(onSize: onSize, child: child),
+  );
+}
+
+class _SizeReporter extends SingleChildRenderObjectWidget {
+  const _SizeReporter({required this.onSize, required super.child});
+
+  final ValueChanged<Size> onSize;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderSizeReporter(onSize);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderSizeReporter renderObject) {
+    renderObject.onSize = onSize;
+  }
+}
+
+class _RenderSizeReporter extends RenderProxyBox {
+  _RenderSizeReporter(this.onSize);
+
+  ValueChanged<Size> onSize;
+  Size? _reported;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    if (size != _reported) {
+      _reported = size;
+      onSize(size);
+    }
   }
 }

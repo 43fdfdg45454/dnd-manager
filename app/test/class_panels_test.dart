@@ -553,7 +553,7 @@ void main() {
     await _pump(tester, characters: repo);
     await _tap(tester, 'ranger-hunters-mark');
     expect(repo.concentrationCalls, ['hunters-mark']);
-    expect(find.byKey(const Key('concentration-chip')), findsOneWidget);
+    expect(_text(tester, 'states-summary'), startsWith('Concentración: '));
     expect(find.text('Marca del cazador (activa)'), findsOneWidget);
     await _tap(tester, 'ranger-hunters-mark-critical');
     expect(find.text('Tirar 2d6'), findsOneWidget);
