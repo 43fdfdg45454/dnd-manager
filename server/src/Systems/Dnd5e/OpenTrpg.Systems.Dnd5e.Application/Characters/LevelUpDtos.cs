@@ -140,6 +140,9 @@ public sealed record LevelUpOptionDto(
     /// <summary>Feats that take saving throw proficiencies away (<c>grants.removeSavingThrows</c>), or null.</summary>
     public RemoveSavingThrowsDto? RemoveSavingThrows { get; init; }
 
+    /// <summary>Id of the catalog item the option stands for (a weapon or a tool proficiency), or null for other options.</summary>
+    public string? ItemId { get; init; }
+
     /// <summary>Change of the class skills chosen at creation that the option brings (−2: two fewer); 0 = none.</summary>
     public int SkillChoicesDelta { get; init; }
 }

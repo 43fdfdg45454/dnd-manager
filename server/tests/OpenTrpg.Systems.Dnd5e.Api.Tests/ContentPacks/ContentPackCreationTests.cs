@@ -371,7 +371,10 @@ public class ContentPackCreationTests(ContentPackCreationApiFactory factory) : I
         var fourth = await PlanAsync(s.Player, hero.Id, keeper);
         var weapon = fourth.Choices.Single(c => c.Key == $"{I("vigia-del-eco")}/arma");
         Assert.Equal("Weapon", weapon.Kind);
-        Assert.Equal([I("guadana-doble")], weapon.Options.Select(o => o.Index).ToArray());
+        var scythe = Assert.Single(weapon.Options);
+        Assert.Equal((I("guadana-doble"), "Guadaña doble"), (scythe.Index, scythe.Name));
+        Assert.Equal(["Arma exótica cuerpo a cuerpo · 1d10 cortante", "Propiedades: two-handed."], scythe.Description);
+        Assert.True(Guid.TryParse(scythe.ItemId, out _), $"itemId: {scythe.ItemId}");
         var save = fourth.Choices.Single(c => c.Key == $"{I("vigia-del-eco")}/salvacion");
         Assert.Equal(6, save.Options.Count);
         hero = await ApplyAsync(s.Player, hero.Id, new

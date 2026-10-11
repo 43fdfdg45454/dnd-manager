@@ -365,6 +365,12 @@ public class CatalogEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(15, conditions.Count);
         Assert.Contains(conditions, c => c.Index == "blinded" && c.Description.Count > 0);
 
+        var tools = await GetAsync<List<ReferenceEntryDto>>($"{Base}/reference/tools");
+        Assert.Equal(31, tools.Count);
+        var thieves = Assert.Single(tools, t => t.Index == "thieves-tools");
+        Assert.Contains("lock picks", Assert.Single(thieves.Description), StringComparison.Ordinal);
+        Assert.All(tools, t => Assert.NotEmpty(t.Description));
+
         var skills = await GetAsync<List<SkillDto>>($"{Base}/skills");
         Assert.Equal(18, skills.Count);
         Assert.Contains(skills, s => s.Index == "acrobatics" && s.AbilityIndex == "dex");

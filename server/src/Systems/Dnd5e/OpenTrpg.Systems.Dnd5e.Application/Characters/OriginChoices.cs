@@ -350,6 +350,7 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
                             o.SpellCategory)
                         {
                             DamageType = o.DamageType,
+                            ItemId = o.ItemId,
                             RemoveSavingThrows = o.Definition?.Grants.RemoveSavingThrows is { } remove
                                 ? new RemoveSavingThrowsDto(remove.Choose, remove.From)
                                 : null,
@@ -417,11 +418,14 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
         var origin = source == BreakdownSources.Background ? "trasfondo" : source == BreakdownSources.Subrace ? "subraza" : "raza";
 
         // A proficiency the character already has from elsewhere cannot be picked again (this choice's own picks can).
-        PlannedOption Proficiency(string key, ProficiencyType type, string index, string name, IReadOnlyList<string> description)
+        PlannedOption Proficiency(string key, ProficiencyType type, string index, string name, IReadOnlyList<string> description, ItemTemplate? item = null)
         {
             var own = character.OriginChoice(key)?.Selection.Selected.Any(s => s.Index == index) ?? false;
             var taken = !own && character.FindProficiency(type, index) is not null;
-            return new PlannedOption(index, name, description, null, !taken, taken ? "Ya tienes esta competencia." : null, null, null, []);
+            return new PlannedOption(index, name, description, null, !taken, taken ? "Ya tienes esta competencia." : null, null, null, [])
+            {
+                ItemId = item?.Id.ToString(),
+            };
         }
 
         PlannedOriginChoice Picks(string key, string name, string kind, PickChoice pick, IReadOnlyList<PlannedOption> options, bool freeText, int required, string note) =>
@@ -459,7 +463,8 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
         {
             var key = prefix + OriginChoiceKeys.Tools;
             var options = toolChoice.From
-                .Select(o => Proficiency(key, ProficiencyType.Tool, o.Index, o.Name, OriginOptionDescriptions.Tool(tools.FirstOrDefault(t => t.Index == o.Index))))
+                .Select(o => (Option: o, Item: tools.FirstOrDefault(t => t.Index == o.Index)))
+                .Select(p => Proficiency(key, ProficiencyType.Tool, p.Option.Index, p.Option.Name, OriginOptionDescriptions.Tool(p.Item), p.Item))
                 .ToList();
             var required = options.Count == 0 ? toolChoice.Choose : Math.Min(toolChoice.Choose, options.Count(o => o.Eligible));
             yield return Picks(key, $"Herramientas ({origin})", OriginChoiceKeys.ToolKind, toolChoice, options, options.Count == 0, required, string.Empty);

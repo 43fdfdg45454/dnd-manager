@@ -90,8 +90,42 @@ internal static class SrdSnapshot
     private const string Trimmed = "The pack importer trims the paragraphs and drops the empty ones (trailing spaces "
         + "and an empty paragraph of the old dataset).";
 
+    private const string ToolDescriptions = "The tool vocabulary (reference.tools) carries the description of the equipment entry "
+        + "of each tool; the old dataset left the vocabulary without text.";
+
     private static readonly Dictionary<string, (string Before, string Now, string Why)> AcceptedDifferences = new(StringComparer.Ordinal)
     {
+        ["ReferenceEntry/tools/alchemists-supplies"] = ("900e9ad2ec29ee71", "d37841ae58b8bcf5", ToolDescriptions),
+        ["ReferenceEntry/tools/bagpipes"] = ("b36dd2496c324da7", "455de8e57529d240", ToolDescriptions),
+        ["ReferenceEntry/tools/brewers-supplies"] = ("406c4ad9d3d0fd6e", "5de713f9be298ff2", ToolDescriptions),
+        ["ReferenceEntry/tools/calligraphers-supplies"] = ("a14c9a3300a31e6e", "65e8592c6a2a85ff", ToolDescriptions),
+        ["ReferenceEntry/tools/carpenters-tools"] = ("b3b0a8a82aba60d3", "90008e5a9af01b17", ToolDescriptions),
+        ["ReferenceEntry/tools/cartographers-tools"] = ("030b20e0d71d5481", "c66838e857a9f6b0", ToolDescriptions),
+        ["ReferenceEntry/tools/cobblers-tools"] = ("23b92d864a0ee631", "913aa953e41dea43", ToolDescriptions),
+        ["ReferenceEntry/tools/cooks-utensils"] = ("1c813abae8d56687", "3e429c5c58ab2d84", ToolDescriptions),
+        ["ReferenceEntry/tools/dice-set"] = ("5b0d81c6b0740313", "1a69f75ed429c391", ToolDescriptions),
+        ["ReferenceEntry/tools/drum"] = ("86e254101b6ac031", "35c3259c3a4cdbf5", ToolDescriptions),
+        ["ReferenceEntry/tools/dulcimer"] = ("6457c4fd39354832", "9c97a4f51eff831e", ToolDescriptions),
+        ["ReferenceEntry/tools/flute"] = ("8aab1dc467c6edf1", "ece561018f2fefd2", ToolDescriptions),
+        ["ReferenceEntry/tools/glassblowers-tools"] = ("179b5d93f7a99694", "3d1e2fc95cd594f6", ToolDescriptions),
+        ["ReferenceEntry/tools/horn"] = ("32271aa1b7ac5bec", "a0c39dac0068184c", ToolDescriptions),
+        ["ReferenceEntry/tools/jewelers-tools"] = ("706620838811fccb", "b6ebc5f52a73cecf", ToolDescriptions),
+        ["ReferenceEntry/tools/leatherworkers-tools"] = ("1bafb38a4174b41c", "e549f3dde4c93081", ToolDescriptions),
+        ["ReferenceEntry/tools/lute"] = ("6915cc4e731b18e9", "31077bcdfc1853de", ToolDescriptions),
+        ["ReferenceEntry/tools/lyre"] = ("028f683958a402fb", "150c316d3c0d0785", ToolDescriptions),
+        ["ReferenceEntry/tools/masons-tools"] = ("169da69379de7e5b", "b1f15922d5fd30c3", ToolDescriptions),
+        ["ReferenceEntry/tools/navigators-tools"] = ("2de695e7b9a74fec", "b07daadb2de21f3a", ToolDescriptions),
+        ["ReferenceEntry/tools/painters-supplies"] = ("dc2d5764c95406d3", "e302ea43dd4771c9", ToolDescriptions),
+        ["ReferenceEntry/tools/pan-flute"] = ("1f167716b418460d", "5458a1465efaa1ab", ToolDescriptions),
+        ["ReferenceEntry/tools/playing-card-set"] = ("7d5d58c618f73e1a", "31f04a028b5b5886", ToolDescriptions),
+        ["ReferenceEntry/tools/potters-tools"] = ("907692568184ac45", "10e5d920e70645fc", ToolDescriptions),
+        ["ReferenceEntry/tools/shawm"] = ("6fd24f8261115f18", "f80b15d419d5fe4d", ToolDescriptions),
+        ["ReferenceEntry/tools/smiths-tools"] = ("62b4da7dd7f524e2", "cae80b99c6662137", ToolDescriptions),
+        ["ReferenceEntry/tools/thieves-tools"] = ("82a5c210ba2d90b4", "a3cf8e6f96907f8b", ToolDescriptions),
+        ["ReferenceEntry/tools/tinkers-tools"] = ("fb1dda81c7fdce40", "e40854d571b62f9a", ToolDescriptions),
+        ["ReferenceEntry/tools/viol"] = ("64dafe630b3e82a7", "05e8db418e41ee99", ToolDescriptions),
+        ["ReferenceEntry/tools/weavers-tools"] = ("bc7f51e98422e7b6", "fd1f33d1dae855f9", ToolDescriptions),
+        ["ReferenceEntry/tools/woodcarvers-tools"] = ("c3899a26dda5cfd6", "1e5e597e0574a364", ToolDescriptions),
         ["ClassLevel/rogue-11"] = ("412dfa31598b8990", "b6e7c4543134a5cf", AsiRogue),
         ["ClassLevel/rogue-13"] = ("82444e86bb4b6c4c", "b9a2d2574ff3cd88", AsiRogue),
         ["ClassLevel/rogue-14"] = ("0f2ad91859fbf11a", "37a08c09b57d5b9b", AsiRogue),

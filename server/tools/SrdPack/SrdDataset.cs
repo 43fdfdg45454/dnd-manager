@@ -136,6 +136,9 @@ internal static class SrdDataset
         };
 
         var categories = Read<EquipmentCategoryJson>("Equipment-Categories");
+        var toolDescriptions = Read<EquipmentJson>("Equipment")
+            .Where(e => e.Desc is { Count: > 0 })
+            .ToDictionary(e => e.Index, e => (IEnumerable<string>?)e.Desc, StringComparer.Ordinal);
         return
         [
             .. Read<LanguageJson>("Languages").Select(l => Entry(
@@ -150,7 +153,7 @@ internal static class SrdDataset
             .. categories.Where(c => c.Index == "tools").SelectMany(c => c.Equipment ?? [])
                 .Where(t => t.Index is not null)
                 .DistinctBy(t => t.Index)
-                .Select(t => Entry(ReferenceEntry.Tools, t.Index!, t.Name, null)),
+                .Select(t => Entry(ReferenceEntry.Tools, t.Index!, t.Name, toolDescriptions.GetValueOrDefault(t.Index!))),
         ];
     }
 

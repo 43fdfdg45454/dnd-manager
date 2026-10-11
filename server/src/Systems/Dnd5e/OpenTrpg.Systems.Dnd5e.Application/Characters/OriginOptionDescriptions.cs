@@ -87,8 +87,8 @@ public static class OriginOptionDescriptions
     };
 
     /// <summary>
-    /// The description of the catalog item of a tool or instrument or, when it has none, its category
-    /// ("Herramientas de artesano"); a tool outside the catalog gets a generic line.
+    /// The category of a catalog tool or instrument ("Herramientas de artesano") followed by its own description when
+    /// it has one; a tool outside the catalog gets a generic line.
     /// </summary>
     public static IReadOnlyList<string> Tool(ItemTemplate? item)
     {
@@ -97,12 +97,67 @@ public static class OriginOptionDescriptions
             return ["Competencia con estas herramientas: sumas tu bonificador de competencia a las pruebas que hagas con ellas."];
         }
 
-        if (item.Description.Any(d => !string.IsNullOrWhiteSpace(d)))
+        var category = string.IsNullOrWhiteSpace(item.Subcategory) ? "Herramientas" : ToolCategories.GetValueOrDefault(item.Subcategory, item.Subcategory);
+        var description = item.Description.Where(d => !string.IsNullOrWhiteSpace(d)).ToList();
+        return description.Count == 0 ? [category] : [category, .. description];
+    }
+
+    /// <summary>
+    /// Summary of a catalog weapon ("Arma marcial cuerpo a cuerpo · 1d8 cortante · versátil (1d10)", with its range when
+    /// it has one), then its properties ("Propiedades: finesse, light.") when any and the item's own paragraphs.
+    /// </summary>
+    public static IReadOnlyList<string> Weapon(ItemTemplate item)
+    {
+        var summary = new List<string> { WeaponCategory(item.Subcategory) };
+        if (!string.IsNullOrWhiteSpace(item.DamageDice))
         {
-            return item.Description;
+            var type = string.IsNullOrWhiteSpace(item.DamageType) ? null : DamageTypes.Spanish(item.DamageType.Trim().ToLowerInvariant()).ToLowerInvariant();
+            summary.Add(type is null ? item.DamageDice : $"{item.DamageDice} {type}");
         }
 
-        return [string.IsNullOrWhiteSpace(item.Subcategory) ? "Herramientas" : ToolCategories.GetValueOrDefault(item.Subcategory, item.Subcategory)];
+        if (!string.IsNullOrWhiteSpace(item.VersatileDice))
+        {
+            summary.Add($"versátil ({item.VersatileDice})");
+        }
+
+        if (item.RangeNormal is { } normal)
+        {
+            summary.Add(item.RangeLong is { } far ? $"alcance {normal}/{far}" : $"alcance {normal}");
+        }
+
+        var lines = new List<string> { string.Join(" · ", summary) };
+        var properties = item.Properties.Where(p => !string.IsNullOrWhiteSpace(p)).ToList();
+        if (properties.Count > 0)
+        {
+            lines.Add($"Propiedades: {string.Join(", ", properties)}.");
+        }
+
+        lines.AddRange(item.Description.Where(d => !string.IsNullOrWhiteSpace(d)));
+        return lines;
+    }
+
+    /// <summary>"Arma sencilla cuerpo a cuerpo" for the "Simple Melee" subcategory; just "Arma" when it says nothing more.</summary>
+    private static string WeaponCategory(string? subcategory)
+    {
+        var parts = new List<string> { "Arma" };
+        foreach (var word in (subcategory ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var spanish = word.ToLowerInvariant() switch
+            {
+                "simple" => "sencilla",
+                "martial" => "marcial",
+                "exotic" => "exótica",
+                "melee" => "cuerpo a cuerpo",
+                "ranged" => "a distancia",
+                _ => null,
+            };
+            if (spanish is not null)
+            {
+                parts.Add(spanish);
+            }
+        }
+
+        return string.Join(' ', parts);
     }
 
     /// <summary>The skill text of the catalog or, when it is empty, the ability it uses.</summary>

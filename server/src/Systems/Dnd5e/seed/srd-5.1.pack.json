@@ -3,7 +3,7 @@
   "system": "dnd5e",
   "id": "srd",
   "name": "SRD 5.1",
-  "version": "5.1.1",
+  "version": "5.1.2",
   "attribution": "This work includes material taken from the System Reference Document 5.1 (“SRD 5.1”) by Wizards of the Coast LLC and available at https://dnd.wizards.com/resources/systems-reference-document. The SRD 5.1 is licensed under the Creative Commons Attribution 4.0 International License available at https://creativecommons.org/licenses/by/4.0/legalcode.",
   "skills": [
     {
@@ -1691,157 +1691,219 @@
       {
         "index": "alchemists-supplies",
         "name": "Alchemist's Supplies",
-        "description": []
+        "description": [
+          "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
+        ]
       },
       {
         "index": "brewers-supplies",
         "name": "Brewer's Supplies",
-        "description": []
+        "description": [
+          "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
+        ]
       },
       {
         "index": "calligraphers-supplies",
         "name": "Calligrapher's Supplies",
-        "description": []
+        "description": [
+          "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
+        ]
       },
       {
         "index": "carpenters-tools",
         "name": "Carpenter's Tools",
-        "description": []
+        "description": [
+          "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
+        ]
       },
       {
         "index": "cartographers-tools",
         "name": "Cartographer's Tools",
-        "description": []
+        "description": [
+          "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
+        ]
       },
       {
         "index": "cobblers-tools",
         "name": "Cobbler's Tools",
-        "description": []
+        "description": [
+          "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
+        ]
       },
       {
         "index": "cooks-utensils",
         "name": "Cook's utensils",
-        "description": []
+        "description": [
+          "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
+        ]
       },
       {
         "index": "glassblowers-tools",
         "name": "Glassblower's Tools",
-        "description": []
+        "description": [
+          "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
+        ]
       },
       {
         "index": "jewelers-tools",
         "name": "Jeweler's Tools",
-        "description": []
+        "description": [
+          "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
+        ]
       },
       {
         "index": "leatherworkers-tools",
         "name": "Leatherworker's Tools",
-        "description": []
+        "description": [
+          "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
+        ]
       },
       {
         "index": "masons-tools",
         "name": "Mason's Tools",
-        "description": []
+        "description": [
+          "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
+        ]
       },
       {
         "index": "painters-supplies",
         "name": "Painter's Supplies",
-        "description": []
+        "description": [
+          "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
+        ]
       },
       {
         "index": "potters-tools",
         "name": "Potter's Tools",
-        "description": []
+        "description": [
+          "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
+        ]
       },
       {
         "index": "smiths-tools",
         "name": "Smith's Tools",
-        "description": []
+        "description": [
+          "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
+        ]
       },
       {
         "index": "tinkers-tools",
         "name": "Tinker's Tools",
-        "description": []
+        "description": [
+          "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
+        ]
       },
       {
         "index": "weavers-tools",
         "name": "Weaver's Tools",
-        "description": []
+        "description": [
+          "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
+        ]
       },
       {
         "index": "woodcarvers-tools",
         "name": "Woodcarver's Tools",
-        "description": []
+        "description": [
+          "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
+        ]
       },
       {
         "index": "dice-set",
         "name": "Dice Set",
-        "description": []
+        "description": [
+          "This item encompasses a wide range of game pieces, including dice and decks of cards (for games such as Three-Dragon Ante). A few common examples appear on the Tools table, but other kinds of gaming sets exist. If you are proficient with a gaming set, you can add your proficiency bonus to ability checks you make to play a game with that set. Each type of gaming set requires a separate proficiency."
+        ]
       },
       {
         "index": "playing-card-set",
         "name": "Playing Card Set",
-        "description": []
+        "description": [
+          "This item encompasses a wide range of game pieces, including dice and decks of cards (for games such as Three-Dragon Ante). A few common examples appear on the Tools table, but other kinds of gaming sets exist. If you are proficient with a gaming set, you can add your proficiency bonus to ability checks you make to play a game with that set. Each type of gaming set requires a separate proficiency."
+        ]
       },
       {
         "index": "bagpipes",
         "name": "Bagpipes",
-        "description": []
+        "description": [
+          "Several of the most common types of musical instruments are shown on the table as examples. If you have proficiency with a given musical instrument, you can add your proficiency bonus to any ability checks you make to play music with the instrument. A bard can use a musical instrument as a spellcasting focus. Each type of musical instrument requires a separate proficiency."
+        ]
       },
       {
         "index": "drum",
         "name": "Drum",
-        "description": []
+        "description": [
+          "Several of the most common types of musical instruments are shown on the table as examples. If you have proficiency with a given musical instrument, you can add your proficiency bonus to any ability checks you make to play music with the instrument. A bard can use a musical instrument as a spellcasting focus. Each type of musical instrument requires a separate proficiency."
+        ]
       },
       {
         "index": "dulcimer",
         "name": "Dulcimer",
-        "description": []
+        "description": [
+          "Several of the most common types of musical instruments are shown on the table as examples. If you have proficiency with a given musical instrument, you can add your proficiency bonus to any ability checks you make to play music with the instrument. A bard can use a musical instrument as a spellcasting focus. Each type of musical instrument requires a separate proficiency."
+        ]
       },
       {
         "index": "flute",
         "name": "Flute",
-        "description": []
+        "description": [
+          "Several of the most common types of musical instruments are shown on the table as examples. If you have proficiency with a given musical instrument, you can add your proficiency bonus to any ability checks you make to play music with the instrument. A bard can use a musical instrument as a spellcasting focus. Each type of musical instrument requires a separate proficiency."
+        ]
       },
       {
         "index": "lute",
         "name": "Lute",
-        "description": []
+        "description": [
+          "Several of the most common types of musical instruments are shown on the table as examples. If you have proficiency with a given musical instrument, you can add your proficiency bonus to any ability checks you make to play music with the instrument. A bard can use a musical instrument as a spellcasting focus. Each type of musical instrument requires a separate proficiency."
+        ]
       },
       {
         "index": "lyre",
         "name": "Lyre",
-        "description": []
+        "description": [
+          "Several of the most common types of musical instruments are shown on the table as examples. If you have proficiency with a given musical instrument, you can add your proficiency bonus to any ability checks you make to play music with the instrument. A bard can use a musical instrument as a spellcasting focus. Each type of musical instrument requires a separate proficiency."
+        ]
       },
       {
         "index": "horn",
         "name": "Horn",
-        "description": []
+        "description": [
+          "Several of the most common types of musical instruments are shown on the table as examples. If you have proficiency with a given musical instrument, you can add your proficiency bonus to any ability checks you make to play music with the instrument. A bard can use a musical instrument as a spellcasting focus. Each type of musical instrument requires a separate proficiency."
+        ]
       },
       {
         "index": "pan-flute",
         "name": "Pan flute",
-        "description": []
+        "description": [
+          "Several of the most common types of musical instruments are shown on the table as examples. If you have proficiency with a given musical instrument, you can add your proficiency bonus to any ability checks you make to play music with the instrument. A bard can use a musical instrument as a spellcasting focus. Each type of musical instrument requires a separate proficiency."
+        ]
       },
       {
         "index": "shawm",
         "name": "Shawm",
-        "description": []
+        "description": [
+          "Several of the most common types of musical instruments are shown on the table as examples. If you have proficiency with a given musical instrument, you can add your proficiency bonus to any ability checks you make to play music with the instrument. A bard can use a musical instrument as a spellcasting focus. Each type of musical instrument requires a separate proficiency."
+        ]
       },
       {
         "index": "viol",
         "name": "Viol",
-        "description": []
+        "description": [
+          "Several of the most common types of musical instruments are shown on the table as examples. If you have proficiency with a given musical instrument, you can add your proficiency bonus to any ability checks you make to play music with the instrument. A bard can use a musical instrument as a spellcasting focus. Each type of musical instrument requires a separate proficiency."
+        ]
       },
       {
         "index": "navigators-tools",
         "name": "Navigator's Tools",
-        "description": []
+        "description": [
+          "This set of instruments is used for navigation at sea. Proficiency with navigator's tools lets you chart a ship's course and follow navigation charts. In addition, these tools allow you to add your proficiency bonus to any ability check you make to avoid getting lost at sea."
+        ]
       },
       {
         "index": "thieves-tools",
         "name": "Thieves' Tools",
-        "description": []
+        "description": [
+          "This set of tools includes a small file, a set of lock picks, a small mirror mounted on a metal handle, a set of narrow-bladed scissors, and a pair of pliers. Proficiency with these tools lets you add your proficiency bonus to any ability checks you make to disarm traps or open locks."
+        ]
       }
     ]
   },
