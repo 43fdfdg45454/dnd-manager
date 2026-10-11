@@ -231,6 +231,7 @@ class CharacterItem {
     required this.id,
     this.templateId,
     this.templateName,
+    this.templateIndex,
     this.quantity = 1,
     this.equipped = false,
     this.attuned = false,
@@ -250,6 +251,7 @@ class CharacterItem {
       id: _str(json['id']),
       templateId: templateId,
       templateName: _strOrNull(json['templateName']),
+      templateIndex: _strOrNull(json['templateIndex']),
       quantity: _int(json['quantity']) ?? 1,
       equipped: _bool(json['equipped']),
       attuned: _bool(json['attuned']),
@@ -266,6 +268,10 @@ class CharacterItem {
   final String id;
   final String? templateId;
   final String? templateName;
+
+  /// Catalog index of the template (SRD and content packs); null for homebrew
+  /// and items made by hand.
+  final String? templateIndex;
   final int quantity;
   final bool equipped;
   final bool attuned;
@@ -296,6 +302,7 @@ class CharacterItem {
     id: id,
     templateId: templateId,
     templateName: templateName,
+    templateIndex: templateIndex,
     quantity: quantity ?? this.quantity,
     equipped: equipped ?? this.equipped,
     attuned: attuned ?? this.attuned,

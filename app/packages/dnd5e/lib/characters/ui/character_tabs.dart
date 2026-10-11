@@ -26,6 +26,7 @@ import '../models.dart';
 import 'combat/companion_section.dart';
 import 'item_enhancements_section.dart';
 import 'level_up/character_choices_section.dart';
+import 'proficiencies_section.dart';
 import 'skill_rolls.dart' show rollSkill, rollSkillWithMode;
 
 /// Icon with the note of an override, shown on long press. Renders nothing for
@@ -544,21 +545,6 @@ class SkillsTab extends StatelessWidget {
           ]..sort((a, b) => skillLabel(a.index, a.name).compareTo(skillLabel(b.index, b.name))),
         ),
     ];
-    final others = [
-      for (final t in const [
-        ProficiencyType.armor,
-        ProficiencyType.weapon,
-        ProficiencyType.tool,
-        ProficiencyType.language,
-      ])
-        (
-          type: t,
-          keys: [
-            for (final p in character.proficiencies)
-              if (p.type == t) p.key,
-          ],
-        ),
-    ];
     return _TabList(
       children: [
         const SectionTitle('Habilidades'),
@@ -607,20 +593,10 @@ class SkillsTab extends StatelessWidget {
               ),
           ],
         ),
-        for (final group in others)
-          if (group.keys.isNotEmpty) ...[
-            SectionTitle(switch (group.type) {
-              ProficiencyType.armor => 'Armaduras',
-              ProficiencyType.weapon => 'Armas',
-              ProficiencyType.tool => 'Herramientas',
-              _ => 'Idiomas',
-            }),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [for (final k in group.keys) Chip(label: Text(k))],
-            ),
-          ],
+        if (character.proficiencies.any(
+          (p) => p.type != ProficiencyType.skill && p.type != ProficiencyType.savingThrow,
+        ))
+          ProficienciesSection(character: character),
       ],
     );
   }

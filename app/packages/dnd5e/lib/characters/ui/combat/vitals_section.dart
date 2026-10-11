@@ -22,6 +22,7 @@ import '../../models.dart';
 import '../character_tabs.dart' show OverrideMark, titleFromSpellIndex;
 import 'combat_support.dart';
 import 'concentration_flow.dart';
+import 'concentration_picker.dart';
 
 Dnd5eCharacterController _controller(WidgetRef ref, CharacterDetail character) =>
     ref.read(dnd5eCharacterControllerProvider(character.id).notifier);
@@ -657,8 +658,13 @@ class ConditionsCard extends ConsumerWidget {
       context,
       taken: {for (final k in character.conditions) k.index},
       campaignId: character.campaignId,
+      offerConcentration: character.concentratingOnSpellIndex == null,
     );
     if (picked == null || !context.mounted) return;
+    if (picked.index == concentrationPickIndex) {
+      await _startConcentration(context, ref);
+      return;
+    }
     if (picked.index == 'exhaustion') {
       await _setExhaustion(context, ref);
       return;
@@ -673,6 +679,19 @@ class ConditionsCard extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  /// Concentration is always on a spell: picks it and starts concentrating.
+  Future<void> _startConcentration(BuildContext context, WidgetRef ref) async {
+    final spell = await showConcentrationSpellPicker(context, character);
+    if (spell == null || !context.mounted) return;
+    if (!await confirmReplaceConcentration(context, ref, character, spell.index)) return;
+    if (!context.mounted) return;
+    await runCombat(
+      context,
+      () => _controller(ref, character).setConcentration(spell.index),
+      success: 'Concentrándote en ${spell.name}.',
     );
   }
 
@@ -721,7 +740,7 @@ class ConditionsCard extends ConsumerWidget {
         for (final cond in c.conditions)
           InputChip(
             key: Key('condition-${cond.index}'),
-            label: Text(names[cond.index] ?? titleFromSpellIndex(cond.index)),
+            label: Text(conditionTitle(cond.index, names[cond.index])),
             deleteButtonTooltipMessage: 'Quitar',
             onDeleted: canEdit
                 ? () => runCombat(
@@ -740,7 +759,9 @@ class ConditionsCard extends ConsumerWidget {
         if (c.exhaustionLevel > 0)
           InputChip(
             key: const Key('condition-exhaustion'),
-            label: Text('${names['exhaustion'] ?? 'Exhaustion'} ${c.exhaustionLevel}'),
+            label: Text(
+              '${conditionTitle('exhaustion', names['exhaustion'])} ${c.exhaustionLevel}',
+            ),
             deleteButtonTooltipMessage: 'Quitar',
             onPressed: canEdit ? () => _setExhaustion(context, ref) : null,
             onDeleted: canEdit
@@ -800,12 +821,20 @@ class ConditionsCard extends ConsumerWidget {
   }
 }
 
+/// Index of the "Concentración" entry of the [ConditionPicker]: the picker
+/// returns a [Condition] with this index when it is chosen (never a catalog
+/// index, which has no `#`).
+const concentrationPickIndex = '#concentration';
+
 /// Opens the [ConditionPicker] in a draggable bottom sheet (like the other long
-/// pickers of the app) and returns the picked condition, or null.
+/// pickers of the app) and returns the picked condition, or null. With
+/// [offerConcentration] the list starts with "Concentración" (see
+/// [concentrationPickIndex]).
 Future<Condition?> showConditionPicker(
   BuildContext context, {
   required Set<String> taken,
   String? campaignId,
+  bool offerConcentration = false,
 }) {
   return showModalBottomSheet<Condition>(
     context: context,
@@ -816,18 +845,32 @@ Future<Condition?> showConditionPicker(
       initialChildSize: 0.7,
       minChildSize: 0.4,
       maxChildSize: 0.95,
-      builder: (_, controller) =>
-          ConditionPicker(taken: taken, campaignId: campaignId, scrollController: controller),
+      builder: (_, controller) => ConditionPicker(
+        taken: taken,
+        campaignId: campaignId,
+        offerConcentration: offerConcentration,
+        scrollController: controller,
+      ),
     ),
   );
 }
 
-/// Picks one condition of the SRD list that is not in [taken]; every row has a
-/// [DetailInfoButton] with the rules of the condition (the picker stays open).
+/// Picks one condition of the catalog that is not in [taken], by its Spanish
+/// name in alphabetical order; every row has a [DetailInfoButton] with the
+/// rules of the condition (the picker stays open).
 class ConditionPicker extends ConsumerWidget {
-  const ConditionPicker({super.key, required this.taken, this.campaignId, this.scrollController});
+  const ConditionPicker({
+    super.key,
+    required this.taken,
+    this.campaignId,
+    this.offerConcentration = false,
+    this.scrollController,
+  });
 
   final Set<String> taken;
+
+  /// Starts the list with "Concentración" (the character is not concentrating).
+  final bool offerConcentration;
 
   /// The campaign whose catalog offers the conditions (its content packs);
   /// null for the global catalog.
@@ -851,31 +894,55 @@ class ConditionPicker extends ConsumerWidget {
         ],
       ),
       data: (list) {
+        // One entry per index (the catalog of a campaign never repeats one,
+        // but a repeated index would otherwise show twice).
+        final seen = <String>{};
         final available = [
           for (final cond in list)
-            if (!taken.contains(cond.index)) cond,
-        ];
-        if (available.isEmpty) {
+            if (!taken.contains(cond.index) && seen.add(cond.index))
+              (condition: cond, title: conditionTitle(cond.index, cond.name)),
+        ]..sort((a, b) => foldForSort(a.title).compareTo(foldForSort(b.title)));
+        if (available.isEmpty && !offerConcentration) {
           return const Padding(
             padding: EdgeInsets.all(16),
             child: Text('No hay más condiciones disponibles.'),
           );
         }
+        final offset = offerConcentration ? 1 : 0;
         return ListView.builder(
           key: const Key('condition-picker-list'),
           controller: scrollController,
-          itemCount: available.length,
+          itemCount: available.length + offset,
           itemBuilder: (context, i) {
-            final cond = available[i];
+            if (i < offset) {
+              return ListTile(
+                key: const Key('pick-concentration'),
+                leading: const AppIcon(AppIcons.anchor, size: 20),
+                title: const Text('Concentración'),
+                subtitle: const Text('Elige el conjuro en el que te concentras'),
+                onTap: () =>
+                    Navigator.of(context)
+                        .pop(const Condition(index: concentrationPickIndex, name: 'Concentración')),
+              );
+            }
+            final (:condition, :title) = available[i - offset];
             return ListTile(
-              key: Key('pick-condition-${cond.index}'),
-              title: Text(cond.name),
+              key: Key('pick-condition-${condition.index}'),
+              title: Text(title),
               trailing: DetailInfoButton(
-                key: Key('condition-info-${cond.index}'),
+                key: Key('condition-info-${condition.index}'),
                 tooltip: 'Ver descripción',
-                onPressed: () => showConditionSheet(context, cond),
+                onPressed: () => showConditionSheet(
+                  context,
+                  Condition(
+                    index: condition.index,
+                    name: title,
+                    description: condition.description,
+                    source: condition.source,
+                  ),
+                ),
               ),
-              onTap: () => Navigator.of(context).pop(cond),
+              onTap: () => Navigator.of(context).pop(condition),
             );
           },
         );

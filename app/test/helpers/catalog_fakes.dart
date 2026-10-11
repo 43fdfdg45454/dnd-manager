@@ -212,6 +212,7 @@ class FakeCatalogRepository implements CatalogRepository {
         .where(
           (s) =>
               (level == null || s.level == level) &&
+              (concentration == null || s.concentration == concentration) &&
               (tag == null || s.tags.contains(tag)) &&
               s.name.toLowerCase().contains(q),
         )
