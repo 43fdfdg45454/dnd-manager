@@ -26,7 +26,7 @@ extension WizardStepInfo on WizardStep {
     WizardStep.race => 'Raza',
     WizardStep.classChoice => 'Clase',
     WizardStep.abilities => 'Características',
-    WizardStep.background => 'Trasfondo',
+    WizardStep.background => 'Trasfondo y competencias',
     WizardStep.personality => 'Personalidad',
     WizardStep.origin => 'Elecciones de raza y trasfondo',
     WizardStep.starterFeat => 'Dote inicial',
@@ -38,6 +38,10 @@ extension WizardStepInfo on WizardStep {
   /// [title] for the wizard in [state]: the origin step names what it asks
   /// (the race and background, the class, or both).
   String titleIn(WizardState state) => this == WizardStep.origin ? state.originStepLabel : title;
+
+  /// Error of this step as the review names it: "Trasfondo y competencias:
+  /// elige 2 habilidades".
+  String reviewError(WizardState state, String error) => '${titleIn(state)}: ${_lowerFirst(error)}';
 
   AppIcons get icon => switch (this) {
     WizardStep.name => AppIcons.quill,
@@ -52,6 +56,33 @@ extension WizardStepInfo on WizardStep {
     WizardStep.spells => AppIcons.spellbook,
     WizardStep.review => AppIcons.scroll,
   };
+}
+
+/// [text] with its first letter in lower case, to follow a step name. A text
+/// that starts with a name ("Estilo de combate: elige…") or an acronym is kept.
+String _lowerFirst(String text) {
+  if (text.length < 2 || text.contains(': ')) return text;
+  final second = text[1];
+  if (second.toUpperCase() == second && second.toLowerCase() != second) return text;
+  return text[0].toLowerCase() + text.substring(1);
+}
+
+/// Error shown at the bottom of [state]'s current step, or null: the review
+/// names the first invalid step; any other step shows its own error once the
+/// user tried to leave it (not while the origin choices are still loading).
+String? wizardStepError(WizardState state) {
+  final current = state.currentStep;
+  if (current == WizardStep.review) {
+    if (state.firstInvalidStep case (:final step, :final error)) {
+      return step.reviewError(state, error);
+    }
+    return null;
+  }
+  if (!state.showsErrorsOf(current)) return null;
+  if ((current == WizardStep.origin || current == WizardStep.starterFeat) && state.originLoading) {
+    return null;
+  }
+  return state.validate(state.step);
 }
 
 /// Step-by-step creation of a character: name, race, class, abilities,
@@ -116,12 +147,9 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
   String? _advanceError;
 
   Future<void> _submit() async {
+    // The review already shows the first invalid step: nothing is created.
     final step = ref.read(characterWizardControllerProvider(_args)).step;
-    final error = _controller.validate(step);
-    if (error != null) {
-      setState(() => _attemptedStep = step);
-      return;
-    }
+    if (_controller.validate(step) != null) return;
     setState(() {
       _submitting = true;
       _submitError = null;
@@ -177,7 +205,7 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
     final step = state.step.clamp(0, steps.length - 1);
     final current = steps[step];
     final isLast = step == steps.length - 1;
-    final error = _attemptedStep == step ? (_advanceError ?? state.validate(step)) : null;
+    final error = (_attemptedStep == step ? _advanceError : null) ?? wizardStepError(state);
     final scheme = Theme.of(context).colorScheme;
 
     return PopScope(

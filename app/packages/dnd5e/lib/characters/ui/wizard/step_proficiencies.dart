@@ -76,6 +76,17 @@ class BackgroundStep extends ConsumerWidget {
     final fixed = state.fixedLanguages;
     final toChoose = state.languagesToChoose;
     final remaining = state.languagesRemaining;
+    // Once the user tried to leave the step, the counter that does not match
+    // turns red (the message is at the bottom of the wizard).
+    final showErrors = state.showsErrorsOf(WizardStep.background);
+    final skillsInvalid = showErrors && skillsToChoose > 0 && state.skills.length != skillsToChoose;
+    final languagesInvalid =
+        showErrors &&
+        (state.languages.length > toChoose ||
+            state.distributeLanguages(state.languages.toList()) == null);
+    TextStyle? counterStyle(bool invalid) => invalid
+        ? theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)
+        : theme.textTheme.bodySmall;
     final languages = <String>{
       ...srdLanguages.keys,
       ...fixed,
@@ -156,7 +167,7 @@ class BackgroundStep extends ConsumerWidget {
             Text(
               'Habilidades de clase ${state.skills.length}/$skillsToChoose',
               key: const Key('wizard-skills-counter'),
-              style: theme.textTheme.bodySmall,
+              style: counterStyle(skillsInvalid),
             ),
             if (state.starterSkillChoicesDelta != 0)
               Text(
@@ -199,7 +210,7 @@ class BackgroundStep extends ConsumerWidget {
                 ? 'Tu raza y trasfondo no te dan idiomas adicionales'
                 : 'Idiomas a elegir ${state.languages.length}/$toChoose',
             key: const Key('wizard-languages-counter'),
-            style: theme.textTheme.bodySmall,
+            style: counterStyle(languagesInvalid),
           ),
           if (toChoose > 0 && remaining > 0)
             Padding(

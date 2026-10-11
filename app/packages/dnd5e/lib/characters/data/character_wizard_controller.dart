@@ -248,10 +248,17 @@ class WizardState {
     this.backgroundDetail = '',
     this.heightText = '',
     this.weightText = '',
+    this.checked = const {},
   });
 
   /// Index in [steps].
   final int step;
+
+  /// Steps the user already tried to leave with "Siguiente" (passed or not):
+  /// their errors are shown live from then on, so a later change that
+  /// invalidates one (another class empties the skills) is visible when
+  /// coming back to it.
+  final Set<WizardStep> checked;
   final String name;
 
   /// Null: the user themselves for a player (the owner is not sent), an NPC
@@ -991,8 +998,10 @@ class WizardState {
     String? backgroundDetail,
     String? heightText,
     String? weightText,
+    Set<WizardStep>? checked,
   }) => WizardState(
     step: step ?? this.step,
+    checked: checked ?? this.checked,
     name: name ?? this.name,
     owner: identical(owner, _unset) ? this.owner : owner as ({String? userId})?,
     raceIndex: identical(raceIndex, _unset) ? this.raceIndex : raceIndex as String?,
@@ -1114,13 +1123,25 @@ class WizardState {
         }
         return null;
       case WizardStep.review:
-        for (var i = 0; i < steps.length - 1; i++) {
-          final error = validate(i);
-          if (error != null) return error;
-        }
-        return null;
+        return firstInvalidStep?.error;
     }
   }
+
+  /// Steps before the review that do not validate, with their error, in order.
+  List<({WizardStep step, String error})> get invalidSteps {
+    final steps = this.steps;
+    return [
+      for (var i = 0; i < steps.length - 1; i++)
+        if (validate(i) case final error?) (step: steps[i], error: error),
+    ];
+  }
+
+  /// First step before the review that does not validate, or null.
+  ({WizardStep step, String error})? get firstInvalidStep => invalidSteps.firstOrNull;
+
+  /// Whether the errors of [step] are shown: the review always, any other
+  /// step once the user tried to leave it ([checked]).
+  bool showsErrorsOf(WizardStep step) => step == WizardStep.review || checked.contains(step);
 
   String? _validateAbilities() {
     switch (method) {
@@ -1342,8 +1363,17 @@ class CharacterWizardController extends Notifier<WizardState> {
 
   void back() => goTo(state.step - 1);
 
+  /// Marks the current step as [WizardState.checked].
+  void _check() {
+    final current = state.currentStep;
+    if (!state.checked.contains(current)) {
+      state = state.copyWith(checked: {...state.checked, current});
+    }
+  }
+
   /// Moves to the next step when the current one is valid; returns its error otherwise.
   String? next() {
+    _check();
     final error = state.validate(state.step);
     if (error != null) return error;
     goTo(state.step + 1);
@@ -1357,6 +1387,7 @@ class CharacterWizardController extends Notifier<WizardState> {
     if (state.currentStep != WizardStep.origin && state.currentStep != WizardStep.starterFeat) {
       return next();
     }
+    _check();
     final error = state.validate(state.step);
     if (error != null) return error;
     try {

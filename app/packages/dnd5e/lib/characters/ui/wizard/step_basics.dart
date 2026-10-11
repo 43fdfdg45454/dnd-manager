@@ -106,7 +106,13 @@ class _NameStepState extends ConsumerState<NameStep> {
           controller: _name,
           maxLength: 100,
           textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(labelText: 'Nombre del personaje'),
+          // The message is at the bottom of the wizard; the field is only marked.
+          decoration: InputDecoration(
+            labelText: 'Nombre del personaje',
+            error: state.showsErrorsOf(WizardStep.name) && state.name.trim().isEmpty
+                ? const SizedBox.shrink(key: Key('wizard-name-invalid'))
+                : null,
+          ),
           onChanged: controller.setName,
         ),
         const SizedBox(height: 8),
@@ -199,7 +205,15 @@ class RaceStep extends ConsumerWidget {
               )
             else ...[
               if (state.race!.subraces.isNotEmpty) ...[
-                Text('Subraza', style: Theme.of(context).textTheme.titleSmall),
+                Text(
+                  'Subraza',
+                  key: const Key('wizard-subrace-title'),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: state.showsErrorsOf(WizardStep.race) && state.subraceIndex == null
+                        ? Theme.of(context).colorScheme.error
+                        : null,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 for (final sub in state.race!.subraces)
                   WizardChoiceCard(
@@ -335,7 +349,12 @@ class _ClassSummary extends StatelessWidget {
             detail.subclassFlavor == null || detail.subclassFlavor!.isEmpty
                 ? 'Subclase'
                 : detail.subclassFlavor!,
-            style: theme.textTheme.titleSmall,
+            key: const Key('wizard-subclass-title'),
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: state.showsErrorsOf(WizardStep.classChoice) && state.subclassIndex == null
+                  ? theme.colorScheme.error
+                  : null,
+            ),
           ),
           const SizedBox(height: 4),
           for (final sub in detail.subclasses)

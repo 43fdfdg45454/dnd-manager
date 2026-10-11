@@ -677,14 +677,14 @@ void main() {
       await _toBackground(tester, classIndex: 'fighter');
 
       expect(find.byKey(const Key('wizard-dot-spells')), findsNothing);
-      expect(find.text('Paso 5 de 8 · Trasfondo'), findsOneWidget);
+      expect(find.text('Paso 5 de 8 · Trasfondo y competencias'), findsOneWidget);
     });
 
     testWidgets('aparece para un mago y limita trucos y hechizos al nivel 1', (tester) async {
       await _pump(tester);
       await _toBackground(tester);
       expect(find.byKey(const Key('wizard-dot-spells')), findsOneWidget);
-      expect(find.text('Paso 5 de 9 · Trasfondo'), findsOneWidget);
+      expect(find.text('Paso 5 de 9 · Trasfondo y competencias'), findsOneWidget);
       await _tap(tester, find.byKey(const Key('skill-arcana')));
       await _tap(tester, find.byKey(const Key('skill-history')));
       await _next(tester);
@@ -878,6 +878,74 @@ void main() {
       await _tap(tester, find.byKey(const Key('wizard-dot-review')));
       // Forward jumps are not allowed from the rail: only "Siguiente" moves on.
       expect(find.byKey(const Key('step-race')), findsOneWidget);
+    });
+
+    testWidgets('la revisión nombra el paso inválido, lo marca y "Editar" lleva a él', (
+      tester,
+    ) async {
+      final setup = await _pump(tester);
+      await toReview(tester);
+      expect(find.byKey(const Key('wizard-error')), findsNothing);
+
+      // A later change leaves the background step without its class skills.
+      setup.container
+          .read(characterWizardControllerProvider(_args).notifier)
+          .toggleSkill('history');
+      await tester.pumpAndSettle();
+
+      expect(_text(tester, 'wizard-error'), 'Trasfondo y competencias: elige 2 habilidades');
+      expect(find.byKey(const Key('review-error-background')), findsOneWidget);
+      expect(find.byKey(const Key('review-error-race')), findsNothing);
+      final card = tester.widget<Card>(find.byKey(const Key('review-background')));
+      final error = Theme.of(tester.element(find.byKey(const Key('step-review'))))
+          .colorScheme
+          .error;
+      expect((card.shape! as RoundedRectangleBorder).side.color, error);
+
+      // "Crear" does not create anything while a step is invalid.
+      await _tap(tester, find.byKey(const Key('wizard-submit')));
+      expect(setup.characters.created, isEmpty);
+      expect(find.byKey(const Key('step-review')), findsOneWidget);
+
+      await _tap(tester, find.byKey(const Key('review-edit-background')));
+      expect(find.byKey(const Key('step-background')), findsOneWidget);
+      expect(_text(tester, 'wizard-error'), 'Elige 2 habilidades');
+      expect(
+        tester.widget<Text>(find.byKey(const Key('wizard-skills-counter'))).style?.color,
+        error,
+      );
+
+      await _tap(tester, find.byKey(const Key('skill-history')));
+      expect(find.byKey(const Key('wizard-error')), findsNothing);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('wizard-skills-counter'))).style?.color,
+        isNot(error),
+      );
+    });
+
+    testWidgets('cambiar de clase desde la revisión muestra el error al volver al trasfondo', (
+      tester,
+    ) async {
+      await _pump(tester);
+      await toReview(tester);
+
+      await _tap(tester, find.byKey(const Key('review-edit-classChoice')));
+      await _tap(tester, find.byKey(const Key('class-fighter')));
+      await _next(tester);
+      expect(find.byKey(const Key('step-abilities')), findsOneWidget);
+      expect(find.byKey(const Key('wizard-error')), findsNothing);
+      await _next(tester);
+
+      // The step was already passed: the error shows without tapping "Siguiente".
+      expect(find.byKey(const Key('step-background')), findsOneWidget);
+      expect(_text(tester, 'wizard-error'), 'Elige 2 habilidades');
+      final error = Theme.of(tester.element(find.byKey(const Key('step-background'))))
+          .colorScheme
+          .error;
+      expect(
+        tester.widget<Text>(find.byKey(const Key('wizard-skills-counter'))).style?.color,
+        error,
+      );
     });
 
     testWidgets('un error del servidor se muestra y el asistente permanece', (tester) async {
