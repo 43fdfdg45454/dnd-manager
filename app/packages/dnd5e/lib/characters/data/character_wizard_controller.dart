@@ -1500,8 +1500,9 @@ class CharacterWizardController extends Notifier<WizardState> {
   void setPointBuyScore(String key, int value) =>
       state = state.copyWith(pointBuyScores: {...state.pointBuyScores, key: value});
 
-  /// Assigns [value] of the standard array to [key]; the value leaves any
-  /// other ability that held it. A null [value] clears the ability.
+  /// Assigns [value] of the standard array to [key]. The picker only offers
+  /// free values; as a safeguard, the value still leaves any other ability
+  /// that held it. A null [value] clears the ability.
   void assignArray(String key, int? value) {
     final scores = {...state.arrayScores};
     if (value == null) {
@@ -1521,8 +1522,9 @@ class CharacterWizardController extends Notifier<WizardState> {
     state = state.copyWith(rollInputs: inputs, rollAssignment: const {});
   }
 
-  /// Assigns slot [slot] of the sorted rolls to [key]; the slot leaves any
-  /// other ability that held it. A null [slot] clears the ability.
+  /// Assigns slot [slot] of the sorted rolls to [key]. The picker only offers
+  /// free slots; as a safeguard, the slot still leaves any other ability that
+  /// held it. A null [slot] clears the ability.
   void assignRoll(String key, int? slot) {
     final scores = {...state.rollAssignment};
     if (slot == null) {

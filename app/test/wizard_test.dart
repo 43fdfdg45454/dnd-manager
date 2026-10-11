@@ -367,6 +367,15 @@ void main() {
 
       expect(find.text('Asigna las seis puntuaciones'), findsOneWidget);
       expect(find.byKey(const Key('step-abilities')), findsOneWidget);
+
+      // El 15 ya asignado a Fuerza no se ofrece a Destreza; Fuerza sí lo conserva.
+      await _tap(tester, find.byKey(const Key('wizard-array-dex')));
+      expect(find.byKey(const Key('wizard-array-dex-slot-0')), findsNothing);
+      expect(find.byKey(const Key('wizard-array-dex-slot-1')), findsWidgets);
+      await _tap(tester, find.byKey(const Key('wizard-array-dex-slot-1')).last);
+      await _tap(tester, find.byKey(const Key('wizard-array-str')));
+      expect(find.byKey(const Key('wizard-array-str-slot-0')), findsWidgets);
+      expect(find.byKey(const Key('wizard-array-str-slot-1')), findsNothing);
     });
 
     testWidgets('las habilidades de clase deben ser exactamente las que se eligen', (tester) async {
@@ -595,12 +604,13 @@ void main() {
 
       await assign(tester, 'int', 0); // 15 (+1 alto elfo)
       expect(_text(tester, 'wizard-final-int'), '16 (+3) · raza +1');
-      // El valor ya usado queda deshabilitado para las demás características.
+      // El valor ya usado no se ofrece a las demás características: solo
+      // "—" y los valores libres.
       await _tap(tester, find.byKey(const Key('wizard-roll-dex')));
-      final taken = tester.widget<DropdownMenuItem<int?>>(
-        find.byKey(const Key('wizard-roll-dex-slot-0')).last,
-      );
-      expect(taken.enabled, isFalse);
+      expect(find.byKey(const Key('wizard-roll-dex-slot-0')), findsNothing);
+      for (var slot = 1; slot < 6; slot++) {
+        expect(find.byKey(Key('wizard-roll-dex-slot-$slot')), findsWidgets);
+      }
       await _tap(tester, find.byKey(const Key('wizard-roll-dex-slot-1')).last); // 14 (+2 raza)
       expect(_text(tester, 'wizard-final-dex'), '16 (+3) · raza +2');
       await assign(tester, 'con', 2);

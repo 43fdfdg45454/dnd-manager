@@ -187,8 +187,9 @@ class _Stepper extends StatelessWidget {
 }
 
 /// Dropdown over a list of values (standard array or sorted rolls). [assigned]
-/// maps ability key -> slot in [values]; a slot taken by another ability is
-/// disabled, so equal rolled values stay distinguishable.
+/// maps ability key -> slot in [values]; it offers only "—", the slot of this
+/// ability and the free ones (a slot taken by another ability is not listed),
+/// so equal rolled values stay distinguishable by slot.
 class _ValuePicker extends StatelessWidget {
   const _ValuePicker({
     required this.keyName,
@@ -217,12 +218,12 @@ class _ValuePicker extends StatelessWidget {
       items: [
         const DropdownMenuItem<int?>(value: null, child: Text('—')),
         for (var i = 0; i < values.length; i++)
-          DropdownMenuItem<int?>(
-            key: Key('$keyName-slot-$i'),
-            value: i,
-            enabled: !taken.contains(i),
-            child: Text('${values[i]}'),
-          ),
+          if (!taken.contains(i))
+            DropdownMenuItem<int?>(
+              key: Key('$keyName-slot-$i'),
+              value: i,
+              child: Text('${values[i]}'),
+            ),
       ],
       onChanged: onChanged,
     );
