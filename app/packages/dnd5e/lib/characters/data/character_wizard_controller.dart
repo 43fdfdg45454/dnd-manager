@@ -20,6 +20,7 @@ import '../../catalog/data/models.dart'
         HeightWeightTable,
         LanguagePick,
         RaceDetail,
+        StartingCategoryPick,
         StartingEquipment,
         StartingEquipmentChoice,
         StartingGold,
@@ -570,6 +571,56 @@ class WizardState {
   OriginAnswer originAnswerOf(OriginChoice choice) =>
       originAnswers[choice.key] ?? const OriginAnswer();
 
+  /// True when [option] of a choice is shown to the player right now: its
+  /// own requirement (a skill picked in another choice) is met.
+  bool isOriginOptionVisible(LevelUpOption option) => originRequirementMet(option.requires);
+
+  /// The answers without anything the player cannot see right now: the
+  /// answer of a hidden choice (its parent option is not picked, or the plan
+  /// no longer has it) is dropped, and so is every pick of an option that is
+  /// no longer offered (an expertise in a skill no longer chosen) or whose
+  /// own requirement is not met. Only free texts are kept as typed. What is
+  /// not visible is never sent (see [toOriginAnswers]).
+  Map<String, OriginAnswer> get prunedOriginAnswers {
+    final plan = originPlan;
+    if (plan == null) return originAnswers;
+    final pruned = <String, OriginAnswer>{};
+    for (final choice in plan.choices) {
+      final answer = originAnswers[choice.key];
+      if (answer == null) continue;
+      if (!originRequirementMet(choice.requires)) continue;
+      var kept = answer;
+      if (choice.kind == OriginChoiceKind.feat) {
+        final feat = answer.feat == null ? null : choice.option(answer.feat!);
+        if (answer.feat != null && (feat == null || !isOriginOptionVisible(feat))) {
+          kept = kept.copyWith(feat: null, ability: null, removedSavingThrows: const []);
+        }
+      } else if (!choice.freeText) {
+        final picks = [
+          for (final p in answer.picks)
+            if (choice.option(p) case final option? when isOriginOptionVisible(option)) p,
+        ];
+        if (picks.length != answer.picks.length) kept = kept.copyWith(picks: picks);
+      }
+      pruned[choice.key] = kept;
+    }
+    return pruned;
+  }
+
+  /// Item indexes of the tools the character is proficient with so far: the
+  /// fixed ones of the class and the background plus the tools picked in the
+  /// race, subrace, background and class choices (only the visible picks of
+  /// list choices; free texts are not indexes).
+  Set<String> get toolProficiencyIndexes {
+    final answers = prunedOriginAnswers;
+    return {
+      ...?classDetail?.toolProficiencies,
+      ...?background?.toolProficiencies,
+      for (final c in originPlan?.choices ?? const <OriginChoice>[])
+        if (c.kind == OriginChoiceKind.tool && !c.freeText) ...?answers[c.key]?.picks,
+    };
+  }
+
   /// Spanish error of [choice] while it lacks required picks, or null.
   String? originChoiceError(OriginChoice choice) {
     final answer = originAnswerOf(choice);
@@ -824,6 +875,62 @@ class WizardState {
     ];
   }
 
+  /// The category pick [choice]-[option]-[category] of [allEquipmentChoices],
+  /// or null when there is no such pick.
+  StartingCategoryPick? categoryPickAt(int choice, int option, int category) {
+    final all = allEquipmentChoices;
+    if (choice < 0 || choice >= all.length) return null;
+    final options = all[choice].options;
+    if (option < 0 || option >= options.length) return null;
+    final categories = options[option].categories;
+    return category < 0 || category >= categories.length ? null : categories[category];
+  }
+
+  /// The items of [pick]'s category the player may choose: all of them, or
+  /// only those of [toolProficiencyIndexes] when the pick is
+  /// [StartingCategoryPick.proficientOnly].
+  List<EquipmentCategoryItem> offeredCategoryItems(
+    StartingCategoryPick pick,
+    List<EquipmentCategoryItem> items,
+  ) {
+    if (!pick.proficientOnly) return items;
+    final proficient = toolProficiencyIndexes;
+    return [
+      for (final i in items)
+        if (proficient.contains(i.index)) i,
+    ];
+  }
+
+  /// The category picks without anything the player cannot see right now: a
+  /// pick of a choice that no longer exists, or of an item the character is
+  /// no longer proficient with in a [StartingCategoryPick.proficientOnly]
+  /// pick (the background or a tool choice changed), is dropped.
+  Map<String, List<EquipmentCategoryItem>> get prunedCategoryPicks {
+    final pruned = <String, List<EquipmentCategoryItem>>{};
+    Set<String>? proficient;
+    for (final e in categoryPicks.entries) {
+      final parts = e.key.split('-').map(int.tryParse).toList();
+      if (parts.length != 3 || parts.any((p) => p == null)) continue;
+      final pick = categoryPickAt(parts[0]!, parts[1]!, parts[2]!);
+      if (pick == null) continue;
+      if (!pick.proficientOnly) {
+        pruned[e.key] = e.value;
+        continue;
+      }
+      proficient ??= toolProficiencyIndexes;
+      final kept = [
+        for (final i in e.value)
+          if (proficient.contains(i.index)) i,
+      ];
+      if (kept.length == e.value.length) {
+        pruned[e.key] = e.value;
+      } else if (kept.isNotEmpty) {
+        pruned[e.key] = kept;
+      }
+    }
+    return pruned;
+  }
+
   /// True when [choice] has the right number of options and every category pick filled.
   bool isChoiceComplete(int choice) {
     final all = allEquipmentChoices;
@@ -831,10 +938,11 @@ class WizardState {
     final def = all[choice];
     final selected = equipmentOptions[choice] ?? const <int>{};
     if (selected.length != def.choose) return false;
+    final picks = prunedCategoryPicks;
     for (final o in selected) {
       final categories = o < def.options.length ? def.options[o].categories : const [];
       for (var k = 0; k < categories.length; k++) {
-        if ((categoryPicks[categoryPickKey(choice, o, k)]?.length ?? 0) != categories[k].choose) {
+        if ((picks[categoryPickKey(choice, o, k)]?.length ?? 0) != categories[k].choose) {
           return false;
         }
       }
@@ -909,6 +1017,7 @@ class WizardState {
       }
     }
     final all = allEquipmentChoices;
+    final picks = prunedCategoryPicks;
     for (final c in activeChoiceIndexes) {
       if (!from(equipmentChoiceOrigin(c))) continue;
       for (final o in [...?equipmentOptions[c]]..sort()) {
@@ -918,7 +1027,7 @@ class WizardState {
           add(i.templateId, i.name, i.quantity);
         }
         for (var k = 0; k < option.categories.length; k++) {
-          for (final i in categoryPicks[categoryPickKey(c, o, k)] ?? const []) {
+          for (final i in picks[categoryPickKey(c, o, k)] ?? const []) {
             add(i.templateId, i.name, 1);
           }
         }
@@ -1256,11 +1365,11 @@ class WizardState {
   /// for, with an empty answer for the ones left blank.
   List<LevelUpChoiceAnswer> toOriginAnswers() {
     final answers = <LevelUpChoiceAnswer>[];
+    // Nothing the player cannot see is sent: a hidden choice is cleared and
+    // the picks of options no longer offered are dropped.
+    final pruned = prunedOriginAnswers;
     for (final choice in originChoices) {
-      // A choice of an option that is not picked (any more) is cleared.
-      final answer = originRequirementMet(choice.requires)
-          ? originAnswerOf(choice)
-          : const OriginAnswer();
+      final answer = pruned[choice.key] ?? const OriginAnswer();
       if (choice.kind == OriginChoiceKind.feat) {
         final feat = answer.feat;
         if (feat == null) {
@@ -1393,7 +1502,7 @@ class CharacterWizardController extends Notifier<WizardState> {
     try {
       await _saveOrigin();
     } catch (e) {
-      return problemDetail(e) ?? describeCharacterError(e);
+      return problemMessage(e) ?? describeCharacterError(e);
     }
     if (!ref.mounted) return null;
     goTo(state.step + 1);
@@ -1472,6 +1581,7 @@ class CharacterWizardController extends Notifier<WizardState> {
   void selectSubrace(String? index) {
     state = state.copyWith(subraceIndex: index, originPlan: null, originAnswers: const {});
     state = state.copyWith(languages: state.trimmedLanguages);
+    _prune();
   }
 
   void setApplyRacialBonuses(bool value) => state = state.copyWith(applyRacialBonuses: value);
@@ -1502,6 +1612,7 @@ class CharacterWizardController extends Notifier<WizardState> {
       final detail = await _catalog.classDetail(index);
       if (!ref.mounted || state.classIndex != index) return;
       state = state.copyWith(classDetail: detail, loadError: null);
+      _prune();
     } catch (_) {
       if (!ref.mounted || state.classIndex != index) return;
       state = state.copyWith(loadError: 'No se pudo cargar la clase. Inténtalo de nuevo.');
@@ -1599,6 +1710,7 @@ class CharacterWizardController extends Notifier<WizardState> {
       },
     );
     state = state.copyWith(languages: state.trimmedLanguages);
+    _prune();
   }
 
   void toggleSkill(String index) {
@@ -1707,6 +1819,7 @@ class CharacterWizardController extends Notifier<WizardState> {
       current.add(option);
     }
     state = state.copyWith(equipmentOptions: {...state.equipmentOptions, choice: current});
+    _prune();
   }
 
   /// Toggles [item] in the category pick [key]; at the limit it replaces the
@@ -1726,6 +1839,7 @@ class CharacterWizardController extends Notifier<WizardState> {
       return;
     }
     state = state.copyWith(categoryPicks: {...state.categoryPicks, key: picks});
+    _prune();
   }
 
   void setGoldRoll(int? roll) => state = state.copyWith(goldRoll: roll);
@@ -1895,11 +2009,14 @@ class CharacterWizardController extends Notifier<WizardState> {
         originLoading: false,
         originError: null,
       );
+      // The plan may no longer offer what was typed (an expertise in a skill
+      // changed since): the stale picks go away.
+      _prune();
     } catch (error) {
       if (!ref.mounted || request != _originRequest) return;
       state = state.copyWith(
         originLoading: false,
-        originError: problemDetail(error) ?? describeCharacterError(error),
+        originError: problemMessage(error) ?? describeCharacterError(error),
       );
     }
   }
@@ -1908,7 +2025,25 @@ class CharacterWizardController extends Notifier<WizardState> {
     state = state.copyWith(
       originAnswers: {...state.originAnswers, choice.key: change(state.originAnswerOf(choice))},
     );
+    _prune();
   }
+
+  /// Drops every selection the player can no longer see (the answer of a
+  /// hidden choice, a pick of an option no longer offered, a kit the
+  /// character is no longer proficient with) so the UI never shows a stale
+  /// pick and nothing hidden is ever sent. Run after every change that moves
+  /// what is visible; the answers are pruned again when they are built.
+  void _prune() {
+    final s = state;
+    final answers = s.prunedOriginAnswers;
+    final picks = s.prunedCategoryPicks;
+    if (_sameEntries(answers, s.originAnswers) && _sameEntries(picks, s.categoryPicks)) return;
+    state = s.copyWith(originAnswers: answers, categoryPicks: picks);
+  }
+
+  /// True when [a] holds the very same values as [b] under the same keys.
+  static bool _sameEntries<T>(Map<String, T> a, Map<String, T> b) =>
+      a.length == b.length && a.entries.every((e) => identical(e.value, b[e.key]));
 
   /// Picks or unpicks [index]; beyond [OriginChoice.choose] a single pick is
   /// replaced and further ones are ignored.

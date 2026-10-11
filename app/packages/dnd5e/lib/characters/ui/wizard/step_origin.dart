@@ -57,7 +57,7 @@ class OriginStep extends ConsumerWidget {
           OriginChoiceView(
             choice: choice,
             answer: state.originAnswerOf(choice),
-            isAvailable: (option) => state.originRequirementMet(option.requires),
+            isAvailable: state.isOriginOptionVisible,
             onToggle: (index) => controller.toggleOriginOption(choice, index),
             onText: (slot, text) => controller.setOriginText(choice, slot, text),
             onFeat: (index) => controller.selectOriginFeat(choice, index),

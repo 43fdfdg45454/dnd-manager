@@ -482,6 +482,7 @@ class ClassDetail extends ClassSummary {
     this.prerequisitesText,
     this.countsAsCasterLevel = false,
     this.hasLevelOneChoices = false,
+    this.toolProficiencies = const [],
   });
 
   factory ClassDetail.fromJson(Map<String, dynamic> json) {
@@ -527,8 +528,13 @@ class ClassDetail extends ClassSummary {
       prerequisitesText: _strOrNull(json['prerequisitesText']),
       countsAsCasterLevel: _bool(json['countsAsCasterLevel']),
       hasLevelOneChoices: _bool(json['hasLevelOneChoices']),
+      toolProficiencies: _strList(json['toolProficiencies']),
     );
   }
+
+  /// Item indexes of the tools the class is always proficient with
+  /// ("thieves-tools"); empty when the server does not send them.
+  final List<String> toolProficiencies;
 
   /// The class asks for choices at level 1 besides the subclass (fighting
   /// style, expertise...): the creation wizard asks them in its origin step
@@ -1399,6 +1405,7 @@ class Background {
     this.choices = const OriginChoiceSpec(),
     this.personality,
     this.optionalTables = const [],
+    this.toolProficiencies = const [],
   });
 
   factory Background.fromJson(Map<String, dynamic> json) => Background(
@@ -1413,10 +1420,15 @@ class Background {
     choices: OriginChoiceSpec.fromJson(json['choices']),
     personality: _map(json['personality']).let(BackgroundPersonality.fromJson),
     optionalTables: _objects(json['optionalTables'], BackgroundTable.fromJson),
+    toolProficiencies: _strList(json['toolProficiencies']),
   );
 
   final String index;
   final String name;
+
+  /// Item indexes of the tools the background always gives ("disguise-kit");
+  /// empty when the server does not send them.
+  final List<String> toolProficiencies;
 
   /// "srd", "homebrew" or the id of a content pack; null when not sent.
   final String? source;
@@ -1523,18 +1535,29 @@ class StartingItem {
 }
 
 /// "Any martial weapon": [choose] items of the equipment category [category].
+/// With [proficientOnly] (a kit of artisan's tools) only the items the
+/// character is proficient with are offered.
 class StartingCategoryPick {
-  const StartingCategoryPick({required this.category, required this.name, this.choose = 1});
+  const StartingCategoryPick({
+    required this.category,
+    required this.name,
+    this.choose = 1,
+    this.proficientOnly = false,
+  });
 
   factory StartingCategoryPick.fromJson(Map<String, dynamic> json) => StartingCategoryPick(
     category: _str(json['category']),
     name: _str(json['name'], _str(json['category'])),
     choose: _int(json['choose']) ?? 1,
+    proficientOnly: _bool(json['proficientOnly']),
   );
 
   final String category;
   final String name;
   final int choose;
+
+  /// Only the items of the category the character is proficient with.
+  final bool proficientOnly;
 }
 
 class StartingEquipmentOption {

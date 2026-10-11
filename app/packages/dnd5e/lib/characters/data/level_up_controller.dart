@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart' show DioException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:opentrpg_core/core/network/api_error.dart';
 import 'package:opentrpg_core/features/characters/data/characters_controller.dart';
@@ -403,12 +402,54 @@ class LevelUpState {
   /// Every page is complete and nothing is being sent.
   bool get canConfirm => !submitting && validate(steps.length - 1) == null;
 
+  /// Whether [choice] is answered with a list of picks the player sees
+  /// (an option picker, not an improvement or free text).
+  static bool _hasOptionPicks(LevelUpChoice choice) =>
+      choice.kind != LevelChoiceKind.asiOrFeat && !choice.freeText;
+
+  /// The selections without anything the player cannot see right now: the
+  /// answers of hidden choices (another subclass, an unpicked parent option)
+  /// are dropped, and so is every pick of an option that is no longer offered
+  /// or whose own requirement is not met. What is not visible is never sent.
+  Map<String, LevelUpSelection> get prunedSelections {
+    final visible = {for (final c in visibleChoices) c.key: c};
+    final pruned = <String, LevelUpSelection>{};
+    for (final e in selections.entries) {
+      final choice = visible[e.key];
+      if (choice == null) continue;
+      var selection = e.value;
+      if (_hasOptionPicks(choice)) {
+        final kept = [
+          for (final index in selection.selected)
+            if (choice.option(index) case final option? when isAvailable(option)) index,
+        ];
+        if (kept.length != selection.selected.length) {
+          selection = selection.copyWith(selected: kept);
+        }
+      }
+      if (selection.feat != null) {
+        final feat = choice.option(selection.feat!);
+        if (feat == null || !isAvailable(feat)) {
+          selection = selection.copyWith(
+            feat: null,
+            featAbility: null,
+            removedSavingThrows: const [],
+          );
+        }
+      }
+      pruned[e.key] = selection;
+    }
+    return pruned;
+  }
+
   /// Body of the POST with the current answers. Optional choices left empty
-  /// are not sent.
+  /// are not sent; nor is anything the player cannot see
+  /// ([prunedSelections]).
   LevelUpRequest get request {
     final answers = <LevelUpChoiceAnswer>[];
+    final selections = prunedSelections;
     for (final choice in visibleChoices) {
-      final selection = selectionOf(choice.key);
+      final selection = selections[choice.key] ?? const LevelUpSelection();
       if (choice.kind == LevelChoiceKind.asiOrFeat) {
         if (choice.required == 0 && validateChoice(choice) != null) continue;
         if (!_featMode(choice, selection)) {
@@ -452,23 +493,14 @@ class LevelUpState {
 }
 
 /// Spanish message of a failed level-up request: the server's explanation
-/// when it sent one (400 and 409 carry it), else a generic text.
-String describeLevelUpError(Object error) {
-  final detail = problemDetail(error);
-  if (detail != null) return detail;
-  if (error is DioException) {
-    final data = error.response?.data;
-    if (data is Map && data['errors'] is Map) {
-      for (final messages in (data['errors'] as Map).values) {
-        if (messages is List && messages.isNotEmpty) return '${messages.first}';
-      }
-    }
-  }
-  return describeCharacterError(
-    error,
-    byStatus: const {409: 'No tienes ningún nivel concedido por el DM.'},
-  );
-}
+/// when it sent one (400 and 409 carry the detail and the validation errors,
+/// one per line), else a generic text.
+String describeLevelUpError(Object error) =>
+    problemMessage(error) ??
+    describeCharacterError(
+      error,
+      byStatus: const {409: 'No tienes ningún nivel concedido por el DM.'},
+    );
 
 /// The level-up wizard of the character with id [characterId]: loads the plan
 /// of the chosen class (again when the class changes), keeps the answers by
@@ -561,6 +593,37 @@ class LevelUpController extends Notifier<LevelUpState> {
       selections: {...state.selections, key: change(state.selectionOf(key))},
       submitError: null,
     );
+    _prune();
+  }
+
+  /// Drops every selection the player can no longer see (a choice hidden by
+  /// another subclass or an unpicked option, an expertise in a skill no
+  /// longer picked...) so the UI never shows a stale pick and nothing hidden
+  /// is ever sent. Run after every change of the answers.
+  void _prune() {
+    final pruned = state.prunedSelections;
+    if (!_sameSelections(pruned, state.selections)) state = state.copyWith(selections: pruned);
+  }
+
+  static bool _sameSelections(Map<String, LevelUpSelection> a, Map<String, LevelUpSelection> b) {
+    if (a.length != b.length) return false;
+    for (final e in a.entries) {
+      final other = b[e.key];
+      if (other == null) return false;
+      if (!identical(other, e.value) &&
+          (other.feat != e.value.feat || !_sameList(other.selected, e.value.selected))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static bool _sameList(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
 
   /// Picks or unpicks [index] in [choice]. Beyond the picks needed, a single
@@ -576,39 +639,6 @@ class LevelUpController extends Notifier<LevelUpState> {
       if (needed == 1) return s.copyWith(selected: [index]);
       return s;
     });
-    // A new subclass changes which choices apply: drop the answers of the others.
-    if (choice.kind == LevelChoiceKind.subclass) _dropHiddenSelections();
-    _dropUnavailablePicks();
-  }
-
-  /// Unpicks options whose required pick of this level-up was undone (an
-  /// expertise in a skill that is no longer picked).
-  void _dropUnavailablePicks() {
-    final plan = state.plan;
-    if (plan == null) return;
-    var selections = state.selections;
-    for (final choice in plan.choices) {
-      final selection = selections[choice.key];
-      if (selection == null || !choice.options.any((o) => o.requires != null)) continue;
-      final kept = [
-        for (final index in selection.selected)
-          if (choice.option(index) == null || state.isAvailable(choice.option(index)!)) index,
-      ];
-      if (kept.length != selection.selected.length) {
-        selections = {...selections, choice.key: selection.copyWith(selected: kept)};
-        state = state.copyWith(selections: selections);
-      }
-    }
-  }
-
-  void _dropHiddenSelections() {
-    final visible = {for (final c in state.visibleChoices) c.key};
-    state = state.copyWith(
-      selections: {
-        for (final e in state.selections.entries)
-          if (visible.contains(e.key)) e.key: e.value,
-      },
-    );
   }
 
   /// Writes the [slot]-th value of a free-text [choice].
@@ -663,7 +693,6 @@ class LevelUpController extends Notifier<LevelUpState> {
         mode: ImprovementMode.feat,
       ),
     );
-    _dropUnavailablePicks();
   }
 
   void setFeatAbility(LevelUpChoice choice, String ability) =>

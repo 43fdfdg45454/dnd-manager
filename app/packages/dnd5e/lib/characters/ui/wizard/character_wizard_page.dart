@@ -159,7 +159,9 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _submitError = describeCharacterError(error);
+        // The server's own explanation (detail and validation errors) comes
+        // first; the generic text only when it gave none.
+        _submitError = problemMessage(error) ?? describeCharacterError(error);
       });
     }
   }

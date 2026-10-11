@@ -948,6 +948,38 @@ void main() {
       );
     });
 
+    testWidgets('un 400 muestra el detalle del servidor y sus errores por campo', (tester) async {
+      final setup = await _pump(tester);
+      await toReview(tester);
+      setup.characters.error = dioError(
+        400,
+        data: {
+          'title': 'Datos no válidos.',
+          'status': 400,
+          'detail': '<arcana> no es una opción de <Pericia>.',
+          'errors': {
+            'Choices': ['Falta 1 elección.'],
+          },
+        },
+      );
+
+      await _tap(tester, find.byKey(const Key('wizard-submit')));
+
+      expect(
+        _text(tester, 'wizard-submit-error'),
+        '<arcana> no es una opción de <Pericia>.\nFalta 1 elección.',
+      );
+      expect(find.byKey(const Key('step-review')), findsOneWidget);
+
+      // Without any explanation the generic text stays.
+      setup.characters.error = dioError(400);
+      await _tap(tester, find.byKey(const Key('wizard-submit')));
+      expect(
+        _text(tester, 'wizard-submit-error'),
+        'Los datos enviados no son válidos para este personaje.',
+      );
+    });
+
     testWidgets('un error del servidor se muestra y el asistente permanece', (tester) async {
       final setup = await _pump(tester);
       await toReview(tester);

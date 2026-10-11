@@ -1349,6 +1349,37 @@ void main() {
       expect(find.byKey(const Key('levelup-cost-respiro')), findsNothing);
     });
 
+    testWidgets('una elección de herramientas lleva la nota y el detalle de cada una', (
+      tester,
+    ) async {
+      const note = 'Eliges competencia con 1 de estas herramientas.';
+      await _pump(
+        tester,
+        plan: _plan(
+          choices: [
+            _choice(
+              'tool',
+              'Herramienta',
+              'Tool',
+              options: [
+                _option('smiths-tools', "Smith's Tools")..['itemId'] = 'smiths-tools',
+                _option('brewers-supplies', "Brewer's Supplies")..['itemId'] = 'brewers-supplies',
+              ],
+            )..['note'] = note,
+          ],
+        ),
+      );
+      await _next(tester);
+      await _writeHp(tester, '6');
+      await _next(tester);
+
+      expect(find.text(note), findsOneWidget, reason: 'la nota va una vez en la cabecera');
+      expect(find.text("Smith's Tools"), findsOneWidget);
+      expect(find.textContaining("Smith's Tools description."), findsOneWidget);
+      expect(find.byKey(const Key('detail-item-smiths-tools')), findsOneWidget);
+      expect(find.byKey(const Key('detail-item-brewers-supplies')), findsOneWidget);
+    });
+
     testWidgets('la pericia ofrece la habilidad recién elegida en el mismo nivel', (tester) async {
       final (:characters, router: _) = await _pump(
         tester,
