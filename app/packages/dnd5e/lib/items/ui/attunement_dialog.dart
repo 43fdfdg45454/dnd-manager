@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:opentrpg_core/core/network/api_error.dart';
+import 'package:opentrpg_core/core/ui/app_message.dart';
 import 'package:opentrpg_core/features/campaigns/ui/feedback.dart';
 import 'package:opentrpg_core/features/items/data/models.dart';
 
@@ -67,9 +68,7 @@ Future<bool> attuneWithReplacement(
   String success = 'Objeto sintonizado.',
 }) async {
   final messenger = ScaffoldMessenger.of(context);
-  void show(String message) => messenger
-    ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(message)));
+  void show(String message) => showAppMessageWith(messenger, message);
   try {
     await write(const InventoryPatch(attuned: true));
     show(success);

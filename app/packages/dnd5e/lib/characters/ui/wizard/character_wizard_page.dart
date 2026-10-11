@@ -6,6 +6,7 @@ import 'package:opentrpg_core/core/network/api_error.dart';
 import 'package:opentrpg_core/core/router/app_router.dart';
 import 'package:opentrpg_core/core/theme/app_icon.dart';
 import 'package:opentrpg_core/core/theme/icons.dart';
+import 'package:opentrpg_core/core/ui/app_message.dart';
 import 'package:opentrpg_core/core/ui/offline_widgets.dart';
 
 import '../../data/character_wizard_controller.dart';
@@ -128,11 +129,7 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
     final error = await _controller.advance();
     if (!mounted) return;
     if (error == null && warning != null) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(key: const Key('personality-next-warning'), content: Text(warning)),
-        );
+      showAppMessage(context, warning, key: const Key('personality-next-warning'));
     }
     setState(() {
       _advancing = false;

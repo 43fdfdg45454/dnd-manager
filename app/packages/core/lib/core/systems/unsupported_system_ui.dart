@@ -11,6 +11,7 @@ import '../characters/change_detail.dart';
 import '../characters/models.dart';
 import '../realtime/realtime_events.dart';
 import '../theme/icons.dart';
+import '../ui/app_message.dart';
 import '../ui/breakdown.dart';
 import 'game_system_ui.dart';
 
@@ -109,7 +110,7 @@ class UnsupportedSystemUi extends GameSystemUi {
     String campaignId, {
     String? ownerUserId,
   }) async {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(notice)));
+    showAppMessage(context, notice);
   }
 
   // -- Catalog and items --------------------------------------------------------
@@ -124,7 +125,7 @@ class UnsupportedSystemUi extends GameSystemUi {
 
   @override
   Future<void> openCatalogItem(BuildContext context, String itemId) async {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(notice)));
+    showAppMessage(context, notice);
   }
 
   @override

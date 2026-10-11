@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../network/api_error.dart';
+import '../ui/app_message.dart';
 import 'files_repository.dart';
 import 'stored_file.dart';
 
@@ -53,9 +54,7 @@ Future<StoredFile?> uploadWithProgress(
       onProgress: (sent, total) => progress.value = total > 0 ? sent / total : null,
     );
   } catch (error) {
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(describeContentError(error))));
+    showAppMessageWith(messenger, describeContentError(error));
     return null;
   } finally {
     if (dialogOpen) navigator.pop();

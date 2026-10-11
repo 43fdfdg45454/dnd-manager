@@ -11,6 +11,7 @@ import '../../../core/files/image_upload.dart';
 import '../../../core/files/stored_file.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/ui/app_message.dart';
 import '../../../core/ui/content_widgets.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
@@ -113,9 +114,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       try {
         await ref.read(libraryDownloadsProvider.notifier).download(document);
       } catch (error) {
-        messenger
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(describeContentError(error))));
+        showAppMessageWith(messenger, describeContentError(error));
         return;
       }
       // Cancelled by the user.
@@ -128,19 +127,14 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         .read(externalFileOpenerProvider)
         .open(file.path, mimeType: 'application/pdf');
     if (result == ExternalOpenResult.opened) return;
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          key: const Key('library-open-failed'),
-          content: Text(
-            result == ExternalOpenResult.noApp
-                ? 'No hay ninguna aplicación para abrir PDF en este dispositivo.'
-                : 'No se pudo abrir el documento con otra aplicación.',
-          ),
-          action: SnackBarAction(label: 'Ver en la app', onPressed: () => router.push(viewer)),
-        ),
-      );
+    showAppMessageWith(
+      messenger,
+      result == ExternalOpenResult.noApp
+          ? 'No hay ninguna aplicación para abrir PDF en este dispositivo.'
+          : 'No se pudo abrir el documento con otra aplicación.',
+      action: SnackBarAction(label: 'Ver en la app', onPressed: () => router.push(viewer)),
+      key: const Key('library-open-failed'),
+    );
   }
 
   Future<void> _removeDownload(LibraryDocument document) => runAction(

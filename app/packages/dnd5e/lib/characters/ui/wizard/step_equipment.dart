@@ -7,6 +7,7 @@ import 'package:opentrpg_core/core/theme/icons.dart';
 import 'package:opentrpg_core/core/theme/textures.dart';
 import 'package:opentrpg_core/core/theme/tokens.dart';
 import 'package:opentrpg_core/core/theme/typography.dart';
+import 'package:opentrpg_core/core/ui/app_message.dart';
 import 'package:opentrpg_core/features/dice/ui/roll_input_button.dart';
 import 'package:opentrpg_core/features/items/ui/item_search_list.dart';
 
@@ -872,9 +873,7 @@ class _ItemPickerPage extends ConsumerWidget {
           ref
               .read(characterWizardControllerProvider(args).notifier)
               .addEquipment(item.id, item.name);
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text('Añadido: ${item.name}')));
+          showAppMessage(context, 'Añadido: ${item.name}');
         },
       ),
     );

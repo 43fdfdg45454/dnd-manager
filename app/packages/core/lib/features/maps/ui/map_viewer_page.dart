@@ -8,6 +8,7 @@ import '../../../core/cache/stale_data.dart';
 import '../../../core/files/authenticated_image.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/ui/app_message.dart';
 import '../../../core/ui/content_widgets.dart';
 import '../../../core/ui/markdown_view.dart';
 import '../../../core/ui/offline_widgets.dart';
@@ -118,9 +119,7 @@ class _MapViewerPageState extends ConsumerState<MapViewerPage> {
     final lore = ref.read(loreControllerProvider(widget.campaignId)).value ?? const [];
     final target = findLoreBySlug(lore, slug);
     if (target == null) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text('No existe la entrada "$slug".')));
+      showAppMessage(context, 'No existe la entrada "$slug".');
       return;
     }
     _openLore(target.id);

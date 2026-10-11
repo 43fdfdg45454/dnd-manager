@@ -260,6 +260,7 @@ class _OriginChoiceViewState extends State<OriginChoiceView> {
       damageType: type,
       removeSavingThrows: option.removeSavingThrows,
       skillChoicesDelta: option.skillChoicesDelta,
+      itemId: option.itemId,
     );
   }
 }

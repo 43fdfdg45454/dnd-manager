@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:opentrpg_core/core/network/api_error.dart';
+import 'package:opentrpg_core/core/ui/app_message.dart';
 import 'package:opentrpg_core/core/ui/offline_widgets.dart';
 import 'package:opentrpg_core/features/campaigns/data/campaigns_controller.dart';
 import 'package:opentrpg_core/features/characters/ui/height_weight_fields.dart';
@@ -221,11 +222,7 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
           ),
     ];
     if (casters.isEmpty) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text('Añade primero una clase que lance conjuros.')),
-        );
+      showAppMessage(context, 'Añade primero una clase que lance conjuros.');
       return;
     }
     final picked = await Navigator.of(context).push<List<CharacterSpell>>(
@@ -249,9 +246,7 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    showAppMessage(context, message);
   }
 
   String? _structuralError() {
@@ -421,21 +416,13 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
       final result = await ref
           .read(dnd5eCharacterControllerProvider(_initial.id).notifier)
           .saveSheet(patch);
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(switch (result) {
-              Saved() => 'Hoja guardada.',
-              PendingApproval() => 'Enviado al DM para aprobación',
-            }),
-          ),
-        );
+      showAppMessageWith(messenger, switch (result) {
+        Saved() => 'Hoja guardada.',
+        PendingApproval() => 'Enviado al DM para aprobación',
+      });
       if (mounted) router.pop();
     } catch (error) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(describeCharacterError(error))));
+      showAppMessageWith(messenger, describeCharacterError(error));
       if (mounted) setState(() => _saving = false);
     }
   }

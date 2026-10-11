@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/characters/models.dart' show CharacterDetail;
 import '../../../core/network/api_error.dart';
 import '../../../core/systems/system_registry.dart';
+import '../../../core/ui/app_message.dart';
 import '../data/items_controllers.dart';
 import '../data/models.dart';
 import '../domain/items_format.dart';
@@ -41,17 +42,10 @@ class _SellDialogState extends ConsumerState<SellDialog> {
     if (!done) return;
     final total = result?.transaction.totalCp;
     final system = ref.read(campaignSystemUiProvider(widget.character.campaignId));
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            total == null
-                ? 'Venta realizada.'
-                : 'Venta realizada: recibes ${system.formatPrice(total)}.',
-          ),
-        ),
-      );
+    showAppMessageWith(
+      messenger,
+      total == null ? 'Venta realizada.' : 'Venta realizada: recibes ${system.formatPrice(total)}.',
+    );
     navigator.pop();
   }
 

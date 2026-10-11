@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/ui/app_message.dart';
 import '../../../core/ui/markdown_view.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
@@ -150,11 +151,7 @@ class _SessionFormState extends ConsumerState<_SessionForm> {
 
     final startsAt = zonedToUtc(widget.timeZoneId, wall);
     if (startsAt == null) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(content: Text('No se reconoce la zona horaria ${widget.timeZoneId}.')),
-        );
+      showAppMessage(context, 'No se reconoce la zona horaria ${widget.timeZoneId}.');
       return;
     }
     final duration = int.tryParse(_duration.text.trim());

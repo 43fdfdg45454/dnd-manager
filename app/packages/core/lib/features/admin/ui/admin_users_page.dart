@@ -9,6 +9,7 @@ import '../../../core/auth/auth_state.dart';
 import '../../../core/auth/user_dto.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/ui/app_message.dart';
 import '../../../core/ui/infinite_scroll_list.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../data/admin_users_controller.dart';
@@ -42,9 +43,7 @@ class _AdminUsersPageState extends ConsumerState<AdminUsersPage> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    showAppMessage(context, message);
   }
 
   /// Runs [action], showing [success] or a Spanish error message in a SnackBar.

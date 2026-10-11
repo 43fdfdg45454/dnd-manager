@@ -19,6 +19,7 @@ import '../../../core/theme/app_icon.dart';
 import '../../../core/theme/icons.dart';
 import '../../../core/theme/textures.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/ui/app_message.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../characters/data/characters_controller.dart';
 import '../../characters/data/characters_repository.dart';
@@ -107,14 +108,13 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
     final messenger = ScaffoldMessenger.maybeOf(context);
     final router = GoRouter.of(context);
     router.go(AppRoutes.home);
-    messenger
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          key: Key('realtime-notice-removed'),
-          content: Text('Ya no formas parte de esta campaña'),
-        ),
+    if (messenger != null) {
+      showAppMessageWith(
+        messenger,
+        'Ya no formas parte de esta campaña',
+        key: const Key('realtime-notice-removed'),
       );
+    }
   }
 
   /// The character [characterId] when it belongs to the user (the game system
@@ -150,28 +150,20 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
     final key = 'realtime-notice-${notice.id}';
     final icon = notice.icon;
     final tokens = context.tokens;
-    ScaffoldMessenger.maybeOf(context)
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          key: Key(key),
-          content: icon == null
-              ? Text(notice.text)
-              : Row(
-                  children: [
-                    AppIcon(icon, key: Key('$key-icon'), size: 20, color: tokens.ember),
-                    const SizedBox(width: 10),
-                    Expanded(child: Text(notice.text)),
-                  ],
-                ),
-          action: notice.openSession
-              ? SnackBarAction(
-                  label: 'Ver',
-                  onPressed: () => navigationShell.goBranch(CampaignBranches.player),
-                )
-              : null,
-        ),
-      );
+    showAppMessage(
+      context,
+      notice.text,
+      key: Key(key),
+      icon: icon == null
+          ? null
+          : AppIcon(icon, key: Key('$key-icon'), size: 20, color: tokens.ember),
+      action: notice.openSession
+          ? SnackBarAction(
+              label: 'Ver',
+              onPressed: () => navigationShell.goBranch(CampaignBranches.player),
+            )
+          : null,
+    );
   }
 
   /// "El DM aceptó/rechazó …" for the requester, with a shortcut to the sheet.
@@ -190,19 +182,15 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
           ? 'tu personaje ${request.characterName}'
           : 'tu solicitud (${request.type.label.toLowerCase()}) de ${request.characterName}';
       final comment = request.comment == null ? '' : ': ${request.comment}';
-      ScaffoldMessenger.maybeOf(context)
-        ?..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            key: const Key('realtime-notice-request-resolved'),
-            content: Text('El DM $verb $what$comment'),
-            duration: const Duration(seconds: 8),
-            action: SnackBarAction(
-              label: 'Ver',
-              onPressed: () => context.push(AppRoutes.character(request.characterId)),
-            ),
-          ),
-        );
+      showAppMessage(
+        context,
+        'El DM $verb $what$comment',
+        action: SnackBarAction(
+          label: 'Ver',
+          onPressed: () => context.push(AppRoutes.character(request.characterId)),
+        ),
+        key: const Key('realtime-notice-request-resolved'),
+      );
     } catch (_) {
       // Offline or no longer visible: the sheet shows the outcome when it loads.
     }
@@ -229,24 +217,16 @@ class _CampaignShellState extends ConsumerState<CampaignShell> {
     if (event is! MessageReceived) return;
     const key = 'realtime-notice-message';
     final tokens = context.tokens;
-    ScaffoldMessenger.maybeOf(context)
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          key: const Key(key),
-          content: Row(
-            children: [
-              AppIcon(AppIcons.seal, key: const Key('$key-icon'), size: 20, color: tokens.blood),
-              const SizedBox(width: 10),
-              const Expanded(child: Text('Mensaje del DM')),
-            ],
-          ),
-          action: SnackBarAction(
-            label: 'Ver',
-            onPressed: () => navigationShell.goBranch(CampaignBranches.player),
-          ),
-        ),
-      );
+    showAppMessage(
+      context,
+      'Mensaje del DM',
+      key: const Key(key),
+      icon: AppIcon(AppIcons.seal, key: const Key('$key-icon'), size: 20, color: tokens.blood),
+      action: SnackBarAction(
+        label: 'Ver',
+        onPressed: () => navigationShell.goBranch(CampaignBranches.player),
+      ),
+    );
   }
 
   /// Branch of the role: "Mesa del DM", "Mi sesión" or "Campaña" while unknown.

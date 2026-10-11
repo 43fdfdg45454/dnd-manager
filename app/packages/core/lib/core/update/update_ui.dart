@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../server/server_config_controller.dart';
+import '../ui/app_message.dart';
 import 'app_release.dart';
 import 'update_controller.dart';
 
@@ -15,7 +16,7 @@ Future<void> _download(BuildContext context, WidgetRef ref, AppRelease release) 
     opened = false;
   }
   if (!opened) {
-    messenger?.showSnackBar(const SnackBar(content: Text('No se pudo abrir la descarga.')));
+    if (messenger != null) showAppMessageWith(messenger, 'No se pudo abrir la descarga.');
   }
 }
 
@@ -106,9 +107,7 @@ class _UpdateRequiredPageState extends ConsumerState<UpdateRequiredPage> {
     if (!mounted) return;
     setState(() => _checking = false);
     if (outcome == UpdateCheckOutcome.failed) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No se pudo comprobar si hay actualizaciones.')));
+      showAppMessage(context, 'No se pudo comprobar si hay actualizaciones.');
     }
   }
 
@@ -222,7 +221,7 @@ class _UpdateGateState extends ConsumerState<UpdateGate> {
 /// Forced check from the user menu ("Buscar actualizaciones"), with feedback.
 Future<void> checkForUpdatesFromMenu(BuildContext context, WidgetRef ref) async {
   final messenger = ScaffoldMessenger.of(context);
-  void say(String text) => messenger.showSnackBar(SnackBar(content: Text(text)));
+  void say(String text) => showAppMessageWith(messenger, text);
 
   final outcome = await ref.read(updateControllerProvider.notifier).check(force: true);
   if (!context.mounted) return;

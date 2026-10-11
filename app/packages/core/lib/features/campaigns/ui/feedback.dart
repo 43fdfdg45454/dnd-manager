@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_error.dart';
+import '../../../core/ui/app_message.dart';
 
 /// Maps an error to a Spanish message, with optional per-status overrides.
 typedef ErrorDescriber = String Function(Object error, {Map<int, String> byStatus});
@@ -17,9 +18,7 @@ Future<bool> runAction(
 }) async {
   // Resolved up front: the context may be gone once the request finishes.
   final messenger = ScaffoldMessenger.of(context);
-  void show(String message) => messenger
-    ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(message)));
+  void show(String message) => showAppMessageWith(messenger, message);
   try {
     await action();
     if (success != null) show(success);

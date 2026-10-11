@@ -9,6 +9,7 @@ import '../../../core/cache/cache_maintenance.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/server/server_config_controller.dart';
+import '../../../core/ui/app_message.dart';
 import '../../../core/update/update_ui.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
 import '../../campaigns/ui/feedback.dart';
@@ -56,7 +57,7 @@ class ProfilePage extends ConsumerWidget {
     if (!confirmed || !context.mounted) return;
     await ref.read(cacheMaintenanceProvider).clearAll();
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Caché vaciada.')));
+    showAppMessage(context, 'Caché vaciada.');
   }
 
   @override
@@ -76,10 +77,7 @@ class ProfilePage extends ConsumerWidget {
                 ListTile(
                   leading: const CircleAvatar(child: Icon(Icons.person_outline)),
                   title: Text(user.displayName, key: const Key('home-greeting')),
-                  subtitle: Text(
-                    '${user.email} · ${user.role.label}',
-                    key: const Key('home-role'),
-                  ),
+                  subtitle: Text('${user.email} · ${user.role.label}', key: const Key('home-role')),
                 ),
                 _Header('Cuenta', theme),
                 ListTile(
@@ -187,11 +185,8 @@ class _ServerStatusTile extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(72, 0, 16, 8),
       child: serverInfo.when(
-        loading: () => const SizedBox(
-          width: 16,
-          height: 16,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
+        loading: () =>
+            const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
         data: (info) => Text(
           'Conectado a ${info.name} v${info.version}',
           key: const Key('server-status'),

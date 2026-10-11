@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
+import '../../../core/ui/app_message.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../data/campaigns_controller.dart';
 import '../domain/campaign_models.dart';
@@ -39,12 +40,15 @@ class MembersSection extends ConsumerWidget {
     );
   }
 
-  Future<void> _cancelInvitation(BuildContext context, WidgetRef ref, CampaignInvitation invitation) =>
-      runAction(
-        context,
-        () => _controllerOf(ref, campaign.id).cancelInvitation(invitation.id),
-        success: 'Invitación a ${invitation.displayName} cancelada.',
-      );
+  Future<void> _cancelInvitation(
+    BuildContext context,
+    WidgetRef ref,
+    CampaignInvitation invitation,
+  ) => runAction(
+    context,
+    () => _controllerOf(ref, campaign.id).cancelInvitation(invitation.id),
+    success: 'Invitación a ${invitation.displayName} cancelada.',
+  );
 
   /// The dialog stays open while the role changes, so an error (such as the
   /// 409 of a player who still owns characters) is shown inline.
@@ -58,9 +62,7 @@ class MembersSection extends ConsumerWidget {
       ),
     );
     if (role == null) return;
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('Rol actualizado.')));
+    showAppMessageWith(messenger, 'Rol actualizado.');
   }
 
   Future<void> _remove(BuildContext context, WidgetRef ref, Member member) => runAction(
@@ -110,8 +112,12 @@ class MembersSection extends ConsumerWidget {
             ListTile(
               key: Key('invitation-${invitation.id}'),
               leading: const Icon(Icons.mail_outline),
-              title: Text(invitation.displayName.isEmpty ? invitation.email : invitation.displayName),
-              subtitle: Text('${invitation.role.label} · invitó ${invitation.invitedByDisplayName}'),
+              title: Text(
+                invitation.displayName.isEmpty ? invitation.email : invitation.displayName,
+              ),
+              subtitle: Text(
+                '${invitation.role.label} · invitó ${invitation.invitedByDisplayName}',
+              ),
               trailing: OfflineAware(
                 builder: (context, canWrite) => IconButton(
                   key: Key('invitation-cancel-${invitation.id}'),

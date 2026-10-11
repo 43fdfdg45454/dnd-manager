@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/network/api_error.dart';
+import '../../../core/ui/app_message.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
 import '../../content_packs/ui/base_pack_chip.dart';
@@ -29,9 +30,7 @@ class _AdminContentPageState extends ConsumerState<AdminContentPage> {
   ContentPacksController get _controller => ref.read(contentPacksControllerProvider.notifier);
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    showAppMessage(context, message);
   }
 
   Future<void> _import() async {
