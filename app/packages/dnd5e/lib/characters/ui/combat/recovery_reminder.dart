@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:opentrpg_core/core/ui/app_message.dart';
 
 import '../../models.dart';
 import 'combat_support.dart';
@@ -90,41 +91,34 @@ int? arcaneRecoveryBudget(CharacterDetail character) =>
 int? naturalRecoveryBudget(CharacterDetail character) =>
     slotRecoveryBudget(character, SlotRecovery.natural);
 
-/// Non-blocking SnackBar offered after an approved short rest: "¿Usar
+/// Non-blocking message ([showAppMessage]) offered after an approved short rest: "¿Usar
 /// Recuperación arcana?" (or "natural") with an action that opens the slot
 /// picker. Returns false (showing nothing) when the character cannot use any.
 bool showRecoveryReminder(BuildContext context, WidgetRef ref, CharacterDetail character) {
   for (final recovery in SlotRecovery.values) {
     final budget = slotRecoveryBudget(character, recovery);
     if (budget == null) continue;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          key: const Key('recovery-reminder'),
-          duration: const Duration(seconds: 12),
-          content: Text('¿Usar ${recovery.label}?'),
-          action: SnackBarAction(
-            label: 'Usar',
-            onPressed: () async {
-              final levels = await showDialog<List<int>>(
-                context: context,
-                builder: (_) => ArcaneRecoveryDialog(
-                  character: character,
-                  budget: budget,
-                  title: recovery.label,
-                ),
-              );
-              if (levels == null || levels.isEmpty || !context.mounted) return;
-              await runCombat(
-                context,
-                () => recovery.use(ref, character, levels),
-                success: '${recovery.label} aplicada.',
-              );
-            },
-          ),
-        ),
-      );
+    showAppMessage(
+      context,
+      '¿Usar ${recovery.label}?',
+      key: const Key('recovery-reminder'),
+      action: SnackBarAction(
+        label: 'Usar',
+        onPressed: () async {
+          final levels = await showDialog<List<int>>(
+            context: context,
+            builder: (_) =>
+                ArcaneRecoveryDialog(character: character, budget: budget, title: recovery.label),
+          );
+          if (levels == null || levels.isEmpty || !context.mounted) return;
+          await runCombat(
+            context,
+            () => recovery.use(ref, character, levels),
+            success: '${recovery.label} aplicada.',
+          );
+        },
+      ),
+    );
     return true;
   }
   return false;
