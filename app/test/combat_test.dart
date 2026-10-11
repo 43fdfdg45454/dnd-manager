@@ -1156,7 +1156,7 @@ void main() {
       },
     });
 
-    FakeCharactersRepository caster() {
+    FakeCharactersRepository caster({Map<String, dynamic> wizardExtra = const {}}) {
       final json = makeCharacterJson(
         status: 'Active',
         classes: [
@@ -1185,6 +1185,7 @@ void main() {
           'saveDc': 15,
           'attackBonus': 7,
           'preparedMax': 6,
+          ...wizardExtra,
         },
         {
           'classIndex': 'cleric',
@@ -1276,6 +1277,35 @@ void main() {
       expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '40');
     });
 
+    testWidgets('los trucos usan su propio ataque y el crítico baja a 19 si la hoja lo dice', (
+      tester,
+    ) async {
+      final repo = caster(
+        wizardExtra: {
+          'cantripAttackBonus': 9,
+          'criticalRange': 19,
+          'criticalRangeSource': 'Chispa (nivel 3)',
+        },
+      );
+      await _pump(tester, characters: repo, catalog: catalog(), face: 19);
+      String facts(String index) => tester
+          .widgetList<Text>(
+            find.descendant(of: find.byKey(Key('spell-facts-$index')), matching: find.byType(Text)),
+          )
+          .map((t) => t.data)
+          .join(' ');
+      expect(facts('fire-bolt'), 'Ataque a distancia +9 Daño 2d10 fuego');
+      await _tap(tester, 'spell-attack-fire-bolt');
+      expect(find.text('1d20+9'), findsOneWidget);
+      expect(find.byKey(const Key('dice-critical')), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<FilterChip>(find.byKey(const Key('spell-crit-fire-bolt'))).selected,
+        isTrue,
+      );
+    });
+
     testWidgets('el nivel de lanzamiento escala el daño y gasta ese espacio', (tester) async {
       final repo = caster();
       await _pump(tester, characters: repo, catalog: catalog(), face: 1);
@@ -1297,6 +1327,76 @@ void main() {
       expect(find.text('Curación: Cure Wounds (nivel 1)'), findsOneWidget);
       expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '7');
       expect(find.byKey(const Key('spell-crit-cure-wounds')), findsNothing);
+    });
+
+    // A fictitious content pack class that casts without slots, paying hit
+    // points, and another one that only casts rituals.
+    FakeCharactersRepository slotless() {
+      final json = makeCharacterJson(
+        status: 'Active',
+        hitPointsCurrent: 20,
+        classes: [
+          {'classIndex': 'ejemplo-penitente', 'className': 'Penitente de ejemplo', 'level': 3},
+          {'classIndex': 'ejemplo-escriba', 'className': 'Escriba de ejemplo', 'level': 1},
+        ],
+        spells: [
+          {'spellIndex': 'burning-hands', 'classIndex': 'ejemplo-penitente'},
+          {'spellIndex': 'shield', 'classIndex': 'ejemplo-escriba'},
+        ],
+        combat: makeCombatJson(spellSlots: const []),
+      );
+      (json['sheet'] as Map<String, dynamic>)['spellcasting'] = [
+        {
+          'classIndex': 'ejemplo-penitente',
+          'ability': 'wis',
+          'saveDc': 13,
+          'attackBonus': 5,
+          'maxSpellLevel': 2,
+          'progression': 'hitPoints',
+          'hitPointCost': [2, 4, 6],
+          'usesResource': 'ejemplo-plegarias',
+        },
+        {
+          'classIndex': 'ejemplo-escriba',
+          'ability': 'int',
+          'saveDc': 11,
+          'attackBonus': 3,
+          'maxSpellLevel': 1,
+          'progression': 'ritualsOnly',
+        },
+      ];
+      return FakeCharactersRepository(characters: [json]);
+    }
+
+    testWidgets('una clase sin espacios lanza pagando PG al nivel elegido', (tester) async {
+      final repo = slotless();
+      await _pump(tester, characters: repo, catalog: catalog());
+
+      // Levels up to its maximum (2), not to its cost table (3).
+      await _tap(tester, 'spell-level-burning-hands');
+      expect(find.text('3'), findsNothing);
+      await _tap(tester, find.text('2').last);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('spell-hp-cost-burning-hands'))).data,
+        'Sin espacios: lanzarlo a nivel 2 cuesta 4 PG.',
+      );
+
+      await _tap(tester, 'spell-spend-burning-hands');
+      expect(repo.hitPointCasts, [(classIndex: 'ejemplo-penitente', spellLevel: 2)]);
+      expect(repo.slotSpends, isEmpty);
+      expect(find.text('Burning Hands lanzado a nivel 2: pierdes 4 PG.'), findsOneWidget);
+    });
+
+    testWidgets('una clase que solo lanza rituales no gasta nada', (tester) async {
+      final repo = slotless();
+      await _pump(tester, characters: repo, catalog: catalog());
+
+      final cast = find.byKey(const Key('spell-spend-shield'));
+      expect(find.descendant(of: cast, matching: find.text('Lanzar como ritual')), findsOneWidget);
+      await _tap(tester, cast);
+      expect(repo.slotSpends, isEmpty);
+      expect(repo.hitPointCasts, isEmpty);
+      expect(find.text('Shield lanzado como ritual (10 minutos más).'), findsOneWidget);
     });
 
     group('detalle, tipo de acción y desglose (fase 27)', () {
@@ -1688,6 +1788,64 @@ void main() {
       await tester.enterText(find.byKey(const Key('number-field')), '10');
       await _tap(tester, 'number-confirm');
       expect(repo.resourceSpends.last, (id: 'r2', amount: 10));
+    });
+
+    testWidgets('recuperar al tirar iniciativa y tirar la recarga de un recurso', (tester) async {
+      final repo = _repo(
+        combat: makeCombatJson(
+          resources: [
+            {
+              'id': 'r1',
+              'name': 'Chispa de ejemplo',
+              'max': 2,
+              'used': 2,
+              'recharge': 'Initiative',
+            },
+            {
+              'id': 'r2',
+              'name': 'Aliento de ejemplo',
+              'max': 1,
+              'used': 1,
+              'recharge': 'Manual',
+              'rechargeRoll': {'dice': 'd6', 'min': 5},
+            },
+          ],
+        ),
+      );
+      await _pump(tester, characters: repo);
+      expect(find.text('Recuperar al tirar iniciativa'), findsOneWidget);
+      expect(find.text('Tirar recarga (d6 ≥ 5)'), findsOneWidget);
+
+      await _tap(tester, 'resources-initiative');
+      expect(repo.initiativeRecharges, 1);
+
+      // A 3 does not bring it back; a 6 does.
+      await _tap(tester, 'resource-r2-recharge-roll');
+      await tester.enterText(find.byKey(const Key('number-field')), '3');
+      await _tap(tester, 'number-confirm');
+      expect(repo.rechargeRolls, [(id: 'r2', value: 3)]);
+      expect(find.text('Aliento de ejemplo no se recupera esta vez.'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      await _tap(tester, 'resource-r2-recharge-roll');
+      await tester.enterText(find.byKey(const Key('number-field')), '6');
+      await _tap(tester, 'number-confirm');
+      expect(repo.rechargeRolls.last, (id: 'r2', value: 6));
+      expect(find.text('Aliento de ejemplo se recupera.'), findsOneWidget);
+    });
+
+    testWidgets('sin recursos de iniciativa no aparece el botón', (tester) async {
+      final repo = _repo(
+        combat: makeCombatJson(
+          resources: [
+            {'id': 'r1', 'name': 'Second Wind', 'max': 1, 'used': 0, 'recharge': 'ShortRest'},
+          ],
+        ),
+      );
+      await _pump(tester, characters: repo);
+      expect(find.byKey(const Key('resources-initiative')), findsNothing);
+      expect(find.byKey(const Key('resource-r1-recharge-roll')), findsNothing);
     });
 
     testWidgets('las opciones con coste salen junto a su recurso con "Usar"', (tester) async {
@@ -2395,6 +2553,95 @@ void main() {
       await tester.pumpAndSettle();
       expect(repo.concentrationCalls, [null]);
       expect(find.byKey(const Key('concentration-chip')), findsNothing);
+    });
+  });
+
+  group('reglas de hoja de los paquetes', () {
+    FakeCharactersRepository repo({
+      List<Map<String, dynamic>>? attacks,
+      Map<String, dynamic> sheetExtra = const {},
+      int hp = 20,
+    }) => FakeCharactersRepository(
+      characters: [
+        makeCharacterJson(
+          status: 'Active',
+          ownerUserId: 'u1',
+          hitPointsCurrent: hp,
+          temporaryHitPoints: 0,
+          combat: makeCombatJson(attacks: attacks),
+          sheetExtra: sheetExtra,
+        ),
+      ],
+    );
+
+    final hookSword = {
+      'itemId': 'it9',
+      'name': 'Espada garfio',
+      'attackBonus': 5,
+      'damage': '1d8+3',
+      'damageType': 'Slashing',
+      'properties': <String>[],
+      'criticalRange': 19,
+      'criticalRangeSource': 'Ojo atento (nivel 3)',
+      'warnings': ['Requiere Fuerza 18; tienes 16.'],
+    };
+    final claws = {
+      'name': 'Garras',
+      'attackBonus': 5,
+      'damage': '1d4+3',
+      'damageType': 'Slashing',
+      'properties': <String>[],
+      'notes': 'Escamado',
+      'natural': true,
+    };
+
+    testWidgets('un ataque muestra su rango de crítico, avisos y si es natural', (tester) async {
+      await _pump(tester, characters: repo(attacks: [hookSword, claws]));
+      expect(find.text('Crítico con 19-20 · Ojo atento (nivel 3)'), findsOneWidget);
+      expect(find.byKey(const Key('attack-warning-0-0')), findsOneWidget);
+      expect(find.text('Requiere Fuerza 18; tienes 16.'), findsOneWidget);
+      expect(find.byKey(const Key('attack-crit-range-1')), findsNothing);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('attack-notes-1'))).data,
+        'Arma natural · Escamado',
+      );
+    });
+
+    testWidgets('con rango 19 un 19 natural es crítico; con 20 no', (tester) async {
+      await _pump(tester, characters: repo(attacks: [hookSword, claws]), face: 19);
+      await _tap(tester, 'attack-roll-0');
+      expect(find.byKey(const Key('dice-critical')), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(tester.widget<FilterChip>(find.byKey(const Key('attack-crit-0'))).selected, isTrue);
+
+      await _tap(tester, 'attack-roll-1');
+      expect(find.byKey(const Key('dice-critical')), findsNothing);
+    });
+
+    testWidgets('las salvaciones de muerte dibujan tantos fallos como pide la hoja', (
+      tester,
+    ) async {
+      final down = repo(
+        hp: 0,
+        sheetExtra: {'deathSaveFailuresToDie': 4, 'deathSaveFailuresSource': 'Tenaz (nivel 2)'},
+      );
+      await _pump(tester, characters: down);
+      expect(find.byKey(const Key('death-failure-3')), findsOneWidget);
+      expect(find.byKey(const Key('death-failure-4')), findsNothing);
+      expect(find.byKey(const Key('death-success-3')), findsNothing);
+      expect(find.text('Mueres con 4 fallos (Tenaz (nivel 2)).'), findsOneWidget);
+      await _tap(tester, 'death-failure-2');
+      expect(down.combatPatches.last.deathSaveFailures, 3);
+      // Tres fallos aún no bastan: el aviso sigue pidiendo la salvación.
+      expect(find.byKey(const Key('death-save-banner')), findsOneWidget);
+    });
+
+    testWidgets('sin regla propia siguen siendo tres fallos', (tester) async {
+      await _pump(tester, characters: repo(hp: 0));
+      expect(find.byKey(const Key('death-failure-2')), findsOneWidget);
+      expect(find.byKey(const Key('death-failure-3')), findsNothing);
+      expect(find.byKey(const Key('death-failures-to-die')), findsNothing);
     });
   });
 }

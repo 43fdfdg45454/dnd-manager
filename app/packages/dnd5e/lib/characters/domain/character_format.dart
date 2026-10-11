@@ -1,3 +1,4 @@
+import '../../catalog/data/models.dart' show titleFromIndex;
 import '../models.dart';
 
 export 'package:opentrpg_core/core/ui/breakdown.dart' show formatModifier;
@@ -123,6 +124,7 @@ String overrideFieldLabel(String field) {
     'ability' => 'Puntuación de ${_abilityName(rest)}',
     'save' => 'Salvación de ${_abilityName(rest)}',
     'skill' => 'Habilidad: ${skillLabel(rest)}',
+    'spellcastingAbility' => 'Característica de conjuros (${titleFromIndex(rest)})',
     _ => field,
   };
 }
@@ -157,6 +159,16 @@ final List<String> overrideFields = [
   for (final a in abilityKeys) 'save.$a',
   for (final s in skillLabels.keys) 'skill.$s',
 ];
+
+/// Override fields of the spellcasting ability of each entry
+/// (`spellcastingAbility.<classIndex>`): the value is 1 (Fuerza) to 6 (Carisma).
+List<String> spellcastingAbilityFields(Iterable<String> classIndexes) => [
+  for (final index in classIndexes) 'spellcastingAbility.$index',
+];
+
+/// Ability of a `spellcastingAbility.*` override value (1 = str … 6 = cha).
+String? abilityOfOverrideValue(int value) =>
+    value >= 1 && value <= abilityKeys.length ? abilityKeys[value - 1] : null;
 
 /// Level at which each SRD class picks its subclass (3 when unknown).
 int subclassUnlockLevel(String classIndex) => switch (classIndex) {
@@ -222,3 +234,46 @@ const damageTypeLabels = <String, String>{
 /// Spanish name of a damage type index ("fire" -> "fuego"); unknown ones stay as sent.
 String damageTypeLabel(String damageType) =>
     damageTypeLabels[damageType.toLowerCase()] ?? damageType;
+
+/// Spanish names of the SRD conditions (immunities of the sheet).
+const conditionLabels = <String, String>{
+  'blinded': 'cegado',
+  'charmed': 'hechizado',
+  'deafened': 'ensordecido',
+  'exhaustion': 'agotamiento',
+  'frightened': 'asustado',
+  'grappled': 'agarrado',
+  'incapacitated': 'incapacitado',
+  'invisible': 'invisible',
+  'paralyzed': 'paralizado',
+  'petrified': 'petrificado',
+  'poisoned': 'envenenado',
+  'prone': 'derribado',
+  'restrained': 'apresado',
+  'stunned': 'aturdido',
+  'unconscious': 'inconsciente',
+};
+
+/// Spanish name of a condition index ("charmed" -> "hechizado"); pack
+/// conditions stay as sent, without dashes.
+String conditionLabel(String condition) =>
+    conditionLabels[condition.toLowerCase()] ?? condition.replaceAll('-', ' ');
+
+/// Spanish names of the creature sizes.
+const sizeLabels = <String, String>{
+  'tiny': 'Diminuto',
+  'small': 'Pequeño',
+  'medium': 'Mediano',
+  'large': 'Grande',
+  'huge': 'Enorme',
+  'gargantuan': 'Gargantuesco',
+};
+
+/// Spanish name of a size ("small" -> "Pequeño"); unknown ones stay as sent.
+String sizeLabel(String size) => sizeLabels[size.toLowerCase()] ?? size;
+
+/// Spanish names of the movements besides walking.
+const speedModeLabels = <String, String>{'swim': 'Nado', 'climb': 'Trepar', 'fly': 'Vuelo'};
+
+/// Spanish name of a movement ("swim" -> "Nado").
+String speedModeLabel(String mode) => speedModeLabels[mode] ?? mode;

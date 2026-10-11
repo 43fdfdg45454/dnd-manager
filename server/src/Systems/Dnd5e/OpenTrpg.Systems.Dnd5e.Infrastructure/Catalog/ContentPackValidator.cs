@@ -25,6 +25,7 @@ namespace OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
 /// <param name="PackSubclasses">Subclasses of the packs already imported: index → (class index, pack id).</param>
 /// <param name="Races">Race index → source (the SRD or a pack), for race prerequisites.</param>
 /// <param name="CasterClasses">Classes that cast spells on their own (a subclass <c>spellcasting</c> is only for the others).</param>
+/// <param name="CantripOnlyClasses">Caster classes without slots (cantrips only), which a subclass <c>spellcasting</c> may still extend.</param>
 /// <param name="SpellLevels">Spell index → level, to check the levels of the expanded spell lists.</param>
 /// <param name="ResourceKeys">Keys of the resources of the catalog options and features, with their source (option costs).</param>
 /// <param name="SetClasses">Option sets used by the level choices of the catalog: set id, class and source (option costs).</param>
@@ -41,6 +42,7 @@ internal sealed record ContentPackContext(
     IReadOnlyDictionary<string, (string ClassIndex, string Source)>? PackSubclasses = null,
     IReadOnlyDictionary<string, string>? Races = null,
     IReadOnlySet<string>? CasterClasses = null,
+    IReadOnlySet<string>? CantripOnlyClasses = null,
     IReadOnlyDictionary<string, int>? SpellLevels = null,
     IReadOnlyList<(string Key, string Source)>? ResourceKeys = null,
     IReadOnlyList<(string SetId, string ClassIndex, string Source)>? SetClasses = null,
@@ -51,6 +53,12 @@ internal sealed record ContentPackContext(
 
     /// <summary>Extra vocabulary entries (kind → indexes) of the SRD and the required packs (languages, damage types...).</summary>
     public IReadOnlyDictionary<string, IReadOnlySet<string>>? Vocabularies { get; init; }
+
+    /// <summary>Conditions of the required packs (<c>conditions[]</c>), for condition immunities.</summary>
+    public IReadOnlySet<string>? Conditions { get; init; }
+
+    /// <summary>Creatures of the SRD and the required packs, for the closed lists of companions.</summary>
+    public IReadOnlySet<string>? Creatures { get; init; }
 
     /// <summary>Contents of the equipment packs of the base pack by item index ("explorers-pack" → backpack, bedroll...).</summary>
     public IReadOnlyDictionary<string, IReadOnlyList<StartingItem>>? ItemContents { get; init; }
@@ -115,6 +123,9 @@ internal sealed class ContentPackRows
 
     /// <summary>Equipment categories with their items (<c>reference.equipmentCategories</c>).</summary>
     public List<EquipmentCategory> EquipmentCategories { get; } = [];
+
+    /// <summary>Spells tagged by the pack (<c>spells[].tags</c> and <c>reference.spellTags[].spells</c>).</summary>
+    public List<SpellTag> SpellTags { get; } = [];
 
     public Dictionary<string, int> Counts() => new()
     {
@@ -184,6 +195,9 @@ internal sealed partial class ContentPackValidator
     /// <summary>Classes that cast spells on their own (catalog in reach and the pack's own).</summary>
     private readonly HashSet<string> _casterClasses;
 
+    /// <summary>Caster classes without slots (cantrips only): a subclass may still give them spellcasting.</summary>
+    private readonly HashSet<string> _cantripOnlyClasses;
+
     /// <summary>Full classes defined by this pack.</summary>
     private readonly HashSet<string> _packClasses = new(StringComparer.Ordinal);
 
@@ -201,6 +215,7 @@ internal sealed partial class ContentPackValidator
         _context = context;
         _classes = new Dictionary<string, string>(context.Classes, StringComparer.Ordinal);
         _casterClasses = new HashSet<string>(context.CasterClasses ?? new HashSet<string>(), StringComparer.Ordinal);
+        _cantripOnlyClasses = new HashSet<string>(context.CantripOnlyClasses ?? new HashSet<string>(), StringComparer.Ordinal);
         _skills = new Dictionary<string, string>(context.Skills, StringComparer.Ordinal);
         _equipmentCategories = new HashSet<string>(context.EquipmentCategories ?? new HashSet<string>(), StringComparer.Ordinal);
         _itemContents = new Dictionary<string, IReadOnlyList<StartingItem>>(
@@ -306,6 +321,22 @@ internal sealed partial class ContentPackValidator
             }
         }
 
+        foreach (var tag in pack.Reference?.SpellTags ?? [])
+        {
+            if (tag?.Index?.Trim() is { Length: > 0 } tagIndex)
+            {
+                _packSpellTags.Add(tagIndex);
+            }
+        }
+
+        foreach (var condition in pack.Conditions ?? [])
+        {
+            if (condition?.Index?.Trim() is { Length: > 0 } conditionIndex)
+            {
+                _packConditions.Add(conditionIndex);
+            }
+        }
+
         // The pack's own equipment categories and equipment pack contents are used by the starting equipment of its
         // classes and backgrounds (validated with their sections).
         foreach (var category in pack.Reference?.EquipmentCategories ?? [])
@@ -374,6 +405,8 @@ internal sealed partial class ContentPackValidator
         CheckCostReferences(rows);
         CheckAfterReferences(rows);
         CheckExpandedSpellReferences(rows);
+        CheckTaggedSpellReferences(rows);
+        CheckCompanionCreatureReferences(rows);
         CheckStartingEquipmentReferences(rows);
         CheckSharedTraitReferences(rows);
         return rows;
@@ -425,6 +458,11 @@ internal sealed partial class ContentPackValidator
                      ("levels", extension.Levels is not null),
                      ("resources", extension.Resources is not null),
                      ("spellList", extension.SpellList is { ValueKind: not JsonValueKind.Null }),
+                     ("auxiliary", extension.Auxiliary is not null),
+                     ("prerequisites", extension.Prerequisites is not null),
+                     ("prerequisitesText", extension.PrerequisitesText is not null),
+                     ("countsAsCasterLevel", extension.CountsAsCasterLevel is not null),
+                     ("saveDc", extension.SaveDc is not null),
                  })
         {
             if (present)
@@ -474,6 +512,8 @@ internal sealed partial class ContentPackValidator
                 Description = description,
                 SpellcastingJson = spellcasting?.ToJson(),
                 ExpandedSpellListJson = expandedSpellList,
+                PrerequisitesJson = Prerequisites($"{subclassPath}.prerequisites", subclass.Prerequisites),
+                PrerequisitesText = NullableText($"{subclassPath}.prerequisitesText", subclass.PrerequisitesText, LevelChoiceRule.NoteMaxLength),
                 Source = _id,
             });
 
@@ -526,6 +566,7 @@ internal sealed partial class ContentPackValidator
             var featureResource = feature.Resource is not null ? Resource($"{featurePath}.resource", feature.Resource) : null;
             var featureCompanion = feature.Companion is not null ? Companion($"{featurePath}.companion", feature.Companion) : null;
             var featureModifiers = feature.Modifiers is not null ? ChoiceModifiers($"{featurePath}.modifiers", feature.Modifiers, "Un rasgo") : null;
+            var featureEnhancement = feature.ItemEnhancement is not null ? ItemEnhancement($"{featurePath}.itemEnhancement", feature.ItemEnhancement) : null;
             if (unlisted)
             {
                 level = RequiredInt($"{featurePath}.level", feature.Level, 1, MaxLevels);
@@ -552,6 +593,7 @@ internal sealed partial class ContentPackValidator
                 ResourceJson = featureResource,
                 CompanionJson = featureCompanion,
                 ModifiersJson = featureModifiers is null or "[]" ? null : featureModifiers,
+                ItemEnhancementJson = featureEnhancement,
                 Source = _id,
             });
         });
@@ -605,9 +647,9 @@ internal sealed partial class ContentPackValidator
                     return;
                 }
 
-                if (!EnumNames.TryParse<ItemModifierKind>(modifier.Kind.Trim(), out var kind))
+                if (!EnumNames.TryParse<ItemModifierKind>(modifier.Kind.Trim(), out var kind) || !ItemModifier.IsItemKind(kind))
                 {
-                    AddError($"{modifierPath}.kind", $"Tipo de modificador desconocido. Valores admitidos: {string.Join(", ", Enum.GetNames<ItemModifierKind>())}.");
+                    AddError($"{modifierPath}.kind", $"Tipo de modificador desconocido. Valores admitidos: {string.Join(", ", Enum.GetValues<ItemModifierKind>().Where(ItemModifier.IsItemKind))}.");
                     return;
                 }
 
@@ -767,9 +809,11 @@ internal sealed partial class ContentPackValidator
             Source = _id,
         };
 
+        var tags = SpellTagList($"{path}.tags", spell.Tags);
         if (index is not null)
         {
             rows.Spells.Add(definition);
+            rows.SpellTags.AddRange(tags.Select(tag => new SpellTag { Tag = tag, SpellIndex = index, Source = _id }));
         }
     }
 
@@ -1056,6 +1100,7 @@ internal sealed partial class ContentPackValidator
             var index = Index($"{traitPath}.index", "traits", trait.Index);
             var name = RequiredText($"{traitPath}.name", trait.Name, NameMaxLength);
             var description = Paragraphs($"{traitPath}.description", trait.Description);
+            var resource = Resource($"{traitPath}.resource", trait.Resource);
             if (index is null)
             {
                 return;
@@ -1069,6 +1114,7 @@ internal sealed partial class ContentPackValidator
                 Description = description,
                 RaceIndexes = raceIndex is null ? [] : [raceIndex],
                 SubraceIndexes = subraceIndex is null ? [] : [subraceIndex],
+                ResourceJson = resource,
                 Source = _id,
             });
         });

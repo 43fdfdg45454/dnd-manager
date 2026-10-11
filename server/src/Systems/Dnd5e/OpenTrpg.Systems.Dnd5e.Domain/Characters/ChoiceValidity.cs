@@ -17,7 +17,8 @@ namespace OpenTrpg.Systems.Dnd5e.Domain.Characters;
 /// <param name="Code"><see cref="InvalidChoiceCodes.Prerequisites"/> or <see cref="InvalidChoiceCodes.PackDisabled"/>.</param>
 public sealed record InvalidChoice(string? ClassIndex, string Key, int Level, string Kind, string SetId, ChoiceItem Item, string Reason, string Code = InvalidChoiceCodes.Prerequisites)
 {
-    public bool IsFeat => SetId == OptionSets.Feats;
+    /// <summary>The pick is the feat of an ability improvement or an origin (or the option an improvement took instead).</summary>
+    public bool IsFeat => SetId == OptionSets.Feats || Kind is nameof(LevelChoiceKind.AsiOrFeat) or OriginChoiceKeys.FeatKind;
 }
 
 /// <summary>Why a pick is invalid.</summary>
@@ -50,7 +51,8 @@ public static class ChoiceValidity
 
         var picks = character.ActivePicks();
         var result = new List<InvalidChoice>();
-        foreach (var pick in picks.Where(p => p.SetId is not null))
+        // Granted options come with their source: their prerequisites are not checked.
+        foreach (var pick in picks.Where(p => p.SetId is not null && p.Key != CharacterChoice.GrantedKey))
         {
             if (findOption(pick.Item.Index) is not { } option)
             {
@@ -95,40 +97,23 @@ public static class ChoiceValidity
         ArgumentNullException.ThrowIfNull(picks);
         ArgumentNullException.ThrowIfNull(findOption);
 
-        var prerequisites = option.Prerequisites;
-        var reasons = new List<string>();
         var level = classIndex is null ? character.TotalLevel : character.Classes.FirstOrDefault(c => c.ClassIndex == classIndex)?.Level ?? 0;
-        if (prerequisites.MinLevel is { } minLevel && level < minLevel)
+        return PrerequisiteEvaluator.WhyNot(option.Prerequisites, new PrerequisiteFacts
         {
-            reasons.Add(classIndex is null ? $"Requiere nivel {minLevel}." : $"Requiere nivel {minLevel} de {BreakdownLabels.Class(classIndex)}.");
-        }
-
-        if (prerequisites.PactBoon is { } pactBoon && !picks.Contains(pactBoon))
-        {
-            reasons.Add($"Requiere {findOption(pactBoon)?.Name ?? pactBoon}.");
-        }
-
-        if (prerequisites.Cantrip is { } cantrip && !character.Spells.Any(s => s.SpellIndex == cantrip))
-        {
-            reasons.Add($"Requiere el truco {cantrip}.");
-        }
-
-        foreach (var (ability, minimum) in prerequisites.Abilities)
-        {
-            if (!Abilities.IsValid(ability))
+            Character = character,
+            Sheet = sheet,
+            ClassIndex = classIndex,
+            ClassLevel = level,
+            CharacterLevel = character.TotalLevel,
+            Picks = picks,
+            Score = ability =>
             {
-                continue;
-            }
-
-            var own = ownLabel is not null && sheet.Breakdowns.TryGetValue(OverrideFields.Ability(ability), out var breakdown)
-                ? breakdown.Parts.Where(p => p.Label == ownLabel).Sum(p => p.Value)
-                : 0;
-            if (sheet.Abilities[ability].Score - own < minimum)
-            {
-                reasons.Add($"Requiere {BreakdownLabels.Ability(ability)} {minimum}.");
-            }
-        }
-
-        return reasons.Count == 0 ? null : string.Join(" ", reasons);
+                var own = ownLabel is not null && sheet.Breakdowns.TryGetValue(OverrideFields.Ability(ability), out var breakdown)
+                    ? breakdown.Parts.Where(p => p.Label == ownLabel).Sum(p => p.Value)
+                    : 0;
+                return sheet.Abilities[ability].Score - own;
+            },
+            Name = index => findOption(index)?.Name ?? (classIndex is not null && index == classIndex ? BreakdownLabels.Class(index) : index),
+        });
     }
 }

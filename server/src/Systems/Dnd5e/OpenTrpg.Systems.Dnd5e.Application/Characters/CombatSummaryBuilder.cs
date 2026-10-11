@@ -32,8 +32,10 @@ public static class CombatSummaryBuilder
         IReadOnlyDictionary<Guid, ItemTemplate> templates,
         IReadOnlyList<CharacterResourceDto> resources)
     {
+        var enhancementsOf = catalog.Enhancements(character);
         var items = character.Items
-            .Select(i => (Entry: i, Template: InventoryView.TemplateOf(templates, i.TemplateId), Effective: InventoryView.Resolve(templates, i)))
+            .Select(i => (Entry: i, Template: InventoryView.TemplateOf(templates, i.TemplateId), Enhanced: Dnd5eInventory.Enhance(i, templates, enhancementsOf)))
+            .Select(i => (i.Entry, i.Template, i.Enhanced, Effective: i.Enhanced.Item))
             .OrderBy(i => i.Entry.SortOrder)
             .ThenBy(i => i.Effective.Name, StringComparer.InvariantCultureIgnoreCase)
             .ThenBy(i => i.Entry.Id)
@@ -43,10 +45,20 @@ public static class CombatSummaryBuilder
         var attacks = CombatCalculator.Attacks(
                 character,
                 sheet,
-                equipped.Select(i => new EquippedWeapon(i.Entry.Id, i.Template?.Index, i.Effective, i.Entry.Attuned)))
+                equipped.Select(i => new EquippedWeapon(i.Entry.Id, i.Template?.Index, i.Effective, i.Entry.Attuned)
+                {
+                    Rules = WeaponRules.Parse(i.Template?.SystemDataJson),
+                    EnhancementBonuses = i.Enhanced.Bonuses,
+                }))
             .Select(a => new AttackDto(
                 a.ItemId, a.Name, a.AttackBonus, a.Damage, a.DamageType, a.VersatileDamage, a.Range, a.Properties, a.Notes,
-                ValueBreakdownDto.From(a.AttackBreakdown), ValueBreakdownDto.From(a.DamageBreakdown)))
+                ValueBreakdownDto.From(a.AttackBreakdown), ValueBreakdownDto.From(a.DamageBreakdown))
+            {
+                CriticalRange = a.CriticalRange,
+                CriticalRangeSource = a.CriticalRangeSource,
+                Warnings = a.Warnings,
+                Natural = a.Natural,
+            })
             .ToList();
 
         var spellSlots = Enumerable.Range(1, 9)
@@ -62,7 +74,7 @@ public static class CombatSummaryBuilder
             .Select(i => new QuickConsumableDto(i.Entry.Id, i.Effective.Name, i.Entry.Quantity, i.Entry.Charges))
             .ToList();
 
-        var gear = EquippedGear.FromEquipped(equipped.Select(i => (i.Effective, i.Entry.Attuned)));
+        var gear = Dnd5eInventory.Gear(equipped.Select(i => i.Entry), templates, enhancementsOf);
         var classPanels = character.OrderedClasses
             .Select(c => Panel(character, sheet, catalog, c, spellSlots, gear))
             .OfType<ClassPanelDto>()

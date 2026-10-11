@@ -57,8 +57,9 @@ int? parseRollScore(String text) {
 }
 
 /// Steps of the creation wizard in order. [origin] only exists when the race,
-/// subrace or background ask for decisions and [spells] only for classes that
-/// cast at level 1.
+/// subrace or background ask for decisions or the class has level-1 choices
+/// (fighting style, expertise...), [starterFeat] when the campaign
+/// offers a starter feat and [spells] only for classes that cast at level 1.
 enum WizardStep {
   name,
   race,
@@ -67,6 +68,7 @@ enum WizardStep {
   background,
   personality,
   origin,
+  starterFeat,
   equipment,
   spells,
   review,
@@ -106,20 +108,33 @@ String backgroundTableDetail(BackgroundTable table, String entry) => '${table.na
 /// What the player answered to one origin choice: the picked indexes (or
 /// texts), or a feat with the ability it raises.
 class OriginAnswer {
-  const OriginAnswer({this.picks = const [], this.feat, this.ability});
+  const OriginAnswer({
+    this.picks = const [],
+    this.feat,
+    this.ability,
+    this.removedSavingThrows = const [],
+  });
 
   final List<String> picks;
   final String? feat;
   final String? ability;
 
+  /// Saving throws given up with a feat that asks for them.
+  final List<String> removedSavingThrows;
+
   bool get isEmpty => picks.every((p) => p.trim().isEmpty) && feat == null;
 
-  OriginAnswer copyWith({List<String>? picks, Object? feat = _unset, Object? ability = _unset}) =>
-      OriginAnswer(
-        picks: picks ?? this.picks,
-        feat: identical(feat, _unset) ? this.feat : feat as String?,
-        ability: identical(ability, _unset) ? this.ability : ability as String?,
-      );
+  OriginAnswer copyWith({
+    List<String>? picks,
+    Object? feat = _unset,
+    Object? ability = _unset,
+    List<String>? removedSavingThrows,
+  }) => OriginAnswer(
+    picks: picks ?? this.picks,
+    feat: identical(feat, _unset) ? this.feat : feat as String?,
+    ability: identical(ability, _unset) ? this.ability : ability as String?,
+    removedSavingThrows: removedSavingThrows ?? this.removedSavingThrows,
+  );
 }
 
 const _unset = Object();
@@ -220,6 +235,7 @@ class WizardState {
     this.originAnswers = const {},
     this.originLoading = false,
     this.originError,
+    this.offersStarterFeat = false,
     this.trinketTable,
     this.trinketRoll,
     this.trinketText = '',
@@ -313,6 +329,10 @@ class WizardState {
 
   /// Spanish error of the last failed load of [originPlan].
   final String? originError;
+
+  /// The campaign allows an optional starter feat (its rules enable them and
+  /// an enabled pack brings some): the "Dote inicial" step is shown.
+  final bool offersStarterFeat;
 
   /// Trinket table of the content packs (null until loaded; empty without one).
   final List<Trinket>? trinketTable;
@@ -470,16 +490,75 @@ class WizardState {
 
   /// True when the race, subrace or background ask for something besides
   /// languages (which have their own step).
-  bool get needsOriginStep =>
+  bool get originAsks =>
       (race?.choices.asksBesidesLanguages ?? false) ||
       (subrace?.choices.asksBesidesLanguages ?? false) ||
       (background?.choices.asksBesidesLanguages ?? false);
 
-  /// Choices of the plan the wizard asks for (languages have their own step).
+  /// True when the class asks for choices at level 1 (fighting style,
+  /// expertise...), answered in the origin step.
+  bool get classAsks => classDetail?.hasLevelOneChoices ?? false;
+
+  /// The origin step is shown for the race, subrace and background decisions
+  /// and for the level-1 choices of the class.
+  bool get needsOriginStep => originAsks || classAsks;
+
+  /// Name of the origin step in the wizard's header and review.
+  String get originStepLabel => switch ((originAsks, classAsks)) {
+    (true, true) => 'Elecciones de origen y clase',
+    (false, true) => 'Elecciones de clase',
+    _ => 'Elecciones de raza y trasfondo',
+  };
+
+  /// Title of the origin step, after what it asks.
+  String get originStepTitle => switch ((originAsks, classAsks)) {
+    (true, true) => 'Tu origen y tu clase',
+    (false, true) => 'Tu clase',
+    _ => 'Tu origen',
+  };
+
+  /// Subtitle of the origin step.
+  String get originStepSubtitle => switch ((originAsks, classAsks)) {
+    (true, true) => 'Tu raza, tu trasfondo y tu clase te piden decidir lo siguiente.',
+    (false, true) => 'Tu clase te pide decidir lo siguiente desde el nivel 1.',
+    _ => 'Tu raza y tu trasfondo te piden decidir lo siguiente.',
+  };
+
+  /// Choices of the plan the wizard asks for (the languages of the race and
+  /// background have their own step; a language of the class is asked here).
   List<OriginChoice> get originChoices => [
     for (final c in originPlan?.choices ?? const <OriginChoice>[])
-      if (c.kind != OriginChoiceKind.language) c,
+      if (c.kind != OriginChoiceKind.language || c.isClassChoice) c,
   ];
+
+  /// The choices of the race, subrace, background and class ([originChoices]
+  /// but the starter feat, which has its own step).
+  List<OriginChoice> get raceAndBackgroundChoices => [
+    for (final c in originChoices)
+      if (c.key != starterFeatChoiceKey) c,
+  ];
+
+  /// The choices the origin step shows: a choice of an option only once that
+  /// option is picked in its parent choice.
+  List<OriginChoice> get visibleOriginChoices => [
+    for (final c in raceAndBackgroundChoices)
+      if (originRequirementMet(c.requires)) c,
+  ];
+
+  /// True when [requires] is null or its option is picked in its choice.
+  bool originRequirementMet(({String choiceKey, String index})? requires) =>
+      requires == null ||
+      (originAnswers[requires.choiceKey]?.picks.contains(requires.index) ?? false) ||
+      originAnswers[requires.choiceKey]?.feat == requires.index;
+
+  /// The optional "Dote inicial" of the plan, or null when the server does
+  /// not offer it.
+  OriginChoice? get starterFeatChoice {
+    for (final c in originChoices) {
+      if (c.key == starterFeatChoiceKey) return c;
+    }
+    return null;
+  }
 
   OriginAnswer originAnswerOf(OriginChoice choice) =>
       originAnswers[choice.key] ?? const OriginAnswer();
@@ -488,14 +567,13 @@ class WizardState {
   String? originChoiceError(OriginChoice choice) {
     final answer = originAnswerOf(choice);
     if (choice.kind == OriginChoiceKind.feat) {
-      if (choice.required == 0) return null;
       final feat = answer.feat == null ? null : choice.option(answer.feat!);
-      if (feat == null) return '${choice.name}: elige una dote';
+      if (feat == null) return choice.required == 0 ? null : '${choice.name}: elige una dote';
       final increase = feat.abilityIncrease;
       if (increase != null && increase.needsPick && answer.ability == null) {
         return '${choice.name}: elige la característica que sube ${feat.name}';
       }
-      return null;
+      return _removedSavesError(choice, feat, answer);
     }
     final picks = answer.picks.where((p) => p.trim().isNotEmpty).length;
     if (picks < choice.required) {
@@ -507,12 +585,51 @@ class WizardState {
     return null;
   }
 
+  /// The feat asks which saving throws are given up and the answer does not
+  /// name exactly that many; also checked for optional feats once chosen.
+  String? _removedSavesError(OriginChoice choice, LevelUpOption feat, OriginAnswer answer) {
+    final remove = feat.removeSavingThrows;
+    if (remove == null || !remove.asks) return null;
+    if (answer.removedSavingThrows.length == remove.choose) return null;
+    return remove.choose == 1
+        ? '${choice.name}: elige la salvación que pierdes con ${feat.name}'
+        : '${choice.name}: elige las ${remove.choose} salvaciones que pierdes con ${feat.name}';
+  }
+
+  /// Change of the class skills to choose brought by the starter feat
+  /// (`skillChoicesDelta`, −1: one fewer); 0 without one.
+  int get starterSkillChoicesDelta {
+    final choice = starterFeatChoice;
+    if (choice == null) return 0;
+    final feat = originAnswerOf(choice).feat;
+    return feat == null ? 0 : choice.option(feat)?.skillChoicesDelta ?? 0;
+  }
+
+  /// Class skills to choose: the class count plus [starterSkillChoicesDelta].
+  int get classSkillsToChoose {
+    final choose = classDetail?.skillChoices.choose ?? 0;
+    if (choose <= 0) return 0;
+    final total = choose + starterSkillChoicesDelta;
+    return total < 0 ? 0 : total;
+  }
+
+  /// The starter feat changed how many class skills are chosen and the
+  /// background step no longer matches it; null otherwise.
+  String? get starterSkillsError {
+    if (starterSkillChoicesDelta == 0) return null;
+    final n = classSkillsToChoose;
+    if (skills.length == n) return null;
+    return n == 1
+        ? 'Con esta dote eliges 1 habilidad de clase: ajústalas en Trasfondo'
+        : 'Con esta dote eliges $n habilidades de clase: ajústalas en Trasfondo';
+  }
+
   /// First error of the origin choices, or null when every required one is answered.
   String? get originValidation {
     if (originLoading) return 'Cargando las elecciones…';
     if (originError != null) return originError;
     if (originPlan == null) return 'Cargando las elecciones…';
-    for (final c in originChoices) {
+    for (final c in visibleOriginChoices) {
       final error = originChoiceError(c);
       if (error != null) return error;
     }
@@ -821,7 +938,9 @@ class WizardState {
   /// asked, "Hechizos" only when the class casts).
   List<WizardStep> get steps => [
     for (final s in WizardStep.values)
-      if ((s != WizardStep.spells || hasSpellStep) && (s != WizardStep.origin || needsOriginStep))
+      if ((s != WizardStep.spells || hasSpellStep) &&
+          (s != WizardStep.origin || needsOriginStep) &&
+          (s != WizardStep.starterFeat || offersStarterFeat))
         s,
   ];
 
@@ -864,6 +983,7 @@ class WizardState {
     Map<String, OriginAnswer>? originAnswers,
     bool? originLoading,
     Object? originError = _unset,
+    bool? offersStarterFeat,
     Object? trinketTable = _unset,
     Object? trinketRoll = _unset,
     String? trinketText,
@@ -910,6 +1030,7 @@ class WizardState {
     originAnswers: originAnswers ?? this.originAnswers,
     originLoading: originLoading ?? this.originLoading,
     originError: identical(originError, _unset) ? this.originError : originError as String?,
+    offersStarterFeat: offersStarterFeat ?? this.offersStarterFeat,
     trinketTable: identical(trinketTable, _unset)
         ? this.trinketTable
         : trinketTable as List<Trinket>?,
@@ -947,9 +1068,8 @@ class WizardState {
       case WizardStep.abilities:
         return _validateAbilities();
       case WizardStep.background:
-        final choices = classDetail?.skillChoices;
-        if (choices != null && choices.choose > 0 && skills.length != choices.choose) {
-          final n = choices.choose;
+        final n = classSkillsToChoose;
+        if (n > 0 && skills.length != n) {
           return n == 1 ? 'Elige 1 habilidad' : 'Elige $n habilidades';
         }
         final m = languagesToChoose;
@@ -971,6 +1091,13 @@ class WizardState {
         return null;
       case WizardStep.origin:
         return originValidation;
+      case WizardStep.starterFeat:
+        if (originLoading || (originPlan == null && originError == null)) {
+          return 'Cargando las elecciones…';
+        }
+        if (originError != null) return originError;
+        final starter = starterFeatChoice;
+        return starter == null ? null : originChoiceError(starter) ?? starterSkillsError;
       case WizardStep.equipment:
         return equipmentError ?? trinketError;
       case WizardStep.spells:
@@ -1019,10 +1146,49 @@ class WizardState {
 
   // -- Request -------------------------------------------------------------------
 
+  /// Proficiencies of the sheet: saving throws of the class, class and
+  /// background skills and the fixed languages. The draft gets them before the
+  /// origin step too, so the class choices that depend on them (expertise)
+  /// offer the skills chosen.
+  List<CharacterProficiency> get sheetProficiencies {
+    final bgSkills = backgroundSkills;
+    return [
+      // Saving throws of the class, as the full sheet editor marks them.
+      for (final a
+          in (classDetail?.savingThrows ?? const <String>[])
+              .map(abilityKeyOf)
+              .where(abilityKeys.contains))
+        CharacterProficiency(
+          type: ProficiencyType.savingThrow,
+          key: a,
+          source: ProficiencySource.classSource,
+        ),
+      for (final s in skills)
+        CharacterProficiency(
+          type: ProficiencyType.skill,
+          key: s,
+          source: ProficiencySource.classSource,
+        ),
+      for (final s in bgSkills)
+        if (!skills.contains(s))
+          CharacterProficiency(
+            type: ProficiencyType.skill,
+            key: s,
+            source: ProficiencySource.background,
+          ),
+      // Chosen languages travel as origin choices (see [toOriginAnswers]).
+      for (final l in fixedLanguages)
+        CharacterProficiency(
+          type: ProficiencyType.language,
+          key: l,
+          source: ProficiencySource.race,
+        ),
+    ];
+  }
+
   /// The single sheet patch that fills in the new character.
   SheetPatch toPatch() {
     final classKey = classIndex!;
-    final bgSkills = backgroundSkills;
     return SheetPatch(
       name: name.trim(),
       raceIndex: raceIndex,
@@ -1032,38 +1198,7 @@ class WizardState {
       applyRacialBonuses: applyRacialBonuses,
       baseAbilities: {for (final k in abilityKeys) k: abilities[k] ?? 10},
       classes: [SheetPatchClass(classIndex: classKey, subclassIndex: subclassIndex, level: 1)],
-      proficiencies: [
-        // Saving throws of the class, as the full sheet editor marks them.
-        for (final a
-            in (classDetail?.savingThrows ?? const <String>[])
-                .map(abilityKeyOf)
-                .where(abilityKeys.contains))
-          CharacterProficiency(
-            type: ProficiencyType.savingThrow,
-            key: a,
-            source: ProficiencySource.classSource,
-          ),
-        for (final s in skills)
-          CharacterProficiency(
-            type: ProficiencyType.skill,
-            key: s,
-            source: ProficiencySource.classSource,
-          ),
-        for (final s in bgSkills)
-          if (!skills.contains(s))
-            CharacterProficiency(
-              type: ProficiencyType.skill,
-              key: s,
-              source: ProficiencySource.background,
-            ),
-        // Chosen languages travel as origin choices (see [toOriginAnswers]).
-        for (final l in fixedLanguages)
-          CharacterProficiency(
-            type: ProficiencyType.language,
-            key: l,
-            source: ProficiencySource.race,
-          ),
-      ],
+      proficiencies: sheetProficiencies,
       spells: [
         for (final s in cantrips)
           CharacterSpell(spellIndex: s.spellIndex, classIndex: classKey, isPrepared: true),
@@ -1101,13 +1236,17 @@ class WizardState {
   List<LevelUpChoiceAnswer> toOriginAnswers() {
     final answers = <LevelUpChoiceAnswer>[];
     for (final choice in originChoices) {
-      final answer = originAnswerOf(choice);
+      // A choice of an option that is not picked (any more) is cleared.
+      final answer = originRequirementMet(choice.requires)
+          ? originAnswerOf(choice)
+          : const OriginAnswer();
       if (choice.kind == OriginChoiceKind.feat) {
         final feat = answer.feat;
         if (feat == null) {
           answers.add(LevelUpChoiceAnswer.picks(choice.key, const []));
         } else {
           final increase = choice.option(feat)?.abilityIncrease;
+          final remove = choice.option(feat)?.removeSavingThrows;
           answers.add(
             LevelUpChoiceAnswer.feat(
               choice.key,
@@ -1115,6 +1254,9 @@ class WizardState {
               ability: increase == null
                   ? null
                   : answer.ability ?? (increase.needsPick ? null : increase.options.first),
+              removedSavingThrows: remove != null && remove.asks
+                  ? answer.removedSavingThrows
+                  : const [],
             ),
           );
         }
@@ -1163,7 +1305,20 @@ class CharacterWizardController extends Notifier<WizardState> {
   WizardState build() {
     // Kept alive for [_ownerToSend]: whether the user is a DM decides the owner.
     ref.listen(campaignDetailControllerProvider(campaignId), (_, _) {});
+    unawaited(Future.microtask(_loadRules));
     return WizardState(owner: args.ownerUserId == null ? null : (userId: args.ownerUserId));
+  }
+
+  /// Whether the campaign offers a starter feat. Without its rules (an error,
+  /// an older server) the step is simply not shown.
+  Future<void> _loadRules() async {
+    try {
+      final rules = await ref.read(dnd5eCharactersRepositoryProvider).campaignRules(campaignId);
+      if (!ref.mounted || !rules.offersStarterFeat) return;
+      state = state.copyWith(offersStarterFeat: true);
+    } catch (_) {
+      // No step.
+    }
   }
 
   CatalogRepository get _catalog => ref.read(catalogRepositoryProvider);
@@ -1177,7 +1332,9 @@ class CharacterWizardController extends Notifier<WizardState> {
   void goTo(int step) {
     final last = state.steps.length - 1;
     state = state.copyWith(step: step.clamp(0, last));
-    if (state.currentStep == WizardStep.origin) unawaited(loadOrigin());
+    if (state.currentStep == WizardStep.origin || state.currentStep == WizardStep.starterFeat) {
+      unawaited(loadOrigin());
+    }
     if (state.currentStep == WizardStep.equipment && state.trinketTable == null) {
       unawaited(loadTrinkets());
     }
@@ -1193,10 +1350,13 @@ class CharacterWizardController extends Notifier<WizardState> {
     return null;
   }
 
-  /// Like [next], but leaving the origin step first saves its answers on the
-  /// server. Returns the error that blocks the step, or null once moved on.
+  /// Like [next], but leaving the origin or the starter feat step first saves
+  /// its answers on the server. Returns the error that blocks the step, or
+  /// null once moved on.
   Future<String?> advance() async {
-    if (state.currentStep != WizardStep.origin) return next();
+    if (state.currentStep != WizardStep.origin && state.currentStep != WizardStep.starterFeat) {
+      return next();
+    }
     final error = state.validate(state.step);
     if (error != null) return error;
     try {
@@ -1409,7 +1569,7 @@ class CharacterWizardController extends Notifier<WizardState> {
   }
 
   void toggleSkill(String index) {
-    final choose = state.classDetail?.skillChoices.choose ?? 0;
+    final choose = state.classSkillsToChoose;
     final skills = {...state.skills};
     if (!skills.remove(index)) {
       if (state.backgroundSkills.contains(index) || skills.length >= choose) return;
@@ -1664,6 +1824,8 @@ class CharacterWizardController extends Notifier<WizardState> {
                   level: 1,
                 ),
               ],
+        // The class choices of level 1 (expertise) are planned from the skills.
+        proficiencies: s.classDetail == null ? null : s.sheetProficiencies,
         clear: {
           if (s.subraceIndex == null) 'subraceIndex',
           if (s.backgroundIndex == null) 'backgroundIndex',
@@ -1691,6 +1853,7 @@ class CharacterWizardController extends Notifier<WizardState> {
               picks: [for (final i in c.selected) i.index],
               feat: c.feat?.index,
               ability: c.ability,
+              removedSavingThrows: c.removedSavingThrows,
             );
       }
       state = state.copyWith(
@@ -1718,6 +1881,7 @@ class CharacterWizardController extends Notifier<WizardState> {
   /// replaced and further ones are ignored.
   void toggleOriginOption(OriginChoice choice, String index) {
     final option = choice.option(index);
+    if (option != null && !state.originRequirementMet(option.requires)) return;
     _setAnswer(choice, (a) {
       final picks = [...a.picks];
       if (picks.remove(index)) return a.copyWith(picks: picks);
@@ -1746,9 +1910,33 @@ class CharacterWizardController extends Notifier<WizardState> {
     _setAnswer(
       choice,
       (a) => a.feat == index
-          ? a.copyWith(feat: null, ability: null)
-          : a.copyWith(feat: index, ability: null),
+          ? a.copyWith(feat: null, ability: null, removedSavingThrows: const [])
+          : a.copyWith(feat: index, ability: null, removedSavingThrows: const []),
     );
+    if (choice.key == starterFeatChoiceKey) _trimSkills();
+  }
+
+  /// Drops the last class skills picked beyond [WizardState.classSkillsToChoose]
+  /// (a starter feat with a negative `skillChoicesDelta`).
+  void _trimSkills() {
+    final choose = state.classSkillsToChoose;
+    if (state.classDetail == null || state.skills.length <= choose) return;
+    state = state.copyWith(skills: state.skills.take(choose).toSet());
+  }
+
+  /// Marks or unmarks [ability] as a saving throw given up with the chosen
+  /// feat; beyond its `choose` a single pick is replaced.
+  void toggleOriginRemovedSave(OriginChoice choice, String ability) {
+    _setAnswer(choice, (a) {
+      final feat = a.feat == null ? null : choice.option(a.feat!);
+      final remove = feat?.removeSavingThrows;
+      if (remove == null) return a;
+      final saves = [...a.removedSavingThrows];
+      if (saves.remove(ability)) return a.copyWith(removedSavingThrows: saves);
+      if (saves.length < remove.choose) return a.copyWith(removedSavingThrows: [...saves, ability]);
+      if (remove.choose == 1) return a.copyWith(removedSavingThrows: [ability]);
+      return a;
+    });
   }
 
   void setOriginFeatAbility(OriginChoice choice, String ability) =>

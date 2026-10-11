@@ -71,8 +71,11 @@ internal static class SrdSnapshot
 
     private static readonly JsonSerializerOptions ValueOptions = new() { Converters = { new JsonStringEnumConverter() } };
 
-    /// <summary>Columns of the item templates that change with every import (or are not part of the catalog data).</summary>
-    private static readonly HashSet<string> ItemColumnsLeftOut = ["Id", "CreatedAt", "UpdatedAt", "CampaignId"];
+    /// <summary>
+    /// Columns of the item templates that change with every import, are not part of the catalog data or are derived
+    /// from it (PropertyTags repeats Properties for the catalog filter, phase 35B2).
+    /// </summary>
+    private static readonly HashSet<string> ItemColumnsLeftOut = ["Id", "CreatedAt", "UpdatedAt", "CampaignId", "PropertyTags"];
 
     // Differences accepted on purpose when the SRD became a pack (phase 34C): row -> (digest before, digest now, why).
     private const string AsiRogue = "The rogue gets an ability score improvement at levels 4, 8, 10, 12, 16 and 19: the old "
@@ -190,6 +193,13 @@ internal static class SrdSnapshot
         {
             var before = expectedCounts[table]?.GetValue<int>();
             var after = actualCounts[table]?.GetValue<int>();
+
+            // Catalog tables added after the capture that the SRD leaves empty (spell tags of content packs).
+            if (before is null && after == 0)
+            {
+                continue;
+            }
+
             if (before != after)
             {
                 differences.Add($"count {table}: {before?.ToString() ?? "-"} before, {after?.ToString() ?? "-"} now");

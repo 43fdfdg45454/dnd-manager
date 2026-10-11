@@ -27,6 +27,9 @@ public sealed partial class Dnd5eCharacter
     /// <summary>Result of the optional table of the background, e.g. "Especialidad: Bibliotecario".</summary>
     public const int BackgroundDetailMaxLength = 200;
     public const int MaxDeathSaves = 3;
+
+    /// <summary>Most failed death saves a feature can require to die (content packs).</summary>
+    public const int MaxDeathSaveFailures = 10;
     public const int MaxExhaustionLevel = 6;
     public const int MaxTemporaryHitPoints = 999;
     public const int MaxConditions = 20;
@@ -108,6 +111,9 @@ public sealed partial class Dnd5eCharacter
     /// <summary>Persisted form of <see cref="HitDiceUsed"/>: <c>{"fighter":2}</c>.</summary>
     public string HitDiceUsedJson { get; private set; } = "{}";
 
+    /// <summary>Persisted form of <see cref="ItemEnhancements"/>: <c>{"&lt;item id&gt;":["option-a","option-b"]}</c>.</summary>
+    public string ItemEnhancementsJson { get; private set; } = "{}";
+
     /// <summary>Result of the optional table of the background (specialty, scheme, origin...).</summary>
     public string BackgroundDetail { get; private set; } = string.Empty;
 
@@ -137,6 +143,52 @@ public sealed partial class Dnd5eCharacter
     /// <summary>Spent hit dice per class index.</summary>
     public IReadOnlyDictionary<string, int> HitDiceUsed =>
         JsonSerializer.Deserialize<Dictionary<string, int>>(HitDiceUsedJson, JsonOptions) ?? [];
+
+    /// <summary>Enhancement options applied to each inventory entry (phase 35B3), by item id.</summary>
+    public IReadOnlyDictionary<Guid, IReadOnlyList<string>> ItemEnhancements
+    {
+        get
+        {
+            try
+            {
+                return (JsonSerializer.Deserialize<Dictionary<Guid, List<string>>>(ItemEnhancementsJson, JsonOptions) ?? [])
+                    .Where(e => e.Value.Count > 0)
+                    .ToDictionary(e => e.Key, e => (IReadOnlyList<string>)e.Value);
+            }
+            catch (JsonException)
+            {
+                return new Dictionary<Guid, IReadOnlyList<string>>();
+            }
+        }
+    }
+
+    /// <summary>The enhancement options of an inventory entry (empty for none).</summary>
+    public IReadOnlyList<string> ItemEnhancementsOf(Guid itemId) => ItemEnhancements.GetValueOrDefault(itemId) ?? [];
+
+    /// <summary>
+    /// Replaces the enhancement options of the inventory entry <paramref name="itemId"/> (an empty list removes them); the
+    /// caller has checked the options. Entries of items no longer in the inventory are dropped.
+    /// </summary>
+    public void SetItemEnhancements(Guid itemId, IReadOnlyList<string> options, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        if (Character.Items.All(i => i.Id != itemId))
+        {
+            throw DomainException.NotFound("El objeto no está en el inventario del personaje.");
+        }
+
+        var all = ItemEnhancements
+            .Where(e => e.Key != itemId && Character.Items.Any(i => i.Id == e.Key))
+            .ToDictionary(e => e.Key, e => e.Value.ToList());
+        var cleaned = options.Select(o => o.Trim()).Where(o => o.Length > 0).Distinct(StringComparer.Ordinal).ToList();
+        if (cleaned.Count > 0)
+        {
+            all[itemId] = cleaned;
+        }
+
+        ItemEnhancementsJson = JsonSerializer.Serialize(all, JsonOptions);
+        Touch(now);
+    }
 
     /// <summary>The 5e part of a new draft: all base scores at 10, average hit points and racial bonuses on.</summary>
     public static Dnd5eCharacter Create(Character character)
@@ -312,8 +364,11 @@ public sealed partial class Dnd5eCharacter
 
     // ---- Combat tracking -----------------------------------------------------------------------
 
-    /// <summary>Applies combat tracking changes. <paramref name="maxHp"/> is the sheet's maximum hit points.</summary>
-    public void ApplyCombatUpdate(CombatUpdate update, int maxHp, DateTimeOffset now)
+    /// <summary>
+    /// Applies combat tracking changes. <paramref name="maxHp"/> is the sheet's maximum hit points and
+    /// <paramref name="deathSaveFailuresToDie"/> its failed death saves that kill (3 unless a feature changes it).
+    /// </summary>
+    public void ApplyCombatUpdate(CombatUpdate update, int maxHp, DateTimeOffset now, int deathSaveFailuresToDie = MaxDeathSaves)
     {
         ArgumentNullException.ThrowIfNull(update);
 
@@ -328,9 +383,12 @@ public sealed partial class Dnd5eCharacter
             throw DomainException.RuleViolation($"Los puntos de golpe temporales deben estar entre 0 y {MaxTemporaryHitPoints}.");
         }
 
-        if (update.DeathSaveSuccesses is < 0 or > MaxDeathSaves || update.DeathSaveFailures is < 0 or > MaxDeathSaves)
+        var maxFailures = Math.Clamp(deathSaveFailuresToDie, MaxDeathSaves, MaxDeathSaveFailures);
+        if (update.DeathSaveSuccesses is < 0 or > MaxDeathSaves || update.DeathSaveFailures is < 0 || update.DeathSaveFailures > maxFailures)
         {
-            throw DomainException.RuleViolation($"Las salvaciones contra muerte deben estar entre 0 y {MaxDeathSaves}.");
+            throw DomainException.RuleViolation(update.DeathSaveFailures > maxFailures
+                ? $"Los fallos de salvación contra muerte deben estar entre 0 y {maxFailures}."
+                : $"Las salvaciones contra muerte deben estar entre 0 y {MaxDeathSaves}.");
         }
 
         if (update.ExhaustionLevel is < 0 or > MaxExhaustionLevel)
@@ -502,6 +560,45 @@ public sealed partial class Dnd5eCharacter
         return resource;
     }
 
+    /// <summary>
+    /// The character rolls initiative: every resource that recharges then (<see cref="ResourceRecharge.Initiative"/>)
+    /// gets its uses back. Returns those resources (none is not an error).
+    /// </summary>
+    public IReadOnlyList<CharacterResource> RechargeOnInitiative(DateTimeOffset now)
+    {
+        var recharged = _resources.Where(r => r.Recharge == ResourceRecharge.Initiative && r.Used > 0).ToList();
+        foreach (var resource in recharged)
+        {
+            resource.SetUsed(0);
+        }
+
+        Touch(now);
+        return recharged;
+    }
+
+    /// <summary>
+    /// A recharge roll of a resource (<see cref="RechargeRoll"/>): with <paramref name="value"/> at least
+    /// <paramref name="roll"/>.Min every use comes back. Returns whether it recharged.
+    /// </summary>
+    public bool RollResourceRecharge(Guid resourceId, RechargeRoll roll, int value, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(roll);
+        var resource = FindResource(resourceId);
+        if (value < 1 || value > roll.Die)
+        {
+            throw DomainException.RuleViolation($"La tirada de {roll.Dice} debe estar entre 1 y {roll.Die}.");
+        }
+
+        if (value < roll.Min)
+        {
+            return false;
+        }
+
+        resource.SetUsed(0);
+        Touch(now);
+        return true;
+    }
+
     /// <summary>Resources whose dice must be rolled after the last rest (<see cref="CharacterResource.RollsPending"/>).</summary>
     public bool RestRollsPending => _resources.Any(r => r.RollsPending);
 
@@ -657,7 +754,7 @@ public sealed partial class Dnd5eCharacter
         }
 
         SetHitDiceUsed(used);
-        foreach (var resource in _resources.Where(r => r.Recharge == ResourceRecharge.ShortRest))
+        foreach (var resource in _resources.Where(r => r.Recharge is ResourceRecharge.ShortRest or ResourceRecharge.Initiative))
         {
             resource.SetUsed(0);
         }
@@ -687,10 +784,11 @@ public sealed partial class Dnd5eCharacter
 
     /// <summary>
     /// Long rest: hit points to <paramref name="maxHp"/>, every slot recovered, short and long rest
-    /// resources restored, recovers max(1, total level / 2) spent hit dice (main class first),
-    /// exhaustion −1, death saves reset and concentration ends. Temporary hit points are kept.
+    /// resources restored, recovers max(1, total level / 2) spent hit dice (main class first; all of them with
+    /// <paramref name="allHitDice"/>, a feature of a content pack), exhaustion −1, death saves reset and concentration
+    /// ends. Temporary hit points are kept.
     /// </summary>
-    public void LongRest(int maxHp, DateTimeOffset now)
+    public void LongRest(int maxHp, DateTimeOffset now, bool allHitDice = false)
     {
         HitPointsCurrent = Math.Max(0, maxHp);
 
@@ -699,7 +797,7 @@ public sealed partial class Dnd5eCharacter
             slot.SetUsed(0);
         }
 
-        foreach (var resource in _resources.Where(r => r.Recharge is ResourceRecharge.ShortRest or ResourceRecharge.LongRest))
+        foreach (var resource in _resources.Where(r => r.Recharge is ResourceRecharge.ShortRest or ResourceRecharge.LongRest or ResourceRecharge.Initiative))
         {
             resource.SetUsed(0);
         }
@@ -709,7 +807,7 @@ public sealed partial class Dnd5eCharacter
             resource.AfterRest(RestKind.Long);
         }
 
-        var toRecover = Math.Max(1, TotalLevel / 2);
+        var toRecover = allHitDice ? int.MaxValue : Math.Max(1, TotalLevel / 2);
         var used = new Dictionary<string, int>(HitDiceUsed, StringComparer.Ordinal);
         foreach (var characterClass in OrderedClasses)
         {
@@ -935,6 +1033,9 @@ public sealed partial class Dnd5eCharacter
     private void ApplyClasses(List<ClassEntry> classes)
     {
         _classes.RemoveAll(c => !classes.Any(e => e.ClassIndex == c.ClassIndex));
+
+        // The level choices of a class the character no longer has stop applying (a draft whose class changed).
+        _choices.RemoveAll(c => c.ClassIndex is not null && !classes.Any(e => e.ClassIndex == c.ClassIndex));
         for (var order = 0; order < classes.Count; order++)
         {
             var entry = classes[order];

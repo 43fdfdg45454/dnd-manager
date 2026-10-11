@@ -87,6 +87,8 @@ const _spellProgressions = <String, String>{
   'third': 'Un tercio',
   'pact': 'Magia de pacto',
   'table': 'Tabla propia',
+  'hitpoints': 'Sin espacios: cuesta puntos de golpe',
+  'ritualsonly': 'Sin espacios: solo rituales',
 };
 
 /// Spanish name of the spell slot progression of a class ("full" ->
@@ -106,6 +108,7 @@ String rechargeLabel(String recharge) => switch (recharge.toLowerCase()) {
   'longrest' => 'Descanso largo',
   'shortrest' => 'Descanso corto',
   'dawn' => 'Al amanecer',
+  'initiative' => 'Al tirar iniciativa',
   'none' || '' => 'No se recupera',
   _ => recharge,
 };

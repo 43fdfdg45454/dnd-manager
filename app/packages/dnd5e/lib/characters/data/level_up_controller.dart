@@ -59,6 +59,7 @@ class LevelUpSelection {
     this.asi = const {},
     this.feat,
     this.featAbility,
+    this.removedSavingThrows = const [],
   });
 
   /// Option indexes (or texts for free-text choices), in pick order.
@@ -75,6 +76,10 @@ class LevelUpSelection {
   /// Ability the [feat] raises, when the feat lets the player pick it.
   final String? featAbility;
 
+  /// Saving throw proficiencies given up with a [feat] that asks which
+  /// (`removeSavingThrows`).
+  final List<String> removedSavingThrows;
+
   int get asiTotal => asi.values.fold(0, (sum, v) => sum + v);
 
   bool get isEmpty =>
@@ -87,7 +92,9 @@ class LevelUpSelection {
     Map<String, int>? asi,
     Object? feat = _unset,
     Object? featAbility = _unset,
+    List<String>? removedSavingThrows,
   }) => LevelUpSelection(
+    removedSavingThrows: removedSavingThrows ?? this.removedSavingThrows,
     selected: selected ?? this.selected,
     replaced: replaced == _unset ? this.replaced : replaced as String?,
     mode: mode ?? this.mode,
@@ -185,15 +192,23 @@ class LevelUpState {
     return p.selectedClass?.subclassIndex;
   }
 
-  /// Choices that apply: the general ones and those of the chosen subclass.
+  /// Choices that apply: the general ones and those of the chosen subclass,
+  /// and the choices of an option or feat only while it is picked.
   List<LevelUpChoice> get visibleChoices {
     final p = plan;
     if (p == null) return const [];
     final subclass = subclassIndex;
     return [
       for (final c in p.choices)
-        if (c.subclassIndex == null || c.subclassIndex == subclass) c,
+        if ((c.subclassIndex == null || c.subclassIndex == subclass) && _requirementMet(c.requires))
+          c,
     ];
+  }
+
+  bool _requirementMet(({String choiceKey, String index})? requires) {
+    if (requires == null) return true;
+    final selection = selectionOf(requires.choiceKey);
+    return selection.selected.contains(requires.index) || selection.feat == requires.index;
   }
 
   /// Automatic features of the class level and of the chosen subclass.
@@ -247,6 +262,10 @@ class LevelUpState {
 
   // -- Abilities ---------------------------------------------------------------
 
+  /// Highest score an improvement may reach in [ability]: 20, or what a
+  /// feature of a content pack sets (`abilityMaxScores` of the sheet).
+  int maxScore(String ability) => character?.sheet.abilityMax(ability) ?? improvementMaxScore;
+
   /// Score of [ability] without items and overrides (what the 20 cap is
   /// checked against).
   int naturalScore(String ability) {
@@ -265,12 +284,7 @@ class LevelUpState {
 
   /// Whether [option] applies with the current answers: options that depend
   /// on another pick of this level-up (`requires`) only when it is picked.
-  bool isAvailable(LevelUpOption option) {
-    final requires = option.requires;
-    if (requires == null) return true;
-    final selection = selectionOf(requires.choiceKey);
-    return selection.selected.contains(requires.index) || selection.feat == requires.index;
-  }
+  bool isAvailable(LevelUpOption option) => _requirementMet(option.requires);
 
   /// Options of [choice] that apply with the current answers.
   List<LevelUpOption> availableOptions(LevelUpChoice choice) => [
@@ -327,10 +341,14 @@ class LevelUpState {
     if (!_featMode(choice, selection)) {
       final values = selection.asi.values.where((v) => v != 0);
       final overCap = selection.asi.entries.any(
-        (e) => e.value > 0 && naturalScore(e.key) + e.value > improvementMaxScore,
+        (e) => e.value > 0 && naturalScore(e.key) + e.value > maxScore(e.key),
       );
       if (selection.asiTotal != improvementPoints || values.any((v) => v < 0) || overCap) {
-        return 'Reparte $improvementPoints puntos (ninguna puede pasar de $improvementMaxScore)';
+        final caps = {
+          for (final a in const ['str', 'dex', 'con', 'int', 'wis', 'cha']) maxScore(a),
+        };
+        final cap = caps.length == 1 ? '${caps.first}' : 'su máximo';
+        return 'Reparte $improvementPoints puntos (ninguna puede pasar de $cap)';
       }
       return null;
     }
@@ -341,10 +359,16 @@ class LevelUpState {
     if (increase != null) {
       final ability = selection.featAbility ?? (increase.needsPick ? null : increase.options.first);
       if (ability == null) return 'Elige la característica que sube ${feat.name}';
-      if (naturalScore(ability) + increase.amount > improvementMaxScore) {
+      if (naturalScore(ability) + increase.amount > maxScore(ability)) {
         return '${feat.name} no puede subir ${abilityLabel(ability)} por encima de '
-            '$improvementMaxScore';
+            '${maxScore(ability)}';
       }
+    }
+    final remove = feat.removeSavingThrows;
+    if (remove != null && remove.asks && selection.removedSavingThrows.length != remove.choose) {
+      return remove.choose == 1
+          ? 'Elige la salvación que pierdes con ${feat.name}'
+          : 'Elige las ${remove.choose} salvaciones que pierdes con ${feat.name}';
     }
     return null;
   }
@@ -404,6 +428,9 @@ class LevelUpState {
               ability: increase == null
                   ? null
                   : selection.featAbility ?? (increase.needsPick ? null : increase.options.first),
+              removedSavingThrows: feat?.removeSavingThrows?.asks ?? false
+                  ? selection.removedSavingThrows
+                  : const [],
             ),
           );
         }
@@ -618,7 +645,7 @@ class LevelUpController extends Notifier<LevelUpState> {
       if (next < 0 || next > improvementPoints) return s;
       if (delta > 0) {
         if (s.asiTotal + delta > improvementPoints) return s;
-        if (state.naturalScore(ability) + next > improvementMaxScore) return s;
+        if (state.naturalScore(ability) + next > state.maxScore(ability)) return s;
       }
       return s.copyWith(asi: {...s.asi, ability: next}, mode: ImprovementMode.asi);
     });
@@ -632,6 +659,7 @@ class LevelUpController extends Notifier<LevelUpState> {
       (s) => s.copyWith(
         feat: s.feat == index ? null : index,
         featAbility: null,
+        removedSavingThrows: const [],
         mode: ImprovementMode.feat,
       ),
     );
@@ -640,6 +668,20 @@ class LevelUpController extends Notifier<LevelUpState> {
 
   void setFeatAbility(LevelUpChoice choice, String ability) =>
       _update(choice.key, (s) => s.copyWith(featAbility: ability));
+
+  /// Toggles a saving throw given up with the chosen feat, up to the number
+  /// the feat takes away.
+  void toggleRemovedSave(LevelUpChoice choice, String ability) => _update(choice.key, (s) {
+    final feat = s.feat == null ? null : choice.option(s.feat!);
+    final remove = feat?.removeSavingThrows;
+    if (remove == null) return s;
+    final current = [...s.removedSavingThrows];
+    if (!current.remove(ability)) {
+      if (current.length >= remove.choose) return s;
+      current.add(ability);
+    }
+    return s.copyWith(removedSavingThrows: current);
+  });
 
   // -- Submission ------------------------------------------------------------------
 

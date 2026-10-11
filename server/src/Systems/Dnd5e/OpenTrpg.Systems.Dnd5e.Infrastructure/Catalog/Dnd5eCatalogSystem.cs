@@ -194,6 +194,7 @@ internal sealed partial class Dnd5eCatalogSystem(
         db.Set<RuleDefinition>().AddRange(rows.Rules);
         db.Set<ReferenceEntry>().AddRange(rows.ReferenceEntries);
         db.Set<EquipmentCategory>().AddRange(rows.EquipmentCategories);
+        db.Set<SpellTag>().AddRange(rows.SpellTags);
         db.Set<SkillDefinition>().AddRange(rows.Skills);
         await db.SaveChangesAsync(cancellationToken);
         db.ChangeTracker.Clear();
@@ -299,6 +300,16 @@ internal sealed partial class Dnd5eCatalogSystem(
             .Where(x => reach.Contains(x.Source) && x.Source != ownId && (x.SpellcastingAbility != null || x.SpellcastingLevel > 0))
             .Select(x => x.Index)
             .ToListAsync(cancellationToken);
+        // Casters without slots (cantrips only) may still get spellcasting from a subclass of another pack.
+        var slotless = await db.Set<ClassDefinition>().AsNoTracking()
+            .Where(x => casterClasses.Contains(x.Index) && x.SpellcastingLevel == 0 && !x.IsPactCaster)
+            .ToListAsync(cancellationToken);
+        var slotlessIndexes = slotless.Where(c => c.MayGainSubclassSpellcasting).Select(c => c.Index).ToList();
+        var withSlots = (await db.Set<ClassLevel>().AsNoTracking().Where(l => slotlessIndexes.Contains(l.ClassIndex)).ToListAsync(cancellationToken))
+            .Where(l => l.SpellSlots.Any(s => s > 0))
+            .Select(l => l.ClassIndex)
+            .ToHashSet(StringComparer.Ordinal);
+        var cantripOnlyClasses = slotlessIndexes.Where(i => !withSlots.Contains(i)).ToHashSet(StringComparer.Ordinal);
         var races = await db.Set<RaceDefinition>().AsNoTracking()
             .Where(x => reach.Contains(x.Source))
             .Select(x => new { x.Index, x.Source })
@@ -311,6 +322,18 @@ internal sealed partial class Dnd5eCatalogSystem(
             .Where(x => x.ResourceJson != null && reach.Contains(x.Source))
             .Select(x => new { x.ResourceJson, x.Source })
             .ToListAsync(cancellationToken));
+        resourceRows.AddRange(await db.Set<TraitDefinition>().AsNoTracking()
+            .Where(x => x.ResourceJson != null && reach.Contains(x.Source))
+            .Select(x => new { x.ResourceJson, x.Source })
+            .ToListAsync(cancellationToken));
+        var creatures = await db.Set<CreatureDefinition>().AsNoTracking()
+            .Where(x => reach.Contains(x.Source) && x.Source != ownId)
+            .Select(x => x.Index)
+            .ToListAsync(cancellationToken);
+        var conditions = await db.Set<ConditionDefinition>().AsNoTracking()
+            .Where(x => reach.Contains(x.Source) && x.Source != ownId)
+            .Select(x => x.Index)
+            .ToListAsync(cancellationToken);
         var classResources = (await db.Set<ClassDefinition>().AsNoTracking()
                 .Where(x => x.ResourcesJson != null && reach.Contains(x.Source))
                 .Select(x => new { x.ResourcesJson, x.Source })
@@ -343,6 +366,7 @@ internal sealed partial class Dnd5eCatalogSystem(
             packSubclasses,
             races,
             casterClasses.ToHashSet(StringComparer.Ordinal),
+            cantripOnlyClasses,
             spellRows.ToDictionary(x => x.Index, x => x.Level, StringComparer.Ordinal),
             resourceRows.Select(x => (Key: LevelChoiceJson.ParseResource(x.ResourceJson)?.Key, x.Source))
                 .Where(x => x.Key is not null)
@@ -354,6 +378,8 @@ internal sealed partial class Dnd5eCatalogSystem(
         {
             Packs = packs,
             Vocabularies = vocabularies,
+            Conditions = conditions.ToHashSet(StringComparer.Ordinal),
+            Creatures = creatures.ToHashSet(StringComparer.Ordinal),
         };
     }
 
@@ -455,6 +481,7 @@ internal sealed partial class Dnd5eCatalogSystem(
         await db.Set<RuleDefinition>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<ReferenceEntry>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<EquipmentCategory>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
+        await db.Set<SpellTag>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<TrinketEntry>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<RollTable>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);
         await db.Set<LevelChoiceRule>().Where(x => x.Source == id).ExecuteDeleteAsync(cancellationToken);

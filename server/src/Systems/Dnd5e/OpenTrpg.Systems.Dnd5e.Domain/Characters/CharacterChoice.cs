@@ -16,6 +16,12 @@ public sealed class CharacterChoice
     /// <summary>Key of the hit points rolled at a class level (<see cref="ChoiceSelection.Roll"/>).</summary>
     public const string HitPointsKey = "hit-points";
 
+    /// <summary>Key of the options granted by another option, a feat or a subclass level (<c>grants.options</c>), one record each.</summary>
+    public const string GrantedKey = "granted";
+
+    /// <summary>Kind of the selection of a granted option.</summary>
+    public const string GrantedKind = "Granted";
+
     private CharacterChoice()
     {
     }
@@ -88,6 +94,9 @@ public sealed record ChoiceSelection
     public ChoiceItem? Feat { get; init; }
 
     public string? Ability { get; init; }
+
+    /// <summary>Feats with <c>grants.removeSavingThrows</c>: abilities whose saving throw proficiency the character loses.</summary>
+    public IReadOnlyList<string>? RemovedSavingThrows { get; init; }
 
     public int? Roll { get; init; }
 

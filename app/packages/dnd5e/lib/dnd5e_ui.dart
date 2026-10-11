@@ -37,6 +37,7 @@ import 'items/money_format.dart' as money;
 import 'items/ui/attunement_dialog.dart';
 import 'items/ui/item_fields_form.dart';
 import 'session/data/party_repository.dart';
+import 'session/campaign_rules_section.dart';
 import 'session/level_up_card.dart';
 import 'session/party_controller.dart';
 import 'session/party_models.dart';
@@ -255,6 +256,9 @@ class Dnd5eUi extends GameSystemUi {
   }
 
   // -- Campaign -----------------------------------------------------------------
+
+  @override
+  Widget? campaignRulesSection(String campaignId) => CampaignRulesSection(campaignId: campaignId);
 
   @override
   Widget partyPanel(BuildContext context, String campaignId) =>

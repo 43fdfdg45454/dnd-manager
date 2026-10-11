@@ -150,6 +150,7 @@ class ClassSummary {
     this.isSpellcaster = false,
     this.spellcastingAbility,
     this.source,
+    this.auxiliary = false,
   });
 
   factory ClassSummary.fromJson(Map<String, dynamic> json) => ClassSummary(
@@ -159,6 +160,7 @@ class ClassSummary {
     isSpellcaster: _bool(json['isSpellcaster']) || json['spellcastingAbility'] != null,
     spellcastingAbility: _strOrNull(json['spellcastingAbility']),
     source: _strOrNull(json['source']),
+    auxiliary: _bool(json['auxiliary']),
   );
 
   final String index;
@@ -166,6 +168,10 @@ class ClassSummary {
   final int? hitDie;
   final bool isSpellcaster;
   final String? spellcastingAbility;
+
+  /// An auxiliary level of a content pack: taken once after level 1, never a
+  /// starting class.
+  final bool auxiliary;
 
   /// "srd" or the id of the content pack that added it; null when not sent.
   final String? source;
@@ -327,6 +333,10 @@ class ClassSpellcasting {
     this.preparation = '',
     this.ritual = false,
     this.focus,
+    this.maxSpellLevel = const {},
+    this.hitPointCost = const [],
+    this.usesResource,
+    this.treatAsRitual = const [],
   });
 
   factory ClassSpellcasting.fromJson(Map<String, dynamic> json) => ClassSpellcasting(
@@ -334,10 +344,35 @@ class ClassSpellcasting {
     preparation: _str(json['preparation']),
     ritual: _bool(json['ritual']),
     focus: _strOrNull(json['focus']),
+    maxSpellLevel: {
+      for (final e in (_map(json['maxSpellLevel']) ?? const <String, dynamic>{}).entries)
+        if ((int.tryParse(e.key), _int(e.value)) case (final int level, final int max)) level: max,
+    },
+    hitPointCost: [
+      for (final v in (json['hitPointCost'] as List?) ?? const [])
+        if (_int(v) case final int cost) cost,
+    ],
+    usesResource: _strOrNull(json['usesResource']),
+    treatAsRitual: _strList(json['treatAsRitual']),
   );
 
-  /// "full", "half", "third", "pact" or "table" (own slots table).
+  /// "full", "half", "third", "pact", "table" (own slots table),
+  /// "hitPoints" (no slots: each spell costs hit points) or "ritualsOnly"
+  /// (no slots: rituals only).
   final String progression;
+
+  /// "hitPoints"/"ritualsOnly": highest spell level by class level (the
+  /// levels where it changes).
+  final Map<int, int> maxSpellLevel;
+
+  /// "hitPoints": hit points lost by spell level (index 0 = 1st level).
+  final List<int> hitPointCost;
+
+  /// "hitPoints": key of the class resource each spell spends, if any.
+  final String? usesResource;
+
+  /// Spell indexes the class casts as rituals although they are not.
+  final List<String> treatAsRitual;
 
   /// "prepared" or "known".
   final String preparation;
@@ -443,6 +478,10 @@ class ClassDetail extends ClassSummary {
     this.levels = const [],
     this.subclasses = const [],
     this.features = const [],
+    super.auxiliary,
+    this.prerequisitesText,
+    this.countsAsCasterLevel = false,
+    this.hasLevelOneChoices = false,
   });
 
   factory ClassDetail.fromJson(Map<String, dynamic> json) {
@@ -484,8 +523,23 @@ class ClassDetail extends ClassSummary {
       levels: levels,
       subclasses: _objects(json['subclasses'], Subclass.fromJson),
       features: features,
+      auxiliary: summary.auxiliary,
+      prerequisitesText: _strOrNull(json['prerequisitesText']),
+      countsAsCasterLevel: _bool(json['countsAsCasterLevel']),
+      hasLevelOneChoices: _bool(json['hasLevelOneChoices']),
     );
   }
+
+  /// The class asks for choices at level 1 besides the subclass (fighting
+  /// style, expertise...): the creation wizard asks them in its origin step
+  /// (`class.*` keys of `origin-choices`).
+  final bool hasLevelOneChoices;
+
+  /// Prerequisites of an auxiliary level as text.
+  final String? prerequisitesText;
+
+  /// An auxiliary level that adds one level to the caster class for slots.
+  final bool countsAsCasterLevel;
 
   final int spellcastingLevel;
 
@@ -801,9 +855,11 @@ class SpellSummary {
     this.source,
     this.category,
     this.expandedBy = const [],
+    this.tags = const [],
   });
 
   factory SpellSummary.fromJson(Map<String, dynamic> json) => SpellSummary(
+    tags: _strList(json['tags']),
     index: _str(json['index']),
     name: _str(json['name'], _str(json['index'])),
     level: _int(json['level']) ?? 0,
@@ -843,6 +899,9 @@ class SpellSummary {
   /// Subclasses whose expanded spell list (content packs) adds the spell to
   /// their class's list.
   final List<SpellExpansion> expandedBy;
+
+  /// Tags of the content packs (`reference.spellTags`).
+  final List<String> tags;
 }
 
 /// A subclass whose expanded spell list adds a spell to its class's list for
@@ -910,6 +969,7 @@ class SpellDetail extends SpellSummary {
     super.source,
     super.category,
     super.expandedBy,
+    super.tags,
     this.range,
     this.components = const [],
     this.material,
@@ -923,6 +983,7 @@ class SpellDetail extends SpellSummary {
     this.damageAtCharacterLevel = const {},
     this.healAtSlotLevel = const {},
     this.dcAbility,
+    this.ritualForClasses = const [],
   });
 
   factory SpellDetail.fromJson(Map<String, dynamic> json) {
@@ -939,6 +1000,7 @@ class SpellDetail extends SpellSummary {
       source: summary.source,
       category: summary.category,
       expandedBy: summary.expandedBy,
+      tags: summary.tags,
       range: _strOrNull(json['range']),
       components: _strList(json['components']),
       material: _strOrNull(json['material']),
@@ -952,8 +1014,12 @@ class SpellDetail extends SpellSummary {
       damageAtCharacterLevel: _levelMap(_map(json['damage'])?['atCharacterLevel']),
       healAtSlotLevel: _levelMap(json['healAtSlotLevel']),
       dcAbility: _strOrNull(_nameOf(json['dcAbility'])),
+      ritualForClasses: _strList(json['ritualForClasses']),
     );
   }
+
+  /// Classes of content packs that cast it as a ritual although it is not one.
+  final List<String> ritualForClasses;
 
   final String? range;
 
@@ -1274,6 +1340,7 @@ abstract final class ReferenceKinds {
   static const damageTypes = 'damageTypes';
   static const magicSchools = 'magicSchools';
   static const tools = 'tools';
+  static const spellTags = 'spellTags';
 }
 
 /// An entry of a vocabulary of the catalog (`ReferenceEntryDto`): a

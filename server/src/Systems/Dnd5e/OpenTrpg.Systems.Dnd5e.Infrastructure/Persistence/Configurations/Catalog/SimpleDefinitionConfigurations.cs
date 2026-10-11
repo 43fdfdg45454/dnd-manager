@@ -125,3 +125,16 @@ internal sealed class EquipmentCategoryConfiguration : IEntityTypeConfiguration<
         builder.HasIndex(x => x.Source);
     }
 }
+
+internal sealed class SpellTagConfiguration : IEntityTypeConfiguration<SpellTag>
+{
+    public void Configure(EntityTypeBuilder<SpellTag> builder)
+    {
+        builder.ToTable("CatalogSpellTags");
+        builder.HasKey(x => new { x.Source, x.Tag, x.SpellIndex });
+        builder.Property(x => x.Tag).HasMaxLength(CatalogColumns.IndexMaxLength);
+        builder.Property(x => x.SpellIndex).HasMaxLength(CatalogColumns.IndexMaxLength);
+        builder.Property(x => x.Source).HasMaxLength(CatalogSources.MaxLength);
+        builder.HasIndex(x => x.SpellIndex);
+    }
+}

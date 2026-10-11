@@ -68,6 +68,7 @@ public sealed class CharacterSheetService(
     IItemTemplateRepository itemTemplates,
     ICharacterCompanionRepository companions,
     CompanionPlanner companionPlanner,
+    Items.ItemEnhancementPlanner enhancementPlanner,
     CharacterViews views,
     CatalogScopeContext scope,
     IDateTimeProvider clock) : ICharacterSheetService
@@ -224,6 +225,17 @@ public sealed class CharacterSheetService(
                 throw AppException.Validation("classes", $"La clase '{disabledClass}' {DisabledPack}.");
             }
 
+            // Auxiliary levels (content packs): one level, never the starting class.
+            if (classes.FirstOrDefault(c => definitions[c.ClassIndex.Trim()].IsAuxiliary && c.Level > 1) is { } longAuxiliary)
+            {
+                throw AppException.Validation("classes", $"'{definitions[longAuxiliary.ClassIndex.Trim()].Name}' es un nivel auxiliar: solo tiene un nivel.");
+            }
+
+            if (definitions[classes[0].ClassIndex.Trim()].IsAuxiliary)
+            {
+                throw AppException.Validation("classes", $"'{definitions[classes[0].ClassIndex.Trim()].Name}' es un nivel auxiliar: no puede ser la clase inicial.");
+            }
+
             var subclassIndexes = classes
                 .Select(c => c.SubclassIndex?.Trim())
                 .Where(s => !string.IsNullOrEmpty(s))
@@ -318,7 +330,31 @@ public sealed class CharacterSheetService(
             || (character.SubraceIndex is not null && sheetCatalog.Subrace(character.SubraceIndex) is null);
         var backgroundMissing = character.BackgroundIndex is not null && sheetCatalog.Background(character.BackgroundIndex) is null;
         var companionGrant = sheetCatalog.Companion(character);
-        var companion = await companions.GetByCharacterAsync(character.Id, cancellationToken);
+        var companionList = await companions.ListByCharacterAsync(character.Id, cancellationToken);
+        var companionContext = CompanionPlanner.Context(character, sheet);
+        var companionDtos = new List<CharacterCompanionDto>();
+        foreach (var each in companionList)
+        {
+            companionDtos.Add(await companionPlanner.BuildDtoAsync(each, companionGrant, sheet.ProficiencyBonus, cancellationToken, companionContext));
+        }
+
+        var enhancementGrant = sheetCatalog.ItemEnhancement(character);
+        var enhancementsOf = sheetCatalog.Enhancements(character);
+        var enhancedItems = character.Items
+            .Select(i => (Entry: i, Enhanced: Dnd5eInventory.Enhance(i, templates, enhancementsOf)))
+            .Where(i => i.Enhanced.Enhancements.Count > 0)
+            .OrderBy(i => i.Entry.SortOrder)
+            .ThenBy(i => i.Entry.Id)
+            .Select(i => Items.CharacterItemEnhancementDto.From(i.Entry.Id, i.Enhanced))
+            .ToList();
+        var grafts = character.Items
+            .Select(i => (Entry: i, Template: InventoryView.TemplateOf(templates, i.TemplateId)))
+            .Select(i => (i.Entry, i.Template, Slot: WeaponRules.Parse(i.Template?.SystemDataJson).GraftSlot))
+            .Where(i => i.Slot is not null)
+            .OrderBy(i => i.Slot, StringComparer.Ordinal)
+            .ThenBy(i => i.Entry.SortOrder)
+            .Select(i => new Items.CharacterGraftDto(i.Entry.Id, InventoryView.Resolve(templates, i.Entry).Name, i.Slot!, i.Entry.Equipped))
+            .ToList();
 
         return new Dnd5eCharacterDetailDto
         {
@@ -366,6 +402,9 @@ public sealed class CharacterSheetService(
             Sheet = ToDto(sheet),
             Inventory = InventoryView.Build(character.Character, templates, Dnd5eInventory.CarryingCapacity(sheet.Abilities[Abilities.Str].Score)),
             Combat = CombatSummaryBuilder.Build(character, sheet, sheetCatalog, templates, resources),
+            ItemEnhancements = enhancedItems,
+            ItemEnhancementFeature = enhancementGrant is null ? null : await enhancementPlanner.FeatureDtoAsync(enhancementGrant, cancellationToken),
+            Grafts = grafts,
             PendingRest = pendingRest is null ? null : PendingRestDto.From(pendingRest),
             PendingLevelUpTo = character.PendingLevelUpTo,
             SpellPreparationPending = character.SpellPreparationPending,
@@ -385,9 +424,10 @@ public sealed class CharacterSheetService(
                 .Select(c => CharacterFeatDto.From(c, sheetCatalog.Option(c.Selection.Feat!.Index)))
                 .ToList(),
             OptionCosts = optionCosts,
-            Companion = companion is null ? null : await companionPlanner.BuildDtoAsync(companion, companionGrant, sheet.ProficiencyBonus, cancellationToken),
-            CompanionFeature = companionGrant is null ? null : CompanionPlanner.FeatureDto(companionGrant),
-            CompanionPending = companionGrant is not null && companion is null,
+            Companion = companionDtos.FirstOrDefault(),
+            Companions = companionDtos,
+            CompanionFeature = companionGrant is null ? null : await companionPlanner.FeatureDtoAsync(companionGrant, sheet.ProficiencyBonus, cancellationToken),
+            CompanionPending = companionGrant is not null && companionDtos.Count == 0,
         };
     }
 
@@ -399,7 +439,7 @@ public sealed class CharacterSheetService(
     {
         var equipped = character.Items.Where(i => i.Equipped).ToList();
         var templates = await InventoryView.LoadTemplatesAsync(itemTemplates, equipped.Select(i => i.TemplateId), cancellationToken);
-        return SheetCalculator.Calculate(sheetCatalog.InputFor(character, Dnd5eInventory.Gear(equipped, templates)));
+        return SheetCalculator.Calculate(sheetCatalog.InputFor(character, Dnd5eInventory.Gear(equipped, templates, sheetCatalog.Enhancements(character))));
     }
 
     /// <summary>Sheets of several characters with their inventories loaded, with one template query for all.</summary>
@@ -414,7 +454,7 @@ public sealed class CharacterSheetService(
             cancellationToken);
         return characters.ToDictionary(
             c => c.Id,
-            c => SheetCalculator.Calculate(sheetCatalog.InputFor(c, Dnd5eInventory.Gear(c.Items.Where(i => i.Equipped), templates))));
+            c => SheetCalculator.Calculate(sheetCatalog.InputFor(c, Dnd5eInventory.Gear(c.Items.Where(i => i.Equipped), templates, sheetCatalog.Enhancements(c)))));
     }
 
     /// <summary>Levels with slots (or spent ones), pact slots first as level 0.</summary>
@@ -425,8 +465,8 @@ public sealed class CharacterSheetService(
             .ToList();
 
     /// <summary>Templates of the automatic resources: SRD class resources and those of chosen options and subclass features.</summary>
-    private static List<ResourceTemplate> AutoResourceTemplates(Dnd5eCharacter character, CharacterSheet sheet) =>
-        [.. ClassResourceRules.ForClasses(character.Classes, sheet.AbilityModifiers), .. sheet.ChoiceResources];
+    internal static List<ResourceTemplate> AutoResourceTemplates(Dnd5eCharacter character, CharacterSheet sheet) =>
+        [.. ResourceTemplate.WithBonuses([.. ClassResourceRules.ForClasses(character.Classes, sheet.AbilityModifiers), .. sheet.ChoiceResources], sheet.FeatureModifiers)];
 
     private static CharacterSheetDto ToDto(CharacterSheet sheet) => new(
         sheet.Abilities.ToDictionary(a => a.Key, a => new AbilityDto(a.Value.Score, a.Value.Modifier, a.Value.Overridden)),
@@ -440,7 +480,21 @@ public sealed class CharacterSheetService(
         sheet.Speed,
         sheet.HitPointsMax,
         sheet.HitDice.Select(h => new HitDiceDto(h.ClassIndex, h.Die, h.Total, h.Remaining)).ToList(),
-        sheet.Spellcasting.Select(s => new SpellcastingDto(s.ClassIndex, s.Ability, s.SaveDc, s.AttackBonus, s.PreparedMax) { SpellsKnownMax = s.SpellsKnownMax, CantripsKnownMax = s.CantripsKnownMax }).ToList(),
+        sheet.Spellcasting.Select(s => new SpellcastingDto(s.ClassIndex, s.Ability, s.SaveDc, s.AttackBonus, s.PreparedMax)
+        {
+            Name = s.Name,
+            AbilityOverridden = s.AbilityOverridden,
+            SpellsKnownMax = s.SpellsKnownMax,
+            CantripsKnownMax = s.CantripsKnownMax,
+            MaxSpellLevel = s.MaxSpellLevel,
+            Progression = s.Progression,
+            HitPointCost = s.HitPointCost,
+            UsesResource = s.UsesResource,
+            CantripSaveDc = s.CantripSaveDc,
+            CantripAttackBonus = s.CantripAttackBonus,
+            CriticalRange = s.CriticalRange,
+            CriticalRangeSource = s.CriticalRangeSource,
+        }).ToList(),
         sheet.PactMagic?.SlotLevel,
         sheet.OverriddenFields,
         sheet.ItemEffects.Select(e => new ItemEffectDto(e.ItemName, e.Kind.ToString(), e.Target, e.Value)).ToList(),
@@ -448,5 +502,22 @@ public sealed class CharacterSheetService(
     {
         Resistances = sheet.Resistances.Select(r => new ResistanceDto(r.DamageType, r.Source, r.Label)).ToList(),
         BreathWeapon = sheet.BreathWeapon is { } b ? new BreathWeaponValueDto(b.Name, b.Source, b.DamageType, b.Dice, b.SaveAbility, b.Area, b.Dc) : null,
+        Immunities = sheet.Immunities.Select(Defense).ToList(),
+        ConditionImmunities = sheet.ConditionImmunities.Select(Defense).ToList(),
+        LostSavingThrows = sheet.LostSavingThrows.Select(Defense).ToList(),
+        LostSkills = sheet.LostSkills.Select(Defense).ToList(),
+        ClassSaveDcs = sheet.ClassSaveDcs.Select(d => new ClassSaveDcDto(d.ClassIndex, d.Name, d.Ability, d.Dc, d.BreakdownKey)).ToList(),
+        PassiveInvestigation = sheet.PassiveInvestigation,
+        PassiveInsight = sheet.PassiveInsight,
+        AbilityMaxScores = sheet.AbilityMaxScores,
+        Size = sheet.Size,
+        SizeSource = sheet.SizeSource,
+        Speeds = sheet.Speeds.ToDictionary(v => v.Mode, v => v.Feet, StringComparer.Ordinal),
+        DeathSaveFailuresToDie = sheet.DeathSaveFailuresToDie,
+        DeathSaveFailuresSource = sheet.DeathSaveFailuresSource,
+        RecoversAllHitDice = sheet.RecoversAllHitDice,
+        HitDiceRecoverySource = sheet.HitDiceRecoverySource,
     };
+
+    private static DefenseDto Defense(SourcedValue value) => new(value.Value, value.Source, value.Label);
 }

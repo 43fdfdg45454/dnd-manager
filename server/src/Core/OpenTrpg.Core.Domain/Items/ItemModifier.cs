@@ -35,6 +35,39 @@ public enum ItemModifierKind
 
     /// <summary>Adds the value to the initiative.</summary>
     InitiativeBonus,
+
+    // The kinds below describe rules of the character (content packs: options, feats and class features), never of
+    // an item: ItemModifier.Validate rejects them (see ItemModifier.IsItemKind).
+
+    /// <summary>Armor class "base + abilities" competing with the armor (value = base).</summary>
+    ArmorClassFormula,
+
+    /// <summary>Lowest d20 roll that is a critical hit (target "weapon", "spell" or null for both).</summary>
+    CriticalRange,
+
+    /// <summary>Adds the value to the spell save DC (target: a class index or null for every class).</summary>
+    SpellSaveDcBonus,
+
+    /// <summary>Adds the value to the spell attack bonus (target: a class index or null for every class).</summary>
+    SpellAttackBonus,
+
+    /// <summary>Adds the value to a passive score (target "perception", "investigation" or "insight").</summary>
+    PassiveBonus,
+
+    /// <summary>Highest score of the target ability (instead of 20).</summary>
+    AbilityMax,
+
+    /// <summary>A movement other than walking (target "swim", "climb" or "fly") with the value in feet.</summary>
+    Speed,
+
+    /// <summary>Death saving throw failures needed to die (instead of 3).</summary>
+    DeathSaveFailures,
+
+    /// <summary>Hit dice recovered on a long rest (target "all"; half by default).</summary>
+    HitDiceRecovery,
+
+    /// <summary>Adds the value to the maximum of the character resource whose key is the target.</summary>
+    ResourceMaxBonus,
 }
 
 /// <summary>
@@ -56,6 +89,11 @@ public sealed record ItemModifier(ItemModifierKind Kind, string? Target, int Val
         if (!Enum.IsDefined(Kind))
         {
             return "El tipo de modificador no es válido.";
+        }
+
+        if (!IsItemKind(Kind))
+        {
+            return "Este tipo de modificador solo se admite en opciones, dotes y rasgos de clase.";
         }
 
         var target = NormalizeTarget(Target);
@@ -126,6 +164,9 @@ public sealed record ItemModifier(ItemModifierKind Kind, string? Target, int Val
 
         return modifiers.Select(m => m.Normalize()).ToArray();
     }
+
+    /// <summary>Whether items may use the kind (the character rules from <see cref="ItemModifierKind.ArmorClassFormula"/> on may not).</summary>
+    public static bool IsItemKind(ItemModifierKind kind) => kind < ItemModifierKind.ArmorClassFormula;
 
     /// <summary>Message for a list longer than <see cref="ItemLimits.MaxModifiers"/>.</summary>
     public static string TooManyMessage => $"Un objeto admite como máximo {ItemLimits.MaxModifiers} modificadores.";

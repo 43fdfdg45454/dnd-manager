@@ -49,7 +49,7 @@ public sealed partial class Dnd5eCharacter
     public void LongRest(CharacterSheet sheet, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(sheet);
-        LongRest(sheet.HitPointsMax, now);
+        LongRest(sheet.HitPointsMax, now, sheet.RecoversAllHitDice);
         if (sheet.PreparingClasses.Count > 0)
         {
             RequireSpellPreparation(Characters.SpellPreparationReason.LongRest, now);

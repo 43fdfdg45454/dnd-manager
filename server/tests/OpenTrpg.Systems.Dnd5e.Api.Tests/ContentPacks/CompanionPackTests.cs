@@ -203,7 +203,7 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
     [InlineData("{\"beastFilter\":{\"sizes\":[\"Medium\"]}}", "companion.beastFilter.maxChallengeRating")]
     [InlineData("{\"beastFilter\":{\"maxChallengeRating\":1,\"sizes\":[\"Enorme\"]}}", "companion.beastFilter.sizes[0]")]
     [InlineData("{\"beastFilter\":{\"maxChallengeRating\":1},\"hitPoints\":\"max(beast, 21*classLevel)\"}", "companion.hitPoints")]
-    [InlineData("{\"beastFilter\":{\"maxChallengeRating\":1},\"hitPoints\":\"4*classLevel\"}", "companion.hitPoints")]
+    [InlineData("{\"beastFilter\":{\"maxChallengeRating\":1},\"hitPoints\":\"4*nivel\"}", "companion.hitPoints")]
     public async Task Invalid_companions_are_reported_with_their_path(string companion, string path)
     {
         var admin = await factory.CreateAdminClientAsync();
@@ -219,7 +219,7 @@ public class CompanionPackTests(CompanionPackApiFactory factory) : IClassFixture
     {
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Guardiana");
         await PatchAsync(s, hero.Id, level: 3, subclass: Subclass, client: s.Player.Client);
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(hero.Id)).StatusCode);
         var chosen = await PutAsync(s.Player.Client, hero.Id, "wolf", "Ceniza");
         Assert.True(chosen.StatusCode == HttpStatusCode.OK, await chosen.Content.ReadAsStringAsync());
         return hero.Id;

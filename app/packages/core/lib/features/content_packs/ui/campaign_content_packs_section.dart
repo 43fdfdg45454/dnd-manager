@@ -4,15 +4,18 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/systems/system_registry.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../data/campaign_content_packs_controller.dart';
 import '../domain/campaign_content_pack.dart';
 import 'base_pack_chip.dart';
 
 /// "Paquetes de contenido" of a campaign: the packs of its system, the base
-/// one always on. With [editable] (Owner/DM, in "Ajustes") each imported pack
-/// has a switch and the selection is saved at once; otherwise (the players,
-/// in "Contenido") the list is read-only.
+/// one always on. With [editable] (Owner/DM, in "Ajustes", titled "Contenido
+/// y reglas") each imported pack has a switch and the selection is saved at
+/// once, followed by the rules of the system
+/// ([GameSystemUi.campaignRulesSection]); otherwise (the players, in
+/// "Contenido") the list is read-only.
 class CampaignContentPacksSection extends ConsumerStatefulWidget {
   const CampaignContentPacksSection({super.key, required this.campaignId, required this.editable});
 
@@ -82,7 +85,10 @@ class _CampaignContentPacksSectionState extends ConsumerState<CampaignContentPac
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: Text('Paquetes de contenido', style: theme.textTheme.titleMedium),
+              child: Text(
+                widget.editable ? 'Contenido y reglas' : 'Paquetes de contenido',
+                style: theme.textTheme.titleMedium,
+              ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -117,6 +123,10 @@ class _CampaignContentPacksSectionState extends ConsumerState<CampaignContentPac
               ),
               data: _list,
             ),
+            if (widget.editable)
+              ?ref
+                  .watch(campaignSystemUiProvider(widget.campaignId))
+                  .campaignRulesSection(widget.campaignId),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: TextButton.icon(

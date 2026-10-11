@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using OpenTrpg.Core.Api.Tests.Items;
 using OpenTrpg.Core.Application.ChangeRequests;
 using OpenTrpg.Core.Application.Characters;
 using OpenTrpg.Systems.Dnd5e.Application.Characters;
@@ -434,6 +435,7 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
         var s = await factory.CreateCampaignScenarioAsync();
         var character = await CreateAsync(s.Player, s.CampaignId, new { name = "Listo" });
         await PatchSheetAsync(s.Player, character.Id, new { classes = new[] { new { classIndex = "fighter", level = 2 } } });
+        await s.Player.Client.AnswerClassChoicesAsync(character.Id);
 
         var request = await SubmitAsync(s.Player, character.Id);
         Assert.Equal("Activate", request.Type);
@@ -854,8 +856,11 @@ public class CharacterEndpointsTests(CatalogApiFactory factory)
         return (await response.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
     }
 
-    private static async Task<CharacterDetailDto> ActivateAsync(SignedInUser dm, Guid id) =>
-        await PostAsync(dm, $"{CharacterUrl(id)}/activate", null);
+    private static async Task<CharacterDetailDto> ActivateAsync(SignedInUser dm, Guid id)
+    {
+        await dm.Client.AnswerClassChoicesAsync(id);
+        return await PostAsync(dm, $"{CharacterUrl(id)}/activate", null);
+    }
 
     private static async Task<ChangeRequestDto> SubmitAsync(SignedInUser owner, Guid id)
     {

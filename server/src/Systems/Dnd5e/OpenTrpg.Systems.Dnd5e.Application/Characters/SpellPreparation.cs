@@ -184,12 +184,12 @@ public sealed class SpellPreparationPlanner(ICatalogRepository catalog, ICharact
                 var own = character.Spells.Where(s => s.ClassIndex == classIndex).ToList();
                 var always = own.Where(s => s.AlwaysPrepared).Select(s => s.SpellIndex).ToHashSet(StringComparer.Ordinal);
                 var subclassIndex = character.Classes.FirstOrDefault(c => c.ClassIndex == classIndex)?.SubclassIndex;
-                var expanded = subclasses.FirstOrDefault(s => s.Index == subclassIndex)?.ExpandedSpellIndexes ?? new HashSet<string>();
+                var expanding = subclasses.FirstOrDefault(s => s.Index == subclassIndex);
                 bool Leveled(string index, int max) => spells.GetValueOrDefault(index) is { Level: >= 1 } s && s.Level <= max;
 
                 var candidates = UsesSpellbook(classIndex)
                     ? own.Where(s => !s.AlwaysPrepared && Leveled(s.SpellIndex, casting.MaxSpellLevel)).Select(s => spells[s.SpellIndex])
-                    : spells.Values.Where(s => (s.ClassIndexes.Contains(classIndex) || expanded.Contains(s.Index)) && s.Level >= 1 && s.Level <= casting.MaxSpellLevel && !always.Contains(s.Index));
+                    : spells.Values.Where(s => (s.ClassIndexes.Contains(classIndex) || expanding?.Expands(s) == true) && s.Level >= 1 && s.Level <= casting.MaxSpellLevel && !always.Contains(s.Index));
 
                 return new PreparationClass(
                     casting,

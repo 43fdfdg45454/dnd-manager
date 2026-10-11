@@ -61,9 +61,12 @@ public static class Dnd5eApplicationServices
         services.AddScoped<CompanionPlanner>();
         services.AddScoped<SetCompanionHandler>();
         services.AddScoped<CompanionTrackingHandler>();
+        services.AddScoped<Items.ItemEnhancementPlanner>();
+        services.AddScoped<Items.SetItemEnhancementsHandler>();
         services.AddScoped<UpdateCombatHandler>();
         services.AddScoped<SetConcentrationHandler>();
         services.AddScoped<ApplyDamageHandler>();
+        services.AddScoped<OpenTrpg.Systems.Dnd5e.Application.Campaigns.CampaignRulesHandler>();
         services.AddScoped<OriginChoicesPlanner>();
         services.AddScoped<OriginChoicesHandler>();
         services.AddScoped<InvalidChoicesPlanner>();

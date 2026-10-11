@@ -34,7 +34,8 @@ public class LevelUpEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(after.Sheet.HitPointsMax, after.HitPointsCurrent);
         Assert.Contains("tiradas 7", after.Sheet.Breakdowns["hitPointsMax"].Parts[0].Label);
         Assert.Contains(after.Combat.Resources, r => r.Key == "action-surge");
-        Assert.Empty(after.Choices);
+        // Only the fighting style answered at creation (level 1).
+        Assert.Equal([("fighting-style", 1)], after.Choices.Select(c => (c.Key, c.Level)));
     }
 
     [Fact]
@@ -61,7 +62,7 @@ public class LevelUpEndpointsTests(CatalogApiFactory factory)
         });
 
         Assert.Equal(("champion", 3), (after.Classes.Single().SubclassIndex, after.Classes.Single().Level));
-        var choice = Assert.Single(after.Choices);
+        var choice = Assert.Single(after.Choices, c => c.Level > 1);
         Assert.Equal(("subclass", 3, "Champion"), (choice.Key, choice.Level, choice.Selected.Single().Name));
     }
 
@@ -103,7 +104,7 @@ public class LevelUpEndpointsTests(CatalogApiFactory factory)
 
         Assert.Equal((13, 17), (after.Sheet.Abilities["str"].Score, after.Sheet.Abilities["dex"].Score));
         Assert.Contains(after.Sheet.Breakdowns["ability.str"].Parts, p => p is { Source: "feature", Label: "Mejora de característica (nivel 4)", Value: 1 });
-        var choice = Assert.Single(after.Choices);
+        var choice = Assert.Single(after.Choices, c => c.Level > 1);
         Assert.Equal(1, choice.Asi!["dex"]);
     }
 
@@ -431,7 +432,7 @@ public class LevelUpEndpointsTests(CatalogApiFactory factory)
             applyRacialBonuses = false,
             proficiencies = (skills ?? []).Select(key => new { type = "Skill", key, expertise = false }).ToArray(),
         });
-        var activate = await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/activate", null);
+        var activate = await s.Dm.ActivateAsync(character.Id);
         Assert.Equal(HttpStatusCode.OK, activate.StatusCode);
         if (grant)
         {

@@ -25,7 +25,16 @@ public sealed record CompanionBeast(
     int HitPoints,
     IReadOnlyDictionary<string, int> SavingThrows,
     IReadOnlyDictionary<string, int> Skills,
-    IReadOnlyList<CompanionBeastAction> Actions);
+    IReadOnlyList<CompanionBeastAction> Actions)
+{
+    /// <summary>Ability scores of the creature (missing ones are 10), for the saving throws it is not proficient in.</summary>
+    public IReadOnlyDictionary<string, int> Abilities { get; init; } = new Dictionary<string, int>();
+
+    public int Modifier(string ability) => (int)Math.Floor((Abilities.GetValueOrDefault(ability, 10) - 10) / 2.0);
+}
+
+/// <summary>What the character brings to the companion's formulas besides the class level: its level and ability modifiers.</summary>
+public sealed record CompanionContext(int CharacterLevel, Func<string, int> Modifier);
 
 /// <summary>
 /// An action of the companion: the attack bonus and the damage with the character's proficiency bonus when the rule adds
@@ -62,31 +71,40 @@ public static partial class CompanionCalculator
     public const string BeastAttackLabel = "Ataque de la bestia";
     public const string BeastDamageLabel = "Daño de la bestia";
     public const string CharacterProficiencyLabel = "Competencia del personaje";
+    public const string FeatureBonusLabel = "Bonificador del rasgo";
+    public const string CreatureModifierLabel = "Modificador de la criatura";
 
     /// <param name="classIndex">Class of the feature that grants the companion.</param>
     /// <param name="classLevel">The character's level in that class.</param>
     /// <param name="proficiencyBonus">The character's proficiency bonus.</param>
     /// <param name="hitPointsMaxOverride">Maximum hit points set by hand, if any.</param>
+    /// <param name="context">The character's level and modifiers, for <see cref="CompanionRule.HitPointsTerms"/>.</param>
     public static CompanionStatBlock Calculate(
         CompanionBeast beast,
         CompanionRule rule,
         string classIndex,
         int classLevel,
         int proficiencyBonus,
-        int? hitPointsMaxOverride = null)
+        int? hitPointsMaxOverride = null,
+        CompanionContext? context = null)
     {
         ArgumentNullException.ThrowIfNull(beast);
         ArgumentNullException.ThrowIfNull(rule);
 
         var addProficiency = rule.ProficiencyBonusFromCharacter;
+        var bonuses = rule.Bonuses;
         var armor = new BreakdownBuilder().Add(BreakdownSources.Base, BeastArmorClassLabel, beast.ArmorClass);
         if (addProficiency)
         {
             armor.Add(BreakdownSources.Proficiency, CharacterProficiencyLabel, proficiencyBonus);
         }
 
-        var hitPoints = new BreakdownBuilder().Add(BreakdownSources.Base, BeastHitPointsLabel, beast.HitPoints);
-        if (rule.HitPointsPerClassLevel is { } perLevel && perLevel * classLevel > beast.HitPoints)
+        AddBonus(armor, bonuses.ArmorClass, proficiencyBonus);
+
+        var hitPoints = rule.HitPointsTerms is { } terms
+            ? HitPointsFormula(terms, beast, classIndex, classLevel, context)
+            : new BreakdownBuilder().Add(BreakdownSources.Base, BeastHitPointsLabel, beast.HitPoints);
+        if (rule.HitPointsTerms is null && rule.HitPointsPerClassLevel is { } perLevel && perLevel * classLevel > beast.HitPoints)
         {
             hitPoints.SetTo(BreakdownSources.Class, $"{perLevel} × Nivel de {BreakdownLabels.Class(classIndex).ToLowerInvariant()} ({classLevel})", perLevel * classLevel);
         }
@@ -96,12 +114,76 @@ public static partial class CompanionCalculator
             hitPoints.SetTo(BreakdownSources.Override, BreakdownLabels.ManualAdjustment, maxOverride);
         }
 
+        var saves = Proficient(beast.SavingThrows, addProficiency, proficiencyBonus);
+        if (bonuses.SavingThrows is { } saveBonus)
+        {
+            // A bonus to every saving throw: the creature's modifier for the ones it is not proficient in.
+            foreach (var ability in Abilities.All)
+            {
+                var builder = saves.TryGetValue(ability, out var proficient)
+                    ? new BreakdownBuilder().AddAll(proficient.Parts)
+                    : new BreakdownBuilder().Add(BreakdownSources.Ability, CreatureModifierLabel, beast.Modifier(ability));
+                saves[ability] = AddBonus(builder, saveBonus, proficiencyBonus).Build();
+            }
+        }
+
         return new CompanionStatBlock(
             armor.Build(),
-            hitPoints.Build(),
-            Proficient(beast.SavingThrows, addProficiency, proficiencyBonus),
+            (rule.HitPointsTerms is null ? hitPoints : hitPoints.Clamp(1, CharacterCompanion.MaxHitPoints, BreakdownLabels.MinimumOf(1))).Build(),
+            saves,
             Proficient(beast.Skills, addProficiency, proficiencyBonus),
-            beast.Actions.Select(a => Attack(a, rule.AttackBonusFromCharacter, proficiencyBonus)).ToList());
+            beast.Actions.Select(a => Attack(a, rule.AttackBonusFromCharacter, proficiencyBonus, bonuses)).ToList());
+    }
+
+    /// <summary>Adds a bonus of <see cref="CompanionBonuses"/> (nothing when null).</summary>
+    private static BreakdownBuilder AddBonus(BreakdownBuilder builder, string? bonus, int proficiencyBonus)
+    {
+        if (bonus is not null)
+        {
+            builder.Add(
+                bonus == CompanionBonuses.ProficiencyBonus ? BreakdownSources.Proficiency : BreakdownSources.Feature,
+                bonus == CompanionBonuses.ProficiencyBonus ? CharacterProficiencyLabel : FeatureBonusLabel,
+                CompanionBonuses.Resolve(bonus, proficiencyBonus));
+        }
+
+        return builder;
+    }
+
+    /// <summary>The hit points of a formula, term by term.</summary>
+    private static BreakdownBuilder HitPointsFormula(IReadOnlyList<CompanionHitPointsTerm> terms, CompanionBeast beast, string classIndex, int classLevel, CompanionContext? context)
+    {
+        var builder = new BreakdownBuilder();
+        var className = BreakdownLabels.Class(classIndex).ToLowerInvariant();
+        foreach (var term in terms)
+        {
+            string Times(string label, int value) => term.Factor == 1 ? $"{label} ({value})" : $"{term.Factor} × {label} ({value})";
+            switch (term.Symbol)
+            {
+                case CompanionHitPointsTerm.Beast:
+                    builder.Add(BreakdownSources.Base, BeastHitPointsLabel, beast.HitPoints);
+                    break;
+                case CompanionHitPointsTerm.Constant:
+                    builder.Add(BreakdownSources.Feature, FeatureBonusLabel, term.Factor);
+                    break;
+                case "characterLevel":
+                    var level = context?.CharacterLevel ?? classLevel;
+                    builder.Add(BreakdownSources.Class, Times("Nivel de personaje", level), term.Factor * level);
+                    break;
+                case "classLevel":
+                    builder.Add(BreakdownSources.Class, Times($"Nivel de {className}", classLevel), term.Factor * classLevel);
+                    break;
+                case "halfClassLevel":
+                    builder.Add(BreakdownSources.Class, Times($"Mitad del nivel de {className}", classLevel / 2), term.Factor * (classLevel / 2));
+                    break;
+                default:
+                    var ability = term.Symbol["mod:".Length..];
+                    var modifier = context?.Modifier(ability) ?? 0;
+                    builder.Add(BreakdownSources.Ability, Times($"{BreakdownLabels.Ability(ability)} del personaje", modifier), term.Factor * modifier);
+                    break;
+            }
+        }
+
+        return builder;
     }
 
     private static Dictionary<string, ValueBreakdown> Proficient(IReadOnlyDictionary<string, int> values, bool addProficiency, int proficiencyBonus) =>
@@ -119,7 +201,7 @@ public static partial class CompanionCalculator
             },
             StringComparer.Ordinal);
 
-    private static CompanionAttack Attack(CompanionBeastAction action, bool addProficiency, int proficiencyBonus)
+    private static CompanionAttack Attack(CompanionBeastAction action, bool addProficiency, int proficiencyBonus, CompanionBonuses bonuses)
     {
         if (action.AttackBonus is not { } bonus)
         {
@@ -131,6 +213,8 @@ public static partial class CompanionCalculator
         {
             attack.Add(BreakdownSources.Proficiency, CharacterProficiencyLabel, proficiencyBonus);
         }
+
+        AddBonus(attack, bonuses.Attack, proficiencyBonus);
 
         if (action.Damage.Count == 0)
         {
@@ -144,6 +228,8 @@ public static partial class CompanionCalculator
         {
             damageBonus.Add(BreakdownSources.Proficiency, CharacterProficiencyLabel, proficiencyBonus);
         }
+
+        AddBonus(damageBonus, bonuses.Damage, proficiencyBonus);
 
         var damage = action.Damage.ToList();
         damage[0] = damage[0] with { Dice = JoinDice(dice, damageBonus.Total) };

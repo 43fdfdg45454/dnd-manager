@@ -15,7 +15,8 @@ public sealed record SearchSpellsQuery(
     bool? Ritual,
     bool? Concentration,
     int? Page,
-    int? PageSize);
+    int? PageSize,
+    string? Tag = null);
 
 public sealed class SearchSpellsQueryValidator : AbstractValidator<SearchSpellsQuery>
 {
@@ -25,6 +26,7 @@ public sealed class SearchSpellsQueryValidator : AbstractValidator<SearchSpellsQ
         RuleFor(x => x.Level).InclusiveBetween(0, 9).WithMessage("El nivel debe estar entre 0 (truco) y 9.");
         RuleFor(x => x.Class).MaximumLength(100).WithMessage("La clase no es válida.");
         RuleFor(x => x.School).MaximumLength(100).WithMessage("La escuela no es válida.");
+        RuleFor(x => x.Tag).MaximumLength(100).WithMessage("La etiqueta no es válida.");
         RuleFor(x => x.Page).GreaterThanOrEqualTo(1).WithMessage("La página debe ser 1 o mayor.");
         RuleFor(x => x.PageSize)
             .InclusiveBetween(1, CatalogQueryDefaults.MaxPageSize)
@@ -45,10 +47,13 @@ public sealed class SearchSpellsHandler(ICatalogRepository catalog)
             string.IsNullOrWhiteSpace(query.Class) ? null : query.Class.Trim().ToLowerInvariant(),
             string.IsNullOrWhiteSpace(query.School) ? null : query.School.Trim().ToLowerInvariant(),
             query.Ritual,
-            query.Concentration);
+            query.Concentration)
+        {
+            Tag = string.IsNullOrWhiteSpace(query.Tag) ? null : query.Tag.Trim().ToLowerInvariant(),
+        };
 
         var (items, total) = await catalog.SearchSpellsAsync(filter, (page - 1) * pageSize, pageSize, cancellationToken);
-        var expansions = SpellExpansionDto.Lookup(await catalog.ListSubclassesWithExpandedSpellsAsync(cancellationToken));
+        var expansions = SpellExpansionDto.Lookup(await catalog.ListSubclassesWithExpandedSpellsAsync(cancellationToken), items);
         return new PagedResult<SpellSummaryDto>(items.Select(s => SpellSummaryDto.From(s, expansions[s.Index].ToList())).ToList(), total, page, pageSize);
     }
 }

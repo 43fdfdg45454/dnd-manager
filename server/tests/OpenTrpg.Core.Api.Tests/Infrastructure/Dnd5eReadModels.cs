@@ -79,6 +79,7 @@ public static class Dnd5eReadModels
         public IReadOnlyList<CharacterFeatDto> Feats => d.System().Feats;
         public IReadOnlyList<CharacterOptionCostDto> OptionCosts => d.System().OptionCosts;
         public CharacterCompanionDto? Companion => d.System().Companion;
+        public IReadOnlyList<CharacterCompanionDto> Companions => d.System().Companions;
         public CompanionFeatureDto? CompanionFeature => d.System().CompanionFeature;
         public bool CompanionPending => d.System().CompanionPending;
     }

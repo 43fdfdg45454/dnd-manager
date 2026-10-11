@@ -60,6 +60,9 @@ public sealed record CharacterResourceDto(Guid Id, string? Key, string Name, int
     /// <summary>Chosen options that spend this resource (by its key), each with its amount: the "Usar" buttons of the Combat tab.</summary>
     public IReadOnlyList<CharacterOptionCostDto> Options { get; init; } = [];
 
+    /// <summary>Die rolled to get the uses back (<c>POST …/resources/{id}/recharge-roll</c>), or null.</summary>
+    public RechargeRollDto? RechargeRoll { get; init; }
+
     /// <param name="template">Current template of an automatic resource (its die, origin and breakdown), if any.</param>
     public static CharacterResourceDto From(CharacterResource r, ResourceTemplate? template = null) => new(r.Id, r.Key, r.Name, r.Max, r.Used, r.Recharge.ToString(), r.IsAuto)
     {
@@ -69,8 +72,12 @@ public sealed record CharacterResourceDto(Guid Id, string? Key, string Name, int
         Dice = template?.Dice,
         Source = template?.Source,
         Breakdown = template?.Breakdown is { } breakdown && breakdown.Total == r.Max ? ValueBreakdownDto.From(breakdown) : null,
+        RechargeRoll = template?.RechargeRoll is { } recharge ? new RechargeRollDto(recharge.Dice, recharge.Min) : null,
     };
 }
+
+/// <summary>The uses come back with <see cref="Min"/> or more on a <see cref="Dice"/> ("d6").</summary>
+public sealed record RechargeRollDto(string Dice, int Min);
 
 /// <summary>Dice rolled after a rest: <see cref="Count"/> × <see cref="Dice"/> ("d20") after a <see cref="Rest"/> ("short" or "long") rest.</summary>
 public sealed record RollOnRestDto(string Dice, int Count, string Rest);
@@ -90,11 +97,44 @@ public sealed record HitDiceDto(string ClassIndex, int Die, int Total, int Remai
 
 public sealed record SpellcastingDto(string ClassIndex, string Ability, int SaveDc, int AttackBonus, int? PreparedMax)
 {
+    /// <summary>Name of an entry of an option, feat or subclass that grants spells with its own ability (its index is <see cref="ClassIndex"/>); null for classes and "race".</summary>
+    public string? Name { get; init; }
+
+    /// <summary>True when the ability was chosen by an override (<c>spellcastingAbility.&lt;classIndex&gt;</c>, 1 = str … 6 = cha): the app marks it.</summary>
+    public bool AbilityOverridden { get; init; }
+
     /// <summary>Spells known allowed at the class level (subclass casters from content packs); null when the class has no fixed number.</summary>
     public int? SpellsKnownMax { get; init; }
 
     /// <summary>Cantrips known allowed at the class level (subclass casters); null when the class has no fixed number.</summary>
     public int? CantripsKnownMax { get; init; }
+
+    /// <summary>Highest spell level the class can cast now (by its slots, or its table without slots); 0 for cantrips only.</summary>
+    public int MaxSpellLevel { get; init; }
+
+    /// <summary>
+    /// Progression of a pack class: "hitPoints" (no slots: each spell spends a use of <see cref="UsesResource"/> and the
+    /// hit points of <see cref="HitPointCost"/>) or "ritualsOnly" (no slots: only rituals of its book); "full", "half",
+    /// "third", "pact" or "table" otherwise; null for the SRD classes.
+    /// </summary>
+    public string? Progression { get; init; }
+
+    /// <summary>"hitPoints": hit points lost by spell level (index 0 = 1st level), up to <see cref="MaxSpellLevel"/>.</summary>
+    public IReadOnlyList<int> HitPointCost { get; init; } = [];
+
+    /// <summary>"hitPoints": key of the class resource each spell spends.</summary>
+    public string? UsesResource { get; init; }
+
+    /// <summary>Save DC of the cantrips when a feature changes it (breakdown "spellSaveDc.&lt;class&gt;.cantrip"); null otherwise.</summary>
+    public int? CantripSaveDc { get; init; }
+
+    /// <summary>Spell attack bonus of the cantrips when a feature changes it ("spellAttackBonus.&lt;class&gt;.cantrip"); null otherwise.</summary>
+    public int? CantripAttackBonus { get; init; }
+
+    /// <summary>Lowest d20 roll of a spell attack that is a critical hit (20 by default).</summary>
+    public int CriticalRange { get; init; } = 20;
+
+    public string? CriticalRangeSource { get; init; }
 }
 
 /// <param name="PactSlotLevel">Spell level of the Pact Magic slots (null without them).</param>
@@ -130,7 +170,56 @@ public sealed record CharacterSheetDto(
 
     /// <summary>Breath weapon of the chosen draconic ancestry (DC breakdown in <c>breakdowns["breathWeapon.dc"]</c>), or null.</summary>
     public BreathWeaponValueDto? BreathWeapon { get; init; }
+
+    /// <summary>Damage immunities (content packs); <see cref="DefenseDto.Type"/> is a damage type.</summary>
+    public IReadOnlyList<DefenseDto> Immunities { get; init; } = [];
+
+    /// <summary>Condition immunities (content packs); <see cref="DefenseDto.Type"/> is a condition index.</summary>
+    public IReadOnlyList<DefenseDto> ConditionImmunities { get; init; } = [];
+
+    /// <summary>Saving throw proficiencies lost by an origin feat; <see cref="DefenseDto.Type"/> is the ability.</summary>
+    public IReadOnlyList<DefenseDto> LostSavingThrows { get; init; } = [];
+
+    /// <summary>Skill proficiencies the character loses (<c>grants.removeSkills</c>), with their origin.</summary>
+    public IReadOnlyList<DefenseDto> LostSkills { get; init; } = [];
+
+    /// <summary>Save DCs of the classes besides the spell one, each with its breakdown key.</summary>
+    public IReadOnlyList<ClassSaveDcDto> ClassSaveDcs { get; init; } = [];
+
+    /// <summary>Passive Investigation (breakdown "passiveInvestigation").</summary>
+    public int PassiveInvestigation { get; init; }
+
+    /// <summary>Passive Insight (breakdown "passiveInsight").</summary>
+    public int PassiveInsight { get; init; }
+
+    /// <summary>Highest score of each ability (20 unless a feature changes it).</summary>
+    public IReadOnlyDictionary<string, int> AbilityMaxScores { get; init; } = new Dictionary<string, int>();
+
+    /// <summary>"tiny", "small", "medium"...; empty without race.</summary>
+    public string Size { get; init; } = string.Empty;
+
+    /// <summary>The race, or the feature that changed the size.</summary>
+    public string? SizeSource { get; init; }
+
+    /// <summary>Swimming, climbing and flying speeds by mode ("swim" → 30); breakdowns "speed.&lt;mode&gt;".</summary>
+    public IReadOnlyDictionary<string, int> Speeds { get; init; } = new Dictionary<string, int>();
+
+    /// <summary>Failed death saves that kill the character (3 unless a feature changes it).</summary>
+    public int DeathSaveFailuresToDie { get; init; } = 3;
+
+    public string? DeathSaveFailuresSource { get; init; }
+
+    /// <summary>A long rest recovers every hit die (instead of half).</summary>
+    public bool RecoversAllHitDice { get; init; }
+
+    public string? HitDiceRecoverySource { get; init; }
 }
+
+/// <summary>An immunity, condition immunity or lost saving throw with what grants it.</summary>
+public sealed record DefenseDto(string Type, string Source, string Label);
+
+/// <summary>A class save DC ("CD de ejemplo" = 8 + proficiency + ability) and the key of its breakdown.</summary>
+public sealed record ClassSaveDcDto(string ClassIndex, string Name, string Ability, int Dc, string BreakdownKey);
 
 /// <summary>A resisted damage type; <see cref="Source"/> is "race", "subrace" or "background", <see cref="Label"/> what grants it.</summary>
 public sealed record ResistanceDto(string DamageType, string Source, string Label);
@@ -257,8 +346,20 @@ public sealed record Dnd5eCharacterDetailDto
     /// <summary>Chosen options (and feats) whose use spends a resource ("2 Ki"), in the order they were chosen.</summary>
     public IReadOnlyList<CharacterOptionCostDto> OptionCosts { get; init; } = [];
 
-    /// <summary>The animal companion with its recalculated statblock; null when the character has none.</summary>
+    /// <summary>The first (oldest) companion with its recalculated statblock; null when the character has none.</summary>
     public CharacterCompanionDto? Companion { get; init; }
+
+    /// <summary>Every companion of the character, oldest first (several when the feature's <c>maxCount</c> allows it).</summary>
+    public IReadOnlyList<CharacterCompanionDto> Companions { get; init; } = [];
+
+    /// <summary>Inventory entries with enhancements (phase 35B3): their options, changed fields and breakdowns.</summary>
+    public IReadOnlyList<Items.CharacterItemEnhancementDto> ItemEnhancements { get; init; } = [];
+
+    /// <summary>The item enhancement feature the character has reached (options per item and which ones), or null.</summary>
+    public Items.ItemEnhancementFeatureDto? ItemEnhancementFeature { get; init; }
+
+    /// <summary>Grafts of the inventory (items with <c>graft.slot</c>), by slot.</summary>
+    public IReadOnlyList<Items.CharacterGraftDto> Grafts { get; init; } = [];
 
     /// <summary>The companion feature the character has reached (which beasts qualify); null when it has none.</summary>
     public CompanionFeatureDto? CompanionFeature { get; init; }
@@ -282,7 +383,38 @@ public sealed record CompanionFeatureDto(
     IReadOnlyList<string> Sizes,
     string HitPoints,
     bool ProficiencyBonusFromCharacter,
-    bool AttackBonusFromCharacter);
+    bool AttackBonusFromCharacter)
+{
+    /// <summary>Closed list of creatures (any type) of the feature; empty when the companion is a beast of the filter.</summary>
+    public IReadOnlyList<string> CreatureIndexes { get; init; } = [];
+
+    /// <summary>The creatures of <see cref="CreatureIndexes"/> found in the catalog, for the chooser.</summary>
+    public IReadOnlyList<CompanionCreatureDto> Creatures { get; init; } = [];
+
+    /// <summary>How many companions the character may have at its level (1 by default).</summary>
+    public int MaxCount { get; init; } = 1;
+
+    /// <summary>Highest total challenge rating of all the companions at the class level, or null when the feature has no budget.</summary>
+    public double? ChallengeBudget { get; init; }
+
+    /// <summary><see cref="ChallengeBudget"/> as text ("1/2"), or null.</summary>
+    public string? ChallengeBudgetText { get; init; }
+
+    /// <summary>Bonuses the character gives to its companions, or null.</summary>
+    public CompanionBonusesDto? Bonuses { get; init; }
+
+    /// <summary>What the companions gain up to the class level (texts of <c>featuresByLevel</c>).</summary>
+    public IReadOnlyList<CompanionFeatureTextDto> Features { get; init; } = [];
+}
+
+/// <summary>A creature of a companion feature's closed list.</summary>
+public sealed record CompanionCreatureDto(string Index, string Name, string Type, string Size, double ChallengeRating, string ChallengeRatingText);
+
+/// <summary>Bonuses to the companions: each a number ("2") or "proficiencyBonus"; null when none.</summary>
+public sealed record CompanionBonusesDto(string? ArmorClass, string? SavingThrows, string? Attack, string? Damage);
+
+/// <summary>A text of what the companions gain at a level of the feature's class.</summary>
+public sealed record CompanionFeatureTextDto(int Level, string Text);
 
 /// <summary>A damage component of a companion attack, with the character's bonus already folded into the dice ("2d4+4").</summary>
 public sealed record CompanionDamageDto(string Dice, string? Type);
@@ -325,7 +457,14 @@ public sealed record CharacterCompanionDto(
     IReadOnlyList<Catalog.BeastTraitDto> Traits,
     IReadOnlyList<CompanionAttackDto> Attacks,
     IReadOnlyDictionary<string, ValueBreakdownDto> Breakdowns,
-    bool BeastMissing);
+    bool BeastMissing)
+{
+    /// <summary>Creature type ("beast", "undead"...).</summary>
+    public string Type { get; init; } = Catalog.BeastDto.BeastType;
+
+    /// <summary>What the companion has gained up to the class level of the feature (texts).</summary>
+    public IReadOnlyList<CompanionFeatureTextDto> Features { get; init; } = [];
+}
 
 /// <summary>
 /// A feat of the character, for the "Rasgos" tab of the sheet: the catalog description, the literal prerequisite
@@ -404,7 +543,11 @@ public sealed record CharacterChoiceDto(
 
 // ---- Combat view (phase 6) -------------------------------------------------------------------
 
-/// <summary>One attack: equipped weapon (with <see cref="ItemId"/>) or the unarmed strike. Damage like "1d8+3".</summary>
+/// <summary>
+/// One attack: equipped weapon (with <see cref="ItemId"/>; a second profile of the same item is a second attack), a
+/// natural weapon (<see cref="Natural"/>, <see cref="Notes"/> says what grants it) or the unarmed strike. Damage like
+/// "1d8+3".
+/// </summary>
 public sealed record AttackDto(
     Guid? ItemId,
     string Name,
@@ -416,7 +559,19 @@ public sealed record AttackDto(
     IReadOnlyList<string> Properties,
     string? Notes,
     ValueBreakdownDto AttackBreakdown,
-    ValueBreakdownDto DamageBreakdown);
+    ValueBreakdownDto DamageBreakdown)
+{
+    /// <summary>Lowest d20 roll that is a critical hit (20 unless a feature lowers it).</summary>
+    public int CriticalRange { get; init; } = 20;
+
+    /// <summary>What lowered <see cref="CriticalRange"/>, or null.</summary>
+    public string? CriticalRangeSource { get; init; }
+
+    /// <summary>Problems wielding it ("Requiere Fuerza 16; tienes 14.").</summary>
+    public IReadOnlyList<string> Warnings { get; init; } = [];
+
+    public bool Natural { get; init; }
+}
 
 /// <summary>A consumable of the inventory (potions, scrolls, ammunition...) for the quick-use list.</summary>
 public sealed record QuickConsumableDto(Guid ItemId, string Name, int Quantity, int? Charges);

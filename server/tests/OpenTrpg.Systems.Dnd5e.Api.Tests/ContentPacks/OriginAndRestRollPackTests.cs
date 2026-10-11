@@ -126,7 +126,7 @@ public class OriginAndRestRollPackTests(OriginPackApiFactory factory) : IClassFi
         });
         Assert.True(saved.StatusCode == HttpStatusCode.OK, await saved.Content.ReadAsStringAsync());
         Assert.True((await saved.Content.ReadFromJsonAsync<OriginChoicesDto>())!.Complete);
-        Assert.Equal(HttpStatusCode.OK, (await s.Dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(hero.Id)}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(hero.Id)).StatusCode);
 
         var detail = await s.Player.GetCharacterAsync(hero.Id);
         Assert.Equal(16, detail.Sheet.Abilities["int"].Score);

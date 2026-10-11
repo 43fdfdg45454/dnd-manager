@@ -78,6 +78,21 @@ public static class SpellSlotTables
         [4, 3, 3, 1, 0, 0, 0, 0, 0], // 20
     ];
 
+    /// <summary>Pact Magic slots of the warlock table at a class level (1-20): every slot of the same level.</summary>
+    public static int[] PactSlots(int classLevel)
+    {
+        var slots = new int[9];
+        if (classLevel <= 0)
+        {
+            return slots;
+        }
+
+        var count = classLevel switch { 1 => 1, <= 10 => 2, <= 16 => 3, _ => 4 };
+        var slotLevel = Math.Min(5, (Math.Min(classLevel, 20) + 1) / 2);
+        slots[slotLevel - 1] = count;
+        return slots;
+    }
+
     /// <summary>Slots for spell levels 1-9 at a multiclass spellcaster level; nine zeros for level 0.</summary>
     public static IReadOnlyList<int> MulticlassSlots(int casterLevel)
     {

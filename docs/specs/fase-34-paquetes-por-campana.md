@@ -3,7 +3,7 @@
 Contrato de implementación. Parte de `docs/framework-roadmap.md` (fila 34), de la fase 30 §6
 (paquetes y catálogo) con las decisiones del revisor (4 y 6) y de la enmienda sin compatibilidad
 hacia atrás. Objetivo: que **todo** el contenido de D&D 5e que no es SRD (PHB privado y, en la
-fase 35, Valda's Spire of Secrets **completo**: razas, clases nuevas, subclases, dotes, equipo, objetos
+fase 35, un suplemento de terceros **completo**: razas, clases nuevas, subclases, dotes, equipo, objetos
 mágicos, conjuros, criaturas y reglas) quepa en un paquete JSON, y que cada campaña elija qué
 paquetes usa.
 
@@ -32,7 +32,7 @@ que crea la tabla nueva, copia las filas `pack:*` y `srd-5.1` y borra la antigua
 
 | Columna | Tipo | Notas |
 |---|---|---|
-| `Id` | `varchar(60)` PK | `srd`, `phb-2014`, `valdas`… (`[a-z0-9-]{3,40}`) |
+| `Id` | `varchar(60)` PK | `srd`, `phb-2014`, `mi-suplemento`… (`[a-z0-9-]{3,40}`) |
 | `SystemId` | `varchar(32)` | sistema que lo entiende (`dnd5e`) |
 | `Name`, `Version` | `varchar(200)`, `varchar(40)` | |
 | `FormatVersion` | `int` | `3` para los importados; `0` para el base cargado por el seeder |
@@ -129,7 +129,7 @@ lanzamiento, recursos) sale de la definición.
 
 Hoy las dotes son `optionSets` con `kind: feat`. v3 añade `feats[]` (`index`, `name`, `prerequisites`,
 `prerequisitesText`, `description[]`, `abilityIncrease`, `modifiers`, `grants`, `resource`,
-`category?` como "starter" de Valda's) que el importador convierte al mismo `OptionSet` interno
+`category?` como "starter" de un suplemento) que el importador convierte al mismo `OptionSet` interno
 ("feats"); `optionSets` sigue aceptado para lo demás (estilos, invocaciones, maniobras…).
 
 ### 2.3 `races[]` completas y `subraces`
@@ -143,7 +143,7 @@ del SRD.
 `items[]` sigue (objetos y objetos mágicos con rareza, sintonía, modificadores). v3 añade a `Item`:
 `weapon: { category: "simple"|"martial", range: "melee"|"ranged", damage, damageType, properties[],
 rangeNormal, rangeLong, special? }`, `armor: { category, baseAc, dexBonus, maxDexBonus, strMin,
-stealthDisadvantage }`, `tool`, `ammunition` y `firearm: { reload, misfire }` (Valda's), de modo que
+stealthDisadvantage }`, `tool`, `ammunition` y `firearm: { reload, misfire }` (suplementos), de modo que
 una arma nueva funciona en ataques y CA como las del SRD (`ItemTemplate` ya tiene estas columnas 5e
 mapeadas por el módulo; si falta alguna, se añade con migración).
 
@@ -170,7 +170,7 @@ Bestias) y como compañeros (`companion` filtra por tipo y CR como hoy).
 - `rules[]`: documentos de reglas (`index`, `title`, `category` ("variant", "multiclassing",
   "equipment", "general"…), `body[]` en Markdown ligero, `tags[]`). Nueva tabla `Dnd5eRules`;
   nueva pestaña **Reglas** en el compendio con búsqueda; sin efecto mecánico. Aquí caben las
-  "Auxiliary Levels", reglas de armas de fuego, etc. de Valda's.
+  niveles auxiliares, reglas de armas de fuego, etc. de un suplemento.
 - `reference`: vocabularios ampliables: `languages[]`, `weaponProperties[]`, `equipmentCategories[]`,
   `damageTypes[]`, `magicSchools[]`, `tools[]` (todos `index`, `name`, `description[]?`). Tabla
   `Dnd5eReferenceEntries(Kind, Index, Name, DescriptionJson, Source)`; el seeder carga los del SRD.
@@ -268,5 +268,5 @@ Cada una con su PR, servidor y app en verde.
 |---|---|
 | Una clase completa toca el asistente, la subida de nivel, el multiclase y la hoja | Todo sale de `ClassDefinition`/`ClassLevel`; el test de 34A crea un personaje de la clase nueva y lo sube por la API. Si algún cálculo lee una tabla fija por índice de clase (p. ej. `classSpecific` de SRD), se generaliza. |
 | Rendimiento del filtrado por ámbito en consultas calientes (hoja) | `Sources` es un conjunto pequeño (≤ 10); `WHERE Source IN (...)` con índice en `Source`. |
-| Conversión del SRD (34C) con pérdidas | Fixture de comparación antes/después; 34C se hace al final y puede desplazarse detrás de la fase 35 si Valda's lo necesita antes. |
+| Conversión del SRD (34C) con pérdidas | Fixture de comparación antes/después; 34C se hace al final y puede desplazarse detrás de la fase 35 si un suplemento lo necesita antes. |
 | El PHB privado deja de importar | El script privado se actualiza a v3 y `PrivatePhbPackTests` lo cubre; no hay instalaciones que conservar. |

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:opentrpg_core/features/characters/data/characters_repository.dart';
 import 'package:opentrpg_dnd5e/characters/dnd5e_characters_repository.dart';
 import 'package:opentrpg_dnd5e/characters/models.dart';
+import 'package:opentrpg_dnd5e/session/campaign_rules.dart';
 
 import 'fakes.dart';
 
@@ -40,6 +41,7 @@ Map<String, dynamic> makeCharacterJson({
   List<Map<String, dynamic>> resources = const [],
   String? concentratingOnSpellIndex,
   List<Map<String, dynamic>> spellcasting = const [],
+  Map<String, dynamic> sheetExtra = const {},
 }) => {
   'id': id,
   'campaignId': campaignId,
@@ -129,6 +131,7 @@ Map<String, dynamic> makeCharacterJson({
     'breakdowns': breakdowns,
     'resistances': resistances,
     'breathWeapon': ?breathWeapon,
+    ...sheetExtra,
   },
   'pendingChangeRequests': pending,
   'pendingRest': pendingRest,
@@ -152,6 +155,11 @@ Map<String, dynamic> makeOriginChoiceJson({
   String note = '',
   List<Map<String, dynamic>>? options,
   List<Map<String, dynamic>> selected = const [],
+  String? classIndex,
+  int? level,
+  String? setId,
+  Map<String, String>? requires,
+  String? warning,
 }) => {
   'key': key,
   'name': name,
@@ -169,6 +177,11 @@ Map<String, dynamic> makeOriginChoiceJson({
         {'index': 'perception', 'name': 'Percepción', 'eligible': true, 'description': <String>[]},
       ],
   'selected': selected,
+  'classIndex': ?classIndex,
+  'level': ?level,
+  'setId': ?setId,
+  'requires': ?requires,
+  'warning': ?warning,
 };
 
 /// An `OriginChoicesDto` as JSON.
@@ -668,22 +681,89 @@ class FakeCharactersRepository implements CharactersRepository, Dnd5eCharactersR
     json['combat'] = combat;
   }
 
+  // Item enhancements (phase 35).
+
+  /// Bodies of `PUT /items/{itemId}/enhancements`.
+  final List<({String itemId, List<String> options})> enhancementCalls = [];
+
+  @override
+  Future<SheetSaveResult> setItemEnhancements(
+    String id,
+    String itemId,
+    List<String> options,
+  ) async {
+    _fail();
+    enhancementCalls.add((itemId: itemId, options: options));
+    final json = _json(id);
+    final feature = json['itemEnhancementFeature'] as Map<String, dynamic>?;
+    if (feature == null && !isDm) {
+      final request = makeChangeRequest(
+        id: 'cr${requests.length + 1}',
+        requestedByUserId: currentUserId,
+        type: 'ItemEnhancement',
+        payload: {'itemId': itemId, 'itemName': itemId, 'options': options},
+      );
+      requests.add(request);
+      return PendingApproval(request);
+    }
+    final names = {
+      for (final o in (feature?['options'] as List? ?? const []).cast<Map<String, dynamic>>())
+        o['index']: o['name'],
+    };
+    final list = [
+      for (final e in (json['itemEnhancements'] as List? ?? const []).cast<Map<String, dynamic>>())
+        if (e['itemId'] != itemId) e,
+      if (options.isNotEmpty)
+        {
+          'itemId': itemId,
+          'itemName': itemId,
+          'options': [
+            for (final o in options) {'index': o, 'name': names[o] ?? o},
+          ],
+          'properties': <String>[],
+          'breakdowns': <String, dynamic>{},
+        },
+    ];
+    json['itemEnhancements'] = list;
+    return Saved(await get(id));
+  }
+
   // Animal companion (phase 25, block 6).
 
   final List<({String beastIndex, String name})> companionChoices = [];
   final List<({int? delta, int? current})> companionHpCalls = [];
   final List<String> companionDeletes = [];
 
+  /// Companion ids of the `/companions/{id}` calls (rename, HP, delete), in
+  /// order, and the bodies of `POST /companions`.
+  final List<String> companionIdCalls = [];
+  final List<({String beastIndex, String name})> companionAdds = [];
+
+  /// The companion [companionId] of the character (the single one when null).
+  Map<String, dynamic> _companion(String id, String? companionId) {
+    final json = _json(id);
+    if (companionId == null) return json['companion'] as Map<String, dynamic>;
+    companionIdCalls.add(companionId);
+    final list = (json['companions'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    return list.firstWhere(
+      (c) => c['id'] == companionId,
+      orElse: () => json['companion'] as Map<String, dynamic>,
+    );
+  }
+
   @override
   Future<SheetSaveResult> setCompanion(
     String id, {
     required String beastIndex,
     required String name,
+    String? companionId,
   }) async {
     _fail();
     companionChoices.add((beastIndex: beastIndex, name: name));
     final json = _json(id);
-    final existing = json['companion'] as Map<String, dynamic>?;
+    final existing = companionId == null
+        ? json['companion'] as Map<String, dynamic>?
+        : _companion(id, companionId);
     if (existing != null && existing['beastIndex'] != beastIndex && !isDm) {
       final request = makeChangeRequest(
         id: 'cr${requests.length + 1}',
@@ -694,16 +774,50 @@ class FakeCharactersRepository implements CharactersRepository, Dnd5eCharactersR
       requests.add(request);
       return PendingApproval(request);
     }
-    json['companion'] = makeCompanionJson(beastIndex: beastIndex, name: name);
+    if (companionId != null && existing != null) {
+      existing
+        ..['beastIndex'] = beastIndex
+        ..['name'] = name;
+    } else {
+      json['companion'] = makeCompanionJson(beastIndex: beastIndex, name: name);
+    }
     json['companionPending'] = false;
     return Saved(await get(id));
   }
 
   @override
-  Future<CharacterDetail> trackCompanionHp(String id, {int? delta, int? current}) async {
+  Future<CharacterDetail> addCompanion(
+    String id, {
+    required String beastIndex,
+    required String name,
+  }) async {
+    _fail();
+    companionAdds.add((beastIndex: beastIndex, name: name));
+    final json = _json(id);
+    final list = [
+      ...((json['companions'] as List?) ??
+          [if (json['companion'] case final Map<String, dynamic> one) one]),
+    ];
+    list.add({
+      ...makeCompanionJson(beastIndex: beastIndex, name: name),
+      'id': 'cp${list.length + 1}',
+    });
+    json['companions'] = list;
+    json['companion'] = list.first;
+    json['companionPending'] = false;
+    return get(id);
+  }
+
+  @override
+  Future<CharacterDetail> trackCompanionHp(
+    String id, {
+    int? delta,
+    int? current,
+    String? companionId,
+  }) async {
     _fail();
     companionHpCalls.add((delta: delta, current: current));
-    final companion = _json(id)['companion'] as Map<String, dynamic>;
+    final companion = _companion(id, companionId);
     final max = companion['hitPointsMax'] as int;
     companion['hitPointsCurrent'] =
         current ?? ((companion['hitPointsCurrent'] as int) + delta!).clamp(0, max);
@@ -711,10 +825,27 @@ class FakeCharactersRepository implements CharactersRepository, Dnd5eCharactersR
   }
 
   @override
-  Future<void> deleteCompanion(String id) async {
+  Future<void> deleteCompanion(String id, {String? companionId}) async {
     _fail();
     companionDeletes.add(id);
-    _json(id)
+    final json = _json(id);
+    if (companionId != null && json['companions'] is List) {
+      companionIdCalls.add(companionId);
+      final list = [
+        for (final c in (json['companions'] as List).cast<Map<String, dynamic>>())
+          if (c['id'] != companionId) c,
+      ];
+      json['companions'] = list;
+      if (list.isEmpty) {
+        json
+          ..remove('companion')
+          ..['companionPending'] = true;
+      } else {
+        json['companion'] = list.first;
+      }
+      return;
+    }
+    json
       ..remove('companion')
       ..['companionPending'] = true;
   }
@@ -780,6 +911,43 @@ class FakeCharactersRepository implements CharactersRepository, Dnd5eCharactersR
         if (r['id'] == resourceId) r['used'] = (r['used'] as int) - amount;
       }
     });
+  }
+
+  /// Calls to `POST /resources/initiative` and bodies of `recharge-roll`.
+  int initiativeRecharges = 0;
+  final List<({String id, int value})> rechargeRolls = [];
+
+  @override
+  Future<CharacterDetail> rechargeOnInitiative(String id) async {
+    _fail();
+    initiativeRecharges++;
+    _combat(id, (combat) {
+      for (final r in (combat['resources'] as List? ?? const [])) {
+        if (r['recharge'] == 'Initiative') r['used'] = 0;
+      }
+    });
+    return get(id);
+  }
+
+  @override
+  Future<({CharacterDetail character, bool recharged})> rechargeRoll(
+    String id,
+    String resourceId,
+    int value,
+  ) async {
+    _fail();
+    rechargeRolls.add((id: resourceId, value: value));
+    var recharged = false;
+    _combat(id, (combat) {
+      for (final r in (combat['resources'] as List? ?? const [])) {
+        final roll = r['rechargeRoll'] as Map?;
+        if (r['id'] == resourceId && roll != null && value >= (roll['min'] as int)) {
+          r['used'] = 0;
+          recharged = true;
+        }
+      }
+    });
+    return (character: await get(id), recharged: recharged);
   }
 
   @override
@@ -956,6 +1124,53 @@ class FakeCharactersRepository implements CharactersRepository, Dnd5eCharactersR
     _fail();
     classActions.add((action: action, body: body));
     return get(id);
+  }
+
+  /// Bodies of `hit-point-cast`, in order.
+  final List<({String classIndex, int spellLevel})> hitPointCasts = [];
+
+  /// Hit points each level of a `hit-point-cast` costs.
+  int hitPointCastCostPerLevel = 2;
+
+  @override
+  Future<HitPointCastResult> hitPointCast(
+    String id, {
+    required String classIndex,
+    required int spellLevel,
+  }) async {
+    _fail();
+    hitPointCasts.add((classIndex: classIndex, spellLevel: spellLevel));
+    final json = _json(id);
+    final lost = spellLevel * hitPointCastCostPerLevel;
+    json['hitPointsCurrent'] = ((json['hitPointsCurrent'] as int? ?? 0) - lost).clamp(0, 1 << 30);
+    return HitPointCastResult(character: await get(id), hitPointsLost: lost);
+  }
+
+  // -- Campaign rules (phase 35) ----------------------------------------------
+
+  /// Rules by campaign id (the default ones when missing).
+  final Map<String, CampaignRules> campaignRulesById = {};
+
+  /// Bodies of `PUT /campaigns/{id}/rules`.
+  final List<({String campaignId, bool starterFeatsEnabled})> rulesSaves = [];
+
+  @override
+  Future<CampaignRules> campaignRules(String campaignId) async {
+    return campaignRulesById[campaignId] ?? const CampaignRules();
+  }
+
+  @override
+  Future<CampaignRules> saveCampaignRules(
+    String campaignId, {
+    required bool starterFeatsEnabled,
+  }) async {
+    _fail();
+    rulesSaves.add((campaignId: campaignId, starterFeatsEnabled: starterFeatsEnabled));
+    final old = campaignRulesById[campaignId] ?? const CampaignRules();
+    return campaignRulesById[campaignId] = CampaignRules(
+      starterFeatsEnabled: starterFeatsEnabled,
+      starterFeatsAvailable: old.starterFeatsAvailable,
+    );
   }
 
   @override

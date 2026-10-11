@@ -157,10 +157,21 @@ public sealed partial class Dnd5eCharacter
     /// choice <c>race.grant.&lt;kind&gt;</c> / <c>race.subrace.grant.&lt;kind&gt;</c> whose effects are proficiencies (source
     /// Race) and always-prepared spells without a class (<see cref="CharacterSpell.OriginClassIndex"/>). Spells with a
     /// <c>minLevel</c> above the total level are left out until the character reaches it. Grants no longer in the catalog
-    /// are removed (changing the race already drops them, see <see cref="DropStaleOriginChoices"/>). True when something changed.
+    /// are removed (changing the race already drops them, see <see cref="DropStaleOriginChoices"/>). A spell or cantrip the
+    /// subrace also grants is the subrace's: its <c>minLevel</c> replaces the race's. True when something changed.
     /// </summary>
     public bool SyncRaceGrants(OptionGrants? race, OptionGrants? subrace, DateTimeOffset now)
     {
+        if (race is not null && subrace is not null && SubraceIndex is not null && subrace.HasSpells)
+        {
+            var overridden = subrace.Spells.Select(s => s.Index).Concat(subrace.Cantrips).ToHashSet(StringComparer.Ordinal);
+            race = race with
+            {
+                Spells = race.Spells.Where(s => !overridden.Contains(s.Index)).ToList(),
+                Cantrips = race.Cantrips.Where(c => !overridden.Contains(c)).ToList(),
+            };
+        }
+
         var changed = SyncGrants(OriginChoiceKeys.RaceGrantPrefix, RaceIndex is null ? null : race, "raza", now);
         changed |= SyncGrants(OriginChoiceKeys.SubraceGrantPrefix, SubraceIndex is null ? null : subrace, "subraza", now);
         return changed;

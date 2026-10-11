@@ -6,6 +6,7 @@ import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
 import 'package:opentrpg_core/features/content_packs/domain/campaign_content_pack.dart';
 import 'package:opentrpg_dnd5e/catalog/data/beast_models.dart';
 import 'package:opentrpg_dnd5e/catalog/data/models.dart';
+import 'package:opentrpg_dnd5e/session/campaign_rules.dart';
 
 import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';
@@ -391,6 +392,33 @@ void main() {
       expect(tester.widget<SwitchListTile>(tile).value, isTrue);
     });
 
+    testWidgets('sin dotes iniciales en los paquetes no hay interruptor', (tester) async {
+      await _pump(tester, location: '/campaigns/c1/general/settings');
+
+      expect(find.text('Contenido y reglas'), findsOneWidget);
+      expect(find.byKey(const Key('campaign-rules-starter-feats')), findsNothing);
+    });
+
+    testWidgets('el interruptor de dotes iniciales se guarda con PUT', (tester) async {
+      final characters = FakeCharactersRepository()
+        ..campaignRulesById['c1'] = const CampaignRules(starterFeatsAvailable: true);
+      await _pump(
+        tester,
+        location: '/campaigns/c1/general/settings',
+        enabled: {_packId},
+        characters: characters,
+      );
+
+      final toggle = find.byKey(const Key('campaign-rules-starter-feats'));
+      expect(find.text('Dotes iniciales'), findsOneWidget);
+      expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
+
+      await _tap(tester, toggle);
+      expect(characters.rulesSaves.single, (campaignId: 'c1', starterFeatsEnabled: true));
+      expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
+      expect(find.text('Dotes iniciales activadas.'), findsOneWidget);
+    });
+
     testWidgets('avisa de un paquete requerido y lo activa con un toque', (tester) async {
       final (:packs, catalog: _, router: _) = await _pump(
         tester,
@@ -714,6 +742,162 @@ void main() {
       await _tapKey(tester, 'class-${_alchemist.index}');
       await _tapKey(tester, 'wizard-next');
       expect(find.byKey(const Key('step-class')), findsNothing);
+    });
+  });
+
+  group('niveles auxiliares', () {
+    const veil = ClassSummary(
+      index: 'reinos-ejemplo-velo',
+      name: 'Velo de ejemplo',
+      hitDie: 6,
+      source: _packId,
+      auxiliary: true,
+    );
+
+    testWidgets('no se ofrecen al crear y su ficha explica los requisitos', (tester) async {
+      final catalog = FakeCatalogRepository(
+        classList: const [_fighter, veil],
+        raceList: const [_human],
+        raceDetails: const {
+          'human': RaceDetail(index: 'human', name: 'Human', speed: 30, languages: ['Common']),
+        },
+        classDetails: {
+          veil.index: const ClassDetail(
+            index: 'reinos-ejemplo-velo',
+            name: 'Velo de ejemplo',
+            hitDie: 6,
+            source: _packId,
+            auxiliary: true,
+            prerequisitesText: 'Nivel de personaje 3.',
+            countsAsCasterLevel: true,
+            levels: [ClassLevel(level: 1)],
+          ),
+        },
+        sourceList: _sources,
+      );
+      final router = await pumpRealApp(
+        tester,
+        location: '/campaigns/c1/characters/new',
+        fakes: AppFakes(catalog: catalog),
+      );
+      await tester.enterText(find.byKey(const Key('wizard-name')), 'Merlina');
+      await tester.pumpAndSettle();
+      await _tapKey(tester, 'wizard-next');
+      await _tapKey(tester, 'race-human');
+      await _tapKey(tester, 'wizard-next');
+      expect(find.byKey(const Key('class-fighter')), findsOneWidget);
+      expect(find.byKey(Key('class-${veil.index}')), findsNothing);
+
+      router.go('/compendium/classes/${veil.index}');
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Tipo: Nivel auxiliar (se toma una sola vez, después del nivel 1)'),
+        findsOneWidget,
+      );
+      expect(find.text('Requisitos: Nivel de personaje 3.'), findsOneWidget);
+      expect(
+        find.text('Lanzamiento: Cuenta como un nivel más de tu clase lanzadora'),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('lanzamiento sin espacios', () {
+    testWidgets('la clase muestra su coste en PG y el conjuro para quién es ritual', (
+      tester,
+    ) async {
+      const penitent = ClassDetail(
+        index: 'reinos-ejemplo-penitente',
+        name: 'Penitente de ejemplo',
+        hitDie: 8,
+        isSpellcaster: true,
+        spellcastingAbility: 'wis',
+        source: _packId,
+        spellcasting: ClassSpellcasting(
+          progression: 'hitPoints',
+          preparation: 'known',
+          maxSpellLevel: {1: 1, 5: 2},
+          hitPointCost: [2, 4],
+          usesResource: 'reinos-ejemplo-plegarias',
+        ),
+        levels: [ClassLevel(level: 1)],
+      );
+      final catalog = FakeCatalogRepository(
+        classList: const [
+          ClassSummary(index: 'reinos-ejemplo-escriba', name: 'Escriba de ejemplo', hitDie: 6),
+        ],
+        classDetails: {penitent.index: penitent},
+        spellDetails: const {
+          'alarm': SpellDetail(
+            index: 'alarm',
+            name: 'Alarm',
+            level: 1,
+            ritualForClasses: ['reinos-ejemplo-escriba'],
+          ),
+        },
+        sourceList: _sources,
+      );
+      final router = await pumpRealApp(
+        tester,
+        location: '/compendium/classes/${penitent.index}',
+        fakes: AppFakes(catalog: catalog),
+      );
+
+      expect(find.text('Progresión: Sin espacios: cuesta puntos de golpe'), findsOneWidget);
+      expect(
+        find.text('Nivel máximo de conjuro: nivel 1 desde el nivel 1, nivel 2 desde el nivel 5'),
+        findsOneWidget,
+      );
+      expect(find.text('Coste en PG: 1.º: 2, 2.º: 4'), findsOneWidget);
+
+      router.go('/compendium/spells/alarm');
+      await tester.pumpAndSettle();
+      expect(find.text('Ritual: Solo para Escriba de ejemplo'), findsOneWidget);
+    });
+
+    test('ClassSpellcasting y Spellcasting leen los campos sin espacios', () {
+      final info = ClassSpellcasting.fromJson({
+        'progression': 'ritualsOnly',
+        'preparation': 'known',
+        'ritual': true,
+        'maxSpellLevel': {'1': 1, '9': 3},
+        'treatAsRitual': ['alarm'],
+      });
+      expect(info.maxSpellLevel, {1: 1, 9: 3});
+      expect(info.treatAsRitual, ['alarm']);
+      expect(info.hitPointCost, isEmpty);
+    });
+  });
+
+  group('crear una campaña', () {
+    testWidgets('tras crearla abre Contenido y continúa al detalle', (tester) async {
+      final campaigns = FakeCampaignsRepository();
+      final contentPacks = FakeCampaignContentPacksRepository(
+        packs: const [srdCampaignPack, _pack],
+      );
+      final router = await pumpRealApp(
+        tester,
+        location: '/',
+        fakes: AppFakes(campaigns: campaigns, contentPacks: contentPacks),
+      );
+
+      await _tapKey(tester, 'campaigns-new');
+      await tester.enterText(find.byKey(const Key('campaign-name')), 'Campaña de ejemplo');
+      await _tapKey(tester, 'campaign-form-submit');
+
+      // The "Contenido" step reuses the "Contenido y reglas" section.
+      expect(find.byKey(const Key('campaign-content-setup')), findsOneWidget);
+      expect(locationOf(router), '/campaigns/c1/content-setup');
+      expect(find.text('Contenido y reglas'), findsOneWidget);
+      await _tapKey(tester, 'campaign-pack-$_packId');
+      await _tapKey(tester, 'campaign-packs-save');
+      expect(contentPacks.saved.single.campaignId, 'c1');
+      expect(contentPacks.saved.single.packIds, {_packId});
+
+      await _tapKey(tester, 'campaign-content-setup-continue');
+      expect(find.byKey(const Key('campaign-content-setup')), findsNothing);
+      expect(locationOf(router), startsWith('/campaigns/c1'));
+      expect(locationOf(router), isNot('/campaigns/c1/content-setup'));
     });
   });
 

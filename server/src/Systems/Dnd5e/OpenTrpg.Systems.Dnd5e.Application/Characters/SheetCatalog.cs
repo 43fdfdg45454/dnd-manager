@@ -1,6 +1,8 @@
 using OpenTrpg.Core.Application.Abstractions.Persistence;
 using OpenTrpg.Core.Domain.Catalog;
 using OpenTrpg.Core.Domain.Characters;
+using OpenTrpg.Core.Domain.Items;
+using OpenTrpg.Systems.Dnd5e.Application.Items;
 using OpenTrpg.Core.Application;
 using OpenTrpg.Core.Application.Characters;
 using OpenTrpg.Systems.Dnd5e.Application;
@@ -32,6 +34,8 @@ public sealed class SheetCatalog
     private readonly Dictionary<string, OptionDefinition> _options;
     private readonly IReadOnlyList<SkillInfo> _skills;
     private readonly IReadOnlyList<FeatureDefinition> _featureResources;
+    private readonly IReadOnlyList<SubclassLevel> _subclassLevels;
+    private readonly IReadOnlyList<TraitDefinition> _traitResources;
 
     private SheetCatalog(
         IEnumerable<ClassDefinition> classes,
@@ -45,7 +49,9 @@ public sealed class SheetCatalog
         IReadOnlyList<SkillInfo> skills,
         IEnumerable<RaceExtensionDefinition> raceExtensions,
         IEnumerable<SpellDefinition> grantedSpells,
-        IReadOnlyList<FeatureDefinition> featureResources)
+        IReadOnlyList<FeatureDefinition> featureResources,
+        IReadOnlyList<SubclassLevel> subclassLevels,
+        IReadOnlyList<TraitDefinition> traitResources)
     {
         _classes = classes.ToDictionary(c => c.Index, StringComparer.Ordinal);
         _classInfos = _classes.Values.ToDictionary(c => c.Index, c => ClassInfo.From(c, levels), StringComparer.Ordinal);
@@ -59,6 +65,8 @@ public sealed class SheetCatalog
         _raceExtensions = raceExtensions.ToLookup(e => e.RaceIndex, StringComparer.Ordinal);
         _grantedSpellNames = grantedSpells.GroupBy(s => s.Index, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First().Name, StringComparer.Ordinal);
         _featureResources = featureResources;
+        _subclassLevels = subclassLevels;
+        _traitResources = traitResources;
     }
 
     /// <summary>Loads what the given characters reference (plus the extra indexes, e.g. those of a pending edit).</summary>
@@ -78,15 +86,24 @@ public sealed class SheetCatalog
         var subclassIndexes = Distinct(characters.SelectMany(c => c.Classes).Select(c => c.SubclassIndex));
         var subclasses = await catalog.ListSubclassesByIndexAsync(subclassIndexes, cancellationToken);
         var featureResources = await catalog.ListFeatureEffectsAsync(classIndexes, subclassIndexes, cancellationToken);
+        var subclassLevels = subclassIndexes.Count == 0 ? [] : await catalog.ListSubclassLevelsAsync(subclassIndexes, cancellationToken);
         var raceIndexes = Distinct(characters.Select(c => c.RaceIndex));
         var races = await catalog.ListRacesByIndexAsync(raceIndexes, cancellationToken);
         var subraces = await catalog.ListSubracesByIndexAsync(Distinct(characters.Select(c => c.SubraceIndex)), cancellationToken);
         var raceExtensions = await catalog.ListRaceExtensionsAsync(raceIndexes, cancellationToken);
 
-        // Racial spells cast per long rest name their resource after the spell.
+        // Options picked in level choices (fighting styles, invocations, feats...): their effects enter the sheet.
+        // Plus the enhancement options applied to inventory entries (phase 35B3).
+        var options = await catalog.ListOptionsByIndexAsync(
+            Distinct(characters.SelectMany(ChoiceEffects.OptionIndexes).Concat(characters.SelectMany(c => c.ItemEnhancements.Values.SelectMany(v => v)))),
+            cancellationToken);
+
+        // Spells cast a number of times per long rest (races, options, subclass levels) name their resource after the spell.
         var grantedSpellIndexes = Distinct(races.Select(r => r.Grants)
             .Concat(subraces.Select(s => s.Grants))
             .Concat(raceExtensions.Select(e => e.Grants))
+            .Concat(options.Select(o => o.Grants))
+            .Concat(subclassLevels.Select(l => l.Grants))
             .SelectMany(g => g.Spells)
             .Where(s => s.UsesPerLongRest is not null)
             .Select(s => s.Index));
@@ -97,10 +114,9 @@ public sealed class SheetCatalog
             : [];
         var skills = (await catalog.ListSkillsAsync(cancellationToken)).Select(SkillInfo.From).ToList();
 
-        // Options picked in level choices (fighting styles, invocations, feats...): their effects enter the sheet.
-        var options = await catalog.ListOptionsByIndexAsync(Distinct(characters.SelectMany(ChoiceEffects.OptionIndexes)), cancellationToken);
+        var traitResources = raceIndexes.Count == 0 ? [] : await catalog.ListTraitResourcesAsync(cancellationToken);
 
-        return new SheetCatalog(classes, levels, subclasses, races, subraces, backgrounds, spells, options, skills, raceExtensions, grantedSpells, featureResources);
+        return new SheetCatalog(classes, levels, subclasses, races, subraces, backgrounds, spells, options, skills, raceExtensions, grantedSpells, featureResources, subclassLevels, traitResources);
     }
 
     public ClassDefinition? Class(string index) => _classes.GetValueOrDefault(index);
@@ -124,8 +140,31 @@ public sealed class SheetCatalog
 
     public OptionDefinition? Option(string index) => _options.GetValueOrDefault(index);
 
+    /// <summary>The enhancements of each inventory entry of the character, with the options of this catalog.</summary>
+    public Func<CharacterItem, IReadOnlyList<AppliedEnhancement>> Enhancements(Dnd5eCharacter character) => ItemEnhancementEffects.For(character, Option);
+
+    /// <summary>The item enhancement feature the character has reached (content packs), or null.</summary>
+    public ItemEnhancementGrant? ItemEnhancement(Dnd5eCharacter character) => ItemEnhancementGrants.Find(character, _featureResources);
+
     /// <summary>The companion feature the character has reached (content packs), or null.</summary>
     public CompanionGrant? Companion(Dnd5eCharacter character) => CompanionGrants.Find(character, _featureResources);
+
+    /// <summary>
+    /// Resources of the racial traits of the character's race and subrace (content packs), labelled "Trait (raza)" and
+    /// counted with the character level.
+    /// </summary>
+    private IEnumerable<ChoiceResourceEffect> TraitResources(Dnd5eCharacter character)
+    {
+        foreach (var trait in _traitResources.OrderBy(t => t.Index, StringComparer.Ordinal))
+        {
+            var ofRace = character.RaceIndex is { } race && trait.RaceIndexes.Contains(race, StringComparer.Ordinal);
+            var ofSubrace = character.SubraceIndex is { } subrace && trait.SubraceIndexes.Contains(subrace, StringComparer.Ordinal);
+            if ((ofRace || ofSubrace) && trait.Resource is { } resource)
+            {
+                yield return new ChoiceResourceEffect(null, resource) { Label = $"{trait.Name} ({(ofSubrace ? "subraza" : "raza")})" };
+            }
+        }
+    }
 
     /// <summary>Input of <see cref="SheetCalculator.Calculate"/> for a character covered by this catalog.</summary>
     public SheetInput InputFor(Dnd5eCharacter character, EquippedGear gear)
@@ -138,18 +177,46 @@ public sealed class SheetCatalog
         var subrace = Subrace(character.SubraceIndex);
 
         // Resources and modifiers of the subclass features reached (content packs) join those of the chosen options.
-        var choices = character.Choices.Count == 0 ? null : ChoiceEffects.Build(character, Option);
+        var choices = character.Choices.Count == 0 ? null : ChoiceEffects.Build(character, Option, _grantedSpellNames.GetValueOrDefault);
         var featureResources = ChoiceEffects.ClassResources(character, Class)
             .Concat(ChoiceEffects.FeatureResources(character, _featureResources))
+            .Concat(TraitResources(character))
             .ToList();
         var featureModifiers = ChoiceEffects.FeatureModifiers(character, _featureResources);
-        if (featureResources.Count > 0 || featureModifiers.Count > 0)
+        var subclassGrants = ChoiceEffects.SubclassLevelGrants(character, _subclassLevels, i => Subclass(i)?.Name);
+
+        // Subclass levels reached that grant spells with their own ability or with casts per long rest.
+        var subclassCasting = new List<GrantedSpellcasting>();
+        foreach (var level in _subclassLevels.Where(l => l.Grants.HasSpells).OrderBy(l => l.Level))
+        {
+            if (character.Classes.FirstOrDefault(c => c.SubclassIndex == level.SubclassIndex && level.Level <= c.Level) is not { } owner)
+            {
+                continue;
+            }
+
+            var name = Subclass(level.SubclassIndex)?.Name ?? level.SubclassIndex;
+            if (level.Grants.SpellcastingAbility is { } ability && subclassCasting.All(g => g.Key != level.SubclassIndex))
+            {
+                subclassCasting.Add(new GrantedSpellcasting(level.SubclassIndex, name, ability));
+            }
+
+            featureResources.AddRange(ChoiceEffects.SpellUseResources(
+                level.Grants,
+                ChoiceEffects.SpellClassIndex(level.Grants, level.SubclassIndex, owner.ClassIndex),
+                owner.ClassIndex,
+                ChoiceEffects.Label(name, level.Level),
+                _grantedSpellNames.GetValueOrDefault));
+        }
+
+        if (featureResources.Count > 0 || featureModifiers.Count > 0 || subclassGrants.Count > 0 || subclassCasting.Count > 0)
         {
             var current = choices ?? ChoiceEffects.None;
             choices = current with
             {
                 Resources = [.. current.Resources, .. featureResources],
                 Modifiers = [.. current.Modifiers, .. featureModifiers],
+                Grants = [.. current.Grants, .. subclassGrants],
+                GrantedSpellcasting = [.. current.GrantedSpellcasting, .. subclassCasting],
             };
         }
 

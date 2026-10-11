@@ -24,6 +24,7 @@ public static class Dnd5eInfrastructureServices
         services.AddScoped<ICatalogRepository, CatalogRepository>();
         services.AddScoped<IDnd5eCharacterRepository, Dnd5eCharacterRepository>();
         services.AddScoped<ICharacterCompanionRepository, CharacterCompanionRepository>();
+        services.AddScoped<ICampaignRulesRepository, CampaignRulesRepository>();
         services.AddScoped<IDnd5eCatalogSystem, Dnd5eCatalogSystem>();
         services.AddScoped<IBeastCatalog, SrdBeastCatalog>();
 

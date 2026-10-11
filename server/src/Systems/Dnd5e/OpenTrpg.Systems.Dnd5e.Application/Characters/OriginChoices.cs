@@ -10,24 +10,28 @@ using OpenTrpg.Core.Application.Characters;
 using OpenTrpg.Systems.Dnd5e.Application;
 using OpenTrpg.Systems.Dnd5e.Application.Abstractions;
 using OpenTrpg.Systems.Dnd5e.Application.Abstractions.Persistence;
+using OpenTrpg.Systems.Dnd5e.Application.Campaigns;
 using OpenTrpg.Systems.Dnd5e.Application.Characters;
 using OpenTrpg.Systems.Dnd5e.Domain.Catalog;
 using OpenTrpg.Systems.Dnd5e.Domain.Characters;
 
 namespace OpenTrpg.Systems.Dnd5e.Application.Characters;
 
-// Phase 19: decisions of the race, subrace and background (GET/PUT /characters/{id}/origin-choices).
+// Phase 19: decisions of the race, subrace and background (GET/PUT /characters/{id}/origin-choices). The level-1
+// choices of the first class (fighting style, expertise...) travel in the same flow (source "class").
 
 /// <summary>
-/// One decision of the race, subrace or background of a character. <see cref="Required"/> picks are needed before the
+/// One decision of the race, subrace or background of a character, or a level-1 choice of its first class. <see cref="Required"/> picks are needed before the
 /// draft can be activated (0 for optional ones: languages, which the creation wizard already asks for in its own step).
 /// <see cref="Selected"/> is the current answer (empty when not answered); feats also carry <see cref="Feat"/> and the
 /// <see cref="Ability"/> they raise.
 /// </summary>
 /// <param name="Key">"race.abilityBonuses", "race.skills", "race.languages", "race.tools", "race.cantrip", "race.feat",
-/// "race.trait.&lt;key&gt;"; subrace ones start with "race.subrace."; background ones with "background.".</param>
-/// <param name="Kind">AbilityBonus, Skill, Language, Tool, Cantrip, Feat or TraitOption.</param>
-/// <param name="Source">"race", "subrace" or "background".</param>
+/// "race.trait.&lt;key&gt;"; subrace ones start with "race.subrace."; background ones with "background."; the level-1
+/// choices of the first class are "class.&lt;rule key&gt;".</param>
+/// <param name="Kind">AbilityBonus, Skill, Language, Tool, Cantrip, Feat or TraitOption; for the class choices, the
+/// <c>LevelChoiceKind</c> of the rule (OptionSet, Expertise, Skill, Tool, Language, Weapon, SpellbookSpells...).</param>
+/// <param name="Source">"race", "subrace", "background", "campaign" (starter feat) or "class".</param>
 /// <param name="Amount">Bonus of each pick of an AbilityBonus choice (+1).</param>
 /// <param name="FreeText">No closed list: any text (languages or tools of any kind).</param>
 public sealed record OriginChoiceDto(
@@ -43,7 +47,29 @@ public sealed record OriginChoiceDto(
     IReadOnlyList<LevelUpOptionDto> Options,
     IReadOnlyList<ChoiceItemDto> Selected,
     ChoiceItemDto? Feat,
-    string? Ability);
+    string? Ability)
+{
+    /// <summary>Feats with <c>grants.removeSavingThrows</c> to choose: the saving throw proficiencies the player gives up.</summary>
+    public IReadOnlyList<string> RemovedSavingThrows { get; init; } = [];
+
+    /// <summary>Class of a level choice of the first class (source "class"); null for the origin ones.</summary>
+    public string? ClassIndex { get; init; }
+
+    /// <summary>Class level of a class choice (1); null for the origin ones.</summary>
+    public int? Level { get; init; }
+
+    /// <summary>Option set of a class choice of options, or null.</summary>
+    public string? SetId { get; init; }
+
+    /// <summary>
+    /// Choice of an option (<c>options[].choices</c>) of another class choice: only asked, and only required, when
+    /// <c>index</c> is picked in the choice <c>choiceKey</c> (a "class." key). Null otherwise.
+    /// </summary>
+    public OptionRequirementDto? Requires { get; init; }
+
+    /// <summary>Why fewer picks than the rule gives are required (no eligible options), or null.</summary>
+    public string? Warning { get; init; }
+}
 
 /// <param name="Complete">Every required choice is answered (the draft can be submitted or activated).</param>
 public sealed record OriginChoicesDto(Guid CharacterId, bool Complete, IReadOnlyList<OriginChoiceDto> Choices);
@@ -84,15 +110,41 @@ public sealed record PlannedOriginChoice(
     IReadOnlyList<PlannedOption> Options)
 {
     public PlannedOption? Option(string index) => Options.FirstOrDefault(o => o.Index == index);
+
+    /// <summary>The level choice of the first class behind a "class." choice, or null for the origin ones.</summary>
+    public PlannedChoice? Class { get; init; }
+
+    /// <summary>Class of <see cref="Class"/>.</summary>
+    public string? ClassIndex { get; init; }
+
+    /// <summary>The "class." choice and option that <see cref="Class"/> requires (options[].choices), or null.</summary>
+    public OptionRequirementDto? Requires { get; init; }
 }
 
 /// <summary>
-/// Builds the origin choices of a character from its race, subrace and background (<see cref="RaceChoices"/>) and checks
-/// that the required ones are answered.
+/// Builds the origin choices of a character from its race, subrace and background (<see cref="RaceChoices"/>), plus the
+/// level-1 choices of its first class (planned by <see cref="LevelUpPlanner.BuildInitialClassAsync"/>), and checks that
+/// the required ones are answered.
 /// </summary>
-public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterSheetService sheets)
+public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterSheetService sheets, ICampaignRulesRepository rules, LevelUpPlanner levelUp)
 {
     public const string IncompleteCode = "origin-choices-incomplete";
+
+    /// <summary>Prefix of the keys of the level-1 choices of the first class ("class.fighting-style").</summary>
+    public const string ClassPrefix = "class.";
+
+    /// <summary>Source of the level-1 choices of the first class.</summary>
+    public const string ClassSource = "class";
+
+    /// <summary>Level at which the choices of the first class asked here are recorded.</summary>
+    public const int ClassLevel = 1;
+
+    /// <summary>Source of the optional starter feat (not the race nor the background).</summary>
+    public const string StarterSource = "campaign";
+
+    /// <summary>The starter feat can be taken now: the campaign enables starter feats and the character is level 1.</summary>
+    public async Task<bool> StarterFeatAllowedAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default) =>
+        character.TotalLevel <= 1 && await CampaignRulesHandler.StarterFeatsEnabledAsync(rules, character.CampaignId, cancellationToken);
 
     public async Task<IReadOnlyList<PlannedOriginChoice>> PlanAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default)
     {
@@ -117,14 +169,57 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
             sources.Add((OriginChoiceKeys.BackgroundPrefix, BreakdownSources.Background, background.Choices));
         }
 
-        if (sources.All(s => s.Choices.IsEmpty))
+        var result = await PlanOriginAsync(character, race, sources, cancellationToken);
+        if (await levelUp.BuildInitialClassAsync(character, new HashSet<string>(StringComparer.Ordinal), cancellationToken) is { } initial)
+        {
+            result.AddRange(initial.Choices.Select(c => ClassChoice(initial.Class.Index, c)));
+        }
+
+        return result;
+    }
+
+    /// <summary>A level-1 choice of the first class as an origin choice ("class." key, source "class").</summary>
+    private static PlannedOriginChoice ClassChoice(string classIndex, PlannedChoice choice) =>
+        new(
+            ClassPrefix + choice.Rule.Key,
+            choice.Rule.Name,
+            choice.Rule.Kind.ToString(),
+            ClassSource,
+            choice.Rule.Choose,
+            choice.Required,
+            null,
+            choice.FreeText,
+            choice.Rule.Note,
+            choice.Options)
+        {
+            Class = choice,
+            ClassIndex = classIndex,
+            Requires = choice.Requires is { } requires ? requires with { ChoiceKey = ClassPrefix + requires.ChoiceKey } : null,
+        };
+
+    private async Task<List<PlannedOriginChoice>> PlanOriginAsync(
+        Dnd5eCharacter character,
+        RaceDefinition? race,
+        List<(string Prefix, string Source, RaceChoices Choices)> sources,
+        CancellationToken cancellationToken)
+    {
+        // The starter feat (H15): offered at level 1 when the campaign enables it; an answer already given stays visible.
+        var starterAllowed = await StarterFeatAllowedAsync(character, cancellationToken);
+        var starterAnswered = character.OriginChoice(OriginChoiceKeys.StarterFeat) is not null;
+        if (sources.All(s => s.Choices.IsEmpty) && !starterAllowed && !starterAnswered)
         {
             return [];
         }
 
         var skills = await catalog.ListSkillsAsync(cancellationToken);
         var spells = sources.Any(s => s.Choices.Cantrip is not null) ? await catalog.ListAllSpellsAsync(cancellationToken) : [];
-        var feats = sources.Any(s => s.Choices.Feats is not null) ? await catalog.ListOptionsBySetAsync([OptionSets.Feats], cancellationToken) : [];
+        var featSets = sources.Where(s => s.Choices.Feats is not null).Select(s => s.Choices.Feats!.SetId ?? OptionSets.Feats).ToList();
+        if (starterAllowed || starterAnswered)
+        {
+            featSets.Add(OptionSets.Feats);
+        }
+
+        var feats = featSets.Count > 0 ? await catalog.ListOptionsBySetAsync(featSets.Distinct(StringComparer.Ordinal).ToList(), cancellationToken) : [];
         var sheet = feats.Count > 0 ? await sheets.CalculateAsync(character, cancellationToken) : null;
         var toolIndexes = sources.SelectMany(s => s.Choices.Tools?.From ?? []).Select(o => o.Index).Distinct(StringComparer.Ordinal).ToList();
         var tools = toolIndexes.Count > 0 ? await catalog.ListCatalogItemsByIndexAsync(toolIndexes, cancellationToken) : [];
@@ -132,7 +227,26 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
         var result = new List<PlannedOriginChoice>();
         foreach (var (prefix, source, choices) in sources)
         {
-            result.AddRange(Plan(character, prefix, source, choices, skills, spells, feats, tools, sheet));
+            result.AddRange(Plan(character, prefix, source, choices, skills, spells, feats, tools, sheet, race?.Size));
+        }
+
+        var starters = feats.Where(f => f.Starter && f.SetId == OptionSets.Feats).ToList();
+        if ((starterAllowed && starters.Count > 0) || starterAnswered)
+        {
+            var options = FeatOptions(character, OriginChoiceKeys.StarterFeat, starters, sheet, race?.Size);
+            result.Add(new PlannedOriginChoice(
+                OriginChoiceKeys.StarterFeat,
+                "Dote inicial",
+                OriginChoiceKeys.FeatKind,
+                StarterSource,
+                1,
+                0,
+                null,
+                false,
+                starterAllowed
+                    ? "Opcional: una dote inicial que la campaña permite a nivel 1, además de todo lo demás."
+                    : "Solo se elige a nivel 1 con las dotes iniciales activadas en la campaña.",
+                options));
         }
 
         return result;
@@ -144,12 +258,30 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
         ArgumentNullException.ThrowIfNull(character);
         ArgumentNullException.ThrowIfNull(plan);
         return plan
-            .Where(c => c.Required > 0 && Answered(character.OriginChoice(c.Key)) < c.Required)
+            .Where(c => c.Required > 0 && RequirementMet(character, c) && Answered(Stored(character, c)) < c.Required)
             .Select(c => c.Name)
             .ToList();
     }
 
-    /// <summary>400 (code <see cref="IncompleteCode"/>) when a required race or background choice is not answered.</summary>
+    /// <summary>The recorded answer of a choice: the origin choice of its key, or the level-1 choice of the first class.</summary>
+    public static CharacterChoice? Stored(Dnd5eCharacter character, PlannedOriginChoice choice) =>
+        choice.Class is { } planned
+            ? LevelUpPlanner.InitialClassChoice(character, choice.ClassIndex!, planned.Rule.Key)
+            : character.OriginChoice(choice.Key);
+
+    /// <summary>A class choice of an option applies only while that option is recorded in its parent choice.</summary>
+    public static bool RequirementMet(Dnd5eCharacter character, PlannedOriginChoice choice)
+    {
+        if (choice.Class?.Requires is not { } requires)
+        {
+            return true;
+        }
+
+        var parent = LevelUpPlanner.InitialClassChoice(character, choice.ClassIndex!, requires.ChoiceKey)?.Selection;
+        return parent is not null && LevelUpPlanner.PickedIndexes(parent).Contains(requires.Index, StringComparer.Ordinal);
+    }
+
+    /// <summary>400 (code <see cref="IncompleteCode"/>) when a required race, background or first-class choice is not answered.</summary>
     public async Task EnsureCompleteAsync(Dnd5eCharacter character, CancellationToken cancellationToken = default)
     {
         var missing = Missing(character, await PlanAsync(character, cancellationToken));
@@ -157,7 +289,7 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
         {
             throw AppException.Validation(
                 "originChoices",
-                $"Faltan elecciones de raza o trasfondo: {string.Join(", ", missing.Select(m => $"«{m}»"))}.",
+                $"Faltan elecciones de raza, trasfondo o clase: {string.Join(", ", missing.Select(m => $"«{m}»"))}.",
                 IncompleteCode);
         }
     }
@@ -167,7 +299,34 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
         Missing(character, plan).Count == 0,
         plan.Select(c =>
             {
-                var answer = character.OriginChoice(c.Key)?.Selection;
+                var answer = Stored(character, c)?.Selection;
+                if (c.Class is { } planned)
+                {
+                    var dto = planned.ToDto();
+                    return new OriginChoiceDto(
+                        c.Key,
+                        c.Name,
+                        c.Kind,
+                        c.Source,
+                        c.Choose,
+                        c.Required,
+                        null,
+                        c.FreeText,
+                        c.Note,
+                        dto.Options.Select(o => o.Requires is { } needs ? o with { Requires = needs with { ChoiceKey = ClassPrefix + needs.ChoiceKey } } : o).ToList(),
+                        (answer?.Selected ?? []).Select(ChoiceItemDto.From).ToList(),
+                        answer?.Feat is { } classFeat ? ChoiceItemDto.From(classFeat) : null,
+                        answer?.Ability)
+                    {
+                        RemovedSavingThrows = answer?.RemovedSavingThrows ?? [],
+                        ClassIndex = c.ClassIndex,
+                        Level = ClassLevel,
+                        SetId = planned.Rule.SetId,
+                        Requires = c.Requires,
+                        Warning = planned.Warning,
+                    };
+                }
+
                 return new OriginChoiceDto(
                     c.Key,
                     c.Name,
@@ -191,16 +350,55 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
                             o.SpellCategory)
                         {
                             DamageType = o.DamageType,
+                            RemoveSavingThrows = o.Definition?.Grants.RemoveSavingThrows is { } remove
+                                ? new RemoveSavingThrowsDto(remove.Choose, remove.From)
+                                : null,
+                            SkillChoicesDelta = o.Definition?.Grants.SkillChoicesDelta ?? 0,
                         })
                         .ToList(),
                     (answer?.Selected ?? []).Select(ChoiceItemDto.From).ToList(),
                     answer?.Feat is { } feat ? ChoiceItemDto.From(feat) : null,
-                    answer?.Ability);
+                    answer?.Ability)
+                {
+                    RemovedSavingThrows = answer?.RemovedSavingThrows ?? [],
+                };
             })
             .ToList());
 
+    /// <summary>
+    /// The feats of an origin choice: at creation only what the origin decides counts (abilities, race and size), and a
+    /// feat another origin choice already took cannot be taken again.
+    /// </summary>
+    private static List<PlannedOption> FeatOptions(Dnd5eCharacter character, string key, IReadOnlyList<OptionDefinition> feats, CharacterSheet? sheet, string? size)
+    {
+        var taken = character.OriginChoices
+            .Where(c => c.Key != key && c.Selection.Feat is not null)
+            .Select(c => c.Selection.Feat!.Index)
+            .ToHashSet(StringComparer.Ordinal);
+        return feats
+            .OrderBy(f => f.Name, StringComparer.Ordinal)
+            .Select(f =>
+            {
+                var originPrerequisites = new OptionPrerequisites(null, null, null, f.Prerequisites.Abilities) { Races = f.Prerequisites.Races, Sizes = f.Prerequisites.Sizes };
+                var reason = taken.Contains(f.Index) ? "Ya tienes esta dote." : sheet is null ? null : PrerequisiteEvaluator.WhyNot(originPrerequisites, new PrerequisiteFacts
+                {
+                    Character = character,
+                    Sheet = sheet,
+                    CharacterLevel = character.TotalLevel,
+                    ClassLevel = character.TotalLevel,
+                    Size = size,
+                });
+                return new PlannedOption(f.Index, f.Name, f.Description, f.PrerequisitesText, reason is null, reason, null, f, []);
+            })
+            .ToList();
+    }
+
     private static int Answered(CharacterChoice? choice) =>
-        choice?.Selection is not { } selection ? 0 : selection.Feat is not null ? 1 : selection.Selected.Count;
+        choice?.Selection is not { } selection ? 0
+        : selection.Feat is not null ? 1
+        : selection.Selected.Count > 0 ? selection.Selected.Count
+        : selection.Asi is { Count: > 0 } ? 1
+        : 0;
 
     private static IEnumerable<PlannedOriginChoice> Plan(
         Dnd5eCharacter character,
@@ -211,7 +409,8 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
         IReadOnlyList<SpellDefinition> spells,
         IReadOnlyList<OptionDefinition> feats,
         IReadOnlyList<ItemTemplate> tools,
-        CharacterSheet? sheet)
+        CharacterSheet? sheet,
+        string? size = null)
     {
         // Every option carries a description (phase 29): the catalog text or, when it has none, one built here
         // (OriginOptionDescriptions).
@@ -306,18 +505,9 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
 
         if (choices.Feats is { } featChoice)
         {
-            var options = feats
-                .OrderBy(f => f.Name, StringComparer.Ordinal)
-                .Select(f =>
-                {
-                    var reasons = f.Prerequisites.Abilities
-                        .Where(a => Abilities.IsValid(a.Key) && sheet is not null && sheet.Abilities[a.Key].Score < a.Value)
-                        .Select(a => $"Requiere {BreakdownLabels.Ability(a.Key)} {a.Value}.")
-                        .ToList();
-                    var reason = reasons.Count == 0 ? null : string.Join(" ", reasons);
-                    return new PlannedOption(f.Index, f.Name, f.Description, f.PrerequisitesText, reason is null, reason, null, f, []);
-                })
-                .ToList();
+            // Feats of the set of the choice (the feats set by default); starter feats only come with "Dote inicial".
+            var setId = featChoice.SetId ?? OptionSets.Feats;
+            var options = FeatOptions(character, prefix + OriginChoiceKeys.Feat, feats.Where(f => f.SetId == setId && !f.Starter).ToList(), sheet, size);
             yield return new PlannedOriginChoice(
                 prefix + OriginChoiceKeys.Feat,
                 $"Dote ({origin})",
@@ -358,11 +548,15 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
 public sealed class OriginChoicesHandler(
     Dnd5eCharacterLoader loader,
     OriginChoicesPlanner planner,
+    LevelUpPlanner levelUp,
+    ICatalogRepository catalog,
     ICharacterSheetService sheets,
     IUnitOfWork unitOfWork,
     ICampaignNotifier notifier,
     IDateTimeProvider clock)
 {
+    public const string StarterFeatNotAllowedCode = "starter-feat-not-allowed";
+
     public async Task<OriginChoicesDto> GetAsync(Guid currentUserId, Guid characterId, CancellationToken cancellationToken = default)
     {
         var loaded = await loader.LoadAsync(characterId, currentUserId, cancellationToken);
@@ -395,12 +589,16 @@ public sealed class OriginChoicesHandler(
         return OriginChoicesPlanner.ToDto(character, await planner.PlanAsync(character, cancellationToken));
     }
 
-    /// <summary>Records (or removes) the answers and recalculates the sheet; the caller saves.</summary>
+    /// <summary>
+    /// Records (or removes) the answers and recalculates the sheet; the caller saves. The race and background answers go
+    /// first, so the level-1 choices of the first class ("class." keys) are checked against the origin just saved.
+    /// </summary>
     public async Task ApplyAsync(Dnd5eCharacter character, SaveOriginChoicesRequest request, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var plan = await planner.PlanAsync(character, cancellationToken);
         var resolved = new List<(PlannedOriginChoice Choice, ChoiceSelection? Selection)>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
+        var classAnswers = new List<LevelUpChoiceAnswer>();
         foreach (var answer in request.Choices ?? [])
         {
             var key = answer.Key!.Trim();
@@ -409,11 +607,33 @@ public sealed class OriginChoicesHandler(
                 throw AppException.Validation("choices", $"La elección '{key}' está repetida.");
             }
 
+            if (key.StartsWith(OriginChoicesPlanner.ClassPrefix, StringComparison.Ordinal))
+            {
+                classAnswers.Add(answer with { Key = key[OriginChoicesPlanner.ClassPrefix.Length..] });
+                continue;
+            }
+
             var choice = plan.FirstOrDefault(c => c.Key == key)
-                ?? throw AppException.Validation("choices", $"La elección '{key}' no corresponde a la raza ni al trasfondo del personaje.");
-            resolved.Add((choice, Resolve(choice, answer)));
+                ?? throw AppException.Validation(
+                    "choices",
+                    key == OriginChoiceKeys.StarterFeat
+                        ? "La dote inicial solo se elige a nivel 1 y si la campaña tiene activadas las dotes iniciales."
+                        : $"La elección '{key}' no corresponde a la raza ni al trasfondo del personaje.",
+                    key == OriginChoiceKeys.StarterFeat ? StarterFeatNotAllowedCode : null);
+            var selection = Resolve(choice, answer);
+            if (selection is not null && key == OriginChoiceKeys.StarterFeat && !await planner.StarterFeatAllowedAsync(character, cancellationToken))
+            {
+                throw AppException.Validation("choices", "La dote inicial solo se elige a nivel 1 y si la campaña tiene activadas las dotes iniciales.", StarterFeatNotAllowedCode);
+            }
+
+            resolved.Add((choice, selection));
         }
 
+        // Feats that stop being picked lose their granted spells (ChoiceGrants); the new ones grant theirs.
+        var replacedFeats = resolved
+            .Select(r => character.OriginChoice(r.Choice.Key)?.Selection.Feat?.Index)
+            .OfType<string>()
+            .ToList();
         foreach (var (choice, selection) in resolved)
         {
             if (selection is null)
@@ -426,8 +646,90 @@ public sealed class OriginChoicesHandler(
             }
         }
 
+        if (replacedFeats.Count > 0 || resolved.Any(r => r.Selection?.Feat is not null))
+        {
+            await ChoiceGrants.ApplyAsync(catalog, character, replacedFeats, now, cancellationToken);
+        }
+
+        if (classAnswers.Count > 0)
+        {
+            await ApplyClassAsync(character, classAnswers, now, cancellationToken);
+        }
+
         await sheets.RecalculateAsync(character, cancellationToken);
     }
+
+    /// <summary>
+    /// The answers to the level-1 choices of the first class (keys without "class."), checked as the level-up checks them
+    /// and recorded as choices of class level 1: an answer replaces the one recorded (undoing its effects), an empty one
+    /// removes it, and the choices of an option that is no longer picked are dropped.
+    /// </summary>
+    private async Task ApplyClassAsync(Dnd5eCharacter character, List<LevelUpChoiceAnswer> classAnswers, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var answers = LevelChoiceAnswers.Parse(classAnswers);
+        var plan = await levelUp.BuildInitialClassAsync(character, LevelChoiceAnswers.PendingPicks(answers), cancellationToken, LevelChoiceAnswers.PendingChoices(answers))
+            ?? throw AppException.Validation("choices", $"La elección '{OriginChoicesPlanner.ClassPrefix}{answers.Keys.First()}' no corresponde a la clase del personaje.");
+        var classIndex = plan.Class.Index;
+        var level = OriginChoicesPlanner.ClassLevel;
+
+        bool Picked(OptionRequirementDto requires) =>
+            answers.TryGetValue(requires.ChoiceKey, out var parent)
+                ? parent.Selected.Contains(requires.Index, StringComparer.Ordinal) || parent.Feat == requires.Index
+                : LevelUpPlanner.InitialClassChoice(character, classIndex, requires.ChoiceKey)?.Selection is { } stored
+                    && LevelUpPlanner.PickedIndexes(stored).Contains(requires.Index, StringComparer.Ordinal);
+
+        var resolved = new List<(PlannedChoice Choice, ChoiceSelection Selection)>();
+        var removed = new List<string>();
+        foreach (var answer in answers.Values)
+        {
+            var choice = plan.Choices.FirstOrDefault(c => c.Rule.Key == answer.Key)
+                ?? throw AppException.Validation("choices", $"La elección '{OriginChoicesPlanner.ClassPrefix}{answer.Key}' no corresponde a la clase del personaje.");
+            if (answer.Replaced.Count > 0)
+            {
+                throw AppException.Validation("choices", $"En «{choice.Rule.Name}» no se sustituye nada al crear el personaje.");
+            }
+
+            var empty = answer.Selected.Count == 0 && answer.Feat is null && answer.Asi is null;
+            if (!empty && choice.Requires is { } requires && !Picked(requires))
+            {
+                throw AppException.Validation("choices", $"«{choice.Rule.Name}» solo se elige con «{requires.Index}» en '{OriginChoicesPlanner.ClassPrefix}{requires.ChoiceKey}'.");
+            }
+
+            var selection = empty ? null : LevelChoiceAnswers.Resolve(plan.Sheet, choice, answer);
+            if (LevelUpPlanner.InitialClassChoice(character, classIndex, choice.Rule.Key) is { } old && character.RemoveLevelChoice(old, now))
+            {
+                removed.AddRange(OptionIndexes(old.Selection));
+            }
+
+            if (selection is not null)
+            {
+                resolved.Add((choice, selection));
+            }
+        }
+
+        LevelChoiceAnswers.EnsureOptionsPickedOnce(resolved, answers);
+        foreach (var (choice, selection) in resolved)
+        {
+            character.RecordChoice(level, classIndex, choice.Rule.Key, selection, now);
+        }
+
+        // Choices of an option that is no longer picked stop applying.
+        foreach (var nested in plan.Choices.Where(c => c.Requires is not null))
+        {
+            var parent = LevelUpPlanner.InitialClassChoice(character, classIndex, nested.Requires!.ChoiceKey)?.Selection;
+            var stillPicked = parent is not null && LevelUpPlanner.PickedIndexes(parent).Contains(nested.Requires.Index, StringComparer.Ordinal);
+            if (!stillPicked && character.LevelChoice(classIndex, level, nested.Rule.Key) is { } stale && character.RemoveLevelChoice(stale, now))
+            {
+                removed.AddRange(OptionIndexes(stale.Selection));
+            }
+        }
+
+        await LevelChoiceAnswers.ApplyAllEffectsAsync(catalog, character, classIndex, resolved, removed, now, cancellationToken);
+    }
+
+    /// <summary>The options and feats a recorded selection picked (their grants are synced when it goes away).</summary>
+    private static IEnumerable<string> OptionIndexes(ChoiceSelection selection) =>
+        selection.SetId is null && selection.Feat is null ? [] : LevelUpPlanner.PickedIndexes(selection);
 
     /// <summary>Validates an answer against its planned choice; null removes the answer.</summary>
     private static ChoiceSelection? Resolve(PlannedOriginChoice choice, LevelUpChoiceAnswer answer)
@@ -518,6 +820,7 @@ public sealed class OriginChoicesHandler(
     {
         string? featIndex = null;
         string? ability = null;
+        List<string>? removed = null;
         if (selected.ValueKind == JsonValueKind.Array && selected.GetArrayLength() == 1 && selected[0].ValueKind == JsonValueKind.String)
         {
             featIndex = selected[0].GetString()?.Trim();
@@ -533,6 +836,11 @@ public sealed class OriginChoicesHandler(
                         break;
                     case "ability" when property.Value.ValueKind is JsonValueKind.String or JsonValueKind.Null:
                         ability = property.Value.GetString()?.Trim().ToLowerInvariant();
+                        break;
+                    case "removedsavingthrows" when property.Value.ValueKind == JsonValueKind.Array:
+                        removed = property.Value.EnumerateArray()
+                            .Select(e => e.ValueKind == JsonValueKind.String ? e.GetString()?.Trim().ToLowerInvariant() ?? string.Empty : string.Empty)
+                            .ToList();
                         break;
                     default:
                         throw AppException.Validation("choices", $"La elección «{choice.Name}» tiene un campo desconocido: {property.Name}.");
@@ -569,9 +877,38 @@ public sealed class OriginChoicesHandler(
         {
             Kind = choice.Kind,
             Name = choice.Name,
-            SetId = OptionSets.Feats,
+            SetId = feat.Definition?.SetId ?? OptionSets.Feats,
             Feat = new ChoiceItem(feat.Index, feat.Name),
             Ability = raised,
+            RemovedSavingThrows = RemovedSavingThrowsOf(feat, removed),
         };
+    }
+
+    /// <summary>
+    /// The saving throws a feat with <c>grants.removeSavingThrows</c> takes away, when the player chooses them
+    /// (<c>removedSavingThrows</c>: exactly <c>choose</c> abilities of <c>from</c>); null when nothing is chosen.
+    /// </summary>
+    internal static List<string>? RemovedSavingThrowsOf(PlannedOption feat, List<string>? removed)
+    {
+        var rule = feat.Definition?.Grants.RemoveSavingThrows;
+        if (rule is null || rule.Fixed.Count > 0)
+        {
+            if (removed is { Count: > 0 })
+            {
+                throw AppException.Validation("choices", $"«{feat.Name}» no pide elegir salvaciones que perder.");
+            }
+
+            return null;
+        }
+
+        var chosen = (removed ?? []).Distinct(StringComparer.Ordinal).ToList();
+        if (chosen.Count != rule.Choose
+            || chosen.Any(a => !Abilities.IsValid(a) || (rule.From.Count > 0 && !rule.From.Contains(a, StringComparer.Ordinal))))
+        {
+            var from = rule.From.Count == 0 ? "cualquiera" : string.Join(", ", rule.From);
+            throw AppException.Validation("choices", $"«{feat.Name}»: elige {rule.Choose} salvación(es) que pierdes en \"removedSavingThrows\" ({from}).");
+        }
+
+        return chosen;
     }
 }

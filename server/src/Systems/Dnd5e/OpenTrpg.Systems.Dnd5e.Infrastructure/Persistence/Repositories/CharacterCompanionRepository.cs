@@ -12,8 +12,15 @@ namespace OpenTrpg.Systems.Dnd5e.Infrastructure.Persistence.Repositories;
 
 internal sealed class CharacterCompanionRepository(AppDbContext db) : ICharacterCompanionRepository
 {
-    public Task<CharacterCompanion?> GetByCharacterAsync(Guid characterId, CancellationToken cancellationToken = default) =>
-        db.Set<CharacterCompanion>().FirstOrDefaultAsync(x => x.CharacterId == characterId, cancellationToken);
+    public async Task<CharacterCompanion?> GetByCharacterAsync(Guid characterId, CancellationToken cancellationToken = default) =>
+        (await ListByCharacterAsync(characterId, cancellationToken)).FirstOrDefault();
+
+    // Ordered in memory: a character has a handful of companions and SQLite cannot order by DateTimeOffset.
+    public async Task<IReadOnlyList<CharacterCompanion>> ListByCharacterAsync(Guid characterId, CancellationToken cancellationToken = default) =>
+        (await db.Set<CharacterCompanion>().Where(x => x.CharacterId == characterId).ToListAsync(cancellationToken))
+            .OrderBy(x => x.CreatedAt)
+            .ThenBy(x => x.Id)
+            .ToList();
 
     public async Task<IReadOnlyList<CharacterCompanion>> ListByCharactersAsync(IReadOnlyCollection<Guid> characterIds, CancellationToken cancellationToken = default)
     {

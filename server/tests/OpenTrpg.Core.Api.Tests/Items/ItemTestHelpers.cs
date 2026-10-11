@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json.Nodes;
 using OpenTrpg.Core.Application.ChangeRequests;
 using OpenTrpg.Core.Application.Characters;
 using OpenTrpg.Core.Application.Common;
@@ -38,6 +39,59 @@ internal static class ItemTestHelpers
         var response = await actor.Client.PostAsJsonAsync($"/api/v1/campaigns/{campaignId}/characters", new { name });
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         return (await response.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
+    }
+
+    /// <summary>
+    /// Answers the level-1 choices of the first class (<c>class.*</c> keys of <c>origin-choices</c>: fighting style,
+    /// expertise...) that block the activation, with the first eligible options, preferring the ones without numeric
+    /// effects so the sheet of the test stays as it was. Choices of an option are answered once it is picked.
+    /// </summary>
+    public static async Task AnswerClassChoicesAsync(this HttpClient client, Guid characterId)
+    {
+        var url = $"{Dnd5eCharacterUrl(characterId)}/origin-choices";
+        var plan = JsonNode.Parse(await client.GetStringAsync(url))!;
+        var choices = plan["choices"]!.AsArray().Select(c => c!.AsObject())
+            .Where(c => c["key"]!.GetValue<string>().StartsWith("class.", StringComparison.Ordinal) && c["required"]!.GetValue<int>() > 0)
+            .ToList();
+        if (choices.Count == 0)
+        {
+            return;
+        }
+
+        var picked = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        bool Met(JsonNode? requires) => requires is null
+            || (picked.TryGetValue(requires["choiceKey"]!.GetValue<string>(), out var parent) && parent.Contains(requires["index"]!.GetValue<string>()));
+
+        bool progress;
+        do
+        {
+            progress = false;
+            foreach (var choice in choices.Where(c => !picked.ContainsKey(c["key"]!.GetValue<string>()) && Met(c["requires"])).ToList())
+            {
+                var key = choice["key"]!.GetValue<string>();
+                var required = choice["required"]!.GetValue<int>();
+                picked[key] = choice["freeText"]!.GetValue<bool>()
+                    ? Enumerable.Range(1, required).Select(n => $"Valor {n}").ToList()
+                    : choice["options"]!.AsArray()
+                        .Where(o => o!["eligible"]!.GetValue<bool>() && Met(o["requires"]))
+                        .OrderBy(o => o!["effectsPreview"]?.AsArray().Count ?? 0)
+                        .Take(required)
+                        .Select(o => o!["index"]!.GetValue<string>())
+                        .ToList();
+                progress = true;
+            }
+        }
+        while (progress);
+
+        var saved = await client.PutAsJsonAsync(url, new { choices = picked.Select(p => new { key = p.Key, selected = p.Value }) });
+        Assert.True(saved.StatusCode == HttpStatusCode.OK, await saved.Content.ReadAsStringAsync());
+    }
+
+    /// <summary>Activation by <paramref name="dm"/> after answering the level-1 choices of the first class.</summary>
+    public static async Task<HttpResponseMessage> ActivateAsync(this SignedInUser dm, Guid characterId)
+    {
+        await dm.Client.AnswerClassChoicesAsync(characterId);
+        return await dm.Client.PostAsync($"{CharacterUrl(characterId)}/activate", null);
     }
 
     /// <summary>Character of <paramref name="owner"/> activated by <paramref name="dm"/>.</summary>
@@ -140,7 +194,7 @@ internal static class ItemTestHelpers
             applyRacialBonuses = false,
         });
         Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
-        var activate = await dm.Client.PostAsync($"{ItemTestHelpers.CharacterUrl(character.Id)}/activate", null);
+        var activate = await dm.ActivateAsync(character.Id);
         Assert.Equal(HttpStatusCode.OK, activate.StatusCode);
         return (await activate.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
     }

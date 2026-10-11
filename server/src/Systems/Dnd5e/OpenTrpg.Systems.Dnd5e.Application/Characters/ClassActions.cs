@@ -7,6 +7,7 @@ using OpenTrpg.Core.Application.Characters;
 using OpenTrpg.Systems.Dnd5e.Application;
 using OpenTrpg.Systems.Dnd5e.Application.Abstractions;
 using OpenTrpg.Systems.Dnd5e.Application.Characters;
+using OpenTrpg.Systems.Dnd5e.Domain.Catalog;
 
 namespace OpenTrpg.Systems.Dnd5e.Application.Characters;
 
@@ -40,6 +41,22 @@ public sealed class DivineSmiteRequestValidator : AbstractValidator<DivineSmiteR
     }
 }
 
+/// <summary>Body of the hit-point cast: the class that casts (a pack class with <c>"progression": "hitPoints"</c>) and the spell level.</summary>
+public sealed record HitPointCastRequest(string ClassIndex, int SpellLevel);
+
+public sealed class HitPointCastRequestValidator : AbstractValidator<HitPointCastRequest>
+{
+    public HitPointCastRequestValidator()
+    {
+        RuleFor(x => x.ClassIndex).NotEmpty().WithMessage("Indica la clase que lanza el conjuro.");
+        RuleFor(x => x.SpellLevel).InclusiveBetween(1, 9).WithMessage("El nivel del conjuro debe estar entre 1 y 9.");
+    }
+}
+
+/// <param name="Character">The character after the cast.</param>
+/// <param name="HitPointsLost">Hit points the cast cost.</param>
+public sealed record HitPointCastResultDto(CharacterDetailDto Character, int HitPointsLost);
+
 /// <param name="SlotLevels">One entry per slot to recover (e.g. [2, 1]).</param>
 public sealed record ArcaneRecoveryRequest(IReadOnlyList<int>? SlotLevels);
 
@@ -64,6 +81,7 @@ public sealed class ClassActionHandler(CharacterTracker tracker, IDateTimeProvid
     public const string DivineSmite = "divine-smite";
     public const string ArcaneRecovery = "arcane-recovery";
     public const string NaturalRecovery = "natural-recovery";
+    public const string HitPointCast = "hit-point-cast";
 
     public static AppException UnknownAction(string action) => AppException.NotFound($"La acción de clase '{action}' no existe.");
 
@@ -102,6 +120,26 @@ public sealed class ClassActionHandler(CharacterTracker tracker, IDateTimeProvid
         var character = await tracker.LoadAsync(currentUserId, characterId, cancellationToken);
         character.ArcaneRecovery(request.SlotLevels ?? [], clock.UtcNow);
         return await tracker.SaveAsync(character, cancellationToken);
+    }
+
+    /// <summary>
+    /// Casts a spell with hit points (pack class with <c>"progression": "hitPoints"</c>): one use of its resource and the
+    /// hit points of its cost table, for a spell level up to the class's maximum.
+    /// </summary>
+    public async Task<HitPointCastResultDto> HitPointCastAsync(Guid currentUserId, Guid characterId, HitPointCastRequest request, CancellationToken cancellationToken = default)
+    {
+        var character = await tracker.LoadAsync(currentUserId, characterId, cancellationToken);
+        var sheet = await tracker.SheetAsync(character, cancellationToken);
+        var casting = sheet.Spellcasting.FirstOrDefault(s => s.ClassIndex == request.ClassIndex && s.Progression == ClassSpellcastingInfo.HitPoints)
+            ?? throw AppException.Validation("classIndex", "Esa clase del personaje no lanza conjuros con puntos de golpe.");
+        if (request.SpellLevel > casting.MaxSpellLevel || request.SpellLevel > casting.HitPointCost.Count)
+        {
+            throw AppException.Validation("spellLevel", $"Con tu nivel solo lanzas conjuros hasta nivel {casting.MaxSpellLevel}.");
+        }
+
+        var resource = character.Resources.FirstOrDefault(r => r.IsAuto && r.Key == casting.UsesResource);
+        var lost = character.CastWithHitPoints(casting.UsesResource!, resource?.Name ?? casting.UsesResource!, casting.HitPointCost[request.SpellLevel - 1], clock.UtcNow);
+        return new HitPointCastResultDto(await tracker.SaveAsync(character, cancellationToken), lost);
     }
 
     /// <summary>Druid (Circle of the Land) Natural Recovery: same body and rules as Arcane Recovery (no slot of 6th level or higher).</summary>

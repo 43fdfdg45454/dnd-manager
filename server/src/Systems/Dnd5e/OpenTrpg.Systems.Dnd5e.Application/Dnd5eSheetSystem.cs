@@ -63,7 +63,7 @@ public sealed class Dnd5eSheetSystem(
 
         var list = references.Select(r => (Dnd5eCharacter)r.System!).ToList();
         var sheetCatalog = await SheetCatalog.LoadAsync(catalog, list, includeSpells: false, cancellationToken);
-        var gear = await gearProvider.GetAsync(list.Select(c => c.Id).ToList(), cancellationToken);
+        var gear = await gearProvider.GetAsync(list.Select(c => c.Id).ToList(), cancellationToken, list.ToDictionary(c => c.Id, sheetCatalog.Enhancements));
         return list.ToDictionary(
             c => c.Id,
             c => (SystemSheet)new Dnd5eSystemSheet(

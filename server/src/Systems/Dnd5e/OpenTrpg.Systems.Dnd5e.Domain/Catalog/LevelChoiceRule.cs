@@ -1,3 +1,4 @@
+using System.Text.Json;
 using OpenTrpg.Core.Domain.Catalog;
 using OpenTrpg.Systems.Dnd5e.Domain.Catalog;
 namespace OpenTrpg.Systems.Dnd5e.Domain.Catalog;
@@ -37,6 +38,86 @@ public enum LevelChoiceKind
 
     /// <summary>Anything else; validated by count only (it may still draw its options from a set or the spellbook).</summary>
     Custom,
+
+    /// <summary>New saving throw proficiencies (abilities the character is not proficient with).</summary>
+    SavingThrow,
+
+    /// <summary>Proficiency with specific weapons of the catalog (narrowed by the weapon filter or <c>from</c>).</summary>
+    Weapon,
+
+    /// <summary>Resistance to a damage type (of <c>from</c>, or any): shown in the defenses of the sheet.</summary>
+    Resistance,
+}
+
+/// <summary>
+/// A choice an option or a feat carries (content packs): made when the option is taken (<c>choices</c>, no level) or
+/// at later levels of the class of the pick (<c>levelChoices</c>, with <see cref="Level"/>). Turned into a
+/// <see cref="LevelChoiceRule"/> of the class with the key <see cref="KeyFor"/>.
+/// </summary>
+public sealed record OptionChoiceRule(
+    int? Level,
+    string Key,
+    string Name,
+    LevelChoiceKind Kind,
+    string? SetId,
+    int Choose,
+    string? FromJson,
+    string? FilterJson,
+    string Note,
+    bool Replaces,
+    bool Cumulative,
+    string? AlsoFromJson)
+{
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+    };
+
+    /// <summary>Key of the choice in the character: "&lt;option index&gt;/&lt;key&gt;".</summary>
+    public static string KeyFor(string optionIndex, string key) => $"{optionIndex}/{key}";
+
+    /// <summary>The rule of the class for a character with the option, at a class level.</summary>
+    public LevelChoiceRule ToRule(string optionIndex, string classIndex, string? subclassIndex, int level) => new()
+    {
+        Id = $"option/{optionIndex}/{level}/{Key}",
+        ClassIndex = classIndex,
+        SubclassIndex = subclassIndex,
+        Level = level,
+        Key = KeyFor(optionIndex, Key),
+        Name = Name,
+        Kind = Kind,
+        SetId = SetId,
+        Choose = Choose,
+        FromJson = FromJson,
+        FilterJson = FilterJson,
+        Replaces = Replaces,
+        Cumulative = Cumulative,
+        Note = Note,
+        AlsoFromJson = AlsoFromJson,
+    };
+
+    public static string Serialize(IEnumerable<OptionChoiceRule> rules) => JsonSerializer.Serialize(rules.ToList(), JsonOptions);
+
+    public static IReadOnlyList<OptionChoiceRule> ParseList(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<OptionChoiceRule>>(json, JsonOptions)?
+                .Where(r => r is not null && !string.IsNullOrEmpty(r.Key))
+                .Select(r => r with { Note = r.Note ?? string.Empty })
+                .ToList() ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
 }
 
 /// <summary>
@@ -95,10 +176,18 @@ public sealed class LevelChoiceRule
     /// </summary>
     public string? After { get; init; }
 
+    /// <summary>
+    /// JSON array of other option sets whose options are offered too (content packs): an ability improvement that may
+    /// be swapped for an option of a class set, or an option choice that also draws from another set. Null = none.
+    /// </summary>
+    public string? AlsoFromJson { get; init; }
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = Dnd5eCatalogSources.Srd;
 
     public IReadOnlyList<string>? From => LevelChoiceJson.ParseStringList(FromJson);
+
+    public IReadOnlyList<string> AlsoFrom => LevelChoiceJson.ParseStringList(AlsoFromJson) ?? [];
 
     public ChoiceFilter Filter => LevelChoiceJson.ParseFilter(FilterJson);
 
@@ -162,6 +251,29 @@ public sealed class OptionDefinition
     /// <summary>Free label of a feat of a content pack ("starter"...), or null.</summary>
     public string? Category { get; init; }
 
+    /// <summary>
+    /// Only offered by origin choices at creation (race, subrace or background feats, or the starter feat): never by
+    /// a level-up choice.
+    /// </summary>
+    public bool CreationOnly { get; init; }
+
+    /// <summary>
+    /// Starter feat: offered only by the optional "Dote inicial" choice at level 1 when the campaign enables it
+    /// (implies <see cref="CreationOnly"/>).
+    /// </summary>
+    public bool Starter { get; init; }
+
+    /// <summary>Repeatable feat: an Ability Score Improvement offers it again after it is taken (each pick counts on its own).</summary>
+    public bool Repeatable { get; init; }
+
+    /// <summary>
+    /// What the option does to the inventory entry it is applied to (<see cref="Catalog.ItemEffects"/>); null for options that
+    /// are not item enhancements.
+    /// </summary>
+    public string? ItemEffectsJson { get; init; }
+
+    public ItemEffects? ItemEffects => Catalog.ItemEffects.Parse(ItemEffectsJson);
+
     public OptionPrerequisites Prerequisites => LevelChoiceJson.ParsePrerequisites(PrerequisitesJson);
 
     public IReadOnlyList<ChoiceModifier> Modifiers => LevelChoiceJson.ParseModifiers(ModifiersJson);
@@ -173,6 +285,16 @@ public sealed class OptionDefinition
     public OptionResource? Resource => LevelChoiceJson.ParseResource(ResourceJson);
 
     public OptionCost? Cost => LevelChoiceJson.ParseCost(CostJson);
+
+    /// <summary>Choices made when the option is taken (<see cref="OptionChoiceRule"/> list as JSON); null = none.</summary>
+    public string? ChoicesJson { get; init; }
+
+    /// <summary>Choices the option adds at later levels of the class of the pick; null = none.</summary>
+    public string? LevelChoicesJson { get; init; }
+
+    public IReadOnlyList<OptionChoiceRule> Choices => OptionChoiceRule.ParseList(ChoicesJson);
+
+    public IReadOnlyList<OptionChoiceRule> LevelChoices => OptionChoiceRule.ParseList(LevelChoicesJson);
 }
 
 /// <summary>Well-known option sets.</summary>

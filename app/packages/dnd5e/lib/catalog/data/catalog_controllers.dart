@@ -16,11 +16,14 @@ const catalogPageSize = 50;
 Duration? _noRetry(int retryCount, Object error) => null;
 
 class SpellFilters {
-  const SpellFilters({this.level, this.classIndex});
+  const SpellFilters({this.level, this.classIndex, this.tag});
 
   /// 0 (cantrips) to 9; null means every level.
   final int? level;
   final String? classIndex;
+
+  /// A tag of the content packs (`reference.spellTags`); null: any.
+  final String? tag;
 }
 
 /// Spell filters of the compendium opened from a campaign (the argument;
@@ -33,10 +36,14 @@ class SpellFiltersController extends Notifier<SpellFilters> {
   @override
   SpellFilters build() => const SpellFilters();
 
-  void setLevel(int? level) => state = SpellFilters(level: level, classIndex: state.classIndex);
+  void setLevel(int? level) =>
+      state = SpellFilters(level: level, classIndex: state.classIndex, tag: state.tag);
 
   void setClass(String? classIndex) =>
-      state = SpellFilters(level: state.level, classIndex: classIndex);
+      state = SpellFilters(level: state.level, classIndex: classIndex, tag: state.tag);
+
+  void setTag(String? tag) =>
+      state = SpellFilters(level: state.level, classIndex: state.classIndex, tag: tag);
 }
 
 final spellFiltersProvider = NotifierProvider.autoDispose
@@ -56,6 +63,22 @@ class ItemFiltersController extends Notifier<String?> {
 /// Selected item category (API value) or null for all, per compendium.
 final itemCategoryFilterProvider = NotifierProvider.autoDispose
     .family<ItemFiltersController, String?, String?>(ItemFiltersController.new);
+
+class ItemGroupFilterController extends Notifier<String?> {
+  ItemGroupFilterController(this.compendium);
+
+  final String? compendium;
+
+  @override
+  String? build() => null;
+
+  void setGroup(String? group) => state = group;
+}
+
+/// Selected weapon/armor group (`group` of the API: simple, martial, exotic,
+/// firearm or bomb) or null for all, per compendium.
+final itemGroupFilterProvider = NotifierProvider.autoDispose
+    .family<ItemGroupFilterController, String?, String?>(ItemGroupFilterController.new);
 
 /// Makes [ref] reload when the catalog of the instance changes or, with
 /// [campaignId], when the packs that campaign enables change.
@@ -159,6 +182,7 @@ class SpellsController extends _CompendiumPagedController<SpellSummary> {
       search: ref.read(compendiumSearchProvider(compendium)),
       level: filters.level,
       classIndex: filters.classIndex,
+      tag: filters.tag,
       page: page,
       pageSize: catalogPageSize,
       campaignId: campaignId,
@@ -175,7 +199,10 @@ class ItemsController extends _CompendiumPagedController<ItemSummary> {
   ItemsController(super.compendium);
 
   @override
-  void watchFilters() => ref.watch(itemCategoryFilterProvider(compendium));
+  void watchFilters() {
+    ref.watch(itemCategoryFilterProvider(compendium));
+    ref.watch(itemGroupFilterProvider(compendium));
+  }
 
   @override
   String? sourceOf(ItemSummary item) => item.source;
@@ -184,6 +211,7 @@ class ItemsController extends _CompendiumPagedController<ItemSummary> {
   Future<Page<ItemSummary>> fetch(int page, {required String? campaignId}) => repository.items(
     search: ref.read(compendiumSearchProvider(compendium)),
     category: ref.read(itemCategoryFilterProvider(compendium)),
+    group: ref.read(itemGroupFilterProvider(compendium)),
     page: page,
     pageSize: catalogPageSize,
     campaignId: campaignId,

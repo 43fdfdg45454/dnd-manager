@@ -66,6 +66,10 @@ class CompendiumSpellsTab extends ConsumerWidget {
     // Only casters can have spells; fall back to all if the flag is missing.
     final casters = classes.where((c) => c.isSpellcaster).toList();
     final classOptions = casters.isEmpty ? classes : casters;
+    // Tags only exist with content packs that declare them.
+    final tags =
+        ref.watch(referenceProvider(ReferenceKinds.spellTags)).value?.values.toList() ??
+        const <ReferenceEntry>[];
 
     return Column(
       children: [
@@ -95,6 +99,19 @@ class CompendiumSpellsTab extends ConsumerWidget {
               ],
               onChanged: filtersController.setClass,
             ),
+            if (tags.isNotEmpty)
+              DropdownButtonFormField<String?>(
+                key: const Key('filter-spell-tag'),
+                initialValue: filters.tag,
+                isExpanded: true,
+                decoration: _filterDecoration.copyWith(labelText: 'Etiqueta'),
+                items: [
+                  const DropdownMenuItem<String?>(value: null, child: Text('Todas')),
+                  for (final t in tags)
+                    DropdownMenuItem<String?>(value: t.index, child: Text(t.name)),
+                ],
+                onChanged: filtersController.setTag,
+              ),
           ],
         ),
         Expanded(
@@ -127,6 +144,15 @@ class CompendiumSpellsTab extends ConsumerWidget {
   }
 }
 
+/// Weapon and armor groups of the item filter (`group` of the API).
+const _itemGroups = {
+  'simple': 'Simples',
+  'martial': 'Marciales',
+  'exotic': 'Exóticas',
+  'firearm': 'Armas de fuego',
+  'bomb': 'Bombas',
+};
+
 class CompendiumItemsTab extends ConsumerWidget {
   const CompendiumItemsTab({super.key});
 
@@ -134,6 +160,7 @@ class CompendiumItemsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final page = CompendiumScope.of(context);
     final category = ref.watch(itemCategoryFilterProvider(page));
+    final group = ref.watch(itemGroupFilterProvider(page));
     return Column(
       children: [
         _FilterBar(
@@ -149,6 +176,18 @@ class CompendiumItemsTab extends ConsumerWidget {
                   DropdownMenuItem<String?>(value: entry.key, child: Text(entry.value)),
               ],
               onChanged: ref.read(itemCategoryFilterProvider(page).notifier).setCategory,
+            ),
+            DropdownButtonFormField<String?>(
+              key: const Key('filter-item-group'),
+              initialValue: group,
+              isExpanded: true,
+              decoration: _filterDecoration.copyWith(labelText: 'Grupo'),
+              items: [
+                const DropdownMenuItem<String?>(value: null, child: Text('Todos')),
+                for (final entry in _itemGroups.entries)
+                  DropdownMenuItem<String?>(value: entry.key, child: Text(entry.value)),
+              ],
+              onChanged: ref.read(itemGroupFilterProvider(page).notifier).setGroup,
             ),
           ],
         ),

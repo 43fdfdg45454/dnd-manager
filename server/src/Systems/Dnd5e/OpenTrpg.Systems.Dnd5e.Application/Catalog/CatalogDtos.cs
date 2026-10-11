@@ -6,6 +6,8 @@ using OpenTrpg.Systems.Dnd5e.Application;
 using OpenTrpg.Systems.Dnd5e.Application.Items;
 using OpenTrpg.Systems.Dnd5e.Domain.Catalog;
 
+using OpenTrpg.Systems.Dnd5e.Domain.Characters;
+
 namespace OpenTrpg.Systems.Dnd5e.Application.Catalog;
 
 public sealed record AttributionDto(string Ruleset, string License, string Text);
@@ -24,8 +26,14 @@ public sealed record ClassSummaryDto(
     string SubclassFlavor,
     string Source)
 {
+    /// <summary>Auxiliary level (content packs): taken after level 1 instead of a class level; never a starting class.</summary>
+    public bool Auxiliary { get; init; }
+
     public static ClassSummaryDto From(ClassDefinition c) => new(
-        c.Index, c.Name, c.HitDie, c.SavingThrows, c.SpellcastingAbility, c.IsSpellcaster, c.SpellcastingLevel, c.IsPactCaster, c.SubclassFlavor, c.Source);
+        c.Index, c.Name, c.HitDie, c.SavingThrows, c.SpellcastingAbility, c.IsSpellcaster, c.SpellcastingLevel, c.IsPactCaster, c.SubclassFlavor, c.Source)
+    {
+        Auxiliary = c.IsAuxiliary,
+    };
 }
 
 public sealed record FeatureDto(
@@ -61,7 +69,11 @@ public sealed record SubclassDto(
     string Flavor,
     IReadOnlyList<string> Description,
     IReadOnlyList<SubclassLevelDto> Levels,
-    string Source);
+    string Source)
+{
+    /// <summary>What the character needs to choose it (Spanish), or null.</summary>
+    public string? PrerequisitesText { get; init; }
+}
 
 public sealed record ClassDetailDto(
     string Index,
@@ -89,8 +101,23 @@ public sealed record ClassDetailDto(
     /// <summary>Level at which the subclass is chosen (0 when the class does not say: the SRD ones).</summary>
     public int SubclassLevel { get; init; }
 
+    /// <summary>
+    /// The class asks for choices at level 1 besides the subclass (fighting style, expertise...): the creation wizard
+    /// asks them with the origin choices (<c>class.*</c> keys of <c>origin-choices</c>).
+    /// </summary>
+    public bool HasLevelOneChoices { get; init; }
+
     /// <summary>Spellcasting of a content pack class, or null (the SRD classes use fixed tables).</summary>
     public ClassSpellcastingDto? Spellcasting { get; init; }
+
+    /// <summary>Auxiliary level (content packs): one level taken after level 1 instead of a class level.</summary>
+    public bool Auxiliary { get; init; }
+
+    /// <summary>Prerequisites of an auxiliary level as text (the pack's, or generated from the structured ones).</summary>
+    public string? PrerequisitesText { get; init; }
+
+    /// <summary>An auxiliary level that counts as one more level of the caster class for spell slots.</summary>
+    public bool CountsAsCasterLevel { get; init; }
 
     /// <summary>Multiclassing of a content pack class, or null (the SRD classes use the fixed SRD table).</summary>
     public ClassMulticlassingDto? Multiclassing { get; init; }
@@ -103,7 +130,25 @@ public sealed record ClassDetailDto(
 /// <param name="Preparation">"prepared" or "known".</param>
 public sealed record ClassSpellcastingDto(string Progression, string Preparation, bool Ritual, string? Focus)
 {
-    public static ClassSpellcastingDto From(ClassSpellcastingInfo info) => new(info.Progression, info.Preparation, info.Ritual, info.Focus);
+    /// <summary>"hitPoints"/"ritualsOnly": highest spell level by class level (entries where it changes); null otherwise.</summary>
+    public IReadOnlyDictionary<int, int>? MaxSpellLevel { get; init; }
+
+    /// <summary>"hitPoints": hit points lost by spell level (index 0 = 1st level).</summary>
+    public IReadOnlyList<int>? HitPointCost { get; init; }
+
+    /// <summary>"hitPoints": key of the class resource each spell spends.</summary>
+    public string? UsesResource { get; init; }
+
+    /// <summary>Spells the class casts as rituals although they are not.</summary>
+    public IReadOnlyList<string> TreatAsRitual { get; init; } = [];
+
+    public static ClassSpellcastingDto From(ClassSpellcastingInfo info) => new(info.Progression, info.Preparation, info.Ritual, info.Focus)
+    {
+        MaxSpellLevel = info.MaxSpellLevels,
+        HitPointCost = info.HitPointCost,
+        UsesResource = info.UsesResource,
+        TreatAsRitual = info.TreatAsRitual ?? [],
+    };
 }
 
 /// <param name="Prerequisites">Minimum ability scores by ability ("int": 13).</param>
@@ -115,7 +160,21 @@ public sealed record ClassMulticlassingDto(
     IReadOnlyList<string> Tools,
     int Skills)
 {
-    public static ClassMulticlassingDto From(ClassMulticlassing m) => new(m.Prerequisites, m.Armor, m.Weapons, m.Tools, m.Skills);
+    /// <summary>Alternatives: one of the maps must be met entirely, besides <see cref="Prerequisites"/>.</summary>
+    public IReadOnlyList<IReadOnlyDictionary<string, int>> AnyOf { get; init; } = [];
+
+    /// <summary>Proficiencies gained at a level of the class when it was taken as a new class.</summary>
+    public IReadOnlyDictionary<int, MulticlassLevelProficiencies> ProficienciesByLevel { get; init; } = new Dictionary<int, MulticlassLevelProficiencies>();
+
+    /// <summary>The prerequisites in Spanish ("Fuerza 13 o Destreza 13 y Carisma 13"), or null without them.</summary>
+    public string? PrerequisitesText { get; init; }
+
+    public static ClassMulticlassingDto From(ClassMulticlassing m, string classIndex = "") => new(m.Prerequisites, m.Armor, m.Weapons, m.Tools, m.Skills)
+    {
+        AnyOf = m.AnyOf,
+        ProficienciesByLevel = m.ProficienciesByLevel,
+        PrerequisitesText = MulticlassRules.Missing(classIndex, _ => 0, m),
+    };
 }
 
 /// <param name="MaxByLevel">Maximum by class level when it comes from a table, else null (see <paramref name="Max"/>).</param>
@@ -221,7 +280,8 @@ public sealed record PickChoiceDto(int Choose, IReadOnlyList<OriginOptionDto> Fr
 /// <summary>A cantrip of the <see cref="SpellList"/> class ("any" for every list), narrowed to <see cref="From"/> when not empty.</summary>
 public sealed record CantripChoiceDto(int Choose, string SpellList, IReadOnlyList<OriginOptionDto> From);
 
-public sealed record FeatChoiceDto(int Choose);
+/// <param name="SetId">Option set of the feats (heritage feats); null = the <c>feats</c> set.</param>
+public sealed record FeatChoiceDto(int Choose, string? SetId = null);
 
 /// <summary>Breath weapon of an option (area, saving throw ability, damage dice by character level).</summary>
 public sealed record BreathWeaponDto(string Name, string Area, string SaveAbility, IReadOnlyDictionary<int, string> DamageAtCharacterLevel);
@@ -260,7 +320,7 @@ public sealed record RaceChoicesDto(
             Pick(choices.Languages),
             Pick(choices.Tools),
             choices.Cantrip is { } c ? new CantripChoiceDto(c.Choose, c.SpellList, Options(c.From)) : null,
-            choices.Feats is { } f ? new FeatChoiceDto(f.Choose) : null,
+            choices.Feats is { } f ? new FeatChoiceDto(f.Choose, f.SetId) : null,
             choices.TraitOptions
                 .Select(t => new TraitOptionChoiceDto(
                     t.Key,
@@ -326,8 +386,14 @@ public sealed record SpellSummaryDto(
     string Category,
     IReadOnlyList<SpellExpansionDto> ExpandedBy)
 {
+    /// <summary>Tags of the content packs (<c>reference.spellTags</c>).</summary>
+    public IReadOnlyList<string> Tags { get; init; } = [];
+
     public static SpellSummaryDto From(SpellDefinition s, IReadOnlyList<SpellExpansionDto>? expandedBy = null) => new(
-        s.Index, s.Name, s.Level, s.School, s.CastingTime, s.Range, s.Components, s.Duration, s.Concentration, s.Ritual, s.ClassIndexes, s.Source, s.Category.ToString(), expandedBy ?? []);
+        s.Index, s.Name, s.Level, s.School, s.CastingTime, s.Range, s.Components, s.Duration, s.Concentration, s.Ritual, s.ClassIndexes, s.Source, s.Category.ToString(), expandedBy ?? [])
+    {
+        Tags = s.Tags,
+    };
 }
 
 /// <summary>
@@ -337,10 +403,18 @@ public sealed record SpellSummaryDto(
 public sealed record SpellExpansionDto(string SubclassIndex, string SubclassName, string ClassIndex, string Source)
 {
     /// <summary>Spell index → the subclasses that expand their class's list with it.</summary>
-    public static ILookup<string, SpellExpansionDto> Lookup(IEnumerable<SubclassDefinition> subclasses) =>
-        subclasses
-            .SelectMany(sc => sc.ExpandedSpellList.Select(e => (e.Index, Dto: new SpellExpansionDto(sc.Index, sc.Name, sc.ClassIndex, sc.Source))))
+    /// <param name="spells">Spells whose tags may match the tags of an expanded list (<c>{ "tags": [...] }</c>).</param>
+    public static ILookup<string, SpellExpansionDto> Lookup(IEnumerable<SubclassDefinition> subclasses, IEnumerable<SpellDefinition>? spells = null)
+    {
+        var list = subclasses.ToList();
+        var tagged = (spells ?? []).Where(s => s.Tags.Count > 0).ToList();
+        return list
+            .SelectMany(sc => sc.ExpandedSpellList.Select(e => e.Index)
+                .Concat(sc.ExpandedSpellTags.Count == 0 ? [] : tagged.Where(sc.Expands).Select(s => s.Index))
+                .Distinct(StringComparer.Ordinal)
+                .Select(index => (Index: index, Dto: new SpellExpansionDto(sc.Index, sc.Name, sc.ClassIndex, sc.Source))))
             .ToLookup(x => x.Index, x => x.Dto, StringComparer.Ordinal);
+    }
 }
 
 /// <summary>
@@ -376,7 +450,14 @@ public sealed record SpellDetailDto(
     string? DcAbility,
     string Source,
     string Category,
-    IReadOnlyList<SpellExpansionDto> ExpandedBy);
+    IReadOnlyList<SpellExpansionDto> ExpandedBy)
+{
+    /// <summary>Classes of content packs that cast this spell as a ritual although it is not one (<c>treatAsRitual</c>).</summary>
+    public IReadOnlyList<string> RitualForClasses { get; init; } = [];
+
+    /// <summary>Tags of the content packs (<c>reference.spellTags</c>).</summary>
+    public IReadOnlyList<string> Tags { get; init; } = [];
+}
 
 public sealed record ConditionDto(string Index, string Name, IReadOnlyList<string> Description)
 {

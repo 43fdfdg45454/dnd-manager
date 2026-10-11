@@ -148,6 +148,11 @@ void main() {
       expect(roll('2d20', [20, 20]).isCritical, isFalse);
       expect(roll('1d20+1d20', [20, 20]).isCritical, isFalse);
       expect(roll('1d12', [12]).isCritical, isFalse);
+      // Rango de crítico ampliado (19-20): solo con un único d20.
+      expect(roll('1d20+5', [19]).isCriticalFrom(19), isTrue);
+      expect(roll('1d20+5', [19]).isCriticalFrom(20), isFalse);
+      expect(roll('1d20+5', [18]).isCriticalFrom(19), isFalse);
+      expect(roll('2d20', [19, 19]).isCriticalFrom(19), isFalse);
     });
 
     test('doubleDice duplica los dados y deja las constantes', () {

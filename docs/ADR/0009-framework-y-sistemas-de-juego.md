@@ -12,7 +12,7 @@ diario, lore, mapas, biblioteca, mensajes, tienda y transacciones, peticiones de
 tiempo real, releases) no depende de ningún sistema.
 
 El objetivo pasa a ser un **framework para desarrollar experiencias de mesa** donde D&D 5e (SRD +
-PHB) sea el primer sistema y Valda's Spire of Secrets se sume después.
+PHB) sea el primer sistema y otros suplementos de 5e se sumen después como paquetes.
 
 Medido sobre `master` el 2026-10-10:
 
@@ -23,7 +23,7 @@ Medido sobre `master` el 2026-10-10:
 | `Dnd.Infrastructure` | persistencia, SMTP, ficheros, SignalR | `Catalog/SrdDataset`, seed del SRD, paquetes de contenido, migraciones del catálogo y la ficha |
 | App Flutter (~60 k líneas) | `core` (10 k), campaigns, session, sessions, lore, maps, library, admin, auth, home, settings, server (~14 k) | characters (23 k), catalog (4 k), items (5,6 k, parcial), dice (1,2 k, genérico salvo etiquetas) |
 
-Valda's Spire of Secrets es un suplemento **compatible con 5e** (clases nuevas, subclases, dotes,
+Un suplemento de terceros **compatible con 5e** (clases nuevas, subclases, dotes,
 conjuros, objetos): no es otro sistema, es contenido del sistema 5e. Lo que hoy le falta al formato
 de paquetes es admitir clases completas, dotes y mecánicas propias de esas clases.
 
@@ -50,10 +50,10 @@ de paquetes es admitir clases completas, dotes y mecánicas propias de esas clas
    (ADR 0007, `docs/content-packs.md`) crece hasta cubrir todo lo que trae un manual: clases
    completas con sus tablas y recursos, dotes, condiciones, reglas opcionales y tablas. Cada campaña
    elige qué paquetes importados en la instancia están activos (el paquete base del sistema siempre
-   lo está): una campaña puede jugar con Valda's y otra sin él. Valda's Spire of Secrets se integra
+   lo está): una campaña puede jugar con un suplemento y otra sin él. Un suplemento se integra
    como paquete privado del sistema 5e, igual que el PHB.
 6. **Sin reglas inventadas.** El módulo 5e implementa lo que dicen el SRD, el PHB y, en su paquete,
-   Valda's; lo que un paquete no puede expresar se documenta como límite, no se improvisa.
+   ese suplemento; lo que un paquete no puede expresar se documenta como límite, no se improvisa.
 
 ## Consecuencias
 
@@ -65,7 +65,7 @@ de paquetes es admitir clases completas, dotes y mecánicas propias de esas clas
 - Un segundo sistema real validará el contrato cuando exista un juego concreto; hasta entonces el
   contrato se diseña a partir de lo que 5e necesita.
 - Un solo repositorio (monorepo: `server/`, `app/`, `docs/`) sigue bastando. Los paquetes privados
-  (PHB, Valda's) no pueden entrar en él (ADR 0007); si se quieren versionar, van en un repositorio
+  (PHB u otros suplementos) no pueden entrar en él (ADR 0007); si se quieren versionar, van en un repositorio
   privado aparte del propietario.
 - Un único `AppDbContext` con modelo compuesto (el núcleo y cada módulo aportan sus configuraciones) y
   una sola historia de migraciones: 11 de las 32 migraciones existentes tocan tablas de ambos lados y no

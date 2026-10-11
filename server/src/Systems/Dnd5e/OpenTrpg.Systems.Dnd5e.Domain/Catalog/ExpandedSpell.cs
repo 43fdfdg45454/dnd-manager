@@ -15,10 +15,39 @@ public sealed record ExpandedSpell(string Index, int Level)
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 
     /// <summary>Serialized form stored in <see cref="SubclassDefinition.ExpandedSpellListJson"/>; null for an empty list.</summary>
-    public static string? ToJson(IReadOnlyCollection<ExpandedSpell> spells)
+    public static string? ToJson(IReadOnlyCollection<ExpandedSpell> spells, IReadOnlyCollection<string>? tags = null)
     {
         ArgumentNullException.ThrowIfNull(spells);
-        return spells.Count == 0 ? null : JsonSerializer.Serialize(spells.Select(s => new { index = s.Index, level = s.Level }), Options);
+        tags ??= [];
+        return spells.Count + tags.Count == 0
+            ? null
+            : JsonSerializer.Serialize(spells.Select(s => (object)new { index = s.Index, level = s.Level }).Concat(tags.Select(t => new { tag = t })), Options);
+    }
+
+    /// <summary>The spell tags of the stored JSON (entries <c>{ "tag": "..." }</c>): every spell with one of them is added.</summary>
+    public static IReadOnlyList<string> ParseTags(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            return document.RootElement.ValueKind != JsonValueKind.Array
+                ? []
+                : document.RootElement.EnumerateArray()
+                    .Where(e => e.ValueKind == JsonValueKind.Object && e.TryGetProperty("tag", out var tag) && tag.ValueKind == JsonValueKind.String)
+                    .Select(e => e.GetProperty("tag").GetString()!.Trim())
+                    .Where(t => t.Length > 0)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList();
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
     }
 
     /// <summary>Tolerant parsing of the stored JSON: empty when missing or malformed; invalid entries are skipped.</summary>

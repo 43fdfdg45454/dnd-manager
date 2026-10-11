@@ -29,9 +29,64 @@ public sealed record OptionPrerequisites(int? MinLevel, string? PactBoon, string
     /// <summary>The character must be able to cast at least one spell (a spellcasting class, or a spell from any source).</summary>
     public bool Spellcasting { get; init; }
 
+    /// <summary>Subclass indexes, one of which the character must have (in any class).</summary>
+    public IReadOnlyList<string> Subclasses { get; init; } = [];
+
+    /// <summary>Option indexes (of any set, feats included) the character must have chosen, all of them.</summary>
+    public IReadOnlyList<string> Options { get; init; } = [];
+
+    /// <summary>Alternatives: one of them must be met entirely, besides the other fields.</summary>
+    public IReadOnlyList<OptionPrerequisites> AnyOf { get; init; } = [];
+
+    /// <summary>
+    /// <see cref="ClassFeatures.Spellcasting"/> or <see cref="ClassFeatures.PactMagic"/>: a class of the character (one of
+    /// <see cref="Classes"/> when given) must have that feature; null = none.
+    /// </summary>
+    public string? ClassFeature { get; init; }
+
+    /// <summary>Class indexes, one of which the character must have a level in (with <see cref="ClassFeature"/> when given).</summary>
+    public IReadOnlyList<string> Classes { get; init; } = [];
+
+    /// <summary>Minimum total character level (unlike <see cref="MinLevel"/>, which counts the class of the choice).</summary>
+    public int? CharacterLevel { get; init; }
+
+    /// <summary>Minimum score of the spellcasting ability of one of the character's spellcasting classes.</summary>
+    public int? SpellcastingAbilityMin { get; init; }
+
+    /// <summary>Sizes, one of which the character's race must have ("small", "medium"); empty = any size.</summary>
+    public IReadOnlyList<string> Sizes { get; init; } = [];
+
     public bool IsEmpty =>
         MinLevel is null && PactBoon is null && Cantrip is null && Abilities.Count == 0
-        && Races.Count == 0 && ArmorProficiencies.Count == 0 && WeaponProficiencies.Count == 0 && !Spellcasting;
+        && Races.Count == 0 && ArmorProficiencies.Count == 0 && WeaponProficiencies.Count == 0 && !Spellcasting
+        && Subclasses.Count == 0 && Options.Count == 0 && AnyOf.Count == 0 && ClassFeature is null && Classes.Count == 0
+        && CharacterLevel is null && SpellcastingAbilityMin is null && Sizes.Count == 0;
+
+    /// <summary>Option indexes named anywhere (pact boon, options, alternatives).</summary>
+    public IEnumerable<string> ReferencedOptions =>
+        (PactBoon is null ? Options : Options.Append(PactBoon)).Concat(AnyOf.SelectMany(a => a.ReferencedOptions));
+
+    /// <summary>Subclass indexes named anywhere.</summary>
+    public IEnumerable<string> ReferencedSubclasses => Subclasses.Concat(AnyOf.SelectMany(a => a.ReferencedSubclasses));
+
+    /// <summary>Spell indexes named anywhere.</summary>
+    public IEnumerable<string> ReferencedSpells =>
+        (Cantrip is null ? [] : new[] { Cantrip }).Concat(AnyOf.SelectMany(a => a.ReferencedSpells));
+
+    /// <summary>Race indexes named anywhere.</summary>
+    public IEnumerable<string> ReferencedRaces => Races.Concat(AnyOf.SelectMany(a => a.ReferencedRaces));
+}
+
+/// <summary>Values of <see cref="OptionPrerequisites.ClassFeature"/>.</summary>
+public static class ClassFeatures
+{
+    /// <summary>A class that casts spells with slots of its own or shared (not the pact magic).</summary>
+    public const string Spellcasting = "spellcasting";
+
+    /// <summary>A class with pact magic.</summary>
+    public const string PactMagic = "pactMagic";
+
+    public static IReadOnlyList<string> All { get; } = [Spellcasting, PactMagic];
 }
 
 /// <summary>Catalog keys of the armor and weapon proficiencies, as the SRD classes list them.</summary>
@@ -42,16 +97,32 @@ public static class ProficiencyKeys
     public const string HeavyArmor = "heavy-armor";
     public const string AllArmor = "all-armor";
     public const string Shields = "shields";
+    public const string ExoticArmor = "exotic-armor";
     public const string SimpleWeapons = "simple-weapons";
     public const string MartialWeapons = "martial-weapons";
+    public const string ExoticWeapons = "exotic-weapons";
+    public const string SimpleFirearms = "simple-firearms";
+    public const string MartialFirearms = "martial-firearms";
+    public const string ExoticFirearms = "exotic-firearms";
+    public const string Bombs = "bombs";
+
+    /// <summary>Weapon property of the bombs (a pack writes it in <c>weapon.properties</c>).</summary>
+    public const string BombProperty = "bomb";
+
+    /// <summary>Weapon property of the firearms (added by the <c>firearm</c> section).</summary>
+    public const string FirearmProperty = "firearm";
+
+    /// <summary>Armor property of the exotic armors (<c>armor.exotic: true</c>); they keep their weight category.</summary>
+    public const string ExoticProperty = "exotic";
 
     /// <summary>Armor keys a prerequisite may name ("heavy" and "heavy-armor" both normalize to <see cref="HeavyArmor"/>).</summary>
-    public static IReadOnlyList<string> Armor { get; } = [LightArmor, MediumArmor, HeavyArmor, Shields];
+    public static IReadOnlyList<string> Armor { get; } = [LightArmor, MediumArmor, HeavyArmor, Shields, ExoticArmor];
 
     /// <summary>Weapon group keys ("simple" and "simple-weapons" both normalize to <see cref="SimpleWeapons"/>); any other value is a weapon index.</summary>
-    public static IReadOnlyList<string> Weapons { get; } = [SimpleWeapons, MartialWeapons];
+    public static IReadOnlyList<string> Weapons { get; } =
+        [SimpleWeapons, MartialWeapons, ExoticWeapons, SimpleFirearms, MartialFirearms, ExoticFirearms, Bombs];
 
-    /// <summary>"heavy" → "heavy-armor", "shield" → "shields"; null when the value is not an armor key.</summary>
+    /// <summary>"heavy" → "heavy-armor", "shield" → "shields", "exotic" → "exotic-armor"; null when the value is not an armor key.</summary>
     public static string? NormalizeArmor(string value)
     {
         var key = value.Trim().ToLowerInvariant();
@@ -61,11 +132,16 @@ public static class ProficiencyKeys
             "medium" or MediumArmor => MediumArmor,
             "heavy" or HeavyArmor => HeavyArmor,
             "shield" or Shields => Shields,
+            "exotic" or ExoticArmor => ExoticArmor,
+            "all" or AllArmor => AllArmor,
             _ => null,
         };
     }
 
-    /// <summary>"simple" → "simple-weapons", "martial" → "martial-weapons"; other values (a weapon index) are kept lowercase.</summary>
+    /// <summary>
+    /// "simple" → "simple-weapons", "martial" → "martial-weapons", "exotic" → "exotic-weapons", "bomb" → "bombs";
+    /// other values (a weapon index or a firearm group such as "martial-firearms") are kept lowercase.
+    /// </summary>
     public static string NormalizeWeapon(string value)
     {
         var key = value.Trim().ToLowerInvariant();
@@ -73,16 +149,40 @@ public static class ProficiencyKeys
         {
             "simple" or SimpleWeapons => SimpleWeapons,
             "martial" or MartialWeapons => MartialWeapons,
+            "exotic" or ExoticWeapons => ExoticWeapons,
+            "bomb" or Bombs => Bombs,
             _ => key,
         };
     }
 
-    /// <summary>True when the proficiency keys the character has (any type) cover <paramref name="armor"/>: "all-armor" covers every armor.</summary>
+    /// <summary>True when the proficiency keys the character has (any type) cover <paramref name="armor"/>: "all-armor" covers every armor but shields and exotic armor.</summary>
     public static bool HasArmor(IEnumerable<string> keys, string armor)
     {
         ArgumentNullException.ThrowIfNull(keys);
         var list = keys.ToList();
-        return list.Contains(armor, StringComparer.Ordinal) || (armor != Shields && list.Contains(AllArmor, StringComparer.Ordinal));
+        return list.Contains(armor, StringComparer.Ordinal)
+            || (armor != Shields && armor != ExoticArmor && list.Contains(AllArmor, StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// The group keys that make a weapon proficient: its category ("Simple Melee" → simple-weapons, "Exotic Ranged" →
+    /// exotic-weapons); a firearm needs the firearm group of its category ("martial-firearms") instead, and a bomb "bombs".
+    /// </summary>
+    public static IReadOnlyList<string> WeaponGroups(string? subcategory, IEnumerable<string>? properties)
+    {
+        var props = (properties ?? []).Select(p => p.Trim().ToLowerInvariant()).ToHashSet(StringComparer.Ordinal);
+        if (props.Contains(BombProperty))
+        {
+            return [Bombs];
+        }
+
+        var category = (subcategory ?? string.Empty).Trim().Split(' ', 2)[0].ToLowerInvariant();
+        if (category is not ("simple" or "martial" or "exotic"))
+        {
+            return [];
+        }
+
+        return props.Contains(FirearmProperty) ? [$"{category}-firearms"] : [$"{category}-weapons"];
     }
 
     /// <summary>Spanish label: "armadura pesada", "escudos", "armas marciales", or the key itself.</summary>
@@ -93,8 +193,14 @@ public static class ProficiencyKeys
         HeavyArmor => "armadura pesada",
         AllArmor => "todas las armaduras",
         Shields => "escudos",
+        ExoticArmor => "armaduras exóticas",
         SimpleWeapons => "armas sencillas",
         MartialWeapons => "armas marciales",
+        ExoticWeapons => "armas exóticas",
+        SimpleFirearms => "armas de fuego sencillas",
+        MartialFirearms => "armas de fuego marciales",
+        ExoticFirearms => "armas de fuego exóticas",
+        Bombs => "bombas",
         _ => key,
     };
 }
@@ -103,7 +209,89 @@ public static class ProficiencyKeys
 /// A numeric effect of a chosen option on the sheet (same kinds as item modifiers), active only while
 /// <see cref="Condition"/> holds (one of <see cref="ModifierConditions"/>; null = always).
 /// </summary>
-public sealed record ChoiceModifier(ItemModifierKind Kind, string? Target, int Value, string? Condition);
+public sealed record ChoiceModifier(ItemModifierKind Kind, string? Target, int Value, string? Condition)
+{
+    /// <summary>
+    /// <see cref="ModifierFormula"/> that gives the value instead of <see cref="Value"/> ("characterLevel", "mod:wis",
+    /// "walk" for a speed equal to the walking one); null for a constant.
+    /// </summary>
+    public string? Formula { get; init; }
+
+    /// <summary><see cref="ItemModifierKind.ArmorClassFormula"/>: abilities whose modifiers are added to the base (<see cref="Value"/>).</summary>
+    public IReadOnlyList<string> Abilities { get; init; } = [];
+
+    /// <summary><see cref="ItemModifierKind.ArmorClassFormula"/>: whether a shield is added to the formula.</summary>
+    public bool AllowShield { get; init; } = true;
+
+    /// <summary>Value equality, <see cref="Abilities"/> compared by content.</summary>
+    public bool Equals(ChoiceModifier? other) =>
+        other is not null
+        && (Kind, Target, Value, Condition, Formula, AllowShield) == (other.Kind, other.Target, other.Value, other.Condition, other.Formula, other.AllowShield)
+        && Abilities.SequenceEqual(other.Abilities, StringComparer.Ordinal);
+
+    public override int GetHashCode() => HashCode.Combine(Kind, Target, Value, Condition, Formula, AllowShield, Abilities.Count);
+}
+
+/// <summary>Values of the <c>target</c> of the character rule modifiers (<see cref="ItemModifierKind.ArmorClassFormula"/> and after).</summary>
+public static class ModifierTargets
+{
+    public const string Weapon = "weapon";
+    public const string Spell = "spell";
+    public const string Perception = "perception";
+    public const string Investigation = "investigation";
+    public const string Insight = "insight";
+    public const string Swim = "swim";
+    public const string Climb = "climb";
+    public const string Fly = "fly";
+    public const string All = "all";
+
+    public static IReadOnlyList<string> CriticalRange { get; } = [Weapon, Spell];
+
+    public static IReadOnlyList<string> Passives { get; } = [Perception, Investigation, Insight];
+
+    public static IReadOnlyList<string> Speeds { get; } = [Swim, Climb, Fly];
+
+    /// <summary>"swim" → "nado", "climb" → "trepar", "fly" → "vuelo".</summary>
+    public static string SpeedLabel(string target) => target switch
+    {
+        Swim => "nado",
+        Climb => "trepar",
+        Fly => "vuelo",
+        _ => target,
+    };
+}
+
+/// <summary>
+/// Fixed natural weapon granted by a race, a subrace, an option or a feat (claws, bite...): an attack of the sheet with
+/// the damage dice (<see cref="Damage"/>, or by character level in <see cref="DamageByCharacterLevel"/>), its type,
+/// whether it is finesse and its reach in feet.
+/// </summary>
+public sealed record NaturalWeapon(string Name, string? Damage, string DamageType)
+{
+    public const int NameMaxLength = 100;
+
+    /// <summary>Dice by character level (<c>{"1": "1d6", "5": "1d8"}</c>); overrides <see cref="Damage"/> from each level.</summary>
+    public IReadOnlyDictionary<int, string> DamageByCharacterLevel { get; init; } = new Dictionary<int, string>();
+
+    public bool Finesse { get; init; }
+
+    /// <summary>Reach in feet (5 by default).</summary>
+    public int Reach { get; init; } = 5;
+
+    /// <summary>The dice at a character level: the highest table entry not above it, else <see cref="Damage"/>.</summary>
+    public string? DamageAt(int characterLevel)
+    {
+        var levels = DamageByCharacterLevel.Keys.Where(l => l <= characterLevel).ToList();
+        return levels.Count == 0 ? Damage : DamageByCharacterLevel[levels.Max()];
+    }
+}
+
+/// <summary>Saving throw proficiencies the character loses (<c>grants.removeSavingThrows</c>): <see cref="Choose"/> of <see cref="From"/> (empty = any).</summary>
+public sealed record RemovedSavingThrows(int Choose, IReadOnlyList<string> From)
+{
+    /// <summary>The abilities lost without asking: every one of <see cref="From"/> when it lists exactly <see cref="Choose"/>.</summary>
+    public IReadOnlyList<string> Fixed => From.Count == Choose ? From : [];
+}
 
 /// <summary>Ability increase of a feat: <see cref="Amount"/> to one ability of <see cref="From"/> (empty = any ability).</summary>
 public sealed record AbilityIncrease(int Amount, IReadOnlyList<string> From);
@@ -137,8 +325,43 @@ public sealed record OptionGrants(
     /// </summary>
     public string? SpellcastingAbility { get; init; }
 
+    /// <summary>
+    /// Option indexes (of any set) the character gets without spending a choice: recorded as picks of the class
+    /// (choices with the key <c>granted</c>) while the source is active.
+    /// </summary>
+    public IReadOnlyList<string> Options { get; init; } = [];
+
+    /// <summary>Damage types resisted.</summary>
+    public IReadOnlyList<string> Resistances { get; init; } = [];
+
+    /// <summary>Damage types the character is immune to.</summary>
+    public IReadOnlyList<string> Immunities { get; init; } = [];
+
+    /// <summary>Condition indexes the character is immune to ("poisoned").</summary>
+    public IReadOnlyList<string> ConditionImmunities { get; init; } = [];
+
+    /// <summary>Size the character has instead of the race's ("small"), or null.</summary>
+    public string? Size { get; init; }
+
+    /// <summary>Saving throw proficiencies lost (origin feats), or null.</summary>
+    public RemovedSavingThrows? RemoveSavingThrows { get; init; }
+
+    /// <summary>Change of the number of class skills chosen at creation (−2: two fewer); 0 = none.</summary>
+    public int SkillChoicesDelta { get; init; }
+
+    /// <summary>Skill proficiencies the character loses (<c>grants.removeSkills</c>), whatever gave them.</summary>
+    public IReadOnlyList<string> RemoveSkills { get; init; } = [];
+
+    /// <summary>Natural weapons: attacks of the sheet.</summary>
+    public IReadOnlyList<NaturalWeapon> NaturalWeapons { get; init; } = [];
+
+    /// <summary>Whether it grants proficiencies, spells or options (what the level-ups record on the character).</summary>
     public bool IsEmpty =>
-        Skills.Count + Cantrips.Count + Spells.Count + Armor.Count + Weapons.Count + Tools.Count + Languages.Count + SavingThrows.Count == 0;
+        Skills.Count + Cantrips.Count + Spells.Count + Armor.Count + Weapons.Count + Tools.Count + Languages.Count + SavingThrows.Count + Options.Count == 0;
+
+    /// <summary>Whether it changes the sheet beyond proficiencies (defenses, size, natural weapons, lost saving throws).</summary>
+    public bool HasSheetEffects =>
+        Resistances.Count + Immunities.Count + ConditionImmunities.Count + NaturalWeapons.Count > 0 || Size is not null || RemoveSavingThrows is not null || RemoveSkills.Count > 0;
 
     /// <summary>Whether it grants spells or cantrips.</summary>
     public bool HasSpells => Spells.Count + Cantrips.Count > 0;
@@ -150,7 +373,7 @@ public sealed record OptionGrants(
     public OptionGrants Merge(OptionGrants other)
     {
         ArgumentNullException.ThrowIfNull(other);
-        if (other.IsEmpty && other.SpellcastingAbility is null)
+        if (other.IsEmpty && other.SpellcastingAbility is null && !other.HasSheetEffects)
         {
             return this;
         }
@@ -168,6 +391,15 @@ public sealed record OptionGrants(
             Union(SavingThrows, other.SavingThrows))
         {
             SpellcastingAbility = SpellcastingAbility ?? other.SpellcastingAbility,
+            Options = Union(Options, other.Options),
+            Resistances = Union(Resistances, other.Resistances),
+            Immunities = Union(Immunities, other.Immunities),
+            ConditionImmunities = Union(ConditionImmunities, other.ConditionImmunities),
+            Size = Size ?? other.Size,
+            RemoveSavingThrows = RemoveSavingThrows ?? other.RemoveSavingThrows,
+            SkillChoicesDelta = SkillChoicesDelta + other.SkillChoicesDelta,
+            RemoveSkills = Union(RemoveSkills, other.RemoveSkills),
+            NaturalWeapons = [.. NaturalWeapons, .. other.NaturalWeapons.Where(w => NaturalWeapons.All(n => n.Name != w.Name))],
         };
     }
 }
@@ -175,7 +407,8 @@ public sealed record OptionGrants(
 /// <summary>
 /// Limited-use resource of an option or a subclass feature. Its maximum is <see cref="Max"/>, a
 /// <see cref="ResourceFormula"/> ("2", "proficiencyBonus", "2*classLevel+mod:int"), raised to <see cref="Min"/>,
-/// unless <see cref="MaxByLevel"/> is given: then the value of the highest class level not above the character's.
+/// unless <see cref="MaxByLevel"/> is given: then the value of the highest class level not above the character's, plus
+/// the formula when <see cref="AddsFormulaToTable"/> (<c>{"formula": "mod:int", "byLevel": {...}}</c>).
 /// </summary>
 public sealed record OptionResource(string Key, string Name, string Max, ResourceRecharge Recharge)
 {
@@ -193,6 +426,12 @@ public sealed record OptionResource(string Key, string Name, string Max, Resourc
 
     /// <summary>Faces of the die by class level (<c>"diceByLevel": {"3": "d8", "10": "d10"}</c>); overrides <see cref="Die"/> from each level.</summary>
     public IReadOnlyDictionary<int, int>? DieByLevel { get; init; }
+
+    /// <summary>The maximum is the <see cref="MaxByLevel"/> entry plus the formula <see cref="Max"/> (both given).</summary>
+    public bool AddsFormulaToTable { get; init; }
+
+    /// <summary>A die that gives the uses back on a high roll (<c>"rechargeRoll": {"dice": "d6", "min": 5}</c>), or null.</summary>
+    public RechargeRoll? RechargeRoll { get; init; }
 
     public const string ProficiencyBonusFormula = ResourceFormula.ProficiencyBonus;
     public const string ClassLevelFormula = ResourceFormula.ClassLevel;
@@ -236,20 +475,28 @@ public sealed record OptionResource(string Key, string Name, string Max, Resourc
         var builder = new BreakdownBuilder();
         if (MaxByLevel is { Count: > 0 } table)
         {
-            if (AtLevel(table, classLevel) is not { } entry)
+            var entry = AtLevel(table, classLevel);
+            if (entry is null && !AddsFormulaToTable)
             {
                 return null;
             }
 
-            builder.Add(BreakdownSources.Feature, BreakdownLabels.ByLevel(label, entry.Level), entry.Value);
-            return builder.Clamp(0, CharacterResource.MaxUses, BreakdownLabels.UsesLimit).Build();
+            if (entry is { } found)
+            {
+                builder.Add(BreakdownSources.Feature, BreakdownLabels.ByLevel(label, found.Level), found.Value);
+            }
+
+            if (!AddsFormulaToTable)
+            {
+                return builder.Clamp(0, CharacterResource.MaxUses, BreakdownLabels.UsesLimit).Build();
+            }
         }
 
         if (ResourceFormula.Parse(Max) is { } terms)
         {
             ResourceFormula.AddTerms(builder, terms, proficiencyBonus, classLevel, abilityModifier, label);
         }
-        else
+        else if (!AddsFormulaToTable)
         {
             builder.Add(BreakdownSources.Feature, label, int.TryParse(Max, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number) ? number : 1);
         }
@@ -273,6 +520,12 @@ public sealed record OptionResource(string Key, string Name, string Max, Resourc
         var levels = table.Keys.Where(l => l <= classLevel).ToList();
         return levels.Count == 0 ? null : (levels.Max(), table[levels.Max()]);
     }
+}
+
+/// <summary>A die rolled to get the uses of a resource back: <see cref="Min"/> or more on a d<see cref="Die"/> ("d6", 5).</summary>
+public sealed record RechargeRoll(int Die, int Min)
+{
+    public string Dice => $"d{Die}";
 }
 
 /// <summary>
@@ -305,6 +558,25 @@ public sealed record ChoiceFilter(string? SpellList, IReadOnlyList<int> SpellLev
 
     /// <summary>Class levels at which a spell of any school may be chosen despite <see cref="Schools"/>.</summary>
     public IReadOnlyList<int> SchoolsExceptAt { get; init; } = [];
+
+    /// <summary>Weapon choices: categories ("simple", "martial", "exotic") the weapons must have; empty = any.</summary>
+    public IReadOnlyList<string> WeaponCategories { get; init; } = [];
+
+    /// <summary>Weapon choices: true = only firearms, false = no firearms, null = any.</summary>
+    public bool? Firearms { get; init; }
+
+    /// <summary>Spell choices: only rituals, or spells the class casts as rituals (<see cref="ClassSpellcastingInfo.TreatAsRitual"/>).</summary>
+    public bool RitualOnly { get; init; }
+
+    /// <summary>Spell choices: only spells with one of these tags (<see cref="SpellTag"/>); empty = any.</summary>
+    public IReadOnlyList<string> Tags { get; init; } = [];
+
+    /// <summary>Whether <paramref name="spell"/> has one of <see cref="Tags"/> (always, without tags).</summary>
+    public bool AllowsTags(SpellDefinition spell)
+    {
+        ArgumentNullException.ThrowIfNull(spell);
+        return Tags.Count == 0 || spell.Tags.Any(Tags.Contains);
+    }
 
     /// <summary>Whether a spell of <paramref name="school"/> ("Evocation" or "evocation") is allowed at the class level.</summary>
     public bool AllowsSchool(string school, int classLevel) =>
@@ -371,8 +643,17 @@ public static class ModifierConditions
     /// <summary>The off-hand attack of two-weapon fighting (not calculated: shown as text).</summary>
     public const string TwoWeaponFighting = "twoWeaponFighting";
 
+    /// <summary>Not wearing armor (a shield is allowed).</summary>
+    public const string NoArmor = "noArmor";
+
+    /// <summary>Attacking with a firearm (weapons with the "firearm" property).</summary>
+    public const string Firearm = "firearm";
+
+    /// <summary>Spell save DC and spell attack bonus of the cantrips only.</summary>
+    public const string Cantrip = "cantrip";
+
     public static IReadOnlyList<string> All { get; } =
-        [WearingArmor, RangedWeapon, OneHandedMeleeNoOtherWeapon, TwoHandedMelee, TwoWeaponFighting];
+        [WearingArmor, RangedWeapon, OneHandedMeleeNoOtherWeapon, TwoHandedMelee, TwoWeaponFighting, NoArmor, Firearm, Cantrip];
 
     public static bool IsValid(string? condition) => condition is null || All.Contains(condition, StringComparer.Ordinal);
 
@@ -384,6 +665,9 @@ public static class ModifierConditions
         OneHandedMeleeNoOtherWeapon => "con un arma cuerpo a cuerpo a una mano y ninguna otra arma",
         TwoHandedMelee => "con un arma cuerpo a cuerpo a dos manos",
         TwoWeaponFighting => "con la segunda arma al combatir con dos armas",
+        NoArmor => "sin armadura",
+        Firearm => "con armas de fuego",
+        Cantrip => "en los trucos",
         _ => condition,
     };
 }
@@ -408,50 +692,64 @@ public static class LevelChoiceJson
     }
 
     public static OptionPrerequisites ParsePrerequisites(string? json) =>
-        Parse(json, root =>
+        Parse(json, root => PrerequisitesOf(root, 0)) ?? OptionPrerequisites.None;
+
+    private static OptionPrerequisites PrerequisitesOf(JsonElement root, int depth)
+    {
+        if (root.ValueKind != JsonValueKind.Object)
         {
-            if (root.ValueKind != JsonValueKind.Object)
-            {
-                return OptionPrerequisites.None;
-            }
+            return OptionPrerequisites.None;
+        }
 
-            var abilities = new Dictionary<string, int>(StringComparer.Ordinal);
-            if (Property(root, "abilities") is { ValueKind: JsonValueKind.Object } scores)
+        var abilities = new Dictionary<string, int>(StringComparer.Ordinal);
+        if (Property(root, "abilities") is { ValueKind: JsonValueKind.Object } scores)
+        {
+            foreach (var score in scores.EnumerateObject())
             {
-                foreach (var score in scores.EnumerateObject())
+                if (score.Value.ValueKind == JsonValueKind.Number && score.Value.TryGetInt32(out var minimum))
                 {
-                    if (score.Value.ValueKind == JsonValueKind.Number && score.Value.TryGetInt32(out var minimum))
-                    {
-                        abilities[score.Name.ToLowerInvariant()] = minimum;
-                    }
+                    abilities[score.Name.ToLowerInvariant()] = minimum;
                 }
             }
+        }
 
-            var armor = new List<string>();
-            var weapons = new List<string>();
-            if (Property(root, "proficiency") is { ValueKind: JsonValueKind.Object } proficiency)
+        var armor = new List<string>();
+        var weapons = new List<string>();
+        if (Property(root, "proficiency") is { ValueKind: JsonValueKind.Object } proficiency)
+        {
+            if (Property(proficiency, "armor") is { ValueKind: JsonValueKind.Array } armorList)
             {
-                if (Property(proficiency, "armor") is { ValueKind: JsonValueKind.Array } armorList)
-                {
-                    armor.AddRange(Strings(armorList).Select(ProficiencyKeys.NormalizeArmor).OfType<string>().Distinct(StringComparer.Ordinal));
-                }
-
-                if (Property(proficiency, "weapon") is { ValueKind: JsonValueKind.Array } weaponList)
-                {
-                    weapons.AddRange(Strings(weaponList).Select(ProficiencyKeys.NormalizeWeapon).Distinct(StringComparer.Ordinal));
-                }
+                armor.AddRange(Strings(armorList).Select(ProficiencyKeys.NormalizeArmor).OfType<string>().Distinct(StringComparer.Ordinal));
             }
 
-            return new OptionPrerequisites(Int(Property(root, "minLevel")), Text(Property(root, "pactBoon")), Text(Property(root, "cantrip")), abilities)
+            if (Property(proficiency, "weapon") is { ValueKind: JsonValueKind.Array } weaponList)
             {
-                Races = Property(root, "races") is { ValueKind: JsonValueKind.Array } races
-                    ? Strings(races).Select(r => r.ToLowerInvariant()).Distinct(StringComparer.Ordinal).ToList()
-                    : [],
-                ArmorProficiencies = armor,
-                WeaponProficiencies = weapons,
-                Spellcasting = Bool(Property(root, "spellcasting")),
-            };
-        }) ?? OptionPrerequisites.None;
+                weapons.AddRange(Strings(weaponList).Select(ProficiencyKeys.NormalizeWeapon).Distinct(StringComparer.Ordinal));
+            }
+        }
+
+        return new OptionPrerequisites(Int(Property(root, "minLevel")), Text(Property(root, "pactBoon")), Text(Property(root, "cantrip")), abilities)
+        {
+            Races = Property(root, "races") is { ValueKind: JsonValueKind.Array } races
+                ? Strings(races).Select(r => r.ToLowerInvariant()).Distinct(StringComparer.Ordinal).ToList()
+                : [],
+            ArmorProficiencies = armor,
+            WeaponProficiencies = weapons,
+            Spellcasting = Bool(Property(root, "spellcasting")),
+            Subclasses = Property(root, "subclasses") is { ValueKind: JsonValueKind.Array } subclasses ? Strings(subclasses).Distinct(StringComparer.Ordinal).ToList() : [],
+            Options = Property(root, "options") is { ValueKind: JsonValueKind.Array } picked ? Strings(picked).Distinct(StringComparer.Ordinal).ToList() : [],
+            AnyOf = depth == 0 && Property(root, "anyOf") is { ValueKind: JsonValueKind.Array } alternatives
+                ? alternatives.EnumerateArray().Select(a => PrerequisitesOf(a, depth + 1)).Where(a => !a.IsEmpty).ToList()
+                : [],
+            ClassFeature = Text(Property(root, "classFeature")) is { } feature && ClassFeatures.All.Contains(feature) ? feature : null,
+            Classes = Property(root, "classes") is { ValueKind: JsonValueKind.Array } classes ? Strings(classes).Distinct(StringComparer.Ordinal).ToList() : [],
+            CharacterLevel = Int(Property(root, "characterLevel")),
+            SpellcastingAbilityMin = Int(Property(root, "spellcastingAbilityMin")),
+            Sizes = Property(root, "sizes") is { ValueKind: JsonValueKind.Array } sizes
+                ? Strings(sizes).Select(z => z.ToLowerInvariant()).Distinct(StringComparer.Ordinal).ToList()
+                : [],
+        };
+    }
 
     public static IReadOnlyList<ChoiceModifier> ParseModifiers(string? json) =>
         Parse<IReadOnlyList<ChoiceModifier>>(json, root =>
@@ -464,13 +762,28 @@ public static class LevelChoiceJson
             var result = new List<ChoiceModifier>();
             foreach (var entry in root.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.Object))
             {
-                if (Text(Property(entry, "kind")) is { } kindName
-                    && Enum.TryParse<ItemModifierKind>(kindName, ignoreCase: true, out var kind)
-                    && Enum.IsDefined(kind)
-                    && Int(Property(entry, "value")) is { } value)
+                if (Text(Property(entry, "kind")) is not { } kindName
+                    || !Enum.TryParse<ItemModifierKind>(kindName, ignoreCase: true, out var kind)
+                    || !Enum.IsDefined(kind))
                 {
-                    result.Add(new ChoiceModifier(kind, Text(Property(entry, "target"))?.ToLowerInvariant(), value, Text(Property(entry, "condition"))));
+                    continue;
                 }
+
+                var formula = Text(Property(entry, "formula"));
+                var value = Int(Property(entry, "value"));
+                if (value is null && formula is null && kind != ItemModifierKind.HitDiceRecovery)
+                {
+                    continue;
+                }
+
+                result.Add(new ChoiceModifier(kind, Text(Property(entry, "target"))?.ToLowerInvariant(), value ?? 0, Text(Property(entry, "condition")))
+                {
+                    Formula = formula,
+                    Abilities = Property(entry, "abilities") is { ValueKind: JsonValueKind.Array } abilities
+                        ? Strings(abilities).Select(a => a.ToLowerInvariant()).Where(Abilities.IsValid).Distinct(StringComparer.Ordinal).ToList()
+                        : [],
+                    AllowShield = Property(entry, "allowShield") is not { ValueKind: JsonValueKind.False },
+                });
             }
 
             return result;
@@ -528,8 +841,52 @@ public static class LevelChoiceJson
                 List("savingThrows"))
             {
                 SpellcastingAbility = Text(Property(root, "spellcastingAbility")) is { } ability && Abilities.IsValid(ability) ? ability : null,
+                Options = List("options"),
+                Resistances = List("resistances"),
+                Immunities = List("immunities"),
+                ConditionImmunities = List("conditionImmunities"),
+                Size = Text(Property(root, "size"))?.ToLowerInvariant(),
+                RemoveSavingThrows = Property(root, "removeSavingThrows") is { ValueKind: JsonValueKind.Object } remove && Int(Property(remove, "choose")) is { } choose and > 0
+                    ? new RemovedSavingThrows(
+                        choose,
+                        Property(remove, "from") is { ValueKind: JsonValueKind.Array } removeFrom
+                            ? Strings(removeFrom).Select(a => a.ToLowerInvariant()).Where(Abilities.IsValid).Distinct(StringComparer.Ordinal).ToList()
+                            : [])
+                    : null,
+                SkillChoicesDelta = Int(Property(root, "skillChoicesDelta")) ?? 0,
+                RemoveSkills = List("removeSkills"),
+                NaturalWeapons = Property(root, "naturalWeapons") is { ValueKind: JsonValueKind.Array } weapons
+                    ? weapons.EnumerateArray().Select(NaturalWeaponOf).OfType<NaturalWeapon>().ToList()
+                    : [],
             };
         }) ?? OptionGrants.None;
+
+    private static NaturalWeapon? NaturalWeaponOf(JsonElement entry)
+    {
+        if (entry.ValueKind != JsonValueKind.Object || Text(Property(entry, "name")) is not { } name)
+        {
+            return null;
+        }
+
+        var byLevel = new Dictionary<int, string>();
+        if (Property(entry, "damageByCharacterLevel") is { ValueKind: JsonValueKind.Object } table)
+        {
+            foreach (var level in table.EnumerateObject())
+            {
+                if (int.TryParse(level.Name, NumberStyles.None, CultureInfo.InvariantCulture, out var number) && number is >= 1 and <= 20 && Text(level.Value) is { } dice)
+                {
+                    byLevel[number] = dice;
+                }
+            }
+        }
+
+        return new NaturalWeapon(name, Text(Property(entry, "damage")), Text(Property(entry, "damageType"))?.ToLowerInvariant() ?? string.Empty)
+        {
+            DamageByCharacterLevel = byLevel,
+            Finesse = Bool(Property(entry, "finesse")),
+            Reach = Int(Property(entry, "reach")) ?? 5,
+        };
+    }
 
     public static OptionResource? ParseResource(string? json) =>
         Parse<OptionResource>(json, root =>
@@ -541,6 +898,7 @@ public static class LevelChoiceJson
 
             var max = "1";
             var min = 1;
+            var combined = false;
             Dictionary<int, int>? byLevel = null;
             switch (Property(root, "max"))
             {
@@ -556,8 +914,9 @@ public static class LevelChoiceJson
                         byLevel = LevelTable(table, e => Int(e));
                     }
 
+                    combined = byLevel is { Count: > 0 } && Text(Property(maxObject, "formula")) is not null;
                     max = Text(Property(maxObject, "formula")) ?? "1";
-                    min = Int(Property(maxObject, "min")) ?? 1;
+                    min = Int(Property(maxObject, "min")) ?? (combined ? 0 : 1);
                     break;
             }
 
@@ -584,6 +943,13 @@ public static class LevelChoiceJson
                 Min = min,
                 Die = RollOnRest.ParseDie(Text(Property(root, "dice"))),
                 DieByLevel = diceByLevel is { Count: > 0 } ? diceByLevel : null,
+                AddsFormulaToTable = combined,
+                RechargeRoll = Property(root, "rechargeRoll") is { ValueKind: JsonValueKind.Object } rechargeJson
+                    && RollOnRest.ParseDie(Text(Property(rechargeJson, "dice"))) is { } rechargeDie
+                    && Int(Property(rechargeJson, "min")) is { } rechargeMin and >= 1
+                    && rechargeMin <= rechargeDie
+                        ? new RechargeRoll(rechargeDie, rechargeMin)
+                        : null,
             };
         });
 
@@ -640,6 +1006,14 @@ public static class LevelChoiceJson
                     : [],
                 SchoolsExceptAt = Property(root, "schoolsExceptAt") is { ValueKind: JsonValueKind.Array } except
                     ? except.EnumerateArray().Select(e => Int(e)).OfType<int>().Where(l => l is >= 1 and <= 20).Distinct().Order().ToList()
+                    : [],
+                WeaponCategories = Property(root, "weaponCategories") is { ValueKind: JsonValueKind.Array } categories
+                    ? Strings(categories).Select(x => x.ToLowerInvariant()).Distinct(StringComparer.Ordinal).ToList()
+                    : [],
+                Firearms = Property(root, "firearms") is { ValueKind: JsonValueKind.True or JsonValueKind.False } firearms ? firearms.GetBoolean() : null,
+                RitualOnly = Property(root, "ritualOnly") is { ValueKind: JsonValueKind.True },
+                Tags = Property(root, "tags") is { ValueKind: JsonValueKind.Array } tags
+                    ? Strings(tags).Select(x => x.ToLowerInvariant()).Distinct(StringComparer.Ordinal).ToList()
                     : [],
             };
         }) ?? ChoiceFilter.None;

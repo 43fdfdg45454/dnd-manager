@@ -8,11 +8,13 @@ import 'package:opentrpg_core/core/characters/models.dart';
 import 'package:opentrpg_core/core/ui/breakdown.dart';
 
 import 'data/companion_models.dart';
+import 'data/item_enhancement_models.dart';
 
 export 'package:opentrpg_core/core/characters/models.dart';
 export 'package:opentrpg_core/core/ui/breakdown.dart' show BreakdownPart, ValueBreakdown;
 
 export 'data/companion_models.dart';
+export 'data/item_enhancement_models.dart';
 
 /// Ability keys in display order.
 const abilityKeys = <String>['str', 'dex', 'con', 'int', 'wis', 'cha'];
@@ -123,7 +125,10 @@ enum Recharge {
   shortRest('ShortRest', 'Descanso corto'),
   longRest('LongRest', 'Descanso largo'),
   dawn('Dawn', 'Amanecer'),
-  manual('Manual', 'Manual');
+  manual('Manual', 'Manual'),
+
+  /// Comes back when initiative is rolled (and with any rest).
+  initiative('Initiative', 'Al tirar iniciativa');
 
   const Recharge(this.apiValue, this.label);
 
@@ -286,10 +291,12 @@ class CharacterResource {
     this.source,
     this.breakdown,
     this.options = const [],
+    this.rechargeRoll,
   });
 
   factory CharacterResource.fromJson(Map<String, dynamic> json) {
     final roll = _map(json['rollOnRest']);
+    final rechargeRoll = _map(json['rechargeRoll']);
     return CharacterResource(
       id: _str(json['id']),
       key: _strOrNull(json['key']),
@@ -305,8 +312,12 @@ class CharacterResource {
       source: _strOrNull(json['source']),
       breakdown: ValueBreakdown.maybeFromJson(json['breakdown']),
       options: _objects(json['options'], CharacterOptionCost.fromJson),
+      rechargeRoll: rechargeRoll == null ? null : RechargeRoll.fromJson(rechargeRoll),
     );
   }
+
+  /// Die that brings the resource back ("d6", 5 or more), or null.
+  final RechargeRoll? rechargeRoll;
 
   /// Chosen options that spend this resource ("Golpe sereno", 2): the
   /// "Usar" buttons of the Combat tab.
@@ -337,6 +348,24 @@ class CharacterResource {
   final int used;
   final Recharge recharge;
   final bool isAuto;
+}
+
+/// A die the player rolls to get a resource back: [min] or more on [dice]
+/// recovers it whole (`rechargeRoll`).
+class RechargeRoll {
+  const RechargeRoll({required this.dice, required this.min});
+
+  factory RechargeRoll.fromJson(Map<String, dynamic> json) =>
+      RechargeRoll(dice: _str(json['dice'], 'd6'), min: _int(json['min']) ?? 1);
+
+  final String dice;
+  final int min;
+
+  /// Faces of [dice] ("d6" -> 6).
+  int get faces => int.tryParse(dice.replaceFirst('d', '')) ?? 6;
+
+  /// "d6 ≥ 5".
+  String get label => '$dice ≥ $min';
 }
 
 /// What using an option costs (`OptionCostDto`): [amount] uses of the
@@ -524,16 +553,39 @@ class Spellcasting {
     this.preparedMax,
     this.spellsKnownMax,
     this.cantripsKnownMax,
+    this.maxSpellLevel = 0,
+    this.progression,
+    this.hitPointCost = const [],
+    this.usesResource,
+    this.cantripSaveDc,
+    this.cantripAttackBonus,
+    this.criticalRange = 20,
+    this.criticalRangeSource,
+    this.name,
+    this.abilityOverridden = false,
   });
 
   factory Spellcasting.fromJson(Map<String, dynamic> json) => Spellcasting(
     classIndex: _str(json['classIndex']),
+    name: _strOrNull(json['name']),
+    abilityOverridden: json['abilityOverridden'] == true,
     ability: _str(json['ability']),
     saveDc: _int(json['saveDc']) ?? 0,
     attackBonus: _int(json['attackBonus']) ?? 0,
     preparedMax: _int(json['preparedMax']),
     spellsKnownMax: _int(json['spellsKnownMax']),
     cantripsKnownMax: _int(json['cantripsKnownMax']),
+    maxSpellLevel: _int(json['maxSpellLevel']) ?? 0,
+    progression: _strOrNull(json['progression']),
+    hitPointCost: [
+      for (final v in (json['hitPointCost'] as List?) ?? const [])
+        if (_int(v) case final int cost) cost,
+    ],
+    usesResource: _strOrNull(json['usesResource']),
+    cantripSaveDc: _int(json['cantripSaveDc']),
+    cantripAttackBonus: _int(json['cantripAttackBonus']),
+    criticalRange: _int(json['criticalRange']) ?? 20,
+    criticalRangeSource: _strOrNull(json['criticalRangeSource']),
   );
 
   final String classIndex;
@@ -542,12 +594,52 @@ class Spellcasting {
   final int attackBonus;
   final int? preparedMax;
 
+  /// Name of a feat, option or subclass that grants spells cast with its own
+  /// ability ([classIndex] is its index); null for classes and the race.
+  final String? name;
+
+  /// The ability was chosen by an override (`spellcastingAbility.<classIndex>`).
+  final bool abilityOverridden;
+
   /// Spells known allowed at the class level (classes that cast through a
   /// subclass of a content pack); null when the class has no fixed number.
   final int? spellsKnownMax;
 
   /// Cantrips known allowed at the class level, like [spellsKnownMax].
   final int? cantripsKnownMax;
+
+  /// Highest spell level the class casts now (0: cantrips only).
+  final int maxSpellLevel;
+
+  /// Progression of a class of a content pack ("hitPoints", "ritualsOnly",
+  /// "full"...); null for the SRD classes.
+  final String? progression;
+
+  /// "hitPoints": hit points lost by spell level (index 0 = 1st level).
+  final List<int> hitPointCost;
+
+  /// "hitPoints": key of the class resource each spell spends.
+  final String? usesResource;
+
+  /// Save DC of the cantrips when a feature changes it (breakdown
+  /// `spellSaveDc.<class>.cantrip`); null otherwise.
+  final int? cantripSaveDc;
+
+  /// Spell attack bonus of the cantrips when a feature changes it (breakdown
+  /// `spellAttackBonus.<class>.cantrip`); null otherwise.
+  final int? cantripAttackBonus;
+
+  /// Lowest d20 roll of a spell attack that is a critical hit (20 by default).
+  final int criticalRange;
+
+  /// What lowered [criticalRange], or null.
+  final String? criticalRangeSource;
+
+  /// The class casts without slots, paying hit points.
+  bool get castsWithHitPoints => progression == 'hitPoints';
+
+  /// The class casts only rituals, without slots.
+  bool get ritualsOnly => progression == 'ritualsOnly';
 }
 
 /// An item modifier applied to the sheet (`ItemEffectDto`).
@@ -581,6 +673,48 @@ class Resistance {
   final String damageType;
   final String source;
   final String label;
+}
+
+/// An immunity, condition immunity or lost saving throw (`DefenseDto`): [type]
+/// is a damage type, a condition index or an ability, [label] what grants it.
+class SheetDefense {
+  const SheetDefense({required this.type, this.source = '', this.label = ''});
+
+  factory SheetDefense.fromJson(Map<String, dynamic> json) => SheetDefense(
+    type: _str(json['type']),
+    source: _str(json['source']),
+    label: _str(json['label']),
+  );
+
+  final String type;
+  final String source;
+  final String label;
+}
+
+/// A save DC of a class feature besides the spell one (`ClassSaveDcDto`), with
+/// the key of its breakdown in `CharacterSheet.breakdowns`.
+class ClassSaveDc {
+  const ClassSaveDc({
+    required this.classIndex,
+    required this.name,
+    required this.ability,
+    required this.dc,
+    required this.breakdownKey,
+  });
+
+  factory ClassSaveDc.fromJson(Map<String, dynamic> json) => ClassSaveDc(
+    classIndex: _str(json['classIndex']),
+    name: _str(json['name']),
+    ability: _str(json['ability']),
+    dc: _int(json['dc']) ?? 0,
+    breakdownKey: _str(json['breakdownKey']),
+  );
+
+  final String classIndex;
+  final String name;
+  final String ability;
+  final int dc;
+  final String breakdownKey;
 }
 
 /// Breath weapon of a draconic ancestry (`BreathWeaponValueDto`).
@@ -633,6 +767,21 @@ class CharacterSheet {
     this.breakdowns = const {},
     this.resistances = const [],
     this.breathWeapon,
+    this.immunities = const [],
+    this.conditionImmunities = const [],
+    this.lostSavingThrows = const [],
+    this.lostSkills = const [],
+    this.classSaveDcs = const [],
+    this.passiveInvestigation = 10,
+    this.passiveInsight = 10,
+    this.abilityMaxScores = const {},
+    this.size = '',
+    this.sizeSource,
+    this.speeds = const {},
+    this.deathSaveFailuresToDie = 3,
+    this.deathSaveFailuresSource,
+    this.recoversAllHitDice = false,
+    this.hitDiceRecoverySource,
   });
 
   factory CharacterSheet.fromJson(Map<String, dynamic> json) {
@@ -668,6 +817,21 @@ class CharacterSheet {
       breathWeapon: _map(json['breathWeapon']) == null
           ? null
           : BreathWeapon.fromJson(_map(json['breathWeapon'])!),
+      immunities: _objects(json['immunities'], SheetDefense.fromJson),
+      conditionImmunities: _objects(json['conditionImmunities'], SheetDefense.fromJson),
+      lostSavingThrows: _objects(json['lostSavingThrows'], SheetDefense.fromJson),
+      lostSkills: _objects(json['lostSkills'], SheetDefense.fromJson),
+      classSaveDcs: _objects(json['classSaveDcs'], ClassSaveDc.fromJson),
+      passiveInvestigation: _int(json['passiveInvestigation']) ?? 10,
+      passiveInsight: _int(json['passiveInsight']) ?? 10,
+      abilityMaxScores: _intMap(json['abilityMaxScores']),
+      size: _str(json['size']),
+      sizeSource: _strOrNull(json['sizeSource']),
+      speeds: _intMap(json['speeds']),
+      deathSaveFailuresToDie: _int(json['deathSaveFailuresToDie']) ?? 3,
+      deathSaveFailuresSource: _strOrNull(json['deathSaveFailuresSource']),
+      recoversAllHitDice: json['recoversAllHitDice'] == true,
+      hitDiceRecoverySource: _strOrNull(json['hitDiceRecoverySource']),
     );
   }
 
@@ -702,6 +866,52 @@ class CharacterSheet {
   /// `breakdowns['breathWeapon.dc']`), or null.
   final BreathWeapon? breathWeapon;
 
+  /// Damage types the character is immune to (content packs).
+  final List<SheetDefense> immunities;
+
+  /// Conditions the character is immune to ([SheetDefense.type] is the index).
+  final List<SheetDefense> conditionImmunities;
+
+  /// Saving throw proficiencies taken away by the race or a feat.
+  final List<SheetDefense> lostSavingThrows;
+
+  /// Skill proficiencies taken away (`grants.removeSkills`); [SheetDefense.type]
+  /// is the skill index.
+  final List<SheetDefense> lostSkills;
+
+  /// Save DCs of the class features (8 + proficiency + ability).
+  final List<ClassSaveDc> classSaveDcs;
+
+  /// Passive Investigation and Insight (breakdowns `passiveInvestigation`,
+  /// `passiveInsight`).
+  final int passiveInvestigation;
+  final int passiveInsight;
+
+  /// Highest score of each ability (20 unless a feature changes it); empty
+  /// when the server does not send it.
+  final Map<String, int> abilityMaxScores;
+
+  /// "tiny", "small", "medium"...; empty without race.
+  final String size;
+
+  /// The race, or the feature that changed the size.
+  final String? sizeSource;
+
+  /// Swimming, climbing and flying speeds by mode ("swim" → 30); breakdowns
+  /// `speed.<mode>`.
+  final Map<String, int> speeds;
+
+  /// Failed death saves that kill the character (3 unless a feature changes it).
+  final int deathSaveFailuresToDie;
+  final String? deathSaveFailuresSource;
+
+  /// A long rest recovers every hit die instead of half.
+  final bool recoversAllHitDice;
+  final String? hitDiceRecoverySource;
+
+  /// Highest score allowed for [key] (20 by default).
+  int abilityMax(String key) => abilityMaxScores[key] ?? 20;
+
   ValueBreakdown? breakdown(String key) => breakdowns[key];
 
   AbilityScore ability(String key) => abilities[key] ?? const AbilityScore(score: 10, modifier: 0);
@@ -726,6 +936,10 @@ class CombatAttack {
     this.notes,
     this.attackBreakdown,
     this.damageBreakdown,
+    this.criticalRange = 20,
+    this.criticalRangeSource,
+    this.warnings = const [],
+    this.natural = false,
   });
 
   factory CombatAttack.fromJson(Map<String, dynamic> json) => CombatAttack(
@@ -740,6 +954,10 @@ class CombatAttack {
     notes: _strOrNull(json['notes']),
     attackBreakdown: ValueBreakdown.maybeFromJson(json['attackBreakdown']),
     damageBreakdown: ValueBreakdown.maybeFromJson(json['damageBreakdown']),
+    criticalRange: _int(json['criticalRange']) ?? 20,
+    criticalRangeSource: _strOrNull(json['criticalRangeSource']),
+    warnings: [for (final w in (json['warnings'] as List? ?? const [])) _str(w)],
+    natural: json['natural'] == true,
   );
 
   final String? itemId;
@@ -758,6 +976,18 @@ class CombatAttack {
   /// the server does not send them.
   final ValueBreakdown? attackBreakdown;
   final ValueBreakdown? damageBreakdown;
+
+  /// Lowest d20 roll that is a critical hit (20 unless a feature lowers it).
+  final int criticalRange;
+
+  /// What lowered [criticalRange], or null.
+  final String? criticalRangeSource;
+
+  /// Problems wielding it ("Requiere Fuerza 16; tienes 14.").
+  final List<String> warnings;
+
+  /// A natural weapon of the race or a feature (claws, bite...).
+  final bool natural;
 
   bool hasProperty(String property) =>
       properties.any((p) => p.toLowerCase() == property.toLowerCase());
@@ -878,6 +1108,14 @@ class DivineSmiteResult {
   final String damageDice;
 }
 
+/// Result of a spell cast with hit points instead of a slot.
+class HitPointCastResult {
+  const HitPointCastResult({required this.character, required this.hitPointsLost});
+
+  final CharacterDetail character;
+  final int hitPointsLost;
+}
+
 /// The D&D 5e part of a character detail: the sheet fields the server sends
 /// next to the core ones in the same flat JSON (`CharacterDetail.raw`).
 /// [fromDetail] builds it once per detail and caches it; the
@@ -920,8 +1158,12 @@ class Dnd5eCharacter {
     this.feats = const [],
     this.optionCosts = const [],
     this.companion,
+    this.companions = const [],
     this.companionFeature,
     this.companionPending = false,
+    this.itemEnhancements = const [],
+    this.itemEnhancementFeature,
+    this.grafts = const [],
     this.raceCatalogMissing = false,
     this.backgroundCatalogMissing = false,
     this.catalogMissing = false,
@@ -971,10 +1213,21 @@ class Dnd5eCharacter {
       companion: _map(json['companion']) == null
           ? null
           : CharacterCompanion.fromJson(_map(json['companion'])!),
+      companions: json['companions'] is List
+          ? _objects(json['companions'], CharacterCompanion.fromJson)
+          : [
+              if (_map(json['companion']) case final Map<String, dynamic> one)
+                CharacterCompanion.fromJson(one),
+            ],
       companionFeature: _map(json['companionFeature']) == null
           ? null
           : CompanionFeature.fromJson(_map(json['companionFeature'])!),
       companionPending: _bool(json['companionPending']),
+      itemEnhancements: _objects(json['itemEnhancements'], CharacterItemEnhancement.fromJson),
+      itemEnhancementFeature: _map(json['itemEnhancementFeature']) == null
+          ? null
+          : ItemEnhancementFeature.fromJson(_map(json['itemEnhancementFeature'])!),
+      grafts: _objects(json['grafts'], CharacterGraft.fromJson),
       raceCatalogMissing: _bool(json['raceCatalogMissing']),
       backgroundCatalogMissing: _bool(json['backgroundCatalogMissing']),
       catalogMissing: _bool(json['catalogMissing']),
@@ -1047,11 +1300,24 @@ class Dnd5eCharacter {
   /// The animal companion, or null (phase 25, block 6).
   final CharacterCompanion? companion;
 
+  /// Every companion, oldest first (several when the feature allows it);
+  /// `[companion]` when the server does not send the list.
+  final List<CharacterCompanion> companions;
+
   /// The companion feature the character has reached, or null.
   final CompanionFeature? companionFeature;
 
   /// The companion feature is reached and no beast is chosen yet.
   final bool companionPending;
+
+  /// Enhanced inventory entries, with their breakdowns.
+  final List<CharacterItemEnhancement> itemEnhancements;
+
+  /// The item enhancement feature the character has reached, or null.
+  final ItemEnhancementFeature? itemEnhancementFeature;
+
+  /// Grafts of the inventory with their body slot.
+  final List<CharacterGraft> grafts;
 
   /// The race (or subrace) is gone from the catalog (a deleted content pack).
   final bool raceCatalogMissing;
@@ -1136,8 +1402,12 @@ extension Dnd5eCharacterDetail on CharacterDetail {
   List<CharacterFeat> get feats => dnd5e.feats;
   List<CharacterOptionCost> get optionCosts => dnd5e.optionCosts;
   CharacterCompanion? get companion => dnd5e.companion;
+  List<CharacterCompanion> get companions => dnd5e.companions;
   CompanionFeature? get companionFeature => dnd5e.companionFeature;
   bool get companionPending => dnd5e.companionPending;
+  List<CharacterItemEnhancement> get itemEnhancements => dnd5e.itemEnhancements;
+  ItemEnhancementFeature? get itemEnhancementFeature => dnd5e.itemEnhancementFeature;
+  List<CharacterGraft> get grafts => dnd5e.grafts;
   bool get raceCatalogMissing => dnd5e.raceCatalogMissing;
   bool get backgroundCatalogMissing => dnd5e.backgroundCatalogMissing;
   bool get catalogMissing => dnd5e.catalogMissing;
@@ -1492,6 +1762,8 @@ class LevelUpClassOption {
     this.isNew = false,
     this.currentLevel = 0,
     this.subclassIndex,
+    this.auxiliary = false,
+    this.prerequisitesText,
   });
 
   factory LevelUpClassOption.fromJson(Map<String, dynamic> json) {
@@ -1505,11 +1777,21 @@ class LevelUpClassOption {
       isNew: _bool(json['isNew']),
       currentLevel: _int(json['currentLevel']) ?? 0,
       subclassIndex: _strOrNull(json['subclassIndex']),
+      auxiliary: _bool(json['auxiliary']),
+      prerequisitesText: _strOrNull(json['prerequisitesText']),
     );
   }
 
   final String classIndex;
   final String name;
+
+  /// An auxiliary level of a content pack: a single level, taken once and
+  /// offered apart ("Nivel auxiliar").
+  final bool auxiliary;
+
+  /// The literal prerequisites of an auxiliary level (narrative ones
+  /// included), or null.
+  final String? prerequisitesText;
 
   /// False when a new class does not meet the multiclassing prerequisites ([reason]).
   final bool allowed;
@@ -1636,6 +1918,9 @@ class LevelUpOption {
     this.damageType,
     this.cost,
     this.requires,
+    this.setId,
+    this.removeSavingThrows,
+    this.skillChoicesDelta = 0,
   });
 
   factory LevelUpOption.fromJson(Map<String, dynamic> json) {
@@ -1659,8 +1944,23 @@ class LevelUpOption {
       requires: requires == null
           ? null
           : (choiceKey: _str(requires['choiceKey']), index: _str(requires['index'])),
+      setId: _strOrNull(json['setId']),
+      removeSavingThrows: _map(json['removeSavingThrows']) == null
+          ? null
+          : RemoveSavingThrows.fromJson(_map(json['removeSavingThrows'])!),
+      skillChoicesDelta: _int(json['skillChoicesDelta']) ?? 0,
     );
   }
+
+  /// Feats that take saving throw proficiencies away, or null.
+  final RemoveSavingThrows? removeSavingThrows;
+
+  /// Change of the class skills chosen at creation (−1: one fewer).
+  final int skillChoicesDelta;
+
+  /// Option set of the option ("feats", or a set offered with
+  /// [LevelUpChoice.alsoFrom]); null for non-options.
+  final String? setId;
 
   final String index;
   final String name;
@@ -1692,6 +1992,22 @@ class LevelUpOption {
   final AbilityIncrease? abilityIncrease;
 }
 
+/// Saving throw proficiencies a feat takes away (`RemoveSavingThrowsDto`):
+/// [choose] of [from] (empty = any). With exactly [choose] in [from] they are
+/// lost without asking; otherwise the player picks them.
+class RemoveSavingThrows {
+  const RemoveSavingThrows({required this.choose, this.from = const []});
+
+  factory RemoveSavingThrows.fromJson(Map<String, dynamic> json) =>
+      RemoveSavingThrows(choose: _int(json['choose']) ?? 0, from: _strings(json['from']));
+
+  final int choose;
+  final List<String> from;
+
+  /// The player has to pick which ones are lost.
+  bool get asks => from.length != choose;
+}
+
 /// Prefix of the key of a forced replacement choice.
 const replacementKeyPrefix = 'replace.';
 
@@ -1714,6 +2030,8 @@ class LevelUpChoice {
     this.options = const [],
     this.known = const [],
     this.warning,
+    this.alsoFrom = const [],
+    this.requires,
   });
 
   factory LevelUpChoice.fromJson(Map<String, dynamic> json) => LevelUpChoice(
@@ -1731,11 +2049,24 @@ class LevelUpChoice {
     options: _objects(json['options'], LevelUpOption.fromJson),
     known: _objects(json['known'], ChoiceItem.fromJson),
     warning: _strOrNull(json['warning']),
+    alsoFrom: _strings(json['alsoFrom']),
+    requires: switch (_map(json['requires'])) {
+      final r? => (choiceKey: _str(r['choiceKey']), index: _str(r['index'])),
+      null => null,
+    },
   );
 
   final String key;
   final String name;
   final LevelChoiceKind kind;
+
+  /// Other option sets offered too (an improvement that also offers class
+  /// options); each option says its own [LevelUpOption.setId].
+  final List<String> alsoFrom;
+
+  /// A choice of an option or a feat: only asked (and only required) when
+  /// [index] is picked in the choice [choiceKey] (also as its feat).
+  final ({String choiceKey, String index})? requires;
   final int choose;
 
   /// Picks needed (fewer than [choose] when not enough options are eligible).
@@ -1903,18 +2234,24 @@ class LevelUpChoiceAnswer {
   const LevelUpChoiceAnswer.picks(this.key, this.selected, {this.replaced = const []})
     : asi = null,
       feat = null,
-      ability = null;
+      ability = null,
+      removedSavingThrows = const [];
 
   const LevelUpChoiceAnswer.asi(this.key, Map<String, int> this.asi)
     : selected = const [],
       replaced = const [],
       feat = null,
-      ability = null;
+      ability = null,
+      removedSavingThrows = const [];
 
-  const LevelUpChoiceAnswer.feat(this.key, String this.feat, {this.ability})
-    : selected = const [],
-      replaced = const [],
-      asi = null;
+  const LevelUpChoiceAnswer.feat(
+    this.key,
+    String this.feat, {
+    this.ability,
+    this.removedSavingThrows = const [],
+  }) : selected = const [],
+       replaced = const [],
+       asi = null;
 
   final String key;
   final List<String> selected;
@@ -1923,12 +2260,20 @@ class LevelUpChoiceAnswer {
   final String? feat;
   final String? ability;
 
+  /// Origin feats with `grants.removeSavingThrows` to choose: the saving
+  /// throw proficiencies given up.
+  final List<String> removedSavingThrows;
+
   Map<String, dynamic> toJson() => {
     'key': key,
     'selected': asi != null
         ? {'asi': asi}
         : feat != null
-        ? {'feat': feat, 'ability': ?ability}
+        ? {
+            'feat': feat,
+            'ability': ?ability,
+            if (removedSavingThrows.isNotEmpty) 'removedSavingThrows': removedSavingThrows,
+          }
         : selected,
     if (replaced.isNotEmpty) 'replaced': replaced,
   };
@@ -2173,8 +2518,17 @@ enum OriginChoiceKind {
       _enumFromApi(values, (e) => e.apiValue, value, OriginChoiceKind.traitOption);
 }
 
-/// A decision of the race, subrace or background (`OriginChoiceDto`).
-/// [required] picks block the activation; optional ones (languages) have 0.
+/// Key of the optional "Dote inicial" a campaign may offer at creation
+/// (`campaign.starterFeat`).
+const starterFeatChoiceKey = 'campaign.starterFeat';
+
+/// Source of the level-1 choices of the first class in `origin-choices`.
+const classChoiceSource = 'class';
+
+/// A decision of the race, subrace or background (`OriginChoiceDto`), or a
+/// level-1 choice of the first class (fighting style, expertise...: [source]
+/// "class", "class." keys). [required] picks block the activation; optional
+/// ones (languages) have 0.
 class OriginChoice {
   const OriginChoice({
     required this.key,
@@ -2190,10 +2544,18 @@ class OriginChoice {
     this.selected = const [],
     this.feat,
     this.ability,
+    this.removedSavingThrows = const [],
+    this.kindName,
+    this.classIndex,
+    this.level,
+    this.setId,
+    this.requires,
+    this.warning,
   });
 
   factory OriginChoice.fromJson(Map<String, dynamic> json) {
     final feat = _map(json['feat']);
+    final requires = _map(json['requires']);
     return OriginChoice(
       key: _str(json['key']),
       name: _str(json['name'], _str(json['key'])),
@@ -2208,14 +2570,49 @@ class OriginChoice {
       selected: _objects(json['selected'], ChoiceItem.fromJson),
       feat: feat == null ? null : ChoiceItem.fromJson(feat),
       ability: _strOrNull(json['ability']),
+      removedSavingThrows: _strings(json['removedSavingThrows']),
+      kindName: _strOrNull(json['kind']),
+      classIndex: _strOrNull(json['classIndex']),
+      level: _int(json['level']),
+      setId: _strOrNull(json['setId']),
+      requires: requires == null
+          ? null
+          : (choiceKey: _str(requires['choiceKey']), index: _str(requires['index'])),
+      warning: _strOrNull(json['warning']),
     );
   }
 
   final String key;
   final String name;
+
+  /// Kind of the choice. A class choice of a kind without its own origin kind
+  /// (OptionSet, Expertise, Weapon, SpellbookSpells...) is a list of picks
+  /// ([OriginChoiceKind.traitOption]); [kindName] keeps the server's name.
   final OriginChoiceKind kind;
 
-  /// "race", "subrace" or "background".
+  /// Kind as the server sent it ("OptionSet", "Expertise"...).
+  final String? kindName;
+
+  /// Class of a level-1 choice of the first class; null for the origin ones.
+  final String? classIndex;
+
+  /// Class level of a class choice (1); null for the origin ones.
+  final int? level;
+
+  /// Option set of a class choice of options.
+  final String? setId;
+
+  /// Choice of an option of another class choice: only asked when
+  /// [requires].index is picked in the choice [requires].choiceKey.
+  final ({String choiceKey, String index})? requires;
+
+  /// Why fewer picks than the class gives are required, or null.
+  final String? warning;
+
+  /// A level-1 choice of the first class (source "class").
+  bool get isClassChoice => source == classChoiceSource;
+
+  /// "race", "subrace", "background", "campaign" (starter feat) or "class".
   final String source;
   final int choose;
   final int required;
@@ -2234,6 +2631,9 @@ class OriginChoice {
   /// Current feat answer and the ability it raised.
   final ChoiceItem? feat;
   final String? ability;
+
+  /// Saving throws given up with the feat answer (`removedSavingThrows`).
+  final List<String> removedSavingThrows;
 
   LevelUpOption? option(String index) {
     for (final o in options) {

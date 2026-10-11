@@ -1,6 +1,8 @@
 using System.Text.Json;
 using OpenTrpg.Core.Domain.Catalog;
+using OpenTrpg.Core.Domain.Characters;
 using OpenTrpg.Core.Domain.Items;
+using OpenTrpg.Systems.Dnd5e.Domain.Catalog;
 
 namespace OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
 
@@ -8,7 +10,7 @@ namespace OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
 // template (the same ones the SRD items use) and, for what has no column, its system data.
 internal sealed partial class ContentPackValidator
 {
-    public static readonly IReadOnlyList<string> WeaponCategories = ["simple", "martial"];
+    public static readonly IReadOnlyList<string> WeaponCategories = ["simple", "martial", "exotic"];
     public static readonly IReadOnlyList<string> WeaponRanges = ["melee", "ranged"];
     public static readonly IReadOnlyList<string> ArmorCategories = ["light", "medium", "heavy", "shield"];
 
@@ -24,6 +26,58 @@ internal sealed partial class ContentPackValidator
         : item.Tool == true ? ItemCategory.Tool
         : item.Ammunition == true ? ItemCategory.Consumable
         : null;
+
+    private Dictionary<string, object?> AlternateProfile(string path, PackAlternateWeaponJson alternate)
+    {
+        var profile = new Dictionary<string, object?>(StringComparer.Ordinal);
+        if (NullableText($"{path}.name", alternate.Name, ItemLimits.NameMaxLength) is { } name)
+        {
+            profile["name"] = name;
+        }
+
+        if (alternate.Range?.Trim().ToLowerInvariant() is { Length: > 0 } range)
+        {
+            if (WeaponRanges.Contains(range))
+            {
+                profile["range"] = range;
+            }
+            else
+            {
+                AddError($"{path}.range", "Debe ser \"melee\" o \"ranged\".");
+            }
+        }
+
+        profile["damage"] = RequiredText($"{path}.damage", alternate.Damage, ItemLimits.DiceMaxLength);
+        if (NullableText($"{path}.damageType", alternate.DamageType, ItemLimits.DamageTypeMaxLength) is { } type)
+        {
+            profile["damageType"] = type.ToLowerInvariant();
+        }
+
+        if (NullableText($"{path}.versatileDamage", alternate.VersatileDamage, ItemLimits.DiceMaxLength) is { } versatile)
+        {
+            profile["versatileDamage"] = versatile;
+        }
+
+        var properties = TextList($"{path}.properties", alternate.Properties, ItemLimits.MaxListEntries, ItemLimits.PropertyMaxLength)
+            .Select(p => p.ToLowerInvariant())
+            .ToList();
+        if (properties.Count > 0)
+        {
+            profile["properties"] = properties;
+        }
+
+        if (OptionalInt($"{path}.rangeNormal", alternate.RangeNormal, 0, ItemLimits.MaxRange) is { } normal)
+        {
+            profile["rangeNormal"] = normal;
+        }
+
+        if (OptionalInt($"{path}.rangeLong", alternate.RangeLong, 0, ItemLimits.MaxRange) is { } far)
+        {
+            profile["rangeLong"] = far;
+        }
+
+        return profile;
+    }
 
     private ItemTemplateData WithItemSections(string path, PackItemJson item, ItemTemplateData data)
     {
@@ -43,7 +97,7 @@ internal sealed partial class ContentPackValidator
             var category = weapon.Category?.Trim().ToLowerInvariant();
             if (category is null || !WeaponCategories.Contains(category))
             {
-                AddError($"{path}.weapon.category", "Debe ser \"simple\" o \"martial\".");
+                AddError($"{path}.weapon.category", "Debe ser \"simple\", \"martial\" o \"exotic\".");
                 category = "simple";
             }
 
@@ -66,6 +120,35 @@ internal sealed partial class ContentPackValidator
             if (NullableText($"{path}.weapon.special", weapon.Special, LongTextMaxLength) is { } special)
             {
                 systemData["special"] = special;
+            }
+
+            if (weapon.AddAbilityToDamage is { } addAbility)
+            {
+                systemData["addAbilityToDamage"] = addAbility;
+            }
+
+            if (weapon.Requires is { Count: > 0 } requires)
+            {
+                var minimums = new Dictionary<string, int>(StringComparer.Ordinal);
+                foreach (var (ability, minimum) in requires)
+                {
+                    var key = ability.Trim().ToLowerInvariant();
+                    if (!Abilities.IsValid(key))
+                    {
+                        AddError($"{path}.weapon.requires.{ability}", "Característica desconocida (str, dex, con, int, wis o cha).");
+                    }
+                    else if (RequiredInt($"{path}.weapon.requires.{ability}", minimum, 1, 30) is { } value)
+                    {
+                        minimums[key] = value;
+                    }
+                }
+
+                systemData["requires"] = minimums;
+            }
+
+            if (weapon.Alternate is { } alternate)
+            {
+                systemData["alternate"] = AlternateProfile($"{path}.weapon.alternate", alternate);
             }
 
             data = data with
@@ -109,6 +192,17 @@ internal sealed partial class ContentPackValidator
                 StrengthMinimum = OptionalInt($"{path}.armor.strMin", armor.StrMin, 0, ItemLimits.MaxStrengthMinimum),
                 StealthDisadvantage = armor.StealthDisadvantage ?? false,
             };
+            if (armor.Exotic == true)
+            {
+                if (shield)
+                {
+                    AddError($"{path}.armor.exotic", "Un escudo no puede ser exótico.");
+                }
+                else if (!data.Properties.Contains(ProficiencyKeys.ExoticProperty))
+                {
+                    data = data with { Properties = [.. data.Properties, ProficiencyKeys.ExoticProperty] };
+                }
+            }
         }
 
         if (item.Tool == true)
@@ -129,11 +223,60 @@ internal sealed partial class ContentPackValidator
                 AddError($"{path}.firearm", "Un arma de fuego necesita también su sección \"weapon\".");
             }
 
-            systemData["firearm"] = new
+            var firearmData = new Dictionary<string, object?>();
+            if (OptionalInt($"{path}.firearm.reload", firearm.Reload, 1, 100) is { } reload)
             {
-                reload = OptionalInt($"{path}.firearm.reload", firearm.Reload, 1, 100),
-                misfire = RequiredInt($"{path}.firearm.misfire", firearm.Misfire, 1, 20),
-            };
+                firearmData["reload"] = reload;
+            }
+
+            // Without "misfire" the firearm never misfires (not every firearm has the property).
+            if (OptionalInt($"{path}.firearm.misfire", firearm.Misfire, 1, 20) is { } misfire)
+            {
+                firearmData["misfire"] = misfire;
+            }
+
+            if (NullableText($"{path}.firearm.era", firearm.Era, ShortTextMaxLength) is { } era)
+            {
+                firearmData["era"] = era.ToLowerInvariant();
+            }
+
+            systemData["firearm"] = firearmData;
+        }
+
+        if (item.AttunementClasses is not null)
+        {
+            if (!data.RequiresAttunement)
+            {
+                AddError($"{path}.attunementClasses", "Solo se admite en objetos con \"requiresAttunement\": true.");
+            }
+
+            var classes = new List<string>();
+            ForEachText($"{path}.attunementClasses", item.AttunementClasses, (classPath, value) =>
+            {
+                if (Reference(classPath, value.ToLowerInvariant()) is not { } index)
+                {
+                    return;
+                }
+
+                // Like the other class references: a class of this pack or of the base packs.
+                if (!_classes.ContainsKey(index))
+                {
+                    AddError(classPath, $"La clase '{index}' no existe en el catálogo.");
+                }
+                else if (!classes.Contains(index))
+                {
+                    classes.Add(index);
+                }
+            });
+            if (classes.Count > 0)
+            {
+                systemData["attunementClasses"] = classes;
+            }
+        }
+
+        if (item.Graft is { } graft && GraftSlot($"{path}.graft", graft) is { } slot)
+        {
+            systemData["graft"] = new Dictionary<string, object?> { ["slot"] = slot };
         }
 
         return systemData.Count == 0 ? data : data with { SystemDataJson = JsonSerializer.Serialize(systemData, SystemDataOptions) };

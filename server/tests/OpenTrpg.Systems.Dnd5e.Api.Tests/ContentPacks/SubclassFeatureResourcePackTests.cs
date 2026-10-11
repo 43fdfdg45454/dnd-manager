@@ -138,7 +138,7 @@ public class SubclassFeatureResourcePackTests(FeatureResourcePackApiFactory fact
     [InlineData("{\"byLevel\":{\"0\":2}}", "resource.max.byLevel.0")]
     [InlineData("{\"byLevel\":{\"3\":\"x\"}}", "resource.max.byLevel.3")]
     [InlineData("{\"byLevel\":{}}", "resource.max.byLevel")]
-    [InlineData("{\"byLevel\":{\"3\":2},\"formula\":\"classLevel\"}", "resource.max")]
+    [InlineData("{\"byLevel\":{\"3\":2},\"formula\":\"classLevel-1\"}", "resource.max.formula")]
     [InlineData("{\"maximo\":2}", "resource.max.maximo")]
     public async Task Invalid_maximums_are_reported_with_their_path(string max, string path)
     {

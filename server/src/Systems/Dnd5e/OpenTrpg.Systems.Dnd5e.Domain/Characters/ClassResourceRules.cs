@@ -1,5 +1,7 @@
+using OpenTrpg.Core.Domain.Items;
 using OpenTrpg.Core.Domain.Rules;
 using OpenTrpg.Core.Domain.Characters;
+using OpenTrpg.Systems.Dnd5e.Domain.Catalog;
 using OpenTrpg.Systems.Dnd5e.Domain.Characters;
 using OpenTrpg.Systems.Dnd5e.Domain.Rules;
 
@@ -19,6 +21,46 @@ public sealed record ResourceTemplate(string Key, string Name, int Max, Resource
 
     /// <summary>How <see cref="Max"/> was obtained (pack resources); null for SRD class resources.</summary>
     public ValueBreakdown? Breakdown { get; init; }
+
+    /// <summary>Die rolled to get the uses back, or null.</summary>
+    public RechargeRoll? RechargeRoll { get; init; }
+
+    /// <summary>
+    /// The templates with the <see cref="ItemModifierKind.ResourceMaxBonus"/> modifiers whose target is their key added to
+    /// the maximum (and to the breakdown, which starts with the plain maximum for SRD class resources).
+    /// </summary>
+    public static IReadOnlyList<ResourceTemplate> WithBonuses(IEnumerable<ResourceTemplate> templates, IReadOnlyList<FeatureModifier> modifiers)
+    {
+        ArgumentNullException.ThrowIfNull(templates);
+        ArgumentNullException.ThrowIfNull(modifiers);
+        var bonuses = modifiers.Where(m => m.Kind == ItemModifierKind.ResourceMaxBonus && m.Target is not null && m.Condition is null).ToList();
+        if (bonuses.Count == 0)
+        {
+            return templates.ToList();
+        }
+
+        return templates.Select(t =>
+        {
+            var parts = bonuses.Where(b => b.Target == t.Key).SelectMany(b => b.ValueParts).ToList();
+            if (parts.Count == 0)
+            {
+                return t;
+            }
+
+            var builder = new BreakdownBuilder();
+            if (t.Breakdown is { } breakdown)
+            {
+                builder.AddAll(breakdown.Parts);
+            }
+            else
+            {
+                builder.Add(BreakdownSources.Class, t.Name, t.Max);
+            }
+
+            var built = builder.AddAll(parts).Clamp(0, CharacterResource.MaxUses, BreakdownLabels.UsesLimit).Build();
+            return t with { Max = built.Total, Breakdown = built };
+        }).ToList();
+    }
 }
 
 /// <summary>

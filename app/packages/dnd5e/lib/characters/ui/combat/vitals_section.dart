@@ -499,7 +499,9 @@ class StatsCard extends ConsumerWidget {
 // Death saves
 // ---------------------------------------------------------------------------
 
-/// Three success and three failure circles; only shown at 0 hit points.
+/// Three success circles and as many failure circles as the sheet's
+/// `deathSaveFailuresToDie` (3 unless a feature changes it); only shown at 0
+/// hit points.
 class DeathSavesCard extends ConsumerWidget {
   const DeathSavesCard({super.key, required this.character, required this.canEdit});
 
@@ -509,11 +511,13 @@ class DeathSavesCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = character;
+    final toDie = c.sheet.deathSaveFailuresToDie;
 
-    Widget row(String label, String keyPrefix, int count, Color color, bool success) => Row(
+    Widget row(String label, String keyPrefix, int count, Color color, bool success) => Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         SizedBox(width: 72, child: Text(label)),
-        for (var i = 0; i < 3; i++)
+        for (var i = 0; i < (success ? 3 : toDie); i++)
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: InkResponse(
@@ -544,7 +548,7 @@ class DeathSavesCard extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (c.hitPointsCurrent == 0 && c.deathSaveSuccesses < 3 && c.deathSaveFailures < 3)
+        if (c.hitPointsCurrent == 0 && c.deathSaveSuccesses < 3 && c.deathSaveFailures < toDie)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Container(
@@ -586,6 +590,7 @@ class DeathSavesCard extends ConsumerWidget {
           natural: natural,
           successes: c.deathSaveSuccesses,
           failures: c.deathSaveFailures,
+          failuresToDie: c.sheet.deathSaveFailuresToDie,
         );
         final controller = _controller(ref, c);
         applying = runCombat(
@@ -622,6 +627,15 @@ class DeathSavesCard extends ConsumerWidget {
         children: [
           row('Éxitos', 'death-success', c.deathSaveSuccesses, context.tokens.moss, true),
           row('Fallos', 'death-failure', c.deathSaveFailures, context.tokens.blood, false),
+          if (c.sheet.deathSaveFailuresSource case final String source)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Mueres con ${c.sheet.deathSaveFailuresToDie} fallos ($source).',
+                key: const Key('death-failures-to-die'),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
         ],
       ),
     );

@@ -91,6 +91,9 @@ internal sealed class PackSharedTraitJson
     public List<string?>? Races { get; set; }
 
     public List<string?>? Subraces { get; set; }
+
+    /// <summary>Limited-use resource of the trait (same shape as an option's; classLevel is the character level).</summary>
+    public PackResourceJson? Resource { get; set; }
 }
 
 internal sealed class PackRollTableJson
@@ -185,6 +188,30 @@ internal sealed class PackClassJson
 
     /// <summary>Level choices of the class (on top of those generated from the levels and the spellcasting tables).</summary>
     public List<PackLevelChoiceJson?>? LevelChoices { get; set; }
+
+    /// <summary>Auxiliary level: a one-level class taken after level 1 instead of a class level.</summary>
+    public bool? Auxiliary { get; set; }
+
+    /// <summary>Auxiliary classes: structured prerequisites.</summary>
+    public PackPrerequisitesJson? Prerequisites { get; set; }
+
+    /// <summary>Auxiliary classes: literal or narrative prerequisites.</summary>
+    public string? PrerequisitesText { get; set; }
+
+    /// <summary>Auxiliary classes: counts as one level of the caster class for its slots.</summary>
+    public bool? CountsAsCasterLevel { get; set; }
+
+    /// <summary>Save DCs of the class's features (8 + proficiency + ability): one object or a list.</summary>
+    [JsonConverter(typeof(SingleOrListConverter<PackClassSaveDcJson>))]
+    public List<PackClassSaveDcJson?>? SaveDc { get; set; }
+}
+
+internal sealed class PackClassSaveDcJson
+{
+    /// <summary>What the DC is for, shown in the sheet ("CD de maniobras").</summary>
+    public string? Name { get; set; }
+
+    public string? Ability { get; set; }
 }
 
 internal sealed class PackClassProficienciesJson
@@ -198,10 +225,22 @@ internal sealed class PackClassProficienciesJson
 
 internal sealed class PackMulticlassingJson
 {
-    /// <summary>Minimum score by ability ("int": 13).</summary>
-    public Dictionary<string, int?>? Prerequisites { get; set; }
+    /// <summary>Minimum score by ability ("int": 13), plus an optional "anyOf" list of such maps (one must be met).</summary>
+    public Dictionary<string, JsonElement>? Prerequisites { get; set; }
 
     public PackMulticlassProficienciesJson? Proficiencies { get; set; }
+
+    /// <summary>Proficiencies gained on reaching a level of the class taken as a new class ("2": {"armor": ["heavy"]}).</summary>
+    public Dictionary<string, PackLevelProficienciesJson?>? ProficienciesByLevel { get; set; }
+}
+
+internal sealed class PackLevelProficienciesJson
+{
+    public List<string?>? Armor { get; set; }
+
+    public List<string?>? Weapons { get; set; }
+
+    public List<string?>? Tools { get; set; }
 }
 
 internal sealed class PackMulticlassProficienciesJson
@@ -236,6 +275,21 @@ internal sealed class PackClassSpellcastingJson
     public bool? Ritual { get; set; }
 
     public string? Focus { get; set; }
+
+    /// <summary>"hitPoints"/"ritualsOnly": highest spell level by class level.</summary>
+    public Dictionary<string, int?>? MaxSpellLevel { get; set; }
+
+    /// <summary>"hitPoints": key of the class resource spent by each spell.</summary>
+    public string? UsesResource { get; set; }
+
+    /// <summary>"hitPoints": hit points lost by spell level (1st, 2nd...).</summary>
+    public List<int?>? HitPointCost { get; set; }
+
+    /// <summary>Spells prepared ("mod:wis+halfClassLevel").</summary>
+    public string? PreparedFormula { get; set; }
+
+    /// <summary>Spells the class casts as rituals.</summary>
+    public List<string?>? TreatAsRitual { get; set; }
 }
 
 internal sealed class PackClassLevelJson
@@ -278,6 +332,8 @@ internal sealed class PackClassResourceJson
 
     public Dictionary<string, string?>? DiceByLevel { get; set; }
 
+    public PackRechargeRollJson? RechargeRoll { get; set; }
+
     public PackResourceJson ToResource(JsonElement? max) => new()
     {
         Key = Key,
@@ -287,6 +343,7 @@ internal sealed class PackClassResourceJson
         RollOnRest = RollOnRest,
         Dice = Dice,
         DiceByLevel = DiceByLevel,
+        RechargeRoll = RechargeRoll,
     };
 }
 
@@ -312,6 +369,18 @@ internal sealed class PackFeatJson
 
     /// <summary>Free label of the feat ("starter"...).</summary>
     public string? Category { get; set; }
+
+    /// <summary>Choices made when the feat is taken (no level).</summary>
+    public List<PackLevelChoiceJson?>? Choices { get; set; }
+
+    /// <summary>Only offered by origin choices at creation, never by an Ability Score Improvement.</summary>
+    public bool? CreationOnly { get; set; }
+
+    /// <summary>Starter feat (the optional "Dote inicial" of level 1 when the campaign enables it); implies creationOnly.</summary>
+    public bool? Starter { get; set; }
+
+    /// <summary>The feat can be taken more than once.</summary>
+    public bool? Repeatable { get; set; }
 }
 
 internal sealed class PackCreatureJson
@@ -445,6 +514,12 @@ internal sealed class PackReferenceJson
     public List<PackReferenceEntryJson?>? MagicSchools { get; set; }
 
     public List<PackReferenceEntryJson?>? Tools { get; set; }
+
+    /// <summary>Spell tags (compendium filter, <c>filter.tags</c> and expanded lists by tag).</summary>
+    public List<PackReferenceEntryJson?>? SpellTags { get; set; }
+
+    /// <summary>Armor properties (<c>items[].armor.properties</c>, and armor enhancements).</summary>
+    public List<PackReferenceEntryJson?>? ArmorProperties { get; set; }
 }
 
 internal sealed class PackReferenceEntryJson
@@ -457,6 +532,9 @@ internal sealed class PackReferenceEntryJson
 
     /// <summary>Only in <c>equipmentCategories</c>: the items of the category (starting equipment picks from it).</summary>
     public List<string?>? Items { get; set; }
+
+    /// <summary>Only in <c>spellTags</c>: spells of the SRD, of a required pack or of the pack that get the tag.</summary>
+    public List<string?>? Spells { get; set; }
 }
 
 internal sealed class PackSubclassJson
@@ -482,6 +560,12 @@ internal sealed class PackSubclassJson
 
     /// <summary>Format 2: spells added to the class's spell list for the characters with this subclass (not granted).</summary>
     public List<PackExpandedSpellJson?>? ExpandedSpellList { get; set; }
+
+    /// <summary>Format 3: what the character needs to choose the subclass (same fields as an option's).</summary>
+    public PackPrerequisitesJson? Prerequisites { get; set; }
+
+    /// <summary>Format 3: prerequisites in words (narrative ones, or a text for the structured ones).</summary>
+    public string? PrerequisitesText { get; set; }
 }
 
 internal sealed class PackExpandedSpellJson
@@ -489,12 +573,18 @@ internal sealed class PackExpandedSpellJson
     public string? Index { get; set; }
 
     public int? Level { get; set; }
+
+    /// <summary>Instead of <see cref="Index"/> and <see cref="Level"/>: every spell with one of these tags.</summary>
+    public List<string?>? Tags { get; set; }
 }
 
 internal sealed class PackSubclassSpellcastingJson
 {
-    /// <summary>"third", "half" or "full".</summary>
+    /// <summary>"third", "half", "full", "pact" or "table".</summary>
     public string? Progression { get; set; }
+
+    /// <summary>"table" (required) and "pact" (optional): slots of the spell levels 1-9 by class level.</summary>
+    public Dictionary<string, List<int?>?>? Slots { get; set; }
 
     public string? Ability { get; set; }
 
@@ -536,18 +626,77 @@ internal sealed class PackFeatureJson
 
     /// <summary>Format 2: numeric modifiers on the sheet from the feature's level (same shape as an option's).</summary>
     public List<PackChoiceModifierJson?>? Modifiers { get; set; }
+
+    /// <summary>Phase 35B3: the character enhances concrete inventory entries with the options of some sets.</summary>
+    public PackItemEnhancementJson? ItemEnhancement { get; set; }
+}
+
+internal sealed class PackItemEnhancementJson
+{
+    public List<string?>? OptionSets { get; set; }
+
+    /// <summary>Options per item by class level: <c>{"2": 1, "6": 2}</c>.</summary>
+    public Dictionary<string, int?>? MaxPerItemByLevel { get; set; }
+}
+
+internal sealed class PackItemEffectsJson
+{
+    public List<string?>? AppliesTo { get; set; }
+
+    public int? AttackBonus { get; set; }
+
+    public int? DamageBonus { get; set; }
+
+    public int? ArmorClassBonus { get; set; }
+
+    public List<string?>? AddProperties { get; set; }
+
+    public int? DamageStep { get; set; }
+
+    public string? DamageType { get; set; }
+}
+
+internal sealed class PackGraftJson
+{
+    public string? Slot { get; set; }
 }
 
 internal sealed class PackCompanionJson
 {
     public PackBeastFilterJson? BeastFilter { get; set; }
 
-    /// <summary>"beast" or "max(beast, N*classLevel)".</summary>
+    /// <summary>"beast", "max(beast, N*classLevel)" or a sum of terms ("beast+2*classLevel", "5*characterLevel+mod:con").</summary>
     public string? HitPoints { get; set; }
 
     public bool? ProficiencyBonusFromCharacter { get; set; }
 
     public bool? AttackBonusFromCharacter { get; set; }
+
+    /// <summary>Closed list of creatures of any type (instead of, or besides, the beast filter).</summary>
+    public List<string?>? CreatureIndexes { get; set; }
+
+    /// <summary>How many companions at once: an integer (1-20) or "proficiencyBonus".</summary>
+    public JsonElement? MaxCount { get; set; }
+
+    /// <summary>Total challenge rating of the companions by class level: <c>{"3": 0.5, "6": 1}</c>.</summary>
+    public Dictionary<string, double?>? CrBudgetByLevel { get; set; }
+
+    /// <summary>Bonuses to the companions: numbers or "proficiencyBonus".</summary>
+    public PackCompanionBonusesJson? Bonuses { get; set; }
+
+    /// <summary>What the companions gain by class level (texts).</summary>
+    public Dictionary<string, string?>? FeaturesByLevel { get; set; }
+}
+
+internal sealed class PackCompanionBonusesJson
+{
+    public JsonElement? ArmorClass { get; set; }
+
+    public JsonElement? SavingThrows { get; set; }
+
+    public JsonElement? Attack { get; set; }
+
+    public JsonElement? Damage { get; set; }
 }
 
 internal sealed class PackBeastFilterJson
@@ -617,16 +766,22 @@ internal sealed class PackItemJson
     /// <summary>Format 3: the item is ammunition (category Consumable, subcategory "Ammunition").</summary>
     public bool? Ammunition { get; set; }
 
-    /// <summary>Format 3: a firearm (with <see cref="Weapon"/>): reload and misfire scores.</summary>
+    /// <summary>Format 3: a firearm (with <see cref="Weapon"/>): reload and (optional) misfire scores.</summary>
     public PackFirearmJson? Firearm { get; set; }
 
     /// <summary>Contents of an equipment pack (explorer's pack...), given with the item in the starting equipment.</summary>
     public List<PackStartingItemJson?>? Contents { get; set; }
+
+    /// <summary>Class indexes that may attune to the item (with <see cref="RequiresAttunement"/>); none = any class.</summary>
+    public List<string?>? AttunementClasses { get; set; }
+
+    /// <summary>Phase 35B3: the item is a graft that takes a body slot (one equipped graft per slot).</summary>
+    public PackGraftJson? Graft { get; set; }
 }
 
 internal sealed class PackWeaponJson
 {
-    /// <summary>"simple" or "martial".</summary>
+    /// <summary>"simple", "martial" or "exotic" (also the firearm group of a weapon with a <c>firearm</c> section).</summary>
     public string? Category { get; set; }
 
     /// <summary>"melee" or "ranged".</summary>
@@ -646,6 +801,36 @@ internal sealed class PackWeaponJson
 
     /// <summary>Special rules of the weapon (free text).</summary>
     public string? Special { get; set; }
+
+    /// <summary>Whether the ability modifier is added to the damage (default: yes, except firearms).</summary>
+    public bool? AddAbilityToDamage { get; set; }
+
+    /// <summary>Minimum scores to wield it without penalty (<c>{"str": 15}</c>); the sheet warns below them.</summary>
+    public Dictionary<string, int?>? Requires { get; set; }
+
+    /// <summary>Second profile (double or switch weapons): another attack with its own damage and properties.</summary>
+    public PackAlternateWeaponJson? Alternate { get; set; }
+}
+
+internal sealed class PackAlternateWeaponJson
+{
+    /// <summary>Name of the attack ("Lanza (modo arrojadizo)"); "&lt;item&gt; (perfil alternativo)" by default.</summary>
+    public string? Name { get; set; }
+
+    /// <summary>"melee" or "ranged" (the weapon's own by default).</summary>
+    public string? Range { get; set; }
+
+    public string? Damage { get; set; }
+
+    public string? DamageType { get; set; }
+
+    public string? VersatileDamage { get; set; }
+
+    public List<string?>? Properties { get; set; }
+
+    public int? RangeNormal { get; set; }
+
+    public int? RangeLong { get; set; }
 }
 
 internal sealed class PackArmorJson
@@ -661,6 +846,9 @@ internal sealed class PackArmorJson
 
     public int? StrMin { get; set; }
 
+    /// <summary>Exotic armor: keeps its weight category and needs the "exotic-armor" proficiency.</summary>
+    public bool? Exotic { get; set; }
+
     public bool? StealthDisadvantage { get; set; }
 }
 
@@ -669,8 +857,11 @@ internal sealed class PackFirearmJson
     /// <summary>Shots before reloading.</summary>
     public int? Reload { get; set; }
 
-    /// <summary>Attack roll at or below which the firearm misfires.</summary>
+    /// <summary>Attack roll at or below which the firearm misfires; null = the firearm never misfires.</summary>
     public int? Misfire { get; set; }
+
+    /// <summary>Era of the firearm ("renaissance", "modern"...): informative data.</summary>
+    public string? Era { get; set; }
 }
 
 internal sealed class PackModifierJson
@@ -716,6 +907,9 @@ internal sealed class PackSpellJson
     public List<string?>? Lists { get; set; }
 
     public List<string?>? Subclasses { get; set; }
+
+    /// <summary>Tags of the spell (<c>reference.spellTags</c> of the pack or of a required pack).</summary>
+    public List<string?>? Tags { get; set; }
 
     public string? AttackType { get; set; }
 
@@ -882,6 +1076,9 @@ internal sealed class PackCantripChoiceJson
 internal sealed class PackFeatChoiceJson
 {
     public int? Choose { get; set; }
+
+    /// <summary>Option set the feats come from (heritage feats); null = the <c>feats</c> set.</summary>
+    public string? SetId { get; set; }
 }
 
 internal sealed class PackTraitOptionChoiceJson
@@ -940,6 +1137,9 @@ internal sealed class PackTraitJson
     public string? Name { get; set; }
 
     public List<string?>? Description { get; set; }
+
+    /// <summary>Limited-use resource of the trait (same shape as an option's; classLevel is the character level).</summary>
+    public PackResourceJson? Resource { get; set; }
 
     /// <summary>True when given as a string: a reference to <c>traits[]</c>.</summary>
     [JsonIgnore]
@@ -1085,6 +1285,15 @@ internal sealed class PackOptionJson
 
     /// <summary>Uses of a resource spent each time the option is used.</summary>
     public PackOptionCostJson? Cost { get; set; }
+
+    /// <summary>Choices made when the option is taken (no level).</summary>
+    public List<PackLevelChoiceJson?>? Choices { get; set; }
+
+    /// <summary>Choices the option adds at later levels of the class of the pick (with level).</summary>
+    public List<PackLevelChoiceJson?>? LevelChoices { get; set; }
+
+    /// <summary>Phase 35B3: what the option does to the inventory entry an item enhancement feature applies it to.</summary>
+    public PackItemEffectsJson? ItemEffects { get; set; }
 }
 
 internal sealed class PackOptionCostJson
@@ -1112,6 +1321,28 @@ internal sealed class PackPrerequisitesJson
 
     /// <summary>The character must be able to cast at least one spell.</summary>
     public bool? Spellcasting { get; set; }
+
+    /// <summary>Subclass indexes, one of which the character must have.</summary>
+    public List<string?>? Subclasses { get; set; }
+
+    /// <summary>Option indexes (any set, feats included) the character must have, all of them.</summary>
+    public List<string?>? Options { get; set; }
+
+    /// <summary>Alternatives, one of which must be met entirely (one level deep).</summary>
+    public List<PackPrerequisitesJson?>? AnyOf { get; set; }
+
+    /// <summary>"spellcasting" or "pactMagic".</summary>
+    public string? ClassFeature { get; set; }
+
+    /// <summary>Class indexes, one of which the character must have (with <see cref="ClassFeature"/> when given).</summary>
+    public List<string?>? Classes { get; set; }
+
+    public int? CharacterLevel { get; set; }
+
+    public int? SpellcastingAbilityMin { get; set; }
+
+    /// <summary>Race sizes ("small", "medium"...), one of which the character must have.</summary>
+    public List<string?>? Sizes { get; set; }
 }
 
 /// <summary>Proficiencies required, all of them: armor keys ("light", "medium", "heavy", "shields") and weapon keys ("simple", "martial" or a weapon index).</summary>
@@ -1128,9 +1359,16 @@ internal sealed class PackChoiceModifierJson
 
     public string? Target { get; set; }
 
-    public int? Value { get; set; }
+    /// <summary>An integer, or a formula text ("characterLevel", "mod:wis", "walk" in <c>Speed</c>).</summary>
+    public JsonElement? Value { get; set; }
 
     public string? Condition { get; set; }
+
+    /// <summary><c>ArmorClassFormula</c>: abilities added to the base (<see cref="Value"/>).</summary>
+    public List<string?>? Abilities { get; set; }
+
+    /// <summary><c>ArmorClassFormula</c>: whether the shield is added (true by default).</summary>
+    public bool? AllowShield { get; set; }
 }
 
 internal sealed class PackAbilityIncreaseJson
@@ -1160,6 +1398,58 @@ internal sealed class PackGrantsJson
 
     /// <summary>Races and subraces: ability the granted spells are cast with ("cha").</summary>
     public string? SpellcastingAbility { get; set; }
+
+    /// <summary>Options and feats: option indexes (any set) the character gets without spending a choice.</summary>
+    public List<string?>? Options { get; set; }
+
+    /// <summary>Damage types resisted.</summary>
+    public List<string?>? Resistances { get; set; }
+
+    /// <summary>Damage types the character is immune to.</summary>
+    public List<string?>? Immunities { get; set; }
+
+    /// <summary>Conditions the character is immune to (SRD or pack condition indexes).</summary>
+    public List<string?>? ConditionImmunities { get; set; }
+
+    /// <summary>Size the character has instead of the race's ("small").</summary>
+    public string? Size { get; set; }
+
+    /// <summary>Saving throw proficiencies lost: <c>{"choose": 1, "from": ["str", "dex"]}</c>.</summary>
+    public PackRemoveSavingThrowsJson? RemoveSavingThrows { get; set; }
+
+    /// <summary>Change of the class skills chosen at creation (−2: two fewer).</summary>
+    public int? SkillChoicesDelta { get; set; }
+
+    /// <summary>Skill proficiencies lost (<c>["athletics"]</c>).</summary>
+    public List<string?>? RemoveSkills { get; set; }
+
+    /// <summary>Natural weapons (claws, bite...): attacks of the sheet.</summary>
+    public List<PackNaturalWeaponJson?>? NaturalWeapons { get; set; }
+}
+
+internal sealed class PackRemoveSavingThrowsJson
+{
+    public int? Choose { get; set; }
+
+    public List<string?>? From { get; set; }
+}
+
+internal sealed class PackNaturalWeaponJson
+{
+    public string? Name { get; set; }
+
+    /// <summary>Dice ("1d6").</summary>
+    public string? Damage { get; set; }
+
+    /// <summary>Dice by character level (<c>{"1": "1d6", "5": "1d8"}</c>).</summary>
+    public Dictionary<string, string?>? DamageByCharacterLevel { get; set; }
+
+    public string? DamageType { get; set; }
+
+    public bool? Finesse { get; set; }
+
+    /// <summary>Reach in feet (5 by default).</summary>
+    public int? Reach { get; set; }
 }
 
 internal sealed class PackGrantedSpellJson
@@ -1194,6 +1484,18 @@ internal sealed class PackResourceJson
 
     /// <summary>Die by class level (<c>{"3": "d8", "10": "d10"}</c>).</summary>
     public Dictionary<string, string?>? DiceByLevel { get; set; }
+
+    /// <summary>Die rolled to get the uses back (<c>{"dice": "d6", "min": 5}</c>).</summary>
+    public PackRechargeRollJson? RechargeRoll { get; set; }
+}
+
+internal sealed class PackRechargeRollJson
+{
+    /// <summary>"d6".</summary>
+    public string? Dice { get; set; }
+
+    /// <summary>Lowest roll that recharges (1 to the die's faces).</summary>
+    public int? Min { get; set; }
 }
 
 internal sealed class PackRollOnRestJson
@@ -1233,6 +1535,9 @@ internal sealed class PackLevelChoiceJson
 
     /// <summary>Key of another choice of the same level that is resolved before this one.</summary>
     public string? After { get; set; }
+
+    /// <summary>AsiOrFeat and OptionSet: other option sets whose options are offered too.</summary>
+    public List<string?>? AlsoFrom { get; set; }
 }
 
 internal sealed class PackChoiceFilterJson
@@ -1252,6 +1557,18 @@ internal sealed class PackChoiceFilterJson
 
     /// <summary>Class levels at which a spell of any school may be chosen.</summary>
     public List<int?>? SchoolsExceptAt { get; set; }
+
+    /// <summary>Weapon choices: "simple", "martial", "exotic".</summary>
+    public List<string?>? WeaponCategories { get; set; }
+
+    /// <summary>Weapon choices: true = only firearms, false = no firearms.</summary>
+    public bool? Firearms { get; set; }
+
+    /// <summary>Spell choices: only rituals (or spells the class casts as rituals).</summary>
+    public bool? RitualOnly { get; set; }
+
+    /// <summary>Spell choices: only spells with one of these tags (<c>reference.spellTags</c>).</summary>
+    public List<string?>? Tags { get; set; }
 }
 
 // ---- Converters ------------------------------------------------------------------------------------
@@ -1313,12 +1630,12 @@ internal sealed class PackTraitConverter : JsonConverter<PackTraitJson>
                 return new PackTraitJson { Index = reader.GetString(), IsReference = true };
             default:
                 var shape = JsonSerializer.Deserialize<Shape>(ref reader, options);
-                return shape is null ? null : new PackTraitJson { Index = shape.Index, Name = shape.Name, Description = shape.Description };
+                return shape is null ? null : new PackTraitJson { Index = shape.Index, Name = shape.Name, Description = shape.Description, Resource = shape.Resource };
         }
     }
 
     public override void Write(Utf8JsonWriter writer, PackTraitJson value, JsonSerializerOptions options) =>
-        JsonSerializer.Serialize(writer, new Shape { Index = value.Index, Name = value.Name, Description = value.Description }, options);
+        JsonSerializer.Serialize(writer, new Shape { Index = value.Index, Name = value.Name, Description = value.Description, Resource = value.Resource }, options);
 
     private sealed class Shape
     {
@@ -1327,5 +1644,7 @@ internal sealed class PackTraitConverter : JsonConverter<PackTraitJson>
         public string? Name { get; set; }
 
         public List<string?>? Description { get; set; }
+
+        public PackResourceJson? Resource { get; set; }
     }
 }

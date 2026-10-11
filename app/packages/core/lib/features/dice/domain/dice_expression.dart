@@ -174,6 +174,12 @@ class DiceResult {
   /// Natural 20 on a single d20 roll.
   bool get isCritical => d20Value == 20;
 
+  /// A single d20 roll of [criticalRange] or more (19 for "critical on 19-20").
+  bool isCriticalFrom(int criticalRange) {
+    final natural = d20Value;
+    return natural != null && natural >= criticalRange;
+  }
+
   /// Natural 1 on a single d20 roll.
   bool get isFumble => d20Value == 1;
 

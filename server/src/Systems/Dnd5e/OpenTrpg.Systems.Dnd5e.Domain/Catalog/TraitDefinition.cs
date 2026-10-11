@@ -14,6 +14,14 @@ public sealed class TraitDefinition
 
     public IReadOnlyList<string> SubraceIndexes { get; init; } = [];
 
+    /// <summary>
+    /// Limited-use resource the trait gives to the characters of its races and subraces (content packs, as in
+    /// <see cref="OptionDefinition.ResourceJson"/>; <c>classLevel</c> is the character level); null when it gives none.
+    /// </summary>
+    public string? ResourceJson { get; init; }
+
+    public OptionResource? Resource => LevelChoiceJson.ParseResource(ResourceJson);
+
     /// <summary>"srd" or the id of the content pack that added it (see <see cref="CatalogSources"/>).</summary>
     public string Source { get; init; } = Dnd5eCatalogSources.Srd;
 }

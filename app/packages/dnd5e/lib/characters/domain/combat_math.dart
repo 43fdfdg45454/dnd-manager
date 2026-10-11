@@ -21,22 +21,26 @@ int toggleDeathSave(int current, int index) => index + 1 == current ? index : in
 /// What a rolled death saving throw changes (PHB ch. 9): a natural 20 brings
 /// the character back with 1 hit point (and clears the saves), a natural 1
 /// counts as two failures, 10 or more is a success and less is a failure.
-/// Counts never go above 3.
+/// Successes never go above 3 and failures above [failuresToDie] (3 unless a
+/// feature of a content pack changes it).
 ({int successes, int failures, bool revived, String message}) applyDeathSaveRoll({
   required int natural,
   required int successes,
   required int failures,
+  int failuresToDie = 3,
 }) {
   if (natural >= 20) {
     return (successes: 0, failures: 0, revived: true, message: '¡20 natural! Recuperas 1 PG.');
   }
   if (natural <= 1) {
-    final next = failures + 2 > 3 ? 3 : failures + 2;
+    final next = failures + 2 > failuresToDie ? failuresToDie : failures + 2;
     return (
       successes: successes,
       failures: next,
       revived: false,
-      message: next >= 3 ? '1 natural: dos fallos. Has muerto.' : '1 natural: dos fallos.',
+      message: next >= failuresToDie
+          ? '1 natural: dos fallos. Has muerto.'
+          : '1 natural: dos fallos.',
     );
   }
   if (natural >= 10) {
@@ -48,11 +52,11 @@ int toggleDeathSave(int current, int index) => index + 1 == current ? index : in
       message: next >= 3 ? 'Éxito ($natural): te estabilizas.' : 'Éxito ($natural).',
     );
   }
-  final next = failures + 1 > 3 ? 3 : failures + 1;
+  final next = failures + 1 > failuresToDie ? failuresToDie : failures + 1;
   return (
     successes: successes,
     failures: next,
     revived: false,
-    message: next >= 3 ? 'Fallo ($natural). Has muerto.' : 'Fallo ($natural).',
+    message: next >= failuresToDie ? 'Fallo ($natural). Has muerto.' : 'Fallo ($natural).',
   );
 }

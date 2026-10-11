@@ -17,6 +17,7 @@ import 'step_personality.dart';
 import 'step_proficiencies.dart';
 import 'step_review.dart';
 import 'step_spells.dart';
+import 'step_starter_feat.dart';
 
 /// Title and icon of each wizard step.
 extension WizardStepInfo on WizardStep {
@@ -28,10 +29,15 @@ extension WizardStepInfo on WizardStep {
     WizardStep.background => 'Trasfondo',
     WizardStep.personality => 'Personalidad',
     WizardStep.origin => 'Elecciones de raza y trasfondo',
+    WizardStep.starterFeat => 'Dote inicial',
     WizardStep.equipment => 'Equipo',
     WizardStep.spells => 'Hechizos',
     WizardStep.review => 'Revisión',
   };
+
+  /// [title] for the wizard in [state]: the origin step names what it asks
+  /// (the race and background, the class, or both).
+  String titleIn(WizardState state) => this == WizardStep.origin ? state.originStepLabel : title;
 
   AppIcons get icon => switch (this) {
     WizardStep.name => AppIcons.quill,
@@ -41,6 +47,7 @@ extension WizardStepInfo on WizardStep {
     WizardStep.background => AppIcons.book,
     WizardStep.personality => AppIcons.quill,
     WizardStep.origin => AppIcons.hood,
+    WizardStep.starterFeat => AppIcons.sparkles,
     WizardStep.equipment => AppIcons.backpack,
     WizardStep.spells => AppIcons.spellbook,
     WizardStep.review => AppIcons.scroll,
@@ -190,6 +197,7 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
             _ProgressRail(
               steps: steps,
               current: step,
+              label: (s) => s.titleIn(state),
               onTap: (i) {
                 if (i < step) _controller.goTo(i);
               },
@@ -199,7 +207,7 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Paso ${step + 1} de ${steps.length} · ${current.title}',
+                  'Paso ${step + 1} de ${steps.length} · ${current.titleIn(state)}',
                   key: const Key('wizard-step-title'),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
@@ -294,6 +302,7 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
     WizardStep.background => BackgroundStep(args: _args),
     WizardStep.personality => PersonalityStep(args: _args),
     WizardStep.origin => OriginStep(args: _args),
+    WizardStep.starterFeat => StarterFeatStep(args: _args),
     WizardStep.equipment => EquipmentStep(args: _args),
     WizardStep.spells => SpellsStep(args: _args),
     WizardStep.review => ReviewStep(args: _args),
@@ -303,10 +312,18 @@ class _CharacterWizardPageState extends ConsumerState<CharacterWizardPage> {
 /// Row of dots (one icon per step); completed and current ones are highlighted
 /// and earlier ones can be tapped to go back.
 class _ProgressRail extends StatelessWidget {
-  const _ProgressRail({required this.steps, required this.current, required this.onTap});
+  const _ProgressRail({
+    required this.steps,
+    required this.current,
+    required this.label,
+    required this.onTap,
+  });
 
   final List<WizardStep> steps;
   final int current;
+
+  /// Name of a step (the origin step names what it asks).
+  final String Function(WizardStep step) label;
   final ValueChanged<int> onTap;
 
   @override
@@ -323,7 +340,7 @@ class _ProgressRail extends StatelessWidget {
               onTap: () => onTap(i),
               radius: 22,
               child: Semantics(
-                label: steps[i].title,
+                label: label(steps[i]),
                 selected: i == current,
                 child: CircleAvatar(
                   radius: 16,

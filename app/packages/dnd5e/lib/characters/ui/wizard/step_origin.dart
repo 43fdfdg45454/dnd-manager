@@ -6,11 +6,13 @@ import '../level_up/level_up_widgets.dart' show LevelUpHeading;
 import '../origin_choices_widgets.dart';
 import 'step_basics.dart' show stepPadding;
 
-/// "Elecciones de raza y trasfondo": the decisions the race, subrace and
-/// background ask for (ability bonuses, skills, tools, a cantrip, a feat or an
-/// ancestry), with the same option cards as the level-up. The required ones
-/// block "Siguiente"; optional ones are shown but never block. Languages are
-/// asked in the background step.
+/// "Tu origen" / "Tu clase": the decisions the race, subrace and background
+/// ask for (ability bonuses, skills, tools, a cantrip, a feat or an ancestry)
+/// and the level-1 choices of the class (fighting style, expertise, favored
+/// enemy...), with the same option cards as the level-up. The required ones
+/// block "Siguiente"; optional ones are shown but never block. The languages of
+/// the race and background are asked in the background step. A choice of an
+/// option appears once that option is picked.
 class OriginStep extends ConsumerWidget {
   const OriginStep({super.key, required this.args});
 
@@ -44,24 +46,23 @@ class OriginStep extends ConsumerWidget {
     if (state.originLoading || state.originPlan == null) {
       return const Center(child: CircularProgressIndicator(key: Key('origin-loading')));
     }
-    final choices = state.originChoices;
+    final choices = state.visibleOriginChoices;
     return ListView(
       key: const Key('step-origin'),
       padding: stepPadding,
       children: [
-        const LevelUpHeading(
-          'Tu origen',
-          subtitle: 'Tu raza y tu trasfondo te piden decidir lo siguiente.',
-        ),
+        LevelUpHeading(state.originStepTitle, subtitle: state.originStepSubtitle),
         if (choices.isEmpty) const Text('No hay nada que elegir.'),
         for (final choice in choices)
           OriginChoiceView(
             choice: choice,
             answer: state.originAnswerOf(choice),
+            isAvailable: (option) => state.originRequirementMet(option.requires),
             onToggle: (index) => controller.toggleOriginOption(choice, index),
             onText: (slot, text) => controller.setOriginText(choice, slot, text),
             onFeat: (index) => controller.selectOriginFeat(choice, index),
             onFeatAbility: (ability) => controller.setOriginFeatAbility(choice, ability),
+            onRemovedSave: (ability) => controller.toggleOriginRemovedSave(choice, ability),
           ),
       ],
     );

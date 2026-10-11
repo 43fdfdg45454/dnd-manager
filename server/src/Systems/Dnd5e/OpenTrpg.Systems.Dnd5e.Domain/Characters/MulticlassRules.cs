@@ -65,15 +65,20 @@ public static class MulticlassRules
         ArgumentNullException.ThrowIfNull(score);
         if (!Prerequisites.TryGetValue(classIndex, out var groups))
         {
-            if (custom is not { Prerequisites.Count: > 0 })
+            if (custom is null || (custom.Prerequisites.Count == 0 && custom.AnyOf.Count == 0))
             {
                 return null;
             }
 
-            var unmet = custom.Prerequisites
+            var unmet = new List<string>();
+            if (custom.AnyOf.Count > 0 && !custom.AnyOf.Any(group => group.All(p => score(p.Key) >= p.Value)))
+            {
+                unmet.Add(string.Join(" o ", custom.AnyOf.Select(group => string.Join(" y ", group.Select(p => $"{BreakdownLabels.Ability(p.Key)} {p.Value}")))));
+            }
+
+            unmet.AddRange(custom.Prerequisites
                 .Where(p => score(p.Key) < p.Value)
-                .Select(p => $"{BreakdownLabels.Ability(p.Key)} {p.Value}")
-                .ToList();
+                .Select(p => $"{BreakdownLabels.Ability(p.Key)} {p.Value}"));
             return unmet.Count == 0 ? null : string.Join(" y ", unmet);
         }
 
@@ -120,23 +125,11 @@ public static class MulticlassRules
             .. custom.Tools.Select(t => (ProficiencyType.Tool, t.Trim())),
         ];
 
-    /// <summary>"light" → "light-armor", "shield" → "shields"; other keys as they are.</summary>
-    private static string ArmorKey(string key) => key.Trim().ToLowerInvariant() switch
-    {
-        "light" => "light-armor",
-        "medium" => "medium-armor",
-        "heavy" => "heavy-armor",
-        "shield" => "shields",
-        var other => other,
-    };
+    /// <summary>"light" → "light-armor", "shield" → "shields", "exotic" → "exotic-armor"; other keys as they are.</summary>
+    private static string ArmorKey(string key) => ProficiencyKeys.NormalizeArmor(key) ?? key.Trim().ToLowerInvariant();
 
-    /// <summary>"simple" → "simple-weapons", "martial" → "martial-weapons"; other keys as they are.</summary>
-    private static string WeaponKey(string key) => key.Trim().ToLowerInvariant() switch
-    {
-        "simple" => "simple-weapons",
-        "martial" => "martial-weapons",
-        var other => other,
-    };
+    /// <summary>"simple" → "simple-weapons", "exotic" → "exotic-weapons", "bomb" → "bombs"; other keys as they are.</summary>
+    private static string WeaponKey(string key) => ProficiencyKeys.NormalizeWeapon(key);
 
     /// <summary>
     /// Skills gained when the class is taken as a new class (PHB multiclassing): bard one skill of any kind, ranger

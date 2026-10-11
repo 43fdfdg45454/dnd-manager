@@ -116,6 +116,14 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
     for (final o in _initial.overrides) _OverrideRow(field: o.field, value: o.value, note: o.note),
   ];
 
+  /// Fields an override may target here: the fixed ones, the spellcasting
+  /// ability of each entry of the sheet and any field already overridden.
+  late final List<String> _overrideFields = {
+    ...overrideFields,
+    ...spellcastingAbilityFields(_initial.sheet.spellcasting.map((s) => s.classIndex)),
+    for (final o in _initial.overrides) o.field,
+  }.toList();
+
   bool _saving = false;
 
   @override
@@ -235,7 +243,7 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
 
   void _addOverride() {
     final used = {for (final o in _overrides) o.field};
-    final free = overrideFields.where((f) => !used.contains(f)).firstOrNull;
+    final free = _overrideFields.where((f) => !used.contains(f)).firstOrNull;
     if (free == null) return;
     setState(() => _overrides.add(_OverrideRow(field: free)));
   }
@@ -931,7 +939,7 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
                           isExpanded: true,
                           decoration: const InputDecoration(labelText: 'Campo'),
                           items: [
-                            for (final f in overrideFields)
+                            for (final f in _overrideFields)
                               if (f == _overrides[i].field || !used.contains(f))
                                 DropdownMenuItem(
                                   value: f,
@@ -962,7 +970,13 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
                     controller: _overrides[i].valueController,
                     keyboardType: const TextInputType.numberWithOptions(signed: true),
                     inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'-?[0-9]*'))],
-                    decoration: const InputDecoration(labelText: 'Valor'),
+                    decoration: InputDecoration(
+                      labelText: 'Valor',
+                      helperText: (_overrides[i].field ?? '').startsWith('spellcastingAbility.')
+                          ? '1 Fuerza · 2 Destreza · 3 Constitución · 4 Inteligencia · '
+                                '5 Sabiduría · 6 Carisma'
+                          : null,
+                    ),
                     validator: (v) =>
                         int.tryParse((v ?? '').trim()) == null ? 'Número entero' : null,
                   ),
@@ -978,7 +992,7 @@ class _SheetEditorFormState extends ConsumerState<SheetEditorForm> {
           ),
         OutlinedButton.icon(
           key: const Key('editor-add-override'),
-          onPressed: used.length >= overrideFields.length ? null : _addOverride,
+          onPressed: used.length >= _overrideFields.length ? null : _addOverride,
           icon: const Icon(Icons.add),
           label: const Text('Añadir valor modificado'),
         ),

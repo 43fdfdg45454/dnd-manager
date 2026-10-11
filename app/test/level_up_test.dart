@@ -195,18 +195,22 @@ Map<String, dynamic> _improvementPlan() => _plan(
 );
 
 /// Fighter with Str 19 without items (the 20 cap applies at +1).
-Map<String, dynamic> _character({int? pendingLevelUpTo = 3, List<Object>? choices}) =>
-    makeCharacterJson(
-      status: 'Active',
-      pendingLevelUpTo: pendingLevelUpTo,
-      combat: makeCombatJson(),
-      classes: [
-        {'classIndex': 'fighter', 'className': 'Fighter', 'level': (pendingLevelUpTo ?? 3) - 1},
-      ],
-      breakdowns: {
-        'ability.str': makeBreakdownJson([('base', 'Base', 17), ('race', 'Humano', 2)]),
-      },
-    )..['choices'] = choices ?? const <Object>[];
+Map<String, dynamic> _character({
+  int? pendingLevelUpTo = 3,
+  List<Object>? choices,
+  Map<String, dynamic> sheetExtra = const {},
+}) => makeCharacterJson(
+  status: 'Active',
+  sheetExtra: sheetExtra,
+  pendingLevelUpTo: pendingLevelUpTo,
+  combat: makeCombatJson(),
+  classes: [
+    {'classIndex': 'fighter', 'className': 'Fighter', 'level': (pendingLevelUpTo ?? 3) - 1},
+  ],
+  breakdowns: {
+    'ability.str': makeBreakdownJson([('base', 'Base', 17), ('race', 'Humano', 2)]),
+  },
+)..['choices'] = choices ?? const <Object>[];
 
 DioException _problem(int status, String detail) {
   final options = RequestOptions(path: '/api/v1/systems/dnd5e/characters/ch1/level-up');
@@ -453,6 +457,37 @@ void main() {
   });
 
   group('Asistente de subida de nivel', () {
+    testWidgets('los niveles auxiliares salen aparte con sus requisitos', (tester) async {
+      final plan = _plan();
+      (plan['classes'] as List).add({
+        'classIndex': 'ejemplo-velo',
+        'name': 'Velo de ejemplo',
+        'allowed': true,
+        'reason': null,
+        'hitDie': 6,
+        'isNew': true,
+        'currentLevel': 0,
+        'subclassIndex': null,
+        'auxiliary': true,
+        'prerequisitesText': 'Haber jurado ante un santuario de ejemplo.',
+      });
+      final (:characters, router: _) = await _pump(tester, plan: plan);
+
+      expect(find.byKey(const Key('levelup-auxiliary')), findsOneWidget);
+      expect(find.text('Nivel auxiliar · d6'), findsOneWidget);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('levelup-class-prerequisites-ejemplo-velo'))).data,
+        'Requisitos: Haber jurado ante un santuario de ejemplo.',
+      );
+      // Below the regular classes.
+      expect(
+        tester.getTopLeft(find.byKey(const Key('levelup-class-ejemplo-velo'))).dy,
+        greaterThan(tester.getTopLeft(find.byKey(const Key('levelup-class-wizard'))).dy),
+      );
+      await _tapKey(tester, 'levelup-class-ejemplo-velo');
+      expect(characters.levelUpPlanRequests, [null, 'ejemplo-velo']);
+    });
+
     testWidgets('carga el plan con la clase preseleccionada y los rasgos automáticos', (
       tester,
     ) async {
@@ -642,6 +677,102 @@ void main() {
       expect(find.text('Nada (opcional)'), findsOneWidget);
     });
 
+    testWidgets('la mejora con alsoFrom agrupa dotes y opciones de clase', (tester) async {
+      final plan = _plan(
+        targetLevel: 4,
+        classLevel: 4,
+        choices: [
+          _choice(
+            'asi',
+            'Mejora o señal',
+            'AsiOrFeat',
+            options: [
+              _option('sturdy', 'Sturdy')..['setId'] = 'feats',
+              _option('ejemplo-senal-faro', 'Señal de faro')..['setId'] = 'ejemplo-senales',
+            ],
+          )..['alsoFrom'] = ['ejemplo-senales'],
+        ],
+      );
+      final (:characters, router: _) = await _pump(
+        tester,
+        plan: plan,
+        character: _character(pendingLevelUpTo: 4),
+      );
+      await _next(tester);
+      await _writeHp(tester, '5');
+      await _next(tester);
+      expect(find.text('Dote u opción'), findsOneWidget);
+      await _tapKey(tester, 'levelup-tab-feat');
+
+      expect(find.byKey(const Key('levelup-group-feats')), findsOneWidget);
+      expect(find.text('Opciones de clase'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.byKey(const Key('levelup-option-asi-ejemplo-senal-faro'))).dy,
+        greaterThan(tester.getTopLeft(find.byKey(const Key('levelup-group-ejemplo-senales'))).dy),
+      );
+      await _tapKey(tester, 'levelup-option-asi-ejemplo-senal-faro');
+      await _next(tester);
+      await _tapKey(tester, 'levelup-confirm');
+      expect(characters.levelUpBodies.single['choices'], [
+        {
+          'key': 'asi',
+          'selected': {'feat': 'ejemplo-senal-faro'},
+        },
+      ]);
+    });
+
+    testWidgets('las elecciones de una opción solo se piden si se elige', (tester) async {
+      final plan = _plan(
+        choices: [
+          _choice(
+            'senal',
+            'Señal',
+            'OptionSet',
+            options: [
+              _option('ejemplo-senal-coro', 'Señal de coro'),
+              _option('ejemplo-senal-faro', 'Señal de faro'),
+            ],
+          ),
+          _choice(
+            'ejemplo-senal-coro/arma',
+            'Arma de ejemplo',
+            'Weapon',
+            options: [_option('ejemplo-guadana', 'Guadaña de ejemplo')],
+          )..['requires'] = {'choiceKey': 'senal', 'index': 'ejemplo-senal-coro'},
+        ],
+      );
+      final (:characters, router: _) = await _pump(tester, plan: plan);
+      await _next(tester);
+      await _writeHp(tester, '6');
+      await _next(tester);
+
+      // Picking another option: no nested choice.
+      await _tapKey(tester, 'levelup-option-senal-ejemplo-senal-faro');
+      await _next(tester);
+      expect(find.byKey(const Key('levelup-review')), findsOneWidget);
+
+      await _tapKey(tester, 'levelup-back');
+      await _tapKey(tester, 'levelup-option-senal-ejemplo-senal-faro');
+      await _tapKey(tester, 'levelup-option-senal-ejemplo-senal-coro');
+      await _next(tester);
+      expect(find.byKey(const Key('levelup-choice-ejemplo-senal-coro/arma')), findsOneWidget);
+      await _next(tester);
+      expect(find.byKey(const Key('levelup-review')), findsNothing);
+      await _tapKey(tester, 'levelup-option-ejemplo-senal-coro/arma-ejemplo-guadana');
+      await _next(tester);
+      await _tapKey(tester, 'levelup-confirm');
+      expect(characters.levelUpBodies.single['choices'], [
+        {
+          'key': 'senal',
+          'selected': ['ejemplo-senal-coro'],
+        },
+        {
+          'key': 'ejemplo-senal-coro/arma',
+          'selected': ['ejemplo-guadana'],
+        },
+      ]);
+    });
+
     testWidgets('Mejora: reparte 2 puntos con el tope de 20 en vivo', (tester) async {
       await _pump(tester, plan: _improvementPlan(), character: _character(pendingLevelUpTo: 4));
       await _next(tester);
@@ -670,6 +801,33 @@ void main() {
       await _next(tester);
       expect(find.byKey(const Key('levelup-review')), findsOneWidget);
       expect(find.text('+1 Fue, +1 Des'), findsOneWidget);
+    });
+
+    testWidgets('Mejora: un máximo propio de la hoja deja pasar de 20', (tester) async {
+      await _pump(
+        tester,
+        plan: _improvementPlan(),
+        character: _character(
+          pendingLevelUpTo: 4,
+          sheetExtra: {
+            'abilityMaxScores': {'str': 22},
+          },
+        ),
+      );
+      await _next(tester);
+      await _writeHp(tester, '5');
+      await _next(tester);
+
+      await _tapKey(tester, 'levelup-asi-str-plus');
+      expect(find.text('19 → 20'), findsOneWidget);
+      expect(find.byKey(const Key('levelup-asi-cap-str')), findsNothing);
+      await _tapKey(tester, 'levelup-asi-str-plus');
+      expect(find.text('19 → 21'), findsOneWidget);
+      expect(find.text('Puntos repartidos: 2 de 2'), findsOneWidget);
+
+      await _next(tester);
+      expect(find.byKey(const Key('levelup-review')), findsOneWidget);
+      expect(find.text('+2 Fue'), findsOneWidget);
     });
 
     testWidgets('Conjuros con filtro de escuela: muestra el motivo de los no elegibles', (
@@ -751,6 +909,58 @@ void main() {
           },
         ],
       });
+    });
+
+    testWidgets('una dote que quita una salvación a elegir la pide y la envía', (tester) async {
+      final (:characters, router: _) = await _pump(
+        tester,
+        plan: _plan(
+          targetLevel: 4,
+          classLevel: 4,
+          choices: [
+            _choice(
+              'asi',
+              'Ability Score Improvement',
+              'AsiOrFeat',
+              options: [
+                {
+                  ..._option('brio-ejemplo-renuncia', 'Renuncia de ejemplo'),
+                  'removeSavingThrows': {
+                    'choose': 1,
+                    'from': ['str', 'con'],
+                  },
+                },
+              ],
+            ),
+          ],
+        ),
+        character: _character(pendingLevelUpTo: 4),
+      );
+      await _next(tester);
+      await _writeHp(tester, '5');
+      await _next(tester);
+
+      await _tapKey(tester, 'levelup-tab-feat');
+      await _tapKey(tester, 'levelup-option-asi-brio-ejemplo-renuncia');
+      expect(find.byKey(const Key('levelup-removed-saves-title')), findsOneWidget);
+      expect(find.byKey(const Key('levelup-removed-save-dex')), findsNothing);
+      await _next(tester);
+      expect(_error('Elige la salvación que pierdes con Renuncia de ejemplo'), findsOneWidget);
+
+      await _tapKey(tester, 'levelup-removed-save-con');
+      // Only one: a second tap on another one is ignored.
+      await _tapKey(tester, 'levelup-removed-save-str');
+      await _next(tester);
+      await _tapKey(tester, 'levelup-confirm');
+      expect(characters.levelUpBodies.single['choices'], [
+        {
+          'key': 'asi',
+          'selected': {
+            'feat': 'brio-ejemplo-renuncia',
+            'removedSavingThrows': ['con'],
+          },
+        },
+      ]);
     });
 
     testWidgets('envía el cuerpo esperado, celebra y vuelve a Mi sesión', (tester) async {

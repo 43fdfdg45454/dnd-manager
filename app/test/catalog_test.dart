@@ -347,6 +347,38 @@ void main() {
       expect(repository.spellCalls.last.classIndex, 'wizard');
     });
 
+    testWidgets('el filtro por etiqueta solo aparece con etiquetas y consulta con tag', (
+      tester,
+    ) async {
+      final repository = FakeCatalogRepository(
+        sourceList: const [CatalogSource(id: 'srd', name: 'SRD 5.1')],
+        spellList: const [
+          SpellSummary(index: 'light', name: 'Light', level: 0, tags: ['brio-ejemplo-luz']),
+          SpellSummary(index: 'magic-missile', name: 'Magic Missile', level: 1),
+        ],
+        classList: [_wizard],
+        referenceEntries: const [
+          ReferenceEntry(kind: 'spellTags', index: 'brio-ejemplo-luz', name: 'Luz de ejemplo'),
+        ],
+      );
+      await _pumpCompendium(tester, repository);
+      expect(find.text('Magic Missile'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('filter-spell-tag')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Luz de ejemplo').last);
+      await tester.pumpAndSettle();
+
+      expect(repository.spellTagCalls.last, 'brio-ejemplo-luz');
+      expect(find.text('Light'), findsOneWidget);
+      expect(find.text('Magic Missile'), findsNothing);
+    });
+
+    testWidgets('sin etiquetas en el catálogo no hay filtro por etiqueta', (tester) async {
+      await _pumpCompendium(tester, _repository());
+      expect(find.byKey(const Key('filter-spell-tag')), findsNothing);
+    });
+
     testWidgets('la búsqueda espera 300 ms antes de consultar', (tester) async {
       final repository = _repository();
       await _pumpCompendium(tester, repository);
@@ -401,6 +433,33 @@ void main() {
       expect(repository.itemCalls.last.category, 'Consumable');
       expect(find.text('Potion of Healing'), findsOneWidget);
       expect(find.text('Longsword'), findsNothing);
+    });
+
+    testWidgets('la pestaña de objetos filtra por grupo de arma', (tester) async {
+      final repository = _repository();
+      repository.itemGroupOf['i1'] = 'martial';
+      await _pumpCompendium(tester, repository);
+
+      await tester.tap(find.byKey(const Key('tab-items')));
+      await tester.pumpAndSettle();
+      expect(repository.itemGroupCalls.last, isNull);
+
+      await tester.tap(find.byKey(const Key('filter-item-group')));
+      await tester.pumpAndSettle();
+      expect(find.text('Armas de fuego').last, findsOneWidget);
+      await tester.tap(find.text('Marciales').last);
+      await tester.pumpAndSettle();
+
+      expect(repository.itemGroupCalls.last, 'martial');
+      expect(find.text('Longsword'), findsOneWidget);
+      expect(find.text('Potion of Healing'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('filter-item-group')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bombas').last);
+      await tester.pumpAndSettle();
+      expect(repository.itemGroupCalls.last, 'bomb');
+      expect(find.text('No se encontraron objetos.'), findsOneWidget);
     });
 
     testWidgets('clases, razas y condiciones se listan y las condiciones abren una hoja', (

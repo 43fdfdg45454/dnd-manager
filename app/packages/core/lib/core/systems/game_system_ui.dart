@@ -347,6 +347,11 @@ abstract class GameSystemUi {
   /// The party actions and roster of the DM table.
   Widget partyPanel(BuildContext context, String campaignId);
 
+  /// The rules of the system an Owner or a DM sets for [campaignId], shown
+  /// under its content packs in "Contenido y reglas" (D&D 5e: starter
+  /// feats), or null when the system has none.
+  Widget? campaignRulesSection(String campaignId);
+
   /// The characters at the DM table of [campaignId] (D&D 5e: the party).
   ProviderListenable<List<TableCharacter>> tableCharacters(String campaignId);
 

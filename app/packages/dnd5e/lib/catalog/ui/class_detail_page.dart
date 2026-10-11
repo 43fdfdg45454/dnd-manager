@@ -28,6 +28,12 @@ class ClassDetailPage extends ConsumerWidget {
           children: [
             Align(alignment: Alignment.centerLeft, child: SourceChip(c.source)),
             if (c.description.isNotEmpty) ...[Paragraphs(c.description), const SizedBox(height: 8)],
+            if (c.auxiliary) ...[
+              FactRow('Tipo', 'Nivel auxiliar (se toma una sola vez, después del nivel 1)'),
+              FactRow('Requisitos', c.prerequisitesText),
+              if (c.countsAsCasterLevel)
+                const FactRow('Lanzamiento', 'Cuenta como un nivel más de tu clase lanzadora'),
+            ],
             FactRow('Dado de golpe', c.hitDie == null ? null : 'd${c.hitDie}'),
             FactRow('Salvaciones', c.savingThrows.map(abilityLabel).join(', ')),
             FactRow(
@@ -94,6 +100,22 @@ class _SpellcastingFacts extends StatelessWidget {
         FactRow('Progresión', spellProgressionLabel(spellcasting.progression)),
         FactRow('Conjuros', spellPreparationLabel(spellcasting.preparation)),
         FactRow('Rituales', spellcasting.ritual ? 'Sí' : 'No'),
+        if (spellcasting.maxSpellLevel.isNotEmpty)
+          FactRow(
+            'Nivel máximo de conjuro',
+            [
+              for (final e in spellcasting.maxSpellLevel.entries)
+                'nivel ${e.value} desde el nivel ${e.key}',
+            ].join(', '),
+          ),
+        if (spellcasting.hitPointCost.isNotEmpty)
+          FactRow(
+            'Coste en PG',
+            [
+              for (var i = 0; i < spellcasting.hitPointCost.length; i++)
+                '${i + 1}.º: ${spellcasting.hitPointCost[i]}',
+            ].join(', '),
+          ),
         FactRow('Foco', spellcasting.focus == null ? null : titleFromIndex(spellcasting.focus!)),
       ],
     );

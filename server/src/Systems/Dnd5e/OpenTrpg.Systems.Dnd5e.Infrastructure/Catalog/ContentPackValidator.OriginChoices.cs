@@ -21,6 +21,9 @@ internal sealed partial class ContentPackValidator
     /// <summary>Damage types of the pack's own vocabulary (<c>reference.damageTypes</c>).</summary>
     private readonly HashSet<string> _packDamageTypes = new(StringComparer.Ordinal);
 
+    /// <summary>Conditions defined by this pack (<c>conditions[]</c>), besides the SRD ones.</summary>
+    private readonly HashSet<string> _packConditions = new(StringComparer.Ordinal);
+
     /// <summary>A damage type of the SRD, of a required pack or of this pack.</summary>
     private bool KnownDamageType(string type) =>
         DamageTypeIndexes.Contains(type, StringComparer.Ordinal)
@@ -190,7 +193,13 @@ internal sealed partial class ContentPackValidator
         FeatChoice? feats = null;
         if (choices.Feats is { } featChoice)
         {
-            feats = new FeatChoice(RequiredInt($"{path}.feats.choose", featChoice.Choose, 1, 1) ?? 1);
+            var featSet = Reference($"{path}.feats.setId", featChoice.SetId);
+            if (featSet is not null && featSet != OptionSets.Feats)
+            {
+                _setReferences.Add(($"{path}.feats.setId", featSet));
+            }
+
+            feats = new FeatChoice(RequiredInt($"{path}.feats.choose", featChoice.Choose, 1, 1) ?? 1, featSet == OptionSets.Feats ? null : featSet);
         }
 
         var traitOptions = new List<TraitOptionChoice>();

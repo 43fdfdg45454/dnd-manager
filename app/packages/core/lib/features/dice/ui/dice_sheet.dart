@@ -18,11 +18,15 @@ const _quickDice = [4, 6, 8, 10, 12, 20, 100];
 /// [onResult] is called as soon as the dice are thrown, before the sheet closes,
 /// so callers can react to a critical right away. The future completes when the
 /// sheet is dismissed.
+///
+/// [criticalRange] is the lowest natural d20 of an attack that is a critical
+/// (20 by default; 19 when a feature widens it to 19-20).
 Future<DiceResult?> rollAndShow(
   BuildContext context,
   String expression, {
   String? label,
   RollKind kind = RollKind.check,
+  int criticalRange = 20,
   void Function(DiceResult result)? onResult,
 }) async {
   final container = ProviderScope.containerOf(context);
@@ -45,7 +49,12 @@ Future<DiceResult?> rollAndShow(
     builder: (_) => SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: DiceResultView(result: result, label: label, kind: kind),
+        child: DiceResultView(
+          result: result,
+          label: label,
+          kind: kind,
+          criticalRange: criticalRange,
+        ),
       ),
     ),
   );
@@ -69,11 +78,20 @@ Future<void> showDiceSheet(BuildContext context) => showModalBottomSheet<void>(
 /// critical in green and a fumble in red; death saves show "¡Recuperas 1 PG!"
 /// and "Dos fallos"; checks show neither.
 class DiceResultView extends StatelessWidget {
-  const DiceResultView({super.key, required this.result, this.label, this.kind = RollKind.check});
+  const DiceResultView({
+    super.key,
+    required this.result,
+    this.label,
+    this.kind = RollKind.check,
+    this.criticalRange = 20,
+  });
 
   final DiceResult result;
   final String? label;
   final RollKind kind;
+
+  /// Lowest natural d20 of an attack that is a critical (20 by default).
+  final int criticalRange;
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +99,9 @@ class DiceResultView extends StatelessWidget {
     final scheme = theme.colorScheme;
     final tokens = context.tokens;
     final natural = result.d20Value;
-    final high = kind.hasNaturalEffects && result.isCritical;
+    final high =
+        kind.hasNaturalEffects &&
+        (kind == RollKind.attack ? result.isCriticalFrom(criticalRange) : result.isCritical);
     final low = kind.hasNaturalEffects && result.isFumble;
     final color = high
         ? tokens.mossText

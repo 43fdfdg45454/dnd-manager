@@ -83,6 +83,86 @@ public sealed class ClassDefinition
 
     public ClassSpellList? SpellList => ClassSpellList.Parse(SpellListJson);
 
+    /// <summary>
+    /// Auxiliary level (content packs): a one-level class taken instead of a class level after level 1, once, without
+    /// the ability prerequisites of multiclassing but with its own <see cref="Prerequisites"/>. Never a starting class.
+    /// </summary>
+    public bool IsAuxiliary { get; init; }
+
+    /// <summary>Structured prerequisites of an auxiliary class (<see cref="OptionPrerequisites"/> JSON), or null.</summary>
+    public string? PrerequisitesJson { get; init; }
+
+    public OptionPrerequisites Prerequisites => LevelChoiceJson.ParsePrerequisites(PrerequisitesJson);
+
+    public const int PrerequisitesTextMaxLength = 2000;
+
+    /// <summary>Literal (or narrative) prerequisites of an auxiliary class, shown as they are.</summary>
+    public string? PrerequisitesText { get; init; }
+
+    /// <summary>
+    /// An auxiliary class with spellcasting: counts as one more level of the character's caster class for its spell
+    /// slots (not for spells known or prepared).
+    /// </summary>
+    public bool CountsAsCasterLevel { get; init; }
+
+    /// <summary>
+    /// A subclass may give the class spellcasting (<see cref="SubclassDefinition.Spellcasting"/>): the class adds nothing
+    /// to the multiclass spellcaster level, has no Pact Magic and no table of its own (it does not cast, or only knows
+    /// cantrips; the importer checks that its levels have no slots).
+    /// </summary>
+    public bool MayGainSubclassSpellcasting =>
+        SpellcastingLevel == 0 && !IsPactCaster && Spellcasting?.Progression is null or ClassSpellcastingInfo.HitPoints or ClassSpellcastingInfo.RitualsOnly;
+
+    /// <summary>
+    /// Class save DCs of a pack class (8 + proficiency + ability) as a JSON array of <c>{"name", "ability"}</c>
+    /// (<see cref="ClassSaveDc"/>); null when it has none.
+    /// </summary>
+    public string? SaveDcsJson { get; init; }
+
+    public IReadOnlyList<ClassSaveDc> SaveDcs => ClassSaveDc.ParseAll(SaveDcsJson);
+
     /// <summary>Whether the class prepares its spells from its whole list (cleric, druid, paladin, wizard and pack classes with <c>"preparation": "prepared"</c>).</summary>
     public bool PreparesSpells => Index is "cleric" or "druid" or "paladin" or "wizard" || Spellcasting?.Preparation == ClassSpellcastingInfo.Prepared;
+}
+
+/// <summary>A save DC of a class other than the spell one ("CD de bombas"): 8 + proficiency bonus + <see cref="Ability"/>.</summary>
+public sealed record ClassSaveDc(string Name, string Ability)
+{
+    public const int NameMaxLength = 100;
+
+    /// <summary>Tolerant: malformed JSON or entries give an empty list.</summary>
+    public static IReadOnlyList<ClassSaveDc> ParseAll(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            var result = new List<ClassSaveDc>();
+            foreach (var entry in document.RootElement.EnumerateArray())
+            {
+                if (entry.ValueKind == System.Text.Json.JsonValueKind.Object
+                    && entry.TryGetProperty("name", out var name) && name.ValueKind == System.Text.Json.JsonValueKind.String
+                    && entry.TryGetProperty("ability", out var ability) && ability.ValueKind == System.Text.Json.JsonValueKind.String
+                    && OpenTrpg.Core.Domain.Characters.Abilities.IsValid(ability.GetString()!))
+                {
+                    result.Add(new ClassSaveDc(name.GetString()!, ability.GetString()!));
+                }
+            }
+
+            return result;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return [];
+        }
+    }
 }

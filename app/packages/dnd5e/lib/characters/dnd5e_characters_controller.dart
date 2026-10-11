@@ -69,10 +69,20 @@ class Dnd5eCharacterController extends Notifier<void> {
     return result.outcome;
   }
 
-  /// Chooses or renames the animal companion: [Saved] when applied,
-  /// [PendingApproval] when the DM has to approve a change of beast.
-  Future<SheetSaveResult> setCompanion({required String beastIndex, required String name}) async {
-    final result = await _repository.setCompanion(id, beastIndex: beastIndex, name: name);
+  /// Chooses or renames the animal companion ([companionId] for one of
+  /// several): [Saved] when applied, [PendingApproval] when the DM has to
+  /// approve a change of beast.
+  Future<SheetSaveResult> setCompanion({
+    required String beastIndex,
+    required String name,
+    String? companionId,
+  }) async {
+    final result = await _repository.setCompanion(
+      id,
+      beastIndex: beastIndex,
+      name: name,
+      companionId: companionId,
+    );
     switch (result) {
       case Saved(:final detail):
         _core.apply(detail);
@@ -82,19 +92,54 @@ class Dnd5eCharacterController extends Notifier<void> {
     return result;
   }
 
-  /// Moves the companion's hit points by [delta] or sets them to [current].
-  Future<void> trackCompanionHp({int? delta, int? current}) async =>
-      _core.apply(await _repository.trackCompanionHp(id, delta: delta, current: current));
+  /// Sets the enhancement options of the inventory entry [itemId].
+  Future<SheetSaveResult> setItemEnhancements(String itemId, List<String> options) async {
+    final result = await _repository.setItemEnhancements(id, itemId, options);
+    switch (result) {
+      case Saved(:final detail):
+        _core.apply(detail);
+      case PendingApproval():
+        await _core.reload();
+    }
+    return result;
+  }
 
-  /// DM only: removes the companion.
-  Future<void> deleteCompanion() async {
-    await _repository.deleteCompanion(id);
+  /// Adds one more companion (features that allow several).
+  Future<void> addCompanion({required String beastIndex, required String name}) async =>
+      _core.apply(await _repository.addCompanion(id, beastIndex: beastIndex, name: name));
+
+  /// Moves the companion's hit points by [delta] or sets them to [current].
+  Future<void> trackCompanionHp({int? delta, int? current, String? companionId}) async =>
+      _core.apply(
+        await _repository.trackCompanionHp(
+          id,
+          delta: delta,
+          current: current,
+          companionId: companionId,
+        ),
+      );
+
+  /// Removes the companion (DM only), or dismisses [companionId].
+  Future<void> deleteCompanion({String? companionId}) async {
+    await _repository.deleteCompanion(id, companionId: companionId);
     await _core.reload();
   }
 
   /// Writes the dice rolled after a rest for the resource [resourceId].
   Future<void> saveResourceRolls(String resourceId, List<int> values) async =>
       _core.apply(await _repository.saveResourceRolls(id, resourceId, values));
+
+  /// Brings back the resources that recharge on initiative.
+  Future<void> rechargeOnInitiative() async =>
+      _core.apply(await _repository.rechargeOnInitiative(id));
+
+  /// Writes the value rolled on the recharge die of [resourceId]; true when
+  /// the resource came back.
+  Future<bool> rechargeRoll(String resourceId, int value) async {
+    final result = await _repository.rechargeRoll(id, resourceId, value);
+    _core.apply(result.character);
+    return result.recharged;
+  }
 
   /// Replaces the invalid picks (`replace.<index>` answers).
   Future<void> replaceInvalidChoices(List<LevelUpChoiceAnswer> answers) async =>
@@ -154,6 +199,18 @@ class Dnd5eCharacterController extends Notifier<void> {
     final result = await _repository.divineSmite(id, slotLevel);
     _core.apply(result.character);
     return result.damageDice;
+  }
+
+  /// Casts a spell of [spellLevel] of [classIndex] paying hit points (a class
+  /// without slots). Returns the hit points lost.
+  Future<int> hitPointCast(String classIndex, int spellLevel) async {
+    final result = await _repository.hitPointCast(
+      id,
+      classIndex: classIndex,
+      spellLevel: spellLevel,
+    );
+    _core.apply(result.character);
+    return result.hitPointsLost;
   }
 }
 

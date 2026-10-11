@@ -38,6 +38,7 @@ internal sealed class Dnd5eCharacterConfiguration : IEntityTypeConfiguration<Dnd
         builder.Property(x => x.ConditionsJson).IsRequired();
         builder.Property(x => x.ConcentratingOnSpellIndex).HasMaxLength(Dnd5eCharacter.IndexMaxLength);
         builder.Property(x => x.HitDiceUsedJson).IsRequired();
+        builder.Property(x => x.ItemEnhancementsJson).IsRequired().HasDefaultValue("{}");
         builder.Property(x => x.BackgroundDetail).HasMaxLength(Dnd5eCharacter.BackgroundDetailMaxLength).IsRequired();
 
         // Shortcuts to the core character.
@@ -180,7 +181,7 @@ internal sealed class CharacterOverrideConfiguration : IEntityTypeConfiguration<
         builder.ToTable("CharacterOverrides");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.Property(x => x.Field).HasMaxLength(Dnd5eCharacter.IndexMaxLength + 16).IsRequired();
+        builder.Property(x => x.Field).HasMaxLength(Dnd5eCharacter.IndexMaxLength + 32).IsRequired();
         builder.Property(x => x.Note).HasMaxLength(CharacterOverride.NoteMaxLength);
         builder.HasIndex(x => new { x.CharacterId, x.Field }).IsUnique();
     }
@@ -198,8 +199,8 @@ internal sealed class CharacterCompanionConfiguration : IEntityTypeConfiguration
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.UpdatedAt).IsRequired();
 
-        // At most one companion per character.
+        // Several companions per character since phase 35B3 (the feature's maxCount).
         builder.HasOne<Dnd5eCharacter>().WithMany().HasForeignKey(x => x.CharacterId).OnDelete(DeleteBehavior.Cascade);
-        builder.HasIndex(x => x.CharacterId).IsUnique();
+        builder.HasIndex(x => x.CharacterId);
     }
 }

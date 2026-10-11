@@ -186,7 +186,8 @@
         "spellcastingLevel": 0,
         "isPactCaster": false,
         "subclassFlavor": "Primal Path",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "bard",
@@ -201,7 +202,8 @@
         "spellcastingLevel": 1,
         "isPactCaster": false,
         "subclassFlavor": "Bard College",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "cleric",
@@ -216,7 +218,8 @@
         "spellcastingLevel": 1,
         "isPactCaster": false,
         "subclassFlavor": "Divine Domain",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "druid",
@@ -231,7 +234,8 @@
         "spellcastingLevel": 1,
         "isPactCaster": false,
         "subclassFlavor": "Druid Circle",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "fighter",
@@ -246,7 +250,8 @@
         "spellcastingLevel": 0,
         "isPactCaster": false,
         "subclassFlavor": "Martial Archetype",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "monk",
@@ -261,7 +266,8 @@
         "spellcastingLevel": 0,
         "isPactCaster": false,
         "subclassFlavor": "Monastic Tradition",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "paladin",
@@ -276,7 +282,8 @@
         "spellcastingLevel": 2,
         "isPactCaster": false,
         "subclassFlavor": "Sacred Oath",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "ranger",
@@ -291,7 +298,8 @@
         "spellcastingLevel": 2,
         "isPactCaster": false,
         "subclassFlavor": "Ranger Archetype",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "rogue",
@@ -306,7 +314,8 @@
         "spellcastingLevel": 0,
         "isPactCaster": false,
         "subclassFlavor": "Roguish Archetype",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "sorcerer",
@@ -321,7 +330,8 @@
         "spellcastingLevel": 1,
         "isPactCaster": false,
         "subclassFlavor": "Sorcerous Origin",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "warlock",
@@ -336,7 +346,8 @@
         "spellcastingLevel": 1,
         "isPactCaster": true,
         "subclassFlavor": "Otherworldly Patron",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       },
       {
         "index": "wizard",
@@ -351,7 +362,8 @@
         "spellcastingLevel": 1,
         "isPactCaster": false,
         "subclassFlavor": "Arcane Tradition",
-        "source": "srd"
+        "source": "srd",
+        "auxiliary": false
       }
     ]
   },
@@ -1282,13 +1294,18 @@
               ]
             }
           ],
-          "source": "srd"
+          "source": "srd",
+          "prerequisitesText": null
         }
       ],
       "source": "srd",
       "description": [],
       "subclassLevel": 0,
+      "hasLevelOneChoices": false,
       "spellcasting": null,
+      "auxiliary": false,
+      "prerequisitesText": null,
+      "countsAsCasterLevel": false,
       "multiclassing": null,
       "resources": []
     }
@@ -1627,7 +1644,8 @@
           ],
           "source": "srd",
           "category": "Damage",
-          "expandedBy": []
+          "expandedBy": [],
+          "tags": []
         },
         {
           "index": "faerie-fire",
@@ -1647,7 +1665,8 @@
           ],
           "source": "srd",
           "category": "Control",
-          "expandedBy": []
+          "expandedBy": [],
+          "tags": []
         },
         {
           "index": "fireball",
@@ -1670,7 +1689,8 @@
           ],
           "source": "srd",
           "category": "Damage",
-          "expandedBy": []
+          "expandedBy": [],
+          "tags": []
         },
         {
           "index": "fire-shield",
@@ -1692,7 +1712,8 @@
           ],
           "source": "srd",
           "category": "Defense",
-          "expandedBy": []
+          "expandedBy": [],
+          "tags": []
         },
         {
           "index": "wall-of-fire",
@@ -1716,7 +1737,8 @@
           ],
           "source": "srd",
           "category": "Damage",
-          "expandedBy": []
+          "expandedBy": [],
+          "tags": []
         },
         {
           "index": "delayed-blast-fireball",
@@ -1739,7 +1761,8 @@
           ],
           "source": "srd",
           "category": "Damage",
-          "expandedBy": []
+          "expandedBy": [],
+          "tags": []
         },
         {
           "index": "fire-storm",
@@ -1762,7 +1785,8 @@
           ],
           "source": "srd",
           "category": "Damage",
-          "expandedBy": []
+          "expandedBy": [],
+          "tags": []
         }
       ],
       "total": 7,
@@ -1815,7 +1839,9 @@
       "dcAbility": null,
       "source": "srd",
       "category": "Damage",
-      "expandedBy": []
+      "expandedBy": [],
+      "ritualForClasses": [],
+      "tags": []
     }
   },
   {
@@ -3189,6 +3215,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 10,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 0
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 10,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 0
+              }
+            ]
+          },
           "initiative": {
             "total": 0,
             "parts": [
@@ -3230,7 +3286,29 @@
           }
         },
         "resistances": [],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 10,
+        "passiveInsight": 10,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "",
+        "sizeSource": null,
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -3275,7 +3353,11 @@
                   "value": 0
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [],
@@ -3295,6 +3377,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -3466,7 +3552,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -3727,8 +3814,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -4070,6 +4167,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -4163,7 +4290,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -4208,7 +4357,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -4234,7 +4387,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -4279,6 +4433,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -4316,8 +4474,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "brewers-supplies",
@@ -4333,8 +4494,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "masons-tools",
@@ -4350,13 +4514,22 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             }
           ],
           "selected": [],
           "feat": null,
-          "ability": null
+          "ability": null,
+          "removedSavingThrows": [],
+          "classIndex": null,
+          "level": null,
+          "setId": null,
+          "requires": null,
+          "warning": null
         },
         {
           "key": "background.languages",
@@ -4383,8 +4556,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Dwarvish",
@@ -4401,8 +4577,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Elvish",
@@ -4419,8 +4598,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Giant",
@@ -4436,8 +4618,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Gnomish",
@@ -4454,8 +4639,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Goblin",
@@ -4471,8 +4659,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Halfling",
@@ -4489,8 +4680,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Orc",
@@ -4507,8 +4701,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Abyssal",
@@ -4524,8 +4721,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Celestial",
@@ -4541,8 +4741,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Draconic",
@@ -4559,8 +4762,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Deep Speech",
@@ -4576,8 +4782,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Infernal",
@@ -4593,8 +4802,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Primordial",
@@ -4610,8 +4822,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Sylvan",
@@ -4627,8 +4842,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Undercommon",
@@ -4644,13 +4862,22 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             }
           ],
           "selected": [],
           "feat": null,
-          "ability": null
+          "ability": null,
+          "removedSavingThrows": [],
+          "classIndex": null,
+          "level": null,
+          "setId": null,
+          "requires": null,
+          "warning": null
         }
       ]
     }
@@ -4688,8 +4915,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "brewers-supplies",
@@ -4705,8 +4935,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "masons-tools",
@@ -4722,8 +4955,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             }
           ],
           "selected": [
@@ -4733,7 +4969,13 @@
             }
           ],
           "feat": null,
-          "ability": null
+          "ability": null,
+          "removedSavingThrows": [],
+          "classIndex": null,
+          "level": null,
+          "setId": null,
+          "requires": null,
+          "warning": null
         },
         {
           "key": "background.languages",
@@ -4760,8 +5002,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Dwarvish",
@@ -4778,8 +5023,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Elvish",
@@ -4796,8 +5044,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Giant",
@@ -4813,8 +5064,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Gnomish",
@@ -4831,8 +5085,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Goblin",
@@ -4848,8 +5105,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Halfling",
@@ -4866,8 +5126,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Orc",
@@ -4884,8 +5147,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Abyssal",
@@ -4901,8 +5167,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Celestial",
@@ -4918,8 +5187,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Draconic",
@@ -4936,8 +5208,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Deep Speech",
@@ -4953,8 +5228,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Infernal",
@@ -4970,8 +5248,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Primordial",
@@ -4987,8 +5268,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Sylvan",
@@ -5004,8 +5288,11 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "Undercommon",
@@ -5021,13 +5308,22 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             }
           ],
           "selected": [],
           "feat": null,
-          "ability": null
+          "ability": null,
+          "removedSavingThrows": [],
+          "classIndex": null,
+          "level": null,
+          "setId": null,
+          "requires": null,
+          "warning": null
         }
       ]
     }
@@ -5276,7 +5572,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -5537,8 +5834,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -5880,6 +6187,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -5973,7 +6310,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -6018,7 +6377,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -6044,7 +6407,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -6109,6 +6473,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -6433,7 +6801,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -6694,8 +7063,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -7037,6 +7416,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -7130,7 +7539,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -7175,7 +7606,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -7201,7 +7636,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -7266,6 +7702,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -7626,7 +8066,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -7887,8 +8328,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -8232,6 +8683,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -8330,7 +8811,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -8375,7 +8878,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -8401,7 +8908,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -8466,6 +8974,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -8655,7 +9167,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -8916,8 +9429,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -9261,6 +9784,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -9359,7 +9912,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -9404,7 +9979,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -9430,7 +10009,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -9495,6 +10075,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -9684,7 +10268,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -9945,8 +10530,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -10290,6 +10885,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -10388,7 +11013,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -10433,7 +11080,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -10459,7 +11110,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -10524,6 +11176,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -10714,7 +11370,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "spellSlots": [
@@ -10975,8 +11632,18 @@
               "saveDc": 12,
               "attackBonus": 4,
               "preparedMax": 3,
+              "name": null,
+              "abilityOverridden": false,
               "spellsKnownMax": null,
-              "cantripsKnownMax": null
+              "cantripsKnownMax": null,
+              "maxSpellLevel": 1,
+              "progression": null,
+              "hitPointCost": [],
+              "usesResource": null,
+              "cantripSaveDc": null,
+              "cantripAttackBonus": null,
+              "criticalRange": 20,
+              "criticalRangeSource": null
             }
           ],
           "pactSlotLevel": null,
@@ -11320,6 +11987,36 @@
                 }
               ]
             },
+            "passiveInvestigation": {
+              "total": 12,
+              "parts": [
+                {
+                  "source": "base",
+                  "label": "Base",
+                  "value": 10
+                },
+                {
+                  "source": "ability",
+                  "label": "Inteligencia",
+                  "value": 2
+                }
+              ]
+            },
+            "passiveInsight": {
+              "total": 11,
+              "parts": [
+                {
+                  "source": "base",
+                  "label": "Base",
+                  "value": 10
+                },
+                {
+                  "source": "ability",
+                  "label": "Sabiduría",
+                  "value": 1
+                }
+              ]
+            },
             "initiative": {
               "total": 2,
               "parts": [
@@ -11418,7 +12115,29 @@
               "label": "Dwarf"
             }
           ],
-          "breathWeapon": null
+          "breathWeapon": null,
+          "immunities": [],
+          "conditionImmunities": [],
+          "lostSavingThrows": [],
+          "lostSkills": [],
+          "classSaveDcs": [],
+          "passiveInvestigation": 12,
+          "passiveInsight": 11,
+          "abilityMaxScores": {
+            "str": 20,
+            "dex": 20,
+            "con": 20,
+            "int": 20,
+            "wis": 20,
+            "cha": 20
+          },
+          "size": "medium",
+          "sizeSource": "Dwarf",
+          "speeds": {},
+          "deathSaveFailuresToDie": 3,
+          "deathSaveFailuresSource": null,
+          "recoversAllHitDice": false,
+          "hitDiceRecoverySource": null
         },
         "inventory": {
           "items": [],
@@ -11463,7 +12182,11 @@
                     "value": -1
                   }
                 ]
-              }
+              },
+              "criticalRange": 20,
+              "criticalRangeSource": null,
+              "warnings": [],
+              "natural": false
             }
           ],
           "spellSlots": [
@@ -11489,7 +12212,8 @@
               "dice": null,
               "source": null,
               "breakdown": null,
-              "options": []
+              "options": [],
+              "rechargeRoll": null
             }
           ],
           "quickConsumables": [],
@@ -11554,6 +12278,10 @@
         "feats": [],
         "optionCosts": [],
         "companion": null,
+        "companions": [],
+        "itemEnhancements": [],
+        "itemEnhancementFeature": null,
+        "grafts": [],
         "companionFeature": null,
         "companionPending": false
       },
@@ -11752,7 +12480,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -12013,8 +12742,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -12358,6 +13097,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -12456,7 +13225,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -12501,7 +13292,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -12527,7 +13322,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -12592,6 +13388,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -12781,7 +13581,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -13042,8 +13843,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -13387,6 +14198,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -13485,7 +14326,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -13530,7 +14393,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -13556,7 +14423,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -13621,6 +14489,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -13810,7 +14682,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -14071,8 +14944,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -14416,6 +15299,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -14514,7 +15427,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -14559,7 +15494,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -14585,7 +15524,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -14650,6 +15590,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -14839,7 +15783,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -15100,8 +16045,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -15445,6 +16400,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -15543,7 +16528,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -15588,7 +16595,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -15614,7 +16625,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -15679,6 +16691,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -15868,7 +16884,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -16129,8 +17146,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -16474,6 +17501,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -16572,7 +17629,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -16617,7 +17696,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -16643,7 +17726,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -16708,6 +17792,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -16752,7 +17840,8 @@
       "dice": null,
       "source": null,
       "breakdown": null,
-      "options": []
+      "options": [],
+      "rechargeRoll": null
     }
   },
   {
@@ -16940,7 +18029,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         },
         {
           "id": "<id53>",
@@ -16956,7 +18046,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -17217,8 +18308,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -17562,6 +18663,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -17660,7 +18791,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -17705,7 +18858,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -17731,7 +18888,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           },
           {
             "id": "<id53>",
@@ -17747,7 +18905,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -17812,6 +18971,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -18001,7 +19164,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         },
         {
           "id": "<id53>",
@@ -18017,7 +19181,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -18278,8 +19443,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -18623,6 +19798,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -18721,7 +19926,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -18766,7 +19993,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -18792,7 +20023,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           },
           {
             "id": "<id53>",
@@ -18808,7 +20040,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -18873,6 +20106,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -19092,7 +20329,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -19353,8 +20591,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -19698,6 +20946,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -19796,7 +21074,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -19841,7 +21141,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -19867,7 +21171,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -19932,6 +21237,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -20121,7 +21430,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -20382,8 +21692,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -20727,6 +22047,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -20825,7 +22175,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -20870,7 +22242,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -20896,7 +22272,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -20961,6 +22338,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -21274,7 +22655,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -21535,8 +22917,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -21880,6 +23272,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -21978,7 +23400,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -22023,7 +23467,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -22049,7 +23497,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -22114,6 +23563,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -22303,7 +23756,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -22564,8 +24018,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -22909,6 +24373,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -23007,7 +24501,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -23052,7 +24568,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -23078,7 +24598,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -23143,6 +24664,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -23332,7 +24857,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -23593,8 +25119,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 3,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -23938,6 +25474,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -24036,7 +25602,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -24081,7 +25669,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -24107,7 +25699,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -24172,6 +25765,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -24609,7 +26206,9 @@
           "hitDie": 6,
           "isNew": false,
           "currentLevel": 1,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "barbarian",
@@ -24619,7 +26218,9 @@
           "hitDie": 12,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "bard",
@@ -24629,7 +26230,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "cleric",
@@ -24639,7 +26242,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "druid",
@@ -24649,7 +26254,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "fighter",
@@ -24659,7 +26266,9 @@
           "hitDie": 10,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "monk",
@@ -24669,7 +26278,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "paladin",
@@ -24679,7 +26290,9 @@
           "hitDie": 10,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "ranger",
@@ -24689,7 +26302,9 @@
           "hitDie": 10,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "rogue",
@@ -24699,7 +26314,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "sorcerer",
@@ -24709,7 +26326,9 @@
           "hitDie": 6,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "warlock",
@@ -24719,7 +26338,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         }
       ],
       "automaticFeatures": [
@@ -24789,12 +26410,17 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             }
           ],
           "known": [],
-          "warning": null
+          "warning": null,
+          "alsoFrom": [],
+          "requires": null
         },
         {
           "key": "spellbook",
@@ -24823,8 +26449,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "burning-hands",
@@ -24840,8 +26469,11 @@
               "abilityIncrease": null,
               "spellCategory": "Damage",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "charm-person",
@@ -24857,8 +26489,11 @@
               "abilityIncrease": null,
               "spellCategory": "Control",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "color-spray",
@@ -24874,8 +26509,11 @@
               "abilityIncrease": null,
               "spellCategory": "Control",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "comprehend-languages",
@@ -24891,8 +26529,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "detect-magic",
@@ -24908,8 +26549,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "disguise-self",
@@ -24925,8 +26569,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "expeditious-retreat",
@@ -24942,8 +26589,11 @@
               "abilityIncrease": null,
               "spellCategory": "Buff",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "false-life",
@@ -24959,8 +26609,11 @@
               "abilityIncrease": null,
               "spellCategory": "Defense",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "feather-fall",
@@ -24976,8 +26629,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "find-familiar",
@@ -24993,8 +26649,11 @@
               "abilityIncrease": null,
               "spellCategory": "Summoning",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "floating-disk",
@@ -25010,8 +26669,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "fog-cloud",
@@ -25027,8 +26689,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "grease",
@@ -25044,8 +26709,11 @@
               "abilityIncrease": null,
               "spellCategory": "Control",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "hideous-laughter",
@@ -25061,8 +26729,11 @@
               "abilityIncrease": null,
               "spellCategory": "Control",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "identify",
@@ -25078,8 +26749,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "illusory-script",
@@ -25095,8 +26769,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "jump",
@@ -25112,8 +26789,11 @@
               "abilityIncrease": null,
               "spellCategory": "Buff",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "longstrider",
@@ -25129,8 +26809,11 @@
               "abilityIncrease": null,
               "spellCategory": "Buff",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "protection-from-evil-and-good",
@@ -25146,8 +26829,11 @@
               "abilityIncrease": null,
               "spellCategory": "Defense",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "silent-image",
@@ -25163,8 +26849,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "thunderwave",
@@ -25180,8 +26869,11 @@
               "abilityIncrease": null,
               "spellCategory": "Damage",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "unseen-servant",
@@ -25197,12 +26889,17 @@
               "abilityIncrease": null,
               "spellCategory": "Summoning",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             }
           ],
           "known": [],
-          "warning": null
+          "warning": null,
+          "alsoFrom": [],
+          "requires": null
         }
       ],
       "spellcasting": {
@@ -25274,7 +26971,9 @@
           "hitDie": 6,
           "isNew": false,
           "currentLevel": 1,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "barbarian",
@@ -25284,7 +26983,9 @@
           "hitDie": 12,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "bard",
@@ -25294,7 +26995,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "cleric",
@@ -25304,7 +27007,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "druid",
@@ -25314,7 +27019,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "fighter",
@@ -25324,7 +27031,9 @@
           "hitDie": 10,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "monk",
@@ -25334,7 +27043,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "paladin",
@@ -25344,7 +27055,9 @@
           "hitDie": 10,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "ranger",
@@ -25354,7 +27067,9 @@
           "hitDie": 10,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "rogue",
@@ -25364,7 +27079,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "sorcerer",
@@ -25374,7 +27091,9 @@
           "hitDie": 6,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         },
         {
           "classIndex": "warlock",
@@ -25384,7 +27103,9 @@
           "hitDie": 8,
           "isNew": true,
           "currentLevel": 0,
-          "subclassIndex": null
+          "subclassIndex": null,
+          "auxiliary": false,
+          "prerequisitesText": null
         }
       ],
       "automaticFeatures": [
@@ -25454,12 +27175,17 @@
               "abilityIncrease": null,
               "spellCategory": null,
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             }
           ],
           "known": [],
-          "warning": null
+          "warning": null,
+          "alsoFrom": [],
+          "requires": null
         },
         {
           "key": "spellbook",
@@ -25488,8 +27214,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "burning-hands",
@@ -25505,8 +27234,11 @@
               "abilityIncrease": null,
               "spellCategory": "Damage",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "charm-person",
@@ -25522,8 +27254,11 @@
               "abilityIncrease": null,
               "spellCategory": "Control",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "color-spray",
@@ -25539,8 +27274,11 @@
               "abilityIncrease": null,
               "spellCategory": "Control",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "comprehend-languages",
@@ -25556,8 +27294,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "detect-magic",
@@ -25573,8 +27314,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "disguise-self",
@@ -25590,8 +27334,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "expeditious-retreat",
@@ -25607,8 +27354,11 @@
               "abilityIncrease": null,
               "spellCategory": "Buff",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "false-life",
@@ -25624,8 +27374,11 @@
               "abilityIncrease": null,
               "spellCategory": "Defense",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "feather-fall",
@@ -25641,8 +27394,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "find-familiar",
@@ -25658,8 +27414,11 @@
               "abilityIncrease": null,
               "spellCategory": "Summoning",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "floating-disk",
@@ -25675,8 +27434,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "fog-cloud",
@@ -25692,8 +27454,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "grease",
@@ -25709,8 +27474,11 @@
               "abilityIncrease": null,
               "spellCategory": "Control",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "hideous-laughter",
@@ -25726,8 +27494,11 @@
               "abilityIncrease": null,
               "spellCategory": "Control",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "identify",
@@ -25743,8 +27514,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "illusory-script",
@@ -25760,8 +27534,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "jump",
@@ -25777,8 +27554,11 @@
               "abilityIncrease": null,
               "spellCategory": "Buff",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "longstrider",
@@ -25794,8 +27574,11 @@
               "abilityIncrease": null,
               "spellCategory": "Buff",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "protection-from-evil-and-good",
@@ -25811,8 +27594,11 @@
               "abilityIncrease": null,
               "spellCategory": "Defense",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "silent-image",
@@ -25828,8 +27614,11 @@
               "abilityIncrease": null,
               "spellCategory": "Utility",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "thunderwave",
@@ -25845,8 +27634,11 @@
               "abilityIncrease": null,
               "spellCategory": "Damage",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             },
             {
               "index": "unseen-servant",
@@ -25862,12 +27654,17 @@
               "abilityIncrease": null,
               "spellCategory": "Summoning",
               "damageType": null,
+              "setId": null,
               "cost": null,
-              "requires": null
+              "requires": null,
+              "removeSavingThrows": null,
+              "skillChoicesDelta": 0
             }
           ],
           "known": [],
-          "warning": null
+          "warning": null,
+          "alsoFrom": [],
+          "requires": null
         }
       ],
       "spellcasting": {
@@ -26125,7 +27922,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -26386,8 +28184,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -26731,6 +28539,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -26829,7 +28667,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -26874,7 +28734,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -26900,7 +28764,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -27009,6 +28874,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -27220,7 +29089,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -27481,8 +29351,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -27826,6 +29706,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -27924,7 +29834,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -27969,7 +29901,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -27995,7 +29931,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [],
@@ -28104,6 +30041,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -29083,7 +31024,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -29344,8 +31286,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -29689,6 +31641,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -29787,7 +31769,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [
@@ -29908,7 +31912,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           },
           {
             "itemId": null,
@@ -29944,7 +31952,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -29970,7 +31982,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [
@@ -30086,6 +32099,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -30525,7 +32542,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -30786,8 +32804,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -31131,6 +33159,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -31229,7 +33287,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [
@@ -31350,7 +33430,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           },
           {
             "itemId": null,
@@ -31386,7 +33470,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -31412,7 +33500,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [
@@ -31528,6 +33617,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -33058,7 +35151,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -33319,8 +35413,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -33664,6 +35768,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -33762,7 +35896,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [
@@ -33928,7 +36084,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           },
           {
             "itemId": "<id120>",
@@ -33966,7 +36126,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           },
           {
             "itemId": null,
@@ -34002,7 +36166,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -34028,7 +36196,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [
@@ -34144,6 +36313,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -35046,7 +37219,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -35307,8 +37481,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -35652,6 +37836,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -35750,7 +37964,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [
@@ -35916,7 +38152,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           },
           {
             "itemId": "<id120>",
@@ -35954,7 +38194,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           },
           {
             "itemId": null,
@@ -35990,7 +38234,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -36016,7 +38264,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [
@@ -36132,6 +38381,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -36366,7 +38619,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -36627,8 +38881,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -36972,6 +39236,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -37070,7 +39364,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [
@@ -37236,7 +39552,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           },
           {
             "itemId": "<id120>",
@@ -37274,7 +39594,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           },
           {
             "itemId": null,
@@ -37310,7 +39634,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -37336,7 +39664,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [
@@ -37452,6 +39781,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -37686,7 +40019,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -37947,8 +40281,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -38292,6 +40636,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -38390,7 +40764,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [
@@ -38556,7 +40952,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           },
           {
             "itemId": "<id120>",
@@ -38594,7 +40994,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           },
           {
             "itemId": null,
@@ -38630,7 +41034,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -38656,7 +41064,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [
@@ -38772,6 +41181,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -39034,7 +41447,8 @@
           "dice": null,
           "source": null,
           "breakdown": null,
-          "options": []
+          "options": [],
+          "rechargeRoll": null
         }
       ],
       "spellSlots": [
@@ -39295,8 +41709,18 @@
             "saveDc": 12,
             "attackBonus": 4,
             "preparedMax": 4,
+            "name": null,
+            "abilityOverridden": false,
             "spellsKnownMax": null,
-            "cantripsKnownMax": null
+            "cantripsKnownMax": null,
+            "maxSpellLevel": 1,
+            "progression": null,
+            "hitPointCost": [],
+            "usesResource": null,
+            "cantripSaveDc": null,
+            "cantripAttackBonus": null,
+            "criticalRange": 20,
+            "criticalRangeSource": null
           }
         ],
         "pactSlotLevel": null,
@@ -39640,6 +42064,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 12,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 2
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 11,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 1
+              }
+            ]
+          },
           "initiative": {
             "total": 2,
             "parts": [
@@ -39738,7 +42192,29 @@
             "label": "Dwarf"
           }
         ],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 12,
+        "passiveInsight": 11,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "medium",
+        "sizeSource": "Dwarf",
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [
@@ -39904,7 +42380,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           },
           {
             "itemId": "<id120>",
@@ -39942,7 +42422,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           },
           {
             "itemId": null,
@@ -39978,7 +42462,11 @@
                   "value": -1
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [
@@ -40004,7 +42492,8 @@
             "dice": null,
             "source": null,
             "breakdown": null,
-            "options": []
+            "options": [],
+            "rechargeRoll": null
           }
         ],
         "quickConsumables": [
@@ -40120,6 +42609,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -40750,6 +43243,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 10,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 0
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 10,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 0
+              }
+            ]
+          },
           "initiative": {
             "total": 0,
             "parts": [
@@ -40791,7 +43314,29 @@
           }
         },
         "resistances": [],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 10,
+        "passiveInsight": 10,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "",
+        "sizeSource": null,
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -40836,7 +43381,11 @@
                   "value": 0
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [],
@@ -40856,6 +43405,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -41486,6 +44039,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 10,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 0
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 10,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 0
+              }
+            ]
+          },
           "initiative": {
             "total": 0,
             "parts": [
@@ -41527,7 +44110,29 @@
           }
         },
         "resistances": [],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 10,
+        "passiveInsight": 10,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "",
+        "sizeSource": null,
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -41572,7 +44177,11 @@
                   "value": 0
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [],
@@ -41592,6 +44201,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
@@ -42222,6 +44835,36 @@
               }
             ]
           },
+          "passiveInvestigation": {
+            "total": 10,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Inteligencia",
+                "value": 0
+              }
+            ]
+          },
+          "passiveInsight": {
+            "total": 10,
+            "parts": [
+              {
+                "source": "base",
+                "label": "Base",
+                "value": 10
+              },
+              {
+                "source": "ability",
+                "label": "Sabiduría",
+                "value": 0
+              }
+            ]
+          },
           "initiative": {
             "total": 0,
             "parts": [
@@ -42263,7 +44906,29 @@
           }
         },
         "resistances": [],
-        "breathWeapon": null
+        "breathWeapon": null,
+        "immunities": [],
+        "conditionImmunities": [],
+        "lostSavingThrows": [],
+        "lostSkills": [],
+        "classSaveDcs": [],
+        "passiveInvestigation": 10,
+        "passiveInsight": 10,
+        "abilityMaxScores": {
+          "str": 20,
+          "dex": 20,
+          "con": 20,
+          "int": 20,
+          "wis": 20,
+          "cha": 20
+        },
+        "size": "",
+        "sizeSource": null,
+        "speeds": {},
+        "deathSaveFailuresToDie": 3,
+        "deathSaveFailuresSource": null,
+        "recoversAllHitDice": false,
+        "hitDiceRecoverySource": null
       },
       "inventory": {
         "items": [],
@@ -42308,7 +44973,11 @@
                   "value": 0
                 }
               ]
-            }
+            },
+            "criticalRange": 20,
+            "criticalRangeSource": null,
+            "warnings": [],
+            "natural": false
           }
         ],
         "spellSlots": [],
@@ -42328,6 +44997,10 @@
       "feats": [],
       "optionCosts": [],
       "companion": null,
+      "companions": [],
+      "itemEnhancements": [],
+      "itemEnhancementFeature": null,
+      "grafts": [],
       "companionFeature": null,
       "companionPending": false
     }
