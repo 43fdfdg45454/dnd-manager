@@ -65,6 +65,17 @@ internal sealed class PackJson
 
     /// <summary>Generic roll tables (e.g. a d100 Wild Magic Surge), optionally tied to a class or subclass.</summary>
     public List<PackRollTableJson?>? RollTables { get; set; }
+
+    /// <summary>New descriptions for items of the SRD or of the required packs (never of this one).</summary>
+    public List<PackItemOverrideJson?>? ItemOverrides { get; set; }
+}
+
+/// <summary>An entry of <c>itemOverrides[]</c>: the item (by index) and the paragraphs that replace its description.</summary>
+internal sealed class PackItemOverrideJson
+{
+    public string? Item { get; set; }
+
+    public List<string?>? Description { get; set; }
 }
 
 internal sealed class PackSkillJson

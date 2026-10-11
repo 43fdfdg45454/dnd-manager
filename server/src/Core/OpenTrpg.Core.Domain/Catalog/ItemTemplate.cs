@@ -149,6 +149,20 @@ public sealed class ItemTemplate : EntityBase
         Apply(data);
     }
 
+    /// <summary>
+    /// Replaces only the description of a catalog item (a content pack overriding an item of the SRD or of another
+    /// pack); the rest of the rules data is untouched.
+    /// </summary>
+    public void OverrideDescription(IReadOnlyList<string> description)
+    {
+        if (!IsSrd)
+        {
+            throw DomainException.RuleViolation("Solo se puede sobreescribir así la descripción de los objetos del catálogo.");
+        }
+
+        Description = description;
+    }
+
     private void Apply(ItemTemplateData data)
     {
         var name = data.Name.Trim();

@@ -6,6 +6,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="OpenTrpg.Systems.Dnd5e.Api.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!--
       The SRD 5.1 as base content pack (format 3), embedded so it ships inside the assembly and the Docker image. It is
       generated from seed/srd (5e-database, CC-BY 4.0) with tools/SrdPack.

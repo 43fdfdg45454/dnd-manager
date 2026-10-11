@@ -24,7 +24,8 @@ namespace OpenTrpg.Systems.Dnd5e.Infrastructure.Catalog;
 /// core's <c>ContentPackRegistry</c> opened (the base pack opens its own): the definitions with <c>Source</c> = pack id
 /// are replaced, its races and classes are updated in place (other packs extend them) and item templates are upserted
 /// by index so their ids survive (items dropped from the pack are deleted unless an inventory, shop or stash uses
-/// them). Re-importing the same version replaces the content as well.
+/// them). The descriptions a pack gives to items of other sources (<c>itemOverrides</c>) are written into those items
+/// (<see cref="CatalogItemOverrides"/>). Re-importing the same version replaces the content as well.
 /// </summary>
 internal sealed partial class Dnd5eCatalogSystem(
     AppDbContext db,
@@ -201,10 +202,20 @@ internal sealed partial class Dnd5eCatalogSystem(
 
         await CatalogItems.UpsertAsync(db, id, rows.Items, now, cancellationToken);
         await CatalogItems.DeleteUnusedAsync(db, id, rows.Items.Select(i => i.Index).ToList(), cancellationToken);
+        if (isBase)
+        {
+            // The upsert reset the descriptions of the base items: the installed packs override them again.
+            await CatalogItemOverrides.RefreshOriginalsAsync(db, id, cancellationToken);
+        }
+        else
+        {
+            await CatalogItemOverrides.ReplaceAsync(db, id, rows.ItemOverrides, now, cancellationToken);
+        }
     }
 
     public async Task DeletePackAsync(string packId, CancellationToken cancellationToken = default)
     {
+        await CatalogItemOverrides.DeleteAsync(db, packId, cancellationToken);
         await DeleteDefinitionsAsync(packId, [], [], cancellationToken);
         var kept = await CatalogItems.DeleteUnusedAsync(db, packId, [], cancellationToken);
         logger.LogInformation("Content pack {PackId}: {KeptItems} items kept because they are in use", packId, kept);

@@ -118,6 +118,9 @@ internal sealed class ContentPackRows
 
     public List<RollTable> RollTables { get; } = [];
 
+    /// <summary>Descriptions the pack gives to items of other sources (<c>itemOverrides</c>).</summary>
+    public List<ItemDescriptionOverride> ItemOverrides { get; } = [];
+
     /// <summary>Skills (base pack only).</summary>
     public List<SkillDefinition> Skills { get; } = [];
 
@@ -151,6 +154,7 @@ internal sealed class ContentPackRows
         ["rollTables"] = RollTables.Count,
         ["skills"] = Skills.Count,
         ["equipmentCategories"] = EquipmentCategories.Count,
+        ["itemOverrides"] = ItemOverrides.Count,
     };
 }
 
@@ -395,6 +399,7 @@ internal sealed partial class ContentPackValidator
         ForEach("races", pack.Races, (path, race) => Race(path, race, rows));
         ForEach("backgrounds", pack.Backgrounds, (path, background) => Background(path, background, rows));
         Trinkets(pack.Trinkets, rows);
+        ItemOverrides(pack.ItemOverrides, rows);
         RollTables(pack.RollTables, rows, packSubclasses);
         ForEach("creatures", pack.Creatures, (path, creature) => Creature(path, creature, rows));
         ForEach("conditions", pack.Conditions, (path, condition) => Condition(path, condition, rows));
