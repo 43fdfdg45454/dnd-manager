@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using OpenTrpg.Core.Application.Characters;
+using OpenTrpg.Core.Domain.Catalog;
 using OpenTrpg.Systems.Dnd5e.Application.Catalog;
 using OpenTrpg.Systems.Dnd5e.Application.Characters;
 using OpenTrpg.Systems.Dnd5e.Domain.Catalog;
@@ -271,7 +272,59 @@ public class OriginChoicesEndpointsTests(CatalogApiFactory factory)
 
         var dwarf = await DraftAsync(s, "dwarf", "hill-dwarf", "barbarian");
         var tools = Assert.Single((await OriginAsync(s.Player, dwarf.Id)).Choices, c => c.Key == "race.tools");
-        Assert.Contains("artisan's tools", Assert.Single(tools.Options, o => o.Index == "smiths-tools").Description[0], StringComparison.OrdinalIgnoreCase);
+        var smiths = Assert.Single(tools.Options, o => o.Index == "smiths-tools");
+        Assert.Equal("Herramientas de artesano", smiths.Description[0]);
+        Assert.Contains("artisan's tools", smiths.Description[1], StringComparison.OrdinalIgnoreCase);
+        Assert.True(Guid.TryParse(smiths.ItemId, out _), $"itemId: {smiths.ItemId}");
+        Assert.All(tools.Options, o => Assert.NotNull(o.ItemId));
+    }
+
+    [Fact]
+    public void Weapon_and_tool_descriptions_summarize_the_catalog_item()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var bow = ItemTemplate.CreateCatalog("srd", "arco-ejemplo", new ItemTemplateData
+        {
+            Name = "Arco de ejemplo",
+            Category = ItemCategory.Weapon,
+            Subcategory = "Martial Ranged",
+            DamageDice = "1d8",
+            DamageType = "Piercing",
+            Properties = ["ammunition", "heavy", "two-handed"],
+            RangeNormal = 150,
+            RangeLong = 600,
+            Description = ["Texto de ejemplo."],
+        }, now);
+        Assert.Equal(
+            ["Arma marcial a distancia · 1d8 perforante · alcance 150/600", "Propiedades: ammunition, heavy, two-handed.", "Texto de ejemplo."],
+            OriginOptionDescriptions.Weapon(bow));
+
+        var sword = ItemTemplate.CreateCatalog("srd", "espada-ejemplo", new ItemTemplateData
+        {
+            Name = "Espada de ejemplo",
+            Category = ItemCategory.Weapon,
+            Subcategory = "Simple Melee",
+            DamageDice = "1d6",
+            DamageType = "slashing",
+            VersatileDice = "1d8",
+            Properties = ["versatile"],
+        }, now);
+        Assert.Equal(["Arma sencilla cuerpo a cuerpo · 1d6 cortante · versátil (1d8)", "Propiedades: versatile."], OriginOptionDescriptions.Weapon(sword));
+
+        var wand = ItemTemplate.CreateCatalog("srd", "varita-ejemplo", new ItemTemplateData { Name = "Varita de ejemplo", Category = ItemCategory.Weapon, Subcategory = "Weapon" }, now);
+        Assert.Equal(["Arma"], OriginOptionDescriptions.Weapon(wand));
+
+        var picks = ItemTemplate.CreateCatalog("srd", "ganzuas-ejemplo", new ItemTemplateData
+        {
+            Name = "Ganzúas de ejemplo",
+            Category = ItemCategory.Tool,
+            Subcategory = "Other Tools",
+            Description = ["Sirven para abrir cerraduras."],
+        }, now);
+        Assert.Equal(["Herramientas", "Sirven para abrir cerraduras."], OriginOptionDescriptions.Tool(picks));
+        var lute = ItemTemplate.CreateCatalog("srd", "laud-ejemplo", new ItemTemplateData { Name = "Laúd de ejemplo", Category = ItemCategory.Tool, Subcategory = "Musical Instrument" }, now);
+        Assert.Equal(["Instrumento musical"], OriginOptionDescriptions.Tool(lute));
+        Assert.Single(OriginOptionDescriptions.Tool(null));
     }
 
     [Fact]

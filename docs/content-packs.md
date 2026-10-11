@@ -1431,7 +1431,7 @@ con los tipos `OptionSet`, `Skill`, `Expertise`, `Tool`, `Language`, `CantripsKn
 | `kind` | Ofrece | Al aplicar |
 | --- | --- | --- |
 | `SavingThrow` | Las seis características (o las de `from`); no elegibles las que ya tienen competencia. | Competencia en esa salvación. |
-| `Weapon` | Armas del catálogo de la campaña: `from` (índices) o `filter.weaponCategories` (`simple`, `martial`, `exotic`) y `filter.firearms` (`true` solo armas de fuego, `false` ninguna). | Competencia con esa arma (por índice). |
+| `Weapon` | Armas del catálogo de la campaña: `from` (índices) o `filter.weaponCategories` (`simple`, `martial`, `exotic`) y `filter.firearms` (`true` solo armas de fuego, `false` ninguna). Cada opción describe el arma (categoría, daño, versátil, alcance y propiedades) y lleva su `itemId`. | Competencia con esa arma (por índice). |
 | `Resistance` | Tipos de daño: los de `from` (del SRD o del vocabulario `reference.damageTypes`) o los 13 del SRD; no elegibles los que ya resiste. Se muestran en español ("Frío"). | Resistencia a ese tipo, en `resistances` de la hoja con el nombre de la opción ("Aguante elemental (nivel 4)"). |
 
 En el plan de subida, cada elección de `choices` aparece con la key `<índice de la opción>/<key>` y
@@ -1657,7 +1657,7 @@ En `classes[].levelChoices` (elecciones de la clase, completa o ampliada con `ex
 | `kind` | `string` | **Obligatorio**: `Subclass`, `OptionSet`, `AsiOrFeat`, `Expertise`, `Skill`, `Language`, `Tool`, `CantripsKnown`, `SpellsKnown`, `SpellbookSpells` o `Custom`. |
 | `setId` | `string?` | Conjunto de donde salen las opciones; **obligatorio** en `OptionSet`. Puede ser del SRD, de otro paquete o del propio paquete. |
 | `choose` | `int` | **Obligatorio**, 0–20: cuántas elecciones da este nivel. En `SpellsKnown`/`CantripsKnown` de una subclase con `spellcasting` puede omitirse: se toma el aumento de su tabla `spellsKnown`/`cantripsKnown` respecto al nivel anterior. |
-| `from` | `string[]?` | Opciones permitidas o, en `Language`/`Tool`, los valores posibles. Sin `from`, todo el conjunto (o texto libre). En `OptionSet` y `Custom` con `setId`, los índices pueden ser de **cualquier** conjunto del catálogo o del paquete: un conjunto puede reutilizar opciones de otro (estilos de combate del SRD junto a los propios). |
+| `from` | `string[]?` | Opciones permitidas o, en `Language`/`Tool`, los valores posibles. Sin `from`, todo el conjunto: en `Language`, los idiomas del catálogo (SRD y `reference.languages` de los paquetes), no elegibles los que el personaje ya habla; en `Tool`, texto libre. En `Tool`, cada valor puede ser el índice (`thieves-tools`) o el nombre (`Lute`) de un objeto del catálogo: la opción lleva entonces su descripción y su `itemId`. En `OptionSet` y `Custom` con `setId`, los índices pueden ser de **cualquier** conjunto del catálogo o del paquete: un conjunto puede reutilizar opciones de otro (estilos de combate del SRD junto a los propios). |
 | `alsoFrom` | `string[]?` | Solo `AsiOrFeat` y `OptionSet`: otros conjuntos cuyas opciones se ofrecen **también**. En `AsiOrFeat`, el jugador puede tomar una opción de esos conjuntos en lugar de la mejora o la dote (se envía como `{"feat": "<índice>"}`). |
 | `replaces` | `bool?` | Desde este nivel, en cada nivel de la clase se puede sustituir una elección ya hecha. |
 | `cumulative` | `bool?` | Se suma a lo elegido en niveles anteriores. |

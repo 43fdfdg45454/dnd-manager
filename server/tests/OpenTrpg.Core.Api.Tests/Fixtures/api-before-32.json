@@ -4470,6 +4470,7 @@
               "index": "smiths-tools",
               "name": "Smith's Tools",
               "description": [
+                "Herramientas de artesano",
                 "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
               ],
               "prerequisitesText": null,
@@ -4484,12 +4485,14 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": "<id47>",
               "skillChoicesDelta": 0
             },
             {
               "index": "brewers-supplies",
               "name": "Brewer's Supplies",
               "description": [
+                "Herramientas de artesano",
                 "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
               ],
               "prerequisitesText": null,
@@ -4504,12 +4507,14 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": "<id48>",
               "skillChoicesDelta": 0
             },
             {
               "index": "masons-tools",
               "name": "Mason's Tools",
               "description": [
+                "Herramientas de artesano",
                 "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
               ],
               "prerequisitesText": null,
@@ -4524,6 +4529,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": "<id49>",
               "skillChoicesDelta": 0
             }
           ],
@@ -4566,6 +4572,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -4587,6 +4594,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -4608,6 +4616,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -4628,6 +4637,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -4649,6 +4659,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -4669,6 +4680,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -4690,6 +4702,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -4711,6 +4724,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -4731,6 +4745,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -4751,6 +4766,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -4772,6 +4788,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -4792,6 +4809,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -4812,6 +4830,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -4832,6 +4851,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -4852,6 +4872,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -4872,6 +4893,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             }
           ],
@@ -4911,6 +4933,7 @@
               "index": "smiths-tools",
               "name": "Smith's Tools",
               "description": [
+                "Herramientas de artesano",
                 "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
               ],
               "prerequisitesText": null,
@@ -4925,12 +4948,14 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": "<id47>",
               "skillChoicesDelta": 0
             },
             {
               "index": "brewers-supplies",
               "name": "Brewer's Supplies",
               "description": [
+                "Herramientas de artesano",
                 "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
               ],
               "prerequisitesText": null,
@@ -4945,12 +4970,14 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": "<id48>",
               "skillChoicesDelta": 0
             },
             {
               "index": "masons-tools",
               "name": "Mason's Tools",
               "description": [
+                "Herramientas de artesano",
                 "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
               ],
               "prerequisitesText": null,
@@ -4965,6 +4992,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": "<id49>",
               "skillChoicesDelta": 0
             }
           ],
@@ -5012,6 +5040,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -5033,6 +5062,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -5054,6 +5084,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -5074,6 +5105,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -5095,6 +5127,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -5115,6 +5148,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -5136,6 +5170,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -5157,6 +5192,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -5177,6 +5213,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -5197,6 +5234,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -5218,6 +5256,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -5238,6 +5277,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -5258,6 +5298,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -5278,6 +5319,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -5298,6 +5340,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -5318,6 +5361,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             }
           ],
@@ -5498,7 +5542,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -6463,7 +6507,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -6554,7 +6598,7 @@
     "request": "POST /api/v1/characters/<character>/submit",
     "status": 201,
     "body": {
-      "id": "<id49>",
+      "id": "<id52>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión",
@@ -6577,7 +6621,7 @@
     "status": 200,
     "body": [
       {
-        "id": "<id49>",
+        "id": "<id52>",
         "campaignId": "<campaign>",
         "characterId": "<character>",
         "characterName": "Regresión",
@@ -6597,10 +6641,10 @@
   },
   {
     "step": "change-request.get",
-    "request": "GET /api/v1/change-requests/<id49>",
+    "request": "GET /api/v1/change-requests/<id52>",
     "status": 200,
     "body": {
-      "id": "<id49>",
+      "id": "<id52>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión",
@@ -6619,10 +6663,10 @@
   },
   {
     "step": "change-request.approve.activate",
-    "request": "POST /api/v1/change-requests/<id49>/approve",
+    "request": "POST /api/v1/change-requests/<id52>/approve",
     "status": 200,
     "body": {
-      "id": "<id49>",
+      "id": "<id52>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión",
@@ -6733,7 +6777,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -7698,7 +7742,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -7733,7 +7777,7 @@
     "request": "PATCH /api/v1/systems/dnd5e/characters/<character>/sheet",
     "status": 202,
     "body": {
-      "id": "<id50>",
+      "id": "<id53>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión",
@@ -7758,10 +7802,10 @@
   },
   {
     "step": "change-request.reject",
-    "request": "POST /api/v1/change-requests/<id50>/reject",
+    "request": "POST /api/v1/change-requests/<id53>/reject",
     "status": 200,
     "body": {
-      "id": "<id50>",
+      "id": "<id53>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión",
@@ -7789,7 +7833,7 @@
     "request": "PATCH /api/v1/systems/dnd5e/characters/<character>/sheet",
     "status": 202,
     "body": {
-      "id": "<id51>",
+      "id": "<id54>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión",
@@ -7812,10 +7856,10 @@
   },
   {
     "step": "change-request.cancel",
-    "request": "POST /api/v1/change-requests/<id51>/cancel",
+    "request": "POST /api/v1/change-requests/<id54>/cancel",
     "status": 200,
     "body": {
-      "id": "<id51>",
+      "id": "<id54>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión",
@@ -7841,7 +7885,7 @@
     "request": "PATCH /api/v1/systems/dnd5e/characters/<character>/sheet",
     "status": 202,
     "body": {
-      "id": "<id52>",
+      "id": "<id55>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión",
@@ -7872,10 +7916,10 @@
   },
   {
     "step": "change-request.approve.sheet",
-    "request": "POST /api/v1/change-requests/<id52>/approve",
+    "request": "POST /api/v1/change-requests/<id55>/approve",
     "status": 200,
     "body": {
-      "id": "<id52>",
+      "id": "<id55>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión II",
@@ -7998,7 +8042,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -8976,7 +9020,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -9105,7 +9149,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -10083,7 +10127,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -10212,7 +10256,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -11190,7 +11234,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -11320,7 +11364,7 @@
             "source": "Race"
           },
           {
-            "id": "<id47>",
+            "id": "<id50>",
             "type": "Tool",
             "key": "smiths-tools",
             "expertise": false,
@@ -12298,7 +12342,7 @@
         "restRollsPending": false,
         "choices": [
           {
-            "id": "<id48>",
+            "id": "<id51>",
             "level": 0,
             "classIndex": null,
             "key": "race.tools",
@@ -12436,7 +12480,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -13414,7 +13458,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -13543,7 +13587,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -14521,7 +14565,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -14650,7 +14694,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -15628,7 +15672,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -15757,7 +15801,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -16735,7 +16779,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -16864,7 +16908,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -17842,7 +17886,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -17899,7 +17943,7 @@
     "request": "POST /api/v1/systems/dnd5e/characters/<character>/resources",
     "status": 201,
     "body": {
-      "id": "<id53>",
+      "id": "<id56>",
       "key": null,
       "name": "Suerte",
       "max": 3,
@@ -17921,7 +17965,7 @@
   },
   {
     "step": "resources.spend",
-    "request": "POST /api/v1/systems/dnd5e/characters/<character>/resources/<id53>/spend",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/resources/<id56>/spend",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -18018,7 +18062,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -18111,7 +18155,7 @@
           "sourceDescription": null
         },
         {
-          "id": "<id53>",
+          "id": "<id56>",
           "key": null,
           "name": "Suerte",
           "max": 3,
@@ -18976,7 +19020,7 @@
             "sourceDescription": null
           },
           {
-            "id": "<id53>",
+            "id": "<id56>",
             "key": null,
             "name": "Suerte",
             "max": 3,
@@ -19036,7 +19080,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -19068,7 +19112,7 @@
   },
   {
     "step": "resources.restore",
-    "request": "POST /api/v1/systems/dnd5e/characters/<character>/resources/<id53>/restore",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/resources/<id56>/restore",
     "status": 200,
     "body": {
       "id": "<character>",
@@ -19165,7 +19209,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -19258,7 +19302,7 @@
           "sourceDescription": null
         },
         {
-          "id": "<id53>",
+          "id": "<id56>",
           "key": null,
           "name": "Suerte",
           "max": 3,
@@ -20123,7 +20167,7 @@
             "sourceDescription": null
           },
           {
-            "id": "<id53>",
+            "id": "<id56>",
             "key": null,
             "name": "Suerte",
             "max": 3,
@@ -20183,7 +20227,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -20215,7 +20259,7 @@
   },
   {
     "step": "resources.rolls",
-    "request": "POST /api/v1/systems/dnd5e/characters/<character>/resources/<id53>/rolls",
+    "request": "POST /api/v1/systems/dnd5e/characters/<character>/resources/<id56>/rolls",
     "status": 400,
     "body": {
       "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
@@ -20226,7 +20270,7 @@
   },
   {
     "step": "resources.delete",
-    "request": "DELETE /api/v1/systems/dnd5e/characters/<character>/resources/<id53>",
+    "request": "DELETE /api/v1/systems/dnd5e/characters/<character>/resources/<id56>",
     "status": 204,
     "body": null
   },
@@ -20342,7 +20386,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -21320,7 +21364,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -21449,7 +21493,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -22427,7 +22471,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -22680,7 +22724,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -23658,7 +23702,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -23787,7 +23831,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -24765,7 +24809,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -24894,7 +24938,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -25872,7 +25916,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -26543,6 +26587,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             }
           ],
@@ -26582,6 +26627,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26602,6 +26648,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26622,6 +26669,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26642,6 +26690,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26662,6 +26711,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26682,6 +26732,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26702,6 +26753,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26722,6 +26774,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26742,6 +26795,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26762,6 +26816,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26782,6 +26837,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26802,6 +26858,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26822,6 +26879,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26842,6 +26900,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26862,6 +26921,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26882,6 +26942,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26902,6 +26963,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26922,6 +26984,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26942,6 +27005,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26962,6 +27026,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -26982,6 +27047,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27002,6 +27068,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27022,6 +27089,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             }
           ],
@@ -27308,6 +27376,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             }
           ],
@@ -27347,6 +27416,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27367,6 +27437,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27387,6 +27458,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27407,6 +27479,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27427,6 +27500,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27447,6 +27521,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27467,6 +27542,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27487,6 +27563,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27507,6 +27584,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27527,6 +27605,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27547,6 +27626,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27567,6 +27647,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27587,6 +27668,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27607,6 +27689,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27627,6 +27710,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27647,6 +27731,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27667,6 +27752,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27687,6 +27773,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27707,6 +27794,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27727,6 +27815,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27747,6 +27836,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27767,6 +27857,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             },
             {
@@ -27787,6 +27878,7 @@
               "cost": null,
               "requires": null,
               "removeSavingThrows": null,
+              "itemId": null,
               "skillChoicesDelta": 0
             }
           ],
@@ -27943,7 +28035,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -27963,7 +28055,7 @@
           "category": "Damage"
         },
         {
-          "id": "<id54>",
+          "id": "<id57>",
           "spellIndex": "alarm",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -27974,7 +28066,7 @@
           "category": "Utility"
         },
         {
-          "id": "<id55>",
+          "id": "<id58>",
           "spellIndex": "burning-hands",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -28945,7 +29037,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -28964,7 +29056,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id56>",
+          "id": "<id59>",
           "level": 2,
           "classIndex": "wizard",
           "key": "subclass",
@@ -28983,7 +29075,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id57>",
+          "id": "<id60>",
           "level": 2,
           "classIndex": "wizard",
           "key": "spellbook",
@@ -29116,7 +29208,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -29136,7 +29228,7 @@
           "category": "Damage"
         },
         {
-          "id": "<id54>",
+          "id": "<id57>",
           "spellIndex": "alarm",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -29147,7 +29239,7 @@
           "category": "Utility"
         },
         {
-          "id": "<id55>",
+          "id": "<id58>",
           "spellIndex": "burning-hands",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -30118,7 +30210,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -30137,7 +30229,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id57>",
+          "id": "<id60>",
           "level": 2,
           "classIndex": "wizard",
           "key": "spellbook",
@@ -30160,7 +30252,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id56>",
+          "id": "<id59>",
           "level": 2,
           "classIndex": "wizard",
           "key": "subclass",
@@ -30207,7 +30299,7 @@
     "request": "POST /api/v1/characters/<character>/inventory",
     "status": 201,
     "body": {
-      "id": "<id58>",
+      "id": "<id61>",
       "templateId": "<id26>",
       "templateName": "Longsword",
       "quantity": 1,
@@ -30247,10 +30339,10 @@
   },
   {
     "step": "inventory.equip",
-    "request": "PATCH /api/v1/characters/<character>/inventory/<id58>",
+    "request": "PATCH /api/v1/characters/<character>/inventory/<id61>",
     "status": 200,
     "body": {
-      "id": "<id58>",
+      "id": "<id61>",
       "templateId": "<id26>",
       "templateName": "Longsword",
       "quantity": 1,
@@ -30293,7 +30385,7 @@
     "request": "POST /api/v1/characters/<character>/inventory",
     "status": 202,
     "body": {
-      "id": "<id59>",
+      "id": "<id62>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión II",
@@ -30343,10 +30435,10 @@
   },
   {
     "step": "change-request.approve.add-item",
-    "request": "POST /api/v1/change-requests/<id59>/approve",
+    "request": "POST /api/v1/change-requests/<id62>/approve",
     "status": 200,
     "body": {
-      "id": "<id59>",
+      "id": "<id62>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión II",
@@ -30401,7 +30493,7 @@
     "body": {
       "items": [
         {
-          "id": "<id58>",
+          "id": "<id61>",
           "templateId": "<id26>",
           "templateName": "Longsword",
           "quantity": 1,
@@ -30439,7 +30531,7 @@
           "templateIndex": "longsword"
         },
         {
-          "id": "<id60>",
+          "id": "<id63>",
           "templateId": "<id27>",
           "templateName": "Potion of Healing",
           "quantity": 2,
@@ -30489,12 +30581,12 @@
   },
   {
     "step": "inventory.use",
-    "request": "POST /api/v1/characters/<character>/inventory/<id60>/use",
+    "request": "POST /api/v1/characters/<character>/inventory/<id63>/use",
     "status": 200,
     "body": {
       "items": [
         {
-          "id": "<id58>",
+          "id": "<id61>",
           "templateId": "<id26>",
           "templateName": "Longsword",
           "quantity": 1,
@@ -30532,7 +30624,7 @@
           "templateIndex": "longsword"
         },
         {
-          "id": "<id60>",
+          "id": "<id63>",
           "templateId": "<id27>",
           "templateName": "Potion of Healing",
           "quantity": 1,
@@ -30582,10 +30674,10 @@
   },
   {
     "step": "inventory.remove.player",
-    "request": "DELETE /api/v1/characters/<character>/inventory/<id58>",
+    "request": "DELETE /api/v1/characters/<character>/inventory/<id61>",
     "status": 202,
     "body": {
-      "id": "<id61>",
+      "id": "<id64>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión II",
@@ -30593,7 +30685,7 @@
       "requestedByDisplayName": "Player User",
       "type": "RemoveItem",
       "payload": {
-        "itemId": "<id58>",
+        "itemId": "<id61>",
         "itemName": "Longsword"
       },
       "status": "Pending",
@@ -30614,7 +30706,7 @@
     "body": {
       "items": [
         {
-          "id": "<id58>",
+          "id": "<id61>",
           "templateId": "<id26>",
           "templateName": "Longsword",
           "quantity": 1,
@@ -30652,7 +30744,7 @@
           "templateIndex": "longsword"
         },
         {
-          "id": "<id60>",
+          "id": "<id63>",
           "templateId": "<id27>",
           "templateName": "Potion of Healing",
           "quantity": 1,
@@ -30705,7 +30797,7 @@
     "request": "POST /api/v1/characters/<character>/money",
     "status": 202,
     "body": {
-      "id": "<id62>",
+      "id": "<id65>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión II",
@@ -30729,10 +30821,10 @@
   },
   {
     "step": "change-request.approve.money",
-    "request": "POST /api/v1/change-requests/<id62>/approve",
+    "request": "POST /api/v1/change-requests/<id65>/approve",
     "status": 200,
     "body": {
-      "id": "<id62>",
+      "id": "<id65>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión II",
@@ -30760,7 +30852,7 @@
     "status": 200,
     "body": [
       {
-        "id": "<id62>",
+        "id": "<id65>",
         "campaignId": "<campaign>",
         "characterId": "<character>",
         "characterName": "Regresión II",
@@ -30782,7 +30874,7 @@
         }
       },
       {
-        "id": "<id61>",
+        "id": "<id64>",
         "campaignId": "<campaign>",
         "characterId": "<character>",
         "characterName": "Regresión II",
@@ -30790,7 +30882,7 @@
         "requestedByDisplayName": "Player User",
         "type": "RemoveItem",
         "payload": {
-          "itemId": "<id58>",
+          "itemId": "<id61>",
           "itemName": "Longsword"
         },
         "status": "Pending",
@@ -30804,7 +30896,7 @@
         }
       },
       {
-        "id": "<id59>",
+        "id": "<id62>",
         "campaignId": "<campaign>",
         "characterId": "<character>",
         "characterName": "Regresión II",
@@ -30852,7 +30944,7 @@
         }
       },
       {
-        "id": "<id52>",
+        "id": "<id55>",
         "campaignId": "<campaign>",
         "characterId": "<character>",
         "characterName": "Regresión II",
@@ -30881,7 +30973,7 @@
         }
       },
       {
-        "id": "<id51>",
+        "id": "<id54>",
         "campaignId": "<campaign>",
         "characterId": "<character>",
         "characterName": "Regresión II",
@@ -30902,7 +30994,7 @@
         }
       },
       {
-        "id": "<id50>",
+        "id": "<id53>",
         "campaignId": "<campaign>",
         "characterId": "<character>",
         "characterName": "Regresión II",
@@ -30925,7 +31017,7 @@
         }
       },
       {
-        "id": "<id49>",
+        "id": "<id52>",
         "campaignId": "<campaign>",
         "characterId": "<character>",
         "characterName": "Regresión II",
@@ -30969,7 +31061,7 @@
       "updatedAt": "<time>",
       "pendingChangeRequests": [
         {
-          "id": "<id61>",
+          "id": "<id64>",
           "campaignId": "<campaign>",
           "characterId": "<character>",
           "characterName": "Regresión II",
@@ -30977,7 +31069,7 @@
           "requestedByDisplayName": "Player User",
           "type": "RemoveItem",
           "payload": {
-            "itemId": "<id58>",
+            "itemId": "<id61>",
             "itemName": "Longsword"
           },
           "status": "Pending",
@@ -31065,7 +31157,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -31085,7 +31177,7 @@
           "category": "Damage"
         },
         {
-          "id": "<id54>",
+          "id": "<id57>",
           "spellIndex": "alarm",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -31096,7 +31188,7 @@
           "category": "Utility"
         },
         {
-          "id": "<id55>",
+          "id": "<id58>",
           "spellIndex": "burning-hands",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -31948,7 +32040,7 @@
       "inventory": {
         "items": [
           {
-            "id": "<id58>",
+            "id": "<id61>",
             "templateId": "<id26>",
             "templateName": "Longsword",
             "quantity": 1,
@@ -31986,7 +32078,7 @@
             "templateIndex": "longsword"
           },
           {
-            "id": "<id60>",
+            "id": "<id63>",
             "templateId": "<id27>",
             "templateName": "Potion of Healing",
             "quantity": 1,
@@ -32036,7 +32128,7 @@
       "combat": {
         "attacks": [
           {
-            "itemId": "<id58>",
+            "itemId": "<id61>",
             "name": "Longsword",
             "attackBonus": -1,
             "damage": "1d8-1",
@@ -32145,7 +32237,7 @@
         ],
         "quickConsumables": [
           {
-            "itemId": "<id60>",
+            "itemId": "<id63>",
             "name": "Potion of Healing",
             "quantity": 1,
             "charges": null
@@ -32192,7 +32284,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -32211,7 +32303,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id57>",
+          "id": "<id60>",
           "level": 2,
           "classIndex": "wizard",
           "key": "spellbook",
@@ -32234,7 +32326,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id56>",
+          "id": "<id59>",
           "level": 2,
           "classIndex": "wizard",
           "key": "subclass",
@@ -32269,7 +32361,7 @@
     "request": "POST /api/v1/characters/<character>/rest-requests",
     "status": 201,
     "body": {
-      "id": "<id63>",
+      "id": "<id66>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión II",
@@ -32293,7 +32385,7 @@
     "status": 200,
     "body": [
       {
-        "id": "<id63>",
+        "id": "<id66>",
         "campaignId": "<campaign>",
         "characterId": "<character>",
         "characterName": "Regresión II",
@@ -32314,10 +32406,10 @@
   },
   {
     "step": "rest-request.get",
-    "request": "GET /api/v1/rest-requests/<id63>",
+    "request": "GET /api/v1/rest-requests/<id66>",
     "status": 200,
     "body": {
-      "id": "<id63>",
+      "id": "<id66>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión II",
@@ -32337,10 +32429,10 @@
   },
   {
     "step": "rest-request.approve.short",
-    "request": "POST /api/v1/rest-requests/<id63>/approve",
+    "request": "POST /api/v1/rest-requests/<id66>/approve",
     "status": 200,
     "body": {
-      "id": "<id63>",
+      "id": "<id66>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión II",
@@ -32363,7 +32455,7 @@
     "request": "POST /api/v1/characters/<character>/rest-requests",
     "status": 201,
     "body": {
-      "id": "<id64>",
+      "id": "<id67>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión II",
@@ -32381,10 +32473,10 @@
   },
   {
     "step": "rest-request.reject",
-    "request": "POST /api/v1/rest-requests/<id64>/reject",
+    "request": "POST /api/v1/rest-requests/<id67>/reject",
     "status": 200,
     "body": {
-      "id": "<id64>",
+      "id": "<id67>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión II",
@@ -32405,7 +32497,7 @@
     "request": "POST /api/v1/characters/<character>/rest-requests",
     "status": 201,
     "body": {
-      "id": "<id65>",
+      "id": "<id68>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión II",
@@ -32432,7 +32524,7 @@
     "request": "POST /api/v1/characters/<character>/rest-requests",
     "status": 201,
     "body": {
-      "id": "<id66>",
+      "id": "<id69>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión II",
@@ -32450,10 +32542,10 @@
   },
   {
     "step": "rest-request.approve.long",
-    "request": "POST /api/v1/rest-requests/<id66>/approve",
+    "request": "POST /api/v1/rest-requests/<id69>/approve",
     "status": 200,
     "body": {
-      "id": "<id66>",
+      "id": "<id69>",
       "campaignId": "<campaign>",
       "characterId": "<character>",
       "characterName": "Regresión II",
@@ -32495,7 +32587,7 @@
       "updatedAt": "<time>",
       "pendingChangeRequests": [
         {
-          "id": "<id61>",
+          "id": "<id64>",
           "campaignId": "<campaign>",
           "characterId": "<character>",
           "characterName": "Regresión II",
@@ -32503,7 +32595,7 @@
           "requestedByDisplayName": "Player User",
           "type": "RemoveItem",
           "payload": {
-            "itemId": "<id58>",
+            "itemId": "<id61>",
             "itemName": "Longsword"
           },
           "status": "Pending",
@@ -32591,7 +32683,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -32611,7 +32703,7 @@
           "category": "Damage"
         },
         {
-          "id": "<id54>",
+          "id": "<id57>",
           "spellIndex": "alarm",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -32622,7 +32714,7 @@
           "category": "Utility"
         },
         {
-          "id": "<id55>",
+          "id": "<id58>",
           "spellIndex": "burning-hands",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -33474,7 +33566,7 @@
       "inventory": {
         "items": [
           {
-            "id": "<id58>",
+            "id": "<id61>",
             "templateId": "<id26>",
             "templateName": "Longsword",
             "quantity": 1,
@@ -33512,7 +33604,7 @@
             "templateIndex": "longsword"
           },
           {
-            "id": "<id60>",
+            "id": "<id63>",
             "templateId": "<id27>",
             "templateName": "Potion of Healing",
             "quantity": 1,
@@ -33562,7 +33654,7 @@
       "combat": {
         "attacks": [
           {
-            "itemId": "<id58>",
+            "itemId": "<id61>",
             "name": "Longsword",
             "attackBonus": -1,
             "damage": "1d8-1",
@@ -33671,7 +33763,7 @@
         ],
         "quickConsumables": [
           {
-            "itemId": "<id60>",
+            "itemId": "<id63>",
             "name": "Potion of Healing",
             "quantity": 1,
             "charges": null
@@ -33718,7 +33810,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -33737,7 +33829,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id57>",
+          "id": "<id60>",
           "level": 2,
           "classIndex": "wizard",
           "key": "spellbook",
@@ -33760,7 +33852,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id56>",
+          "id": "<id59>",
           "level": 2,
           "classIndex": "wizard",
           "key": "subclass",
@@ -33795,7 +33887,7 @@
     "request": "POST /api/v1/campaigns/<campaign>/items",
     "status": 201,
     "body": {
-      "id": "<id67>",
+      "id": "<id70>",
       "campaignId": "<campaign>",
       "index": null,
       "name": "Espada de prueba",
@@ -33842,7 +33934,7 @@
     "body": {
       "items": [
         {
-          "id": "<id68>",
+          "id": "<id71>",
           "index": "abacus",
           "name": "Abacus",
           "category": "AdventuringGear",
@@ -33854,7 +33946,7 @@
           "source": "srd"
         },
         {
-          "id": "<id69>",
+          "id": "<id72>",
           "index": "acid-vial",
           "name": "Acid (vial)",
           "category": "AdventuringGear",
@@ -33866,7 +33958,7 @@
           "source": "srd"
         },
         {
-          "id": "<id70>",
+          "id": "<id73>",
           "index": "adamantine-armor",
           "name": "Adamantine Armor",
           "category": "Armor",
@@ -33878,7 +33970,7 @@
           "source": "srd"
         },
         {
-          "id": "<id71>",
+          "id": "<id74>",
           "index": "elemental-gem-air",
           "name": "Air Elemental Gem",
           "category": "MagicItem",
@@ -33890,7 +33982,7 @@
           "source": "srd"
         },
         {
-          "id": "<id72>",
+          "id": "<id75>",
           "index": "alchemists-supplies",
           "name": "Alchemist's Supplies",
           "category": "Tool",
@@ -33902,7 +33994,7 @@
           "source": "srd"
         },
         {
-          "id": "<id73>",
+          "id": "<id76>",
           "index": "alchemists-fire-flask",
           "name": "Alchemist's fire (flask)",
           "category": "AdventuringGear",
@@ -33914,7 +34006,7 @@
           "source": "srd"
         },
         {
-          "id": "<id74>",
+          "id": "<id77>",
           "index": "alms-box",
           "name": "Alms box",
           "category": "AdventuringGear",
@@ -33926,7 +34018,7 @@
           "source": "srd"
         },
         {
-          "id": "<id75>",
+          "id": "<id78>",
           "index": "ammunition-1",
           "name": "Ammunition, +1",
           "category": "Consumable",
@@ -33938,7 +34030,7 @@
           "source": "srd"
         },
         {
-          "id": "<id76>",
+          "id": "<id79>",
           "index": "ammunition",
           "name": "Ammunition, +1, +2, or +3",
           "category": "Consumable",
@@ -33950,7 +34042,7 @@
           "source": "srd"
         },
         {
-          "id": "<id77>",
+          "id": "<id80>",
           "index": "ammunition-2",
           "name": "Ammunition, +2",
           "category": "Consumable",
@@ -33962,7 +34054,7 @@
           "source": "srd"
         },
         {
-          "id": "<id78>",
+          "id": "<id81>",
           "index": "ammunition-3",
           "name": "Ammunition, +3",
           "category": "Consumable",
@@ -33974,7 +34066,7 @@
           "source": "srd"
         },
         {
-          "id": "<id79>",
+          "id": "<id82>",
           "index": "amulet",
           "name": "Amulet",
           "category": "AdventuringGear",
@@ -33986,7 +34078,7 @@
           "source": "srd"
         },
         {
-          "id": "<id80>",
+          "id": "<id83>",
           "index": "amulet-of-health",
           "name": "Amulet of Health",
           "category": "MagicItem",
@@ -33998,7 +34090,7 @@
           "source": "srd"
         },
         {
-          "id": "<id81>",
+          "id": "<id84>",
           "index": "amulet-of-proof-against-detection-and-location",
           "name": "Amulet of Proof against Detection and Location",
           "category": "MagicItem",
@@ -34010,7 +34102,7 @@
           "source": "srd"
         },
         {
-          "id": "<id82>",
+          "id": "<id85>",
           "index": "amulet-of-the-planes",
           "name": "Amulet of the Planes",
           "category": "MagicItem",
@@ -34022,7 +34114,7 @@
           "source": "srd"
         },
         {
-          "id": "<id83>",
+          "id": "<id86>",
           "index": "feather-token-anchor",
           "name": "Anchor Feather Token",
           "category": "MagicItem",
@@ -34034,7 +34126,7 @@
           "source": "srd"
         },
         {
-          "id": "<id84>",
+          "id": "<id87>",
           "index": "animal-feed-1-day",
           "name": "Animal Feed (1 day)",
           "category": "Mount",
@@ -34046,7 +34138,7 @@
           "source": "srd"
         },
         {
-          "id": "<id85>",
+          "id": "<id88>",
           "index": "animated-shield",
           "name": "Animated Shield",
           "category": "Armor",
@@ -34058,7 +34150,7 @@
           "source": "srd"
         },
         {
-          "id": "<id86>",
+          "id": "<id89>",
           "index": "antitoxin-vial",
           "name": "Antitoxin (vial)",
           "category": "AdventuringGear",
@@ -34070,7 +34162,7 @@
           "source": "srd"
         },
         {
-          "id": "<id87>",
+          "id": "<id90>",
           "index": "apparatus-of-the-crab",
           "name": "Apparatus of the Crab",
           "category": "MagicItem",
@@ -34082,7 +34174,7 @@
           "source": "srd"
         },
         {
-          "id": "<id88>",
+          "id": "<id91>",
           "index": "armor-of-invulnerability",
           "name": "Armor of Invulnerability",
           "category": "Armor",
@@ -34094,7 +34186,7 @@
           "source": "srd"
         },
         {
-          "id": "<id89>",
+          "id": "<id92>",
           "index": "armor-of-resistance",
           "name": "Armor of Resistance",
           "category": "Armor",
@@ -34106,7 +34198,7 @@
           "source": "srd"
         },
         {
-          "id": "<id90>",
+          "id": "<id93>",
           "index": "armor-of-vulnerability",
           "name": "Armor of Vulnerability",
           "category": "Armor",
@@ -34118,7 +34210,7 @@
           "source": "srd"
         },
         {
-          "id": "<id91>",
+          "id": "<id94>",
           "index": "armor-1",
           "name": "Armor, +1",
           "category": "Armor",
@@ -34130,7 +34222,7 @@
           "source": "srd"
         },
         {
-          "id": "<id92>",
+          "id": "<id95>",
           "index": "armor",
           "name": "Armor, +1, +2, or +3",
           "category": "Armor",
@@ -34142,7 +34234,7 @@
           "source": "srd"
         },
         {
-          "id": "<id93>",
+          "id": "<id96>",
           "index": "armor-2",
           "name": "Armor, +2",
           "category": "Armor",
@@ -34154,7 +34246,7 @@
           "source": "srd"
         },
         {
-          "id": "<id94>",
+          "id": "<id97>",
           "index": "armor-3",
           "name": "Armor, +3",
           "category": "Armor",
@@ -34166,7 +34258,7 @@
           "source": "srd"
         },
         {
-          "id": "<id95>",
+          "id": "<id98>",
           "index": "arrow",
           "name": "Arrow",
           "category": "Consumable",
@@ -34178,7 +34270,7 @@
           "source": "srd"
         },
         {
-          "id": "<id96>",
+          "id": "<id99>",
           "index": "arrow-of-slaying",
           "name": "Arrow of Slaying",
           "category": "Consumable",
@@ -34190,7 +34282,7 @@
           "source": "srd"
         },
         {
-          "id": "<id97>",
+          "id": "<id100>",
           "index": "arrow-catching-shield",
           "name": "Arrow-Catching Shield",
           "category": "Armor",
@@ -34214,7 +34306,7 @@
           "source": "srd"
         },
         {
-          "id": "<id98>",
+          "id": "<id101>",
           "index": "bag-of-beans",
           "name": "Bag of Beans",
           "category": "MagicItem",
@@ -34226,7 +34318,7 @@
           "source": "srd"
         },
         {
-          "id": "<id99>",
+          "id": "<id102>",
           "index": "bag-of-devouring",
           "name": "Bag of Devouring",
           "category": "MagicItem",
@@ -34238,7 +34330,7 @@
           "source": "srd"
         },
         {
-          "id": "<id100>",
+          "id": "<id103>",
           "index": "bag-of-holding",
           "name": "Bag of Holding",
           "category": "MagicItem",
@@ -34250,7 +34342,7 @@
           "source": "srd"
         },
         {
-          "id": "<id101>",
+          "id": "<id104>",
           "index": "bag-of-tricks",
           "name": "Bag of Tricks",
           "category": "MagicItem",
@@ -34262,7 +34354,7 @@
           "source": "srd"
         },
         {
-          "id": "<id102>",
+          "id": "<id105>",
           "index": "bagpipes",
           "name": "Bagpipes",
           "category": "Tool",
@@ -34274,7 +34366,7 @@
           "source": "srd"
         },
         {
-          "id": "<id103>",
+          "id": "<id106>",
           "index": "ball-bearings-bag-of-1000",
           "name": "Ball bearings (bag of 1,000)",
           "category": "AdventuringGear",
@@ -34286,7 +34378,7 @@
           "source": "srd"
         },
         {
-          "id": "<id104>",
+          "id": "<id107>",
           "index": "barding-breastplate",
           "name": "Barding: Breastplate",
           "category": "Mount",
@@ -34298,7 +34390,7 @@
           "source": "srd"
         },
         {
-          "id": "<id105>",
+          "id": "<id108>",
           "index": "barding-chain-mail",
           "name": "Barding: Chain mail",
           "category": "Mount",
@@ -34310,7 +34402,7 @@
           "source": "srd"
         },
         {
-          "id": "<id106>",
+          "id": "<id109>",
           "index": "barding-chain-shirt",
           "name": "Barding: Chain shirt",
           "category": "Mount",
@@ -34322,7 +34414,7 @@
           "source": "srd"
         },
         {
-          "id": "<id107>",
+          "id": "<id110>",
           "index": "barding-half-plate",
           "name": "Barding: Half plate",
           "category": "Mount",
@@ -34334,7 +34426,7 @@
           "source": "srd"
         },
         {
-          "id": "<id108>",
+          "id": "<id111>",
           "index": "barding-hide",
           "name": "Barding: Hide",
           "category": "Mount",
@@ -34346,7 +34438,7 @@
           "source": "srd"
         },
         {
-          "id": "<id109>",
+          "id": "<id112>",
           "index": "barding-leather",
           "name": "Barding: Leather",
           "category": "Mount",
@@ -34358,7 +34450,7 @@
           "source": "srd"
         },
         {
-          "id": "<id110>",
+          "id": "<id113>",
           "index": "barding-padded",
           "name": "Barding: Padded",
           "category": "Mount",
@@ -34370,7 +34462,7 @@
           "source": "srd"
         },
         {
-          "id": "<id111>",
+          "id": "<id114>",
           "index": "barding-plate",
           "name": "Barding: Plate",
           "category": "Mount",
@@ -34382,7 +34474,7 @@
           "source": "srd"
         },
         {
-          "id": "<id112>",
+          "id": "<id115>",
           "index": "barding-ring-mail",
           "name": "Barding: Ring mail",
           "category": "Mount",
@@ -34394,7 +34486,7 @@
           "source": "srd"
         },
         {
-          "id": "<id113>",
+          "id": "<id116>",
           "index": "barding-scale-mail",
           "name": "Barding: Scale mail",
           "category": "Mount",
@@ -34406,7 +34498,7 @@
           "source": "srd"
         },
         {
-          "id": "<id114>",
+          "id": "<id117>",
           "index": "barding-splint",
           "name": "Barding: Splint",
           "category": "Mount",
@@ -34418,7 +34510,7 @@
           "source": "srd"
         },
         {
-          "id": "<id115>",
+          "id": "<id118>",
           "index": "barding-studded-leather",
           "name": "Barding: Studded Leather",
           "category": "Mount",
@@ -34430,7 +34522,7 @@
           "source": "srd"
         },
         {
-          "id": "<id116>",
+          "id": "<id119>",
           "index": "barrel",
           "name": "Barrel",
           "category": "AdventuringGear",
@@ -34449,10 +34541,10 @@
   },
   {
     "step": "homebrew.get",
-    "request": "GET /api/v1/campaigns/<campaign>/items/<id67>",
+    "request": "GET /api/v1/campaigns/<campaign>/items/<id70>",
     "status": 200,
     "body": {
-      "id": "<id67>",
+      "id": "<id70>",
       "campaignId": "<campaign>",
       "index": null,
       "name": "Espada de prueba",
@@ -34494,10 +34586,10 @@
   },
   {
     "step": "homebrew.patch",
-    "request": "PATCH /api/v1/campaigns/<campaign>/items/<id67>",
+    "request": "PATCH /api/v1/campaigns/<campaign>/items/<id70>",
     "status": 200,
     "body": {
-      "id": "<id67>",
+      "id": "<id70>",
       "campaignId": "<campaign>",
       "index": null,
       "name": "Espada de prueba",
@@ -34539,10 +34631,10 @@
   },
   {
     "step": "catalog.item.homebrew",
-    "request": "GET /api/v1/systems/dnd5e/catalog/items/<id67>",
+    "request": "GET /api/v1/systems/dnd5e/catalog/items/<id70>",
     "status": 200,
     "body": {
-      "id": "<id67>",
+      "id": "<id70>",
       "campaignId": "<campaign>",
       "index": null,
       "name": "Espada de prueba",
@@ -34587,7 +34679,7 @@
     "request": "POST /api/v1/campaigns/<campaign>/shops",
     "status": 201,
     "body": {
-      "id": "<id117>",
+      "id": "<id120>",
       "campaignId": "<campaign>",
       "name": "Herrería",
       "description": "Armas",
@@ -34598,10 +34690,10 @@
   },
   {
     "step": "shop.open",
-    "request": "PATCH /api/v1/shops/<id117>",
+    "request": "PATCH /api/v1/shops/<id120>",
     "status": 200,
     "body": {
-      "id": "<id117>",
+      "id": "<id120>",
       "campaignId": "<campaign>",
       "name": "Herrería",
       "description": "Armas",
@@ -34612,11 +34704,11 @@
   },
   {
     "step": "shop.item.add",
-    "request": "POST /api/v1/shops/<id117>/items",
+    "request": "POST /api/v1/shops/<id120>/items",
     "status": 201,
     "body": {
-      "id": "<id118>",
-      "templateId": "<id67>",
+      "id": "<id121>",
+      "templateId": "<id70>",
       "priceCp": 2000,
       "stock": 2,
       "sortOrder": 0,
@@ -34656,10 +34748,10 @@
   },
   {
     "step": "shop.item.bulk",
-    "request": "POST /api/v1/shops/<id117>/items/bulk",
+    "request": "POST /api/v1/shops/<id120>/items/bulk",
     "status": 200,
     "body": {
-      "id": "<id117>",
+      "id": "<id120>",
       "campaignId": "<campaign>",
       "name": "Herrería",
       "description": "Armas",
@@ -34667,8 +34759,8 @@
       "buybackPercent": 50,
       "items": [
         {
-          "id": "<id118>",
-          "templateId": "<id67>",
+          "id": "<id121>",
+          "templateId": "<id70>",
           "priceCp": 2000,
           "stock": 2,
           "sortOrder": 0,
@@ -34706,7 +34798,7 @@
           }
         },
         {
-          "id": "<id119>",
+          "id": "<id122>",
           "templateId": "<id26>",
           "priceCp": 1500,
           "stock": null,
@@ -34741,11 +34833,11 @@
   },
   {
     "step": "shop.item.patch",
-    "request": "PATCH /api/v1/shops/<id117>/items/<id118>",
+    "request": "PATCH /api/v1/shops/<id120>/items/<id121>",
     "status": 200,
     "body": {
-      "id": "<id118>",
-      "templateId": "<id67>",
+      "id": "<id121>",
+      "templateId": "<id70>",
       "priceCp": 1800,
       "stock": 2,
       "sortOrder": 0,
@@ -34785,10 +34877,10 @@
   },
   {
     "step": "shop.get",
-    "request": "GET /api/v1/shops/<id117>",
+    "request": "GET /api/v1/shops/<id120>",
     "status": 200,
     "body": {
-      "id": "<id117>",
+      "id": "<id120>",
       "campaignId": "<campaign>",
       "name": "Herrería",
       "description": "Armas",
@@ -34796,8 +34888,8 @@
       "buybackPercent": 50,
       "items": [
         {
-          "id": "<id118>",
-          "templateId": "<id67>",
+          "id": "<id121>",
+          "templateId": "<id70>",
           "priceCp": 1800,
           "stock": 2,
           "sortOrder": 0,
@@ -34835,7 +34927,7 @@
           }
         },
         {
-          "id": "<id119>",
+          "id": "<id122>",
           "templateId": "<id26>",
           "priceCp": 1500,
           "stock": null,
@@ -34874,7 +34966,7 @@
     "status": 200,
     "body": [
       {
-        "id": "<id117>",
+        "id": "<id120>",
         "campaignId": "<campaign>",
         "name": "Herrería",
         "description": "Armas",
@@ -34886,13 +34978,13 @@
   },
   {
     "step": "shop.buy",
-    "request": "POST /api/v1/shops/<id117>/buy",
+    "request": "POST /api/v1/shops/<id120>/buy",
     "status": 200,
     "body": {
       "inventory": {
         "items": [
           {
-            "id": "<id58>",
+            "id": "<id61>",
             "templateId": "<id26>",
             "templateName": "Longsword",
             "quantity": 1,
@@ -34930,7 +35022,7 @@
             "templateIndex": "longsword"
           },
           {
-            "id": "<id60>",
+            "id": "<id63>",
             "templateId": "<id27>",
             "templateName": "Potion of Healing",
             "quantity": 1,
@@ -34972,8 +35064,8 @@
             "templateIndex": "potion-of-healing"
           },
           {
-            "id": "<id120>",
-            "templateId": "<id67>",
+            "id": "<id123>",
+            "templateId": "<id70>",
             "templateName": "Espada de prueba",
             "quantity": 1,
             "equipped": false,
@@ -35024,8 +35116,8 @@
         "attunedCount": 0
       },
       "transaction": {
-        "id": "<id121>",
-        "shopId": "<id117>",
+        "id": "<id124>",
+        "shopId": "<id120>",
         "shopName": "Herrería",
         "characterId": "<character>",
         "characterName": "Regresión II",
@@ -35041,11 +35133,11 @@
   },
   {
     "step": "inventory.attune",
-    "request": "PATCH /api/v1/characters/<character>/inventory/<id120>",
+    "request": "PATCH /api/v1/characters/<character>/inventory/<id123>",
     "status": 200,
     "body": {
-      "id": "<id120>",
-      "templateId": "<id67>",
+      "id": "<id123>",
+      "templateId": "<id70>",
       "templateName": "Espada de prueba",
       "quantity": 1,
       "equipped": true,
@@ -35116,7 +35208,7 @@
       "updatedAt": "<time>",
       "pendingChangeRequests": [
         {
-          "id": "<id61>",
+          "id": "<id64>",
           "campaignId": "<campaign>",
           "characterId": "<character>",
           "characterName": "Regresión II",
@@ -35124,7 +35216,7 @@
           "requestedByDisplayName": "Player User",
           "type": "RemoveItem",
           "payload": {
-            "itemId": "<id58>",
+            "itemId": "<id61>",
             "itemName": "Longsword"
           },
           "status": "Pending",
@@ -35212,7 +35304,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -35232,7 +35324,7 @@
           "category": "Damage"
         },
         {
-          "id": "<id54>",
+          "id": "<id57>",
           "spellIndex": "alarm",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -35243,7 +35335,7 @@
           "category": "Utility"
         },
         {
-          "id": "<id55>",
+          "id": "<id58>",
           "spellIndex": "burning-hands",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -36095,7 +36187,7 @@
       "inventory": {
         "items": [
           {
-            "id": "<id58>",
+            "id": "<id61>",
             "templateId": "<id26>",
             "templateName": "Longsword",
             "quantity": 1,
@@ -36133,7 +36225,7 @@
             "templateIndex": "longsword"
           },
           {
-            "id": "<id60>",
+            "id": "<id63>",
             "templateId": "<id27>",
             "templateName": "Potion of Healing",
             "quantity": 1,
@@ -36175,8 +36267,8 @@
             "templateIndex": "potion-of-healing"
           },
           {
-            "id": "<id120>",
-            "templateId": "<id67>",
+            "id": "<id123>",
+            "templateId": "<id70>",
             "templateName": "Espada de prueba",
             "quantity": 1,
             "equipped": true,
@@ -36229,7 +36321,7 @@
       "combat": {
         "attacks": [
           {
-            "itemId": "<id58>",
+            "itemId": "<id61>",
             "name": "Longsword",
             "attackBonus": -1,
             "damage": "1d8-1",
@@ -36266,7 +36358,7 @@
             "natural": false
           },
           {
-            "itemId": "<id120>",
+            "itemId": "<id123>",
             "name": "Espada de prueba",
             "attackBonus": 0,
             "damage": "1d8-1",
@@ -36380,7 +36472,7 @@
         ],
         "quickConsumables": [
           {
-            "itemId": "<id60>",
+            "itemId": "<id63>",
             "name": "Potion of Healing",
             "quantity": 1,
             "charges": null
@@ -36427,7 +36519,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -36446,7 +36538,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id57>",
+          "id": "<id60>",
           "level": 2,
           "classIndex": "wizard",
           "key": "spellbook",
@@ -36469,7 +36561,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id56>",
+          "id": "<id59>",
           "level": 2,
           "classIndex": "wizard",
           "key": "subclass",
@@ -36501,7 +36593,7 @@
   },
   {
     "step": "shop.sell",
-    "request": "POST /api/v1/shops/<id117>/sell",
+    "request": "POST /api/v1/shops/<id120>/sell",
     "status": 400,
     "body": {
       "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
@@ -36522,8 +36614,8 @@
     "body": {
       "items": [
         {
-          "id": "<id121>",
-          "shopId": "<id117>",
+          "id": "<id124>",
+          "shopId": "<id120>",
           "shopName": "Herrería",
           "characterId": "<character>",
           "characterName": "Regresión II",
@@ -36543,19 +36635,19 @@
   },
   {
     "step": "shop.item.delete",
-    "request": "DELETE /api/v1/shops/<id117>/items/<id118>",
+    "request": "DELETE /api/v1/shops/<id120>/items/<id121>",
     "status": 204,
     "body": null
   },
   {
     "step": "shop.delete",
-    "request": "DELETE /api/v1/shops/<id117>",
+    "request": "DELETE /api/v1/shops/<id120>",
     "status": 204,
     "body": null
   },
   {
     "step": "homebrew.delete",
-    "request": "DELETE /api/v1/campaigns/<campaign>/items/<id67>",
+    "request": "DELETE /api/v1/campaigns/<campaign>/items/<id70>",
     "status": 409,
     "body": {
       "type": "https://tools.ietf.org/html/rfc9110#section-15.5.10",
@@ -36579,7 +36671,7 @@
     "request": "POST /api/v1/campaigns/<campaign>/stash/items",
     "status": 201,
     "body": {
-      "id": "<id122>",
+      "id": "<id125>",
       "templateId": "<id26>",
       "item": {
         "name": "Longsword",
@@ -36614,10 +36706,10 @@
   },
   {
     "step": "stash.item.patch",
-    "request": "PATCH /api/v1/campaigns/<campaign>/stash/items/<id122>",
+    "request": "PATCH /api/v1/campaigns/<campaign>/stash/items/<id125>",
     "status": 200,
     "body": {
-      "id": "<id122>",
+      "id": "<id125>",
       "templateId": "<id26>",
       "item": {
         "name": "Longsword",
@@ -36652,14 +36744,14 @@
   },
   {
     "step": "stash.item.take",
-    "request": "POST /api/v1/campaigns/<campaign>/stash/items/<id122>/take",
+    "request": "POST /api/v1/campaigns/<campaign>/stash/items/<id125>/take",
     "status": 200,
     "body": {
       "copperPieces": 0,
       "playersCanTakeFromStash": true,
       "items": [
         {
-          "id": "<id122>",
+          "id": "<id125>",
           "templateId": "<id26>",
           "item": {
             "name": "Longsword",
@@ -36701,7 +36793,7 @@
     "body": {
       "items": [
         {
-          "id": "<id58>",
+          "id": "<id61>",
           "templateId": "<id26>",
           "templateName": "Longsword",
           "quantity": 1,
@@ -36739,7 +36831,7 @@
           "templateIndex": "longsword"
         },
         {
-          "id": "<id60>",
+          "id": "<id63>",
           "templateId": "<id27>",
           "templateName": "Potion of Healing",
           "quantity": 1,
@@ -36781,8 +36873,8 @@
           "templateIndex": "potion-of-healing"
         },
         {
-          "id": "<id120>",
-          "templateId": "<id67>",
+          "id": "<id123>",
+          "templateId": "<id70>",
           "templateName": "Espada de prueba",
           "quantity": 1,
           "equipped": true,
@@ -36827,7 +36919,7 @@
           "templateIndex": null
         },
         {
-          "id": "<id123>",
+          "id": "<id126>",
           "templateId": "<id26>",
           "templateName": "Longsword",
           "quantity": 1,
@@ -36880,7 +36972,7 @@
       "playersCanTakeFromStash": true,
       "items": [
         {
-          "id": "<id122>",
+          "id": "<id125>",
           "templateId": "<id26>",
           "item": {
             "name": "Longsword",
@@ -36913,7 +37005,7 @@
           "addedByDisplayName": "Dm User"
         },
         {
-          "id": "<id124>",
+          "id": "<id127>",
           "templateId": "<id26>",
           "item": {
             "name": "Longsword",
@@ -36957,7 +37049,7 @@
       "playersCanTakeFromStash": true,
       "items": [
         {
-          "id": "<id122>",
+          "id": "<id125>",
           "templateId": "<id26>",
           "item": {
             "name": "Longsword",
@@ -36990,7 +37082,7 @@
           "addedByDisplayName": "Dm User"
         },
         {
-          "id": "<id124>",
+          "id": "<id127>",
           "templateId": "<id26>",
           "item": {
             "name": "Longsword",
@@ -37034,7 +37126,7 @@
       "playersCanTakeFromStash": true,
       "items": [
         {
-          "id": "<id122>",
+          "id": "<id125>",
           "templateId": "<id26>",
           "item": {
             "name": "Longsword",
@@ -37067,7 +37159,7 @@
           "addedByDisplayName": "Dm User"
         },
         {
-          "id": "<id124>",
+          "id": "<id127>",
           "templateId": "<id26>",
           "item": {
             "name": "Longsword",
@@ -37104,7 +37196,7 @@
   },
   {
     "step": "stash.item.delete",
-    "request": "DELETE /api/v1/campaigns/<campaign>/stash/items/<id122>",
+    "request": "DELETE /api/v1/campaigns/<campaign>/stash/items/<id125>",
     "status": 204,
     "body": null
   },
@@ -37114,7 +37206,7 @@
     "status": 201,
     "body": [
       {
-        "id": "<id125>",
+        "id": "<id128>",
         "campaignId": "<campaign>",
         "senderUserId": "<dm>",
         "senderDisplayName": "Dm User",
@@ -37133,7 +37225,7 @@
     "status": 200,
     "body": [
       {
-        "id": "<id125>",
+        "id": "<id128>",
         "campaignId": "<campaign>",
         "senderUserId": "<dm>",
         "senderDisplayName": "Dm User",
@@ -37156,10 +37248,10 @@
   },
   {
     "step": "message.read",
-    "request": "POST /api/v1/messages/<id125>/read",
+    "request": "POST /api/v1/messages/<id128>/read",
     "status": 200,
     "body": {
-      "id": "<id125>",
+      "id": "<id128>",
       "campaignId": "<campaign>",
       "senderUserId": "<dm>",
       "senderDisplayName": "Dm User",
@@ -37197,7 +37289,7 @@
       "updatedAt": "<time>",
       "pendingChangeRequests": [
         {
-          "id": "<id61>",
+          "id": "<id64>",
           "campaignId": "<campaign>",
           "characterId": "<character>",
           "characterName": "Regresión II",
@@ -37205,7 +37297,7 @@
           "requestedByDisplayName": "Player User",
           "type": "RemoveItem",
           "payload": {
-            "itemId": "<id58>",
+            "itemId": "<id61>",
             "itemName": "Longsword"
           },
           "status": "Pending",
@@ -37293,7 +37385,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -37313,7 +37405,7 @@
           "category": "Damage"
         },
         {
-          "id": "<id54>",
+          "id": "<id57>",
           "spellIndex": "alarm",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -37324,7 +37416,7 @@
           "category": "Utility"
         },
         {
-          "id": "<id55>",
+          "id": "<id58>",
           "spellIndex": "burning-hands",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -38176,7 +38268,7 @@
       "inventory": {
         "items": [
           {
-            "id": "<id58>",
+            "id": "<id61>",
             "templateId": "<id26>",
             "templateName": "Longsword",
             "quantity": 1,
@@ -38214,7 +38306,7 @@
             "templateIndex": "longsword"
           },
           {
-            "id": "<id60>",
+            "id": "<id63>",
             "templateId": "<id27>",
             "templateName": "Potion of Healing",
             "quantity": 1,
@@ -38256,8 +38348,8 @@
             "templateIndex": "potion-of-healing"
           },
           {
-            "id": "<id120>",
-            "templateId": "<id67>",
+            "id": "<id123>",
+            "templateId": "<id70>",
             "templateName": "Espada de prueba",
             "quantity": 1,
             "equipped": true,
@@ -38310,7 +38402,7 @@
       "combat": {
         "attacks": [
           {
-            "itemId": "<id58>",
+            "itemId": "<id61>",
             "name": "Longsword",
             "attackBonus": -1,
             "damage": "1d8-1",
@@ -38347,7 +38439,7 @@
             "natural": false
           },
           {
-            "itemId": "<id120>",
+            "itemId": "<id123>",
             "name": "Espada de prueba",
             "attackBonus": 0,
             "damage": "1d8-1",
@@ -38461,7 +38553,7 @@
         ],
         "quickConsumables": [
           {
-            "itemId": "<id60>",
+            "itemId": "<id63>",
             "name": "Potion of Healing",
             "quantity": 1,
             "charges": null
@@ -38508,7 +38600,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -38527,7 +38619,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id57>",
+          "id": "<id60>",
           "level": 2,
           "classIndex": "wizard",
           "key": "spellbook",
@@ -38550,7 +38642,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id56>",
+          "id": "<id59>",
           "level": 2,
           "classIndex": "wizard",
           "key": "subclass",
@@ -38606,7 +38698,7 @@
       "updatedAt": "<time>",
       "pendingChangeRequests": [
         {
-          "id": "<id61>",
+          "id": "<id64>",
           "campaignId": "<campaign>",
           "characterId": "<character>",
           "characterName": "Regresión II",
@@ -38614,7 +38706,7 @@
           "requestedByDisplayName": "Player User",
           "type": "RemoveItem",
           "payload": {
-            "itemId": "<id58>",
+            "itemId": "<id61>",
             "itemName": "Longsword"
           },
           "status": "Pending",
@@ -38702,7 +38794,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -38722,7 +38814,7 @@
           "category": "Damage"
         },
         {
-          "id": "<id54>",
+          "id": "<id57>",
           "spellIndex": "alarm",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -38733,7 +38825,7 @@
           "category": "Utility"
         },
         {
-          "id": "<id55>",
+          "id": "<id58>",
           "spellIndex": "burning-hands",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -39585,7 +39677,7 @@
       "inventory": {
         "items": [
           {
-            "id": "<id58>",
+            "id": "<id61>",
             "templateId": "<id26>",
             "templateName": "Longsword",
             "quantity": 1,
@@ -39623,7 +39715,7 @@
             "templateIndex": "longsword"
           },
           {
-            "id": "<id60>",
+            "id": "<id63>",
             "templateId": "<id27>",
             "templateName": "Potion of Healing",
             "quantity": 1,
@@ -39665,8 +39757,8 @@
             "templateIndex": "potion-of-healing"
           },
           {
-            "id": "<id120>",
-            "templateId": "<id67>",
+            "id": "<id123>",
+            "templateId": "<id70>",
             "templateName": "Espada de prueba",
             "quantity": 1,
             "equipped": true,
@@ -39719,7 +39811,7 @@
       "combat": {
         "attacks": [
           {
-            "itemId": "<id58>",
+            "itemId": "<id61>",
             "name": "Longsword",
             "attackBonus": -1,
             "damage": "1d8-1",
@@ -39756,7 +39848,7 @@
             "natural": false
           },
           {
-            "itemId": "<id120>",
+            "itemId": "<id123>",
             "name": "Espada de prueba",
             "attackBonus": 0,
             "damage": "1d8-1",
@@ -39870,7 +39962,7 @@
         ],
         "quickConsumables": [
           {
-            "itemId": "<id60>",
+            "itemId": "<id63>",
             "name": "Potion of Healing",
             "quantity": 1,
             "charges": null
@@ -39917,7 +40009,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -39936,7 +40028,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id57>",
+          "id": "<id60>",
           "level": 2,
           "classIndex": "wizard",
           "key": "spellbook",
@@ -39959,7 +40051,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id56>",
+          "id": "<id59>",
           "level": 2,
           "classIndex": "wizard",
           "key": "subclass",
@@ -40015,7 +40107,7 @@
       "updatedAt": "<time>",
       "pendingChangeRequests": [
         {
-          "id": "<id61>",
+          "id": "<id64>",
           "campaignId": "<campaign>",
           "characterId": "<character>",
           "characterName": "Regresión II",
@@ -40023,7 +40115,7 @@
           "requestedByDisplayName": "Player User",
           "type": "RemoveItem",
           "payload": {
-            "itemId": "<id58>",
+            "itemId": "<id61>",
             "itemName": "Longsword"
           },
           "status": "Pending",
@@ -40111,7 +40203,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -40131,7 +40223,7 @@
           "category": "Damage"
         },
         {
-          "id": "<id54>",
+          "id": "<id57>",
           "spellIndex": "alarm",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -40142,7 +40234,7 @@
           "category": "Utility"
         },
         {
-          "id": "<id55>",
+          "id": "<id58>",
           "spellIndex": "burning-hands",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -40994,7 +41086,7 @@
       "inventory": {
         "items": [
           {
-            "id": "<id58>",
+            "id": "<id61>",
             "templateId": "<id26>",
             "templateName": "Longsword",
             "quantity": 1,
@@ -41032,7 +41124,7 @@
             "templateIndex": "longsword"
           },
           {
-            "id": "<id60>",
+            "id": "<id63>",
             "templateId": "<id27>",
             "templateName": "Potion of Healing",
             "quantity": 1,
@@ -41074,8 +41166,8 @@
             "templateIndex": "potion-of-healing"
           },
           {
-            "id": "<id120>",
-            "templateId": "<id67>",
+            "id": "<id123>",
+            "templateId": "<id70>",
             "templateName": "Espada de prueba",
             "quantity": 1,
             "equipped": true,
@@ -41128,7 +41220,7 @@
       "combat": {
         "attacks": [
           {
-            "itemId": "<id58>",
+            "itemId": "<id61>",
             "name": "Longsword",
             "attackBonus": -1,
             "damage": "1d8-1",
@@ -41165,7 +41257,7 @@
             "natural": false
           },
           {
-            "itemId": "<id120>",
+            "itemId": "<id123>",
             "name": "Espada de prueba",
             "attackBonus": 0,
             "damage": "1d8-1",
@@ -41279,7 +41371,7 @@
         ],
         "quickConsumables": [
           {
-            "itemId": "<id60>",
+            "itemId": "<id63>",
             "name": "Potion of Healing",
             "quantity": 1,
             "charges": null
@@ -41326,7 +41418,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -41345,7 +41437,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id57>",
+          "id": "<id60>",
           "level": 2,
           "classIndex": "wizard",
           "key": "spellbook",
@@ -41368,7 +41460,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id56>",
+          "id": "<id59>",
           "level": 2,
           "classIndex": "wizard",
           "key": "subclass",
@@ -41452,7 +41544,7 @@
       "updatedAt": "<time>",
       "pendingChangeRequests": [
         {
-          "id": "<id61>",
+          "id": "<id64>",
           "campaignId": "<campaign>",
           "characterId": "<character>",
           "characterName": "Regresión II",
@@ -41460,7 +41552,7 @@
           "requestedByDisplayName": "Player User",
           "type": "RemoveItem",
           "payload": {
-            "itemId": "<id58>",
+            "itemId": "<id61>",
             "itemName": "Longsword"
           },
           "status": "Pending",
@@ -41548,7 +41640,7 @@
           "source": "Race"
         },
         {
-          "id": "<id47>",
+          "id": "<id50>",
           "type": "Tool",
           "key": "smiths-tools",
           "expertise": false,
@@ -41568,7 +41660,7 @@
           "category": "Damage"
         },
         {
-          "id": "<id54>",
+          "id": "<id57>",
           "spellIndex": "alarm",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -41579,7 +41671,7 @@
           "category": "Utility"
         },
         {
-          "id": "<id55>",
+          "id": "<id58>",
           "spellIndex": "burning-hands",
           "classIndex": "wizard",
           "isPrepared": false,
@@ -42431,7 +42523,7 @@
       "inventory": {
         "items": [
           {
-            "id": "<id58>",
+            "id": "<id61>",
             "templateId": "<id26>",
             "templateName": "Longsword",
             "quantity": 1,
@@ -42469,7 +42561,7 @@
             "templateIndex": "longsword"
           },
           {
-            "id": "<id60>",
+            "id": "<id63>",
             "templateId": "<id27>",
             "templateName": "Potion of Healing",
             "quantity": 1,
@@ -42511,8 +42603,8 @@
             "templateIndex": "potion-of-healing"
           },
           {
-            "id": "<id120>",
-            "templateId": "<id67>",
+            "id": "<id123>",
+            "templateId": "<id70>",
             "templateName": "Espada de prueba",
             "quantity": 1,
             "equipped": true,
@@ -42565,7 +42657,7 @@
       "combat": {
         "attacks": [
           {
-            "itemId": "<id58>",
+            "itemId": "<id61>",
             "name": "Longsword",
             "attackBonus": -1,
             "damage": "1d8-1",
@@ -42602,7 +42694,7 @@
             "natural": false
           },
           {
-            "itemId": "<id120>",
+            "itemId": "<id123>",
             "name": "Espada de prueba",
             "attackBonus": 0,
             "damage": "1d8-1",
@@ -42716,7 +42808,7 @@
         ],
         "quickConsumables": [
           {
-            "itemId": "<id60>",
+            "itemId": "<id63>",
             "name": "Potion of Healing",
             "quantity": 1,
             "charges": null
@@ -42763,7 +42855,7 @@
       "restRollsPending": false,
       "choices": [
         {
-          "id": "<id48>",
+          "id": "<id51>",
           "level": 0,
           "classIndex": null,
           "key": "race.tools",
@@ -42782,7 +42874,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id57>",
+          "id": "<id60>",
           "level": 2,
           "classIndex": "wizard",
           "key": "spellbook",
@@ -42805,7 +42897,7 @@
           "createdAt": "<time>"
         },
         {
-          "id": "<id56>",
+          "id": "<id59>",
           "level": 2,
           "classIndex": "wizard",
           "key": "subclass",
@@ -42840,7 +42932,7 @@
     "request": "POST /api/v1/campaigns/<campaign>/characters",
     "status": 201,
     "body": {
-      "id": "<id126>",
+      "id": "<id129>",
       "campaignId": "<campaign>",
       "ownerUserId": null,
       "ownerDisplayName": null,

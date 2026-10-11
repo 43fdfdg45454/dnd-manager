@@ -8,6 +8,7 @@ using OpenTrpg.Core.Application;
 using OpenTrpg.Core.Application.Characters;
 using OpenTrpg.Systems.Dnd5e.Application;
 using OpenTrpg.Systems.Dnd5e.Application.Abstractions.Persistence;
+using OpenTrpg.Systems.Dnd5e.Application.Catalog;
 using OpenTrpg.Systems.Dnd5e.Application.Characters;
 using OpenTrpg.Systems.Dnd5e.Domain.Catalog;
 using OpenTrpg.Systems.Dnd5e.Domain.Characters;
@@ -35,6 +36,9 @@ public sealed record PlannedOption(
 
     /// <summary>Pick of the same level-up the option depends on (a skill gained at this level), or null.</summary>
     public OptionRequirementDto? Requires { get; init; }
+
+    /// <summary>Id of the catalog item the option stands for (a weapon or a tool), or null for other options.</summary>
+    public string? ItemId { get; init; }
 }
 
 /// <summary>A choice of the plan: the rule, how many picks are required, the options and the replaceable picks.</summary>
@@ -83,6 +87,7 @@ public sealed record PlannedChoice(LevelChoiceRule Rule, int Required, bool Free
             {
                 Cost = o.Cost,
                 Requires = o.Requires,
+                ItemId = o.ItemId,
                 SetId = o.Definition?.SetId,
                 RemoveSavingThrows = o.Definition?.Grants.RemoveSavingThrows is { } remove
                     ? new RemoveSavingThrowsDto(remove.Choose, remove.From)
@@ -347,6 +352,12 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         var weapons = choiceKinds.Contains(LevelChoiceKind.Weapon)
             ? (await catalog.SearchSrdItemsAsync(new ItemFilter(null, ItemCategory.Weapon, null), 0, MaxWeaponOptions, cancellationToken)).Items
             : [];
+        var tools = choiceKinds.Contains(LevelChoiceKind.Tool)
+            ? (await catalog.SearchSrdItemsAsync(new ItemFilter(null, ItemCategory.Tool, null), 0, MaxWeaponOptions, cancellationToken)).Items
+            : [];
+        var languages = choiceKinds.Contains(LevelChoiceKind.Language)
+            ? await catalog.ListReferenceEntriesAsync(ReferenceEntry.Languages, cancellationToken)
+            : [];
         var races = prerequisites.Any(p => p.ReferencedRaces.Any())
             ? (await catalog.ListRacesAsync(cancellationToken)).ToDictionary(r => r.Index, r => r.Name, StringComparer.Ordinal)
             : new Dictionary<string, string>(StringComparer.Ordinal);
@@ -373,6 +384,8 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             Names = names,
             Size = size,
             Weapons = weapons,
+            Tools = tools,
+            Languages = languages,
             IsPactClass = c => allClasses.FirstOrDefault(d => d.Index == c)?.IsPactCaster ?? c == "warlock",
             CharacterLevel = input.CharacterLevel,
             Own = input.Own ?? new Dictionary<string, IReadOnlySet<string>>(StringComparer.Ordinal),
@@ -928,6 +941,12 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         /// <summary>Catalog weapons, for the weapon choices.</summary>
         public IReadOnlyList<ItemTemplate> Weapons { get; init; } = [];
 
+        /// <summary>Catalog tools, to describe the options of the tool choices.</summary>
+        public IReadOnlyList<ItemTemplate> Tools { get; init; } = [];
+
+        /// <summary>Languages of the catalog (SRD and content packs), for the language choices that list none.</summary>
+        public IReadOnlyList<ReferenceEntry> Languages { get; init; } = [];
+
         /// <summary>Answers of the request by choice key (applying), or null (the plan shown to the player).</summary>
         public IReadOnlyDictionary<string, IReadOnlyList<string>>? PendingChoices { get; init; }
 
@@ -1018,8 +1037,17 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                 case LevelChoiceKind.CantripsKnown or LevelChoiceKind.SpellsKnown or LevelChoiceKind.SpellbookSpells:
                     list = SpellCandidates(rule, filter);
                     break;
+                case LevelChoiceKind.Tool:
+                    // The listed tools (by index or name), described by their catalog item; any text when none is listed.
+                    var toolsFrom = rule.From ?? [];
+                    list = toolsFrom.Select(ToolOption).ToList();
+                    freeText = toolsFrom.Count == 0;
+                    break;
+                case LevelChoiceKind.Language when rule.From is not { Count: > 0 }:
+                    list = LanguageOptions(rule);
+                    break;
                 default:
-                    // Languages, tools and free custom choices: the listed values, or any text.
+                    // Listed languages and free custom choices: the listed values, or any text.
                     var from = rule.From ?? [];
                     list = from.Select(f => Simple(f, f, [])).ToList();
                     freeText = from.Count == 0;
@@ -1076,7 +1104,46 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                 .Select(w =>
                 {
                     var has = !IsOwn(rule, w.Index!) && (keys.Contains(w.Index!) || ProficiencyKeys.WeaponGroups(w.Subcategory, w.Properties).Any(keys.Contains));
-                    return new PlannedOption(w.Index!, w.Name, [w.Subcategory ?? string.Empty], null, !has, has ? "Ya tienes competencia con esta arma." : null, null, null, []);
+                    return new PlannedOption(w.Index!, w.Name, OriginOptionDescriptions.Weapon(w), null, !has, has ? "Ya tienes competencia con esta arma." : null, null, null, [])
+                    {
+                        ItemId = w.Id.ToString(),
+                    };
+                })
+                .ToList();
+        }
+
+        /// <summary>
+        /// A tool of a tool choice (<c>from</c> lists indexes such as "thieves-tools" or names such as "Lute"), described by
+        /// its catalog item when one matches; the value itself stays the index the proficiency is stored with.
+        /// </summary>
+        private PlannedOption ToolOption(string value)
+        {
+            var item = Tools.FirstOrDefault(t => string.Equals(t.Index, value, StringComparison.Ordinal))
+                ?? Tools.FirstOrDefault(t => string.Equals(t.Name, value, StringComparison.OrdinalIgnoreCase))
+                ?? Tools.FirstOrDefault(t => string.Equals(t.Index, value, StringComparison.OrdinalIgnoreCase));
+            return item is null
+                ? Simple(value, value, [])
+                : Simple(value, item.Name, OriginOptionDescriptions.Tool(item)) with { ItemId = item.Id.ToString() };
+        }
+
+        /// <summary>
+        /// The languages of the catalog (SRD and content packs) for a language choice that lists none; not eligible
+        /// when the character already speaks them (by index or name), except the ones this same choice gave.
+        /// </summary>
+        private List<PlannedOption> LanguageOptions(LevelChoiceRule rule)
+        {
+            var known = character.Proficiencies
+                .Where(p => p.Type == ProficiencyType.Language)
+                .Select(p => p.Key)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return Languages
+                .Select(l =>
+                {
+                    var has = !IsOwn(rule, l.Name) && !IsOwn(rule, l.Index) && (known.Contains(l.Name) || known.Contains(l.Index));
+                    var description = OriginOptionDescriptions.Languages.Any(k => string.Equals(k.Name, l.Name, StringComparison.OrdinalIgnoreCase))
+                        ? OriginOptionDescriptions.Language(l.Name)
+                        : CatalogJson.StringList(l.DescriptionJson) is { Count: > 0 } own ? own : OriginOptionDescriptions.Language(l.Name);
+                    return new PlannedOption(l.Name, l.Name, description, null, !has, has ? "Ya conoces este idioma." : null, null, null, []);
                 })
                 .ToList();
         }

@@ -61,9 +61,10 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
             new
             {
                 extends = "monk",
-                levelChoices = new[]
+                levelChoices = new object[]
                 {
                     new { level = 2, key = "tecnica-ejemplo", name = "Técnica", kind = "OptionSet", setId = Techniques, choose = 1 },
+                    new { level = 2, key = "herramienta-ejemplo", name = "Herramienta", kind = "Tool", choose = 1, from = new[] { "thieves-tools", "Lute", "Kit inventado" } },
                 },
             },
             new
@@ -135,7 +136,9 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
              choice.Options.Single(o => o.Index == "artes-ejemplo-golpe-centrado").Cost!.Amount));
         Assert.Null(choice.Options.Single(o => o.Index == "artes-ejemplo-foco-interior").Cost);
 
-        var after = await ApplyAsync(s.Player, monk.Id, 6, new { key = "tecnica-ejemplo", selected = new[] { CalmStrike } });
+        var after = await ApplyAsync(s.Player, monk.Id, 6,
+            new { key = "tecnica-ejemplo", selected = new[] { CalmStrike } },
+            new { key = "herramienta-ejemplo", selected = new[] { "thieves-tools" } });
         var cost = Assert.Single(after.OptionCosts);
         Assert.Equal((CalmStrike, "Golpe sereno", "ki", "Ki", 2), (cost.Index, cost.Name, cost.Resource, cost.ResourceName, cost.Amount));
         var ki = Assert.Single(after.Resources, r => r.Key == "ki");
@@ -202,7 +205,7 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
         await ImportAsync();
         var s = await factory.CreateCampaignScenarioAsync();
         await s.EnablePacksAsync();
-        var fighter = await LevelAsync(s, "fighter", null, 2, "Guerrera letrada");
+        var fighter = await LevelAsync(s, "fighter", null, 2, "Guerrera letrada", languages: ["Common"]);
 
         var plan = await PlanAsync(s.Player, fighter.Id);
         var keys = plan.Choices.Where(c => c.SubclassIndex == Scholar).Select(c => c.Key).ToList();
@@ -211,22 +214,76 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
         var arcana = expertise.Options.Single(o => o.Index == "arcana");
         Assert.Equal(("habilidad-erudito", "arcana"), (arcana.Requires!.ChoiceKey, arcana.Requires.Index));
 
+        // A language choice without "from" lists the languages of the catalog, without the ones the character speaks.
+        var language = plan.Choices.Single(c => c.Key == "idioma-erudito");
+        Assert.False(language.FreeText);
+        Assert.Contains(fighter.Proficiencies, p => p.Type == "Language" && p.Key == "Common");
+        var common = Assert.Single(language.Options, o => o.Index == "Common");
+        Assert.Equal((false, "Ya conoces este idioma."), (common.Eligible, common.Reason));
+        var elvish = Assert.Single(language.Options, o => o.Index == "Elvish");
+        Assert.True(elvish.Eligible);
+        Assert.Equal("Elvish", elvish.Name);
+        Assert.StartsWith("Idioma estándar.", elvish.Description[0], StringComparison.Ordinal);
+        Assert.Contains(language.Options, o => o.Index == "Draconic");
+        Assert.True(language.Options.Count >= 16);
+
         // Expertise in the skill that was not picked is refused.
         var subclassKey = plan.Choices.Single(c => c.Kind == "Subclass").Key;
         var wrong = await PostLevelUpAsync(s.Player, fighter.Id, 7,
             new { key = subclassKey, selected = new[] { Scholar } },
             new { key = "habilidad-erudito", selected = new[] { "arcana" } },
-            new { key = "idioma-erudito", selected = new[] { "Lengua de ejemplo" } },
+            new { key = "idioma-erudito", selected = new[] { "Elvish" } },
             new { key = "pericia-erudito", selected = new[] { "history" } });
         Assert.Equal(HttpStatusCode.BadRequest, wrong.StatusCode);
+
+        // A language that is not in the catalog is refused too.
+        var unknown = await PostLevelUpAsync(s.Player, fighter.Id, 7,
+            new { key = subclassKey, selected = new[] { Scholar } },
+            new { key = "habilidad-erudito", selected = new[] { "arcana" } },
+            new { key = "idioma-erudito", selected = new[] { "Lengua inventada" } },
+            new { key = "pericia-erudito", selected = new[] { "arcana" } });
+        Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
 
         var after = await ApplyAsync(s.Player, fighter.Id, 7,
             new { key = subclassKey, selected = new[] { Scholar } },
             new { key = "habilidad-erudito", selected = new[] { "arcana" } },
-            new { key = "idioma-erudito", selected = new[] { "Lengua de ejemplo" } },
+            new { key = "idioma-erudito", selected = new[] { "Elvish" } },
             new { key = "pericia-erudito", selected = new[] { "arcana" } });
         Assert.Contains(after.Proficiencies, p => p.Type == "Skill" && SkillKey(p.Key) == "arcana" && p.Expertise);
         Assert.DoesNotContain(after.Proficiencies, p => p.Type == "Skill" && SkillKey(p.Key) == "history");
+        Assert.Contains(after.Proficiencies, p => p.Type == "Language" && p.Key == "Elvish");
+    }
+
+    [Fact]
+    public async Task A_tool_choice_describes_each_tool_with_its_catalog_item()
+    {
+        await ImportAsync();
+        var s = await factory.CreateCampaignScenarioAsync();
+        await s.EnablePacksAsync();
+        var monk = await LevelAsync(s, "monk", null, 1, "Monje manitas");
+
+        var choice = Assert.Single((await PlanAsync(s.Player, monk.Id)).Choices, c => c.Key == "herramienta-ejemplo");
+        Assert.False(choice.FreeText);
+        Assert.Equal(["thieves-tools", "Lute", "Kit inventado"], choice.Options.Select(o => o.Index));
+
+        var thieves = choice.Options[0];
+        Assert.Equal("Thieves' Tools", thieves.Name);
+        Assert.Equal("Herramientas", thieves.Description[0]);
+        Assert.Contains("lock picks", thieves.Description[1], StringComparison.Ordinal);
+        Assert.True(Guid.TryParse(thieves.ItemId, out _), $"itemId: {thieves.ItemId}");
+
+        var lute = choice.Options[1];
+        Assert.Equal(("Lute", "Instrumento musical"), (lute.Name, lute.Description[0]));
+        Assert.NotNull(lute.ItemId);
+
+        var custom = choice.Options[2];
+        Assert.Equal(("Kit inventado", 0), (custom.Name, custom.Description.Count));
+        Assert.Null(custom.ItemId);
+
+        var after = await ApplyAsync(s.Player, monk.Id, 6,
+            new { key = "tecnica-ejemplo", selected = new[] { CalmStrike } },
+            new { key = "herramienta-ejemplo", selected = new[] { "Lute" } });
+        Assert.Contains(after.Proficiencies, p => p is { Type: "Tool", Key: "Lute" });
     }
 
     [Theory]
@@ -297,7 +354,7 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
     }
 
     /// <summary>An active character of the class at <paramref name="level"/> (Wis 16) with a level granted by the DM.</summary>
-    private static async Task<CharacterDetailDto> LevelAsync(CampaignScenario s, string classIndex, string? subclass, int level, string name)
+    private static async Task<CharacterDetailDto> LevelAsync(CampaignScenario s, string classIndex, string? subclass, int level, string name, string[]? languages = null)
     {
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, name);
         var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet", new
@@ -307,6 +364,16 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
             applyRacialBonuses = false,
         });
         Assert.True(patch.StatusCode == HttpStatusCode.OK, await patch.Content.ReadAsStringAsync());
+        if (languages is { Length: > 0 })
+        {
+            // The languages of the race, as the app writes them in the sheet.
+            var spoken = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet", new
+            {
+                proficiencies = languages.Select(l => new { type = "Language", key = l, expertise = false, source = "Race" }).ToArray(),
+            });
+            Assert.True(spoken.StatusCode == HttpStatusCode.OK, await spoken.Content.ReadAsStringAsync());
+        }
+
         Assert.Equal(HttpStatusCode.OK, (await s.Dm.ActivateAsync(hero.Id)).StatusCode);
         var granted = await s.Dm.Client.PostAsJsonAsync($"/api/v1/systems/dnd5e/campaigns/{s.CampaignId}/party/grant-level", new { characterIds = new[] { hero.Id } });
         Assert.Equal(HttpStatusCode.OK, granted.StatusCode);
