@@ -12,6 +12,7 @@ import 'companion_section.dart';
 import 'resources_section.dart';
 import 'rest_section.dart';
 import 'spells_section.dart';
+import 'status_section.dart';
 import 'vitals_section.dart';
 
 /// The tabs of the combat view, in order.
@@ -19,6 +20,7 @@ enum CombatSection {
   actions('Acciones'),
   spells('Conjuros'),
   resources('Recursos'),
+  status('Estado'),
   more('Más');
 
   const CombatSection(this.label);
@@ -30,8 +32,8 @@ enum CombatSection {
 String combatSectionPreference(String characterId) => 'character.$characterId.combatSection';
 
 /// The tabs [character] has something in: "Conjuros" with spells, slots or
-/// class rows for it, "Recursos" with limited uses; "Acciones" and "Más"
-/// always.
+/// class rows for it, "Recursos" with limited uses; "Acciones", "Estado" and
+/// "Más" always.
 List<CombatSection> combatSectionsOf(CharacterDetail character) => [
   CombatSection.actions,
   if (character.spells.isNotEmpty ||
@@ -40,19 +42,22 @@ List<CombatSection> combatSectionsOf(CharacterDetail character) => [
       hasClassSpellRows(character))
     CombatSection.spells,
   if (hasResources(character)) CombatSection.resources,
+  CombatSection.status,
   CombatSection.more,
 ];
 
-/// The combat screen of a character: a status header that never scrolls
-/// (hit points with quick damage and healing, the six stats, the death saves
-/// at 0 and the concentration and conditions) over four tabs, the last one
-/// chosen remembered per character:
+/// The combat screen of a character: a compact status header that never
+/// scrolls (hit points with quick damage and healing, the death saves at 0
+/// and the concentration and conditions) over five tabs, the last one chosen
+/// remembered per character:
 ///
 /// - "Acciones": attacks, the spells it can cast in one tap and what each
 ///   class does on its turn.
 /// - "Conjuros": slots, the spells by level ("Preparados" / "Todos"), rituals
 ///   and "Preparar conjuros".
 /// - "Recursos": every limited use with its pips, recharge and origin.
+/// - "Estado": armor class, initiative, speed, passive perception,
+///   proficiency bonus and inspiration, each with its breakdown.
 /// - "Más": companions, consumables, what the classes need to remember,
 ///   recoveries and rests.
 ///
@@ -166,6 +171,7 @@ class _CombatViewState extends ConsumerState<CombatView> {
         ),
       ],
       CombatSection.resources => [ResourcesSection(character: c, canEdit: canEdit, isDm: isDm)],
+      CombatSection.status => [CombatStatusSection(character: c, canEdit: canEdit)],
       CombatSection.more => [
         CompanionSection(character: c, canEdit: canEdit, isDm: isDm),
         if (widget.inSession)

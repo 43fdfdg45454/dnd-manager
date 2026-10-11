@@ -617,6 +617,7 @@ void main() {
       expect(primaryAt('character-title'), accent);
       expect(primaryAt('character-class-icon'), accent);
       // The rest of the combat view keeps the app's colours.
+      await openCombatSection(tester, 'status');
       expect(primaryAt('combat-ac'), isNot(accent));
     });
   });
