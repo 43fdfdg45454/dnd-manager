@@ -1242,6 +1242,9 @@ internal sealed class PackStartingOptionJson
 
     public int? CategoryChoose { get; set; }
 
+    /// <summary>With <see cref="Category"/>: only the items of the category the character is proficient with are offered.</summary>
+    public bool? ProficientOnly { get; set; }
+
     public List<PackCategoryPickJson?>? Categories { get; set; }
 }
 
@@ -1250,6 +1253,9 @@ internal sealed class PackCategoryPickJson
     public string? Category { get; set; }
 
     public int? Choose { get; set; }
+
+    /// <summary>Only the items of the category the character is proficient with are offered (false by default).</summary>
+    public bool? ProficientOnly { get; set; }
 }
 
 // ---- Format 2: level choices -----------------------------------------------------------------------

@@ -28,7 +28,7 @@ internal sealed partial class ContentPackValidator
                 return;
             }
 
-            _itemReferences.Add(($"{path}.item", item));
+            _itemReferences.Add(($"{path}.item", item, false));
             rows.Trinkets.Add(new TrinketEntry { Source = _id, Roll = roll.Value, ItemIndex = item });
         });
     }

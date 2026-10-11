@@ -21,6 +21,7 @@ public sealed class GetClassHandler(ICatalogRepository catalog)
         var features = (await catalog.ListFeaturesByClassAsync(definition.Index, cancellationToken)).ToDictionary(f => f.Index);
         var startingEquipment = definition.StartingEquipment;
         var resolve = await StartingEquipmentResolver.PrepareAsync(catalog, [startingEquipment], cancellationToken);
+        var toolProficiencies = await ToolProficiencies.ResolveAsync(catalog, definition.ProficiencyNames, cancellationToken);
 
         return new ClassDetailDto(
             definition.Index,
@@ -65,6 +66,7 @@ public sealed class GetClassHandler(ICatalogRepository catalog)
                 .ToList())
         {
             Source = definition.Source,
+            ToolProficiencies = toolProficiencies,
             Description = definition.Description,
             SubclassLevel = definition.SubclassLevel,
             HasLevelOneChoices = (await catalog.ListLevelChoiceRulesAsync(definition.Index, cancellationToken)).Any(Characters.LevelUpPlanner.IsInitialClassRule),

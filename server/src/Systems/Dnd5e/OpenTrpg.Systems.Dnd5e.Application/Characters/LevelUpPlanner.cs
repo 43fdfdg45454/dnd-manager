@@ -44,6 +44,9 @@ public sealed record PlannedOption(
 /// <summary>A choice of the plan: the rule, how many picks are required, the options and the replaceable picks.</summary>
 public sealed record PlannedChoice(LevelChoiceRule Rule, int Required, bool FreeText, IReadOnlyList<PlannedOption> Options, IReadOnlyList<ChoiceItem> Known)
 {
+    /// <summary>Note shown with the choice: the rule's, preceded by what the choice gives when the kind explains itself (tools).</summary>
+    public string Note { get; init; } = Rule.Note;
+
     /// <summary>
     /// Choice of an option (<c>options[].choices</c>): it only applies, and is only required, when <c>Index</c> is picked
     /// in the choice <c>ChoiceKey</c> of the same level-up. Null for the choices of the class.
@@ -69,7 +72,7 @@ public sealed record PlannedChoice(LevelChoiceRule Rule, int Required, bool Free
         Required,
         Rule.Replaces,
         Rule.Cumulative,
-        Rule.Note,
+        Note,
         Rule.SubclassIndex,
         Rule.SetId,
         FreeText,
@@ -1038,7 +1041,7 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
                     list = SpellCandidates(rule, filter);
                     break;
                 case LevelChoiceKind.Tool:
-                    // The listed tools (by index or name), described by their catalog item; any text when none is listed.
+                    // The listed tools (catalog item indexes), described by their catalog item; any text when none is listed.
                     var toolsFrom = rule.From ?? [];
                     list = toolsFrom.Select(ToolOption).ToList();
                     freeText = toolsFrom.Count == 0;
@@ -1058,7 +1061,17 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
             var required = rule.Choose <= 0 ? 0
                 : freeText || rule.Kind == LevelChoiceKind.AsiOrFeat ? rule.Choose
                 : Math.Min(rule.Choose, eligible);
-            return new PlannedChoice(rule, required, freeText, list, rule.Replaces ? Known(rule) : []);
+            return new PlannedChoice(rule, required, freeText, list, rule.Replaces ? Known(rule) : [])
+            {
+                Note = rule.Kind == LevelChoiceKind.Tool ? ToolNote(rule) : rule.Note,
+            };
+        }
+
+        /// <summary>The note of a tool choice: what the proficiency gives, then the rule's own note when it has one.</summary>
+        private static string ToolNote(LevelChoiceRule rule)
+        {
+            var note = OriginOptionDescriptions.ToolChoiceNote(Math.Max(1, rule.Choose));
+            return rule.Note.Length == 0 ? note : $"{note} {rule.Note}";
         }
 
         /// <summary>
@@ -1113,14 +1126,13 @@ public sealed class LevelUpPlanner(ICatalogRepository catalog, ICharacterSheetSe
         }
 
         /// <summary>
-        /// A tool of a tool choice (<c>from</c> lists indexes such as "thieves-tools" or names such as "Lute"), described by
-        /// its catalog item when one matches; the value itself stays the index the proficiency is stored with.
+        /// A tool of a tool choice (<c>from</c> lists catalog item indexes such as "thieves-tools"), named and described
+        /// by its catalog item; the value itself stays the index the proficiency is stored with. A value without a
+        /// catalog item (the validator rejects them at import) is shown as it is.
         /// </summary>
         private PlannedOption ToolOption(string value)
         {
-            var item = Tools.FirstOrDefault(t => string.Equals(t.Index, value, StringComparison.Ordinal))
-                ?? Tools.FirstOrDefault(t => string.Equals(t.Name, value, StringComparison.OrdinalIgnoreCase))
-                ?? Tools.FirstOrDefault(t => string.Equals(t.Index, value, StringComparison.OrdinalIgnoreCase));
+            var item = Tools.FirstOrDefault(t => string.Equals(t.Index, value, StringComparison.Ordinal));
             return item is null
                 ? Simple(value, value, [])
                 : Simple(value, item.Name, OriginOptionDescriptions.Tool(item)) with { ItemId = item.Id.ToString() };

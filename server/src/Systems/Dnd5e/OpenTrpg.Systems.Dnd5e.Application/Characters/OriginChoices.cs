@@ -189,7 +189,7 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
             choice.Required,
             null,
             choice.FreeText,
-            choice.Rule.Note,
+            choice.Note,
             choice.Options)
         {
             Class = choice,
@@ -462,12 +462,13 @@ public sealed class OriginChoicesPlanner(ICatalogRepository catalog, ICharacterS
         if (choices.Tools is { } toolChoice)
         {
             var key = prefix + OriginChoiceKeys.Tools;
+            // Every option is a catalog item index: the item gives the name, the description and the itemId.
             var options = toolChoice.From
-                .Select(o => (Option: o, Item: tools.FirstOrDefault(t => t.Index == o.Index)))
-                .Select(p => Proficiency(key, ProficiencyType.Tool, p.Option.Index, p.Option.Name, OriginOptionDescriptions.Tool(p.Item), p.Item))
+                .Select(o => (Option: o, Item: tools.FirstOrDefault(t => string.Equals(t.Index, o.Index, StringComparison.Ordinal))))
+                .Select(p => Proficiency(key, ProficiencyType.Tool, p.Option.Index, p.Item?.Name ?? p.Option.Name, OriginOptionDescriptions.Tool(p.Item), p.Item))
                 .ToList();
             var required = options.Count == 0 ? toolChoice.Choose : Math.Min(toolChoice.Choose, options.Count(o => o.Eligible));
-            yield return Picks(key, $"Herramientas ({origin})", OriginChoiceKeys.ToolKind, toolChoice, options, options.Count == 0, required, string.Empty);
+            yield return Picks(key, $"Herramientas ({origin})", OriginChoiceKeys.ToolKind, toolChoice, options, options.Count == 0, required, OriginOptionDescriptions.ToolChoiceNote(toolChoice.Choose));
         }
 
         if (choices.Languages is { } languageChoice)

@@ -64,7 +64,7 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
                 levelChoices = new object[]
                 {
                     new { level = 2, key = "tecnica-ejemplo", name = "Técnica", kind = "OptionSet", setId = Techniques, choose = 1 },
-                    new { level = 2, key = "herramienta-ejemplo", name = "Herramienta", kind = "Tool", choose = 1, from = new[] { "thieves-tools", "Lute", "Kit inventado" } },
+                    new { level = 2, key = "herramienta-ejemplo", name = "Herramienta", kind = "Tool", choose = 1, from = new[] { "thieves-tools", "lute" }, note = "Nota del paquete." },
                 },
             },
             new
@@ -264,26 +264,41 @@ public class OptionCostAndExpertisePackTests(OptionCostPackApiFactory factory) :
 
         var choice = Assert.Single((await PlanAsync(s.Player, monk.Id)).Choices, c => c.Key == "herramienta-ejemplo");
         Assert.False(choice.FreeText);
-        Assert.Equal(["thieves-tools", "Lute", "Kit inventado"], choice.Options.Select(o => o.Index));
+        Assert.Equal(["thieves-tools", "lute"], choice.Options.Select(o => o.Index));
+        // What the proficiency gives is said once, on the choice, before the pack's own note.
+        Assert.Equal("Eliges competencia con una de estas herramientas: sumas tu bonificador de competencia a las pruebas que hagas con ellas. Nota del paquete.", choice.Note);
 
         var thieves = choice.Options[0];
         Assert.Equal("Thieves' Tools", thieves.Name);
-        Assert.Equal("Herramientas", thieves.Description[0]);
-        Assert.Contains("lock picks", thieves.Description[1], StringComparison.Ordinal);
+        Assert.Contains("lock picks", Assert.Single(thieves.Description), StringComparison.Ordinal);
         Assert.True(Guid.TryParse(thieves.ItemId, out _), $"itemId: {thieves.ItemId}");
 
         var lute = choice.Options[1];
-        Assert.Equal(("Lute", "Instrumento musical"), (lute.Name, lute.Description[0]));
+        Assert.Equal("Lute", lute.Name);
         Assert.NotNull(lute.ItemId);
-
-        var custom = choice.Options[2];
-        Assert.Equal(("Kit inventado", 0), (custom.Name, custom.Description.Count));
-        Assert.Null(custom.ItemId);
+        Assert.All(lute.Description, d => Assert.DoesNotContain("bonificador de competencia", d, StringComparison.Ordinal));
 
         var after = await ApplyAsync(s.Player, monk.Id, 6,
             new { key = "tecnica-ejemplo", selected = new[] { CalmStrike } },
-            new { key = "herramienta-ejemplo", selected = new[] { "Lute" } });
-        Assert.Contains(after.Proficiencies, p => p is { Type: "Tool", Key: "Lute" });
+            new { key = "herramienta-ejemplo", selected = new[] { "lute" } });
+        Assert.Contains(after.Proficiencies, p => p is { Type: "Tool", Key: "lute" });
+    }
+
+    [Theory]
+    [InlineData("Lute")]
+    [InlineData("Kit inventado")]
+    [InlineData("THIEVES-TOOLS")]
+    public async Task A_tool_choice_only_accepts_catalog_item_indexes(string value)
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        var pack = Renamed("artes-herramientas");
+        pack["classes"]![0]!["levelChoices"]![1]!["from"] = new JsonArray("thieves-tools", value);
+
+        var errors = await ImportErrorsAsync(admin, pack);
+
+        var error = Assert.Single(errors, e => e.StartsWith("classes[0].levelChoices[1].from[1]:", StringComparison.Ordinal));
+        Assert.Contains($"'{value}'", error, StringComparison.Ordinal);
+        Assert.Contains("índice", error, StringComparison.Ordinal);
     }
 
     [Theory]

@@ -103,7 +103,7 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
         Assert.Equal(($"{PackId}-battle-master", 3, 16), (maneuvers.SubclassIndex, maneuvers.Required, maneuvers.Options.Count));
         Assert.DoesNotContain(plan.Choices, c => c.Key.StartsWith("recurso-", StringComparison.Ordinal));
         var tool = Assert.Single(plan.Choices, c => c.Key == "herramienta-de-artesano");
-        Assert.Contains(tool.Options, o => o.Index == "Smith's tools");
+        Assert.Contains(tool.Options, o => o is { Index: "smiths-tools", Name: "Smith's Tools", ItemId: not null });
 
         // The Eldritch Knight (a third caster of the wizard list) asks for two cantrips and three level-1 wizard spells.
         var knightCantrips = Assert.Single(plan.Choices, c => c.Key == "trucos" && c.SubclassIndex == $"{PackId}-eldritch-knight");
@@ -123,14 +123,14 @@ public class PrivatePhbPackTests(ContentPackApiFactory factory) : IClassFixture<
             {
                 new { key = "subclass", selected = new[] { $"{PackId}-battle-master" } },
                 new { key = "maniobras", selected = new[] { $"{PackId}-maneuver-parry", $"{PackId}-maneuver-riposte", $"{PackId}-maneuver-trip-attack" } },
-                new { key = "herramienta-de-artesano", selected = new[] { "Smith's tools" } },
+                new { key = "herramienta-de-artesano", selected = new[] { "smiths-tools" } },
             },
         });
         Assert.Equal($"{PackId}-battle-master", level3.Classes.Single().SubclassIndex);
         var superiority = Assert.Single(level3.Resources, r => r.Key == $"{PackId}-superiority-dice");
         Assert.Equal((4, "ShortRest", true, "d8"), (superiority.Max, superiority.Recharge, superiority.IsAuto, superiority.Dice));
         Assert.Contains("Combat Superiority", superiority.Source);
-        Assert.Contains(level3.Proficiencies, p => p is { Type: "Tool", Key: "Smith's tools" });
+        Assert.Contains(level3.Proficiencies, p => p is { Type: "Tool", Key: "smiths-tools" });
 
         // Level 4: the 41 feats are offered as before, with their prerequisites.
         await GrantAsync(s, hero.Id);

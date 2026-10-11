@@ -272,11 +272,13 @@ public class OriginChoicesEndpointsTests(CatalogApiFactory factory)
 
         var dwarf = await DraftAsync(s, "dwarf", "hill-dwarf", "barbarian");
         var tools = Assert.Single((await OriginAsync(s.Player, dwarf.Id)).Choices, c => c.Key == "race.tools");
+        Assert.Equal("Eliges competencia con una de estas herramientas: sumas tu bonificador de competencia a las pruebas que hagas con ellas.", tools.Note);
         var smiths = Assert.Single(tools.Options, o => o.Index == "smiths-tools");
-        Assert.Equal("Herramientas de artesano", smiths.Description[0]);
-        Assert.Contains("artisan's tools", smiths.Description[1], StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Smith's Tools", smiths.Name);
+        Assert.Contains("artisan's tools", Assert.Single(smiths.Description), StringComparison.OrdinalIgnoreCase);
         Assert.True(Guid.TryParse(smiths.ItemId, out _), $"itemId: {smiths.ItemId}");
         Assert.All(tools.Options, o => Assert.NotNull(o.ItemId));
+        Assert.All(tools.Options, o => Assert.All(o.Description, d => Assert.DoesNotContain("bonificador de competencia", d, StringComparison.Ordinal)));
     }
 
     [Fact]
@@ -321,10 +323,13 @@ public class OriginChoicesEndpointsTests(CatalogApiFactory factory)
             Subcategory = "Other Tools",
             Description = ["Sirven para abrir cerraduras."],
         }, now);
-        Assert.Equal(["Herramientas", "Sirven para abrir cerraduras."], OriginOptionDescriptions.Tool(picks));
+        // Only the item's own paragraphs: what a tool proficiency gives is said once, in the note of the choice.
+        Assert.Equal(["Sirven para abrir cerraduras."], OriginOptionDescriptions.Tool(picks));
         var lute = ItemTemplate.CreateCatalog("srd", "laud-ejemplo", new ItemTemplateData { Name = "Laúd de ejemplo", Category = ItemCategory.Tool, Subcategory = "Musical Instrument" }, now);
-        Assert.Equal(["Instrumento musical"], OriginOptionDescriptions.Tool(lute));
-        Assert.Single(OriginOptionDescriptions.Tool(null));
+        Assert.Empty(OriginOptionDescriptions.Tool(lute));
+        Assert.Empty(OriginOptionDescriptions.Tool(null));
+        Assert.Equal("Eliges competencia con una de estas herramientas: sumas tu bonificador de competencia a las pruebas que hagas con ellas.", OriginOptionDescriptions.ToolChoiceNote(1));
+        Assert.StartsWith("Eliges competencia con 2 de estas herramientas:", OriginOptionDescriptions.ToolChoiceNote(2), StringComparison.Ordinal);
     }
 
     [Fact]

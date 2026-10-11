@@ -78,29 +78,17 @@ public static class OriginOptionDescriptions
     public static IReadOnlyList<string> Ability(string ability) =>
         [AbilityTexts.GetValueOrDefault(ability, "Característica del personaje.")];
 
-    private static readonly Dictionary<string, string> ToolCategories = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["Artisan's Tools"] = "Herramientas de artesano",
-        ["Gaming Sets"] = "Juego",
-        ["Musical Instrument"] = "Instrumento musical",
-        ["Other Tools"] = "Herramientas",
-    };
-
     /// <summary>
-    /// The category of a catalog tool or instrument ("Herramientas de artesano") followed by its own description when
-    /// it has one; a tool outside the catalog gets a generic line.
+    /// The catalog paragraphs of a tool or instrument (empty when it has none or it is not in the catalog): what a tool
+    /// proficiency means is said once, in the <see cref="ToolChoiceNote"/> of the choice.
     /// </summary>
-    public static IReadOnlyList<string> Tool(ItemTemplate? item)
-    {
-        if (item is null)
-        {
-            return ["Competencia con estas herramientas: sumas tu bonificador de competencia a las pruebas que hagas con ellas."];
-        }
+    public static IReadOnlyList<string> Tool(ItemTemplate? item) =>
+        item?.Description.Where(d => !string.IsNullOrWhiteSpace(d)).ToList() ?? [];
 
-        var category = string.IsNullOrWhiteSpace(item.Subcategory) ? "Herramientas" : ToolCategories.GetValueOrDefault(item.Subcategory, item.Subcategory);
-        var description = item.Description.Where(d => !string.IsNullOrWhiteSpace(d)).ToList();
-        return description.Count == 0 ? [category] : [category, .. description];
-    }
+    /// <summary>Note of a tool proficiency choice: how many to pick and what the proficiency gives (Spanish).</summary>
+    public static string ToolChoiceNote(int choose) =>
+        $"Eliges competencia con {(choose == 1 ? "una" : choose.ToString(System.Globalization.CultureInfo.InvariantCulture))} de estas herramientas: "
+        + "sumas tu bonificador de competencia a las pruebas que hagas con ellas.";
 
     /// <summary>
     /// Summary of a catalog weapon ("Arma marcial cuerpo a cuerpo · 1d8 cortante · versátil (1d10)", with its range when

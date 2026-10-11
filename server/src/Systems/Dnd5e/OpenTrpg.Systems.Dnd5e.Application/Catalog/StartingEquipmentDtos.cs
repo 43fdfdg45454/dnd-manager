@@ -32,7 +32,8 @@ public sealed record StartingEquipmentChoiceDto(string Description, int Choose, 
 public sealed record StartingEquipmentOptionDto(string Label, IReadOnlyList<StartingItemDto> Items, IReadOnlyList<StartingCategoryPickDto> Categories);
 
 /// <param name="Category">Equipment category index ("martial-weapons"), for <c>GET /catalog/equipment-categories/{index}</c>.</param>
-public sealed record StartingCategoryPickDto(string Category, string Name, int Choose);
+/// <param name="ProficientOnly">Only the items of the category the character is proficient with are offered.</param>
+public sealed record StartingCategoryPickDto(string Category, string Name, int Choose, bool ProficientOnly = false);
 
 public sealed record StartingGoldDto(string Dice, int Multiplier);
 
@@ -84,7 +85,7 @@ internal static class StartingEquipmentResolver
                             .Select(o => new StartingEquipmentOptionDto(
                                 o.Label,
                                 o.Items.Select(Item).ToList(),
-                                o.Categories.Select(k => new StartingCategoryPickDto(k.Category, categories.GetValueOrDefault(k.Category) ?? k.Category, k.Choose)).ToList()))
+                                o.Categories.Select(k => new StartingCategoryPickDto(k.Category, categories.GetValueOrDefault(k.Category) ?? k.Category, k.Choose, k.ProficientOnly)).ToList()))
                             .ToList()))
                     .ToList(),
                 stored.Gold is { } gold ? new StartingGoldDto(gold.Dice, gold.Multiplier) : null,

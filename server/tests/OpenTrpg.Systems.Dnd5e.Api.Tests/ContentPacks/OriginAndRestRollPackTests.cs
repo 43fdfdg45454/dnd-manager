@@ -79,7 +79,15 @@ public class OriginAndRestRollPackTests(OriginPackApiFactory factory) : IClassFi
                 index = "augurios-ejemplo-vigia",
                 name = "Vigía de ejemplo",
                 skillProficiencies = new[] { "perception" },
-                choices = new { tools = new { choose = 1, from = new[] { "Catalejo de ejemplo", "Brújula de ejemplo" } } },
+                choices = new { tools = new { choose = 1, from = new[] { "navigators-tools", "cartographers-tools" } } },
+            },
+            new
+            {
+                index = "augurios-ejemplo-cartografo",
+                name = "Cartógrafo de ejemplo",
+                skillProficiencies = new[] { "survival" },
+                // Exactly as many tools as it grants: no choice, fixed proficiencies.
+                choices = new { tools = new { choose = 2, from = new[] { "navigators-tools", "cartographers-tools" } } },
             },
         },
     };
@@ -97,6 +105,9 @@ public class OriginAndRestRollPackTests(OriginPackApiFactory factory) : IClassFi
         var race = await s.Player.Client.GetFromJsonAsync<RaceDetailDto>("/api/v1/systems/dnd5e/catalog/races/augurios-ejemplo-viajero");
         Assert.Equal((2, 6, 1), (race!.Choices!.AbilityBonuses!.Choose, race.Choices.AbilityBonuses.From.Count, race.Choices.Feats!.Choose));
         Assert.Equal(["cold"], race.Resistances);
+        var backgrounds = (await s.Player.Client.GetFromJsonAsync<List<BackgroundDto>>("/api/v1/systems/dnd5e/catalog/backgrounds"))!;
+        Assert.Empty(Assert.Single(backgrounds, b => b.Index == "augurios-ejemplo-vigia").ToolProficiencies);
+        Assert.Equal(["navigators-tools", "cartographers-tools"], Assert.Single(backgrounds, b => b.Index == "augurios-ejemplo-cartografo").ToolProficiencies);
 
         var hero = await s.Player.CreateCharacterAsync(s.CampaignId, "Viajera");
         var patch = await s.Player.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet", new
@@ -113,6 +124,14 @@ public class OriginAndRestRollPackTests(OriginPackApiFactory factory) : IClassFi
             ["background.tools", "race.abilityBonuses", "race.feat", "race.skills"],
             plan!.Choices.Where(c => c.Required > 0).Select(c => c.Key).Order());
         Assert.Contains(Assert.Single(plan.Choices, c => c.Key == "race.feat").Options, o => o.Index == "augurios-ejemplo-presagio");
+        // Background tools are catalog items: name, own description and itemId per option; what the proficiency gives, once on the choice.
+        var tools = Assert.Single(plan.Choices, c => c.Key == "background.tools");
+        Assert.StartsWith("Eliges competencia con una de estas herramientas:", tools.Note, StringComparison.Ordinal);
+        var navigators = Assert.Single(tools.Options, o => o.Index == "navigators-tools");
+        Assert.Equal("Navigator's Tools", navigators.Name);
+        Assert.Contains("navigation", Assert.Single(navigators.Description), StringComparison.OrdinalIgnoreCase);
+        Assert.True(Guid.TryParse(navigators.ItemId, out _), $"itemId: {navigators.ItemId}");
+        Assert.All(tools.Options, o => Assert.NotNull(o.ItemId));
 
         var saved = await s.Player.Client.PutAsJsonAsync(Url(hero.Id), new
         {
@@ -121,7 +140,7 @@ public class OriginAndRestRollPackTests(OriginPackApiFactory factory) : IClassFi
                 new { key = "race.abilityBonuses", selected = new[] { "int", "con" } },
                 new { key = "race.skills", selected = new[] { "arcana" } },
                 new { key = "race.feat", selected = new { feat = "augurios-ejemplo-presagio" } },
-                new { key = "background.tools", selected = new[] { "Catalejo de ejemplo" } },
+                new { key = "background.tools", selected = new[] { "navigators-tools" } },
             },
         });
         Assert.True(saved.StatusCode == HttpStatusCode.OK, await saved.Content.ReadAsStringAsync());
@@ -130,7 +149,7 @@ public class OriginAndRestRollPackTests(OriginPackApiFactory factory) : IClassFi
 
         var detail = await s.Player.GetCharacterAsync(hero.Id);
         Assert.Equal(16, detail.Sheet.Abilities["int"].Score);
-        Assert.Contains(detail.Proficiencies, p => p is { Type: "Tool", Key: "Catalejo de ejemplo", Source: "Background" });
+        Assert.Contains(detail.Proficiencies, p => p is { Type: "Tool", Key: "navigators-tools", Source: "Background" });
         Assert.Contains(detail.Sheet.Resistances, r => r is { DamageType: "cold", Source: "race" });
         var dice = Assert.Single(detail.Resources, r => r.Key == "augurios-ejemplo-dados");
         Assert.Equal((2, "d20", 2, "long", true), (dice.Max, dice.RollOnRest!.Dice, dice.RollOnRest.Count, dice.RollOnRest.Rest, dice.RollsPending));

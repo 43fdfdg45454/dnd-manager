@@ -138,5 +138,84 @@ public class ContentPackStartingEquipmentTests(ContentPackApiFactory factory) : 
         Assert.Contains(errors, e => e.StartsWith($"{path}.fixedGoldCp:", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task A_category_option_may_offer_only_the_items_the_character_is_proficient_with()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        var pack = new
+        {
+            formatVersion = 3,
+            id = "equipo-competente",
+            name = "Equipo competente",
+            version = "1",
+            backgrounds = new object[]
+            {
+                new
+                {
+                    index = "equipo-competente-juglar",
+                    name = "Juglar de ejemplo",
+                    startingEquipment = new
+                    {
+                        choices = new object[]
+                        {
+                            new
+                            {
+                                options = new object[]
+                                {
+                                    new { label = "Un instrumento con el que seas competente", category = "musical-instruments", proficientOnly = true },
+                                    new { label = "Dos armas sencillas", categories = new[] { new { category = "simple-weapons", choose = 2, proficientOnly = false } } },
+                                    new { label = "Cualquier símbolo sagrado", category = "holy-symbols" },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        };
+
+        var response = await admin.PostAsync(PacksUrl, Json(pack));
+        Assert.True(response.StatusCode == HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+
+        var backgrounds = await (await factory.CreateSignedInUserAsync()).Client.GetFromJsonAsync<List<BackgroundDto>>("/api/v1/systems/dnd5e/catalog/backgrounds");
+        var options = Assert.Single(Assert.Single(backgrounds!, b => b.Index == "equipo-competente-juglar").StartingEquipment!.Choices).Options;
+        Assert.Equal(new StartingCategoryPickDto("musical-instruments", "Musical Instruments", 1, true), Assert.Single(options[0].Categories));
+        Assert.Equal(new StartingCategoryPickDto("simple-weapons", "Simple Weapons", 2), Assert.Single(options[1].Categories));
+        Assert.Equal(new StartingCategoryPickDto("holy-symbols", "Holy Symbols", 1), Assert.Single(options[2].Categories));
+    }
+
+    [Fact]
+    public async Task ProficientOnly_is_only_allowed_with_a_category()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        var pack = new
+        {
+            formatVersion = 3,
+            id = "equipo-competente-malo",
+            name = "Equipo competente malo",
+            version = "1",
+            backgrounds = new object[]
+            {
+                new
+                {
+                    index = "equipo-competente-malo-juglar",
+                    name = "Juglar de ejemplo",
+                    startingEquipment = new
+                    {
+                        choices = new object[]
+                        {
+                            new { options = new object[] { new { label = "Una daga", items = new[] { new { item = "dagger" } }, proficientOnly = true } } },
+                        },
+                    },
+                },
+            },
+        };
+
+        var response = await admin.PostAsync(PacksUrl, Json(pack));
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var errors = document.RootElement.GetProperty("errors").EnumerateArray().Select(e => e.GetString()!).ToList();
+        Assert.Contains(errors, e => e.StartsWith("backgrounds[0].startingEquipment.choices[0].options[0].proficientOnly:", StringComparison.Ordinal));
+    }
+
     private static StringContent Json(object value) => new(JsonSerializer.Serialize(value), Encoding.UTF8, "application/json");
 }

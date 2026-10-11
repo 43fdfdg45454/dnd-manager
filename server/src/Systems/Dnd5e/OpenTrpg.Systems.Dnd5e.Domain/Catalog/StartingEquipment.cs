@@ -113,8 +113,14 @@ public sealed record StartingEquipmentChoice(string Description, int Choose, IRe
 /// <summary>One option of a choice: fixed items plus picks from equipment categories ("a martial weapon and a shield").</summary>
 public sealed record StartingEquipmentOption(string Label, IReadOnlyList<StartingItem> Items, IReadOnlyList<StartingCategoryPick> Categories);
 
-/// <summary>Pick <see cref="Choose"/> items of the equipment category <see cref="Category"/> ("martial-weapons").</summary>
-public sealed record StartingCategoryPick(string Category, int Choose);
+/// <summary>
+/// Pick <see cref="Choose"/> items of the equipment category <see cref="Category"/> ("martial-weapons"). With
+/// <see cref="ProficientOnly"/>, only the items of the category the character is proficient with are offered.
+/// </summary>
+public sealed record StartingCategoryPick(
+    string Category,
+    int Choose,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool ProficientOnly = false);
 
 /// <summary>Alternative starting wealth: roll <see cref="Dice"/> and multiply by <see cref="Multiplier"/> gold pieces.</summary>
 public sealed record StartingGold(string Dice, int Multiplier);
