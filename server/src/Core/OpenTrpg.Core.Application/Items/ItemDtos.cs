@@ -191,6 +191,7 @@ public sealed record EffectiveItemDto(
 
 /// <param name="TemplateName">Name of the template (null for items made by hand).</param>
 /// <param name="Overrides">Only the overridden fields.</param>
+/// <param name="TemplateIndex">Catalog index of the template (SRD and content packs); null for homebrew and items made by hand.</param>
 public sealed record CharacterItemDto(
     Guid Id,
     Guid? TemplateId,
@@ -204,7 +205,8 @@ public sealed record CharacterItemDto(
     int SortOrder,
     ItemOverridesDto Overrides,
     EffectiveItemDto Effective,
-    bool IsCustom)
+    bool IsCustom,
+    string? TemplateIndex = null)
 {
     public static CharacterItemDto From(CharacterItem item, ItemTemplate? template)
     {
@@ -222,7 +224,8 @@ public sealed record CharacterItemDto(
             item.SortOrder,
             ItemOverridesDto.From(item.Overrides),
             EffectiveItemDto.From(effective),
-            effective.IsCustom);
+            effective.IsCustom,
+            template?.Index);
     }
 }
 

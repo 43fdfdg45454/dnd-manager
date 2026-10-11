@@ -259,6 +259,60 @@ const conditionLabels = <String, String>{
 String conditionLabel(String condition) =>
     conditionLabels[condition.toLowerCase()] ?? condition.replaceAll('-', ' ');
 
+/// Title of a condition in lists and chips: the Spanish name of the SRD
+/// conditions with a capital letter ("Envenenado"); for the conditions of the
+/// content packs, [catalogName] or else the index without dashes.
+String conditionTitle(String index, [String? catalogName]) {
+  final label = conditionLabels[index.toLowerCase()];
+  if (label != null) return _capitalized(label);
+  if (catalogName != null && catalogName.trim().isNotEmpty) return catalogName.trim();
+  return _capitalized(index.replaceAll('-', ' '));
+}
+
+String _capitalized(String text) =>
+    text.isEmpty ? text : '${text[0].toUpperCase()}${text.substring(1)}';
+
+/// Lower case without accents, to sort and compare Spanish names
+/// ("Álgido" sorts with "algido").
+String foldForSort(String text) {
+  const from = 'áàäâéèëêíìïîóòöôúùüûñç';
+  const to = 'aaaaeeeeiiiioooouuuunc';
+  final lower = text.toLowerCase();
+  final buffer = StringBuffer();
+  for (final rune in lower.runes) {
+    final char = String.fromCharCode(rune);
+    final i = from.indexOf(char);
+    buffer.write(i < 0 ? char : to[i]);
+  }
+  return buffer.toString();
+}
+
+/// Spanish names of the armor and weapon group proficiencies (the keys the
+/// server normalizes: "light-armor", "simple-weapons"...).
+const armorWeaponProficiencyLabels = <String, String>{
+  'light-armor': 'Armaduras ligeras',
+  'medium-armor': 'Armaduras medias',
+  'heavy-armor': 'Armaduras pesadas',
+  'all-armor': 'Todas las armaduras',
+  'shields': 'Escudos',
+  'exotic-armor': 'Armaduras exóticas',
+  'simple-weapons': 'Armas sencillas',
+  'martial-weapons': 'Armas marciales',
+  'exotic-weapons': 'Armas exóticas',
+  'simple-firearms': 'Armas de fuego sencillas',
+  'martial-firearms': 'Armas de fuego marciales',
+  'exotic-firearms': 'Armas de fuego exóticas',
+  'bombs': 'Bombas',
+};
+
+/// Catalog-style key of a name: "Thieves' Tools" -> "thieves-tools". Used to
+/// match proficiencies and items when there is no catalog index.
+String catalogKeyOf(String text) =>
+    foldForSort(text)
+        .replaceAll(RegExp(r"['’]"), '')
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-+|-+$'), '');
+
 /// Spanish names of the creature sizes.
 const sizeLabels = <String, String>{
   'tiny': 'Diminuto',

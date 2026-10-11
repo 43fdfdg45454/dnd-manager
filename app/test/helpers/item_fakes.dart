@@ -41,6 +41,7 @@ EffectiveItem makeEffective({
 CharacterItem makeCharacterItem({
   String id = 'it1',
   String? templateId = 't-sword',
+  String? templateIndex,
   int quantity = 1,
   bool equipped = false,
   bool attuned = false,
@@ -50,6 +51,7 @@ CharacterItem makeCharacterItem({
 }) => CharacterItem(
   id: id,
   templateId: templateId,
+  templateIndex: templateIndex,
   quantity: quantity,
   equipped: equipped,
   attuned: attuned,

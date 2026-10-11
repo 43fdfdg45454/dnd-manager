@@ -30100,7 +30100,8 @@
         "description": [],
         "modifiers": []
       },
-      "isCustom": false
+      "isCustom": false,
+      "templateIndex": "longsword"
     }
   },
   {
@@ -30142,7 +30143,8 @@
         "description": [],
         "modifiers": []
       },
-      "isCustom": false
+      "isCustom": false,
+      "templateIndex": "longsword"
     }
   },
   {
@@ -30292,7 +30294,8 @@
             "description": [],
             "modifiers": []
           },
-          "isCustom": false
+          "isCustom": false,
+          "templateIndex": "longsword"
         },
         {
           "id": "<id60>",
@@ -30333,7 +30336,8 @@
             ],
             "modifiers": []
           },
-          "isCustom": false
+          "isCustom": false,
+          "templateIndex": "potion-of-healing"
         }
       ],
       "copperPieces": 0,
@@ -30383,7 +30387,8 @@
             "description": [],
             "modifiers": []
           },
-          "isCustom": false
+          "isCustom": false,
+          "templateIndex": "longsword"
         },
         {
           "id": "<id60>",
@@ -30424,7 +30429,8 @@
             ],
             "modifiers": []
           },
-          "isCustom": false
+          "isCustom": false,
+          "templateIndex": "potion-of-healing"
         }
       ],
       "copperPieces": 0,
@@ -30501,7 +30507,8 @@
             "description": [],
             "modifiers": []
           },
-          "isCustom": false
+          "isCustom": false,
+          "templateIndex": "longsword"
         },
         {
           "id": "<id60>",
@@ -30542,7 +30549,8 @@
             ],
             "modifiers": []
           },
-          "isCustom": false
+          "isCustom": false,
+          "templateIndex": "potion-of-healing"
         }
       ],
       "copperPieces": 5000,
@@ -31830,7 +31838,8 @@
               "description": [],
               "modifiers": []
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": "longsword"
           },
           {
             "id": "<id60>",
@@ -31871,7 +31880,8 @@
               ],
               "modifiers": []
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": "potion-of-healing"
           }
         ],
         "copperPieces": 4900,
@@ -33348,7 +33358,8 @@
               "description": [],
               "modifiers": []
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": "longsword"
           },
           {
             "id": "<id60>",
@@ -33389,7 +33400,8 @@
               ],
               "modifiers": []
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": "potion-of-healing"
           }
         ],
         "copperPieces": 4900,
@@ -34761,7 +34773,8 @@
               "description": [],
               "modifiers": []
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": "longsword"
           },
           {
             "id": "<id60>",
@@ -34802,7 +34815,8 @@
               ],
               "modifiers": []
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": "potion-of-healing"
           },
           {
             "id": "<id120>",
@@ -34847,7 +34861,8 @@
                 }
               ]
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": null
           }
         ],
         "copperPieces": 3100,
@@ -34918,7 +34933,8 @@
           }
         ]
       },
-      "isCustom": false
+      "isCustom": false,
+      "templateIndex": null
     }
   },
   {
@@ -35957,7 +35973,8 @@
               "description": [],
               "modifiers": []
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": "longsword"
           },
           {
             "id": "<id60>",
@@ -35998,7 +36015,8 @@
               ],
               "modifiers": []
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": "potion-of-healing"
           },
           {
             "id": "<id120>",
@@ -36043,7 +36061,8 @@
                 }
               ]
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": null
           }
         ],
         "copperPieces": 3100,
@@ -36557,7 +36576,8 @@
             "description": [],
             "modifiers": []
           },
-          "isCustom": false
+          "isCustom": false,
+          "templateIndex": "longsword"
         },
         {
           "id": "<id60>",
@@ -36598,7 +36618,8 @@
             ],
             "modifiers": []
           },
-          "isCustom": false
+          "isCustom": false,
+          "templateIndex": "potion-of-healing"
         },
         {
           "id": "<id120>",
@@ -36643,7 +36664,8 @@
               }
             ]
           },
-          "isCustom": false
+          "isCustom": false,
+          "templateIndex": null
         },
         {
           "id": "<id123>",
@@ -36680,7 +36702,8 @@
             "description": [],
             "modifiers": []
           },
-          "isCustom": false
+          "isCustom": false,
+          "templateIndex": "longsword"
         }
       ],
       "copperPieces": 3100,
@@ -38025,7 +38048,8 @@
               "description": [],
               "modifiers": []
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": "longsword"
           },
           {
             "id": "<id60>",
@@ -38066,7 +38090,8 @@
               ],
               "modifiers": []
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": "potion-of-healing"
           },
           {
             "id": "<id120>",
@@ -38111,7 +38136,8 @@
                 }
               ]
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": null
           }
         ],
         "copperPieces": 4100,
@@ -39425,7 +39451,8 @@
               "description": [],
               "modifiers": []
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": "longsword"
           },
           {
             "id": "<id60>",
@@ -39466,7 +39493,8 @@
               ],
               "modifiers": []
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": "potion-of-healing"
           },
           {
             "id": "<id120>",
@@ -39511,7 +39539,8 @@
                 }
               ]
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": null
           }
         ],
         "copperPieces": 4100,
@@ -40825,7 +40854,8 @@
               "description": [],
               "modifiers": []
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": "longsword"
           },
           {
             "id": "<id60>",
@@ -40866,7 +40896,8 @@
               ],
               "modifiers": []
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": "potion-of-healing"
           },
           {
             "id": "<id120>",
@@ -40911,7 +40942,8 @@
                 }
               ]
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": null
           }
         ],
         "copperPieces": 4100,
@@ -42253,7 +42285,8 @@
               "description": [],
               "modifiers": []
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": "longsword"
           },
           {
             "id": "<id60>",
@@ -42294,7 +42327,8 @@
               ],
               "modifiers": []
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": "potion-of-healing"
           },
           {
             "id": "<id120>",
@@ -42339,7 +42373,8 @@
                 }
               ]
             },
-            "isCustom": false
+            "isCustom": false,
+            "templateIndex": null
           }
         ],
         "copperPieces": 4100,

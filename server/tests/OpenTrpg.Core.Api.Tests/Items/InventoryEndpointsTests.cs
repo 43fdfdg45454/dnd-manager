@@ -24,6 +24,7 @@ public class InventoryEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var item = (await response.Content.ReadFromJsonAsync<CharacterItemDto>())!;
         Assert.Equal((swordId, "Longsword", 1, false), (item.TemplateId, item.TemplateName, item.Quantity, item.IsCustom));
+        Assert.Equal("longsword", item.TemplateIndex);
         Assert.Equal(("Longsword", "Weapon", "1d8", "1d10"), (item.Effective.Name, item.Effective.Category, item.Effective.Damage!.Dice, item.Effective.Damage.Versatile));
         var inventory = await s.Player.GetInventoryAsync(character.Id);
         Assert.Equal(item.Id, Assert.Single(inventory.Items).Id);
@@ -107,6 +108,7 @@ public class InventoryEndpointsTests(CatalogApiFactory factory)
         await s.Dm.ApproveAsync(request.Id);
         var item = Assert.Single((await s.Player.GetInventoryAsync(character.Id)).Items);
         Assert.Equal(("Medallón de la abuela", true, (Guid?)null), (item.Effective.Name, item.IsCustom, item.TemplateId));
+        Assert.Null(item.TemplateIndex);
     }
 
     [Fact]
