@@ -56,14 +56,13 @@ class UnsupportedSystemUi extends GameSystemUi {
     required bool canEdit,
     bool isDm = false,
     bool inSession = false,
-    Widget? header,
-  }) => header == null
-      ? _notice()
-      : ListView(
+  }) => inSession
+      ? ListView(
           key: const Key('player-combat'),
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 32),
-          children: [header, _notice()],
-        );
+          children: [_notice()],
+        )
+      : _notice();
 
   @override
   List<SheetTab> detailTabs(

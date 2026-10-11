@@ -26,8 +26,7 @@ import 'package:opentrpg_dnd5e/characters/ui/combat/class_panels.dart';
 import 'package:opentrpg_dnd5e/characters/ui/combat/combat_support.dart' show Pip;
 import 'package:opentrpg_dnd5e/characters/ui/combat/panels/critical_damage_roll.dart';
 import 'package:opentrpg_dnd5e/characters/ui/combat/resources_section.dart' show canRestoreResource;
-import 'package:opentrpg_dnd5e/characters/ui/combat/vitals_section.dart'
-    show ConditionsStrip;
+import 'package:opentrpg_dnd5e/characters/ui/combat/vitals_section.dart' show ConditionsStrip;
 import 'package:opentrpg_dnd5e/characters/ui/combat/wild_magic_surge.dart' show isWildMagicSurgeKey;
 import 'package:opentrpg_dnd5e/session/data/party_repository.dart';
 import 'package:opentrpg_dnd5e/session/party_models.dart' show PartyAdjustment;
@@ -454,8 +453,10 @@ void main() {
 
       await _tap(tester, 'tab-combat');
       expect(find.byKey(const Key('combat-view')), findsOneWidget);
-      // La cabecera con sus acciones y las pestañas siguen a la vista.
-      expect(find.byKey(const Key('character-status')), findsOneWidget);
+      // El nombre sigue en la barra; la cabecera con el estado y sus acciones
+      // es solo de Detalle.
+      expect(find.byKey(const Key('character-title')), findsOneWidget);
+      expect(find.byKey(const Key('character-status')), findsNothing);
       expect(find.byKey(const Key('tab-detail')), findsOneWidget);
       expect(prefs.getString('character.ch1.mainView'), 'combat');
 
@@ -649,10 +650,17 @@ void main() {
       await _pump(tester, characters: down);
       expect(find.byKey(const Key('death-save-banner')), findsOneWidget);
       expect(find.text('Anota tu salvación contra muerte'), findsOneWidget);
-      // El banner queda encima de la tarjeta de salvaciones.
+      // El aviso queda bajo las dos filas de la cabecera, dentro de ella.
       expect(
-        tester.getBottomLeft(find.byKey(const Key('death-save-banner'))).dy,
-        lessThanOrEqualTo(tester.getTopLeft(find.byKey(const Key('death-saves'))).dy),
+        tester.getTopLeft(find.byKey(const Key('death-save-banner'))).dy,
+        greaterThanOrEqualTo(tester.getBottomLeft(find.byKey(const Key('hp-minus'))).dy),
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('combat-status')),
+          matching: find.byKey(const Key('death-save-banner')),
+        ),
+        findsOneWidget,
       );
       await _tap(tester, 'death-success-0');
       await _tap(tester, 'death-success-1');
@@ -751,6 +759,83 @@ void main() {
         expect(find.text('Condición'), findsOneWidget);
       },
     );
+
+    testWidgets('la concentración es una condición más: el chip la quita con el conjuro', (
+      tester,
+    ) async {
+      final withConcentration = FakeCatalogRepository(
+        conditionList: [
+          ...catalog.conditionList,
+          const Condition(index: 'concentration', name: 'Concentration'),
+        ],
+      );
+      final repo = FakeCharactersRepository(
+        characters: [
+          makeCharacterJson(
+              status: 'Active',
+              combat: makeCombatJson(),
+              concentratingOnSpellIndex: 'bless',
+            )
+            ..['conditions'] = [
+              {'index': 'concentration'},
+              {'index': 'prone'},
+            ],
+        ],
+      );
+      await _pump(tester, characters: repo, catalog: withConcentration);
+      // One chip for the concentration, named after the spell; no second one
+      // for the condition behind it.
+      expect(find.text('Concentración: Bless'), findsOneWidget);
+      expect(find.byKey(const Key('condition-concentration')), findsNothing);
+      expect(find.byKey(const Key('condition-prone')), findsOneWidget);
+
+      await _tap(tester, 'concentration-lose');
+      expect(repo.concentrationCalls, [null]);
+      expect(repo.combatPatches.last.conditions?.map((c) => c.index), ['prone']);
+      expect(find.byKey(const Key('concentration-chip')), findsNothing);
+
+      // Picked from the selector it is a plain condition, with no spell.
+      await _tap(tester, 'condition-add');
+      await _tap(tester, 'pick-condition-concentration');
+      expect(repo.concentrationCalls, [null]);
+      expect(repo.combatPatches.last.conditions?.map((c) => c.index), ['prone', 'concentration']);
+      expect(find.text('Concentración'), findsOneWidget);
+      await _tap(tester, 'concentration-lose');
+      expect(repo.concentrationCalls, [null]);
+      expect(repo.combatPatches.last.conditions?.map((c) => c.index), ['prone']);
+    });
+
+    testWidgets('lanzar un conjuro de concentración marca la condición', (tester) async {
+      final spells = FakeCatalogRepository(
+        conditionList: catalog.conditionList,
+        spellDetails: const {
+          'bless': SpellDetail(index: 'bless', name: 'Bless', level: 1, concentration: true),
+        },
+      );
+      final repo = FakeCharactersRepository(
+        characters: [
+          makeCharacterJson(
+            status: 'Active',
+            combat: makeCombatJson(
+              spellSlots: [
+                {'level': 1, 'max': 2, 'used': 0},
+              ],
+            ),
+            spells: [
+              {'spellIndex': 'bless', 'classIndex': 'cleric', 'isPrepared': true},
+            ],
+            spellcasting: const [
+              {'classIndex': 'cleric', 'ability': 'wis', 'saveDc': 13, 'attackBonus': 5},
+            ],
+          ),
+        ],
+      );
+      await _pump(tester, characters: repo, catalog: spells);
+      await _tap(tester, 'spell-spend-bless');
+      expect(repo.concentrationCalls, ['bless']);
+      expect(repo.combatPatches.last.conditions?.map((c) => c.index), ['concentration']);
+      expect(find.text('Concentración: Bless'), findsOneWidget);
+    });
 
     testWidgets('el selector las ordena por su nombre en español', (tester) async {
       await _pump(tester, characters: _repo(), catalog: catalog);
@@ -1123,7 +1208,11 @@ void main() {
       for (final MapEntry(key: key, value: label) in rows.entries) {
         final row = find.descendant(of: grid, matching: find.byKey(Key(key)));
         expect(row, findsOneWidget, reason: key);
-        expect(find.descendant(of: row, matching: find.text(label)), findsOneWidget, reason: key);
+        expect(
+          find.descendant(of: row, matching: find.text(label)),
+          findsOneWidget,
+          reason: key,
+        );
       }
       // One row each, from top to bottom in the order above.
       final tops = [for (final key in rows.keys) tester.getTopLeft(find.byKey(Key(key))).dy];
@@ -1146,7 +1235,10 @@ void main() {
       );
       await _tap(tester, 'stat-armorClass');
       expect(find.byKey(const Key('breakdown-sheet')), findsOneWidget);
-      expect(tester.widget<Text>(find.byKey(const Key('breakdown-title'))).data, 'Clase de Armadura');
+      expect(
+        tester.widget<Text>(find.byKey(const Key('breakdown-title'))).data,
+        'Clase de Armadura',
+      );
 
       // Skills are no longer in Combate.
       expect(find.byKey(const Key('quick-skills')), findsNothing);

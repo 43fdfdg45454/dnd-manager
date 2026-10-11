@@ -24,10 +24,12 @@ import 'change_owner_dialog.dart';
 import 'character_avatar.dart';
 import 'character_detail_tabs.dart';
 
-/// A character: a header with its actions and two main tabs, "Combate" (the
-/// combat view of its game system) and "Detalle" ([CharacterDetailTabs]: the
-/// sub-tabs of the system, Inventario and Notas). The main view and the last sub-tab
-/// are remembered per character. A dice button floats over every tab.
+/// A character: its name and headline in the app bar over two main tabs,
+/// "Combate" (the combat view of its game system, with nothing else above it)
+/// and "Detalle" (the header with the status and the actions of the
+/// character over [CharacterDetailTabs]: the sub-tabs of the system,
+/// Inventario and Notas). The main view and the last sub-tab are remembered
+/// per character. A dice button floats over every tab.
 class CharacterPage extends ConsumerWidget {
   const CharacterPage({super.key, required this.characterId});
 
@@ -93,7 +95,8 @@ class _CharacterViewState extends ConsumerState<_CharacterView>
     super.initState();
     final initial = ref.read(characterViewProvider(widget.character.id));
     _tabController = TabController(length: _tabs.length, initialIndex: initial.index, vsync: this)
-      ..addListener(_rememberView);
+      ..addListener(_rememberView)
+      ..addListener(_onTabChanged);
   }
 
   @override
@@ -101,6 +104,9 @@ class _CharacterViewState extends ConsumerState<_CharacterView>
     _tabController.dispose();
     super.dispose();
   }
+
+  /// The header sliver belongs to "Detalle" only: rebuild when the tab moves.
+  void _onTabChanged() => setState(() {});
 
   /// Stores the main view once the change settles (not on every animation tick).
   void _rememberView() {
@@ -169,10 +175,32 @@ class _CharacterViewState extends ConsumerState<_CharacterView>
       myRole: campaign.value?.myRole,
     );
     final system = ref.watch(campaignSystemUiProvider(character.campaignId));
+    final onDetail = _tabController.index == CharacterView.detail.index;
+    final headline = system.characterHeadline(character, compact: true);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Personaje'),
+        title: system.characterAccent(
+          character,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                character.name,
+                key: const Key('character-title'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (headline != null)
+                DefaultTextStyle.merge(
+                  key: const Key('character-headline'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                  child: headline,
+                ),
+            ],
+          ),
+        ),
         actions: [
           if (permissions.canDelete || permissions.isDm)
             PopupMenuButton<String>(
@@ -203,27 +231,28 @@ class _CharacterViewState extends ConsumerState<_CharacterView>
         scopes: [staleTree(CharactersRepository.characterPath(character.id))],
         child: NestedScrollView(
           headerSliverBuilder: (context, _) => [
-            SliverToBoxAdapter(
-              child: _Header(
-                system: system,
-                character: character,
-                permissions: permissions,
-                onSubmit: () => runAction(
-                  context,
-                  () async {
-                    await _controller(ref).submit();
-                  },
-                  success: 'Enviado al DM para aprobación',
-                  describe: describeCharacterError,
-                ),
-                onActivate: () => runAction(
-                  context,
-                  () => _controller(ref).activate(),
-                  success: 'Personaje activado.',
-                  describe: describeCharacterError,
+            if (onDetail)
+              SliverToBoxAdapter(
+                child: _Header(
+                  system: system,
+                  character: character,
+                  permissions: permissions,
+                  onSubmit: () => runAction(
+                    context,
+                    () async {
+                      await _controller(ref).submit();
+                    },
+                    success: 'Enviado al DM para aprobación',
+                    describe: describeCharacterError,
+                  ),
+                  onActivate: () => runAction(
+                    context,
+                    () => _controller(ref).activate(),
+                    success: 'Personaje activado.',
+                    describe: describeCharacterError,
+                  ),
                 ),
               ),
-            ),
           ],
           body: TabBarView(
             controller: _tabController,
@@ -285,11 +314,7 @@ class _Header extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      c.name,
-                      key: const Key('character-title'),
-                      style: theme.textTheme.headlineSmall,
-                    ),
+                    Text(c.name, style: theme.textTheme.headlineSmall),
                     if (system.characterHeadline(c) case final headline?) ...[
                       const SizedBox(height: 2),
                       headline,

@@ -19,7 +19,6 @@ import '../../../campaigns/data/campaigns_controller.dart';
 import '../../../campaigns/domain/campaign_models.dart';
 import '../../../characters/data/characters_controller.dart';
 import '../../../characters/domain/character_permissions.dart';
-import '../../../characters/ui/character_avatar.dart';
 import '../../../characters/ui/character_detail_tabs.dart';
 import '../../../items/data/items_controllers.dart';
 import '../stash_card.dart';
@@ -27,18 +26,26 @@ import 'messages_inbox.dart';
 
 /// The two halves of "Mi sesión", the same main views as the character page.
 enum PlayerSubview {
-  combat('Combate'),
-  detail('Detalle');
+  combat('Combate', Icons.shield_outlined),
+  detail('Detalle', Icons.menu_book_outlined);
 
-  const PlayerSubview(this.label);
+  const PlayerSubview(this.label, this.icon);
 
   final String label;
+
+  /// Stands for the label when the row is too narrow for the words.
+  final IconData icon;
 }
 
+/// Width (logical pixels) of the top row under which the subview switch
+/// shows icons instead of words.
+const _iconsOnlyBelow = 320.0;
+
 /// "Mi sesión": the view of a Player at the table. Finds their active
-/// character in the campaign (with a selector when there are several) and
-/// shows it split in "Combate" and "Detalle" (the sub-tabs of the sheet with a
-/// first "Sesión" sub-tab). It never links to the sheets of other players.
+/// character in the campaign and names it on one row (a selector when there
+/// are several) next to the switch between "Combate" and "Detalle" (the
+/// sub-tabs of the sheet with a first "Sesión" sub-tab). It never links to
+/// the sheets of other players.
 class PlayerSessionPage extends ConsumerStatefulWidget {
   const PlayerSessionPage({super.key, required this.campaignId});
 
@@ -80,42 +87,65 @@ class _PlayerSessionPageState extends ConsumerState<PlayerSessionPage> {
           return _NoCharacter(campaign: campaign, drafts: mine);
         }
         final selected = active.firstWhere((c) => c.id == _selectedId, orElse: () => active.first);
+        final theme = Theme.of(context);
         return Column(
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (active.length > 1)
-                    DropdownButtonFormField<String>(
-                      key: const Key('player-character-select'),
-                      initialValue: selected.id,
-                      decoration: const InputDecoration(
-                        labelText: 'Personaje',
-                        isDense: true,
-                        border: OutlineInputBorder(),
-                      ),
-                      items: [
-                        for (final c in active) DropdownMenuItem(value: c.id, child: Text(c.name)),
-                      ],
-                      onChanged: (id) => setState(() => _selectedId = id),
+              child: LayoutBuilder(
+                builder: (context, constraints) => Row(
+                  children: [
+                    Expanded(
+                      child: active.length > 1
+                          ? DropdownButtonFormField<String>(
+                              key: const Key('player-character-select'),
+                              initialValue: selected.id,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Personaje',
+                                isDense: true,
+                                border: OutlineInputBorder(),
+                              ),
+                              items: [
+                                for (final c in active)
+                                  DropdownMenuItem(
+                                    value: c.id,
+                                    child: Text(c.name, overflow: TextOverflow.ellipsis),
+                                  ),
+                              ],
+                              onChanged: (id) => setState(() => _selectedId = id),
+                            )
+                          : Text(
+                              selected.name,
+                              style: theme.textTheme.titleMedium,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                     ),
-                  if (active.length > 1) const SizedBox(height: 8),
-                  SegmentedButton<PlayerSubview>(
-                    key: const Key('player-subview'),
-                    showSelectedIcon: false,
-                    segments: [
-                      for (final v in PlayerSubview.values)
-                        ButtonSegment(
-                          value: v,
-                          label: Text(v.label, key: Key('player-subview-${v.name}')),
-                        ),
-                    ],
-                    selected: {_subview},
-                    onSelectionChanged: (s) => setState(() => _subview = s.first),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    SegmentedButton<PlayerSubview>(
+                      key: const Key('player-subview'),
+                      showSelectedIcon: false,
+                      style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                      segments: [
+                        for (final v in PlayerSubview.values)
+                          if (constraints.maxWidth < _iconsOnlyBelow)
+                            ButtonSegment(
+                              value: v,
+                              tooltip: v.label,
+                              icon: Icon(v.icon, key: Key('player-subview-${v.name}')),
+                            )
+                          else
+                            ButtonSegment(
+                              value: v,
+                              label: Text(v.label, key: Key('player-subview-${v.name}')),
+                            ),
+                      ],
+                      selected: {_subview},
+                      onSelectionChanged: (s) => setState(() => _subview = s.first),
+                    ),
+                  ],
+                ),
               ),
             ),
             Expanded(
@@ -296,7 +326,6 @@ class _CharacterSessionState extends ConsumerState<_CharacterSession> {
             character,
             canEdit: true,
             inSession: true,
-            header: _PlayerHeader(system: system, character: character),
           ),
           PlayerSubview.detail => _DetailSubview(
             system: system,
@@ -313,56 +342,9 @@ class _CharacterSessionState extends ConsumerState<_CharacterSession> {
 EdgeInsets _listPadding(BuildContext context) =>
     EdgeInsets.fromLTRB(12, 4, 12, 32 + MediaQuery.paddingOf(context).bottom);
 
-/// Name, portrait and the short line of the game system with the accent of
-/// the character (D&D 5e: classes and level, with the colour of the main
-/// class).
-class _PlayerHeader extends StatelessWidget {
-  const _PlayerHeader({required this.system, required this.character});
-
-  final GameSystemUi system;
-  final CharacterDetail character;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = character;
-    return system.characterAccent(
-      c,
-      child: Builder(
-        builder: (context) {
-          final theme = Theme.of(context);
-          final headline = system.characterHeadline(c, compact: true);
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: [
-                CharacterAvatar(character: c, radius: 24),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        c.name,
-                        key: const Key('player-character-name'),
-                        style: theme.textTheme.headlineSmall,
-                      ),
-                      ?headline,
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-/// "Detalle": the player's header over the sub-tabs of the sheet
-/// ([CharacterDetailTabs]) with a first "Sesión" sub-tab: the cards of the
-/// game system (D&D 5e: the level granted and the rests), the open shops, the
-/// party stash and the DM's messages.
+/// "Detalle": the sub-tabs of the sheet ([CharacterDetailTabs]) with a first
+/// "Sesión" sub-tab: the cards of the game system (D&D 5e: the level granted
+/// and the rests), the open shops, the party stash and the DM's messages.
 class _DetailSubview extends ConsumerWidget {
   const _DetailSubview({required this.system, required this.campaign, required this.character});
 
@@ -382,10 +364,6 @@ class _DetailSubview extends ConsumerWidget {
     return Column(
       key: const Key('player-detail'),
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: _PlayerHeader(system: system, character: c),
-        ),
         Expanded(
           child: CharacterDetailTabs(
             character: c,

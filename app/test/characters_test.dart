@@ -162,8 +162,9 @@ void main() {
       expect(find.text('PG 20 / 28'), findsNWidgets(2));
       await tester.tap(find.byKey(const Key('character-ch2')));
       await tester.pumpAndSettle();
-      expect(find.text('Elara'), findsOneWidget);
-      expect(find.byKey(const Key('character-title')), findsOneWidget);
+      // The name in the app bar and again in the header of "Detalle".
+      expect(find.text('Elara'), findsNWidgets(2));
+      expect(tester.widget<Text>(find.byKey(const Key('character-title'))).data, 'Elara');
     });
 
     testWidgets('"Nuevo personaje" abre el asistente sin elegir dueño para un jugador', (
@@ -1064,8 +1065,8 @@ void main() {
       // Only the changed field is sent.
       expect(repository.patches.single.toJson(), {'name': 'Thorin II'});
       // Back on the sheet, which still shows the old name until the DM approves.
-      expect(find.byKey(const Key('character-title')), findsOneWidget);
-      expect(find.text('Thorin'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('character-title'))).data, 'Thorin');
+      expect(find.text('Thorin II'), findsNothing);
       expect(find.text('1 solicitud pendiente'), findsOneWidget);
     });
 
@@ -1088,7 +1089,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Hoja guardada.'), findsOneWidget);
-      expect(find.text('Thorin II'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('character-title'))).data, 'Thorin II');
+      expect(find.text('Thorin'), findsNothing);
     });
 
     testWidgets('sin cambios no se envía nada', (tester) async {

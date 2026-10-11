@@ -473,6 +473,12 @@ class SpellSlot {
   final int used;
 }
 
+/// Index of the catalog condition that marks a concentrating character. The
+/// sheet keeps it in step with the spell concentration (set when a
+/// concentration spell is cast, removed when it is lost); picked by hand it is
+/// a plain condition, like any other.
+const concentrationConditionIndex = 'concentration';
+
 class CharacterCondition {
   const CharacterCondition({required this.index, this.note});
 
