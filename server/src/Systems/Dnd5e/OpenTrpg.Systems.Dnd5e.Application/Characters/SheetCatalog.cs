@@ -161,7 +161,13 @@ public sealed class SheetCatalog
             var ofSubrace = character.SubraceIndex is { } subrace && trait.SubraceIndexes.Contains(subrace, StringComparer.Ordinal);
             if ((ofRace || ofSubrace) && trait.Resource is { } resource)
             {
-                yield return new ChoiceResourceEffect(null, resource) { Label = $"{trait.Name} ({(ofSubrace ? "subraza" : "raza")})" };
+                yield return new ChoiceResourceEffect(null, resource)
+                {
+                    Label = $"{trait.Name} ({(ofSubrace ? "subraza" : "raza")})",
+                    SourceKind = ResourceSourceKinds.Trait,
+                    SourceIndex = trait.Index,
+                    SourceDescription = ChoiceEffects.Describe(trait.Description),
+                };
             }
         }
     }

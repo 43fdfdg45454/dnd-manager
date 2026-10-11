@@ -5,10 +5,10 @@ import 'package:opentrpg_core/core/theme/icons.dart';
 
 import '../../../../ui/action_type.dart';
 import '../../../dnd5e_characters_controller.dart';
-import '../../../domain/class_theme.dart';
 import '../../../models.dart';
+import '../combat_rows.dart';
 import '../combat_support.dart';
-import '../resources_section.dart' show canRestoreResource, resourcesOf;
+import '../resources_section.dart' show resourcesOf;
 
 /// What a class panel needs to render.
 class ClassPanelContext {
@@ -32,7 +32,22 @@ class ClassPanelContext {
   int get level => panel.level;
 }
 
-typedef ClassPanelBuilder = Widget Function(BuildContext context, ClassPanelContext panel);
+/// Rows of a class for one tab of the combat view, built inside a widget's
+/// build (so [WidgetRef.watch] works); an empty list hides the class there.
+typedef ClassRowsBuilder = List<Widget> Function(ClassPanelContext panel, WidgetRef ref);
+
+/// The rows a class adds to the combat view: what it does on its turn
+/// ("Acciones") and what it only needs to remember ("Más"). Its limited uses
+/// are listed with the other resources ("Recursos").
+class ClassPanelSpec {
+  const ClassPanelSpec({required this.actions, this.more, this.spells});
+
+  final ClassRowsBuilder actions;
+  final ClassRowsBuilder? more;
+
+  /// Rows of the class in "Conjuros" (the wizard's spellbook).
+  final ClassRowsBuilder? spells;
+}
 
 // -- Data helpers -------------------------------------------------------------
 
@@ -71,12 +86,13 @@ CharacterResource? findResource(CharacterDetail character, String key, [String? 
 /// Maximum the server uses for "unlimited" uses (rage at barbarian level 20).
 const unlimitedUses = 999;
 
-/// Largest resource drawn as dots; bigger ones are a bar.
-const _maxPips = 20;
-
 /// Remaining uses of [resource] (0 when missing).
 int remainingOf(CharacterResource? resource) =>
     resource == null ? 0 : (resource.max - resource.used).clamp(0, resource.max);
+
+/// "2 / 3", or "∞" for unlimited uses.
+String usesText(CharacterResource resource) =>
+    resource.max >= unlimitedUses ? '∞' : '${remainingOf(resource)} / ${resource.max}';
 
 /// Spends [amount] of [resource] through the server; warns instead when there
 /// are not enough uses left. Returns true when the server accepted it.
@@ -117,149 +133,170 @@ Future<bool> restoreClassResource(
   );
 }
 
-// -- Widgets ------------------------------------------------------------------
+// -- Rows ---------------------------------------------------------------------
 
-/// Header (class icon, Spanish name and level) and cards of a class panel,
-/// keyed `class-panel-<index>`.
-class ClassPanelFrame extends StatelessWidget {
-  const ClassPanelFrame({super.key, required this.panel, required this.children});
-
-  final ClassPanelContext panel;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final classTheme = classThemeOf(panel.classIndex);
-    return Column(
-      key: Key('class-panel-${panel.classIndex}'),
-      crossAxisAlignment: CrossAxisAlignment.start,
+/// "Se obtiene a nivel N." or "Usos: Recurso no disponible" for a class
+/// resource the character cannot use yet; null when it can.
+Widget? _resourceProblem(
+  BuildContext context,
+  ClassPanelContext panel,
+  CharacterResource? resource,
+  String keyPrefix,
+  String label,
+  int minLevel,
+) {
+  final theme = Theme.of(context);
+  final style = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+  if (panel.level < minLevel) {
+    return Text(
+      '$label: se obtiene a nivel $minLevel.',
+      key: Key('$keyPrefix-locked'),
+      style: style,
+    );
+  }
+  if (resource == null || resource.max <= 0) {
+    return Row(
+      key: Key('$keyPrefix-unavailable'),
       children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 20, bottom: 8),
-          child: Row(
-            children: [
-              AppIcon(classTheme.icon, size: 22, color: theme.colorScheme.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '${classTheme.labelEs} (nivel ${panel.level})',
-                  style: theme.textTheme.titleMedium,
-                ),
-              ),
-            ],
-          ),
-        ),
-        ...children,
+        Icon(Icons.info_outline, size: 16, color: theme.colorScheme.onSurfaceVariant),
+        const SizedBox(width: 6),
+        Expanded(child: Text('$label: Recurso no disponible', style: style)),
       ],
     );
   }
+  return null;
 }
 
-/// Uses of a class resource looked up by key: dots (tap spends one, long press
-/// gives one back), a bar beyond 20, "Usos ilimitados" at the unlimited value.
-/// Shows "Recurso no disponible" when the character lacks it, or the level
-/// that grants it when [level] is below [minLevel].
-class ClassResourceUses extends ConsumerWidget {
-  const ClassResourceUses({
+/// A class resource as a count to keep an eye on ("Puntos de ki 4 / 5",
+/// `<keyPrefix>-uses`), with the level that grants it below [minLevel] or
+/// "Recurso no disponible". Its use pips are in "Recursos".
+class ClassResourceCountRow extends StatelessWidget {
+  const ClassResourceCountRow({
     super.key,
     required this.panel,
     required this.resource,
     required this.keyPrefix,
-    required this.label,
+    required this.title,
+    required this.icon,
+    this.label = 'Usos',
     this.minLevel = 1,
-    this.tapToSpend = true,
+    this.subtitle,
+    this.info,
+    this.trailing,
   });
 
   final ClassPanelContext panel;
   final CharacterResource? resource;
-
-  /// Keys: `<prefix>-uses` (text), `<prefix>-pips`, `<prefix>-unavailable`.
   final String keyPrefix;
+  final String title;
+  final AppIcons icon;
   final String label;
   final int minLevel;
+  final String? subtitle;
+  final Widget? info;
+  final Widget? trailing;
 
-  /// False when the panel has its own buttons to spend (the dots only show).
-  final bool tapToSpend;
+  @override
+  Widget build(BuildContext context) {
+    final r = resource;
+    final problem = _resourceProblem(context, panel, r, keyPrefix, label, minLevel);
+    return CombatActionRow(
+      title: title,
+      icon: icon,
+      cost: problem == null ? usesText(r!) : null,
+      costKey: Key('$keyPrefix-uses'),
+      subtitle: problem == null ? subtitle : null,
+      info: info,
+      action: trailing,
+      details: [?problem],
+    );
+  }
+}
+
+/// A class feature that spends one use of a resource found by [resourceKey]:
+/// what is left (`<actionKey>-uses`) next to the name and the button keyed
+/// [actionKey] on the right. [onUse] replaces the plain spend (e.g. Second
+/// Wind also heals). Below [minLevel] it only says when the feature arrives
+/// (`<actionKey>-locked`); without the resource the button stays disabled
+/// (`<actionKey>-unavailable`).
+class ClassResourceActionRow extends ConsumerWidget {
+  const ClassResourceActionRow({
+    super.key,
+    required this.panel,
+    required this.resourceKey,
+    required this.title,
+    required this.actionKey,
+    required this.buttonLabel,
+    required this.icon,
+    this.minLevel = 1,
+    this.success,
+    this.description,
+    this.onUse,
+    this.extra = const [],
+    this.actionKind,
+    this.featureIndex,
+  });
+
+  final ClassPanelContext panel;
+  final String resourceKey;
+  final String title;
+  final String actionKey;
+  final String buttonLabel;
+  final AppIcons icon;
+  final int minLevel;
+  final String? success;
+
+  /// One line saying what it does.
+  final String? description;
+  final Future<void> Function(BuildContext context, WidgetRef ref, CharacterResource resource)?
+  onUse;
+
+  /// Facts and controls below the row.
+  final List<Widget> extra;
+
+  /// What using the feature costs on the turn, as the SRD says; null when the
+  /// feature is not an action of its own.
+  final ActionKind? actionKind;
+
+  /// SRD index of the feature for its [FeatureInfoButton], or null.
+  final String? featureIndex;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final r = resource;
-    if (panel.level < minLevel) {
-      return Text(
-        '$label: se obtiene a nivel $minLevel.',
-        key: Key('$keyPrefix-locked'),
-        style: theme.textTheme.bodySmall,
-      );
-    }
-    if (r == null || r.max <= 0) {
-      return Row(
-        key: Key('$keyPrefix-unavailable'),
-        children: [
-          Icon(Icons.info_outline, size: 18, color: theme.colorScheme.onSurfaceVariant),
-          const SizedBox(width: 6),
-          Expanded(child: Text('$label: Recurso no disponible', style: theme.textTheme.bodySmall)),
-        ],
-      );
-    }
-    final remaining = remainingOf(r);
-    final canEdit = panel.canEdit;
-    VoidCallback? spend = canEdit && tapToSpend
-        ? () => spendClassResource(context, ref, panel.character, r)
-        : null;
-    VoidCallback? restore = canEdit && canRestoreResource(r, isDm: panel.isDm)
-        ? () => restoreClassResource(context, ref, panel.character, r)
-        : null;
-
-    final Widget body;
-    if (r.max >= unlimitedUses) {
-      body = const Text('Usos ilimitados');
-      spend = null;
-      restore = null;
-    } else if (r.max > _maxPips) {
-      body = InkWell(
-        key: Key('$keyPrefix-pips'),
-        onTap: spend,
-        onLongPress: restore,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: LinearProgressIndicator(
-            value: remaining / r.max,
-            minHeight: 10,
-            borderRadius: BorderRadius.circular(5),
-          ),
-        ),
-      );
-    } else {
-      body = PipRow(
-        key: Key('$keyPrefix-pips'),
-        total: r.max,
-        filled: remaining,
-        semanticLabel: '$label: $remaining de ${r.max}',
-        onTap: spend,
-        onLongPress: restore,
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(child: Text(label, style: theme.textTheme.bodyLarge)),
-            Text(
-              r.max >= unlimitedUses ? '∞' : '$remaining / ${r.max}',
-              key: Key('$keyPrefix-uses'),
-              style: numericStyle(theme.textTheme.titleSmall),
-            ),
-          ],
-        ),
-        body,
-        Text(
-          r.recharge.label,
-          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-        ),
-      ],
+    final resource = findResource(panel.character, resourceKey);
+    final unlocked = panel.level >= minLevel;
+    final problem = _resourceProblem(context, panel, resource, actionKey, 'Usos', minLevel);
+    final usable =
+        resource != null &&
+        resource.max > 0 &&
+        (resource.max >= unlimitedUses || remainingOf(resource) > 0);
+    return CombatActionRow(
+      title: title,
+      icon: icon,
+      actionKind: unlocked ? actionKind : null,
+      cost: problem == null ? usesText(resource!) : null,
+      costKey: Key('$actionKey-uses'),
+      subtitle: description,
+      info: featureIndex == null ? null : FeatureInfoButton(index: featureIndex!),
+      action: unlocked
+          ? FilledButton.tonalIcon(
+              key: Key(actionKey),
+              onPressed: panel.canEdit && usable
+                  ? () => onUse != null
+                        ? onUse!(context, ref, resource)
+                        : spendClassResource(
+                            context,
+                            ref,
+                            panel.character,
+                            resource,
+                            success: success,
+                          )
+                  : null,
+              icon: AppIcon(icon, size: 18),
+              label: Text(buttonLabel, maxLines: 1, overflow: TextOverflow.ellipsis),
+            )
+          : null,
+      details: [?problem, ...extra],
     );
   }
 }
@@ -276,7 +313,7 @@ class PanelFact extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -302,113 +339,8 @@ class PanelFact extends StatelessWidget {
   }
 }
 
-/// Card of a class resource with a button that spends one use: the uses
-/// ([ClassResourceUses], keys `<actionKey>-uses` / `-pips`) and the button
-/// keyed [actionKey]. [onUse] replaces the plain spend (e.g. Second Wind also
-/// heals). Below [minLevel] only says when the feature arrives.
-class ClassResourceActionCard extends ConsumerWidget {
-  const ClassResourceActionCard({
-    super.key,
-    required this.panel,
-    required this.resourceKey,
-    required this.title,
-    required this.actionKey,
-    required this.buttonLabel,
-    required this.icon,
-    this.minLevel = 1,
-    this.success,
-    this.description,
-    this.onUse,
-    this.trailing,
-    this.extra = const [],
-    this.actionKind,
-    this.featureIndex,
-  });
-
-  final ClassPanelContext panel;
-  final String resourceKey;
-  final String title;
-  final String actionKey;
-  final String buttonLabel;
-  final AppIcons icon;
-  final int minLevel;
-  final String? success;
-  final String? description;
-  final Future<void> Function(BuildContext context, WidgetRef ref, CharacterResource resource)?
-  onUse;
-  final Widget? trailing;
-  final List<Widget> extra;
-
-  /// What using the feature costs on the turn, as the SRD says; null when the
-  /// feature is not an action of its own.
-  final ActionKind? actionKind;
-
-  /// SRD index of the feature for its [CombatCard.featureIndex], or null.
-  final String? featureIndex;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final resource = findResource(panel.character, resourceKey);
-    final unlocked = panel.level >= minLevel;
-    final usable =
-        resource != null &&
-        resource.max > 0 &&
-        (resource.max >= unlimitedUses || remainingOf(resource) > 0);
-    return CombatCard(
-      title: title,
-      trailing: trailing,
-      actionKind: actionKind,
-      featureIndex: featureIndex,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClassResourceUses(
-            panel: panel,
-            resource: resource,
-            keyPrefix: actionKey,
-            label: 'Usos',
-            minLevel: minLevel,
-            tapToSpend: false,
-          ),
-          if (unlocked)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton.tonalIcon(
-                  key: Key(actionKey),
-                  onPressed: panel.canEdit && usable
-                      ? () => onUse != null
-                            ? onUse!(context, ref, resource)
-                            : spendClassResource(
-                                context,
-                                ref,
-                                panel.character,
-                                resource,
-                                success: success,
-                              )
-                      : null,
-                  icon: AppIcon(icon, size: 20),
-                  label: Text(buttonLabel),
-                ),
-              ),
-            ),
-          if (description != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(description!, style: theme.textTheme.bodySmall),
-            ),
-          ...extra,
-        ],
-      ),
-    );
-  }
-}
-
-/// A read-only reminder of a class feature, keyed for tests; [actionKind]
-/// adds its chip under the title and [featureIndex] a [FeatureInfoButton]
-/// to its right.
+/// A class feature to remember, without a button: [actionKind] adds its chip
+/// next to the title and [featureIndex] a [FeatureInfoButton].
 class FeatureReminder extends StatelessWidget {
   const FeatureReminder({
     super.key,
@@ -417,6 +349,7 @@ class FeatureReminder extends StatelessWidget {
     required this.text,
     this.actionKind,
     this.featureIndex,
+    this.children = const [],
   });
 
   final AppIcons icon;
@@ -428,33 +361,15 @@ class FeatureReminder extends StatelessWidget {
 
   /// What using the feature costs on the turn, as the SRD says.
   final ActionKind? actionKind;
+  final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      dense: true,
-      leading: AppIcon(icon, color: Theme.of(context).colorScheme.primary),
-      title: featureIndex == null
-          ? Text(title)
-          : Row(
-              children: [
-                Flexible(child: Text(title)),
-                FeatureInfoButton(index: featureIndex!),
-              ],
-            ),
-      subtitle: actionKind == null
-          ? Text(text)
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: ActionTypeChip(actionKind!, compact: true),
-                ),
-                Text(text),
-              ],
-            ),
-    );
-  }
+  Widget build(BuildContext context) => CombatActionRow(
+    icon: icon,
+    title: title,
+    actionKind: actionKind,
+    subtitle: text,
+    info: featureIndex == null ? null : FeatureInfoButton(index: featureIndex!),
+    details: children,
+  );
 }

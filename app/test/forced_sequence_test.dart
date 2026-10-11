@@ -7,6 +7,7 @@ import 'package:opentrpg_dnd5e/characters/models.dart';
 import 'package:opentrpg_dnd5e/characters/ui/character_tabs.dart';
 
 import 'helpers/app_pump.dart';
+import 'helpers/combat_tabs.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/fake_realtime_hub.dart';
 import 'helpers/fakes.dart';
@@ -288,6 +289,7 @@ void main() {
       expect(characters.rollSaves.single.resourceId, 'r-portent');
       expect(characters.rollSaves.single.values, [14, 3]);
       expect(locationOf(router), _playerRoute);
+      await openCombatSection(tester, 'resources');
       // The values stay in the panel of the resource.
       expect(find.byKey(const Key('resource-r-portent-rolls')), findsOneWidget);
       expect(find.text('Tiradas: 14 · 3'), findsOneWidget);
@@ -320,6 +322,7 @@ void main() {
         ),
       );
       expect(locationOf(router), _playerRoute);
+      await openCombatSection(tester, 'resources');
       expect(find.text('Tiradas: 7 · 18'), findsOneWidget);
     });
   });

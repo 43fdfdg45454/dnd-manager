@@ -70,6 +70,15 @@ public sealed record AbilityIncreaseEffect(string Label, string Ability, int Amo
 public sealed record ChoiceResourceEffect(string? ClassIndex, OptionResource Resource)
 {
     public string? Label { get; init; }
+
+    /// <summary>What grants the resource (<see cref="ResourceSourceKinds"/>), or null.</summary>
+    public string? SourceKind { get; init; }
+
+    /// <summary>Catalog index of the feature, trait, option, feat or spell that grants it, or null.</summary>
+    public string? SourceIndex { get; init; }
+
+    /// <summary>Rules text of the origin when the catalog has no detail page for it, or null.</summary>
+    public string? SourceDescription { get; init; }
 }
 
 /// <summary>
@@ -140,6 +149,8 @@ public sealed record ChoiceEffects(
                 })
             {
                 Label = label,
+                SourceKind = ResourceSourceKinds.Spell,
+                SourceIndex = spell.Index,
             };
         }
     }
@@ -154,6 +165,14 @@ public sealed record ChoiceEffects(
         : OriginChoiceKeys.IsBackground(key) ? BreakdownSources.Background : OriginChoiceKeys.IsSubrace(key) ? BreakdownSources.Subrace : BreakdownSources.Race;
 
     public static ChoiceEffects None { get; } = new([], [], []);
+
+    /// <summary>The paragraphs of a description as one text (null when empty), for <see cref="ChoiceResourceEffect.SourceDescription"/>.</summary>
+    public static string? Describe(IReadOnlyList<string> paragraphs)
+    {
+        ArgumentNullException.ThrowIfNull(paragraphs);
+        var text = string.Join("\n\n", paragraphs.Where(p => !string.IsNullOrWhiteSpace(p))).Trim();
+        return text.Length == 0 ? null : text;
+    }
 
     /// <summary>"Defense (nivel 1)".</summary>
     public static string Label(string name, int level) => $"{name} (nivel {level})";
@@ -177,7 +196,7 @@ public sealed record ChoiceEffects(
         var choices = character.Choices.Where(c => c.Key != CharacterChoice.HitPointsKey).ToList();
 
         var grants = new List<GrantEffect>();
-        void AddOption(OptionDefinition option, string? classIndex, string label, string? chosenAbility, string source, IReadOnlyList<string>? removedSaves = null)
+        void AddOption(OptionDefinition option, string? classIndex, string label, string? chosenAbility, string source, string kind, IReadOnlyList<string>? removedSaves = null)
         {
             modifiers.AddRange(option.Modifiers.Select(m => FeatureModifier.From(label, m, classIndex)));
             if (option.Grants is { HasSheetEffects: true } sheetGrants)
@@ -194,7 +213,13 @@ public sealed record ChoiceEffects(
 
             if (option.Resource is { } resource)
             {
-                resources.Add(new ChoiceResourceEffect(classIndex, resource) { Label = label });
+                resources.Add(new ChoiceResourceEffect(classIndex, resource)
+                {
+                    Label = label,
+                    SourceKind = kind,
+                    SourceIndex = option.Index,
+                    SourceDescription = Describe(option.Description),
+                });
             }
 
             var spellClass = SpellClassIndex(option.Grants, option.Index, classIndex ?? CharacterSpell.OriginClassIndex);
@@ -237,7 +262,7 @@ public sealed record ChoiceEffects(
             if (selection.Feat is { } feat && !ReplacedLater(choice, feat.Index) && findOption(feat.Index) is { } featOption)
             {
                 var label = choice.IsOrigin ? OriginLabel(featOption.Name, choice.Key) : Label(featOption.Name, choice.Level);
-                AddOption(featOption, choice.ClassIndex, label, selection.Ability, choice.IsOrigin ? OriginSource(choice.Key) : BreakdownSources.Feature, selection.RemovedSavingThrows);
+                AddOption(featOption, choice.ClassIndex, label, selection.Ability, choice.IsOrigin ? OriginSource(choice.Key) : BreakdownSources.Feature, ResourceSourceKinds.Feat, selection.RemovedSavingThrows);
             }
         }
 
@@ -245,7 +270,7 @@ public sealed record ChoiceEffects(
         {
             if (findOption(pick.Item.Index) is { } option)
             {
-                AddOption(option, pick.ClassIndex, Label(option.Name, pick.Level), null, BreakdownSources.Feature);
+                AddOption(option, pick.ClassIndex, Label(option.Name, pick.Level), null, BreakdownSources.Feature, ResourceSourceKinds.Option);
             }
         }
 
@@ -309,7 +334,12 @@ public sealed record ChoiceEffects(
             .Where(f => f.Owner is not null && f.Feature.Level <= f.Owner.Level && f.Feature.Resource is not null)
             .OrderBy(f => f.Feature.Level)
             .ThenBy(f => f.Feature.Index, StringComparer.Ordinal)
-            .Select(f => new ChoiceResourceEffect(f.Owner!.ClassIndex, f.Feature.Resource!) { Label = Label(f.Feature.Name, f.Feature.Level) })
+            .Select(f => new ChoiceResourceEffect(f.Owner!.ClassIndex, f.Feature.Resource!)
+            {
+                Label = Label(f.Feature.Name, f.Feature.Level),
+                SourceKind = ResourceSourceKinds.Feature,
+                SourceIndex = f.Feature.Index,
+            })
             .ToList();
     }
 

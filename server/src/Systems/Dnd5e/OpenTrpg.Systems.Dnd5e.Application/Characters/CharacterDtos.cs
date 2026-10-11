@@ -63,6 +63,19 @@ public sealed record CharacterResourceDto(Guid Id, string? Key, string Name, int
     /// <summary>Die rolled to get the uses back (<c>POST …/resources/{id}/recharge-roll</c>), or null.</summary>
     public RechargeRollDto? RechargeRoll { get; init; }
 
+    /// <summary>
+    /// What grants the resource: "feature" (class or subclass feature, <c>GET /catalog/features/{SourceIndex}</c>),
+    /// "trait" (racial trait), "option", "feat" or "spell" (uses per long rest of the spell <see cref="SourceIndex"/>);
+    /// null for manual resources and when unknown.
+    /// </summary>
+    public string? SourceKind { get; init; }
+
+    /// <summary>Catalog index of the origin named by <see cref="SourceKind"/>, or null.</summary>
+    public string? SourceIndex { get; init; }
+
+    /// <summary>Rules text of the origin when the catalog has no detail page for it (options, feats, racial traits), or null.</summary>
+    public string? SourceDescription { get; init; }
+
     /// <param name="template">Current template of an automatic resource (its die, origin and breakdown), if any.</param>
     public static CharacterResourceDto From(CharacterResource r, ResourceTemplate? template = null) => new(r.Id, r.Key, r.Name, r.Max, r.Used, r.Recharge.ToString(), r.IsAuto)
     {
@@ -73,6 +86,9 @@ public sealed record CharacterResourceDto(Guid Id, string? Key, string Name, int
         Source = template?.Source,
         Breakdown = template?.Breakdown is { } breakdown && breakdown.Total == r.Max ? ValueBreakdownDto.From(breakdown) : null,
         RechargeRoll = template?.RechargeRoll is { } recharge ? new RechargeRollDto(recharge.Dice, recharge.Min) : null,
+        SourceKind = template?.SourceKind,
+        SourceIndex = template?.SourceIndex,
+        SourceDescription = template?.SourceDescription,
     };
 }
 

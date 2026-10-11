@@ -305,23 +305,24 @@ class Dnd5eCharactersRepository {
     );
   }
 
-  /// `hit-point-cast`: casts a spell of [spellLevel] of the class
-  /// [classIndex] paying hit points instead of a slot. Answers with the
-  /// updated character and the hit points lost.
-  Future<HitPointCastResult> hitPointCast(
-    String id, {
-    required String classIndex,
-    required int spellLevel,
+  /// `POST …/spells/{spellIndex}/cast`: casts a spell of the character and
+  /// lets the server decide what it costs (a use of the spell's resource, a
+  /// slot of [level] or a pact slot, hit points, or nothing for cantrips and
+  /// rituals). [classIndex] picks the entry of the spell; [level] is the
+  /// chosen cast level.
+  Future<SpellCastResult> castSpell(
+    String id,
+    String spellIndex, {
+    String? classIndex,
+    int? level,
+    bool ritual = false,
   }) async {
     final json = await _json(
       'POST',
-      '$_dnd5e/characters/$id/class-actions/hit-point-cast',
-      data: {'classIndex': classIndex, 'spellLevel': spellLevel},
+      '$_dnd5e/characters/$id/spells/${Uri.encodeComponent(spellIndex)}/cast',
+      data: {'classIndex': ?classIndex, 'level': ?level, if (ritual) 'ritual': true},
     );
-    return HitPointCastResult(
-      character: CharacterDetail.fromJson(Map<String, dynamic>.from(json['character'] as Map)),
-      hitPointsLost: (json['hitPointsLost'] as num?)?.toInt() ?? 0,
-    );
+    return SpellCastResult.fromJson(json);
   }
 
   // -- Campaign rules (phase 35) ----------------------------------------------

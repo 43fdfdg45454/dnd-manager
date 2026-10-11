@@ -105,7 +105,11 @@ Future<void> _pump(
   CampaignRole role = CampaignRole.player,
   String tab = 'combat',
 }) async {
-  SharedPreferences.setMockInitialValues({'character.ch1.tab': tab});
+  // The companions are in the "Más" tab of the combat view.
+  SharedPreferences.setMockInitialValues({
+    'character.ch1.tab': tab,
+    'character.ch1.combatSection': 'more',
+  });
   final prefs = await SharedPreferences.getInstance();
   final router = GoRouter(
     initialLocation: '/characters/ch1',

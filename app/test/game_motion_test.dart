@@ -394,7 +394,7 @@ void main() {
           ValueListenableBuilder<CharacterDetail>(
             valueListenable: character,
             builder: (_, c, _) =>
-                SingleChildScrollView(child: HpCard(character: c, canEdit: false)),
+                SingleChildScrollView(child: HpStrip(character: c, canEdit: false)),
           ),
         ),
       );

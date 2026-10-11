@@ -13,7 +13,26 @@ public class ClassResourceRulesTests
     {
         var rage = Assert.Single(ClassResourceRules.For("barbarian", 3, NoMods));
 
-        Assert.Equal(new ResourceTemplate(ClassResourceRules.Rage, "Rage", 3, ResourceRecharge.LongRest), rage);
+        Assert.Equal(
+            new ResourceTemplate(ClassResourceRules.Rage, "Rage", 3, ResourceRecharge.LongRest)
+            {
+                SourceKind = ResourceSourceKinds.Feature,
+                SourceIndex = "rage",
+            },
+            rage);
+    }
+
+    [Theory]
+    [InlineData("cleric", 2, ClassResourceRules.ChannelDivinity, "channel-divinity-1-rest")]
+    [InlineData("paladin", 3, ClassResourceRules.ChannelDivinity, "channel-divinity")]
+    [InlineData("monk", 2, ClassResourceRules.Ki, "ki")]
+    [InlineData("sorcerer", 2, ClassResourceRules.SorceryPoints, "font-of-magic")]
+    [InlineData("bard", 1, ClassResourceRules.BardicInspiration, "bardic-inspiration-d6")]
+    public void Each_class_resource_names_the_srd_feature_that_grants_it(string classIndex, int level, string key, string feature)
+    {
+        var template = ClassResourceRules.For(classIndex, level, NoMods).Single(t => t.Key == key);
+
+        Assert.Equal((ResourceSourceKinds.Feature, feature, (string?)null), (template.SourceKind, template.SourceIndex, template.SourceDescription));
     }
 
     [Theory]
@@ -67,11 +86,11 @@ public class ClassResourceRulesTests
     public void Other_classes_follow_the_contract_table()
     {
         Assert.Empty(ClassResourceRules.For("monk", 1, NoMods));
-        Assert.Equal(new ResourceTemplate("ki", "Ki", 5, ResourceRecharge.ShortRest), ClassResourceRules.For("monk", 5, NoMods).Single());
-        Assert.Equal(new ResourceTemplate("wild-shape", "Wild Shape", 2, ResourceRecharge.ShortRest), ClassResourceRules.For("druid", 2, NoMods).Single());
+        Assert.Equal(new ResourceTemplate("ki", "Ki", 5, ResourceRecharge.ShortRest) { SourceKind = ResourceSourceKinds.Feature, SourceIndex = "ki" }, ClassResourceRules.For("monk", 5, NoMods).Single());
+        Assert.Equal(new ResourceTemplate("wild-shape", "Wild Shape", 2, ResourceRecharge.ShortRest) { SourceKind = ResourceSourceKinds.Feature, SourceIndex = "wild-shape-cr-1-4-or-below-no-flying-or-swim-speed" }, ClassResourceRules.For("druid", 2, NoMods).Single());
         Assert.Equal(ClassResourceRules.Unlimited, ClassResourceRules.For("druid", 20, NoMods).Single().Max);
-        Assert.Equal(new ResourceTemplate("sorcery-points", "Sorcery Points", 4, ResourceRecharge.LongRest), ClassResourceRules.For("sorcerer", 4, NoMods).Single());
-        Assert.Equal(new ResourceTemplate("arcane-recovery", "Arcane Recovery", 1, ResourceRecharge.LongRest), ClassResourceRules.For("wizard", 1, NoMods).Single());
+        Assert.Equal(new ResourceTemplate("sorcery-points", "Sorcery Points", 4, ResourceRecharge.LongRest) { SourceKind = ResourceSourceKinds.Feature, SourceIndex = "font-of-magic" }, ClassResourceRules.For("sorcerer", 4, NoMods).Single());
+        Assert.Equal(new ResourceTemplate("arcane-recovery", "Arcane Recovery", 1, ResourceRecharge.LongRest) { SourceKind = ResourceSourceKinds.Feature, SourceIndex = "arcane-recovery" }, ClassResourceRules.For("wizard", 1, NoMods).Single());
 
         var paladin = ClassResourceRules.For("paladin", 3, NoMods);
         Assert.Equal([("lay-on-hands", 15, ResourceRecharge.LongRest), ("channel-divinity", 1, ResourceRecharge.ShortRest)], paladin.Select(r => (r.Key, r.Max, r.Recharge)));

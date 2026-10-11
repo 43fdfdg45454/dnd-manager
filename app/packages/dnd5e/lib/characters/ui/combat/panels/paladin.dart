@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:opentrpg_core/core/motion/flash.dart';
 import 'package:opentrpg_core/core/theme/app_icon.dart';
-import 'package:opentrpg_core/core/theme/components.dart';
 import 'package:opentrpg_core/core/theme/icons.dart';
 import 'package:opentrpg_core/features/characters/data/characters_controller.dart';
 import 'package:opentrpg_core/features/dice/ui/dice_sheet.dart';
 
 import '../../../../ui/action_type.dart';
 import '../../../models.dart';
+import '../combat_rows.dart';
 import '../combat_support.dart';
 import 'critical_damage_roll.dart';
 import 'panel_support.dart';
@@ -37,7 +37,7 @@ const smiteMaxSlotDice = 5;
 /// Most d8 Divine Smite can deal in total, with the die against undead and fiends.
 const smiteMaxDice = 6;
 
-/// Damage of a Divine Smite (PHB): the [base] dice the server gives for the
+/// Damage of a Divine Smite: the [base] dice the server gives for the
 /// slot (at most 5d8), plus 1d8 [againstUndead] or fiends (at most 6d8), all
 /// doubled on a [critical] hit. A [base] that is not "Nd8" is kept as it is.
 String smiteDamage(String base, {bool againstUndead = false, bool critical = false}) {
@@ -53,21 +53,55 @@ String smiteDamage(String base, {bool againstUndead = false, bool critical = fal
   return '${count}d8';
 }
 
-class PaladinPanel extends ConsumerStatefulWidget {
-  const PaladinPanel({super.key, required this.panel});
+/// Paladin: Lay on Hands, Divine Sense, Divine Smite and Channel Divinity on
+/// the turn; the Aura of Protection to remember.
+const paladinPanel = ClassPanelSpec(actions: _actions, more: _more);
+
+List<Widget> _actions(ClassPanelContext panel, WidgetRef ref) => [
+  LayOnHandsRow(panel: panel),
+  const FeatureReminder(
+    key: Key('paladin-divine-sense'),
+    icon: AppIcons.eye,
+    title: 'Sentido divino',
+    featureIndex: 'divine-sense',
+    // SRD: "As an action, you can open your awareness to detect such forces".
+    actionKind: ActionKind.action,
+    text:
+        'Hasta el final de tu próximo turno conoces la ubicación de celestiales, '
+        'infernales y muertos vivientes a 60 pies que no estén tras cobertura total. '
+        'Usos: 1 + tu modificador de Carisma por descanso largo.',
+  ),
+  DivineSmiteRow(panel: panel),
+  _ChannelDivinityRow(panel: panel),
+];
+
+List<Widget> _more(ClassPanelContext panel, WidgetRef ref) {
+  final aura = panelInt(panel.panel.data['auraRange']);
+  return [
+    if (aura != null)
+      FeatureReminder(
+        key: const Key('paladin-aura'),
+        icon: AppIcons.sun,
+        title: 'Aura de protección',
+        featureIndex: 'aura-of-protection',
+        text: 'Aura de protección: $aura pies',
+      ),
+  ];
+}
+
+/// Lay on Hands: the pool left, a slider for the amount and "Curarme" /
+/// "Curar a otro".
+class LayOnHandsRow extends ConsumerStatefulWidget {
+  const LayOnHandsRow({super.key, required this.panel});
 
   final ClassPanelContext panel;
 
   @override
-  ConsumerState<PaladinPanel> createState() => _PaladinPanelState();
+  ConsumerState<LayOnHandsRow> createState() => _LayOnHandsRowState();
 }
 
-class _PaladinPanelState extends ConsumerState<PaladinPanel> {
-  int? _smiteLevel;
+class _LayOnHandsRowState extends ConsumerState<LayOnHandsRow> {
   int _amount = 1;
-
-  /// Bumped on every Divine Smite the server accepts: plays the golden flash.
-  int _smites = 0;
 
   CharacterDetail get _character => widget.panel.character;
   bool get _canEdit => widget.panel.canEdit;
@@ -100,10 +134,93 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
     );
   }
 
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final loh = panelMap(widget.panel.panel.data['layOnHands']);
+    final pool = panelInt(loh['pool']) ?? 0;
+    final used = panelInt(loh['used']) ?? 0;
+    final remaining = (pool - used).clamp(0, pool);
+    final amount = remaining == 0 ? 0 : _amount.clamp(1, remaining);
+    return CombatActionRow(
+      icon: AppIcons.drop,
+      title: 'Imposición de manos',
+      // SRD: "As an action, you can touch a creature and draw power from the pool".
+      actionKind: ActionKind.action,
+      cost: '$remaining / $pool',
+      costKey: const Key('loh-remaining'),
+      subtitle: 'Cura PG de tu reserva, o 5 por enfermedad o veneno.',
+      info: const FeatureInfoButton(index: 'lay-on-hands'),
+      details: [
+        if (remaining > 1)
+          Row(
+            children: [
+              Expanded(
+                child: Slider(
+                  key: const Key('loh-slider'),
+                  min: 1,
+                  max: remaining.toDouble(),
+                  divisions: remaining - 1,
+                  value: amount.toDouble(),
+                  label: '$amount',
+                  onChanged: _canEdit ? (v) => setState(() => _amount = v.round()) : null,
+                ),
+              ),
+              SizedBox(
+                width: 32,
+                child: Text(
+                  '$amount',
+                  key: const Key('loh-amount'),
+                  style: numericStyle(theme.textTheme.bodyMedium),
+                ),
+              ),
+            ],
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Text(remaining == 0 ? 'Reserva agotada.' : 'Cantidad: 1'),
+          ),
+      ],
+      actions: [
+        FilledButton.icon(
+          key: const Key('loh-heal-self'),
+          onPressed: _canEdit && remaining > 0 ? () => _healSelf(remaining) : null,
+          icon: const AppIcon(AppIcons.drop, size: 18),
+          label: const Text('Curarme'),
+        ),
+        FilledButton.tonalIcon(
+          key: const Key('loh-heal-other'),
+          onPressed: _canEdit && remaining > 0 ? () => _healOther(remaining) : null,
+          icon: const AppIcon(AppIcons.heart, size: 18),
+          label: const Text('Curar a otro'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Divine Smite: picks the slot level and spends it, then offers to roll the
+/// extra damage. A golden flash plays on every smite the server accepts.
+class DivineSmiteRow extends ConsumerStatefulWidget {
+  const DivineSmiteRow({super.key, required this.panel});
+
+  final ClassPanelContext panel;
+
+  @override
+  ConsumerState<DivineSmiteRow> createState() => _DivineSmiteRowState();
+}
+
+class _DivineSmiteRowState extends ConsumerState<DivineSmiteRow> {
+  int? _smiteLevel;
+
+  /// Bumped on every Divine Smite the server accepts: plays the golden flash.
+  int _smites = 0;
+
   Future<void> _smite(int level) async {
     String? dice;
     final done = await runCombat(context, () async {
-      dice = await panelController(ref, _character).divineSmite(level);
+      dice = await panelController(ref, widget.panel.character).divineSmite(level);
     });
     if (!done || !mounted) return;
     setState(() => _smites++);
@@ -121,28 +238,10 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
     }
   }
 
-  Future<void> _channel() async {
-    final resource = findResource(_character, 'channel-divinity', 'channel divinity');
-    if (resource == null) {
-      showCombatMessage(context, 'No se encontró el recurso Canalizar divinidad.');
-      return;
-    }
-    await runCombat(
-      context,
-      () => panelController(ref, _character).spendResource(resource.id),
-      success: 'Canalizar divinidad gastado.',
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final data = widget.panel.panel.data;
-    final loh = panelMap(data['layOnHands']);
-    final pool = panelInt(loh['pool']) ?? 0;
-    final used = panelInt(loh['used']) ?? 0;
-    final remaining = (pool - used).clamp(0, pool);
-    final smite = panelMap(data['divineSmite']);
+    final smite = panelMap(widget.panel.panel.data['divineSmite']);
     final slots = [
       for (final e in (smite['slotsByLevel'] as List? ?? const []))
         if (e is Map)
@@ -153,173 +252,94 @@ class _PaladinPanelState extends ConsumerState<PaladinPanel> {
           ),
     ].where((s) => s.available > 0).toList();
     final selected = slots.where((s) => s.level == _smiteLevel).firstOrNull ?? slots.firstOrNull;
-    final channel = panelUses(data['channelDivinity']);
-    final channelLeft = channel.max - channel.used;
-    final aura = panelInt(data['auraRange']);
-    final amount = remaining == 0 ? 0 : _amount.clamp(1, remaining);
+    return RadialFlash(
+      key: const Key('smite-flash'),
+      trigger: _smites == 0 ? null : _smites,
+      child: CombatActionRow(
+        icon: AppIcons.sun,
+        title: 'Castigo divino',
+        cost: selected == null ? null : 'Espacio de nivel ${selected.level}',
+        subtitle: slots.isEmpty
+            ? 'No tienes espacios de conjuro disponibles.'
+            : 'Al impactar cuerpo a cuerpo, gasta un espacio: +1d8 contra no-muertos e '
+                  'infernales.',
+        info: const FeatureInfoButton(index: 'divine-smite'),
+        action: selected == null
+            ? null
+            : FilledButton.icon(
+                key: const Key('smite-confirm'),
+                onPressed: widget.panel.canEdit ? () => _smite(selected.level) : null,
+                icon: const AppIcon(AppIcons.sun, size: 18),
+                label: const Text('Castigar'),
+              ),
+        details: [
+          if (selected != null) ...[
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                for (final slot in slots)
+                  ChoiceChip(
+                    key: Key('smite-level-${slot.level}'),
+                    label: Text('Nivel ${slot.level} (${slot.available})'),
+                    selected: slot.level == selected.level,
+                    onSelected: (_) => setState(() => _smiteLevel = slot.level),
+                  ),
+              ],
+            ),
+            Text(
+              'Dados extra: ${selected.dice}',
+              key: const Key('smite-dice'),
+              style: theme.textTheme.titleSmall,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SectionHeader('Paladín', padding: combatSectionPadding),
-        CombatCard(
-          key: const Key('class-panel-paladin'),
-          title: 'Imposición de manos',
-          featureIndex: 'lay-on-hands',
-          // SRD: "As an action, you can touch a creature and draw power from the pool".
-          actionKind: ActionKind.action,
-          trailing: Text(
-            '$remaining / $pool',
-            key: const Key('loh-remaining'),
-            style: numericStyle(theme.textTheme.bodyMedium),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              LinearProgressIndicator(
-                value: pool == 0 ? 0 : remaining / pool,
-                minHeight: 10,
-                borderRadius: BorderRadius.circular(5),
-              ),
-              if (remaining > 1)
-                Row(
-                  children: [
-                    Expanded(
-                      child: Slider(
-                        key: const Key('loh-slider'),
-                        min: 1,
-                        max: remaining.toDouble(),
-                        divisions: remaining - 1,
-                        value: amount.toDouble(),
-                        label: '$amount',
-                        onChanged: _canEdit ? (v) => setState(() => _amount = v.round()) : null,
-                      ),
-                    ),
-                    SizedBox(
-                      width: 32,
-                      child: Text(
-                        '$amount',
-                        key: const Key('loh-amount'),
-                        style: numericStyle(theme.textTheme.bodyMedium),
-                      ),
-                    ),
-                  ],
-                )
-              else
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(remaining == 0 ? 'Reserva agotada.' : 'Cantidad: 1'),
-                ),
-              Row(
-                children: [
-                  Expanded(
-                    child: FilledButton.icon(
-                      key: const Key('loh-heal-self'),
-                      onPressed: _canEdit && remaining > 0 ? () => _healSelf(remaining) : null,
-                      icon: const AppIcon(AppIcons.drop, size: 20),
-                      label: const Text('Curarme'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FilledButton.tonalIcon(
-                      key: const Key('loh-heal-other'),
-                      onPressed: _canEdit && remaining > 0 ? () => _healOther(remaining) : null,
-                      icon: const AppIcon(AppIcons.heart, size: 20),
-                      label: const Text('Curar a otro'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        CombatCard(
-          key: const Key('paladin-divine-sense'),
-          title: 'Sentido divino',
-          featureIndex: 'divine-sense',
-          // SRD: "As an action, you can open your awareness to detect such forces".
-          actionKind: ActionKind.action,
-          child: Text(
-            'Hasta el final de tu próximo turno conoces la ubicación de celestiales, '
-            'infernales y muertos vivientes a 60 pies que no estén tras cobertura total. '
-            'Usos: 1 + tu modificador de Carisma por descanso largo.',
-            style: theme.textTheme.bodySmall,
-          ),
-        ),
-        RadialFlash(
-          key: const Key('smite-flash'),
-          trigger: _smites == 0 ? null : _smites,
-          child: CombatCard(
-            title: 'Castigo divino',
-            featureIndex: 'divine-smite',
-            child: slots.isEmpty
-                ? const Text('No tienes espacios de conjuro disponibles.')
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          for (final slot in slots)
-                            ChoiceChip(
-                              key: Key('smite-level-${slot.level}'),
-                              label: Text('Nivel ${slot.level} (${slot.available})'),
-                              selected: slot.level == selected!.level,
-                              onSelected: (_) => setState(() => _smiteLevel = slot.level),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Dados extra: ${selected!.dice}',
-                        key: const Key('smite-dice'),
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      Text(
-                        '+1d8 contra no-muertos e infernales.',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 8),
-                      FilledButton.icon(
-                        key: const Key('smite-confirm'),
-                        onPressed: _canEdit ? () => _smite(selected.level) : null,
-                        icon: const AppIcon(AppIcons.sun, size: 20),
-                        label: const Text('Castigo divino'),
-                      ),
-                    ],
-                  ),
-          ),
-        ),
-        CombatCard(
-          title: 'Canalizar divinidad',
-          featureIndex: 'channel-divinity',
-          // SRD, Oath of Devotion: Sacred Weapon and Turn the Unholy are both used
-          // "As an action".
-          actionKind: ActionKind.action,
-          trailing: Text(
-            'Usos: $channelLeft / ${channel.max}',
-            key: const Key('channel-uses'),
-            style: numericStyle(theme.textTheme.bodyMedium),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              FilledButton.tonalIcon(
-                key: const Key('channel-divinity'),
-                onPressed: _canEdit && channelLeft > 0 ? _channel : null,
-                icon: const AppIcon(AppIcons.sparkles, size: 20),
-                label: const Text('Canalizar divinidad'),
-              ),
-              if (aura != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text('Aura de protección: $aura pies'),
-                ),
-            ],
-          ),
-        ),
-      ],
+/// Channel Divinity of the paladin (uses from the server's panel).
+class _ChannelDivinityRow extends ConsumerWidget {
+  const _ChannelDivinityRow({required this.panel});
+
+  final ClassPanelContext panel;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = panel.character;
+    final channel = panelUses(panel.panel.data['channelDivinity']);
+    final left = channel.max - channel.used;
+
+    Future<void> use() async {
+      final resource = findResource(c, 'channel-divinity', 'channel divinity');
+      if (resource == null) {
+        showCombatMessage(context, 'No se encontró el recurso Canalizar divinidad.');
+        return;
+      }
+      await runCombat(
+        context,
+        () => panelController(ref, c).spendResource(resource.id),
+        success: 'Canalizar divinidad gastado.',
+      );
+    }
+
+    return CombatActionRow(
+      icon: AppIcons.sparkles,
+      title: 'Canalizar divinidad',
+      // SRD, Oath of Devotion: Sacred Weapon and Turn the Unholy are both used
+      // "As an action".
+      actionKind: ActionKind.action,
+      cost: 'Usos: $left / ${channel.max}',
+      costKey: const Key('channel-uses'),
+      subtitle: 'Las opciones de tu juramento.',
+      info: const FeatureInfoButton(index: 'channel-divinity'),
+      action: FilledButton.tonalIcon(
+        key: const Key('channel-divinity'),
+        onPressed: panel.canEdit && left > 0 ? use : null,
+        icon: const AppIcon(AppIcons.sparkles, size: 18),
+        label: const Text('Canalizar'),
+      ),
     );
   }
 }

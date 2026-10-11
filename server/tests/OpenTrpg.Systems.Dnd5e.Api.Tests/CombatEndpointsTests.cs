@@ -107,6 +107,78 @@ public class CombatEndpointsTests(CatalogApiFactory factory)
         Assert.Equal(3, data.GetProperty("arcaneRecovery").GetProperty("slotLevelsRecoverable").GetInt32());
     }
 
+    [Fact]
+    public async Task Class_resources_name_the_srd_feature_that_grants_them()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var fighter = await SetupAsync(s.Player, s.CampaignId, "fighter", 2, new { str = 16, dex = 10, con = 14, @int = 10, wis = 10, cha = 10 });
+
+        var resources = (await s.Player.GetCharacterAsync(fighter.Id)).Combat.Resources;
+
+        Assert.Equal(("feature", "second-wind"), (resources.Single(r => r.Key == "second-wind").SourceKind, resources.Single(r => r.Key == "second-wind").SourceIndex));
+        Assert.Equal("action-surge-1-use", resources.Single(r => r.Key == "action-surge").SourceIndex);
+        Assert.All(resources, r => Assert.Null(r.SourceDescription));
+    }
+
+    // ---- Casting spells --------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task Casting_spends_a_slot_of_the_chosen_level_and_nothing_for_rituals_or_cantrips()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var wizard = await SetupAsync(s.Player, s.CampaignId, "wizard", 5, new { str = 8, dex = 14, con = 12, @int = 18, wis = 10, cha = 10 });
+        await PatchSheetAsync(s.Player, wizard.Id, new
+        {
+            spells = new[]
+            {
+                new { spellIndex = "fire-bolt", classIndex = "wizard", isPrepared = true },
+                new { spellIndex = "magic-missile", classIndex = "wizard", isPrepared = true },
+                new { spellIndex = "detect-magic", classIndex = "wizard", isPrepared = true },
+            },
+        });
+
+        var upcast = await CastAsync(s.Player, wizard.Id, "magic-missile", new { level = 2 });
+        Assert.Equal(("slot", 2), (upcast.Cost, upcast.SlotLevel));
+        Assert.Equal([(1, 0), (2, 1), (3, 0)], upcast.Character.Combat.SpellSlots.Select(x => (x.Level, x.Used)));
+
+        var ritual = await CastAsync(s.Player, wizard.Id, "detect-magic", new { ritual = true });
+        Assert.Equal("ritual", ritual.Cost);
+        var cantrip = await CastAsync(s.Player, wizard.Id, "fire-bolt", null);
+        Assert.Equal(("cantrip", (int?)null), (cantrip.Cost, cantrip.SlotLevel));
+        Assert.Equal([(1, 0), (2, 1), (3, 0)], cantrip.Character.Combat.SpellSlots.Select(x => (x.Level, x.Used)));
+
+        // Without a level, the spell's own level.
+        Assert.Equal(1, (await CastAsync(s.Player, wizard.Id, "magic-missile", null)).SlotLevel);
+        await CastAsync(s.Player, wizard.Id, "magic-missile", new { level = 3 });
+        await CastAsync(s.Player, wizard.Id, "magic-missile", new { level = 3 });
+
+        var url = CastUrl(wizard.Id, "magic-missile");
+        var empty = await s.Player.Client.PostAsJsonAsync(url, new { level = 3 });
+        Assert.Equal(HttpStatusCode.BadRequest, empty.StatusCode);
+        Assert.Contains("No quedan espacios de nivel 3.", await empty.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.BadRequest, (await s.Player.Client.PostAsJsonAsync(url, new { ritual = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await s.Player.Client.PostAsJsonAsync(CastUrl(wizard.Id, "fireball"), new { level = 3 })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await s.Player.Client.PostAsJsonAsync(url, new { level = 12 })).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_warlock_casts_with_a_pact_slot_of_its_level()
+    {
+        var s = await factory.CreateCampaignScenarioAsync();
+        var warlock = await SetupAsync(s.Player, s.CampaignId, "warlock", 3, new { str = 8, dex = 14, con = 12, @int = 10, wis = 10, cha = 16 });
+        await PatchSheetAsync(s.Player, warlock.Id, new
+        {
+            spells = new[] { new { spellIndex = "hellish-rebuke", classIndex = "warlock", isPrepared = true } },
+        });
+
+        var cast = await CastAsync(s.Player, warlock.Id, "hellish-rebuke", new { level = 2 });
+
+        Assert.Equal(("pactSlot", 2), (cast.Cost, cast.SlotLevel));
+        Assert.Equal(1, cast.Character.Combat.PactSlots!.Used);
+        Assert.Equal(HttpStatusCode.OK, (await s.Player.Client.PostAsJsonAsync(CastUrl(warlock.Id, "hellish-rebuke"), new { level = 2 })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await s.Player.Client.PostAsJsonAsync(CastUrl(warlock.Id, "hellish-rebuke"), new { level = 2 })).StatusCode);
+    }
+
     // ---- Class actions -------------------------------------------------------------------------------
 
     [Fact]
@@ -229,6 +301,15 @@ public class CombatEndpointsTests(CatalogApiFactory factory)
         var response = await actor.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/sheet", patch);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         return (await response.Content.ReadFromJsonAsync<CharacterDetailDto>())!;
+    }
+
+    private static string CastUrl(Guid id, string spellIndex) => $"{ItemTestHelpers.Dnd5eCharacterUrl(id)}/spells/{spellIndex}/cast";
+
+    private static async Task<SpellCastResultDto> CastAsync(SignedInUser actor, Guid id, string spellIndex, object? body)
+    {
+        var response = await actor.Client.PostAsJsonAsync(CastUrl(id, spellIndex), body ?? new { });
+        Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        return (await response.Content.ReadFromJsonAsync<SpellCastResultDto>())!;
     }
 
     private static async Task<T> ActionAsync<T>(SignedInUser actor, Guid id, string action, object? body = null)

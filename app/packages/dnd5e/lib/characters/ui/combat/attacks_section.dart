@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:opentrpg_core/core/theme/app_icon.dart';
-import 'package:opentrpg_core/core/theme/components.dart';
 import 'package:opentrpg_core/core/theme/icons.dart';
 import 'package:opentrpg_core/core/ui/stat_value.dart';
 import 'package:opentrpg_core/features/dice/domain/dice_expression.dart';
@@ -11,12 +10,14 @@ import '../../../catalog/ui/catalog_detail_links.dart' show DetailInfoButton;
 import '../../../ui/action_type.dart';
 import '../../domain/character_format.dart';
 import '../../models.dart';
+import 'combat_rows.dart';
 import 'combat_state.dart';
 import 'combat_support.dart';
 import 'resources_section.dart' show openCombatItemDetail;
 
-/// One card per attack (an action) with "Tirar ataque" and "Tirar daño"; a
-/// weapon opens its item detail.
+/// "Ataques": one row per attack (an action) with "Tirar ataque" (long press
+/// for advantage or disadvantage) and "Tirar daño"; a weapon opens its item
+/// detail.
 class AttacksSection extends ConsumerWidget {
   const AttacksSection({super.key, required this.character});
 
@@ -25,15 +26,15 @@ class AttacksSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final attacks = character.combat.attacks;
+    if (attacks.isEmpty) return const SizedBox.shrink();
     final rage = ref.watch(rageControllerProvider(character.id));
     final rageBonus = rage.active ? rageDamageBonusOf(character) : 0;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return CombatGroup(
+      key: const Key('combat-attacks'),
+      title: 'Ataques',
       children: [
-        const SectionHeader('Ataques', padding: combatSectionPadding),
-        if (attacks.isEmpty) const Text('Sin ataques disponibles.'),
         for (var i = 0; i < attacks.length; i++)
-          AttackCard(
+          AttackRow(
             key: Key('attack-$i'),
             index: i,
             attack: attacks[i],
@@ -42,13 +43,20 @@ class AttacksSection extends ConsumerWidget {
                 ? null
                 : () => openCombatItemDetail(context, ref, character.id, attacks[i].itemId!),
           ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Text(
+            'Mantén pulsado "Tirar ataque" para ventaja o desventaja.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
       ],
     );
   }
 }
 
-class AttackCard extends StatefulWidget {
-  const AttackCard({
+class AttackRow extends StatefulWidget {
+  const AttackRow({
     super.key,
     required this.index,
     required this.attack,
@@ -66,10 +74,10 @@ class AttackCard extends StatefulWidget {
   final VoidCallback? onDetail;
 
   @override
-  State<AttackCard> createState() => _AttackCardState();
+  State<AttackRow> createState() => _AttackRowState();
 }
 
-class _AttackCardState extends State<AttackCard> {
+class _AttackRowState extends State<AttackRow> {
   /// The last attack roll was a critical (natural 20, or from the attack's
   /// `criticalRange`): the damage dice are doubled.
   bool _critical = false;
@@ -142,136 +150,111 @@ class _AttackCardState extends State<AttackCard> {
     final theme = Theme.of(context);
     final a = _attack;
     final details = [if (a.range != null) 'Alcance ${a.range}', ...a.properties].join(' · ');
-    return CombatCard(
+    final small = theme.textTheme.bodySmall;
+    return CombatActionRow(
+      icon: a.isRanged ? AppIcons.bow : AppIcons.sword,
       title: a.name,
       actionKind: ActionKind.action,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (widget.onDetail != null)
-            DetailInfoButton(key: Key('detail-item-${a.itemId}'), onPressed: widget.onDetail!),
-          StatValue(
-            statKey: 'attack.${widget.index}.bonus',
-            textKey: Key('attack-bonus-${widget.index}'),
-            title: 'Ataque: ${a.name}',
-            text: formatModifier(a.attackBonus),
-            breakdown: a.attackBreakdown,
-            style: numericStyle(theme.textTheme.headlineSmall),
-          ),
-        ],
+      badge: StatValue(
+        statKey: 'attack.${widget.index}.bonus',
+        textKey: Key('attack-bonus-${widget.index}'),
+        title: 'Ataque: ${a.name}',
+        text: formatModifier(a.attackBonus),
+        breakdown: a.attackBreakdown,
+        style: numericStyle(theme.textTheme.titleMedium),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          StatValue(
-            statKey: 'attack.${widget.index}.damage',
-            textKey: Key('attack-damage-text-${widget.index}'),
-            title: 'Daño: ${a.name}',
-            text: [
-              a.damage.isEmpty ? 'Sin daño' : a.damage,
-              if (a.damageType.isNotEmpty) a.damageType,
-            ].join(' '),
-            totalText: a.damageBreakdown == null ? null : formatModifier(a.damageBreakdown!.total),
-            breakdown: a.damage.isEmpty ? null : a.damageBreakdown,
-            style: numericStyle(theme.textTheme.bodyLarge),
+      info: widget.onDetail == null
+          ? null
+          : DetailInfoButton(key: Key('detail-item-${a.itemId}'), onPressed: widget.onDetail!),
+      action: FilledButton(
+        key: Key('attack-roll-${widget.index}'),
+        onPressed: _rollAttack,
+        onLongPress: _chooseMode,
+        child: const Text('Tirar ataque', maxLines: 1, overflow: TextOverflow.ellipsis),
+      ),
+      details: [
+        StatValue(
+          statKey: 'attack.${widget.index}.damage',
+          textKey: Key('attack-damage-text-${widget.index}'),
+          title: 'Daño: ${a.name}',
+          text: [
+            a.damage.isEmpty ? 'Sin daño' : a.damage,
+            if (a.damageType.isNotEmpty) a.damageType,
+          ].join(' '),
+          totalText: a.damageBreakdown == null ? null : formatModifier(a.damageBreakdown!.total),
+          breakdown: a.damage.isEmpty ? null : a.damageBreakdown,
+          style: numericStyle(theme.textTheme.bodyMedium),
+        ),
+        if (details.isNotEmpty) Text(details, style: small),
+        if (a.notes != null)
+          Text(
+            a.natural ? 'Arma natural · ${a.notes}' : a.notes!,
+            key: Key('attack-notes-${widget.index}'),
+            style: small,
           ),
-          if (details.isNotEmpty) Text(details, style: theme.textTheme.bodySmall),
-          if (a.notes != null)
-            Text(
-              a.natural ? 'Arma natural · ${a.notes}' : a.notes!,
-              key: Key('attack-notes-${widget.index}'),
-              style: theme.textTheme.bodySmall,
-            ),
-          if (a.criticalRange < 20)
-            Text(
-              [
-                'Crítico con ${a.criticalRange}-20',
-                if (a.criticalRangeSource != null) a.criticalRangeSource!,
-              ].join(' · '),
-              key: Key('attack-crit-range-${widget.index}'),
-              style: theme.textTheme.bodySmall,
-            ),
-          for (var w = 0; w < a.warnings.length; w++)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Row(
-                key: Key('attack-warning-${widget.index}-$w'),
-                children: [
-                  Icon(Icons.warning_amber, size: 16, color: theme.colorScheme.error),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      a.warnings[w],
-                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
-                    ),
+        if (a.criticalRange < 20)
+          Text(
+            [
+              'Crítico con ${a.criticalRange}-20',
+              if (a.criticalRangeSource != null) a.criticalRangeSource!,
+            ].join(' · '),
+            key: Key('attack-crit-range-${widget.index}'),
+            style: small,
+          ),
+        for (var w = 0; w < a.warnings.length; w++)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Row(
+              key: Key('attack-warning-${widget.index}-$w'),
+              children: [
+                Icon(Icons.warning_amber, size: 16, color: theme.colorScheme.error),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    a.warnings[w],
+                    style: small?.copyWith(color: theme.colorScheme.error),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          if (widget.rageBonus != 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Chip(
-                key: Key('attack-rage-${widget.index}'),
-                avatar: const AppIcon(AppIcons.flame, size: 18),
-                label: Text('Furia ${formatModifier(widget.rageBonus)} al daño'),
-                visualDensity: VisualDensity.compact,
-              ),
-            ),
-          Wrap(
-            spacing: 8,
-            children: [
-              if (a.versatileDamage != null)
-                FilterChip(
-                  key: Key('attack-versatile-${widget.index}'),
-                  label: Text('Dos manos (${a.versatileDamage})'),
-                  selected: _twoHanded,
-                  onSelected: (value) => setState(() => _twoHanded = value),
-                ),
-              FilterChip(
-                key: Key('attack-crit-${widget.index}'),
-                label: const Text('Crítico'),
-                selected: _critical,
-                onSelected: (value) => setState(() => _critical = value),
-              ),
-            ],
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton(
-                  key: Key('attack-roll-${widget.index}'),
-                  onPressed: _rollAttack,
-                  onLongPress: _chooseMode,
-                  child: const Text('Tirar ataque'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton.tonal(
-                  key: Key('attack-damage-${widget.index}'),
-                  onPressed: a.damage.isEmpty
-                      ? null
-                      : () => rollAndShow(
-                          context,
-                          _damageExpression(),
-                          label: 'Daño: ${a.name}${_critical ? ' (crítico)' : ''}',
-                        ),
-                  child: const Text('Tirar daño'),
-                ),
-              ),
-            ],
-          ),
+        if (widget.rageBonus != 0)
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              'Mantén pulsado "Tirar ataque" para ventaja o desventaja.',
-              style: theme.textTheme.bodySmall,
+            child: Chip(
+              key: Key('attack-rage-${widget.index}'),
+              avatar: const AppIcon(AppIcons.flame, size: 18),
+              label: Text('Furia ${formatModifier(widget.rageBonus)} al daño'),
+              visualDensity: VisualDensity.compact,
             ),
           ),
-        ],
-      ),
+      ],
+      actions: [
+        if (a.versatileDamage != null)
+          FilterChip(
+            key: Key('attack-versatile-${widget.index}'),
+            label: Text('Dos manos (${a.versatileDamage})'),
+            selected: _twoHanded,
+            onSelected: (value) => setState(() => _twoHanded = value),
+          ),
+        FilterChip(
+          key: Key('attack-crit-${widget.index}'),
+          label: const Text('Crítico'),
+          selected: _critical,
+          onSelected: (value) => setState(() => _critical = value),
+        ),
+        FilledButton.tonal(
+          key: Key('attack-damage-${widget.index}'),
+          onPressed: a.damage.isEmpty
+              ? null
+              : () => rollAndShow(
+                  context,
+                  _damageExpression(),
+                  label: 'Daño: ${a.name}${_critical ? ' (crítico)' : ''}',
+                ),
+          child: const Text('Tirar daño'),
+        ),
+      ],
     );
   }
 }

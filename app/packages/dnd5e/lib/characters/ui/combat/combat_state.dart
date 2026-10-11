@@ -59,3 +59,20 @@ class WildShapeController extends Notifier<bool> {
 final wildShapeControllerProvider = NotifierProvider.family<WildShapeController, bool, String>(
   WildShapeController.new,
 );
+
+/// Local (not stored) flag of a barbarian's Reckless Attack this turn.
+class RecklessController extends Notifier<bool> {
+  RecklessController(this.characterId);
+
+  final String characterId;
+
+  @override
+  bool build() => false;
+
+  void set(bool value) => state = value;
+}
+
+/// Lasts until the barbarian's next turn ("Siguiente asalto" ends it).
+final recklessControllerProvider = NotifierProvider.family<RecklessController, bool, String>(
+  RecklessController.new,
+);

@@ -432,6 +432,19 @@ esos PG o si el nivel supera el máximo. Devuelve `{ character, hitPointsLost }`
 conjuros: aprende los de su libro con elecciones `SpellbookSpells` cuyo filtro lleve `ritualOnly: true` (solo
 rituales y los de `treatAsRitual`; `spellList: "any"` para cualquier lista).
 
+**Lanzar un conjuro.** La app lanza siempre con
+`POST /api/v1/systems/dnd5e/characters/{id}/spells/{spellIndex}/cast` (`{ "classIndex"?, "level"?, "ritual"? }`),
+sin aprobación, y el servidor decide el coste: nada para un truco o con `ritual: true` (el conjuro debe ser ritual
+o estar en `treatAsRitual` de su clase); un uso del recurso `<classIndex>.<spellIndex>` si el conjuro se concedió con
+usos por descanso (400 "Sin usos de … hasta el descanso largo." sin usos); los PG del nivel en una clase `hitPoints`;
+o un espacio del nivel pedido (normal y, si no queda, de pacto). Devuelve
+`{ character, cost, slotLevel?, usesLeft?, hitPointsLost? }` con `cost` = `cantrip`, `ritual`, `use`, `slot`,
+`pactSlot` o `hitPoints`.
+
+Cada recurso de la hoja indica de dónde sale: `sourceKind` (`feature`, `trait`, `option`, `feat` o `spell`),
+`sourceIndex` (el índice del rasgo, rasgo racial, opción, dote o conjuro) y, para rasgos raciales, opciones y dotes,
+`sourceDescription` con su texto; la app abre con ello el detalle del origen.
+
 ```json
 "spellcasting": {
   "ability": "wis", "progression": "hitPoints", "preparation": "prepared",

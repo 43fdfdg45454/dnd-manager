@@ -5,6 +5,7 @@ import 'package:opentrpg_dnd5e/items/dnd5e_item.dart';
 import 'package:opentrpg_dnd5e/items/domain/combat_usable.dart';
 
 import 'helpers/app_pump.dart';
+import 'helpers/combat_tabs.dart';
 import 'helpers/character_fakes.dart';
 import 'helpers/fakes.dart';
 import 'helpers/item_fakes.dart';
@@ -125,6 +126,9 @@ void main() {
       expect(find.byKey(const Key('hp-bar')), findsOneWidget);
       expect(find.byKey(const Key('rest-short')), findsNothing);
 
+      // Los objetos de combate están en "Más", sin descansos.
+      await openCombatSection(tester, 'more');
+      expect(find.byKey(const Key('rest-short')), findsNothing);
       expect(find.byKey(const Key('combat-item-sword')), findsOneWidget);
       expect(find.byKey(const Key('combat-item-potion')), findsOneWidget);
       expect(find.byKey(const Key('combat-item-wand')), findsOneWidget);

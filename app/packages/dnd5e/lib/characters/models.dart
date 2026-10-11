@@ -292,6 +292,9 @@ class CharacterResource {
     this.breakdown,
     this.options = const [],
     this.rechargeRoll,
+    this.sourceKind,
+    this.sourceIndex,
+    this.sourceDescription,
   });
 
   factory CharacterResource.fromJson(Map<String, dynamic> json) {
@@ -313,8 +316,22 @@ class CharacterResource {
       breakdown: ValueBreakdown.maybeFromJson(json['breakdown']),
       options: _objects(json['options'], CharacterOptionCost.fromJson),
       rechargeRoll: rechargeRoll == null ? null : RechargeRoll.fromJson(rechargeRoll),
+      sourceKind: _strOrNull(json['sourceKind']),
+      sourceIndex: _strOrNull(json['sourceIndex']),
+      sourceDescription: _strOrNull(json['sourceDescription']),
     );
   }
+
+  /// What grants the resource ([ResourceSourceKind]: "feature", "trait",
+  /// "option", "feat" or "spell"), or null for manual ones.
+  final String? sourceKind;
+
+  /// Catalog index of that origin (the feature, the racial trait, the option
+  /// or feat, or the spell whose uses it counts), or null.
+  final String? sourceIndex;
+
+  /// Rules text of the origin when the catalog has no page for it, or null.
+  final String? sourceDescription;
 
   /// Die that brings the resource back ("d6", 5 or more), or null.
   final RechargeRoll? rechargeRoll;
@@ -1108,12 +1125,61 @@ class DivineSmiteResult {
   final String damageDice;
 }
 
-/// Result of a spell cast with hit points instead of a slot.
-class HitPointCastResult {
-  const HitPointCastResult({required this.character, required this.hitPointsLost});
+/// What a cast spent (`cost` of `POST …/spells/{spellIndex}/cast`).
+enum SpellCastCost {
+  /// A cantrip: nothing.
+  cantrip,
+
+  /// Cast as a ritual: nothing.
+  ritual,
+
+  /// One use of the spell's own resource (granted with uses per long rest).
+  use,
+
+  /// A spell slot of the cast level.
+  slot,
+
+  /// A pact magic slot.
+  pactSlot,
+
+  /// A use of the class resource and hit points.
+  hitPoints;
+
+  static SpellCastCost fromApi(Object? value) => switch (value) {
+    'cantrip' => cantrip,
+    'ritual' => ritual,
+    'use' => use,
+    'pactSlot' => pactSlot,
+    'hitPoints' => hitPoints,
+    _ => slot,
+  };
+}
+
+/// Result of casting a spell: the character after it and what the server
+/// charged ([cost]; [slotLevel] for slots, [usesLeft] for a use of the spell,
+/// [hitPointsLost] when paid with hit points).
+class SpellCastResult {
+  const SpellCastResult({
+    required this.character,
+    required this.cost,
+    this.slotLevel,
+    this.usesLeft,
+    this.hitPointsLost,
+  });
+
+  factory SpellCastResult.fromJson(Map<String, dynamic> json) => SpellCastResult(
+    character: CharacterDetail.fromJson(Map<String, dynamic>.from(json['character'] as Map)),
+    cost: SpellCastCost.fromApi(json['cost']),
+    slotLevel: _int(json['slotLevel']),
+    usesLeft: _int(json['usesLeft']),
+    hitPointsLost: _int(json['hitPointsLost']),
+  );
 
   final CharacterDetail character;
-  final int hitPointsLost;
+  final SpellCastCost cost;
+  final int? slotLevel;
+  final int? usesLeft;
+  final int? hitPointsLost;
 }
 
 /// The D&D 5e part of a character detail: the sheet fields the server sends

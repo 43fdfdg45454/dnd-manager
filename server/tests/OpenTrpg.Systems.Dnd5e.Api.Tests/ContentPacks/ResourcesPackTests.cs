@@ -49,6 +49,8 @@ public class ResourcesPackTests(ResourcesPackApiFactory factory) : IClassFixture
         Assert.Equal(5, brio.Breakdown!.Total);
         Assert.Contains(brio.Breakdown.Parts, p => p.Label.StartsWith("Reserva", StringComparison.Ordinal) && p.Value == 1);
         Assert.Contains(brio.Breakdown.Parts, p => p.Value == 2 && p.Label.Contains("Constitución", StringComparison.Ordinal));
+        // The info button of the resource opens the subclass feature that grants it.
+        Assert.Equal(("feature", I("brio"), (string?)null), (brio.SourceKind, brio.SourceIndex, brio.SourceDescription));
     }
 
     [Fact]
@@ -114,6 +116,7 @@ public class ResourcesPackTests(ResourcesPackApiFactory factory) : IClassFixture
         var tenacity = Resource(hero, I("tenacidad"));
         Assert.Equal(3, tenacity.Max);
         Assert.Equal("Tenacidad (raza)", tenacity.Source);
+        Assert.Equal(("trait", I("tenacidad"), "Rasgo ficticio."), (tenacity.SourceKind, tenacity.SourceIndex, tenacity.SourceDescription));
         Assert.False(hero.Sheet.Skills.Single(k => k.Index == "athletics").Proficient);
         Assert.True(hero.Sheet.Skills.Single(k => k.Index == "perception").Proficient);
         Assert.Equal(("athletics", "Pétreo"), (Assert.Single(hero.Sheet.LostSkills).Type, hero.Sheet.LostSkills[0].Label));
@@ -136,6 +139,28 @@ public class ResourcesPackTests(ResourcesPackApiFactory factory) : IClassFixture
         Assert.Contains(leveled.Spells, sp => sp.SpellIndex == "light" && sp.ClassIndex == I("chispa"));
         var uses = Resource(leveled, $"{I("chispa")}.magic-missile");
         Assert.Equal((1, "LongRest"), (uses.Max, uses.Recharge));
+        Assert.Equal(("spell", "magic-missile"), (uses.SourceKind, uses.SourceIndex));
+    }
+
+    [Fact]
+    public async Task A_spell_granted_with_uses_per_long_rest_is_cast_with_its_use_and_not_with_a_slot()
+    {
+        var s = await ScenarioAsync();
+        var hero = await DraftAsync(s, "fighter", 3, new { str = 15, dex = 12, con = 14, @int = 16, wis = 10, cha = 8 }, I("senda"));
+        var leveled = await LevelUpAsync(s, hero.Id, new { feat = I("chispa") });
+        var url = $"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/spells/magic-missile/cast";
+
+        // A fighter has no slots: the cast spends the use of the spell, whatever level is asked.
+        var cast = await s.Player.Client.PostAsJsonAsync(url, new { classIndex = I("chispa"), level = 1 });
+        Assert.True(cast.StatusCode == HttpStatusCode.OK, await cast.Content.ReadAsStringAsync());
+        var result = (await cast.Content.ReadFromJsonAsync<SpellCastResultDto>())!;
+        Assert.Equal(("use", 1, 0), (result.Cost, result.SlotLevel, result.UsesLeft));
+        Assert.Equal(1, Resource(result.Character, $"{I("chispa")}.magic-missile").Used);
+        Assert.Equal(leveled.SpellSlots, result.Character.SpellSlots);
+
+        var again = await s.Player.Client.PostAsJsonAsync(url, new { classIndex = I("chispa") });
+        Assert.Equal(HttpStatusCode.BadRequest, again.StatusCode);
+        Assert.Contains("Sin usos de Magic Missile hasta el descanso largo.", await again.Content.ReadAsStringAsync(), StringComparison.Ordinal);
     }
 
     [Fact]

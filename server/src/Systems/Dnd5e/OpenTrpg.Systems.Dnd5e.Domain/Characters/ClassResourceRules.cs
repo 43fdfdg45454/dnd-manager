@@ -25,6 +25,18 @@ public sealed record ResourceTemplate(string Key, string Name, int Max, Resource
     /// <summary>Die rolled to get the uses back, or null.</summary>
     public RechargeRoll? RechargeRoll { get; init; }
 
+    /// <summary>What grants the resource (<see cref="ResourceSourceKinds"/>), or null when unknown.</summary>
+    public string? SourceKind { get; init; }
+
+    /// <summary>
+    /// Catalog index of what grants the resource: the class feature (<c>GET /catalog/features/{index}</c>), the racial
+    /// trait, the option or feat, or the spell whose uses it counts; null when there is none.
+    /// </summary>
+    public string? SourceIndex { get; init; }
+
+    /// <summary>Rules text of the origin when the catalog has no detail page for it (options, feats, racial traits).</summary>
+    public string? SourceDescription { get; init; }
+
     /// <summary>
     /// The templates with the <see cref="ItemModifierKind.ResourceMaxBonus"/> modifiers whose target is their key added to
     /// the maximum (and to the breakdown, which starts with the plain maximum for SRD class resources).
@@ -61,6 +73,25 @@ public sealed record ResourceTemplate(string Key, string Name, int Max, Resource
             return t with { Max = built.Total, Breakdown = built };
         }).ToList();
     }
+}
+
+/// <summary>Values of <see cref="ResourceTemplate.SourceKind"/>.</summary>
+public static class ResourceSourceKinds
+{
+    /// <summary>A class or subclass feature of the catalog.</summary>
+    public const string Feature = "feature";
+
+    /// <summary>A trait of the race or subrace.</summary>
+    public const string Trait = "trait";
+
+    /// <summary>A chosen option (fighting style, invocation...).</summary>
+    public const string Option = "option";
+
+    /// <summary>A feat.</summary>
+    public const string Feat = "feat";
+
+    /// <summary>The uses per long rest of a granted spell.</summary>
+    public const string Spell = "spell";
 }
 
 /// <summary>
@@ -110,7 +141,11 @@ public static class ClassResourceRules
         }
 
         var result = new List<ResourceTemplate>();
-        void Add(string key, string name, int max, ResourceRecharge recharge) => result.Add(new ResourceTemplate(key, name, max, recharge));
+        void Add(string key, string name, int max, ResourceRecharge recharge) => result.Add(new ResourceTemplate(key, name, max, recharge)
+        {
+            SourceKind = ResourceSourceKinds.Feature,
+            SourceIndex = FeatureIndex(classIndex, key),
+        });
 
         switch (classIndex)
         {
@@ -125,6 +160,8 @@ public static class ClassResourceRules
                     level >= 5 ? ResourceRecharge.ShortRest : ResourceRecharge.LongRest)
                 {
                     Dice = BardicInspirationDie(level),
+                    SourceKind = ResourceSourceKinds.Feature,
+                    SourceIndex = FeatureIndex(classIndex, BardicInspiration),
                 });
                 break;
             case "cleric" when level >= 2:
@@ -218,7 +255,33 @@ public static class ClassResourceRules
     {
         ArgumentNullException.ThrowIfNull(entry);
         return entry.ClassIndex == "druid" && entry.Level >= NaturalRecoveryMinLevel && IsCircleOfTheLand(entry.SubclassIndex)
-            ? [new ResourceTemplate(NaturalRecovery, "Natural Recovery", 1, ResourceRecharge.LongRest)]
+            ? [new ResourceTemplate(NaturalRecovery, "Natural Recovery", 1, ResourceRecharge.LongRest)
+            {
+                SourceKind = ResourceSourceKinds.Feature,
+                SourceIndex = FeatureIndex("druid", NaturalRecovery),
+            }]
             : [];
     }
+
+    /// <summary>
+    /// SRD feature that grants a class resource (its first entry when the SRD has one per level): the info button of the
+    /// resource opens it. Null when the SRD has no feature of its own for the key.
+    /// </summary>
+    public static string? FeatureIndex(string classIndex, string key) => (classIndex, key) switch
+    {
+        ("barbarian", Rage) => "rage",
+        ("bard", BardicInspiration) => "bardic-inspiration-d6",
+        ("cleric", ChannelDivinity) => "channel-divinity-1-rest",
+        ("paladin", ChannelDivinity) => "channel-divinity",
+        ("druid", WildShape) => "wild-shape-cr-1-4-or-below-no-flying-or-swim-speed",
+        ("druid", NaturalRecovery) => "natural-recovery",
+        ("fighter", SecondWind) => "second-wind",
+        ("fighter", ActionSurge) => "action-surge-1-use",
+        ("fighter", Indomitable) => "indomitable-1-use",
+        ("monk", Ki) => "ki",
+        ("paladin", LayOnHands) => "lay-on-hands",
+        ("sorcerer", SorceryPoints) => "font-of-magic",
+        ("wizard", ArcaneRecovery) => "arcane-recovery",
+        _ => null,
+    };
 }

@@ -72,6 +72,7 @@ public static class Dnd5eApplicationServices
         services.AddScoped<InvalidChoicesPlanner>();
         services.AddScoped<InvalidChoicesHandler>();
         services.AddScoped<SpellSlotHandler>();
+        services.AddScoped<CastSpellHandler>();
         services.AddScoped<ResourceHandler>();
         services.AddScoped<RestHandler>();
         services.AddScoped<ClassActionHandler>();
