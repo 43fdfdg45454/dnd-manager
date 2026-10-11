@@ -697,7 +697,7 @@ void main() {
       await _tap(tester, 'pick-condition-poisoned');
       expect(repo.combatPatches.last.conditions?.map((c) => c.index), ['poisoned']);
       expect(find.byKey(const Key('condition-poisoned')), findsOneWidget);
-      expect(find.text('Poisoned'), findsOneWidget);
+      expect(find.text('Envenenado'), findsOneWidget);
 
       // Las ya puestas no se ofrecen otra vez.
       await _tap(tester, 'condition-add');
@@ -745,6 +745,88 @@ void main() {
       },
     );
 
+    testWidgets('el selector las ordena por su nombre en español', (tester) async {
+      await _pump(tester, characters: _repo(), catalog: catalog);
+      await _tap(tester, 'condition-add');
+
+      final titles = [
+        for (final key in ['exhaustion', 'poisoned', 'prone'])
+          tester.getTopLeft(find.byKey(Key('pick-condition-$key'))).dy,
+      ];
+      // Agotamiento < Derribado < Envenenado.
+      expect(find.text('Agotamiento'), findsOneWidget);
+      expect(find.text('Derribado'), findsOneWidget);
+      expect(find.text('Envenenado'), findsOneWidget);
+      expect(titles[0] < titles[2], isTrue);
+      expect(titles[2] < titles[1], isTrue);
+    });
+
+    testWidgets('"Concentración" ofrece los conjuros de concentración preparados', (tester) async {
+      final repo = FakeCharactersRepository(
+        characters: [
+          makeCharacterJson(
+            status: 'Active',
+            combat: makeCombatJson(),
+            spells: [
+              {'spellIndex': 'bless', 'classIndex': 'cleric', 'isPrepared': true},
+              {'spellIndex': 'cure-wounds', 'classIndex': 'cleric', 'isPrepared': true},
+            ],
+          ),
+        ],
+      );
+      final withSpells = FakeCatalogRepository(
+        conditionList: catalog.conditionList,
+        spellDetails: const {
+          'bless': SpellDetail(index: 'bless', name: 'Bless', level: 1, concentration: true),
+          'cure-wounds': SpellDetail(index: 'cure-wounds', name: 'Cure Wounds', level: 1),
+        },
+      );
+      await _pump(tester, characters: repo, catalog: withSpells);
+
+      await _tap(tester, 'condition-add');
+      final concentration = find.byKey(const Key('pick-concentration'));
+      final first = find.byKey(const Key('pick-condition-exhaustion'));
+      expect(tester.getTopLeft(concentration).dy < tester.getTopLeft(first).dy, isTrue);
+      await _tap(tester, concentration);
+
+      expect(find.byKey(const Key('concentration-picker')), findsOneWidget);
+      expect(find.byKey(const Key('pick-concentration-spell-cure-wounds')), findsNothing);
+      await _tap(tester, 'pick-concentration-spell-bless');
+
+      expect(repo.concentrationCalls, ['bless']);
+      expect(find.byKey(const Key('concentration-chip')), findsOneWidget);
+      expect(find.text('Concentración: Bless'), findsOneWidget);
+
+      // Ya concentrado: el selector no lo ofrece otra vez.
+      await _tap(tester, 'condition-add');
+      expect(find.byKey(const Key('pick-concentration')), findsNothing);
+    });
+
+    testWidgets('sin conjuros de concentración propios se busca en el catálogo', (tester) async {
+      final repo = _repo();
+      final withCatalog = FakeCatalogRepository(
+        conditionList: catalog.conditionList,
+        spellList: const [
+          SpellSummary(index: 'hold-person', name: 'Hold Person', level: 2, concentration: true),
+          SpellSummary(index: 'fire-bolt', name: 'Fire Bolt', level: 0),
+        ],
+      );
+      await _pump(tester, characters: repo, catalog: withCatalog);
+
+      await _tap(tester, 'condition-add');
+      await _tap(tester, 'pick-concentration');
+      expect(find.byKey(const Key('concentration-no-own-spells')), findsOneWidget);
+      expect(find.byKey(const Key('pick-concentration-spell-fire-bolt')), findsNothing);
+
+      await tester.enterText(find.byKey(const Key('concentration-search')), 'hold');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(withCatalog.spellCalls.last.search, 'hold');
+      await _tap(tester, 'pick-concentration-spell-hold-person');
+
+      expect(repo.concentrationCalls, ['hold-person']);
+    });
+
     testWidgets('el agotamiento pide el nivel', (tester) async {
       final repo = _repo();
       await _pump(tester, characters: repo, catalog: catalog);
@@ -753,7 +835,7 @@ void main() {
       await _tap(tester, 'exhaustion-level-2');
       expect(repo.combatPatches.last.exhaustionLevel, 2);
       expect(repo.combatPatches.last.conditions, isNull);
-      expect(find.text('Exhaustion 2'), findsOneWidget);
+      expect(find.text('Agotamiento 2'), findsOneWidget);
 
       await tester.tap(
         find.descendant(

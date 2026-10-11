@@ -13,8 +13,8 @@ import 'package:opentrpg_core/features/session/ui/session_feedback.dart';
 
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/data/models.dart' show Condition;
+import '../../../characters/domain/character_format.dart' show conditionTitle;
 import '../../../characters/models.dart' show CharacterCondition, DamageOutcome, classesLabel;
-import '../../../characters/ui/character_tabs.dart' show titleFromSpellIndex;
 import '../../../characters/ui/combat/combat_support.dart' show promptNumber;
 import '../../../characters/ui/combat/concentration_flow.dart' show resolveDamageOutcome;
 import '../../../characters/ui/combat/vitals_section.dart' show showConditionPicker;
@@ -299,13 +299,13 @@ class _DmCharacterSheetState extends ConsumerState<DmCharacterSheet> {
                       InputChip(
                         key: Key('dm-condition-${c.index}'),
                         avatar: AppIcon(AppIcons.chains, size: 16, color: tokens.boneMuted),
-                        label: Text(names[c.index] ?? titleFromSpellIndex(c.index)),
+                        label: Text(conditionTitle(c.index, names[c.index])),
                         deleteButtonTooltipMessage: 'Quitar',
                         onDeleted: canWrite
                             ? () => _removeCondition(
                                 m,
                                 c.index,
-                                names[c.index] ?? titleFromSpellIndex(c.index),
+                                conditionTitle(c.index, names[c.index]),
                               )
                             : null,
                       ),
