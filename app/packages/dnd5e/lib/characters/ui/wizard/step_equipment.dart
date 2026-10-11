@@ -158,54 +158,19 @@ class _KitSection extends ConsumerWidget {
 /// One item line of the equipment step. The same look for the default
 /// starting items and the ones the player adds, so both read as "my items".
 class EquipmentLineTile extends StatelessWidget {
-  const EquipmentLineTile({
-    super.key,
-    required this.name,
-    required this.quantity,
-    this.trailing,
-    this.contents,
-  });
+  const EquipmentLineTile({super.key, required this.name, required this.quantity, this.trailing});
 
   final String name;
   final int quantity;
   final Widget? trailing;
 
-  /// Items inside a pack (explorer's pack…); the line expands to show them.
-  final List<StartingItem>? contents;
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final title = Text(name);
-    final subtitle = Text('Cantidad: $quantity');
-    final inner = contents;
-    if (inner == null || inner.isEmpty) {
-      return ListTile(
-        contentPadding: EdgeInsets.zero,
-        title: title,
-        subtitle: subtitle,
-        trailing: trailing,
-      );
-    }
-    return ExpansionTile(
-      tilePadding: EdgeInsets.zero,
-      title: title,
-      subtitle: subtitle,
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(name),
+      subtitle: Text('Cantidad: $quantity'),
       trailing: trailing,
-      children: [
-        for (final c in inner)
-          ListTile(
-            dense: true,
-            contentPadding: const EdgeInsets.only(left: 16),
-            title: Text(_qtyName(c), style: theme.textTheme.bodySmall),
-            trailing: c.templateId == null
-                ? null
-                : DetailInfoButton(
-                    key: Key('detail-item-${c.templateId}'),
-                    onPressed: () => openItemDetail(context, c.templateId!),
-                  ),
-          ),
-      ],
     );
   }
 }
@@ -224,23 +189,6 @@ class _DefaultEquipmentList extends ConsumerWidget {
     final theme = Theme.of(context);
     final copper = state.startingCopper;
     final hasLines = state.startingLines.isNotEmpty;
-
-    // Pack contents by template, to let packs expand.
-    final contents = <String, List<StartingItem>>{};
-    void collect(StartingItem i) {
-      final id = i.templateId;
-      if (id != null && i.contents != null && i.contents!.isNotEmpty) contents[id] = i.contents!;
-    }
-
-    for (final e in [state.classEquipment, state.backgroundEquipment]) {
-      if (e == null) continue;
-      e.fixed.forEach(collect);
-      for (final c in e.choices) {
-        for (final o in c.options) {
-          o.items.forEach(collect);
-        }
-      }
-    }
 
     // Gold by origin: the background's fixed purse and the class's rolled wealth.
     final goldByOrigin = {
@@ -279,7 +227,6 @@ class _DefaultEquipmentList extends ConsumerWidget {
                 key: Key('equipment-default-${line.templateId}'),
                 name: line.name,
                 quantity: line.qty,
-                contents: contents[line.templateId],
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

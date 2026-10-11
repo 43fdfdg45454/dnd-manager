@@ -1006,15 +1006,24 @@ class WizardState {
       lines[templateId] = (templateId: templateId, name: name, qty: (old?.qty ?? 0) + qty);
     }
 
-    if (equipmentMode == EquipmentMode.kit && from(EquipmentOrigin.characterClass)) {
-      for (final i in classEquipment?.fixed ?? const <StartingItem>[]) {
-        add(i.templateId, i.name, i.quantity);
+    // An equipment pack ("Explorer's Pack") is unpacked into its contents when
+    // they are known, so each piece is its own inventory line.
+    void addItem(StartingItem i) {
+      final contents = i.contents;
+      if (contents != null && contents.isNotEmpty && contents.every((c) => c.templateId != null)) {
+        for (final c in contents) {
+          add(c.templateId, c.name, c.quantity * i.quantity);
+        }
+        return;
       }
+      add(i.templateId, i.name, i.quantity);
+    }
+
+    if (equipmentMode == EquipmentMode.kit && from(EquipmentOrigin.characterClass)) {
+      classEquipment?.fixed.forEach(addItem);
     }
     if (usesBackgroundEquipment && from(EquipmentOrigin.background)) {
-      for (final i in backgroundEquipment?.fixed ?? const <StartingItem>[]) {
-        add(i.templateId, i.name, i.quantity);
-      }
+      backgroundEquipment?.fixed.forEach(addItem);
     }
     final all = allEquipmentChoices;
     final picks = prunedCategoryPicks;
@@ -1023,9 +1032,7 @@ class WizardState {
       for (final o in [...?equipmentOptions[c]]..sort()) {
         if (o >= all[c].options.length) continue;
         final option = all[c].options[o];
-        for (final i in option.items) {
-          add(i.templateId, i.name, i.quantity);
-        }
+        option.items.forEach(addItem);
         for (var k = 0; k < option.categories.length; k++) {
           for (final i in picks[categoryPickKey(c, o, k)] ?? const []) {
             add(i.templateId, i.name, 1);

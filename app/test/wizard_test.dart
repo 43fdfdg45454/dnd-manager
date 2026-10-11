@@ -1090,10 +1090,10 @@ void main() {
       expect(state.isChoiceComplete(1), isTrue);
     });
 
-    testWidgets('el contenido de un paquete se despliega', (tester) async {
+    testWidgets('el resumen lista el contenido del paquete, no el paquete', (tester) async {
       await toEquipment(tester);
-      expect(find.text('Rope'), findsNothing);
-      await _tap(tester, find.byKey(const Key('equipment-default-explorers-pack')));
+      expect(find.byKey(const Key('equipment-default-explorers-pack')), findsNothing);
+      expect(find.byKey(const Key('equipment-default-rope')), findsOneWidget);
       expect(find.text('Rope'), findsOneWidget);
     });
 
@@ -1148,7 +1148,8 @@ void main() {
       await toReview(tester);
     });
 
-    testWidgets('envío en modo equipo: objetos y oro fijo del trasfondo', (tester) async {
+    testWidgets('envío en modo equipo: objetos y oro fijo del trasfondo; el paquete se '
+        'descompone en su contenido', (tester) async {
       final setup = await toEquipment(tester);
       await _tap(tester, find.byKey(const Key('equipment-option-0-0')));
       await pickTwoWeapons(tester);
@@ -1157,7 +1158,7 @@ void main() {
       await _tap(tester, find.byKey(const Key('wizard-submit')));
 
       expect(setup.inventory.added.map((a) => (a.templateId, a.quantity)).toList(), [
-        ('explorers-pack', 1),
+        ('rope', 1),
         ('dagger', 2),
         ('holy-symbol', 1),
         ('chain-mail', 1),
