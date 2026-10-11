@@ -31,6 +31,7 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       Database__AutoMigrate: ${DB_AUTO_MIGRATE}
+      Logging__Http: ${HTTP_LOGGING}
       App__PublicUrl: ${PUBLIC_URL}
       App__DefaultTimeZone: ${DEFAULT_TIME_ZONE}
       Jwt__Secret: ${JWT_SECRET}

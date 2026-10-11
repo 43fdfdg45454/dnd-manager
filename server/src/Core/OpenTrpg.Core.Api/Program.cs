@@ -17,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using OpenTrpg.Systems.Dnd5e.Api;
+using Microsoft.AspNetCore.HttpLogging;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,6 +28,24 @@ builder.Logging.ClearProviders();
 // preserveStaticLogger keeps one logger per host instead of the shared static Log.Logger: several hosts in the
 // same process (integration tests) would otherwise overwrite and silence each other.
 builder.Host.UseSerilog((context, _, logger) => LoggingSetup.Configure(context, logger), preserveStaticLogger: true, writeToProviders: true);
+
+// Logging:Http (Logging__Http=true in docker compose): every request and response with their JSON bodies, for
+// diagnosing the client. Headers are left out, so the Authorization header never reaches the logs. The category
+// Microsoft.AspNetCore.HttpLogging is kept at Information in appsettings.json (the rest of ASP.NET Core logs at Warning).
+var httpLogging = builder.Configuration.GetValue<bool>("Logging:Http");
+if (httpLogging)
+{
+    builder.Services.AddHttpLogging(options =>
+    {
+        options.LoggingFields = HttpLoggingFields.RequestPath | HttpLoggingFields.RequestMethod | HttpLoggingFields.RequestQuery
+            | HttpLoggingFields.ResponseStatusCode | HttpLoggingFields.RequestBody | HttpLoggingFields.ResponseBody;
+        options.MediaTypeOptions.AddText("application/json");
+        options.MediaTypeOptions.AddText("application/problem+json");
+        options.RequestBodyLogLimit = 64 * 1024;
+        options.ResponseBodyLogLimit = 64 * 1024;
+        options.CombineLogs = true;
+    });
+}
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -137,6 +156,10 @@ app.UseForwardedHeaders();
 
 app.UseRequestCorrelation();
 app.UseSerilogRequestLogging(options => options.GetLevel = LoggingSetup.RequestLevel);
+if (httpLogging)
+{
+    app.UseHttpLogging();
+}
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
