@@ -3553,7 +3553,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -4388,7 +4391,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -5573,7 +5579,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -6408,7 +6417,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -6802,7 +6814,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -7637,7 +7652,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -8067,7 +8085,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -8909,7 +8930,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -9168,7 +9192,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -10010,7 +10037,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -10269,7 +10299,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -11111,7 +11144,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -11371,7 +11407,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "spellSlots": [
@@ -12213,7 +12252,10 @@
               "source": null,
               "breakdown": null,
               "options": [],
-              "rechargeRoll": null
+              "rechargeRoll": null,
+              "sourceKind": "feature",
+              "sourceIndex": "arcane-recovery",
+              "sourceDescription": null
             }
           ],
           "quickConsumables": [],
@@ -12481,7 +12523,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -13323,7 +13368,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -13582,7 +13630,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -14424,7 +14475,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -14683,7 +14737,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -15525,7 +15582,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -15784,7 +15844,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -16626,7 +16689,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -16885,7 +16951,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -17727,7 +17796,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -17841,7 +17913,10 @@
       "source": null,
       "breakdown": null,
       "options": [],
-      "rechargeRoll": null
+      "rechargeRoll": null,
+      "sourceKind": null,
+      "sourceIndex": null,
+      "sourceDescription": null
     }
   },
   {
@@ -18030,7 +18105,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         },
         {
           "id": "<id53>",
@@ -18047,7 +18125,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": null,
+          "sourceIndex": null,
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -18889,7 +18970,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           },
           {
             "id": "<id53>",
@@ -18906,7 +18990,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": null,
+            "sourceIndex": null,
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -19165,7 +19252,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         },
         {
           "id": "<id53>",
@@ -19182,7 +19272,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": null,
+          "sourceIndex": null,
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -20024,7 +20117,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           },
           {
             "id": "<id53>",
@@ -20041,7 +20137,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": null,
+            "sourceIndex": null,
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -20330,7 +20429,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -21172,7 +21274,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -21431,7 +21536,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -22273,7 +22381,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -22656,7 +22767,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -23498,7 +23612,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -23757,7 +23874,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -24599,7 +24719,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -24858,7 +24981,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -25700,7 +25826,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -27923,7 +28052,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -28765,7 +28897,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -29090,7 +29225,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -29932,7 +30070,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [],
@@ -31033,7 +31174,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -31993,7 +32137,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [
@@ -32553,7 +32700,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -33513,7 +33663,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [
@@ -35168,7 +35321,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -36216,7 +36372,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [
@@ -37243,7 +37402,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -38291,7 +38453,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [
@@ -38646,7 +38811,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -39694,7 +39862,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [
@@ -40049,7 +40220,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -41097,7 +41271,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [
@@ -41480,7 +41657,10 @@
           "source": null,
           "breakdown": null,
           "options": [],
-          "rechargeRoll": null
+          "rechargeRoll": null,
+          "sourceKind": "feature",
+          "sourceIndex": "arcane-recovery",
+          "sourceDescription": null
         }
       ],
       "spellSlots": [
@@ -42528,7 +42708,10 @@
             "source": null,
             "breakdown": null,
             "options": [],
-            "rechargeRoll": null
+            "rechargeRoll": null,
+            "sourceKind": "feature",
+            "sourceIndex": "arcane-recovery",
+            "sourceDescription": null
           }
         ],
         "quickConsumables": [

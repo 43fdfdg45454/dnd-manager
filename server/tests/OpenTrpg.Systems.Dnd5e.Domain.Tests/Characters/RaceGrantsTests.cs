@@ -170,8 +170,8 @@ public sealed class RaceGrantsTests
 
         var resources = Sheet(Fighter(5), MountainFolk, subrace).ChoiceResources;
         Assert.Equal(2, resources.Count);
-        Assert.Contains(new ResourceTemplate("race.veil-of-dusk", "Veil of Dusk", 1, ResourceRecharge.LongRest), resources);
-        Assert.Contains(new ResourceTemplate("race.deep-shadow", "deep-shadow", 2, ResourceRecharge.LongRest), resources);
+        Assert.Contains(new ResourceTemplate("race.veil-of-dusk", "Veil of Dusk", 1, ResourceRecharge.LongRest) { SourceKind = ResourceSourceKinds.Spell, SourceIndex = "veil-of-dusk" }, resources);
+        Assert.Contains(new ResourceTemplate("race.deep-shadow", "deep-shadow", 2, ResourceRecharge.LongRest) { SourceKind = ResourceSourceKinds.Spell, SourceIndex = "deep-shadow" }, resources);
     }
 
     [Fact]

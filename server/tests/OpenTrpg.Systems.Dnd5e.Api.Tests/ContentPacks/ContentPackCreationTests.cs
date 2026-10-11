@@ -549,6 +549,31 @@ public class ContentPackCreationTests(ContentPackCreationApiFactory factory) : I
     }
 
     [Fact]
+    public async Task Casting_a_spell_of_a_hit_point_caster_pays_with_a_use_and_hit_points()
+    {
+        var s = await ScenarioAsync();
+        var penitent = I("penitente");
+        var hero = await DraftAsync(s, penitent, 1, new { str = 10, dex = 12, con = 14, @int = 10, wis = 16, cha = 8 });
+        var patch = await s.Dm.Client.PatchAsJsonAsync($"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/sheet", new
+        {
+            spells = new[] { new { spellIndex = "cure-wounds", classIndex = penitent, isPrepared = true } },
+        });
+        Assert.True(patch.StatusCode == HttpStatusCode.OK, await patch.Content.ReadAsStringAsync());
+
+        var url = $"{ItemTestHelpers.Dnd5eCharacterUrl(hero.Id)}/spells/cure-wounds/cast";
+        var cast = await s.Player.Client.PostAsJsonAsync(url, new { level = 1 });
+        Assert.True(cast.StatusCode == HttpStatusCode.OK, await cast.Content.ReadAsStringAsync());
+        var result = (await cast.Content.ReadFromJsonAsync<SpellCastResultDto>())!;
+        Assert.Equal(("hitPoints", 1, 5), (result.Cost, result.SlotLevel, result.HitPointsLost));
+        Assert.Equal(5, result.Character.HitPointsCurrent);
+        Assert.Equal(1, result.Character.Resources.Single(r => r.Key == I("plegarias")).Used);
+        // Above the class's table, and once the hit points run out, there is nothing to pay with.
+        Assert.Equal(HttpStatusCode.BadRequest, (await s.Player.Client.PostAsJsonAsync(url, new { level = 2 })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Player.Client.PostAsJsonAsync(url, new { level = 1 })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await s.Player.Client.PostAsJsonAsync(url, new { level = 1 })).StatusCode);
+    }
+
+    [Fact]
     public async Task A_ritual_caster_learns_only_rituals_up_to_its_table_and_spells_it_treats_as_rituals()
     {
         var s = await ScenarioAsync();

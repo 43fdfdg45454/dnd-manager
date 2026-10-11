@@ -372,9 +372,9 @@ public static class SheetCalculator
 
         var (spellSlots, casterLevel) = CalculateSpellSlots(classes);
         var choiceResources = choices.Resources
-            .Select(r => (r.Resource, r.Label, ClassLevel: r.ClassIndex is null ? totalLevel : classes.FirstOrDefault(c => c.Level.ClassIndex == r.ClassIndex)?.Level.Level ?? 0))
+            .Select(r => (Effect: r, r.Resource, r.Label, ClassLevel: r.ClassIndex is null ? totalLevel : classes.FirstOrDefault(c => c.Level.ClassIndex == r.ClassIndex)?.Level.Level ?? 0))
             .Where(r => r.ClassLevel > 0)
-            .Select(r => (r.Resource, r.Label, r.ClassLevel, Breakdown: r.Resource.Calculate(proficiencyBonus, r.ClassLevel, Mod, r.Label)))
+            .Select(r => (r.Effect, r.Resource, r.Label, r.ClassLevel, Breakdown: r.Resource.Calculate(proficiencyBonus, r.ClassLevel, Mod, r.Label)))
             .Where(r => r.Breakdown is not null)
             .Select(r => new ResourceTemplate(r.Resource.Key, r.Resource.Name, r.Breakdown!.Total, r.Resource.Recharge)
             {
@@ -383,6 +383,9 @@ public static class SheetCalculator
                 Dice = r.Resource.DiceAt(r.ClassLevel),
                 Source = r.Label,
                 Breakdown = r.Breakdown,
+                SourceKind = r.Effect.SourceKind,
+                SourceIndex = r.Effect.SourceIndex,
+                SourceDescription = r.Effect.SourceDescription,
             })
             .ToList();
         choiceResources.AddRange(RacialSpellResources(input.Race, input.Subrace, level));
@@ -662,7 +665,11 @@ public static class SheetCalculator
                     key.Length > Dnd5eCharacter.IndexMaxLength ? key[..Dnd5eCharacter.IndexMaxLength] : key,
                     name.Length > CharacterResource.NameMaxLength ? name[..CharacterResource.NameMaxLength] : name,
                     Math.Min(uses, CharacterResource.MaxUses),
-                    ResourceRecharge.LongRest);
+                    ResourceRecharge.LongRest)
+                {
+                    SourceKind = ResourceSourceKinds.Spell,
+                    SourceIndex = spell.Index,
+                };
             }
         }
     }

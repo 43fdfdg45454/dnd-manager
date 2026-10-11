@@ -153,6 +153,12 @@ public static class Dnd5eCharacterEndpoints
             .WithSummary("Recupera espacios de conjuro gastados de un nivel (0 = pacto).")
             .ProducesValidationProblem();
 
+        group.MapPost("/spells/{spellIndex}/cast", async (Guid id, string spellIndex, CastSpellRequest? request, ClaimsPrincipal user, CastSpellHandler handler, CancellationToken ct) =>
+                TypedResults.Ok(await handler.HandleAsync(user.GetUserId(), id, spellIndex, request, ct)))
+            .WithName("CastCharacterSpell")
+            .WithSummary("Lanza un conjuro del personaje ({ classIndex?, level?, ritual? }) y decide el coste: ritual o truco, nada; conjuro concedido con usos por descanso largo, un uso de su recurso; clase que lanza con PG, un uso y sus PG; si no, un espacio del nivel pedido o uno de pacto de ese nivel. Devuelve { character, cost, slotLevel, usesLeft, hitPointsLost }; 400 si no hay con qué pagarlo.")
+            .ProducesValidationProblem();
+
         group.MapPost("/resources", async (Guid id, AddResourceRequest request, ClaimsPrincipal user, ResourceHandler handler, CancellationToken ct) =>
                 TypedResults.Created((string?)null, await handler.AddAsync(user.GetUserId(), id, request, ct)))
             .WithName("AddCharacterResource")
