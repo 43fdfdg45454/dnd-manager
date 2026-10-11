@@ -5,7 +5,7 @@ import 'package:opentrpg_core/core/theme/icons.dart';
 import 'package:opentrpg_core/features/dice/domain/dice_expression.dart';
 import 'package:opentrpg_core/features/dice/ui/dice_sheet.dart';
 
-/// [expression] with its dice doubled when [critical] (PHB ch. 9: a critical
+/// [expression] with its dice doubled when [critical] (SRD: a critical
 /// hit rolls the damage dice twice, modifiers once). Text that is not a dice
 /// expression is returned unchanged.
 String criticalDamage(String expression, {required bool critical}) {

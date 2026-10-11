@@ -27,7 +27,7 @@ import 'package:opentrpg_dnd5e/characters/ui/combat/combat_support.dart' show Pi
 import 'package:opentrpg_dnd5e/characters/ui/combat/panels/critical_damage_roll.dart';
 import 'package:opentrpg_dnd5e/characters/ui/combat/resources_section.dart' show canRestoreResource;
 import 'package:opentrpg_dnd5e/characters/ui/combat/vitals_section.dart'
-    show ConditionsCard, StatsCard;
+    show CombatStatsStrip, ConditionsStrip;
 import 'package:opentrpg_dnd5e/characters/ui/combat/wild_magic_surge.dart' show isWildMagicSurgeKey;
 import 'package:opentrpg_dnd5e/session/data/party_repository.dart';
 import 'package:opentrpg_dnd5e/session/party_models.dart' show PartyAdjustment;
@@ -37,6 +37,7 @@ import 'dice_test.dart' show SequenceRandom;
 import 'helpers/app_pump.dart';
 import 'helpers/catalog_fakes.dart';
 import 'helpers/character_fakes.dart';
+import 'helpers/combat_tabs.dart';
 import 'helpers/fakes.dart';
 import 'helpers/item_fakes.dart';
 import 'helpers/motion.dart';
@@ -540,14 +541,14 @@ void main() {
       // The chip lives with the other states, not under the stats grid.
       expect(
         find.descendant(
-          of: find.byType(ConditionsCard),
+          of: find.byType(ConditionsStrip),
           matching: find.byKey(const Key('concentration-chip')),
         ),
         findsOneWidget,
       );
       expect(
         find.descendant(
-          of: find.byType(StatsCard),
+          of: find.byType(CombatStatsStrip),
           matching: find.byKey(const Key('concentration-chip')),
         ),
         findsNothing,
@@ -691,7 +692,8 @@ void main() {
     testWidgets('se añade desde el catálogo y se quita', (tester) async {
       final repo = _repo();
       await _pump(tester, characters: repo, catalog: catalog);
-      expect(find.text('Sin condiciones.'), findsOneWidget);
+      // Sin condiciones, el chip de añadir dice "Condición".
+      expect(find.text('Condición'), findsOneWidget);
 
       await _tap(tester, 'condition-add');
       await _tap(tester, 'pick-condition-poisoned');
@@ -732,16 +734,16 @@ void main() {
         await _pump(tester, characters: repo, catalog: catalog);
 
         Finder inConditions(String key) =>
-            find.descendant(of: find.byType(ConditionsCard), matching: find.byKey(Key(key)));
+            find.descendant(of: find.byType(ConditionsStrip), matching: find.byKey(Key(key)));
         expect(inConditions('concentration-chip'), findsOneWidget);
         expect(inConditions('concentration-lose'), findsOneWidget);
-        expect(find.text('Sin condiciones.'), findsNothing);
+        expect(find.text('Condición'), findsNothing);
 
         await tester.ensureVisible(inConditions('concentration-lose'));
         await _tap(tester, inConditions('concentration-lose'));
         expect(repo.concentrationCalls, [null]);
         expect(find.byKey(const Key('concentration-chip')), findsNothing);
-        expect(find.text('Sin condiciones.'), findsOneWidget);
+        expect(find.text('Condición'), findsOneWidget);
       },
     );
 
@@ -1122,11 +1124,11 @@ void main() {
       expectEqualTiles();
       expect({for (final k in tiles) rect(k).top}.length, 1);
 
-      // 400 px: two rows of three, still equal.
+      // 400 px: still one row of six equal cells (the header stays compact).
       tester.view.physicalSize = const Size(400, 7000);
       await tester.pumpAndSettle();
       expectEqualTiles();
-      expect({for (final k in tiles) rect(k).top}.length, 2);
+      expect({for (final k in tiles) rect(k).top}.length, 1);
 
       // The dice corner lives inside the initiative tile.
       expect(
@@ -1159,6 +1161,7 @@ void main() {
         combat: makeCombatJson(spellSlots: const [], pactSlots: {'level': 5, 'max': 2, 'used': 0}),
       );
       await _pump(tester, characters: repo);
+      await openCombatSection(tester, 'spells');
       tester.view.physicalSize = const Size(400, 7000);
       await tester.pumpAndSettle();
       expect(
@@ -1178,6 +1181,7 @@ void main() {
         combat: makeCombatJson(spellSlots: const [], pactSlots: {'level': 5, 'max': 2, 'used': 0}),
       );
       await _pump(tester, characters: repo);
+      await openCombatSection(tester, 'spells');
       final pips = find.byKey(const Key('combat-pact-slots-pips'));
       final ink = find.descendant(of: pips, matching: find.byType(InkWell));
       final inkRect = tester.getRect(ink);
@@ -1796,6 +1800,7 @@ void main() {
     testWidgets('tocar un nivel gasta un espacio y mantener pulsado lo repone', (tester) async {
       final repo = _repo();
       await _pump(tester, characters: repo);
+      await openCombatSection(tester, 'spells');
       Finder pips({required bool filled}) => find.descendant(
         of: find.byKey(const Key('combat-slot-1')),
         matching: find.byWidgetPredicate((w) => w is Pip && w.filled == filled),
@@ -1822,6 +1827,7 @@ void main() {
         ),
       );
       await _pump(tester, characters: repo);
+      await openCombatSection(tester, 'spells');
       await _tap(tester, 'combat-slot-2-pips');
       expect(repo.slotSpends, isEmpty);
       expect(find.text('No quedan espacios de nivel 2.'), findsOneWidget);
@@ -1832,6 +1838,7 @@ void main() {
         combat: makeCombatJson(spellSlots: const [], pactSlots: {'level': 3, 'max': 2, 'used': 0}),
       );
       await _pump(tester, characters: repo);
+      await openCombatSection(tester, 'spells');
       expect(find.text('Pacto (niv. 3)'), findsOneWidget);
       await _tap(tester, 'combat-pact-slots-pips');
       expect(repo.slotSpends, [(level: 0, amount: 1)]);
@@ -1852,6 +1859,7 @@ void main() {
         ),
       );
       await _pump(tester, characters: repo);
+      await openCombatSection(tester, 'resources');
       expect(find.byKey(const Key('resource-r1-pips')), findsOneWidget);
       expect(find.byKey(const Key('resource-r2-pool')), findsOneWidget);
       expect(find.text('20 / 25'), findsOneWidget);
@@ -1895,6 +1903,7 @@ void main() {
         ),
       );
       await _pump(tester, characters: repo);
+      await openCombatSection(tester, 'resources');
       expect(find.text('Recuperar al tirar iniciativa'), findsOneWidget);
       expect(find.text('Tirar recarga (d6 ≥ 5)'), findsOneWidget);
 
@@ -1926,6 +1935,7 @@ void main() {
         ),
       );
       await _pump(tester, characters: repo);
+      await openCombatSection(tester, 'resources');
       expect(find.byKey(const Key('resources-initiative')), findsNothing);
       expect(find.byKey(const Key('resource-r1-recharge-roll')), findsNothing);
     });
@@ -1963,6 +1973,7 @@ void main() {
         ),
       );
       await _pump(tester, characters: repo);
+      await openCombatSection(tester, 'resources');
       expect(find.byKey(const Key('resource-r1-option-golpe-sereno')), findsOneWidget);
       expect(find.text('Golpe sereno'), findsOneWidget);
       expect(find.text('2 Ki'), findsOneWidget);
@@ -2014,6 +2025,7 @@ void main() {
       ];
       final repo = _repo(combat: makeCombatJson(resources: resources));
       await _pump(tester, characters: repo);
+      await openCombatSection(tester, 'resources');
 
       await tester.longPress(find.byKey(const Key('resource-r1-pips')));
       await tester.pumpAndSettle();
@@ -2045,6 +2057,7 @@ void main() {
         ),
       );
       await _pump(tester, characters: repo, role: CampaignRole.dm);
+      await openCombatSection(tester, 'resources');
       await tester.longPress(find.byKey(const Key('resource-r1-pips')));
       await tester.pumpAndSettle();
       expect(repo.resourceRestores, [(id: 'r1', amount: 1)]);
@@ -2088,6 +2101,7 @@ void main() {
         ),
       );
       await _pump(tester, characters: repo, face: 5);
+      await openCombatSection(tester, 'resources');
 
       expect(find.text('Tirar 1d8'), findsOneWidget);
       expect(find.byKey(const Key('resource-r3-roll')), findsNothing);
@@ -2125,6 +2139,7 @@ void main() {
         ),
         inventory: inventory,
       );
+      await openCombatSection(tester, 'more');
       expect(find.text('Potion of Healing'), findsOneWidget);
       expect(find.text('Cantidad: 2'), findsOneWidget);
       await _tap(tester, 'consumable-use-p1');
@@ -2136,12 +2151,14 @@ void main() {
   group('descansos', () {
     testWidgets('el DM descansa directo; el jugador pide el descanso al DM', (tester) async {
       await _pump(tester, characters: _repo(), role: CampaignRole.dm);
+      await openCombatSection(tester, 'more');
       expect(find.byKey(const Key('rest-short')), findsOneWidget);
       expect(find.byKey(const Key('rest-request-short')), findsNothing);
     });
 
     testWidgets('el jugador no tiene botones de descanso directo', (tester) async {
       await _pump(tester, characters: _repo(), role: CampaignRole.player);
+      await openCombatSection(tester, 'more');
       expect(find.byKey(const Key('rest-short')), findsNothing);
       expect(find.byKey(const Key('rest-long')), findsNothing);
       expect(find.byKey(const Key('rest-request-short')), findsOneWidget);
@@ -2151,6 +2168,7 @@ void main() {
     testWidgets('el corto pide dados de golpe por clase', (tester) async {
       final repo = _repo();
       await _pump(tester, characters: repo, role: CampaignRole.dm);
+      await openCombatSection(tester, 'more');
       await _tap(tester, 'rest-short');
       expect(find.text('Fighter (d10)\nQuedan 3 de 3'), findsOneWidget);
       await _tap(tester, 'hit-dice-fighter-plus');
@@ -2165,6 +2183,7 @@ void main() {
     testWidgets('el largo pide confirmación', (tester) async {
       final repo = _repo();
       await _pump(tester, characters: repo, role: CampaignRole.dm);
+      await openCombatSection(tester, 'more');
       await _tap(tester, 'rest-long');
       expect(repo.longRests, 0);
       await tester.tap(find.text('Cancelar'));
@@ -2191,6 +2210,7 @@ void main() {
       await _tap(tester, 'smite-level-2');
       expect(find.text('Dados extra: 3d8'), findsOneWidget);
       expect(find.text('Dados extra: 2d8'), findsNothing);
+      await openCombatSection(tester, 'more');
       expect(find.text('Aura de protección: 10 pies'), findsOneWidget);
     });
 
@@ -2445,11 +2465,13 @@ void main() {
           },
         ),
       );
+      await openCombatSection(tester, 'spells');
       expect(find.text('Preparados: 1 / 5'), findsOneWidget);
       await _tap(tester, find.byKey(const Key('wizard-spellbook')));
       expect(find.text('Magic Missile'), findsOneWidget);
       expect(find.text('Shield'), findsOneWidget);
 
+      await openCombatSection(tester, 'more');
       await _tap(tester, 'arcane-recovery');
       expect(find.text('Niveles seleccionados: 0 / 2'), findsOneWidget);
       expect(
@@ -2491,6 +2513,7 @@ void main() {
           ),
         ),
       );
+      await openCombatSection(tester, 'more');
       expect(find.text('Recuperación arcana (usada)'), findsOneWidget);
       expect(
         tester.widget<ButtonStyleButton>(find.byKey(const Key('arcane-recovery'))).onPressed,
@@ -2501,10 +2524,11 @@ void main() {
     testWidgets('una clase sin panel propio usa el genérico y se puede registrar otro', (
       tester,
     ) async {
-      final rogue = classPanelBuilders['rogue'];
-      classPanelBuilders['rogue'] = (context, panel) =>
-          Text('Panel de pícaro ${panel.panel.level}');
-      addTearDown(() => classPanelBuilders['rogue'] = rogue!);
+      final rogue = classPanelSpecs['rogue'];
+      classPanelSpecs['rogue'] = ClassPanelSpec(
+        actions: (panel, ref) => [Text('Panel de pícaro ${panel.panel.level}')],
+      );
+      addTearDown(() => classPanelSpecs['rogue'] = rogue!);
       await _pump(
         tester,
         characters: _repo(
@@ -2524,6 +2548,7 @@ void main() {
         ),
       );
       expect(find.text('Panel de pícaro 3'), findsOneWidget);
+      await openCombatSection(tester, 'more');
       expect(find.text('Artificer (nivel 3)'), findsOneWidget);
       expect(find.text('infusions: 2'), findsOneWidget);
     });
@@ -2534,12 +2559,15 @@ void main() {
       final repo = _repo(ownerUserId: 'p2');
       await _pump(tester, characters: repo, role: CampaignRole.player);
       expect(tester.widget<IconButton>(find.byKey(const Key('hp-minus'))).onPressed, isNull);
+      await openCombatSection(tester, 'more');
       expect(
         tester.widget<ButtonStyleButton>(find.byKey(const Key('rest-request-long'))).onPressed,
         isNull,
       );
+      await openCombatSection(tester, 'spells');
       await _tap(tester, 'combat-slot-1-pips');
       expect(repo.slotSpends, isEmpty);
+      await openCombatSection(tester, 'actions');
       await _tap(tester, 'attack-roll-0');
       expect(find.byKey(const Key('dice-result')), findsOneWidget);
     });

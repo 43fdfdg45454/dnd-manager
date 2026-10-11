@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:opentrpg_core/core/network/api_error.dart';
-import 'package:opentrpg_core/core/theme/app_icon.dart';
 import 'package:opentrpg_core/core/theme/icons.dart';
 
 import '../../../../catalog/data/beast_models.dart';
@@ -9,6 +8,7 @@ import '../../../../catalog/data/catalog_controllers.dart';
 import '../../../../catalog/ui/beast_page.dart' show BeastTile;
 import '../../../../ui/action_type.dart';
 import '../../../models.dart';
+import '../combat_rows.dart';
 import '../combat_state.dart';
 import '../combat_support.dart';
 import '../recovery_reminder.dart';
@@ -56,10 +56,21 @@ bool isCircleOfTheMoon(CharacterDetail character) => character.classes.any(
   (k) => k.classIndex == 'druid' && (k.subclassIndex ?? '').toLowerCase().contains('moon'),
 );
 
-/// Druid: Wild Shape (resource `wild-shape`, from level 2), the beast limits
-/// by level and a local "in Wild Shape" switch.
-class DruidPanel extends ConsumerWidget {
-  const DruidPanel({super.key, required this.panel});
+/// Druid: Wild Shape (resource `wild-shape`, from level 2) with the beast
+/// limits by level and a local "in Wild Shape" switch; Natural Recovery of
+/// the Circle of the Land after a short rest ("Más").
+const druidPanel = ClassPanelSpec(actions: _actions, more: _more);
+
+List<Widget> _actions(ClassPanelContext panel, WidgetRef ref) => [WildShapeRow(panel: panel)];
+
+List<Widget> _more(ClassPanelContext panel, WidgetRef ref) => [
+  // Circle of the Land: the server only sends the data when the druid has it.
+  if (panelMap(panel.panel.data['naturalRecovery']).isNotEmpty)
+    NaturalRecoveryRow(key: const Key('druid-natural-recovery-card'), panel: panel),
+];
+
+class WildShapeRow extends ConsumerWidget {
+  const WildShapeRow({super.key, required this.panel});
 
   final ClassPanelContext panel;
 
@@ -72,10 +83,76 @@ class DruidPanel extends ConsumerWidget {
     final limits = wildShapeLimits(level, moon: moon);
     final active = ref.watch(wildShapeControllerProvider(c.id));
     final form = ref.read(wildShapeControllerProvider(c.id).notifier);
-    // Circle of the Land: the server only sends the data when the druid has it.
+
+    Future<void> transform(BuildContext context, WidgetRef ref, CharacterResource resource) async {
+      final done = await spendClassResource(
+        context,
+        ref,
+        c,
+        resource,
+        success: 'Adoptas tu forma salvaje.',
+      );
+      if (done) form.set(true);
+    }
+
+    return ClassResourceActionRow(
+      panel: panel,
+      resourceKey: 'wild-shape',
+      title: 'Forma salvaje',
+      featureIndex: 'wild-shape-cr-1-4-or-below-no-flying-or-swim-speed',
+      // SRD: "you can use your action to magically assume the shape of a beast".
+      actionKind: ActionKind.action,
+      actionKey: 'druid-wild-shape',
+      buttonLabel: 'Transformarse',
+      icon: AppIcons.druid,
+      minLevel: 2,
+      onUse: transform,
+      extra: [
+        if (level >= 2) ...[
+          PanelFact(
+            key: const Key('druid-wild-shape-cr'),
+            label: 'VD máximo',
+            value: limits.cr,
+            detail: '${limits.limits} Duración: hasta ${level ~/ 2} h.',
+          ),
+          SwitchListTile(
+            key: const Key('druid-wild-shape-active'),
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: const Text('En forma salvaje'),
+            subtitle: Text(
+              active
+                  ? 'Usas los PG de la bestia; al llegar a 0 vuelves a tu forma.'
+                  : 'Solo en este dispositivo.',
+            ),
+            value: active,
+            onChanged: panel.canEdit ? form.set : null,
+          ),
+          if (level >= 20)
+            Text(
+              'Archidruida: usos ilimitados de forma salvaje.',
+              style: theme.textTheme.bodySmall,
+            ),
+          WildShapeForms(level: level, moon: moon),
+        ],
+      ],
+    );
+  }
+}
+
+/// Natural Recovery: once a day, after a short rest, spell slots whose levels
+/// add up to half the druid level.
+class NaturalRecoveryRow extends ConsumerWidget {
+  const NaturalRecoveryRow({super.key, required this.panel});
+
+  final ClassPanelContext panel;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = panel.character;
     final recovery = panelMap(panel.panel.data['naturalRecovery']);
     final recovered = recovery['used'] == true;
-    final budget = panelInt(recovery['slotLevelsRecoverable']) ?? (level + 1) ~/ 2;
+    final budget = panelInt(recovery['slotLevelsRecoverable']) ?? (panel.level + 1) ~/ 2;
 
     Future<void> naturalRecovery() async {
       final levels = await showDialog<List<int>>(
@@ -94,90 +171,23 @@ class DruidPanel extends ConsumerWidget {
       );
     }
 
-    Future<void> transform(BuildContext context, WidgetRef ref, CharacterResource resource) async {
-      final done = await spendClassResource(
-        context,
-        ref,
-        c,
-        resource,
-        success: 'Adoptas tu forma salvaje.',
-      );
-      if (done) form.set(true);
-    }
-
-    return ClassPanelFrame(
-      panel: panel,
-      children: [
-        ClassResourceActionCard(
-          panel: panel,
-          resourceKey: 'wild-shape',
-          title: 'Forma salvaje',
-          featureIndex: 'wild-shape-cr-1-4-or-below-no-flying-or-swim-speed',
-          // SRD: "you can use your action to magically assume the shape of a beast".
-          actionKind: ActionKind.action,
-          actionKey: 'druid-wild-shape',
-          buttonLabel: 'Adoptar forma salvaje',
-          icon: AppIcons.druid,
-          minLevel: 2,
-          onUse: transform,
-          extra: [
-            if (level >= 2) ...[
-              PanelFact(
-                key: const Key('druid-wild-shape-cr'),
-                label: 'VD máximo',
-                value: limits.cr,
-                detail: '${limits.limits} Duración: hasta ${level ~/ 2} h.',
-              ),
-              SwitchListTile(
-                key: const Key('druid-wild-shape-active'),
-                contentPadding: EdgeInsets.zero,
-                title: const Text('En forma salvaje'),
-                subtitle: Text(
-                  active
-                      ? 'Usas los PG de la bestia; al llegar a 0 vuelves a tu forma.'
-                      : 'Solo en este dispositivo.',
-                ),
-                value: active,
-                onChanged: panel.canEdit ? form.set : null,
-              ),
-              if (level >= 20)
-                Text(
-                  'Archidruida: usos ilimitados de forma salvaje.',
-                  style: theme.textTheme.bodySmall,
-                ),
-              WildShapeForms(level: level, moon: moon),
-            ],
-          ],
+    return CombatActionRow(
+      icon: AppIcons.druid,
+      title: 'Recuperación natural',
+      cost: recovered ? 'Usada' : '1/día',
+      subtitle:
+          'Tras un descanso corto, recupera espacios de conjuro cuyo nivel sumado sea '
+          '$budget como máximo (ninguno de nivel 6 o superior).',
+      info: const FeatureInfoButton(index: 'natural-recovery'),
+      action: FilledButton.tonal(
+        key: const Key('natural-recovery'),
+        onPressed: panel.canEdit && !recovered ? naturalRecovery : null,
+        child: Text(
+          recovered ? 'Recuperación natural (usada)' : 'Recuperar',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
-        if (recovery.isNotEmpty)
-          CombatCard(
-            key: const Key('druid-natural-recovery-card'),
-            title: 'Recuperación natural',
-            featureIndex: 'natural-recovery',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.tonalIcon(
-                    key: const Key('natural-recovery'),
-                    onPressed: panel.canEdit && !recovered ? naturalRecovery : null,
-                    icon: const AppIcon(AppIcons.druid, size: 20),
-                    label: Text(
-                      recovered ? 'Recuperación natural (usada)' : 'Recuperación natural',
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Tras un descanso corto, recupera espacios de conjuro cuyo nivel sumado sea '
-                  '$budget como máximo (ninguno de nivel 6 o superior). Una vez por día.',
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-      ],
+      ),
     );
   }
 }

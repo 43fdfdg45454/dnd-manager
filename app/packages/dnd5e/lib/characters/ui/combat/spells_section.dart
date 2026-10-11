@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:opentrpg_core/core/theme/components.dart';
+import 'package:go_router/go_router.dart';
+import 'package:opentrpg_core/core/theme/app_icon.dart';
+import 'package:opentrpg_core/core/theme/icons.dart';
 import 'package:opentrpg_core/core/ui/stat_value.dart';
 import 'package:opentrpg_core/features/dice/domain/dice_expression.dart';
 import 'package:opentrpg_core/features/dice/ui/dice_sheet.dart';
 
 import '../../../catalog/data/models.dart' show RollTable, SpellDetail;
-import '../../../catalog/domain/catalog_format.dart' show spellLevelLabel;
 import '../../../catalog/ui/catalog_detail_links.dart';
 import '../../../ui/action_type.dart';
 import '../../../ui/spell_category.dart';
+import '../../../dnd5e_routes.dart';
 import '../../dnd5e_characters_controller.dart';
 import '../../domain/character_format.dart';
 import '../../domain/spell_combat.dart';
@@ -17,19 +19,46 @@ import '../../models.dart';
 import '../level_up/level_up_widgets.dart' show ExpandableText;
 import '../skill_rolls.dart' show pickAdvantageMode;
 import 'combat_support.dart';
+import 'combat_rows.dart';
 import 'concentration_flow.dart' show confirmReplaceConcentration;
-import 'resources_section.dart' show pactSlotsOf, regularSlots;
+import 'resources_section.dart' show SpellSlotsSection, pactSlotsOf, regularSlots, resourcesOf;
 import 'wild_magic_surge.dart';
 
-/// A castable spell with its catalog detail.
+/// A spell of the character with its catalog detail.
 typedef _CombatSpell = ({CharacterSpell spell, SpellDetail detail});
 
-/// "Conjuros": every spell the character can cast now (cantrips, prepared,
-/// always prepared and known spells; catalog detail from [spellInfoProvider]).
-/// Each card opens the spell's detail, shows its action type, rolls the spell
-/// attack, shows the save DC, rolls damage or healing at the chosen cast level
-/// (each number with its breakdown), doubles the dice with "Crítico" and
-/// "Lanzar" spends a slot (and starts concentrating when the spell needs it).
+/// The character's spells with their catalog detail (null while loading),
+/// one entry per spell, by level and name. [castableOnly] keeps the ones it
+/// can cast now ([isCastable]).
+List<_CombatSpell>? _spellsOf(WidgetRef ref, CharacterDetail c, {required bool castableOnly}) {
+  if (c.spells.isEmpty) return const [];
+  final info = ref.watch(spellInfoProvider(spellInfoKey(c.spells.map((s) => s.spellIndex)))).value;
+  if (info == null) return null;
+  final seen = <String>{};
+  // Castable entries first: a spell known by two classes shows the one that
+  // can cast it.
+  final castable = <_CombatSpell>[
+    for (final s in c.spells)
+      if (info[s.spellIndex] case final SpellDetail detail
+          when isCastable(c, s, s.level ?? detail.level) && seen.add(s.spellIndex))
+        (spell: s, detail: detail),
+  ];
+  final spells = [
+    ...castable,
+    if (!castableOnly)
+      for (final s in c.spells)
+        if (info[s.spellIndex] case final SpellDetail detail when seen.add(s.spellIndex))
+          (spell: s, detail: detail),
+  ];
+  return spells..sort((a, b) {
+    final byLevel = a.detail.level.compareTo(b.detail.level);
+    return byLevel != 0 ? byLevel : a.detail.name.compareTo(b.detail.name);
+  });
+}
+
+/// "Conjuros" of the "Acciones" tab: every spell the character can cast now
+/// (cantrips, prepared, always prepared and known spells), each with what it
+/// costs and one tap to cast it ([SpellRow]).
 class SpellsSection extends ConsumerWidget {
   const SpellsSection({super.key, required this.character, required this.canEdit});
 
@@ -39,33 +68,15 @@ class SpellsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = character;
-    if (c.spells.isEmpty) return const SizedBox.shrink();
-    final info = ref
-        .watch(spellInfoProvider(spellInfoKey(c.spells.map((s) => s.spellIndex))))
-        .value;
-    if (info == null) return const SizedBox.shrink();
-
-    final seen = <String>{};
-    final spells =
-        <_CombatSpell>[
-          for (final s in c.spells)
-            if (info[s.spellIndex] case final SpellDetail detail
-                when isCastable(c, s, s.level ?? detail.level) && seen.add(s.spellIndex))
-              (spell: s, detail: detail),
-        ]..sort((a, b) {
-          final byLevel = a.detail.level.compareTo(b.detail.level);
-          return byLevel != 0 ? byLevel : a.detail.name.compareTo(b.detail.name);
-        });
-    if (spells.isEmpty) return const SizedBox.shrink();
+    final spells = _spellsOf(ref, c, castableOnly: true);
+    if (spells == null || spells.isEmpty) return const SizedBox.shrink();
     final surgeTable = wildMagicSurgeTable(ref, c);
-
-    return Column(
+    return CombatGroup(
       key: const Key('combat-spells'),
-      crossAxisAlignment: CrossAxisAlignment.start,
+      title: 'Conjuros',
       children: [
-        const SectionHeader('Conjuros', padding: combatSectionPadding),
         for (final s in spells)
-          SpellCard(
+          SpellRow(
             key: Key('combat-spell-${s.detail.index}'),
             character: c,
             spell: s.spell,
@@ -78,14 +89,143 @@ class SpellsSection extends ConsumerWidget {
   }
 }
 
-class SpellCard extends ConsumerStatefulWidget {
-  const SpellCard({
+/// The "Conjuros" tab: the spell slots (and pact slots), the class rows (the
+/// wizard's spellbook), "Preparar conjuros" for classes that prepare, and
+/// every spell by level with a "Preparados" / "Todos" filter. Each spell can
+/// be cast (as a ritual when it is one) from its row.
+class SpellListSection extends ConsumerStatefulWidget {
+  const SpellListSection({
+    super.key,
+    required this.character,
+    required this.canEdit,
+    this.isDm = false,
+    this.spellRows = const [],
+  });
+
+  final CharacterDetail character;
+  final bool canEdit;
+  final bool isDm;
+
+  /// Rows of the classes for this tab, above the list.
+  final List<Widget> spellRows;
+
+  @override
+  ConsumerState<SpellListSection> createState() => _SpellListSectionState();
+}
+
+class _SpellListSectionState extends ConsumerState<SpellListSection> {
+  bool _all = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.character;
+    final theme = Theme.of(context);
+    final all = _spellsOf(ref, c, castableOnly: false) ?? const <_CombatSpell>[];
+    final castable = {
+      for (final s in all)
+        if (isCastable(c, s.spell, s.spell.level ?? s.detail.level)) s.detail.index,
+    };
+    final hasUnprepared = castable.length < all.length;
+    final shown = _all || !hasUnprepared
+        ? all
+        : [
+            for (final s in all)
+              if (castable.contains(s.detail.index)) s,
+          ];
+    final prepares = c.sheet.spellcasting.any((s) => s.preparedMax != null);
+    final surgeTable = wildMagicSurgeTable(ref, c);
+    final levels = {for (final s in shown) s.detail.level}.toList()..sort();
+    return Column(
+      key: const Key('spell-list'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SpellSlotsSection(character: c, canEdit: widget.canEdit),
+        ...widget.spellRows,
+        if (hasUnprepared || (prepares && widget.canEdit))
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (hasUnprepared)
+                  SegmentedButton<bool>(
+                    key: const Key('spells-filter'),
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(
+                        value: false,
+                        label: Text('Preparados', key: Key('spells-filter-prepared')),
+                      ),
+                      ButtonSegment(
+                        value: true,
+                        label: Text('Todos', key: Key('spells-filter-all')),
+                      ),
+                    ],
+                    selected: {_all},
+                    onSelectionChanged: (value) => setState(() => _all = value.first),
+                  ),
+                if (prepares && widget.canEdit)
+                  OutlinedButton.icon(
+                    key: const Key('spells-prepare'),
+                    onPressed: () => context.push(Dnd5eRoutes.prepareSpells(c.id)),
+                    icon: const AppIcon(AppIcons.spellbook, size: 18),
+                    label: const Text('Preparar conjuros'),
+                  ),
+              ],
+            ),
+          ),
+        for (final level in levels)
+          CombatGroup(
+            key: Key('spell-level-group-$level'),
+            title: level == 0 ? 'Trucos' : 'Nivel $level',
+            children: [
+              for (final s in shown)
+                if (s.detail.level == level)
+                  SpellRow(
+                    key: Key('combat-spell-${s.detail.index}'),
+                    character: c,
+                    spell: s.spell,
+                    detail: s.detail,
+                    canEdit: widget.canEdit,
+                    surgeTable: surgeTable,
+                    castable: castable.contains(s.detail.index),
+                    showRolls: false,
+                  ),
+            ],
+          ),
+        if (all.isEmpty && c.spells.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text('Cargando conjuros…', style: theme.textTheme.bodySmall),
+          ),
+      ],
+    );
+  }
+}
+
+/// A spell: its name with the casting time and what casting it costs ("Truco",
+/// "Espacio de nivel 2", "1/descanso largo", "6 PG", "Ritual"), range,
+/// duration, concentration and ritual, and "Lanzar" on the right. With
+/// [showRolls] it also has the attack, the save DC, the damage or healing at
+/// the chosen level (each with its breakdown), "Crítico" and the roll buttons.
+///
+/// Casting goes through the server, which decides the cost: a use of the
+/// spell's own resource (a spell granted with uses per rest), the hit points
+/// of a class that casts with them, a slot of the chosen level, or nothing
+/// for a ritual. A concentration spell then becomes the one the character
+/// concentrates on.
+class SpellRow extends ConsumerStatefulWidget {
+  const SpellRow({
     super.key,
     required this.character,
     required this.spell,
     required this.detail,
     required this.canEdit,
     this.surgeTable,
+    this.castable = true,
+    this.showRolls = true,
   });
 
   final CharacterDetail character;
@@ -97,11 +237,16 @@ class SpellCard extends ConsumerStatefulWidget {
   /// offers to roll for a surge.
   final RollTable? surgeTable;
 
+  /// False for a spell that is not prepared: no "Lanzar" (but a ritual can
+  /// still be cast as one).
+  final bool castable;
+  final bool showRolls;
+
   @override
-  ConsumerState<SpellCard> createState() => _SpellCardState();
+  ConsumerState<SpellRow> createState() => _SpellRowState();
 }
 
-class _SpellCardState extends ConsumerState<SpellCard> {
+class _SpellRowState extends ConsumerState<SpellRow> {
   /// The dice of the damage are doubled (set by a natural 20 on the attack).
   bool _critical = false;
 
@@ -129,7 +274,18 @@ class _SpellCardState extends ConsumerState<SpellCard> {
     return casting != null && casting.ritualsOnly && casting.classIndex == widget.spell.classIndex;
   }
 
-  List<int> get _levels => _ritualOnly
+  /// The spell's own resource: a spell granted with uses per rest
+  /// (`<classIndex>.<spellIndex>`, e.g. `race.speak-with-dead`). Casting it
+  /// spends a use instead of a slot.
+  CharacterResource? get _useResource {
+    final key = '${widget.spell.classIndex}.$_index';
+    for (final r in resourcesOf(widget.character)) {
+      if (r.key == key && r.max > 0) return r;
+    }
+    return null;
+  }
+
+  List<int> get _levels => _ritualOnly || _useResource != null
       ? [_detail.level]
       : _withHitPoints
       ? hitPointCastLevels(_detail.level, _casting!)
@@ -206,12 +362,40 @@ class _SpellCardState extends ConsumerState<SpellCard> {
     await rollAndShow(context, expression, label: 'Curación: ${_detail.name}$_levelSuffix');
   }
 
-  /// A class without slots: the server spends a use of its resource and the
-  /// hit points of the level. A concentration spell then becomes the one the
-  /// character concentrates on.
-  Future<void> _castWithHitPoints() async {
-    final casting = _casting!;
+  /// What casting it costs now: "Truco", "1/descanso largo" (a use of its
+  /// own resource), "Ritual", the hit points of the level, or the slot.
+  String get _costLabel {
+    if (_detail.level == 0) return 'Truco';
+    if (_useResource case final use?) return '1/${use.recharge.label.toLowerCase()}';
+    if (_ritualOnly) return 'Ritual';
+    if (_withHitPoints) return '${hitPointCastCost(_casting!, _level)} PG';
+    return 'Espacio de nivel $_level';
+  }
+
+  /// Whether the spell can be cast as a ritual without spending anything.
+  bool get _isRitual =>
+      _detail.level > 0 &&
+      (_detail.ritual || _detail.ritualForClasses.contains(widget.spell.classIndex));
+
+  /// Casts the spell through the server, which decides what it costs
+  /// ([SpellCastResult.cost]); [asRitual] asks for the ritual (nothing spent).
+  /// A concentration spell then becomes the one the character concentrates on.
+  Future<void> _cast({bool asRitual = false}) async {
+    final use = _useResource;
     final level = _level;
+    final ritual = asRitual || (_ritualOnly && use == null);
+    if (!ritual && use == null && !_withHitPoints) {
+      final regular = regularSlots(widget.character).where((s) => s.level == level).firstOrNull;
+      final pact = pactSlotsOf(widget.character);
+      final hasSlot =
+          (regular != null && regular.used < regular.max) ||
+          (pact != null && pact.level == level && pact.used < pact.max);
+      if (!hasSlot) {
+        showCombatMessage(context, 'No quedan espacios de nivel $level.');
+        return;
+      }
+    }
+    final name = _detail.name;
     final concentration = _detail.concentration;
     if (concentration &&
         !await confirmReplaceConcentration(context, ref, widget.character, _index)) {
@@ -219,69 +403,36 @@ class _SpellCardState extends ConsumerState<SpellCard> {
     }
     if (!mounted) return;
     final controller = ref.read(dnd5eCharacterControllerProvider(widget.character.id).notifier);
-    var lost = 0;
+    SpellCastResult? result;
     final cast = await runCombat(context, () async {
-      lost = await controller.hitPointCast(casting.classIndex, level);
-    });
-    if (!cast || !mounted) return;
-    if (concentration) {
-      await runCombat(context, () => controller.setConcentration(_index));
-      if (!mounted) return;
-    }
-    showCombatMessage(
-      context,
-      '${_detail.name} lanzado a nivel $level: pierdes $lost PG'
-      '${concentration ? '. Concentrándote en el conjuro.' : '.'}',
-    );
-  }
-
-  /// Spends a slot of the cast level: a regular one when there is one left,
-  /// else a pact slot of that level. A concentration spell then becomes the
-  /// one the character concentrates on.
-  Future<void> _cast() async {
-    if (_withHitPoints) return _castWithHitPoints();
-    if (_ritualOnly) return _castAsRitual();
-    final level = _level;
-    final regular = regularSlots(widget.character).where((s) => s.level == level).firstOrNull;
-    final pact = pactSlotsOf(widget.character);
-    final int slotLevel;
-    if (regular != null && regular.used < regular.max) {
-      slotLevel = level;
-    } else if (pact != null && pact.level == level && pact.used < pact.max) {
-      slotLevel = 0;
-    } else {
-      showCombatMessage(context, 'No quedan espacios de nivel $level.');
-      return;
-    }
-    final concentration = _detail.concentration;
-    if (concentration &&
-        !await confirmReplaceConcentration(context, ref, widget.character, _index)) {
-      return;
-    }
-    if (!mounted) return;
-    final controller = ref.read(dnd5eCharacterControllerProvider(widget.character.id).notifier);
-    final spent = await runCombat(
-      context,
-      () => controller.spendSpellSlot(slotLevel),
-      success: concentration ? null : 'Espacio de nivel $level gastado: ${_detail.name}.',
-    );
-    if (!spent || !mounted) return;
-    if (concentration) {
-      await runCombat(
-        context,
-        () => controller.setConcentration(_index),
-        success: 'Espacio de nivel $level gastado. Concentrándote en ${_detail.name}.',
+      result = await controller.castSpell(
+        _index,
+        classIndex: widget.spell.classIndex,
+        level: ritual ? null : level,
+        ritual: ritual,
       );
-      if (!mounted) return;
+    });
+    final done = result;
+    if (!cast || done == null || !mounted) return;
+    if (concentration) {
+      final concentrated = await runCombat(context, () => controller.setConcentration(_index));
+      if (!concentrated || !mounted) return;
     }
-    if (level >= 1 && widget.surgeTable != null) setState(() => _surgePending = true);
-  }
-
-  /// A class that only casts rituals: nothing is spent; a concentration
-  /// spell becomes the one the character concentrates on.
-  Future<void> _castAsRitual() async {
-    if (_detail.concentration) return _concentrate();
-    showCombatMessage(context, '${_detail.name} lanzado como ritual (10 minutos más).');
+    final slotLevel = done.slotLevel ?? level;
+    final message = switch (done.cost) {
+      SpellCastCost.use => 'Uso de $name gastado (quedan ${done.usesLeft ?? 0})',
+      SpellCastCost.hitPoints =>
+        '$name lanzado a nivel $level: pierdes ${done.hitPointsLost ?? 0} PG',
+      SpellCastCost.ritual => '$name lanzado como ritual (10 minutos más)',
+      SpellCastCost.cantrip => '$name lanzado',
+      SpellCastCost.slot || SpellCastCost.pactSlot =>
+        concentration
+            ? 'Espacio de nivel $slotLevel gastado'
+            : 'Espacio de nivel $slotLevel gastado: $name',
+    };
+    showCombatMessage(context, concentration ? '$message. Concentrándote en $name.' : '$message.');
+    final slot = done.cost == SpellCastCost.slot || done.cost == SpellCastCost.pactSlot;
+    if (slot && level >= 1 && widget.surgeTable != null) setState(() => _surgePending = true);
   }
 
   /// A concentration cantrip: only starts concentrating (nothing is spent).
@@ -419,6 +570,43 @@ class _SpellCardState extends ConsumerState<SpellCard> {
     ];
   }
 
+  /// "Lanzar" (or why not), or the concentration of a cantrip; null for a
+  /// plain cantrip.
+  Widget? _castButton() {
+    final d = _detail;
+    if (d.level == 0) {
+      if (!d.concentration) return null;
+      final concentrating = widget.character.concentratingOnSpellIndex == _index;
+      return OutlinedButton(
+        key: Key('spell-concentrate-$_index'),
+        onPressed: widget.canEdit && !concentrating ? _concentrate : null,
+        child: Text(concentrating ? 'Concentrado' : 'Concentrarse'),
+      );
+    }
+    if (!widget.castable) return null;
+    final use = _useResource;
+    if (use != null && use.used >= use.max) {
+      return OutlinedButton(
+        key: Key('spell-spend-$_index'),
+        onPressed: null,
+        child: Text(
+          'Sin usos hasta el ${use.recharge.label.toLowerCase()}',
+          maxLines: 2,
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+    return FilledButton.tonal(
+      key: Key('spell-spend-$_index'),
+      onPressed: widget.canEdit ? _cast : null,
+      child: Text(
+        _ritualOnly && use == null ? 'Lanzar como ritual' : 'Lanzar',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -427,138 +615,113 @@ class _SpellCardState extends ConsumerState<SpellCard> {
     final damage = _damage;
     final heal = _heal;
     final levels = _levels;
-    final facts = _facts(casting);
-    final concentrating = widget.character.concentratingOnSpellIndex == _index;
+    final rolls = widget.showRolls;
+    final facts = rolls ? _facts(casting) : const <Widget>[];
+    final timing = ActionKind.fromCastingTime(d.castingTime);
     final about = [
+      if (!widget.castable) 'No preparado',
       ?d.range,
       ?d.duration,
       if (d.concentration) 'Concentración',
       if (d.ritual || d.ritualForClasses.contains(widget.spell.classIndex)) 'Ritual',
     ].where((e) => e.isNotEmpty).join(' · ');
+    final small = theme.textTheme.bodySmall;
+    // A ritual can be cast as one (nothing spent) besides "Lanzar".
+    final offerRitual =
+        !rolls &&
+        _isRitual &&
+        !_ritualOnly &&
+        _useResource == null &&
+        (widget.castable || widget.spell.classIndex == 'wizard');
 
-    return CombatCard(
+    return CombatActionRow(
+      icon: null,
       title: d.name,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          DetailInfoButton(
-            key: Key('detail-spell-$_index'),
-            onPressed: () => openSpellDetail(context, _index),
-          ),
-          const SizedBox(width: 4),
-          SpellCategoryIcon(widget.spell.category ?? d.category),
-          const SizedBox(width: 6),
-          Text(spellLevelLabel(d.level), style: theme.textTheme.bodySmall),
-        ],
+      actionKind: d.castingTime == null ? null : timing.kind,
+      actionLabel: d.castingTime == null ? null : timing.label,
+      cost: _costLabel,
+      costKey: Key('spell-cost-$_index'),
+      badge: SpellCategoryIcon(widget.spell.category ?? d.category),
+      info: DetailInfoButton(
+        key: Key('detail-spell-$_index'),
+        onPressed: () => openSpellDetail(context, _index),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (d.castingTime != null || about.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  if (d.castingTime != null) ActionTypeChip.castingTime(d.castingTime),
-                  if (about.isNotEmpty)
-                    Text(about, key: Key('spell-about-$_index'), style: theme.textTheme.bodySmall),
-                ],
-              ),
-            ),
-          if (facts.isNotEmpty)
-            Wrap(
-              key: Key('spell-facts-$_index'),
-              spacing: 12,
-              runSpacing: 4,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: facts,
-            )
-          else if (d.description.isNotEmpty)
-            ExpandableText([d.description.first], key: Key('spell-summary-$_index')),
-          if (d.level > 0 && _withHitPoints && levels.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                'Sin espacios: lanzarlo a nivel $_level cuesta '
-                '${hitPointCastCost(_casting!, _level)} PG.',
-                key: Key('spell-hp-cost-$_index'),
-                style: theme.textTheme.bodySmall,
-              ),
-            ),
-          if (d.level > 0 && levels.length > 1)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Row(
-                children: [
-                  Text('Lanzar a nivel', style: theme.textTheme.bodyMedium),
-                  const SizedBox(width: 12),
-                  DropdownButton<int>(
-                    key: Key('spell-level-$_index'),
-                    value: _level,
-                    items: [for (final l in levels) DropdownMenuItem(value: l, child: Text('$l'))],
-                    onChanged: (value) => setState(() => _castLevel = value),
-                  ),
-                ],
-              ),
-            ),
-          const SizedBox(height: 8),
+      action: _castButton(),
+      details: [
+        if (about.isNotEmpty) Text(about, key: Key('spell-about-$_index'), style: small),
+        if (facts.isNotEmpty)
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            key: Key('spell-facts-$_index'),
+            spacing: 12,
+            runSpacing: 4,
             crossAxisAlignment: WrapCrossAlignment.center,
+            children: facts,
+          )
+        else if (rolls && d.description.isNotEmpty)
+          ExpandableText([d.description.first], key: Key('spell-summary-$_index')),
+        if (d.level > 0 && _withHitPoints && levels.isNotEmpty && widget.castable)
+          Text(
+            'Sin espacios: lanzarlo a nivel $_level cuesta '
+            '${hitPointCastCost(_casting!, _level)} PG.',
+            key: Key('spell-hp-cost-$_index'),
+            style: small,
+          ),
+        if (d.level > 0 && levels.length > 1 && widget.castable)
+          Row(
             children: [
-              if (d.attackType != null)
-                FilledButton(
-                  key: Key('spell-attack-$_index'),
-                  onPressed: _rollAttack,
-                  onLongPress: _chooseMode,
-                  child: const Text('Tirar ataque'),
-                ),
-              if (damage != null)
-                FilledButton.tonal(
-                  key: Key('spell-damage-$_index'),
-                  onPressed: _rollDamage,
-                  child: const Text('Tirar daño'),
-                ),
-              if (heal != null)
-                FilledButton.tonal(
-                  key: Key('spell-heal-$_index'),
-                  onPressed: _rollHeal,
-                  child: const Text('Tirar curación'),
-                ),
-              if (damage != null)
-                FilterChip(
-                  key: Key('spell-crit-$_index'),
-                  label: const Text('Crítico'),
-                  selected: _critical,
-                  onSelected: (value) => setState(() => _critical = value),
-                ),
-              if (d.level > 0)
-                OutlinedButton(
-                  key: Key('spell-spend-$_index'),
-                  onPressed: widget.canEdit ? _cast : null,
-                  child: Text(_ritualOnly ? 'Lanzar como ritual' : 'Lanzar'),
-                )
-              else if (d.concentration)
-                OutlinedButton(
-                  key: Key('spell-concentrate-$_index'),
-                  onPressed: widget.canEdit && !concentrating ? _concentrate : null,
-                  child: Text(concentrating ? 'Concentrado' : 'Concentrarse'),
-                ),
+              Text('Lanzar a nivel', style: theme.textTheme.bodyMedium),
+              const SizedBox(width: 12),
+              DropdownButton<int>(
+                key: Key('spell-level-$_index'),
+                value: _level,
+                isDense: true,
+                items: [for (final l in levels) DropdownMenuItem(value: l, child: Text('$l'))],
+                onChanged: (value) => setState(() => _castLevel = value),
+              ),
             ],
           ),
-          if (_surgePending && widget.surgeTable != null)
-            WildMagicSurgePrompt(
-              character: widget.character,
-              table: widget.surgeTable!,
-              canEdit: widget.canEdit,
-              onDismiss: () => setState(() => _surgePending = false),
-            ),
-        ],
-      ),
+        if (_surgePending && widget.surgeTable != null)
+          WildMagicSurgePrompt(
+            character: widget.character,
+            table: widget.surgeTable!,
+            canEdit: widget.canEdit,
+            onDismiss: () => setState(() => _surgePending = false),
+          ),
+      ],
+      actions: [
+        if (rolls && d.attackType != null)
+          FilledButton(
+            key: Key('spell-attack-$_index'),
+            onPressed: _rollAttack,
+            onLongPress: _chooseMode,
+            child: const Text('Tirar ataque'),
+          ),
+        if (rolls && damage != null)
+          FilterChip(
+            key: Key('spell-crit-$_index'),
+            label: const Text('Crítico'),
+            selected: _critical,
+            onSelected: (value) => setState(() => _critical = value),
+          ),
+        if (rolls && damage != null)
+          FilledButton.tonal(
+            key: Key('spell-damage-$_index'),
+            onPressed: _rollDamage,
+            child: const Text('Tirar daño'),
+          ),
+        if (rolls && heal != null)
+          FilledButton.tonal(
+            key: Key('spell-heal-$_index'),
+            onPressed: _rollHeal,
+            child: const Text('Tirar curación'),
+          ),
+        if (offerRitual)
+          OutlinedButton(
+            key: Key('spell-ritual-$_index'),
+            onPressed: widget.canEdit ? () => _cast(asRitual: true) : null,
+            child: const Text('Como ritual'),
+          ),
+      ],
     );
   }
 }

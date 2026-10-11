@@ -23,6 +23,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dice_test.dart' show SequenceRandom;
 import 'helpers/catalog_fakes.dart';
 import 'helpers/character_fakes.dart';
+import 'helpers/combat_tabs.dart';
 import 'helpers/fakes.dart';
 import 'helpers/item_fakes.dart';
 import 'helpers/motion.dart';
@@ -221,6 +222,7 @@ void main() {
     testWidgets('el panel usa el endpoint nuevo con los niveles elegidos', (tester) async {
       final repo = druid();
       await _pump(tester, characters: repo);
+      await openCombatSection(tester, 'more');
       expect(find.byKey(const Key('druid-natural-recovery-card')), findsOneWidget);
       expect(_enabled(tester, 'natural-recovery'), isTrue);
 
@@ -239,6 +241,7 @@ void main() {
 
     testWidgets('usada queda deshabilitada', (tester) async {
       await _pump(tester, characters: druid(used: true));
+      await openCombatSection(tester, 'more');
       expect(_enabled(tester, 'natural-recovery'), isFalse);
       expect(find.text('Recuperación natural (usada)'), findsOneWidget);
     });
@@ -248,6 +251,7 @@ void main() {
     ) async {
       final repo = _repo('druid', 4, resources: [_resource('d1', 'wild-shape', 'Wild Shape', 2)]);
       await _pump(tester, characters: repo);
+      await openCombatSection(tester, 'more');
       expect(find.byKey(const Key('druid-natural-recovery-card')), findsNothing);
       expect(find.byKey(const Key('natural-recovery')), findsNothing);
     });
@@ -435,7 +439,9 @@ void main() {
     expect(repo.resourceSpends, [(id: 's1', amount: 2)]);
     expect(repo.slotRestores, [(level: 1, amount: 1)]);
 
-    await _tap(tester, 'sorcerer-points-pips');
+    // Los puntos se gastan a mano desde "Recursos".
+    await openCombatSection(tester, 'resources');
+    await _tap(tester, 'resource-s1-pips');
     expect(repo.resourceSpends.last, (id: 's1', amount: 1));
   });
 
@@ -475,6 +481,7 @@ void main() {
       ],
     );
     await _pump(tester, characters: repo, catalog: catalog);
+    await openCombatSection(tester, 'more');
     expect(find.byKey(const Key('roll-table-open-otra')), findsNothing);
 
     await _tap(tester, 'roll-table-open-surge-example');
@@ -528,21 +535,22 @@ void main() {
       },
     );
     await _pump(tester, characters: repo, catalog: catalog);
-    expect(_text(tester, 'warlock-pact-level'), 'Nivel 3');
-    expect(_text(tester, 'warlock-pact-slots-uses'), '2 / 2');
+    // Los espacios de pacto van con los demás espacios, en "Conjuros".
+    await openCombatSection(tester, 'spells');
+    final pact = find.byKey(const Key('combat-pact-slots'));
+    expect(find.descendant(of: pact, matching: find.text('Pacto (niv. 3)')), findsOneWidget);
+    expect(find.descendant(of: pact, matching: find.text('2 / 2')), findsOneWidget);
+    await _tap(tester, 'combat-pact-slots-pips');
+    expect(repo.slotSpends, [(level: 0, amount: 1)]);
+
+    await openCombatSection(tester, 'more');
     expect(_text(tester, 'warlock-invocations-known'), 'Conocidas: 3');
     expect(find.byKey(const Key('warlock-invocation-eldritch-invocations')), findsOneWidget);
-
-    await _tap(tester, 'warlock-pact-slots');
-    expect(repo.slotSpends, [(level: 0, amount: 1)]);
   });
 
   testWidgets('explorador: Marca del cazador fija la concentración', (tester) async {
     final repo = _repo('ranger', 6);
     await _pump(tester, characters: repo);
-    expect(find.text('Enemigo predilecto (2)'), findsOneWidget);
-    expect(find.text('Explorador natural (2)'), findsOneWidget);
-
     await _tap(tester, 'ranger-hunters-mark');
     expect(repo.concentrationCalls, ['hunters-mark']);
     expect(find.byKey(const Key('concentration-chip')), findsOneWidget);
@@ -550,6 +558,10 @@ void main() {
     await _tap(tester, 'ranger-hunters-mark-critical');
     expect(find.text('Tirar 2d6'), findsOneWidget);
     expect(_enabled(tester, 'ranger-hunters-mark'), isFalse);
+
+    await openCombatSection(tester, 'more');
+    expect(find.text('Enemigo predilecto (2)'), findsOneWidget);
+    expect(find.text('Explorador natural (2)'), findsOneWidget);
   });
 
   group('degradación', () {
@@ -568,9 +580,14 @@ void main() {
       expect(find.byKey(const Key('monk-flurry-of-blows')), findsNothing);
     });
 
-    testWidgets('el brujo sin espacios de pacto no falla', (tester) async {
+    testWidgets('el brujo sin espacios de pacto no falla ni muestra la pestaña Conjuros', (
+      tester,
+    ) async {
       await _pump(tester, characters: _repo('warlock', 1));
-      expect(find.byKey(const Key('warlock-pact-slots-unavailable')), findsOneWidget);
+      // Sin conjuros ni espacios, la pestaña "Conjuros" no aparece.
+      expect(find.byKey(const Key('combat-tab-spells')), findsNothing);
+      expect(find.byKey(const Key('combat-pact-slots')), findsNothing);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('bárbaro, mago y paladín sin datos del servidor no muestran panel', (tester) async {
@@ -584,7 +601,8 @@ void main() {
       final repo = _repo('monk', 5, ownerUserId: 'p2', resources: [_resource('k1', 'ki', 'Ki', 5)]);
       await _pump(tester, characters: repo);
       expect(_enabled(tester, 'monk-flurry-of-blows'), isFalse);
-      await _tap(tester, 'monk-ki-pips');
+      await openCombatSection(tester, 'resources');
+      await _tap(tester, 'resource-k1-pips');
       expect(repo.resourceSpends, isEmpty);
     });
 

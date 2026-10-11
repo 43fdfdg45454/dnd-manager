@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:opentrpg_core/core/theme/components.dart';
+import 'package:opentrpg_core/core/theme/icons.dart';
 import 'package:opentrpg_core/core/ui/stat_value.dart';
 import 'package:opentrpg_core/features/characters/data/characters_controller.dart';
 import 'package:opentrpg_core/features/dice/ui/dice_sheet.dart';
@@ -10,9 +10,10 @@ import 'package:opentrpg_core/features/items/data/models.dart' show CharacterIte
 import 'package:opentrpg_core/features/items/ui/effective_item_page.dart'
     show openInventoryItemDetail;
 
-import '../../../catalog/ui/catalog_detail_links.dart' show DetailInfoButton;
+import '../../../catalog/ui/catalog_detail_links.dart';
 import '../../dnd5e_characters_controller.dart';
 import '../../models.dart';
+import 'combat_rows.dart';
 import 'combat_support.dart';
 
 Dnd5eCharacterController _controller(WidgetRef ref, CharacterDetail character) =>
@@ -66,8 +67,8 @@ List<CharacterResource> resourcesOf(CharacterDetail character) =>
 // Spell slots
 // ---------------------------------------------------------------------------
 
-/// A row per slot level with filled (available) and empty (used) dots. Tap
-/// spends a slot, long press restores one. Pact magic is listed apart.
+/// One row per slot level with its pips, filled while available: a tap
+/// spends a slot, a long press restores one. The pact slots go last.
 class SpellSlotsSection extends ConsumerWidget {
   const SpellSlotsSection({super.key, required this.character, required this.canEdit});
 
@@ -96,58 +97,50 @@ class SpellSlotsSection extends ConsumerWidget {
     final slots = regularSlots(character);
     final pact = pactSlotsOf(character);
     if (slots.isEmpty && pact == null) return const SizedBox.shrink();
-    final theme = Theme.of(context);
 
-    Widget row(String key, String label, int level, SpellSlot slot) => Row(
+    Widget row(
+      String key,
+      String label,
+      int level,
+      SpellSlot slot, {
+      String? subtitle,
+      Widget? info,
+    }) => CombatActionRow(
       key: Key(key),
-      children: [
-        SizedBox(
-          width: 112,
-          child: Text(
-            label,
-            style: theme.textTheme.bodyLarge,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        Expanded(
-          child: Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: PipRow(
-              key: Key('$key-pips'),
-              total: slot.max,
-              filled: slot.max - slot.used,
-              semanticLabel: '$label: ${slot.max - slot.used} de ${slot.max} disponibles',
-              onTap: canEdit ? () => _spend(context, ref, level, slot) : null,
-              onLongPress: canEdit ? () => _restore(context, ref, level, slot) : null,
-            ),
-          ),
-        ),
-      ],
+      title: label,
+      cost: '${slot.max - slot.used} / ${slot.max}',
+      subtitle: subtitle,
+      info: info,
+      action: PipRow(
+        key: Key('$key-pips'),
+        total: slot.max,
+        filled: slot.max - slot.used,
+        semanticLabel: '$label: ${slot.max - slot.used} de ${slot.max} disponibles',
+        onTap: canEdit ? () => _spend(context, ref, level, slot) : null,
+        onLongPress: canEdit ? () => _restore(context, ref, level, slot) : null,
+      ),
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return CombatGroup(
+      key: const Key('combat-slots'),
+      title: 'Espacios de conjuro',
       children: [
-        const SectionHeader('Espacios de conjuro', padding: combatSectionPadding),
-        CombatCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final slot in slots)
-                row('combat-slot-${slot.level}', 'Nivel ${slot.level}', slot.level, slot),
-              if (pact != null)
-                row(
-                  'combat-pact-slots',
-                  pact.level > 0 ? 'Pacto (niv. ${pact.level})' : 'Pacto',
-                  0,
-                  pact,
-                ),
-              Text(
-                'Toca para gastar un espacio; mantén pulsado para recuperarlo.',
-                style: theme.textTheme.bodySmall,
-              ),
-            ],
+        for (final slot in slots)
+          row('combat-slot-${slot.level}', 'Nivel ${slot.level}', slot.level, slot),
+        if (pact != null)
+          row(
+            'combat-pact-slots',
+            pact.level > 0 ? 'Pacto (niv. ${pact.level})' : 'Pacto',
+            0,
+            pact,
+            subtitle: 'Se recuperan con un descanso corto o largo.',
+            info: const FeatureInfoButton(index: 'pact-magic'),
+          ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Text(
+            'Toca para gastar un espacio; mantén pulsado para recuperarlo.',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
       ],
@@ -159,7 +152,14 @@ class SpellSlotsSection extends ConsumerWidget {
 // Resources
 // ---------------------------------------------------------------------------
 
-/// Class and item resources: dots up to 10 uses, a pool bar beyond that.
+/// Whether [character] has something for "Recursos": a resource with uses or
+/// a once-per-long-rest feature.
+bool hasResources(CharacterDetail character) =>
+    resourcesOf(character).any((r) => r.max > 0) || character.combat.onceSinceLongRest.isNotEmpty;
+
+/// Every limited use of the character in one list: class resources, racial
+/// traits, spells granted with uses per rest, options and feats, items, and
+/// the features usable once per long rest.
 class ResourcesSection extends ConsumerWidget {
   const ResourcesSection({
     super.key,
@@ -182,10 +182,9 @@ class ResourcesSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader('Recursos', padding: combatSectionPadding),
         if (canEdit && resources.any((r) => r.recharge == Recharge.initiative))
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(top: 12),
             child: FilledButton.tonalIcon(
               key: const Key('resources-initiative'),
               onPressed: () => runCombat(
@@ -197,44 +196,72 @@ class ResourcesSection extends ConsumerWidget {
               label: const Text('Recuperar al tirar iniciativa'),
             ),
           ),
-        for (final resource in resources)
-          ResourceTile(
-            key: Key('resource-${resource.id}'),
-            character: character,
-            resource: resource,
-            canEdit: canEdit,
-            isDm: isDm,
-          ),
-        if (once.isNotEmpty)
-          CombatCard(
-            title: 'Una vez por descanso largo',
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                for (final item in once)
-                  Chip(
-                    key: Key('once-${item.key}'),
-                    avatar: Pip(
-                      filled: !item.used,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 18,
-                    ),
-                    label: Text(item.used ? '${item.name} (usado)' : item.name),
-                  ),
-              ],
-            ),
-          ),
+        CombatGroup(
+          key: const Key('combat-resources'),
+          title: 'Recursos',
+          children: [
+            for (final resource in resources)
+              ResourceRow(
+                key: Key('resource-${resource.id}'),
+                character: character,
+                resource: resource,
+                canEdit: canEdit,
+                isDm: isDm,
+              ),
+            for (final item in once)
+              CombatActionRow(
+                key: Key('once-${item.key}'),
+                title: item.name,
+                cost: item.used ? 'Usado' : '1/descanso largo',
+                subtitle: 'Una vez por descanso largo',
+                action: Pip(
+                  filled: !item.used,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
+              ),
+          ],
+        ),
       ],
     );
   }
 }
 
-/// Largest resource shown as dots; bigger ones become a pool bar.
+/// Opens where [resource] comes from: the class feature, the spell, the race
+/// of a racial trait (or its text), or the text of an option or a feat.
+/// Null when the resource does not say.
+VoidCallback? resourceOriginOpener(
+  BuildContext context,
+  CharacterDetail character,
+  CharacterResource resource,
+) {
+  final index = resource.sourceIndex;
+  final description = resource.sourceDescription;
+  void sheet() => showRulesTextSheet(context, resource.name, description ?? 'Sin descripción.');
+  switch (resource.sourceKind) {
+    case 'feature' when index != null:
+      return () => openFeatureDetail(context, index);
+    case 'spell' when index != null:
+      return () => openSpellDetail(context, index);
+    case 'trait':
+      final race = character.raceIndex;
+      if (race != null) return () => openRaceDetail(context, race);
+      return description == null ? null : sheet;
+    case 'option' || 'feat':
+      return description == null && index == null ? null : sheet;
+    default:
+      return description == null ? null : sheet;
+  }
+}
+
+/// Largest resource shown as pips; bigger ones become a pool bar.
 const maxPipResource = 10;
 
-class ResourceTile extends ConsumerWidget {
-  const ResourceTile({
+/// A resource: name, uses left, its pips (a tap spends one, a long press
+/// gives one back when allowed) or a pool bar, what brings it back, where it
+/// comes from ([resourceOriginOpener]) and its options, die and recharge roll.
+class ResourceRow extends ConsumerWidget {
+  const ResourceRow({
     super.key,
     required this.character,
     required this.resource,
@@ -330,8 +357,35 @@ class ResourceTile extends ConsumerWidget {
     final r = resource;
     final remaining = r.max - r.used;
     final isPool = r.max > maxPipResource;
-    final body = isPool
-        ? Row(
+    final small = theme.textTheme.bodySmall;
+    final origin = resourceOriginOpener(context, character, r);
+    final dice = r.dice;
+    return CombatActionRow(
+      title: r.name,
+      // A pool shows its count on the bar.
+      cost: isPool ? null : '$remaining / ${r.max}',
+      costKey: Key('resource-${r.id}-count'),
+      subtitle: r.recharge.label,
+      info: origin == null
+          ? null
+          : DetailInfoButton(
+              key: Key('resource-${r.id}-info'),
+              tooltip: 'Ver origen',
+              onPressed: origin,
+            ),
+      action: isPool
+          ? null
+          : PipRow(
+              key: Key('resource-${r.id}-pips'),
+              total: r.max,
+              filled: remaining,
+              semanticLabel: '${r.name}: $remaining de ${r.max}',
+              onTap: canEdit ? () => _spend(context, ref) : null,
+              onLongPress: _canRestore ? () => _restore(context, ref) : null,
+            ),
+      details: [
+        if (isPool)
+          Row(
             children: [
               IconButton.filledTonal(
                 key: Key('resource-${r.id}-minus'),
@@ -349,13 +403,13 @@ class ResourceTile extends ConsumerWidget {
                       children: [
                         Text(
                           '$remaining / ${r.max}',
-                          style: numericStyle(theme.textTheme.titleLarge),
+                          style: numericStyle(theme.textTheme.titleMedium),
                         ),
                         const SizedBox(height: 4),
                         LinearProgressIndicator(
                           value: r.max == 0 ? 0 : remaining / r.max,
-                          minHeight: 10,
-                          borderRadius: BorderRadius.circular(5),
+                          minHeight: 8,
+                          borderRadius: BorderRadius.circular(4),
                         ),
                       ],
                     ),
@@ -369,64 +423,32 @@ class ResourceTile extends ConsumerWidget {
                 icon: const Icon(Icons.add),
               ),
             ],
-          )
-        : PipRow(
-            key: Key('resource-${r.id}-pips'),
-            total: r.max,
-            filled: remaining,
-            semanticLabel: '${r.name}: $remaining de ${r.max}',
-            onTap: canEdit ? () => _spend(context, ref) : null,
-            onLongPress: _canRestore ? () => _restore(context, ref) : null,
-          );
-    final dice = r.dice;
-    final details = <Widget>[
-      for (final option in r.options)
-        Padding(
-          key: Key('resource-${r.id}-option-${option.index}'),
-          padding: const EdgeInsets.only(top: 6),
-          child: Row(
-            children: [
-              Expanded(child: Text(option.name, style: theme.textTheme.bodyMedium)),
-              Text(
-                option.label,
-                key: Key('resource-${r.id}-option-${option.index}-cost'),
-                style: theme.textTheme.bodySmall,
-              ),
-              const SizedBox(width: 8),
-              FilledButton.tonal(
-                key: Key('resource-${r.id}-use-${option.index}'),
-                onPressed: canEdit && remaining >= option.amount
-                    ? () => _spend(context, ref, option.amount)
-                    : null,
-                child: const Text('Usar'),
-              ),
-            ],
           ),
-        ),
-      if (dice != null)
-        Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: FilledButton.tonalIcon(
-            key: Key('resource-${r.id}-roll'),
-            onPressed: canEdit && remaining > 0 ? () => _spendAndRoll(context, ref, dice) : null,
-            icon: const Icon(Icons.casino_outlined),
-            label: Text('Tirar 1$dice'),
+        for (final option in r.options)
+          Padding(
+            key: Key('resource-${r.id}-option-${option.index}'),
+            padding: const EdgeInsets.only(top: 4),
+            child: Row(
+              children: [
+                Expanded(child: Text(option.name, style: theme.textTheme.bodyMedium)),
+                Text(
+                  option.label,
+                  key: Key('resource-${r.id}-option-${option.index}-cost'),
+                  style: small,
+                ),
+                const SizedBox(width: 8),
+                FilledButton.tonal(
+                  key: Key('resource-${r.id}-use-${option.index}'),
+                  onPressed: canEdit && remaining >= option.amount
+                      ? () => _spend(context, ref, option.amount)
+                      : null,
+                  child: const Text('Usar'),
+                ),
+              ],
+            ),
           ),
-        ),
-      if (r.rechargeRoll case final roll?)
-        Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: OutlinedButton.icon(
-            key: Key('resource-${r.id}-recharge-roll'),
-            onPressed: canEdit && r.used > 0 ? () => _rechargeRoll(context, ref, roll) : null,
-            icon: const Icon(Icons.replay_outlined),
-            label: Text('Tirar recarga (${roll.label})'),
-          ),
-        ),
-      if (r.source != null || r.breakdown != null)
-        Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Row(
+        if (r.source != null || r.breakdown != null)
+          Row(
             children: [
               StatValue(
                 statKey: 'resource-${r.id}-max',
@@ -434,44 +456,42 @@ class ResourceTile extends ConsumerWidget {
                 title: r.name,
                 breakdown: r.breakdown,
                 totalText: '${r.max}',
-                style: theme.textTheme.bodySmall,
+                style: small,
               ),
               if (r.source != null)
                 Expanded(
                   child: Text(
                     ' · ${r.source}',
                     key: Key('resource-${r.id}-source'),
-                    style: theme.textTheme.bodySmall,
+                    style: small,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
             ],
           ),
-        ),
-    ];
-    return CombatCard(
-      title: r.name,
-      trailing: Text(r.recharge.label, style: theme.textTheme.bodySmall),
-      child: r.rolls.isEmpty && !r.rollsPending && details.isEmpty
-          ? body
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                body,
-                ...details,
-                if (r.rolls.isNotEmpty || r.rollsPending)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      r.rollsPending
-                          ? 'Tiradas pendientes de anotar'
-                          : 'Tiradas: ${r.rolls.join(' · ')}',
-                      key: Key('resource-${r.id}-rolls'),
-                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-              ],
-            ),
+        if (r.rolls.isNotEmpty || r.rollsPending)
+          Text(
+            r.rollsPending ? 'Tiradas pendientes de anotar' : 'Tiradas: ${r.rolls.join(' · ')}',
+            key: Key('resource-${r.id}-rolls'),
+            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+      ],
+      actions: [
+        if (dice != null)
+          FilledButton.tonalIcon(
+            key: Key('resource-${r.id}-roll'),
+            onPressed: canEdit && remaining > 0 ? () => _spendAndRoll(context, ref, dice) : null,
+            icon: const Icon(Icons.casino_outlined),
+            label: Text('Tirar 1$dice'),
+          ),
+        if (r.rechargeRoll case final roll?)
+          OutlinedButton.icon(
+            key: Key('resource-${r.id}-recharge-roll'),
+            onPressed: canEdit && r.used > 0 ? () => _rechargeRoll(context, ref, roll) : null,
+            icon: const Icon(Icons.replay_outlined),
+            label: Text('Tirar recarga (${roll.label})'),
+          ),
+      ],
     );
   }
 }
@@ -529,43 +549,28 @@ class ConsumablesSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final items = character.combat.quickConsumables;
     if (items.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return CombatGroup(
+      key: const Key('combat-consumables'),
+      title: 'Consumibles rápidos',
       children: [
-        const SectionHeader('Consumibles rápidos', padding: combatSectionPadding),
-        CombatCard(
-          child: Column(
-            children: [
-              for (final item in items)
-                ListTile(
-                  key: Key('consumable-${item.itemId}'),
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(item.name),
-                  subtitle: Text(
-                    item.charges == null
-                        ? 'Cantidad: ${item.quantity}'
-                        : 'Cantidad: ${item.quantity} · Cargas: ${item.charges}',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      DetailInfoButton(
-                        key: Key('detail-item-${item.itemId}'),
-                        onPressed: () =>
-                            openCombatItemDetail(context, ref, character.id, item.itemId),
-                      ),
-                      const SizedBox(width: 4),
-                      FilledButton.tonal(
-                        key: Key('consumable-use-${item.itemId}'),
-                        onPressed: canEdit ? () => _use(context, ref, item) : null,
-                        child: const Text('Usar'),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
+        for (final item in items)
+          CombatActionRow(
+            key: Key('consumable-${item.itemId}'),
+            icon: AppIcons.drop,
+            title: item.name,
+            subtitle: item.charges == null
+                ? 'Cantidad: ${item.quantity}'
+                : 'Cantidad: ${item.quantity} · Cargas: ${item.charges}',
+            info: DetailInfoButton(
+              key: Key('detail-item-${item.itemId}'),
+              onPressed: () => openCombatItemDetail(context, ref, character.id, item.itemId),
+            ),
+            action: FilledButton.tonal(
+              key: Key('consumable-use-${item.itemId}'),
+              onPressed: canEdit ? () => _use(context, ref, item) : null,
+              child: const Text('Usar'),
+            ),
           ),
-        ),
       ],
     );
   }

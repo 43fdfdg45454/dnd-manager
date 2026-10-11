@@ -4,15 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:opentrpg_core/core/motion/shake.dart';
 import 'package:opentrpg_core/core/theme/app_icon.dart';
 import 'package:opentrpg_core/core/theme/icons.dart';
-import 'package:opentrpg_core/core/theme/textures.dart';
 import 'package:opentrpg_core/core/theme/tokens.dart';
-import 'package:opentrpg_core/core/ui/stat_tiles.dart';
+import 'package:opentrpg_core/core/ui/breakdown.dart';
+import 'package:opentrpg_core/core/ui/stat_value.dart';
 import 'package:opentrpg_core/features/dice/domain/dice_expression.dart';
 import 'package:opentrpg_core/features/dice/ui/dice_sheet.dart';
 
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/data/models.dart' show Condition;
-import '../../../catalog/ui/catalog_detail_links.dart' show DetailInfoButton;
+import '../../../catalog/ui/catalog_detail_links.dart' show DetailInfoButton, openSpellDetail;
 import '../../../catalog/ui/condition_sheet.dart';
 import '../../dnd5e_characters_controller.dart';
 import '../../domain/character_format.dart';
@@ -31,22 +31,23 @@ Dnd5eCharacterController _controller(WidgetRef ref, CharacterDetail character) =
 // Hit points
 // ---------------------------------------------------------------------------
 
-/// Hit points with the quick damage / healing controls and temporary hit points.
+/// Hit points of the status header: "20 / 28" (" / 28" edits the maximum),
+/// the temporary hit points, the bar and the quick damage / healing controls.
 ///
-/// When the hit points of the same character go down the card shakes and is
+/// When the hit points of the same character go down the strip shakes and is
 /// tinted with blood ([ShakeAndTint]); when they go up it pulses in moss
 /// ([PulseTint]).
-class HpCard extends ConsumerStatefulWidget {
-  const HpCard({super.key, required this.character, required this.canEdit});
+class HpStrip extends ConsumerStatefulWidget {
+  const HpStrip({super.key, required this.character, required this.canEdit});
 
   final CharacterDetail character;
   final bool canEdit;
 
   @override
-  ConsumerState<HpCard> createState() => _HpCardState();
+  ConsumerState<HpStrip> createState() => _HpStripState();
 }
 
-class _HpCardState extends ConsumerState<HpCard> {
+class _HpStripState extends ConsumerState<HpStrip> {
   final _amount = TextEditingController(text: '1');
   late final _maxTap = TapGestureRecognizer()..onTap = _editMax;
 
@@ -55,7 +56,7 @@ class _HpCardState extends ConsumerState<HpCard> {
   int _heals = 0;
 
   @override
-  void didUpdateWidget(HpCard oldWidget) {
+  void didUpdateWidget(HpStrip oldWidget) {
     super.didUpdateWidget(oldWidget);
     final before = oldWidget.character;
     final after = widget.character;
@@ -178,7 +179,6 @@ class _HpCardState extends ConsumerState<HpCard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final c = widget.character;
     final max = c.sheet.hitPointsMax;
     final fraction = max <= 0 ? 0.0 : (c.hitPointsCurrent / max).clamp(0.0, 1.0);
@@ -188,8 +188,7 @@ class _HpCardState extends ConsumerState<HpCard> {
         : fraction > .25
         ? tokens.ember
         : tokens.blood;
-    final bigNumber = numericStyle(theme.textTheme.displaySmall);
-    const tintRadius = BorderRadius.all(Radius.circular(RuneCard.corner));
+    const tintRadius = BorderRadius.all(Radius.circular(8));
     return ClassAccent(
       classIndex: mainClassIndex(c),
       child: ShakeAndTint(
@@ -200,98 +199,111 @@ class _HpCardState extends ConsumerState<HpCard> {
           key: const Key('hp-pulse'),
           trigger: _heals == 0 ? null : _heals,
           borderRadius: tintRadius,
-          child: _card(context, c, max, fraction, barColor, bigNumber),
+          child: _strip(context, c, max, fraction, barColor),
         ),
       ),
     );
   }
 
-  Widget _card(
-    BuildContext context,
-    CharacterDetail c,
-    int max,
-    double fraction,
-    Color barColor,
-    TextStyle? bigNumber,
-  ) {
+  Widget _strip(BuildContext context, CharacterDetail c, int max, double fraction, Color barColor) {
     final theme = Theme.of(context);
-    return CombatCard(
-      title: 'Puntos de golpe',
-      trailing: ActionChip(
-        key: const Key('temp-hp'),
-        avatar: const AppIcon(AppIcons.shield, size: 18),
-        label: Text(
-          'PG temp.: ${c.temporaryHitPoints}',
-          style: numericStyle(theme.textTheme.labelLarge),
-        ),
-        onPressed: widget.canEdit ? _editTemp : null,
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Only " / max" reacts to taps: it opens the maximum editor.
-              KeyedSubtree(
-                key: const Key('hp-max-edit'),
-                child: Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(text: '${c.hitPointsCurrent}'),
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Text('PG', style: theme.textTheme.labelLarge),
+              ),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  // Only " / max" reacts to taps: it opens the maximum editor.
+                  child: KeyedSubtree(
+                    key: const Key('hp-max-edit'),
+                    child: Text.rich(
                       TextSpan(
-                        text: ' / $max',
-                        recognizer: widget.canEdit ? _maxTap : null,
-                        mouseCursor: widget.canEdit ? SystemMouseCursors.click : null,
+                        children: [
+                          TextSpan(text: '${c.hitPointsCurrent}'),
+                          TextSpan(
+                            text: ' / $max',
+                            recognizer: widget.canEdit ? _maxTap : null,
+                            mouseCursor: widget.canEdit ? SystemMouseCursors.click : null,
+                          ),
+                        ],
                       ),
-                    ],
+                      key: const Key('combat-hp'),
+                      style: numericStyle(theme.textTheme.headlineSmall),
+                      semanticsLabel: '${c.hitPointsCurrent} de $max puntos de golpe',
+                    ),
                   ),
-                  key: const Key('combat-hp'),
-                  style: bigNumber,
-                  semanticsLabel: '${c.hitPointsCurrent} de $max puntos de golpe',
                 ),
               ),
               OverrideMark(character: c, field: hitPointsMaxField),
+              const Spacer(),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: ActionChip(
+                    key: const Key('temp-hp'),
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    avatar: const AppIcon(AppIcons.shield, size: 16),
+                    label: Text(
+                      'PG temp.: ${c.temporaryHitPoints}',
+                      style: numericStyle(theme.textTheme.labelMedium),
+                    ),
+                    tooltip: 'PG temporales',
+                    onPressed: widget.canEdit ? _editTemp : null,
+                  ),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 8),
-          LinearProgressIndicator(
-            key: const Key('hp-bar'),
-            value: fraction,
-            minHeight: 12,
-            borderRadius: BorderRadius.circular(6),
-            color: barColor,
-          ),
-          const SizedBox(height: 12),
           Row(
             children: [
+              Expanded(
+                child: LinearProgressIndicator(
+                  key: const Key('hp-bar'),
+                  value: fraction,
+                  minHeight: 10,
+                  borderRadius: BorderRadius.circular(5),
+                  color: barColor,
+                ),
+              ),
+              const SizedBox(width: 8),
               IconButton.filledTonal(
                 key: const Key('hp-minus'),
                 tooltip: 'Daño',
-                iconSize: 32,
                 onPressed: widget.canEdit ? _damage : null,
-                icon: const AppIcon(AppIcons.splash, size: 32),
+                icon: const AppIcon(AppIcons.splash, size: 24),
               ),
-              const SizedBox(width: 12),
-              Expanded(
+              SizedBox(
+                width: 64,
                 child: TextField(
                   key: const Key('hp-amount'),
                   controller: _amount,
                   textAlign: TextAlign.center,
                   keyboardType: TextInputType.number,
+                  style: numericStyle(theme.textTheme.titleMedium),
                   decoration: const InputDecoration(
-                    labelText: 'Daño / curación',
+                    hintText: 'PG',
                     border: OutlineInputBorder(),
                     isDense: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
               IconButton.filledTonal(
                 key: const Key('hp-plus'),
                 tooltip: 'Curación',
-                iconSize: 32,
                 onPressed: widget.canEdit ? _heal : null,
-                icon: const AppIcon(AppIcons.drop, size: 32),
+                icon: const AppIcon(AppIcons.drop, size: 24),
               ),
             ],
           ),
@@ -392,11 +404,14 @@ class _HpMaxDialogState extends State<HpMaxDialog> {
 }
 
 // ---------------------------------------------------------------------------
-// Armor class, initiative, speed, inspiration, concentration
+// Armor class, initiative, speed, perception, proficiency, inspiration
 // ---------------------------------------------------------------------------
 
-class StatsCard extends ConsumerWidget {
-  const StatsCard({super.key, required this.character, required this.canEdit});
+/// Six equal cells in one row: armor class, initiative (with its roll),
+/// speed, passive perception, proficiency bonus and inspiration (a tap
+/// toggles it). Each value opens its breakdown ([StatValue]).
+class CombatStatsStrip extends ConsumerWidget {
+  const CombatStatsStrip({super.key, required this.character, required this.canEdit});
 
   final CharacterDetail character;
   final bool canEdit;
@@ -406,93 +421,156 @@ class StatsCard extends ConsumerWidget {
     final c = character;
     final sheet = c.sheet;
     final tokens = context.tokens;
-    return CombatCard(
+    return Row(
+      key: const Key('combat-stats-grid'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final cell in [
+          _StatCell(
+            key: const Key('combat-ac'),
+            statKey: 'armorClass',
+            label: 'CA',
+            title: 'CA',
+            value: '${sheet.armorClass}',
+            breakdown: sheet.breakdown('armorClass'),
+          ),
+          _StatCell(
+            key: const Key('combat-initiative'),
+            statKey: 'initiative',
+            label: 'Inic.',
+            title: 'Iniciativa',
+            value: formatModifier(sheet.initiative),
+            breakdown: sheet.breakdown('initiative'),
+            corner: InkResponse(
+              key: const Key('roll-initiative'),
+              radius: 16,
+              onTap: () =>
+                  rollAndShow(context, d20Expression(sheet.initiative), label: 'Iniciativa'),
+              child: Tooltip(
+                message: 'Tirar iniciativa',
+                child: AppIcon(
+                  AppIcons.d20,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+          ),
+          _StatCell(
+            key: const Key('combat-speed'),
+            statKey: 'speed',
+            label: 'Vel.',
+            title: 'Velocidad',
+            value: '${sheet.speed}',
+            totalText: '${sheet.speed} pies',
+            breakdown: sheet.breakdown('speed'),
+          ),
+          _StatCell(
+            key: const Key('combat-perception'),
+            statKey: 'passivePerception',
+            label: 'Perc. pas.',
+            title: 'Percepción pasiva',
+            value: '${sheet.passivePerception}',
+            breakdown: sheet.breakdown('passivePerception'),
+          ),
+          _StatCell(
+            key: const Key('combat-proficiency'),
+            statKey: 'proficiencyBonus',
+            label: 'Comp.',
+            title: 'Bonificador de competencia',
+            value: formatModifier(sheet.proficiencyBonus),
+            breakdown: sheet.breakdown('proficiencyBonus'),
+          ),
+          KeyedSubtree(
+            key: const Key('inspiration'),
+            child: _StatCell(
+              key: const Key('combat-inspiration'),
+              statKey: 'inspiration',
+              label: 'Insp.',
+              title: 'Inspiración',
+              value: c.inspiration ? 'Sí' : 'No',
+              valueColor: c.inspiration ? tokens.oldGold : null,
+              onTap: canEdit
+                  ? () => runCombat(
+                      context,
+                      () =>
+                          _controller(ref, c).patchCombat(CombatPatch(inspiration: !c.inspiration)),
+                    )
+                  : null,
+            ),
+          ),
+        ])
+          Expanded(child: cell),
+      ],
+    );
+  }
+}
+
+/// A cell of [CombatStatsStrip]: a short label over the value.
+class _StatCell extends StatelessWidget {
+  const _StatCell({
+    super.key,
+    required this.statKey,
+    required this.label,
+    required this.title,
+    required this.value,
+    this.breakdown,
+    this.totalText,
+    this.corner,
+    this.onTap,
+    this.valueColor,
+  });
+
+  final String statKey;
+  final String label;
+  final String title;
+  final String value;
+  final ValueBreakdown? breakdown;
+  final String? totalText;
+  final Widget? corner;
+  final VoidCallback? onTap;
+  final Color? valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final style = numericStyle(theme.textTheme.titleMedium)?.copyWith(color: valueColor);
+    final body = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          StatTileGrid(
-            key: const Key('combat-stats-grid'),
-            columnsWide: 6,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              StatTile(
-                statKey: 'ac',
-                key: const Key('combat-ac'),
-                breakdownKey: 'armorClass',
-                label: 'CA',
-                value: '${sheet.armorClass}',
-                breakdown: sheet.breakdown('armorClass'),
-              ),
-              StatTile(
-                statKey: 'initiative',
-                key: const Key('combat-initiative'),
-                breakdownKey: 'initiative',
-                label: 'Iniciativa',
-                value: formatModifier(sheet.initiative),
-                breakdown: sheet.breakdown('initiative'),
-                corner: IconButton(
-                  key: const Key('roll-initiative'),
-                  tooltip: 'Tirar iniciativa',
-                  visualDensity: VisualDensity.compact,
-                  iconSize: 20,
-                  icon: const AppIcon(AppIcons.d20, size: 20),
-                  onPressed: () =>
-                      rollAndShow(context, d20Expression(sheet.initiative), label: 'Iniciativa'),
+              Flexible(
+                child: Text(
+                  label,
+                  style: theme.textTheme.labelSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              StatTile(
-                statKey: 'speed',
-                key: const Key('combat-speed'),
-                breakdownKey: 'speed',
-                label: 'Velocidad',
-                value: '${sheet.speed} pies',
-                totalText: '${sheet.speed} pies',
-                breakdown: sheet.breakdown('speed'),
-              ),
-              StatTile(
-                statKey: 'perception',
-                key: const Key('combat-perception'),
-                breakdownKey: 'passivePerception',
-                label: 'Percepción pasiva',
-                value: '${sheet.passivePerception}',
-                breakdown: sheet.breakdown('passivePerception'),
-              ),
-              StatTile(
-                statKey: 'proficiency',
-                key: const Key('combat-proficiency'),
-                breakdownKey: 'proficiencyBonus',
-                label: 'Competencia',
-                value: formatModifier(sheet.proficiencyBonus),
-                breakdown: sheet.breakdown('proficiencyBonus'),
-              ),
-              StatTile(
-                statKey: 'inspiration',
-                key: const Key('combat-inspiration'),
-                tapKey: const Key('inspiration'),
-                label: 'Inspiración',
-                value: c.inspiration ? 'Sí' : 'No',
-                corner: Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: AppIcon(
-                    AppIcons.sparkles,
-                    size: 18,
-                    color: c.inspiration ? tokens.oldGold : tokens.boneMuted,
-                  ),
-                ),
-                onTap: canEdit
-                    ? () => runCombat(
-                        context,
-                        () => _controller(
-                          ref,
-                          c,
-                        ).patchCombat(CombatPatch(inspiration: !c.inspiration)),
-                      )
-                    : null,
-              ),
+              if (corner != null) ...[const SizedBox(width: 2), corner!],
             ],
+          ),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: StatValue(
+              statKey: statKey,
+              title: title,
+              text: value,
+              totalText: totalText,
+              breakdown: breakdown,
+              style: style,
+            ),
           ),
         ],
       ),
     );
+    return onTap == null
+        ? body
+        : InkWell(borderRadius: BorderRadius.circular(6), onTap: onTap, child: body);
   }
 }
 
@@ -500,11 +578,11 @@ class StatsCard extends ConsumerWidget {
 // Death saves
 // ---------------------------------------------------------------------------
 
-/// Three success circles and as many failure circles as the sheet's
-/// `deathSaveFailuresToDie` (3 unless a feature changes it); only shown at 0
-/// hit points.
-class DeathSavesCard extends ConsumerWidget {
-  const DeathSavesCard({super.key, required this.character, required this.canEdit});
+/// Three success pips and as many failure pips as the sheet's
+/// `deathSaveFailuresToDie` (3 unless a feature changes it), with "Tirar";
+/// only shown at 0 hit points, in the status header.
+class DeathSavesStrip extends ConsumerWidget {
+  const DeathSavesStrip({super.key, required this.character, required this.canEdit});
 
   final CharacterDetail character;
   final bool canEdit;
@@ -517,13 +595,13 @@ class DeathSavesCard extends ConsumerWidget {
     Widget row(String label, String keyPrefix, int count, Color color, bool success) => Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        SizedBox(width: 72, child: Text(label)),
+        Padding(padding: const EdgeInsets.only(right: 4), child: Text(label)),
         for (var i = 0; i < (success ? 3 : toDie); i++)
           Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.only(right: 2),
             child: InkResponse(
               key: Key('$keyPrefix-$i'),
-              radius: 28,
+              radius: 22,
               onTap: canEdit
                   ? () => runCombat(
                       context,
@@ -535,10 +613,10 @@ class DeathSavesCard extends ConsumerWidget {
                     )
                   : null,
               child: SizedBox(
-                width: 44,
-                height: 44,
+                width: 36,
+                height: 40,
                 child: Center(
-                  child: Pip(filled: i < count, color: color, size: 32),
+                  child: Pip(filled: i < count, color: color, size: 26),
                 ),
               ),
             ),
@@ -551,10 +629,10 @@ class DeathSavesCard extends ConsumerWidget {
       children: [
         if (c.hitPointsCurrent == 0 && c.deathSaveSuccesses < 3 && c.deathSaveFailures < toDie)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: 4),
             child: Container(
               key: const Key('death-save-banner'),
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: context.tokens.blood.withValues(alpha: 0.18),
                 border: Border.all(color: context.tokens.blood),
@@ -616,29 +694,37 @@ class DeathSavesCard extends ConsumerWidget {
     CharacterDetail c,
     Widget Function(String, String, int, Color, bool) row,
   ) {
-    return CombatCard(
+    return Column(
       key: const Key('death-saves'),
-      title: 'Salvaciones de muerte',
-      trailing: TextButton(
-        key: const Key('roll-death-save'),
-        onPressed: () => _roll(context, ref, c),
-        child: const Text('Tirar'),
-      ),
-      child: Column(
-        children: [
-          row('Éxitos', 'death-success', c.deathSaveSuccesses, context.tokens.moss, true),
-          row('Fallos', 'death-failure', c.deathSaveFailures, context.tokens.blood, false),
-          if (c.sheet.deathSaveFailuresSource case final String source)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Mueres con ${c.sheet.deathSaveFailuresToDie} fallos ($source).',
-                key: const Key('death-failures-to-die'),
-                style: Theme.of(context).textTheme.bodySmall,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Salvaciones de muerte', style: Theme.of(context).textTheme.labelLarge),
+        Row(
+          children: [
+            Expanded(
+              child: Wrap(
+                spacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  row('Éxitos', 'death-success', c.deathSaveSuccesses, context.tokens.moss, true),
+                  row('Fallos', 'death-failure', c.deathSaveFailures, context.tokens.blood, false),
+                ],
               ),
             ),
-        ],
-      ),
+            FilledButton.tonal(
+              key: const Key('roll-death-save'),
+              onPressed: () => _roll(context, ref, c),
+              child: const Text('Tirar'),
+            ),
+          ],
+        ),
+        if (c.sheet.deathSaveFailuresSource case final String source)
+          Text(
+            'Mueres con ${c.sheet.deathSaveFailuresToDie} fallos ($source).',
+            key: const Key('death-failures-to-die'),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+      ],
     );
   }
 }
@@ -647,8 +733,11 @@ class DeathSavesCard extends ConsumerWidget {
 // Conditions
 // ---------------------------------------------------------------------------
 
-class ConditionsCard extends ConsumerWidget {
-  const ConditionsCard({super.key, required this.character, required this.canEdit});
+/// The states of the character in the status header: the spell it
+/// concentrates on (with "Perder"), its conditions and exhaustion as chips,
+/// and "+" to add one (or start concentrating).
+class ConditionsStrip extends ConsumerWidget {
+  const ConditionsStrip({super.key, required this.character, required this.canEdit});
 
   final CharacterDetail character;
   final bool canEdit;
@@ -732,14 +821,37 @@ class ConditionsCard extends ConsumerWidget {
         ? null
         : ref.watch(spellInfoProvider(spellInfoKey([concentrating]))).value?[concentrating]?.name ??
               titleFromSpellIndex(concentrating);
-    final conditions = Wrap(
-      spacing: 8,
+    return Wrap(
+      key: const Key('conditions-card'),
+      spacing: 6,
       runSpacing: 4,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
+        if (concentrating != null) ...[
+          InputChip(
+            key: const Key('concentration-chip'),
+            visualDensity: VisualDensity.compact,
+            avatar: const AppIcon(AppIcons.anchor, size: 16),
+            label: Text('Concentración: $spellName', overflow: TextOverflow.ellipsis),
+            onPressed: () => openSpellDetail(context, concentrating),
+          ),
+          TextButton(
+            key: const Key('concentration-lose'),
+            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+            onPressed: canEdit
+                ? () => runCombat(
+                    context,
+                    () => _controller(ref, c).setConcentration(null),
+                    success: 'Concentración perdida.',
+                  )
+                : null,
+            child: const Text('Perder'),
+          ),
+        ],
         for (final cond in c.conditions)
           InputChip(
             key: Key('condition-${cond.index}'),
+            visualDensity: VisualDensity.compact,
             label: Text(conditionTitle(cond.index, names[cond.index])),
             deleteButtonTooltipMessage: 'Quitar',
             onDeleted: canEdit
@@ -759,6 +871,7 @@ class ConditionsCard extends ConsumerWidget {
         if (c.exhaustionLevel > 0)
           InputChip(
             key: const Key('condition-exhaustion'),
+            visualDensity: VisualDensity.compact,
             label: Text(
               '${conditionTitle('exhaustion', names['exhaustion'])} ${c.exhaustionLevel}',
             ),
@@ -771,52 +884,19 @@ class ConditionsCard extends ConsumerWidget {
                   )
                 : null,
           ),
-        if (c.conditions.isEmpty && c.exhaustionLevel == 0 && concentrating == null)
-          const Text('Sin condiciones.'),
         ActionChip(
           key: const Key('condition-add'),
-          avatar: const Icon(Icons.add, size: 18),
-          label: const Text('Añadir'),
+          visualDensity: VisualDensity.compact,
+          avatar: const Icon(Icons.add, size: 16),
+          label: Text(
+            c.conditions.isEmpty && c.exhaustionLevel == 0 && concentrating == null
+                ? 'Condición'
+                : 'Añadir',
+          ),
+          tooltip: 'Añadir condición o concentración',
           onPressed: canEdit ? () => _add(context, ref) : null,
         ),
       ],
-    );
-    return CombatCard(
-      key: const Key('conditions-card'),
-      title: 'Condiciones',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (concentrating != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                children: [
-                  Flexible(
-                    child: Chip(
-                      key: const Key('concentration-chip'),
-                      avatar: const AppIcon(AppIcons.anchor, size: 18),
-                      label: Text('Concentración: $spellName', overflow: TextOverflow.ellipsis),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    key: const Key('concentration-lose'),
-                    onPressed: canEdit
-                        ? () => runCombat(
-                            context,
-                            () => _controller(ref, c).setConcentration(null),
-                            success: 'Concentración perdida.',
-                          )
-                        : null,
-                    child: const Text('Perder'),
-                  ),
-                ],
-              ),
-            ),
-          conditions,
-        ],
-      ),
     );
   }
 }
@@ -968,6 +1048,45 @@ class ConditionPicker extends ConsumerWidget {
           ),
           Expanded(child: body),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Status header
+// ---------------------------------------------------------------------------
+
+/// The always visible top of the combat view: hit points with the quick
+/// damage and healing, the six stats, the death saves at 0 hit points and the
+/// concentration and conditions.
+class CombatStatusHeader extends StatelessWidget {
+  const CombatStatusHeader({super.key, required this.character, required this.canEdit});
+
+  final CharacterDetail character;
+  final bool canEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = character;
+    return DecoratedBox(
+      key: const Key('combat-status'),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        border: Border(bottom: BorderSide(color: context.tokens.oldGold.withValues(alpha: 0.5))),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            HpStrip(character: c, canEdit: canEdit),
+            CombatStatsStrip(character: c, canEdit: canEdit),
+            if (c.hitPointsCurrent == 0) DeathSavesStrip(character: c, canEdit: canEdit),
+            ConditionsStrip(character: c, canEdit: canEdit),
+          ],
+        ),
       ),
     );
   }

@@ -1126,24 +1126,69 @@ class FakeCharactersRepository implements CharactersRepository, Dnd5eCharactersR
     return get(id);
   }
 
-  /// Bodies of `hit-point-cast`, in order.
+  /// Bodies of `POST …/spells/{spellIndex}/cast`, in order.
+  final List<({String spellIndex, String? classIndex, int? level, bool ritual})> spellCasts = [];
+
+  /// Casts paid with hit points (`classIndex` of the caster and level), in order.
   final List<({String classIndex, int spellLevel})> hitPointCasts = [];
 
-  /// Hit points each level of a `hit-point-cast` costs.
+  /// Hit points each level of a cast paid with hit points costs.
   int hitPointCastCostPerLevel = 2;
 
+  /// Decides the cost like the server: a ritual or a cantrip (no level) spends
+  /// nothing; a resource `<classIndex>.<spell>` spends a use; a class with the
+  /// `hitPoints` progression pays hit points; else a slot of the level (in
+  /// [slotSpends]) or a pact slot of that level (level 0); 400 without any.
   @override
-  Future<HitPointCastResult> hitPointCast(
-    String id, {
-    required String classIndex,
-    required int spellLevel,
+  Future<SpellCastResult> castSpell(
+    String id,
+    String spellIndex, {
+    String? classIndex,
+    int? level,
+    bool ritual = false,
   }) async {
     _fail();
-    hitPointCasts.add((classIndex: classIndex, spellLevel: spellLevel));
+    spellCasts.add((spellIndex: spellIndex, classIndex: classIndex, level: level, ritual: ritual));
     final json = _json(id);
-    final lost = spellLevel * hitPointCastCostPerLevel;
-    json['hitPointsCurrent'] = ((json['hitPointsCurrent'] as int? ?? 0) - lost).clamp(0, 1 << 30);
-    return HitPointCastResult(character: await get(id), hitPointsLost: lost);
+    Future<SpellCastResult> result(SpellCastCost cost, {int? usesLeft, int? lost}) async =>
+        SpellCastResult(
+          character: await get(id),
+          cost: cost,
+          slotLevel: level,
+          usesLeft: usesLeft,
+          hitPointsLost: lost,
+        );
+    if (ritual) return result(SpellCastCost.ritual);
+    if (level == null) return result(SpellCastCost.cantrip);
+    final combat = json['combat'] as Map? ?? const {};
+    final key = '$classIndex.$spellIndex';
+    for (final r in (combat['resources'] as List? ?? const [])) {
+      if (r['key'] != key) continue;
+      if ((r['used'] as int) >= (r['max'] as int)) throw dioError(400);
+      await spendResource(id, r['id'] as String);
+      return result(SpellCastCost.use, usesLeft: (r['max'] as int) - (r['used'] as int) - 1);
+    }
+    final sheet = json['sheet'] as Map? ?? const {};
+    for (final casting in (sheet['spellcasting'] as List? ?? const [])) {
+      if (casting['classIndex'] != classIndex || casting['progression'] != 'hitPoints') continue;
+      hitPointCasts.add((classIndex: classIndex!, spellLevel: level));
+      final lost = level * hitPointCastCostPerLevel;
+      json['hitPointsCurrent'] = ((json['hitPointsCurrent'] as int? ?? 0) - lost).clamp(0, 1 << 30);
+      return result(SpellCastCost.hitPoints, lost: lost);
+    }
+    for (final slot in (combat['spellSlots'] as List? ?? const [])) {
+      if (slot['level'] == level && (slot['used'] as int) < (slot['max'] as int)) {
+        await spendSpellSlot(id, level);
+        return result(SpellCastCost.slot);
+      }
+    }
+    final pact = combat['pactSlots'];
+    if (pact is Map && pact['level'] == level && (pact['used'] as int) < (pact['max'] as int)) {
+      slotSpends.add((level: 0, amount: 1));
+      _combat(id, (combat) => combat['pactSlots']['used'] = (pact['used'] as int) + 1);
+      return result(SpellCastCost.pactSlot);
+    }
+    throw dioError(400, data: {'detail': 'No quedan espacios de nivel $level.'});
   }
 
   // -- Campaign rules (phase 35) ----------------------------------------------

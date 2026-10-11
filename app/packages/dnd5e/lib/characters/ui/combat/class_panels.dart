@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:opentrpg_core/core/theme/components.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:opentrpg_core/core/theme/app_icon.dart';
+import 'package:opentrpg_core/core/theme/icons.dart';
 
 import '../../domain/class_theme.dart';
 import '../../models.dart';
 import '../character_tabs.dart' show titleFromSpellIndex;
-import 'combat_support.dart';
+import 'combat_rows.dart';
 import 'panels/barbarian.dart';
 import 'panels/bard.dart';
 import 'panels/cleric.dart';
@@ -33,24 +35,24 @@ export 'panels/sorcerer.dart';
 export 'panels/warlock.dart';
 export 'panels/wizard.dart';
 
-/// Class panels by `classIndex`. A class without an entry gets
-/// [buildGenericPanel]. Register new classes here.
-final Map<String, ClassPanelBuilder> classPanelBuilders = {
-  'barbarian': (context, panel) => BarbarianPanel(panel: panel),
-  'bard': (context, panel) => BardPanel(panel: panel),
-  'cleric': (context, panel) => ClericPanel(panel: panel),
-  'druid': (context, panel) => DruidPanel(panel: panel),
-  'fighter': (context, panel) => FighterPanel(panel: panel),
-  'monk': (context, panel) => MonkPanel(panel: panel),
-  'paladin': (context, panel) => PaladinPanel(panel: panel),
-  'ranger': (context, panel) => RangerPanel(panel: panel),
-  'rogue': (context, panel) => RoguePanel(panel: panel),
-  'sorcerer': (context, panel) => SorcererPanel(panel: panel),
-  'warlock': (context, panel) => WarlockPanel(panel: panel),
-  'wizard': (context, panel) => WizardPanel(panel: panel),
+/// The rows of each class by `classIndex`. A class without an entry gets
+/// [genericClassPanel]. Register new classes here.
+final Map<String, ClassPanelSpec> classPanelSpecs = {
+  'barbarian': barbarianPanel,
+  'bard': bardPanel,
+  'cleric': clericPanel,
+  'druid': druidPanel,
+  'fighter': fighterPanel,
+  'monk': monkPanel,
+  'paladin': paladinPanel,
+  'ranger': rangerPanel,
+  'rogue': roguePanel,
+  'sorcerer': sorcererPanel,
+  'warlock': warlockPanel,
+  'wizard': wizardPanel,
 };
 
-/// Classes whose panel is built from the server's `ClassPanelDto`: without it
+/// Classes whose rows are built from the server's `ClassPanelDto`: without it
 /// they show nothing. The rest work from the class level and the resources.
 const serverPanelClasses = {'barbarian', 'wizard', 'paladin'};
 
@@ -64,80 +66,100 @@ List<ClassPanel> classPanelsOf(CharacterDetail character) {
       if (character.combat.panelOf(c.classIndex) case final panel?)
         panel
       else if (!serverPanelClasses.contains(c.classIndex) &&
-          classPanelBuilders.containsKey(c.classIndex))
+          classPanelSpecs.containsKey(c.classIndex))
         ClassPanel(classIndex: c.classIndex, level: c.level),
     for (final panel in character.combat.classPanels)
       if (!classes.contains(panel.classIndex)) panel,
   ];
 }
 
-/// The panels of the character's classes, each with the registered builder
-/// and the accent of its class.
-class ClassPanelsSection extends StatelessWidget {
-  const ClassPanelsSection({
+/// The tab of the combat view a group of class rows goes to.
+enum ClassPanelPart { actions, spells, more }
+
+/// Whether some class of [character] has rows for "Conjuros".
+bool hasClassSpellRows(CharacterDetail character) =>
+    classPanelsOf(character).any((p) => classPanelSpecs[p.classIndex]?.spells != null);
+
+/// One group per class with its rows for [part], each with the accent of its
+/// class. The "Acciones" group is keyed `class-panel-<index>`, the others
+/// `class-<part>-<index>`.
+class ClassPanelGroups extends ConsumerWidget {
+  const ClassPanelGroups({
     super.key,
     required this.character,
+    required this.part,
     required this.canEdit,
     this.isDm = false,
   });
 
   final CharacterDetail character;
+  final ClassPanelPart part;
   final bool canEdit;
   final bool isDm;
 
   @override
-  Widget build(BuildContext context) {
-    final panels = [
-      for (final panel in classPanelsOf(character))
+  Widget build(BuildContext context, WidgetRef ref) {
+    final groups = <Widget>[];
+    for (final panel in classPanelsOf(character)) {
+      final index = panel.classIndex;
+      final spec = classPanelSpecs[index] ?? genericClassPanel;
+      final builder = switch (part) {
+        ClassPanelPart.actions => spec.actions,
+        ClassPanelPart.spells => spec.spells,
+        ClassPanelPart.more => spec.more,
+      };
+      if (builder == null) continue;
+      final rows = builder(
+        ClassPanelContext(character: character, panel: panel, canEdit: canEdit, isDm: isDm),
+        ref,
+      );
+      if (rows.isEmpty) continue;
+      final known = classPanelSpecs.containsKey(index);
+      final theme = classThemeOf(index);
+      final name = known ? theme.labelEs : _className(character, panel);
+      groups.add(
         ClassAccent(
-          classIndex: panel.classIndex,
+          classIndex: index,
           child: Builder(
-            builder: (context) => (classPanelBuilders[panel.classIndex] ?? buildGenericPanel)(
-              context,
-              ClassPanelContext(character: character, panel: panel, canEdit: canEdit, isDm: isDm),
+            builder: (context) => CombatGroup(
+              key: Key(
+                part == ClassPanelPart.actions ? 'class-panel-$index' : 'class-${part.name}-$index',
+              ),
+              leading: AppIcon(
+                known ? theme.icon : AppIcons.d20,
+                size: 22,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              title: '$name (nivel ${panel.level})',
+              children: rows,
             ),
           ),
         ),
-    ];
-    if (panels.isEmpty) return const SizedBox.shrink();
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: panels);
+      );
+    }
+    if (groups.isEmpty) return const SizedBox.shrink();
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: groups);
   }
 }
 
-String _className(CharacterDetail character, ClassPanel panel, String fallback) {
+String _className(CharacterDetail character, ClassPanel panel) {
   for (final c in character.classes) {
     if (c.classIndex == panel.classIndex) return c.className;
   }
-  return fallback;
+  return titleFromSpellIndex(panel.classIndex);
 }
 
 // ---------------------------------------------------------------------------
 // Generic
 // ---------------------------------------------------------------------------
 
-/// Panel for classes without their own: the class and any extra data the
-/// server sends. Class resources are listed in the Resources section.
-Widget buildGenericPanel(BuildContext context, ClassPanelContext panel) {
-  final data = panel.panel.data;
-  if (data.isEmpty) return const SizedBox.shrink();
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      SectionHeader(
-        '${_className(panel.character, panel.panel, titleFromSpellIndex(panel.panel.classIndex))} '
-        '(nivel ${panel.panel.level})',
-        padding: combatSectionPadding,
-      ),
-      CombatCard(
-        key: Key('class-panel-${panel.panel.classIndex}'),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final e in data.entries)
-              if (e.value is! Map && e.value is! List) Text('${e.key}: ${e.value}'),
-          ],
-        ),
-      ),
-    ],
-  );
-}
+/// Rows for classes without their own: any extra data the server sends, in
+/// "Más". Class resources are listed in "Recursos".
+const genericClassPanel = ClassPanelSpec(actions: _noRows, more: genericClassRows);
+
+List<Widget> _noRows(ClassPanelContext panel, WidgetRef ref) => const [];
+
+List<Widget> genericClassRows(ClassPanelContext panel, WidgetRef ref) => [
+  for (final e in panel.panel.data.entries)
+    if (e.value is! Map && e.value is! List) CombatActionRow(title: '${e.key}: ${e.value}'),
+];

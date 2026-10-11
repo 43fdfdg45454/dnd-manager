@@ -13,7 +13,7 @@ void main() {
       for (final f in jsonDecode(dataset.readAsStringSync()) as List) (f as Map)['index'] as String,
     };
 
-    final pattern = RegExp(r"featureIndex: '([^']+)'");
+    final pattern = RegExp(r"(?:featureIndex: |FeatureInfoButton\(index: )'([^']+)'");
     final used = <String>{};
     for (final file in Directory('packages/dnd5e/lib/characters/ui/combat/panels').listSync()) {
       if (file is! File || !file.path.endsWith('.dart')) continue;
