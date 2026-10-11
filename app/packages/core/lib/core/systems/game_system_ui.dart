@@ -225,7 +225,6 @@ abstract class GameSystemUi {
     required bool canEdit,
     bool isDm = false,
     bool inSession = false,
-    Widget? header,
   });
 
   /// The sub-tabs of "Detalle" that belong to the system.

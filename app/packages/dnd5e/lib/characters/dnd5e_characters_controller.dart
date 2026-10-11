@@ -145,8 +145,35 @@ class Dnd5eCharacterController extends Notifier<void> {
   Future<void> replaceInvalidChoices(List<LevelUpChoiceAnswer> answers) async =>
       _core.apply(await _repository.replaceInvalidChoices(id, answers));
 
+  /// Concentrates on [spellIndex] (null: stops concentrating) and keeps the
+  /// `concentration` condition of the sheet in step: added with the spell,
+  /// removed with it. Without a condition to touch the sheet is reloaded.
   Future<void> setConcentration(String? spellIndex) async {
     await _repository.setConcentration(id, spellIndex);
+    final conditions = ref.read(characterControllerProvider(id)).value?.conditions;
+    final marked = conditions?.any((c) => c.index == concentrationConditionIndex) ?? false;
+    if (conditions != null && spellIndex != null && !marked) {
+      await patchCombat(
+        CombatPatch(
+          conditions: [
+            ...conditions,
+            const CharacterCondition(index: concentrationConditionIndex),
+          ],
+        ),
+      );
+      return;
+    }
+    if (conditions != null && spellIndex == null && marked) {
+      await patchCombat(
+        CombatPatch(
+          conditions: [
+            for (final c in conditions)
+              if (c.index != concentrationConditionIndex) c,
+          ],
+        ),
+      );
+      return;
+    }
     await _core.reload();
   }
 

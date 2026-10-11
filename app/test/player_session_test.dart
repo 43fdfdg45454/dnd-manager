@@ -122,7 +122,13 @@ void main() {
 
       expect(find.byKey(const Key('player-subview')), findsOneWidget);
       expect(find.byKey(const Key('player-combat')), findsOneWidget);
-      expect(find.byKey(const Key('player-character-name')), findsOneWidget);
+      // The name sits on the row of the switch; no header over the combat.
+      expect(find.text('Thorin'), findsOneWidget);
+      expect(find.byKey(const Key('player-character-name')), findsNothing);
+      expect(
+        tester.getBottomLeft(find.text('Thorin')).dy,
+        lessThanOrEqualTo(tester.getTopLeft(find.byKey(const Key('combat-status'))).dy),
+      );
       expect(find.byKey(const Key('hp-bar')), findsOneWidget);
       expect(find.byKey(const Key('rest-short')), findsNothing);
 
@@ -147,7 +153,7 @@ void main() {
       expect(find.text('Fuera de combate'), findsNothing);
       await _detail(tester);
 
-      expect(find.byKey(const Key('player-character-name')), findsOneWidget);
+      expect(find.text('Thorin'), findsOneWidget);
       final tabs = tester.widget<TabBar>(find.byKey(const Key('character-detail-tabs')));
       expect(
         [for (final t in tabs.tabs) (t as Tab).text],
@@ -200,7 +206,10 @@ void main() {
       await _tap(tester, find.byKey(const Key('player-character-select')));
       expect(find.text('Elara'), findsNothing);
       await _tap(tester, find.text('Brom').last);
-      expect(tester.widget<Text>(find.byKey(const Key('player-character-name'))).data, 'Brom');
+      // The selector names the character; nothing repeats it below.
+      expect(find.text('Brom'), findsOneWidget);
+      expect(find.text('Thorin'), findsNothing);
+      expect(find.byKey(const Key('player-combat')), findsOneWidget);
     });
 
     testWidgets('sin personaje activo avisa y ofrece crear uno con el asistente', (tester) async {

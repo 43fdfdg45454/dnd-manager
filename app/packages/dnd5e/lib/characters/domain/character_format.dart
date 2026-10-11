@@ -239,6 +239,7 @@ String damageTypeLabel(String damageType) =>
 const conditionLabels = <String, String>{
   'blinded': 'cegado',
   'charmed': 'hechizado',
+  'concentration': 'concentración',
   'deafened': 'ensordecido',
   'exhaustion': 'agotamiento',
   'frightened': 'asustado',

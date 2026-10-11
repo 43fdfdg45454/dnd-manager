@@ -4,15 +4,14 @@ import '../characters/models.dart';
 import '../characters/ui/combat/combat_view.dart';
 
 /// "Combate" of "Mi sesión": the combat view of the player's own character
-/// with the header of the player, the level granted on top of the tabs and
-/// the items that matter in a fight. The rests live in the "Sesión" sub-tab.
+/// with the level granted on top of the tabs and the items that matter in a
+/// fight. The rests live in the "Sesión" sub-tab.
 class Dnd5ePlayerCombat extends StatelessWidget {
-  const Dnd5ePlayerCombat({super.key, required this.character, this.header});
+  const Dnd5ePlayerCombat({super.key, required this.character});
 
   final CharacterDetail character;
-  final Widget? header;
 
   @override
   Widget build(BuildContext context) =>
-      CombatView(character: character, canEdit: true, header: header, inSession: true);
+      CombatView(character: character, canEdit: true, inSession: true);
 }

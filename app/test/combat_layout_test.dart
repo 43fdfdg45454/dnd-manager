@@ -148,38 +148,54 @@ void main() {
       expect(find.byKey(const Key('attack-roll-0')), findsNothing);
     });
 
-    testWidgets('la cabecera es una fila de 720 px en adelante y una columna debajo', (
-      tester,
-    ) async {
+    testWidgets('la cabecera son dos filas a cualquier ancho', (tester) async {
+      await _pump(tester, characters: _repo());
+      Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+      for (final width in [900.0, 400.0]) {
+        tester.view.physicalSize = Size(width, 7000);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('combat-status-wide')), findsNothing);
+        expect(find.byKey(const Key('combat-status-narrow')), findsNothing);
+        // First row: the numbers, the bar and the temporary hit points.
+        final hp = rect('combat-hp');
+        final bar = rect('hp-bar');
+        final temp = rect('temp-hp');
+        expect(hp.right <= bar.left, isTrue, reason: '$width');
+        expect(bar.right <= temp.left, isTrue, reason: '$width');
+        expect((hp.center.dy - temp.center.dy).abs(), lessThan(8), reason: '$width');
+        // Second row: the damage and healing controls, then the states.
+        final minus = rect('hp-minus');
+        final plus = rect('hp-plus');
+        final conditions = rect('conditions-card');
+        expect(minus.top >= bar.bottom, isTrue, reason: '$width');
+        expect(plus.right <= conditions.left, isTrue, reason: '$width');
+        expect((minus.center.dy - conditions.center.dy).abs(), lessThan(8), reason: '$width');
+        expect(rect('condition-add').right <= rect('combat-status').right, isTrue);
+        expect(rect('combat-status').height, lessThanOrEqualTo(110), reason: '$width');
+        expect(tester.takeException(), isNull);
+      }
+
+      // At 0 hit points the death saves take the place of the bar.
+      await tester.pumpWidget(const SizedBox());
       final down = FakeCharactersRepository(
         characters: [
-          makeCharacterJson(status: 'Active', hitPointsCurrent: 0, combat: makeCombatJson()),
+          makeCharacterJson(
+            status: 'Active',
+            hitPointsCurrent: 0,
+            temporaryHitPoints: 0,
+            combat: makeCombatJson(),
+          ),
         ],
       );
       await _pump(tester, characters: down);
-      // 900 px: one row with the hit points on the left and the death saves
-      // over the conditions on the right.
-      tester.view.physicalSize = const Size(900, 7000);
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('combat-status-wide')), findsOneWidget);
-      expect(find.byKey(const Key('combat-status-narrow')), findsNothing);
-      Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
-      final hp = rect('hp-bar');
-      final saves = rect('death-saves');
-      final conditions = rect('conditions-card');
-      expect(hp.right <= saves.left, isTrue);
-      expect(hp.right <= conditions.left, isTrue);
-      expect(saves.bottom <= conditions.top, isTrue);
-      // Side by side: the saves start before the hit points end.
-      expect(saves.top < hp.bottom, isTrue);
-
-      // 400 px: one column, the hit points on top.
       tester.view.physicalSize = const Size(400, 7000);
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('combat-status-wide')), findsNothing);
-      expect(find.byKey(const Key('combat-status-narrow')), findsOneWidget);
-      expect(rect('hp-bar').bottom <= rect('death-saves').top, isTrue);
-      expect(rect('death-saves').bottom <= rect('conditions-card').top, isTrue);
+      expect(find.byKey(const Key('hp-bar')), findsNothing);
+      final hp = rect('combat-hp');
+      final saves = rect('death-saves');
+      expect(hp.right <= saves.left, isTrue);
+      expect(saves.top < hp.bottom && saves.bottom > hp.top, isTrue);
+      expect(saves.bottom <= rect('hp-minus').top, isTrue);
       expect(tester.takeException(), isNull);
     });
 

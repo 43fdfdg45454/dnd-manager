@@ -87,10 +87,9 @@ class Dnd5eUi extends GameSystemUi {
     required bool canEdit,
     bool isDm = false,
     bool inSession = false,
-    Widget? header,
   }) => inSession
-      ? Dnd5ePlayerCombat(character: character, header: header)
-      : CombatView(character: character, canEdit: canEdit, isDm: isDm, header: header);
+      ? Dnd5ePlayerCombat(character: character)
+      : CombatView(character: character, canEdit: canEdit, isDm: isDm);
 
   @override
   List<SheetTab> detailTabs(

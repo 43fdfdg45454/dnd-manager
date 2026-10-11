@@ -47,9 +47,9 @@ List<CombatSection> combatSectionsOf(CharacterDetail character) => [
 ];
 
 /// The combat screen of a character: a compact status header that never
-/// scrolls (hit points with quick damage and healing, the death saves at 0
-/// and the concentration and conditions) over five tabs, the last one chosen
-/// remembered per character:
+/// scrolls (two rows: hit points with the death saves at 0, then the quick
+/// damage and healing with the conditions) over one row of five tabs that
+/// scrolls sideways, the last one chosen remembered per character:
 ///
 /// - "Acciones": attacks, the spells it can cast in one tap and what each
 ///   class does on its turn.
@@ -67,8 +67,8 @@ List<CombatSection> combatSectionsOf(CharacterDetail character) => [
 ///
 /// [canEdit] false (a player looking at someone else's character) disables
 /// every control that writes. [isDm] (a DM or the Owner) rests the character
-/// directly; anyone else asks the DM for the rest. [header], when given, goes
-/// on top. [inSession] is the player's own view of "Mi sesión": the level
+/// directly; anyone else asks the DM for the rest. [inSession] is the
+/// player's own view of "Mi sesión": the level
 /// granted on top of the tabs, the combat items instead of the quick
 /// consumables and no rests (they live in the "Sesión" sub-tab). At 0 hit
 /// points a dark vignette closes in on the edges.
@@ -78,14 +78,12 @@ class CombatView extends ConsumerStatefulWidget {
     required this.character,
     required this.canEdit,
     this.isDm = false,
-    this.header,
     this.inSession = false,
   });
 
   final CharacterDetail character;
   final bool canEdit;
   final bool isDm;
-  final Widget? header;
   final bool inSession;
 
   @override
@@ -125,8 +123,6 @@ class _CombatViewState extends ConsumerState<CombatView> {
       key: Key(widget.inSession ? 'player-combat' : 'combat-view'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.header case final header?)
-          Padding(padding: const EdgeInsets.fromLTRB(12, 4, 12, 0), child: header),
         CombatStatusHeader(character: c, canEdit: widget.canEdit),
         _SectionBar(sections: sections, selected: section, onSelected: _select),
         Expanded(
@@ -185,7 +181,8 @@ class _CombatViewState extends ConsumerState<CombatView> {
   }
 }
 
-/// One chip per tab of the combat view, keyed `combat-tab-<section>`.
+/// One chip per tab of the combat view, keyed `combat-tab-<section>`, in a
+/// single row that scrolls sideways when the chips do not fit.
 class _SectionBar extends StatelessWidget {
   const _SectionBar({required this.sections, required this.selected, required this.onSelected});
 
@@ -195,22 +192,27 @@ class _SectionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Wrap(
+    return SizedBox(
+      height: 48,
+      child: SingleChildScrollView(
         key: const Key('combat-tabs'),
-        spacing: 8,
-        runSpacing: 4,
-        children: [
-          for (final section in sections)
-            ChoiceChip(
-              key: Key('combat-tab-${section.name}'),
-              label: Text(section.label),
-              selected: section == selected,
-              showCheckmark: false,
-              onSelected: (_) => onSelected(section),
-            ),
-        ],
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            for (final section in sections)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  key: Key('combat-tab-${section.name}'),
+                  label: Text(section.label),
+                  selected: section == selected,
+                  showCheckmark: false,
+                  onSelected: (_) => onSelected(section),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
