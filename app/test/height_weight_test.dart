@@ -160,6 +160,11 @@ void main() {
 
       expect(find.byKey(const Key('basics-height')), findsOneWidget);
       expect(find.byKey(const Key('basics-roll-height-weight')), findsNothing);
+      expect(
+        find.text('Esta raza no tiene tabla de altura y peso; escríbelos a mano.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('basics-no-height-weight-table')), findsOneWidget);
 
       await tester.enterText(find.byKey(const Key('basics-height')), '250');
       await _tap(tester, find.byKey(const Key('wizard-next')));
@@ -205,6 +210,7 @@ void main() {
         ],
       );
 
+      expect(find.byKey(const Key('editor-no-height-weight-table')), findsNothing);
       await _tap(tester, find.byKey(const Key('editor-roll-height-weight')));
       expect(_fieldText(tester, 'editor-height'), '68');
       expect(_fieldText(tester, 'editor-weight'), '128');
@@ -212,6 +218,19 @@ void main() {
       await _tap(tester, find.byKey(const Key('editor-save')));
       expect(repository.patches.single.toJson(), {'heightInches': 68, 'weightPounds': 128});
       expect(find.text('Hoja guardada.'), findsOneWidget);
+    });
+
+    testWidgets('el editor avisa de que la raza no tiene tabla', (tester) async {
+      await _pump(
+        tester,
+        location: '/characters/ch1/edit',
+        characters: [
+          {...makeCharacterJson(status: 'Active'), 'raceIndex': 'human'},
+        ],
+      );
+
+      expect(find.byKey(const Key('editor-roll-height-weight')), findsNothing);
+      expect(find.byKey(const Key('editor-no-height-weight-table')), findsOneWidget);
     });
 
     testWidgets('vaciar un campo lo borra', (tester) async {

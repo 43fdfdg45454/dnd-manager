@@ -26,6 +26,8 @@ class SelectionItem {
     this.caption,
     this.state = SelectionState.available,
     this.tileKey,
+    this.onInfo,
+    this.infoKey,
   });
 
   final String id;
@@ -35,6 +37,11 @@ class SelectionItem {
   final String? caption;
   final SelectionState state;
   final Key? tileKey;
+
+  /// Opens a description of the option; when set, the tile shows a small
+  /// info icon at its end (tapping it does not select).
+  final VoidCallback? onInfo;
+  final Key? infoKey;
 }
 
 /// A tidy grid of equal tiles for picking a few options from a list (skills,
@@ -78,6 +85,8 @@ class SelectionGrid extends StatelessWidget {
               caption: item.caption,
               state: item.state,
               onTap: canTap ? () => onToggle(item.id) : null,
+              onInfo: item.onInfo,
+              infoKey: item.infoKey,
             );
           },
         );
@@ -86,8 +95,9 @@ class SelectionGrid extends StatelessWidget {
   }
 }
 
-/// A tile of [SelectionGrid]: a check mark, the label (up to two lines) and
-/// an optional caption, with a clear look for each [SelectionState].
+/// A tile of [SelectionGrid]: a check mark, the label (up to two lines), an
+/// optional caption and an optional info icon, with a clear look for each
+/// [SelectionState].
 class SelectionTile extends StatelessWidget {
   const SelectionTile({
     super.key,
@@ -96,6 +106,8 @@ class SelectionTile extends StatelessWidget {
     required this.state,
     this.onTap,
     this.wrap = false,
+    this.onInfo,
+    this.infoKey,
   });
 
   final String label;
@@ -108,6 +120,10 @@ class SelectionTile extends StatelessWidget {
 
   /// Null when the tile cannot be changed (locked or blocked by the limit).
   final VoidCallback? onTap;
+
+  /// See [SelectionItem.onInfo].
+  final VoidCallback? onInfo;
+  final Key? infoKey;
 
   @override
   Widget build(BuildContext context) {
@@ -163,6 +179,18 @@ class SelectionTile extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (onInfo != null)
+                  IconButton(
+                    key: infoKey,
+                    icon: const Icon(Icons.info_outline),
+                    tooltip: 'Ver detalle',
+                    onPressed: onInfo,
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    padding: EdgeInsets.zero,
+                    iconSize: 18,
+                    color: tokens.boneMuted,
+                  ),
               ],
             ),
           ),

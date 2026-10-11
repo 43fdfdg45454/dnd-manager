@@ -8,7 +8,8 @@ import '../catalog/data/models.dart' show HeightWeightTable;
 import 'domain/height_weight.dart';
 
 /// Header of the height and weight fields: the title with "Tirar" beside it
-/// when the race (or subrace) of [scope] has a table, and the table below.
+/// when the race (or subrace) of [scope] has a table, and the table below;
+/// without a table, a short note to type them by hand.
 /// "Tirar" rolls it with the app's dice engine, hands the result to
 /// [HeightWeightScope.onRolled] and shows the roll in a SnackBar. Key:
 /// `<keyPrefix>-roll-height-weight`.
@@ -20,9 +21,8 @@ class Dnd5eHeightWeightRoller extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final raceIndex = scope.raceIndex;
-    final table = raceIndex == null
-        ? null
-        : ref.watch(raceDetailProvider(raceIndex)).value?.heightWeightFor(scope.subraceIndex);
+    final race = raceIndex == null ? null : ref.watch(raceDetailProvider(raceIndex)).value;
+    final table = race?.heightWeightFor(scope.subraceIndex);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -42,6 +42,13 @@ class Dnd5eHeightWeightRoller extends ConsumerWidget {
           Text(
             'Tabla de la raza: ${describeHeightWeightTable(table)}',
             style: Theme.of(context).textTheme.bodySmall,
+          )
+        else if (race != null)
+          Text(
+            'Esta raza no tiene tabla de altura y peso; escríbelos a mano.',
+            key: Key('${scope.keyPrefix}-no-height-weight-table'),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
       ],
     );

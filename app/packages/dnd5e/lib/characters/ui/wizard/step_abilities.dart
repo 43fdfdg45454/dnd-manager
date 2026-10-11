@@ -21,6 +21,13 @@ class AbilitiesStep extends ConsumerWidget {
     final state = ref.watch(characterWizardControllerProvider(args));
     final controller = ref.read(characterWizardControllerProvider(args).notifier);
     final theme = Theme.of(context);
+    final showErrors = state.showsErrorsOf(WizardStep.abilities);
+    bool unassigned(String key) => switch (state.method) {
+      AbilityMethod.standardArray => state.arrayScores[key] == null,
+      AbilityMethod.rolled => state.rollAssignment[key] == null,
+      AbilityMethod.manual => (state.manualScores[key] ?? 0) < 1 || state.manualScores[key]! > 20,
+      AbilityMethod.pointBuy => false,
+    };
 
     return ListView(
       key: const Key('step-abilities'),
@@ -40,7 +47,11 @@ class AbilitiesStep extends ConsumerWidget {
           Text(
             'Puntos restantes: ${pointBuyBudget - state.pointBuySpent} / $pointBuyBudget',
             key: const Key('wizard-pb-remaining'),
-            style: theme.textTheme.titleMedium,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: showErrors && state.pointBuySpent > pointBuyBudget
+                  ? theme.colorScheme.error
+                  : null,
+            ),
           ),
         if (state.method == AbilityMethod.standardArray)
           Text(
@@ -71,7 +82,16 @@ class AbilitiesStep extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Row(
                 children: [
-                  Expanded(flex: 3, child: Text(abilityLabel(key))),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      abilityLabel(key),
+                      key: Key('wizard-ability-label-$key'),
+                      style: showErrors && unassigned(key)
+                          ? TextStyle(color: theme.colorScheme.error)
+                          : null,
+                    ),
+                  ),
                   switch (state.method) {
                     AbilityMethod.pointBuy => _Stepper(
                       keyPrefix: 'wizard-pb',
@@ -187,8 +207,9 @@ class _Stepper extends StatelessWidget {
 }
 
 /// Dropdown over a list of values (standard array or sorted rolls). [assigned]
-/// maps ability key -> slot in [values]; a slot taken by another ability is
-/// disabled, so equal rolled values stay distinguishable.
+/// maps ability key -> slot in [values]; it offers only "—", the slot of this
+/// ability and the free ones (a slot taken by another ability is not listed),
+/// so equal rolled values stay distinguishable by slot.
 class _ValuePicker extends StatelessWidget {
   const _ValuePicker({
     required this.keyName,
@@ -217,12 +238,12 @@ class _ValuePicker extends StatelessWidget {
       items: [
         const DropdownMenuItem<int?>(value: null, child: Text('—')),
         for (var i = 0; i < values.length; i++)
-          DropdownMenuItem<int?>(
-            key: Key('$keyName-slot-$i'),
-            value: i,
-            enabled: !taken.contains(i),
-            child: Text('${values[i]}'),
-          ),
+          if (!taken.contains(i))
+            DropdownMenuItem<int?>(
+              key: Key('$keyName-slot-$i'),
+              value: i,
+              child: Text('${values[i]}'),
+            ),
       ],
       onChanged: onChanged,
     );

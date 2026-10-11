@@ -151,7 +151,9 @@ FakeCatalogRepository _catalog({bool structured = false}) => FakeCatalogReposito
         Subrace(
           index: 'high-elf',
           name: 'High Elf',
+          description: ['A keen mind and a mastery of basic magic.'],
           abilityBonuses: [AbilityBonus(ability: 'int', bonus: 1)],
+          traits: [Trait(index: 'elf-weapon-training', name: 'Elf Weapon Training')],
         ),
       ],
     ),
@@ -172,6 +174,22 @@ FakeCatalogRepository _catalog({bool structured = false}) => FakeCatalogReposito
       startingEquipment: structured ? _acolyteEquipment : null,
       featureName: 'Shelter of the Faithful',
       featureDescription: const ['You command the respect of those who share your faith.'],
+    ),
+  ],
+  skillList: const [
+    Skill(
+      index: 'arcana',
+      name: 'Arcana',
+      ability: 'INT',
+      description: ['Your Intelligence (Arcana) check measures your lore.'],
+    ),
+  ],
+  referenceEntries: const [
+    ReferenceEntry(
+      kind: 'languages',
+      index: 'elvish',
+      name: 'Elvish',
+      description: ['Standard; Script: Elvish'],
     ),
   ],
   equipmentCategories: const {
@@ -367,6 +385,15 @@ void main() {
 
       expect(find.text('Asigna las seis puntuaciones'), findsOneWidget);
       expect(find.byKey(const Key('step-abilities')), findsOneWidget);
+
+      // El 15 ya asignado a Fuerza no se ofrece a Destreza; Fuerza sí lo conserva.
+      await _tap(tester, find.byKey(const Key('wizard-array-dex')));
+      expect(find.byKey(const Key('wizard-array-dex-slot-0')), findsNothing);
+      expect(find.byKey(const Key('wizard-array-dex-slot-1')), findsWidgets);
+      await _tap(tester, find.byKey(const Key('wizard-array-dex-slot-1')).last);
+      await _tap(tester, find.byKey(const Key('wizard-array-str')));
+      expect(find.byKey(const Key('wizard-array-str-slot-0')), findsWidgets);
+      expect(find.byKey(const Key('wizard-array-str-slot-1')), findsNothing);
     });
 
     testWidgets('las habilidades de clase deben ser exactamente las que se eligen', (tester) async {
@@ -595,12 +622,13 @@ void main() {
 
       await assign(tester, 'int', 0); // 15 (+1 alto elfo)
       expect(_text(tester, 'wizard-final-int'), '16 (+3) · raza +1');
-      // El valor ya usado queda deshabilitado para las demás características.
+      // El valor ya usado no se ofrece a las demás características: solo
+      // "—" y los valores libres.
       await _tap(tester, find.byKey(const Key('wizard-roll-dex')));
-      final taken = tester.widget<DropdownMenuItem<int?>>(
-        find.byKey(const Key('wizard-roll-dex-slot-0')).last,
-      );
-      expect(taken.enabled, isFalse);
+      expect(find.byKey(const Key('wizard-roll-dex-slot-0')), findsNothing);
+      for (var slot = 1; slot < 6; slot++) {
+        expect(find.byKey(Key('wizard-roll-dex-slot-$slot')), findsWidgets);
+      }
       await _tap(tester, find.byKey(const Key('wizard-roll-dex-slot-1')).last); // 14 (+2 raza)
       expect(_text(tester, 'wizard-final-dex'), '16 (+3) · raza +2');
       await assign(tester, 'con', 2);
@@ -649,14 +677,14 @@ void main() {
       await _toBackground(tester, classIndex: 'fighter');
 
       expect(find.byKey(const Key('wizard-dot-spells')), findsNothing);
-      expect(find.text('Paso 5 de 8 · Trasfondo'), findsOneWidget);
+      expect(find.text('Paso 5 de 8 · Trasfondo y competencias'), findsOneWidget);
     });
 
     testWidgets('aparece para un mago y limita trucos y hechizos al nivel 1', (tester) async {
       await _pump(tester);
       await _toBackground(tester);
       expect(find.byKey(const Key('wizard-dot-spells')), findsOneWidget);
-      expect(find.text('Paso 5 de 9 · Trasfondo'), findsOneWidget);
+      expect(find.text('Paso 5 de 9 · Trasfondo y competencias'), findsOneWidget);
       await _tap(tester, find.byKey(const Key('skill-arcana')));
       await _tap(tester, find.byKey(const Key('skill-history')));
       await _next(tester);
@@ -850,6 +878,74 @@ void main() {
       await _tap(tester, find.byKey(const Key('wizard-dot-review')));
       // Forward jumps are not allowed from the rail: only "Siguiente" moves on.
       expect(find.byKey(const Key('step-race')), findsOneWidget);
+    });
+
+    testWidgets('la revisión nombra el paso inválido, lo marca y "Editar" lleva a él', (
+      tester,
+    ) async {
+      final setup = await _pump(tester);
+      await toReview(tester);
+      expect(find.byKey(const Key('wizard-error')), findsNothing);
+
+      // A later change leaves the background step without its class skills.
+      setup.container
+          .read(characterWizardControllerProvider(_args).notifier)
+          .toggleSkill('history');
+      await tester.pumpAndSettle();
+
+      expect(_text(tester, 'wizard-error'), 'Trasfondo y competencias: elige 2 habilidades');
+      expect(find.byKey(const Key('review-error-background')), findsOneWidget);
+      expect(find.byKey(const Key('review-error-race')), findsNothing);
+      final card = tester.widget<Card>(find.byKey(const Key('review-background')));
+      final error = Theme.of(tester.element(find.byKey(const Key('step-review'))))
+          .colorScheme
+          .error;
+      expect((card.shape! as RoundedRectangleBorder).side.color, error);
+
+      // "Crear" does not create anything while a step is invalid.
+      await _tap(tester, find.byKey(const Key('wizard-submit')));
+      expect(setup.characters.created, isEmpty);
+      expect(find.byKey(const Key('step-review')), findsOneWidget);
+
+      await _tap(tester, find.byKey(const Key('review-edit-background')));
+      expect(find.byKey(const Key('step-background')), findsOneWidget);
+      expect(_text(tester, 'wizard-error'), 'Elige 2 habilidades');
+      expect(
+        tester.widget<Text>(find.byKey(const Key('wizard-skills-counter'))).style?.color,
+        error,
+      );
+
+      await _tap(tester, find.byKey(const Key('skill-history')));
+      expect(find.byKey(const Key('wizard-error')), findsNothing);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('wizard-skills-counter'))).style?.color,
+        isNot(error),
+      );
+    });
+
+    testWidgets('cambiar de clase desde la revisión muestra el error al volver al trasfondo', (
+      tester,
+    ) async {
+      await _pump(tester);
+      await toReview(tester);
+
+      await _tap(tester, find.byKey(const Key('review-edit-classChoice')));
+      await _tap(tester, find.byKey(const Key('class-fighter')));
+      await _next(tester);
+      expect(find.byKey(const Key('step-abilities')), findsOneWidget);
+      expect(find.byKey(const Key('wizard-error')), findsNothing);
+      await _next(tester);
+
+      // The step was already passed: the error shows without tapping "Siguiente".
+      expect(find.byKey(const Key('step-background')), findsOneWidget);
+      expect(_text(tester, 'wizard-error'), 'Elige 2 habilidades');
+      final error = Theme.of(tester.element(find.byKey(const Key('step-background'))))
+          .colorScheme
+          .error;
+      expect(
+        tester.widget<Text>(find.byKey(const Key('wizard-skills-counter'))).style?.color,
+        error,
+      );
     });
 
     testWidgets('un error del servidor se muestra y el asistente permanece', (tester) async {
@@ -1188,6 +1284,82 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('step-race')), findsOneWidget);
       expect(setup.container.read(characterWizardControllerProvider(_args)).raceIndex, isNull);
+    });
+
+    testWidgets('la subraza abre su detalle sin elegirla', (tester) async {
+      final setup = await _pump(tester);
+      await _name(tester);
+      await _next(tester);
+      await _tap(tester, find.byKey(const Key('race-elf')));
+
+      await _tap(tester, find.byKey(const Key('detail-subrace-high-elf')));
+      expect(find.byKey(const Key('subrace-detail-high-elf')), findsOneWidget);
+      expect(find.text('High Elf'), findsWidgets);
+      expect(find.text('A keen mind and a mastery of basic magic.'), findsOneWidget);
+      expect(find.text('Elf Weapon Training'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('step-race')), findsOneWidget);
+      expect(setup.container.read(characterWizardControllerProvider(_args)).subraceIndex, isNull);
+    });
+
+    testWidgets('el botón de info del trasfondo abre su detalle', (tester) async {
+      await _pump(tester);
+      await _toBackground(tester);
+      final none = find.byKey(const Key('detail-background-none'));
+      expect(
+        tester
+            .widget<IconButton>(find.descendant(of: none, matching: find.byType(IconButton)))
+            .onPressed,
+        isNull,
+      );
+
+      await _tap(tester, find.byKey(const Key('wizard-background')));
+      await _tap(tester, find.text('Acolyte').last);
+      await _tap(tester, find.byKey(const Key('detail-background-acolyte')));
+      expect(find.byKey(const Key('background-detail-acolyte')), findsOneWidget);
+      expect(find.text('Shelter of the Faithful'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('step-background')), findsOneWidget);
+    });
+
+    testWidgets('habilidades e idiomas muestran su descripción sin elegirse', (tester) async {
+      final setup = await _pump(tester);
+      await _toBackground(tester);
+      // Only what the catalog describes has an info button.
+      expect(find.byKey(const Key('skill-info-arcana')), findsOneWidget);
+      expect(find.byKey(const Key('skill-info-history')), findsNothing);
+      expect(find.byKey(const Key('lang-info-Elvish')), findsOneWidget);
+      expect(find.byKey(const Key('lang-info-Dwarvish')), findsNothing);
+
+      await _tap(tester, find.byKey(const Key('skill-info-arcana')));
+      final skillSheet = find.byKey(const Key('skill-sheet-arcana'));
+      expect(skillSheet, findsOneWidget);
+      expect(find.descendant(of: skillSheet, matching: find.text('Arcanos')), findsOneWidget);
+      expect(
+        find.descendant(of: skillSheet, matching: find.text('Característica: Inteligencia')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: skillSheet,
+          matching: find.text('Your Intelligence (Arcana) check measures your lore.'),
+        ),
+        findsOneWidget,
+      );
+      Navigator.of(tester.element(skillSheet)).pop();
+      await tester.pumpAndSettle();
+      expect(setup.container.read(characterWizardControllerProvider(_args)).skills, isEmpty);
+
+      await _tap(tester, find.byKey(const Key('lang-info-Elvish')));
+      final languageSheet = find.byKey(const Key('lang-sheet-Elvish'));
+      expect(languageSheet, findsOneWidget);
+      expect(find.descendant(of: languageSheet, matching: find.text('Élfico')), findsOneWidget);
+      expect(
+        find.descendant(of: languageSheet, matching: find.text('Standard; Script: Elvish')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('el trasfondo elegido muestra su rasgo', (tester) async {

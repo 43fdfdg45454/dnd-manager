@@ -51,32 +51,62 @@ class _ReviewStepState extends ConsumerState<ReviewStep> {
     final state = ref.watch(characterWizardControllerProvider(widget.args));
     final controller = ref.read(characterWizardControllerProvider(widget.args).notifier);
     final steps = state.steps;
+    final errors = {for (final e in state.invalidSteps) e.step: e.error};
+    final scheme = Theme.of(context).colorScheme;
 
-    Widget section(WizardStep step, List<String> lines) => Card(
-      key: Key('review-${step.name}'),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(step.titleIn(state), style: Theme.of(context).textTheme.titleSmall),
-                  for (final line in lines) Text(line),
-                ],
+    // A step that does not validate (also after a later change, such as
+    // another class emptying the skills) is marked in the error colour with
+    // its error; "Editar" goes straight to it.
+    Widget section(WizardStep step, List<String> lines) {
+      final error = errors[step];
+      return Card(
+        key: Key('review-${step.name}'),
+        shape: error == null
+            ? null
+            : RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: scheme.error, width: 2),
               ),
-            ),
-            TextButton(
-              key: Key('review-edit-${step.name}'),
-              onPressed: () => controller.goTo(steps.indexOf(step)),
-              child: const Text('Editar'),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      step.titleIn(state),
+                      style: Theme.of(context).textTheme.titleSmall
+                          ?.copyWith(color: error == null ? null : scheme.error),
+                    ),
+                    for (final line in lines) Text(line),
+                    if (error != null)
+                      Row(
+                        key: Key('review-error-${step.name}'),
+                        children: [
+                          Icon(Icons.error_outline, size: 16, color: scheme.error),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(error, style: TextStyle(color: scheme.error)),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+              TextButton(
+                key: Key('review-edit-${step.name}'),
+                style: error == null ? null : TextButton.styleFrom(foregroundColor: scheme.error),
+                onPressed: () => controller.goTo(steps.indexOf(step)),
+                child: const Text('Editar'),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    }
 
     final race = state.race;
     final subrace = state.subrace;
@@ -124,6 +154,14 @@ class _ReviewStepState extends ConsumerState<ReviewStep> {
           if (state.backgroundDetail.trim().isNotEmpty) state.backgroundDetail.trim(),
           if (state.personalityWarning != null) 'Incompleta (puedes completarla en la hoja)',
         ]),
+        if (steps.contains(WizardStep.starterFeat))
+          section(WizardStep.starterFeat, [
+            if (state.starterFeatChoice case final choice?)
+              if (state.originAnswerOf(choice).feat case final feat?)
+                choice.option(feat)?.name ?? feat
+              else
+                'Sin dote inicial',
+          ]),
         section(WizardStep.equipment, [
           if (state.allEquipment.isEmpty &&
               state.startingCopper == 0 &&

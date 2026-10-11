@@ -6,6 +6,9 @@ import 'package:opentrpg_core/core/ui/selection_grid.dart';
 
 import '../../../catalog/data/catalog_controllers.dart';
 import '../../../catalog/domain/catalog_format.dart';
+import '../../../catalog/data/models.dart' show ReferenceEntry, ReferenceKinds, Skill;
+import '../../../catalog/ui/catalog_detail_links.dart';
+import '../../../catalog/ui/condition_sheet.dart' show showInfoSheet;
 import '../../data/character_wizard_controller.dart';
 import '../../domain/character_format.dart';
 import '../level_up/level_up_widgets.dart' show ExpandableText;
@@ -62,6 +65,10 @@ class BackgroundStep extends ConsumerWidget {
     final state = ref.watch(characterWizardControllerProvider(args));
     final controller = ref.read(characterWizardControllerProvider(args).notifier);
     final backgrounds = ref.watch(backgroundsProvider(args.campaignId));
+    final skillCatalog = ref.watch(skillsProvider).value ?? const <String, Skill>{};
+    final languageCatalog = _languagesByName(
+      ref.watch(referenceProvider(ReferenceKinds.languages)).value,
+    );
     final theme = Theme.of(context);
     final choices = state.classDetail?.skillChoices;
     final skillsToChoose = state.classSkillsToChoose;
@@ -69,6 +76,17 @@ class BackgroundStep extends ConsumerWidget {
     final fixed = state.fixedLanguages;
     final toChoose = state.languagesToChoose;
     final remaining = state.languagesRemaining;
+    // Once the user tried to leave the step, the counter that does not match
+    // turns red (the message is at the bottom of the wizard).
+    final showErrors = state.showsErrorsOf(WizardStep.background);
+    final skillsInvalid = showErrors && skillsToChoose > 0 && state.skills.length != skillsToChoose;
+    final languagesInvalid =
+        showErrors &&
+        (state.languages.length > toChoose ||
+            state.distributeLanguages(state.languages.toList()) == null);
+    TextStyle? counterStyle(bool invalid) => invalid
+        ? theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)
+        : theme.textTheme.bodySmall;
     final languages = <String>{
       ...srdLanguages.keys,
       ...fixed,
@@ -86,17 +104,30 @@ class BackgroundStep extends ConsumerWidget {
         key: const Key('step-background'),
         padding: stepPadding,
         children: [
-          DropdownButtonFormField<String>(
-            key: const Key('wizard-background'),
-            initialValue: state.backgroundIndex ?? _noBackground,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Trasfondo'),
-            items: [
-              const DropdownMenuItem(value: _noBackground, child: Text('Sin trasfondo')),
-              for (final b in list) DropdownMenuItem(value: b.index, child: Text(b.name)),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  key: const Key('wizard-background'),
+                  initialValue: state.backgroundIndex ?? _noBackground,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Trasfondo'),
+                  items: [
+                    const DropdownMenuItem(value: _noBackground, child: Text('Sin trasfondo')),
+                    for (final b in list) DropdownMenuItem(value: b.index, child: Text(b.name)),
+                  ],
+                  onChanged: (value) =>
+                      controller.selectBackground(list.where((b) => b.index == value).firstOrNull),
+                ),
+              ),
+              const SizedBox(width: 4),
+              DetailInfoButton(
+                key: Key('detail-background-${state.background?.index ?? 'none'}'),
+                onPressed: state.background == null
+                    ? null
+                    : () => openBackgroundDetail(context, state.background!),
+              ),
             ],
-            onChanged: (value) =>
-                controller.selectBackground(list.where((b) => b.index == value).firstOrNull),
           ),
           if (state.background != null) ...[
             const SizedBox(height: 8),
@@ -136,7 +167,7 @@ class BackgroundStep extends ConsumerWidget {
             Text(
               'Habilidades de clase ${state.skills.length}/$skillsToChoose',
               key: const Key('wizard-skills-counter'),
-              style: theme.textTheme.bodySmall,
+              style: counterStyle(skillsInvalid),
             ),
             if (state.starterSkillChoicesDelta != 0)
               Text(
@@ -154,6 +185,10 @@ class BackgroundStep extends ConsumerWidget {
                   SelectionItem(
                     id: skill,
                     tileKey: Key('skill-$skill'),
+                    infoKey: Key('skill-info-$skill'),
+                    onInfo: skillCatalog[skill] == null
+                        ? null
+                        : () => _showSkill(context, skill, skillCatalog[skill]!),
                     label: skillLabel(skill),
                     caption: granted.contains(skill)
                         ? 'Del trasfondo'
@@ -175,7 +210,7 @@ class BackgroundStep extends ConsumerWidget {
                 ? 'Tu raza y trasfondo no te dan idiomas adicionales'
                 : 'Idiomas a elegir ${state.languages.length}/$toChoose',
             key: const Key('wizard-languages-counter'),
-            style: theme.textTheme.bodySmall,
+            style: counterStyle(languagesInvalid),
           ),
           if (toChoose > 0 && remaining > 0)
             Padding(
@@ -204,6 +239,14 @@ class BackgroundStep extends ConsumerWidget {
                     SelectionItem(
                       id: language,
                       tileKey: Key('lang-$language'),
+                      infoKey: Key('lang-info-$language'),
+                      onInfo: languageCatalog[language.toLowerCase()] == null
+                          ? null
+                          : () => _showLanguage(
+                              context,
+                              language,
+                              languageCatalog[language.toLowerCase()]!,
+                            ),
                       label: languageLabel(language),
                       caption: fixed.contains(language) ? 'De la raza' : null,
                       state: fixed.contains(language)
@@ -221,4 +264,32 @@ class BackgroundStep extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Languages of the catalog by lower-case name and index ("common", "deep speech").
+Map<String, ReferenceEntry> _languagesByName(Map<String, ReferenceEntry>? entries) => {
+  for (final e in entries?.values ?? const <ReferenceEntry>[]) ...{
+    e.index.toLowerCase(): e,
+    e.name.toLowerCase(): e,
+  },
+};
+
+void _showSkill(BuildContext context, String index, Skill skill) {
+  final ability = skillAbilities[index] ?? skill.ability;
+  showInfoSheet(
+    context,
+    key: Key('skill-sheet-$index'),
+    title: skillLabel(index, skill.name),
+    subtitle: ability == null ? null : 'Característica: ${abilityLabel(ability)}',
+    description: skill.description,
+  );
+}
+
+void _showLanguage(BuildContext context, String language, ReferenceEntry entry) {
+  showInfoSheet(
+    context,
+    key: Key('lang-sheet-$language'),
+    title: languageLabel(language),
+    description: entry.description,
+  );
 }

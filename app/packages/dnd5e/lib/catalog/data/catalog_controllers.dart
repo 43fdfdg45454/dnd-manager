@@ -277,6 +277,13 @@ final referenceProvider = FutureProvider.autoDispose.family<Map<String, Referenc
   return {for (final e in entries) e.index: e};
 }, retry: _noRetry);
 
+/// Skills of the catalog (ability and description), by index.
+final skillsProvider = FutureProvider.autoDispose<Map<String, Skill>>((ref) async {
+  ref.watch(catalogRevisionProvider);
+  final skills = await ref.watch(catalogRepositoryProvider).skills();
+  return {for (final s in skills) s.index: s};
+}, retry: _noRetry);
+
 /// Every creature of the catalog (any type) for the compendium.
 final creaturesProvider = FutureProvider.autoDispose.family<List<BeastSummary>, String?>((
   ref,

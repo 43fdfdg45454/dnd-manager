@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../data/models.dart' hide Page;
+import 'background_detail_page.dart';
 import 'beast_page.dart';
 import 'class_detail_page.dart';
 import 'feature_detail_page.dart';
@@ -20,6 +22,14 @@ Future<void> openItemDetail(BuildContext context, String templateId) =>
 Future<void> openRaceDetail(BuildContext context, String index) =>
     _open(context, RaceDetailPage(index: index));
 
+/// A subrace from the data its race already loaded.
+Future<void> openSubraceDetail(BuildContext context, Subrace subrace, {String? raceName}) =>
+    _open(context, SubraceDetailPage(subrace: subrace, raceName: raceName));
+
+/// A background from the data of the list (no request).
+Future<void> openBackgroundDetail(BuildContext context, Background background) =>
+    _open(context, BackgroundDetailPage(background: background));
+
 Future<void> openClassDetail(BuildContext context, String index) =>
     _open(context, ClassDetailPage(index: index));
 
@@ -33,11 +43,12 @@ Future<void> openBeastDetail(BuildContext context, String index) =>
 Future<void> _open(BuildContext context, Widget page) =>
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
 
-/// Compact info button that opens the detail of a catalog element.
+/// Compact info button that opens the detail of a catalog element; disabled
+/// while [onPressed] is null (nothing chosen yet).
 class DetailInfoButton extends StatelessWidget {
   const DetailInfoButton({super.key, required this.onPressed, this.tooltip = 'Ver detalle'});
 
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final String tooltip;
 
   @override

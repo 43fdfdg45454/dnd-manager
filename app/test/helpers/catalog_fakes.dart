@@ -58,6 +58,7 @@ class FakeCatalogRepository implements CatalogRepository {
     this.featureDetails = const {},
     this.ruleList = const [],
     this.referenceEntries = const [],
+    this.skillList = const [],
     Map<String, Set<String>>? enabledPacks,
   }) : enabledPacks = enabledPacks ?? {};
 
@@ -86,6 +87,7 @@ class FakeCatalogRepository implements CatalogRepository {
   /// Rules documents (the list answers them without body).
   final List<Rule> ruleList;
   final List<ReferenceEntry> referenceEntries;
+  final List<Skill> skillList;
 
   /// Packs each campaign enables: asked with a `campaignId` found here, the
   /// lists keep only the base content ("srd" or no source), the homebrew and
@@ -320,7 +322,10 @@ class FakeCatalogRepository implements CatalogRepository {
   }
 
   @override
-  Future<List<Skill>> skills() async => const [];
+  Future<List<Skill>> skills() async {
+    _fail();
+    return skillList;
+  }
 
   @override
   Future<List<Background>> backgrounds({String? campaignId}) async {
