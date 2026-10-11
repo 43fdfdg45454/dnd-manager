@@ -115,6 +115,19 @@ public class CatalogEndpointsTests(CatalogApiFactory factory)
     }
 
     [Fact]
+    public async Task Fixed_tool_proficiencies_of_a_class_are_catalog_item_indexes()
+    {
+        var rogue = await GetAsync<ClassDetailDto>($"{Base}/classes/rogue");
+        var druid = await GetAsync<ClassDetailDto>($"{Base}/classes/druid");
+        var wizard = await GetAsync<ClassDetailDto>($"{Base}/classes/wizard");
+
+        Assert.Contains("Thieves' Tools", rogue.ProficiencyNames);
+        Assert.Equal(["thieves-tools"], rogue.ToolProficiencies);
+        Assert.Equal(["herbalism-kit"], druid.ToolProficiencies);
+        Assert.Empty(wizard.ToolProficiencies);
+    }
+
+    [Fact]
     public async Task Class_specific_counters_are_exposed_as_an_object()
     {
         var barbarian = await GetAsync<ClassDetailDto>($"{Base}/classes/barbarian");
@@ -362,8 +375,11 @@ public class CatalogEndpointsTests(CatalogApiFactory factory)
     public async Task Reference_tables_are_complete()
     {
         var conditions = await GetAsync<List<ConditionDto>>($"{Base}/conditions");
-        Assert.Equal(15, conditions.Count);
+        Assert.Equal(16, conditions.Count);
         Assert.Contains(conditions, c => c.Index == "blinded" && c.Description.Count > 0);
+        var concentration = Assert.Single(conditions, c => c.Index == "concentration");
+        Assert.Equal("Concentration", concentration.Name);
+        Assert.Contains(concentration.Description, d => d.Contains("Constitution saving throw", StringComparison.Ordinal));
 
         var tools = await GetAsync<List<ReferenceEntryDto>>($"{Base}/reference/tools");
         Assert.Equal(31, tools.Count);

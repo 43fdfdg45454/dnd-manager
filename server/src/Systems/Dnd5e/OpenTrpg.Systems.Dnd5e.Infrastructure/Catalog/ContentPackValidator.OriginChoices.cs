@@ -180,6 +180,23 @@ internal sealed partial class ContentPackValidator
             return new PickChoice(RequiredInt($"{path}.{name}.choose", pick.Choose, 1, MaxOriginChoose) ?? 1, from);
         }
 
+        // Tools are catalog item indexes ("thieves-tools", "lute"), checked once every item of the pack is known.
+        PickChoice? Tools(PackPickChoiceJson? pick)
+        {
+            if (pick is null)
+            {
+                return null;
+            }
+
+            var from = Options($"{path}.tools.from", pick.From, IndexMaxLength);
+            for (var i = 0; i < from.Count; i++)
+            {
+                ToolReference($"{path}.tools.from[{i}]", from[i].Index);
+            }
+
+            return new PickChoice(RequiredInt($"{path}.tools.choose", pick.Choose, 1, MaxOriginChoose) ?? 1, from);
+        }
+
         CantripChoice? cantrip = null;
         if (choices.Cantrip is { } cantripChoice)
         {
@@ -251,7 +268,7 @@ internal sealed partial class ContentPackValidator
             AbilityBonuses = abilities,
             Skills = skills,
             Languages = Texts("languages", choices.Languages),
-            Tools = Texts("tools", choices.Tools),
+            Tools = Tools(choices.Tools),
             Cantrip = cantrip,
             Feats = feats,
             TraitOptions = traitOptions,

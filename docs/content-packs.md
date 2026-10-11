@@ -364,7 +364,7 @@ existente** (con `extends`).
 | `name` | `string` | **Obligatorio**, ≤ 200. |
 | `hitDie` | `int` | **Obligatorio**: 4, 6, 8, 10 o 12. |
 | `savingThrows` | `string[]?` | Características (`str`...`cha`) con competencia en salvaciones. |
-| `proficiencies` | `{ armor, weapons, tools }?` | Listas de texto (≤ 50 de ≤ 100): "Light Armor", "Simple Weapons"... (los mismos nombres que el SRD). |
+| `proficiencies` | `{ armor, weapons, tools }?` | Listas de texto (≤ 50 de ≤ 100): "Light Armor", "Simple Weapons"... (los mismos nombres que el SRD). En `tools`, cada entrada puede ser el índice del objeto (`thieves-tools`) o su nombre (`Thieves' Tools`, cuya forma de índice es la misma): `GET /catalog/classes/{index}` devuelve en `toolProficiencies` los índices de las herramientas fijas de la clase que existen en el catálogo. |
 | `skillChoices` | `{ choose, from }?` | Habilidades a elegir en el nivel 1 (`from`: índices como `arcana`; vacío = todas). |
 | `startingEquipment` | `StartingEquipment?` | Equipo inicial estructurado, [como el de los trasfondos](#startingequipment), más `gold` (`{ "dice": "5d4", "multiplier": 10 }`: riqueza inicial alternativa). |
 | `startingEquipmentText` | `string?` | ≤ 10 000. Texto del equipo inicial. |
@@ -950,14 +950,15 @@ La misma ruta devuelve también las **elecciones de nivel 1 de la clase inicial*
 | `abilityBonuses` | `{ "choose": 1-6, "amount": 1-2, "from": ["str", "dex"] }` | +`amount` a `choose` características distintas de `from` (sin `from`, las seis). Desglose con origen "race"/"subrace" ("Raza (elección)"). |
 | `skills` | `{ "choose": 1-10, "from": ["perception"] }` | Competencias en habilidades (índices del SRD); sin `from`, cualquiera. Origen "Raza" o "Trasfondo". |
 | `languages` | `{ "choose": 1-10, "from": ["Elvish"] }` | Idiomas (nombres, como las competencias de idioma); sin `from`, cualquiera. |
-| `tools` | `{ "choose": 1-10, "from": ["Catalejo de ejemplo"] }` | Competencias en herramientas; sin `from`, texto libre. |
+| `tools` | `{ "choose": 1-10, "from": ["navigators-tools", "ejemplo-catalejo"] }` | Competencias en herramientas. Cada entrada de `from` es el **índice de un objeto** del catálogo (del SRD, del propio paquete o de otro instalado), nunca su nombre: la importación rechaza cualquier valor que no sea un índice existente. La API devuelve cada opción con el nombre y la descripción del objeto y su `itemId`, y la elección lleva una `note` que explica una sola vez qué da la competencia. Sin `from`, texto libre. |
 | `cantrip` | `{ "choose": 1, "spellList": "wizard", "from": ["light"] }` | Truco de la lista de esa clase (`any`: cualquiera), siempre preparado (clase `race` en la lista de conjuros). |
 | `feats` | `{ "choose": 1, "setId": "reinos-ejemplo-herencias" }` | Una dote del conjunto `feats`, con sus efectos (humano variante), salvo las `starter`. Con `setId`, una opción de ese conjunto (del SRD, de un paquete de `requires` o del propio paquete): dotes de herencia de una raza. |
 | `traitOptions` | `[{ "key": "linaje", "name": "Linaje", "choose": 1, "options": [{ "index": "linaje-escarcha", "name": "Escarcha", "description": ["..."], "damageType": "cold" }] }]` | Opciones de un rasgo; `damageType` da la resistencia a ese daño y `breathWeapon` (`{ "name", "area": "15 ft. cone", "save": "con", "damageAtCharacterLevel": { "1": "2d6", "6": "3d6" } }`) el arma de aliento de esa opción. |
 
 Las entradas de `from` en `abilityBonuses`, `skills`, `languages`, `tools` y `cantrip` pueden ser un
 texto o `{ "index", "name" }` cuando el nombre visible de la opción no coincide con su índice
-(`{ "index": "str", "name": "STR" }`).
+(`{ "index": "str", "name": "STR" }`). En `tools` el `name` es solo informativo: la API muestra el
+nombre del objeto del catálogo.
 
 Ejemplo ficticio de raza al estilo del humano variante:
 
@@ -1025,16 +1026,21 @@ opciones), `choose` (`int?`, opciones a elegir, 1 hasta el número de opciones; 
 `options` (**obligatorio**, al menos una).
 
 **`Option`**: `label` (**obligatorio**, ≤ 200), `items` (`StartingItem[]?`, objetos fijos de la
-opción) y elecciones por categoría: `categories` (`[{ "category", "choose" }]`, `choose` 1-20, por
-defecto 1) o, como atajo para una sola categoría, `category` + `categoryChoose`. Cada opción debe
-incluir objetos o al menos una categoría. Las categorías son índices de las categorías de equipo del
-SRD (`simple-weapons`, `martial-weapons`, `martial-melee-weapons`, `holy-symbols`,
-`musical-instruments`, `artisans-tools`, `arcane-foci`, `druidic-foci`, `equipment-packs`...);
-`GET /api/v1/systems/dnd5e/catalog/equipment-categories/{index}` lista sus objetos.
+opción) y elecciones por categoría: `categories` (`[{ "category", "choose", "proficientOnly" }]`,
+`choose` 1-20, por defecto 1) o, como atajo para una sola categoría, `category` + `categoryChoose`
+(+ `proficientOnly`). Cada opción debe incluir objetos o al menos una categoría. Las categorías son
+índices de las categorías de equipo del SRD (`simple-weapons`, `martial-weapons`,
+`martial-melee-weapons`, `holy-symbols`, `musical-instruments`, `artisans-tools`, `arcane-foci`,
+`druidic-foci`, `equipment-packs`...); `GET /api/v1/systems/dnd5e/catalog/equipment-categories/{index}`
+lista sus objetos. `proficientOnly` (`bool?`, por defecto `false`, solo junto a una categoría): con
+`true` la app ofrece únicamente los objetos de esa categoría con los que el personaje ya tiene
+competencia ("un instrumento musical con el que seas competente").
 
 La API devuelve el equipo resuelto en `GET /api/v1/systems/dnd5e/catalog/backgrounds` (`startingEquipment`, o
 `null` si el trasfondo no lo define): cada objeto con `item`, `templateId`, `name` y `quantity`, y
-cada categoría con `category`, `name` y `choose`.
+cada categoría con `category`, `name`, `choose` y `proficientOnly`. El mismo listado devuelve en
+`toolProficiencies` los índices de las herramientas que el trasfondo da sin elegir (una elección
+`tools` que ofrece exactamente tantas como concede: `choose` igual al número de entradas de `from`).
 
 ### `Trinket`
 
@@ -1657,7 +1663,7 @@ En `classes[].levelChoices` (elecciones de la clase, completa o ampliada con `ex
 | `kind` | `string` | **Obligatorio**: `Subclass`, `OptionSet`, `AsiOrFeat`, `Expertise`, `Skill`, `Language`, `Tool`, `CantripsKnown`, `SpellsKnown`, `SpellbookSpells` o `Custom`. |
 | `setId` | `string?` | Conjunto de donde salen las opciones; **obligatorio** en `OptionSet`. Puede ser del SRD, de otro paquete o del propio paquete. |
 | `choose` | `int` | **Obligatorio**, 0–20: cuántas elecciones da este nivel. En `SpellsKnown`/`CantripsKnown` de una subclase con `spellcasting` puede omitirse: se toma el aumento de su tabla `spellsKnown`/`cantripsKnown` respecto al nivel anterior. |
-| `from` | `string[]?` | Opciones permitidas o, en `Language`/`Tool`, los valores posibles. Sin `from`, todo el conjunto: en `Language`, los idiomas del catálogo (SRD y `reference.languages` de los paquetes), no elegibles los que el personaje ya habla; en `Tool`, texto libre. En `Tool`, cada valor puede ser el índice (`thieves-tools`) o el nombre (`Lute`) de un objeto del catálogo: la opción lleva entonces su descripción y su `itemId`. En `OptionSet` y `Custom` con `setId`, los índices pueden ser de **cualquier** conjunto del catálogo o del paquete: un conjunto puede reutilizar opciones de otro (estilos de combate del SRD junto a los propios). |
+| `from` | `string[]?` | Opciones permitidas o, en `Language`/`Tool`, los valores posibles. Sin `from`, todo el conjunto: en `Language`, los idiomas del catálogo (SRD y `reference.languages` de los paquetes), no elegibles los que el personaje ya habla; en `Tool`, texto libre. En `Tool`, cada valor es el **índice** de un objeto del catálogo (`thieves-tools`, `lute`; del SRD, del propio paquete o de otro instalado), nunca su nombre: la importación rechaza los demás valores. La opción lleva el nombre, la descripción y el `itemId` del objeto, y la elección una `note` que explica una vez qué da la competencia. En `OptionSet` y `Custom` con `setId`, los índices pueden ser de **cualquier** conjunto del catálogo o del paquete: un conjunto puede reutilizar opciones de otro (estilos de combate del SRD junto a los propios). |
 | `alsoFrom` | `string[]?` | Solo `AsiOrFeat` y `OptionSet`: otros conjuntos cuyas opciones se ofrecen **también**. En `AsiOrFeat`, el jugador puede tomar una opción de esos conjuntos en lugar de la mejora o la dote (se envía como `{"feat": "<índice>"}`). |
 | `replaces` | `bool?` | Desde este nivel, en cada nivel de la clase se puede sustituir una elección ya hecha. |
 | `cumulative` | `bool?` | Se suma a lo elegido en niveles anteriores. |

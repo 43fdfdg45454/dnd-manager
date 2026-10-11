@@ -49,6 +49,7 @@ curl http://127.0.0.1:8080/health/ready
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base de datos |
 | `DB_AUTO_MIGRATE` | Aplicar las migraciones al arrancar la API (`true`) |
 | `ASPNETCORE_ENVIRONMENT` | `Production` (logs JSON) o `Development` (logs legibles, más detalle) |
+| `HTTP_LOGGING` | `true` registra cada petición y respuesta HTTP con sus cuerpos JSON; solo para diagnosticar (ver [Logs y salud](#logs-y-salud)) |
 | `PUBLIC_URL` | URL pública de la API tras tu reverse proxy (obligatoria, sin ruta ni barra final). Se usa en los enlaces de los correos |
 | `JWT_SECRET` | Firma de los tokens y de los enlaces de asistencia (mínimo 32 caracteres) |
 | `DEFAULT_TIME_ZONE` | Zona horaria IANA de las campañas nuevas (cada campaña puede cambiarla en sus ajustes) |
@@ -226,6 +227,11 @@ a crear desde cero.
 
   El nivel se controla con `Logging__LogLevel__Default` en el servicio `api`; tras cambiarlo,
   `docker compose up -d api`.
+- Para ver **cada petición y respuesta completas** (método, ruta, consulta, estado y cuerpos JSON,
+  hasta 64 KB por cuerpo), pon `HTTP_LOGGING=true` en `.env`, aplica con `docker compose up -d api` y
+  sigue los logs con `docker compose logs -f api`. Las cabeceras no se registran (el token de
+  `Authorization` nunca sale en los logs). Es un modo de diagnóstico: multiplica el volumen de logs y
+  deja en ellos los datos que envían los jugadores, así que vuelve a `false` en cuanto termines.
 - `GET /health`: la API responde (liveness). `GET /health/ready`: además PostgreSQL responde
   (readiness); es el `healthcheck` del servicio `api` en el compose.
 - Estadísticas para el administrador: `GET /api/v1/admin/stats` devuelve la versión de la API, nº de

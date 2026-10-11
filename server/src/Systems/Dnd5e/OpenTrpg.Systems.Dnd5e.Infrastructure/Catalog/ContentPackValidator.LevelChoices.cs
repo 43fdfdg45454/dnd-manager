@@ -1262,6 +1262,10 @@ internal sealed partial class ContentPackValidator
             {
                 AddError(fromPath, $"Tipo de daño desconocido. Valores admitidos: {string.Join(", ", DamageTypeIndexes)}.");
             }
+            else if (kind == LevelChoiceKind.Tool)
+            {
+                ToolReference(fromPath, value);
+            }
         });
 
         var alsoFrom = new List<string>();

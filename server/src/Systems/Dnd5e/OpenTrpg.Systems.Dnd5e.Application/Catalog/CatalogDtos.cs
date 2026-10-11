@@ -95,6 +95,12 @@ public sealed record ClassDetailDto(
     /// <summary>"srd" or the id of the content pack that added it.</summary>
     public string Source { get; init; } = "srd";
 
+    /// <summary>
+    /// Catalog item indexes of the tools the class grants as fixed proficiencies ("thieves-tools"), resolved from
+    /// the tool entries of <see cref="ProficiencyNames"/>; empty when it grants none.
+    /// </summary>
+    public IReadOnlyList<string> ToolProficiencies { get; init; } = [];
+
     /// <summary>Description paragraphs (classes of content packs; empty for the SRD ones).</summary>
     public IReadOnlyList<string> Description { get; init; } = [];
 
@@ -505,6 +511,12 @@ public sealed record BackgroundDto(
     /// <summary>Decisions the background asks for at creation (languages, tools...), or null.</summary>
     public RaceChoicesDto? Choices { get; init; }
 
+    /// <summary>
+    /// Catalog item indexes of the tools the background grants without choosing: its <c>tools</c> choice offers
+    /// exactly as many as it grants (<c>choose</c> equal to the entries of <c>from</c>). Empty when none.
+    /// </summary>
+    public IReadOnlyList<string> ToolProficiencies { get; init; } = [];
+
     /// <summary>Personality tables (traits, ideals, bonds, flaws), or null when the background has none.</summary>
     public BackgroundPersonalityDto? Personality { get; init; }
 
@@ -515,6 +527,9 @@ public sealed record BackgroundDto(
         b.Index, b.Name, b.FeatureName, b.FeatureDescription, b.SkillProficiencies, b.StartingEquipmentText, startingEquipment, b.Source)
     {
         Choices = RaceChoicesDto.From(b.Choices),
+        ToolProficiencies = b.Choices.Tools is { From.Count: > 0 } tools && tools.Choose >= tools.From.Count
+            ? tools.From.Select(o => o.Index).ToList()
+            : [],
         Personality = b.Personality is { } p
             ? new BackgroundPersonalityDto(p.Traits, p.Ideals.Select(i => new BackgroundIdealDto(i.Text, i.Alignment)).ToList(), p.Bonds, p.Flaws)
             : null,

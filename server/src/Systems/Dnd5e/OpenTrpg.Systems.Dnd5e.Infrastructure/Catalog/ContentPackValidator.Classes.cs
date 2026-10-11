@@ -1141,7 +1141,7 @@ internal sealed partial class ContentPackValidator
                         if (Reference(itemPath, item) is { } itemIndex && !items.Contains(itemIndex))
                         {
                             items.Add(itemIndex);
-                            _itemReferences.Add((itemPath, itemIndex));
+                            _itemReferences.Add((itemPath, itemIndex, false));
                         }
                     });
                 }

@@ -157,6 +157,13 @@ internal static class SrdSnapshot
         ["SpellDefinition/scrying"] = ("b30724c548a8ad23", "ab0b46e8742b4776", Trimmed),
     };
 
+    // Rows added to the SRD pack after the capture on purpose ("table/key").
+    private static readonly HashSet<string> AcceptedAdditions = new(StringComparer.Ordinal)
+    {
+        // Concentration as a condition of the catalog, so the combat tracker offers it like the other conditions.
+        "ConditionDefinition/concentration",
+    };
+
     /// <summary>Complete definitions kept in the fixture, by table.</summary>
     private static readonly Dictionary<string, Func<JsonObject, bool>> Samples = new(StringComparer.Ordinal)
     {
@@ -225,7 +232,7 @@ internal static class SrdSnapshot
         var actualCounts = actual["counts"]!.AsObject();
         foreach (var table in expectedCounts.Select(p => p.Key).Union(actualCounts.Select(p => p.Key)).Order(StringComparer.Ordinal))
         {
-            var before = expectedCounts[table]?.GetValue<int>();
+            var before = expectedCounts[table]?.GetValue<int>() + AcceptedAdditions.Count(k => k.StartsWith($"{table}/", StringComparison.Ordinal));
             var after = actualCounts[table]?.GetValue<int>();
 
             // Catalog tables added after the capture that the SRD leaves empty (spell tags of content packs).
@@ -267,7 +274,9 @@ internal static class SrdSnapshot
             {
                 var b = before[key]?.GetValue<string>();
                 var a = after[key]?.GetValue<string>();
-                if (b != a && !(AcceptedDifferences.TryGetValue($"{table}/{key}", out var accepted) && accepted.Before == b && accepted.Now == a))
+                if (b != a
+                    && !(AcceptedDifferences.TryGetValue($"{table}/{key}", out var accepted) && accepted.Before == b && accepted.Now == a)
+                    && !(b is null && AcceptedAdditions.Contains($"{table}/{key}")))
                 {
                     differences.Add($"row {table}/{key}: {(b is null ? "new" : a is null ? "missing" : "changed")}");
                 }

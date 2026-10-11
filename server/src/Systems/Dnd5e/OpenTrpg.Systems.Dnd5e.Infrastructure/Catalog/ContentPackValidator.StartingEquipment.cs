@@ -14,7 +14,7 @@ internal sealed partial class ContentPackValidator
 {
     public const int MaxFixedGoldCp = 10_000_000;
 
-    private readonly List<(string Path, string Index)> _itemReferences = [];
+    private readonly List<(string Path, string Index, bool Tool)> _itemReferences = [];
 
     /// <summary>Validates and normalizes <c>startingEquipment</c>; returns the JSON stored in the catalog.</summary>
     private string ParseStartingEquipment(string path, PackStartingEquipmentJson equipment, bool allowGold = false)
@@ -56,15 +56,19 @@ internal sealed partial class ContentPackValidator
                 var categories = new List<StartingCategoryPick>();
                 if (option.Category is not null || option.CategoryChoose is not null)
                 {
-                    if (CategoryPick($"{optionPath}.category", $"{optionPath}.categoryChoose", option.Category, option.CategoryChoose) is { } pick)
+                    if (CategoryPick($"{optionPath}.category", $"{optionPath}.categoryChoose", option.Category, option.CategoryChoose, option.ProficientOnly) is { } pick)
                     {
                         categories.Add(pick);
                     }
                 }
+                else if (option.ProficientOnly is not null)
+                {
+                    AddError($"{optionPath}.proficientOnly", "Solo se admite junto a \"category\".");
+                }
 
                 ForEach($"{optionPath}.categories", option.Categories, (pickPath, pick) =>
                 {
-                    if (CategoryPick($"{pickPath}.category", $"{pickPath}.choose", pick.Category, pick.Choose) is { } valid)
+                    if (CategoryPick($"{pickPath}.category", $"{pickPath}.choose", pick.Category, pick.Choose, pick.ProficientOnly) is { } valid)
                     {
                         categories.Add(valid);
                     }
@@ -102,14 +106,14 @@ internal sealed partial class ContentPackValidator
                 return;
             }
 
-            _itemReferences.Add(($"{itemPath}.item", index));
+            _itemReferences.Add(($"{itemPath}.item", index, false));
             var name = NullableText($"{itemPath}.name", item.Name, NameMaxLength);
             result.Add(new StartingItem(index, quantity, name, _itemContents.GetValueOrDefault(index)));
         });
         return result;
     }
 
-    private StartingCategoryPick? CategoryPick(string categoryPath, string choosePath, string? category, int? choose)
+    private StartingCategoryPick? CategoryPick(string categoryPath, string choosePath, string? category, int? choose, bool? proficientOnly)
     {
         var index = RequiredText(categoryPath, category, IndexMaxLength);
         var count = OptionalInt(choosePath, choose, 1, Domain.Catalog.StartingEquipment.MaxChoose) ?? 1;
@@ -124,17 +128,25 @@ internal sealed partial class ContentPackValidator
             return null;
         }
 
-        return new StartingCategoryPick(index, count);
+        return new StartingCategoryPick(index, count, proficientOnly ?? false);
     }
+
+    /// <summary>
+    /// Registers a tool of a proficiency choice (<c>choices.tools.from</c> of an origin, <c>from</c> of a <c>Tool</c>
+    /// level choice): it must be the index of a catalog item, checked with the starting equipment references.
+    /// </summary>
+    private void ToolReference(string path, string index) => _itemReferences.Add((path, index, true));
 
     private void CheckStartingEquipmentReferences(ContentPackRows rows)
     {
         var packItems = rows.Items.Select(i => i.Index).ToHashSet(StringComparer.Ordinal);
-        foreach (var (path, index) in _itemReferences)
+        foreach (var (path, index, tool) in _itemReferences)
         {
             if (!packItems.Contains(index) && _context.SrdItems?.Contains(index) != true)
             {
-                AddError(path, $"El objeto '{index}' no existe en el SRD ni en el paquete.");
+                AddError(path, tool
+                    ? $"La herramienta '{index}' no es el índice de ningún objeto del SRD ni del paquete (usa índices como \"thieves-tools\" o \"lute\", no nombres)."
+                    : $"El objeto '{index}' no existe en el SRD ni en el paquete.");
             }
         }
     }

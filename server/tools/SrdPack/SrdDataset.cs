@@ -114,7 +114,7 @@ internal static class SrdDataset
                 .. equipment.Select(e => (e.Index, MapEquipment(e))),
                 .. Read<MagicItemJson>("Magic-Items").Select(m => (m.Index, MapMagicItem(m))),
             ],
-            Read<ConditionJson>("Conditions").Select(MapCondition).ToList(),
+            [.. Read<ConditionJson>("Conditions").Select(MapCondition), Concentration],
             Read<SkillJson>("Skills").Select(MapSkill).ToList(),
             Read<BackgroundJson>("Backgrounds").Select(b => MapBackground(b, contents)).ToList(),
             Read<EquipmentCategoryJson>("Equipment-Categories").Select(MapEquipmentCategory).ToList())
@@ -679,6 +679,26 @@ internal static class SrdDataset
             Modifiers = SrdItemModifiers.For(m.Index),
         };
     }
+
+    /// <summary>
+    /// Concentration as a condition of the catalog, so the combat tracker can mark it like the others. The dataset keeps
+    /// it in the spellcasting rules only, so its SRD 5.1 text ("Concentration", chapter Spellcasting) is embedded here.
+    /// </summary>
+    private static ConditionDefinition Concentration { get; } = new()
+    {
+        Index = "concentration",
+        Name = "Concentration",
+        Description =
+        [
+            "Some spells require you to maintain concentration in order to keep their magic active. If you lose concentration, such a spell ends.",
+            "If a spell must be maintained with concentration, that fact appears in its Duration entry, and the spell specifies how long you can concentrate on it. You can end concentration at any time (no action required).",
+            "Normal activity, such as moving and attacking, doesn't interfere with concentration. The following factors can break concentration:",
+            "- Casting another spell that requires concentration. You lose concentration on a spell if you cast another spell that requires concentration. You can't concentrate on two spells at once.",
+            "- Taking damage. Whenever you take damage while you are concentrating on a spell, you must make a Constitution saving throw to maintain your concentration. The DC equals 10 or half the damage you take, whichever number is higher. If you take damage from multiple sources, such as an arrow and a dragon's breath, you make a separate saving throw for each source of damage.",
+            "- Being incapacitated or killed. You lose concentration on a spell if you are incapacitated or if you die.",
+            "The GM might also decide that certain environmental phenomena, such as a wave crashing over you while you're on a storm-tossed ship, require you to succeed on a DC 10 Constitution saving throw to maintain concentration on a spell.",
+        ],
+    };
 
     private static ConditionDefinition MapCondition(ConditionJson c) => new()
     {

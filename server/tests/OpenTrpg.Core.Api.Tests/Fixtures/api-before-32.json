@@ -459,7 +459,8 @@
                   {
                     "category": "arcane-foci",
                     "name": "Arcane Foci",
-                    "choose": 1
+                    "choose": 1,
+                    "proficientOnly": false
                   }
                 ]
               }
@@ -1299,6 +1300,7 @@
         }
       ],
       "source": "srd",
+      "toolProficiencies": [],
       "description": [],
       "subclassLevel": 0,
       "hasLevelOneChoices": false,
@@ -2107,6 +2109,20 @@
         "source": "srd"
       },
       {
+        "index": "concentration",
+        "name": "Concentration",
+        "description": [
+          "Some spells require you to maintain concentration in order to keep their magic active. If you lose concentration, such a spell ends.",
+          "If a spell must be maintained with concentration, that fact appears in its Duration entry, and the spell specifies how long you can concentrate on it. You can end concentration at any time (no action required).",
+          "Normal activity, such as moving and attacking, doesn't interfere with concentration. The following factors can break concentration:",
+          "- Casting another spell that requires concentration. You lose concentration on a spell if you cast another spell that requires concentration. You can't concentrate on two spells at once.",
+          "- Taking damage. Whenever you take damage while you are concentrating on a spell, you must make a Constitution saving throw to maintain your concentration. The DC equals 10 or half the damage you take, whichever number is higher. If you take damage from multiple sources, such as an arrow and a dragon's breath, you make a separate saving throw for each source of damage.",
+          "- Being incapacitated or killed. You lose concentration on a spell if you are incapacitated or if you die.",
+          "The GM might also decide that certain environmental phenomena, such as a wave crashing over you while you're on a storm-tossed ship, require you to succeed on a DC 10 Constitution saving throw to maintain concentration on a spell."
+        ],
+        "source": "srd"
+      },
+      {
         "index": "deafened",
         "name": "Deafened",
         "description": [
@@ -2442,7 +2458,8 @@
                     {
                       "category": "holy-symbols",
                       "name": "Holy Symbols",
-                      "choose": 1
+                      "choose": 1,
+                      "proficientOnly": false
                     }
                   ]
                 }
@@ -2465,6 +2482,7 @@
           "feats": null,
           "traitOptions": []
         },
+        "toolProficiencies": [],
         "personality": {
           "traits": [
             "I idolize a particular hero of my faith, and constantly refer to that person's deeds and example.",
@@ -4464,13 +4482,12 @@
           "required": 1,
           "amount": null,
           "freeText": false,
-          "note": "",
+          "note": "Eliges competencia con una de estas herramientas: sumas tu bonificador de competencia a las pruebas que hagas con ellas.",
           "options": [
             {
               "index": "smiths-tools",
               "name": "Smith's Tools",
               "description": [
-                "Herramientas de artesano",
                 "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
               ],
               "prerequisitesText": null,
@@ -4492,7 +4509,6 @@
               "index": "brewers-supplies",
               "name": "Brewer's Supplies",
               "description": [
-                "Herramientas de artesano",
                 "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
               ],
               "prerequisitesText": null,
@@ -4514,7 +4530,6 @@
               "index": "masons-tools",
               "name": "Mason's Tools",
               "description": [
-                "Herramientas de artesano",
                 "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
               ],
               "prerequisitesText": null,
@@ -4927,13 +4942,12 @@
           "required": 1,
           "amount": null,
           "freeText": false,
-          "note": "",
+          "note": "Eliges competencia con una de estas herramientas: sumas tu bonificador de competencia a las pruebas que hagas con ellas.",
           "options": [
             {
               "index": "smiths-tools",
               "name": "Smith's Tools",
               "description": [
-                "Herramientas de artesano",
                 "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
               ],
               "prerequisitesText": null,
@@ -4955,7 +4969,6 @@
               "index": "brewers-supplies",
               "name": "Brewer's Supplies",
               "description": [
-                "Herramientas de artesano",
                 "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
               ],
               "prerequisitesText": null,
@@ -4977,7 +4990,6 @@
               "index": "masons-tools",
               "name": "Mason's Tools",
               "description": [
-                "Herramientas de artesano",
                 "These special tools include the items needed to pursue a craft or trade. The table shows examples of the most common types of tools, each providing items related to a single craft. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft. Each type of artisan's tools requires a separate proficiency."
               ],
               "prerequisitesText": null,
