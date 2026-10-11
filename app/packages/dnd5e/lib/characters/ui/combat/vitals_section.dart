@@ -31,7 +31,7 @@ Dnd5eCharacterController _controller(WidgetRef ref, CharacterDetail character) =
 /// The two rows of the status header. First row: "PG 20 / 28" (" / 28"
 /// edits the maximum), the bar (the death saves at 0 hit points) and the
 /// temporary hit points chip. Second row: the quick damage / healing controls
-/// and, to their right, [states] (the conditions of the character).
+/// and, to their right, [states] (the summary of the states of the character).
 ///
 /// When the hit points of the same character go down the strip shakes and is
 /// tinted with blood ([ShakeAndTint]); when they go up it pulses in moss
@@ -578,14 +578,111 @@ class DeathSaveBanner extends StatelessWidget {
 // Conditions
 // ---------------------------------------------------------------------------
 
-/// The states of the character in the status header, as one row of chips
-/// that scrolls sideways, with "+" to add one at the end: the concentration
-/// (on a spell, "Concentración: X"; or the plain `concentration` condition),
-/// the conditions and the exhaustion with its level. Every state is a chip of
-/// the same kind; removing the concentration chip ends the spell
+/// The states of a character as the chips and the summary show them: the
+/// concentration first (on a spell, "Concentración: X"; or the plain
+/// `concentration` condition), then the conditions and the exhaustion with
+/// its level.
+class _States {
+  const _States({
+    required this.concentration,
+    required this.spellIndex,
+    required this.conditions,
+    required this.exhaustion,
+  });
+
+  /// "Concentración" or "Concentración: X"; null without concentration.
+  final String? concentration;
+
+  /// The spell the character concentrates on, when any.
+  final String? spellIndex;
+
+  /// The conditions other than the concentration, as (index, title).
+  final List<(String, String)> conditions;
+
+  /// "Agotamiento N"; null at level 0.
+  final String? exhaustion;
+
+  bool get isEmpty => concentration == null && conditions.isEmpty && exhaustion == null;
+
+  /// Every state in order, as the summary reads them.
+  List<String> get labels => [
+    ?concentration,
+    for (final (_, title) in conditions) title,
+    ?exhaustion,
+  ];
+}
+
+_States _statesOf(WidgetRef ref, CharacterDetail c) {
+  final names = {
+    for (final cond in ref.watch(conditionsProvider(null)).value ?? const <Condition>[])
+      cond.index: cond.name,
+  };
+  final concentrating = c.concentratingOnSpellIndex;
+  final marked = c.conditions.any((k) => k.index == concentrationConditionIndex);
+  final spellName = concentrating == null
+      ? null
+      : ref.watch(spellInfoProvider(spellInfoKey([concentrating]))).value?[concentrating]?.name ??
+            titleFromSpellIndex(concentrating);
+  final concentrationTitle = conditionTitle(
+    concentrationConditionIndex,
+    names[concentrationConditionIndex],
+  );
+  return _States(
+    concentration: concentrating == null && !marked
+        ? null
+        : spellName == null
+        ? concentrationTitle
+        : '$concentrationTitle: $spellName',
+    spellIndex: concentrating,
+    conditions: [
+      for (final cond in c.conditions)
+        if (cond.index != concentrationConditionIndex)
+          (cond.index, conditionTitle(cond.index, names[cond.index])),
+    ],
+    exhaustion: c.exhaustionLevel == 0
+        ? null
+        : '${conditionTitle('exhaustion', names['exhaustion'])} ${c.exhaustionLevel}',
+  );
+}
+
+/// One line with the states of the character in the status header, joined
+/// with " · " ("Concentración: Bless · Envenenado"), or "Sin estados". A tap
+/// ([onTap]) opens the "Estado" tab, where [ConditionsPanel] edits them.
+class StatesSummary extends ConsumerWidget {
+  const StatesSummary({super.key, required this.character, this.onTap});
+
+  final CharacterDetail character;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final labels = _statesOf(ref, character).labels;
+    final theme = Theme.of(context);
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        child: Text(
+          labels.isEmpty ? 'Sin estados' : labels.join(' · '),
+          key: const Key('states-summary'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.bodySmall,
+        ),
+      ),
+    );
+  }
+}
+
+/// The states of the character in the "Estado" tab, as chips that wrap onto
+/// as many lines as they need, with "+" to add one at the end: the
+/// concentration (on a spell, "Concentración: X"; or the plain `concentration`
+/// condition), the conditions and the exhaustion with its level. Every state
+/// is a chip of the same kind; removing the concentration chip ends the spell
 /// concentration and drops the condition with it.
-class ConditionsStrip extends ConsumerWidget {
-  const ConditionsStrip({super.key, required this.character, required this.canEdit});
+class ConditionsPanel extends ConsumerWidget {
+  const ConditionsPanel({super.key, required this.character, required this.canEdit});
 
   final CharacterDetail character;
   final bool canEdit;
@@ -654,93 +751,65 @@ class ConditionsStrip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = character;
-    final names = {
-      for (final cond in ref.watch(conditionsProvider(null)).value ?? const <Condition>[])
-        cond.index: cond.name,
-    };
-    final concentrating = c.concentratingOnSpellIndex;
-    final marked = c.conditions.any((k) => k.index == concentrationConditionIndex);
-    final spellName = concentrating == null
-        ? null
-        : ref.watch(spellInfoProvider(spellInfoKey([concentrating]))).value?[concentrating]?.name ??
-              titleFromSpellIndex(concentrating);
-    final concentrationTitle = conditionTitle(
-      concentrationConditionIndex,
-      names[concentrationConditionIndex],
-    );
-    final empty = c.conditions.isEmpty && c.exhaustionLevel == 0 && concentrating == null;
+    final states = _statesOf(ref, c);
+    final concentrating = states.spellIndex;
 
-    final chips = <Widget>[
-      if (concentrating != null || marked)
-        InputChip(
-          key: const Key('concentration-chip'),
-          visualDensity: VisualDensity.compact,
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          avatar: const AppIcon(AppIcons.anchor, size: 16),
-          label: Text(
-            spellName == null ? concentrationTitle : '$concentrationTitle: $spellName',
-            overflow: TextOverflow.ellipsis,
-          ),
-          onPressed: concentrating == null ? null : () => openSpellDetail(context, concentrating),
-          deleteButtonTooltipMessage: 'Quitar',
-          deleteIcon: const Icon(Icons.close, key: Key('concentration-lose')),
-          onDeleted: !canEdit
-              ? null
-              : concentrating != null
-              ? () => runCombat(
-                  context,
-                  () => _controller(ref, c).setConcentration(null),
-                  success: 'Concentración perdida.',
-                )
-              : () => _remove(context, ref, concentrationConditionIndex),
-        ),
-      for (final cond in c.conditions)
-        if (cond.index != concentrationConditionIndex)
+    return Wrap(
+      key: const Key('conditions-card'),
+      spacing: 6,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (states.concentration case final concentration?)
           InputChip(
-            key: Key('condition-${cond.index}'),
+            key: const Key('concentration-chip'),
             visualDensity: VisualDensity.compact,
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            label: Text(conditionTitle(cond.index, names[cond.index])),
+            avatar: const AppIcon(AppIcons.anchor, size: 16),
+            label: Text(concentration, overflow: TextOverflow.ellipsis),
+            onPressed: concentrating == null ? null : () => openSpellDetail(context, concentrating),
             deleteButtonTooltipMessage: 'Quitar',
-            onDeleted: canEdit ? () => _remove(context, ref, cond.index) : null,
+            deleteIcon: const Icon(Icons.close, key: Key('concentration-lose')),
+            onDeleted: !canEdit
+                ? null
+                : concentrating != null
+                ? () => runCombat(
+                    context,
+                    () => _controller(ref, c).setConcentration(null),
+                    success: 'Concentración perdida.',
+                  )
+                : () => _remove(context, ref, concentrationConditionIndex),
           ),
-      if (c.exhaustionLevel > 0)
-        InputChip(
-          key: const Key('condition-exhaustion'),
-          visualDensity: VisualDensity.compact,
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          label: Text('${conditionTitle('exhaustion', names['exhaustion'])} ${c.exhaustionLevel}'),
-          deleteButtonTooltipMessage: 'Quitar',
-          onPressed: canEdit ? () => _setExhaustion(context, ref) : null,
-          onDeleted: canEdit
-              ? () => runCombat(
-                  context,
-                  () => _controller(ref, c).patchCombat(const CombatPatch(exhaustionLevel: 0)),
-                )
-              : null,
-        ),
-    ];
-
-    return Row(
-      key: const Key('conditions-card'),
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final chip in chips)
-                  Padding(padding: const EdgeInsets.only(right: 6), child: chip),
-              ],
-            ),
+        for (final (index, title) in states.conditions)
+          InputChip(
+            key: Key('condition-$index'),
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            label: Text(title),
+            deleteButtonTooltipMessage: 'Quitar',
+            onDeleted: canEdit ? () => _remove(context, ref, index) : null,
           ),
-        ),
+        if (states.exhaustion case final exhaustion?)
+          InputChip(
+            key: const Key('condition-exhaustion'),
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            label: Text(exhaustion),
+            deleteButtonTooltipMessage: 'Quitar',
+            onPressed: canEdit ? () => _setExhaustion(context, ref) : null,
+            onDeleted: canEdit
+                ? () => runCombat(
+                    context,
+                    () => _controller(ref, c).patchCombat(const CombatPatch(exhaustionLevel: 0)),
+                  )
+                : null,
+          ),
         ActionChip(
           key: const Key('condition-add'),
           visualDensity: VisualDensity.compact,
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           avatar: const Icon(Icons.add, size: 16),
-          label: Text(empty ? 'Condición' : 'Añadir'),
+          label: Text(states.isEmpty ? 'Condición' : 'Añadir'),
           tooltip: 'Añadir condición',
           onPressed: canEdit ? () => _add(context, ref) : null,
         ),
@@ -872,16 +941,23 @@ class ConditionPicker extends ConsumerWidget {
 // Status header
 // ---------------------------------------------------------------------------
 
-/// The always visible top of the combat view, two rows tall at any width:
-/// the hit points with the bar (the death saves at 0 hit points) and the
-/// temporary hit points, then the quick damage and healing with the states
-/// of the character ([HpStrip]). At 0 hit points [DeathSaveBanner] asks for
-/// the save under them.
+/// The top of the combat view, two rows tall at any width: the hit points
+/// with the bar (the death saves at 0 hit points) and the temporary hit
+/// points, then the quick damage and healing with the one-line summary of the
+/// states of the character ([HpStrip]; a tap on the summary calls
+/// [onShowStates], which opens the "Estado" tab). At 0 hit points
+/// [DeathSaveBanner] asks for the save under them.
 class CombatStatusHeader extends StatelessWidget {
-  const CombatStatusHeader({super.key, required this.character, required this.canEdit});
+  const CombatStatusHeader({
+    super.key,
+    required this.character,
+    required this.canEdit,
+    this.onShowStates,
+  });
 
   final CharacterDetail character;
   final bool canEdit;
+  final VoidCallback? onShowStates;
 
   @override
   Widget build(BuildContext context) {
@@ -901,7 +977,7 @@ class CombatStatusHeader extends StatelessWidget {
             HpStrip(
               character: c,
               canEdit: canEdit,
-              states: ConditionsStrip(character: c, canEdit: canEdit),
+              states: StatesSummary(character: c, onTap: onShowStates),
             ),
             DeathSaveBanner(character: c),
           ],
