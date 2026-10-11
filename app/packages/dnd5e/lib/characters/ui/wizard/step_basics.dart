@@ -208,6 +208,8 @@ class RaceStep extends ConsumerWidget {
                     title: sub.name,
                     lines: [if (sub.abilityBonuses.isNotEmpty) bonusesText(sub.abilityBonuses)],
                     onTap: () => controller.selectSubrace(sub.index),
+                    infoKey: Key('detail-subrace-${sub.index}'),
+                    onInfo: () => openSubraceDetail(context, sub, raceName: state.race!.name),
                   ),
               ],
               SwitchListTile(

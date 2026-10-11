@@ -49,7 +49,7 @@ class RaceDetailPage extends ConsumerWidget {
             ],
             if (r.subraces.isNotEmpty) ...[
               const SectionTitle('Subrazas'),
-              for (final sub in r.subraces) _SubraceCard(subrace: sub),
+              for (final sub in r.subraces) SubraceCard(subrace: sub),
             ],
           ],
         ),
@@ -58,8 +58,10 @@ class RaceDetailPage extends ConsumerWidget {
   }
 }
 
-class _SubraceCard extends StatelessWidget {
-  const _SubraceCard({required this.subrace});
+/// A subrace inside the detail of its race: name, bonuses, height and weight,
+/// description and traits.
+class SubraceCard extends StatelessWidget {
+  const SubraceCard({super.key, required this.subrace});
 
   final Subrace subrace;
 
@@ -75,18 +77,48 @@ class _SubraceCard extends StatelessWidget {
           children: [
             Text(subrace.name, style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 6),
-            FactRow('Bonos de característica', _bonuses(subrace.abilityBonuses)),
-            if (subrace.heightWeight != null)
-              FactRow(
-                'Altura y peso',
-                describeHeightWeightTable(subrace.heightWeight!),
-                key: Key('subrace-height-weight-${subrace.index}'),
-              ),
-            if (subrace.description.isNotEmpty) Paragraphs(subrace.description),
-            for (final t in subrace.traits)
-              ExpandableEntry(title: t.name, description: t.description),
+            ...subraceDetails(subrace),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Bonuses, height and weight table, description and traits of [subrace].
+List<Widget> subraceDetails(Subrace subrace) => [
+  FactRow('Bonos de característica', _bonuses(subrace.abilityBonuses)),
+  if (subrace.languages.isNotEmpty) FactRow('Idiomas', subrace.languages.join(', ')),
+  if (subrace.heightWeight != null)
+    FactRow(
+      'Altura y peso',
+      describeHeightWeightTable(subrace.heightWeight!),
+      key: Key('subrace-height-weight-${subrace.index}'),
+    ),
+  if (subrace.description.isNotEmpty) Paragraphs(subrace.description),
+  for (final t in subrace.traits) ExpandableEntry(title: t.name, description: t.description),
+];
+
+/// Detail of a subrace from the data its race already brought (no request):
+/// what the subrace adds on top of [raceName].
+class SubraceDetailPage extends StatelessWidget {
+  const SubraceDetailPage({super.key, required this.subrace, this.raceName});
+
+  final Subrace subrace;
+  final String? raceName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(subrace.name)),
+      body: DetailList(
+        key: Key('subrace-detail-${subrace.index}'),
+        children: [
+          if (raceName != null) FactRow('Subraza de', raceName),
+          ...subraceDetails(subrace),
+          if (subrace.traits.isEmpty && subrace.description.isEmpty)
+            const Text('Sin rasgos propios.'),
+        ],
       ),
     );
   }

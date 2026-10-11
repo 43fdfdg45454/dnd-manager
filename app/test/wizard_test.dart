@@ -151,7 +151,9 @@ FakeCatalogRepository _catalog({bool structured = false}) => FakeCatalogReposito
         Subrace(
           index: 'high-elf',
           name: 'High Elf',
+          description: ['A keen mind and a mastery of basic magic.'],
           abilityBonuses: [AbilityBonus(ability: 'int', bonus: 1)],
+          traits: [Trait(index: 'elf-weapon-training', name: 'Elf Weapon Training')],
         ),
       ],
     ),
@@ -172,6 +174,22 @@ FakeCatalogRepository _catalog({bool structured = false}) => FakeCatalogReposito
       startingEquipment: structured ? _acolyteEquipment : null,
       featureName: 'Shelter of the Faithful',
       featureDescription: const ['You command the respect of those who share your faith.'],
+    ),
+  ],
+  skillList: const [
+    Skill(
+      index: 'arcana',
+      name: 'Arcana',
+      ability: 'INT',
+      description: ['Your Intelligence (Arcana) check measures your lore.'],
+    ),
+  ],
+  referenceEntries: const [
+    ReferenceEntry(
+      kind: 'languages',
+      index: 'elvish',
+      name: 'Elvish',
+      description: ['Standard; Script: Elvish'],
     ),
   ],
   equipmentCategories: const {
@@ -1198,6 +1216,82 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('step-race')), findsOneWidget);
       expect(setup.container.read(characterWizardControllerProvider(_args)).raceIndex, isNull);
+    });
+
+    testWidgets('la subraza abre su detalle sin elegirla', (tester) async {
+      final setup = await _pump(tester);
+      await _name(tester);
+      await _next(tester);
+      await _tap(tester, find.byKey(const Key('race-elf')));
+
+      await _tap(tester, find.byKey(const Key('detail-subrace-high-elf')));
+      expect(find.byKey(const Key('subrace-detail-high-elf')), findsOneWidget);
+      expect(find.text('High Elf'), findsWidgets);
+      expect(find.text('A keen mind and a mastery of basic magic.'), findsOneWidget);
+      expect(find.text('Elf Weapon Training'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('step-race')), findsOneWidget);
+      expect(setup.container.read(characterWizardControllerProvider(_args)).subraceIndex, isNull);
+    });
+
+    testWidgets('el botón de info del trasfondo abre su detalle', (tester) async {
+      await _pump(tester);
+      await _toBackground(tester);
+      final none = find.byKey(const Key('detail-background-none'));
+      expect(
+        tester
+            .widget<IconButton>(find.descendant(of: none, matching: find.byType(IconButton)))
+            .onPressed,
+        isNull,
+      );
+
+      await _tap(tester, find.byKey(const Key('wizard-background')));
+      await _tap(tester, find.text('Acolyte').last);
+      await _tap(tester, find.byKey(const Key('detail-background-acolyte')));
+      expect(find.byKey(const Key('background-detail-acolyte')), findsOneWidget);
+      expect(find.text('Shelter of the Faithful'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('step-background')), findsOneWidget);
+    });
+
+    testWidgets('habilidades e idiomas muestran su descripción sin elegirse', (tester) async {
+      final setup = await _pump(tester);
+      await _toBackground(tester);
+      // Only what the catalog describes has an info button.
+      expect(find.byKey(const Key('skill-info-arcana')), findsOneWidget);
+      expect(find.byKey(const Key('skill-info-history')), findsNothing);
+      expect(find.byKey(const Key('lang-info-Elvish')), findsOneWidget);
+      expect(find.byKey(const Key('lang-info-Dwarvish')), findsNothing);
+
+      await _tap(tester, find.byKey(const Key('skill-info-arcana')));
+      final skillSheet = find.byKey(const Key('skill-sheet-arcana'));
+      expect(skillSheet, findsOneWidget);
+      expect(find.descendant(of: skillSheet, matching: find.text('Arcanos')), findsOneWidget);
+      expect(
+        find.descendant(of: skillSheet, matching: find.text('Característica: Inteligencia')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: skillSheet,
+          matching: find.text('Your Intelligence (Arcana) check measures your lore.'),
+        ),
+        findsOneWidget,
+      );
+      Navigator.of(tester.element(skillSheet)).pop();
+      await tester.pumpAndSettle();
+      expect(setup.container.read(characterWizardControllerProvider(_args)).skills, isEmpty);
+
+      await _tap(tester, find.byKey(const Key('lang-info-Elvish')));
+      final languageSheet = find.byKey(const Key('lang-sheet-Elvish'));
+      expect(languageSheet, findsOneWidget);
+      expect(find.descendant(of: languageSheet, matching: find.text('Élfico')), findsOneWidget);
+      expect(
+        find.descendant(of: languageSheet, matching: find.text('Standard; Script: Elvish')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('el trasfondo elegido muestra su rasgo', (tester) async {
