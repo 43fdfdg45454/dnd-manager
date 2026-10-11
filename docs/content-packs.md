@@ -340,6 +340,7 @@ Notación: `string?` admite `null` o ausencia; **obligatorio** indica que no pue
 | `classes` | `Class[]?` | Clases completas nuevas o ampliaciones de clases existentes con `extends` ([ver abajo](#class)). |
 | `feats` | `Feat[]?` | Dotes ([ver abajo](#feat)). |
 | `items` | `Item[]?` | Objetos, con secciones de arma, armadura, herramienta, munición y arma de fuego. |
+| `itemOverrides` | `ItemOverride[]?` | Nuevas descripciones para objetos del SRD o de los paquetes de `requires` ([ver abajo](#itemoverride)). |
 | `spells` | `Spell[]?` | Conjuros. |
 | `races` | `Race[]?` | Razas con sus rasgos y subrazas, o ampliaciones de razas existentes. |
 | `backgrounds` | `Background[]?` | Trasfondos. |
@@ -712,6 +713,34 @@ tamaño `tiny` o `small` (ver `grants.size`).
 `simple`, `martial` (armas de esa categoría), `exotic` (armas exóticas y armaduras con `exotic`),
 `firearm` (propiedad `firearm`) y `bomb` (propiedad `bomb`); otro valor da 400. El compendio de la app
 lo ofrece como desplegable "Grupo" junto a la categoría.
+
+### `ItemOverride`
+
+Los índices de un paquete llevan su prefijo y no pueden coincidir con los del SRD, así que un paquete
+no puede redefinir un objeto del SRD en `items`. Con `itemOverrides` le da **otra descripción**
+(y solo la descripción: el resto de los datos del objeto no cambian) a un objeto del SRD o de un
+paquete de `requires`, por ejemplo para ampliar el texto de unas herramientas de artesano.
+
+```json
+"itemOverrides": [
+  { "item": "alchemists-supplies",
+    "description": ["Texto ficticio del primer párrafo.", "Texto ficticio del segundo párrafo."] }
+]
+```
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `item` | `string` | **Obligatorio**. Índice de un objeto del SRD o de un paquete de `requires`, sin repetir dentro de la sección. Un objeto del propio paquete es un error: su descripción va en `items`. |
+| `description` | `string[]` | **Obligatorio**: al menos un párrafo, ninguno vacío, con los límites de las descripciones de objeto (≤ 200 párrafos de ≤ 10 000). |
+
+Como mucho 500 entradas por paquete. El paquete base no admite la sección.
+
+Mientras el paquete está importado, el objeto muestra la descripción del paquete en todas partes
+(detalle del catálogo, opciones de herramienta del asistente de origen y de la subida de nivel,
+inventarios...), esté o no activo el paquete en la campaña. Si varios paquetes sobreescriben el
+mismo objeto gana el **último importado** (reimportar un paquete lo vuelve a poner por delante);
+al borrar ese paquete vuelve a valer el anterior, y al borrar el último el objeto recupera su
+descripción original. Reimportar el SRD (por un cambio de versión) conserva las sobreescrituras.
 
 ### `Spell`
 
@@ -1245,7 +1274,7 @@ Solo el administrador de la instancia.
 `counts` tiene el número de `classes`, `subclasses`, `features`, `feats`, `optionSets`, `options` (las
 dotes incluidas), `levelChoices` (las generadas incluidas), `items`, `spells`, `races`, `subraces`,
 `raceExtensions` (razas ampliadas con `extends`), `traits`, `backgrounds`, `trinkets`, `rollTables`,
-`creatures`, `conditions`, `rules` y `reference` importados.
+`creatures`, `conditions`, `rules`, `reference` e `itemOverrides` importados.
 
 ### Activar paquetes en una campaña
 

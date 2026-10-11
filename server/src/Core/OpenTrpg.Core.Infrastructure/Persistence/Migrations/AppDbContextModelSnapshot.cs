@@ -1812,6 +1812,34 @@ namespace OpenTrpg.Core.Infrastructure.Persistence.Migrations
                     b.ToTable("CatalogFeatures", (string)null);
                 });
 
+            modelBuilder.Entity("OpenTrpg.Systems.Dnd5e.Domain.Catalog.ItemDescriptionOverride", b =>
+                {
+                    b.Property<string>("Source")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("ItemIndex")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("ImportedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OriginalDescription")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Source", "ItemIndex");
+
+                    b.HasIndex("ItemIndex");
+
+                    b.ToTable("CatalogItemDescriptionOverrides", (string)null);
+                });
+
             modelBuilder.Entity("OpenTrpg.Systems.Dnd5e.Domain.Catalog.LevelChoiceRule", b =>
                 {
                     b.Property<string>("Id")
