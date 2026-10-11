@@ -124,17 +124,63 @@ void main() {
   group('pestañas de combate', () {
     testWidgets('la cabecera de estado sigue a la vista en todas las pestañas', (tester) async {
       await _pump(tester, characters: _repo());
-      for (final section in ['actions', 'spells', 'resources', 'more']) {
+      final header = find.byKey(const Key('combat-status'));
+      for (final section in ['actions', 'spells', 'resources', 'status', 'more']) {
         await openCombatSection(tester, section);
-        expect(find.byKey(const Key('combat-status')), findsOneWidget, reason: section);
+        expect(header, findsOneWidget, reason: section);
         expect(find.byKey(const Key('hp-minus')), findsOneWidget, reason: section);
-        expect(find.byKey(const Key('combat-stats-grid')), findsOneWidget, reason: section);
         expect(find.byKey(const Key('condition-add')), findsOneWidget, reason: section);
+        // The six stats live in their own tab, never in the header.
+        expect(
+          find.descendant(of: header, matching: find.byKey(const Key('combat-stats-grid'))),
+          findsNothing,
+          reason: section,
+        );
+        expect(
+          find.byKey(const Key('combat-stats-grid')),
+          section == 'status' ? findsOneWidget : findsNothing,
+          reason: section,
+        );
         expect(_chip(tester, section).selected, isTrue, reason: section);
       }
       // Each tab builds only its own content.
       expect(find.byKey(const Key('rest-request-long')), findsOneWidget);
       expect(find.byKey(const Key('attack-roll-0')), findsNothing);
+    });
+
+    testWidgets('la cabecera es una fila de 720 px en adelante y una columna debajo', (
+      tester,
+    ) async {
+      final down = FakeCharactersRepository(
+        characters: [
+          makeCharacterJson(status: 'Active', hitPointsCurrent: 0, combat: makeCombatJson()),
+        ],
+      );
+      await _pump(tester, characters: down);
+      // 900 px: one row with the hit points on the left and the death saves
+      // over the conditions on the right.
+      tester.view.physicalSize = const Size(900, 7000);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('combat-status-wide')), findsOneWidget);
+      expect(find.byKey(const Key('combat-status-narrow')), findsNothing);
+      Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+      final hp = rect('hp-bar');
+      final saves = rect('death-saves');
+      final conditions = rect('conditions-card');
+      expect(hp.right <= saves.left, isTrue);
+      expect(hp.right <= conditions.left, isTrue);
+      expect(saves.bottom <= conditions.top, isTrue);
+      // Side by side: the saves start before the hit points end.
+      expect(saves.top < hp.bottom, isTrue);
+
+      // 400 px: one column, the hit points on top.
+      tester.view.physicalSize = const Size(400, 7000);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('combat-status-wide')), findsNothing);
+      expect(find.byKey(const Key('combat-status-narrow')), findsOneWidget);
+      expect(rect('hp-bar').bottom <= rect('death-saves').top, isTrue);
+      expect(rect('death-saves').bottom <= rect('conditions-card').top, isTrue);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('la última pestaña elegida se recuerda por personaje', (tester) async {
@@ -200,7 +246,14 @@ void main() {
             sourceIndex: 'ejemplo-opcion',
             sourceDescription: 'Primer párrafo ficticio.\n\nSegundo párrafo ficticio.',
           ),
-          _resource('t1', 'Rasgo racial de ejemplo', sourceKind: 'trait', sourceIndex: 'ejemplo'),
+          _resource(
+            't1',
+            'Rasgo racial de ejemplo (raza)',
+            sourceKind: 'trait',
+            sourceIndex: 'ejemplo',
+            sourceDescription: 'Texto ficticio del rasgo racial.',
+          ),
+          _resource('t2', 'Rasgo de subraza (subraza)', sourceKind: 'trait', sourceIndex: 'sub'),
           _resource('m1', 'Recurso manual'),
         ],
       ),
@@ -232,12 +285,31 @@ void main() {
       expect(find.text('Segundo párrafo ficticio.'), findsOneWidget);
     });
 
-    testWidgets('un rasgo racial abre la raza; sin origen no hay botón', (tester) async {
+    testWidgets('un rasgo racial abre el propio rasgo, no la raza; sin origen no hay botón', (
+      tester,
+    ) async {
       await _pump(tester, characters: repo(), catalog: catalog);
       await openCombatSection(tester, 'resources');
       expect(find.byKey(const Key('resource-m1-info')), findsNothing);
+
       await _tap(tester, 'resource-t1-info');
-      expect(find.byType(RaceDetailPage), findsOneWidget);
+      expect(find.byType(RaceDetailPage), findsNothing);
+      final sheet = find.byKey(const Key('rules-text-sheet'));
+      expect(sheet, findsOneWidget);
+      // Titled with the trait alone, without the "(raza)" suffix of the resource.
+      expect(
+        find.descendant(of: sheet, matching: find.text('Rasgo racial de ejemplo')),
+        findsOneWidget,
+      );
+      expect(find.text('Texto ficticio del rasgo racial.'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(sheet, findsNothing);
+
+      // Without a description the sheet says so.
+      await _tap(tester, 'resource-t2-info');
+      expect(find.descendant(of: sheet, matching: find.text('Rasgo de subraza')), findsOneWidget);
+      expect(find.text('Sin descripción.'), findsOneWidget);
     });
   });
 

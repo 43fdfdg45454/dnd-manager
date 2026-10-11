@@ -5,8 +5,6 @@ import 'package:opentrpg_core/core/motion/shake.dart';
 import 'package:opentrpg_core/core/theme/app_icon.dart';
 import 'package:opentrpg_core/core/theme/icons.dart';
 import 'package:opentrpg_core/core/theme/tokens.dart';
-import 'package:opentrpg_core/core/ui/breakdown.dart';
-import 'package:opentrpg_core/core/ui/stat_value.dart';
 import 'package:opentrpg_core/features/dice/domain/dice_expression.dart';
 import 'package:opentrpg_core/features/dice/ui/dice_sheet.dart';
 
@@ -22,7 +20,6 @@ import '../../models.dart';
 import '../character_tabs.dart' show OverrideMark, titleFromSpellIndex;
 import 'combat_support.dart';
 import 'concentration_flow.dart';
-import 'concentration_picker.dart';
 
 Dnd5eCharacterController _controller(WidgetRef ref, CharacterDetail character) =>
     ref.read(dnd5eCharacterControllerProvider(character.id).notifier);
@@ -212,56 +209,61 @@ class _HpStripState extends ConsumerState<HpStrip> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
+          // The numbers on the left and the temporary hit points chip on the
+          // right of the same row, vertically centered; when the two do not
+          // fit side by side the chip goes below instead of overflowing.
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            runSpacing: 2,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: Text('PG', style: theme.textTheme.labelLarge),
-              ),
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: AlignmentDirectional.centerStart,
-                  // Only " / max" reacts to taps: it opens the maximum editor.
-                  child: KeyedSubtree(
-                    key: const Key('hp-max-edit'),
-                    child: Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(text: '${c.hitPointsCurrent}'),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Text('PG', style: theme.textTheme.labelLarge),
+                  ),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      // Only " / max" reacts to taps: it opens the maximum editor.
+                      child: KeyedSubtree(
+                        key: const Key('hp-max-edit'),
+                        child: Text.rich(
                           TextSpan(
-                            text: ' / $max',
-                            recognizer: widget.canEdit ? _maxTap : null,
-                            mouseCursor: widget.canEdit ? SystemMouseCursors.click : null,
+                            children: [
+                              TextSpan(text: '${c.hitPointsCurrent}'),
+                              TextSpan(
+                                text: ' / $max',
+                                recognizer: widget.canEdit ? _maxTap : null,
+                                mouseCursor: widget.canEdit ? SystemMouseCursors.click : null,
+                              ),
+                            ],
                           ),
-                        ],
+                          key: const Key('combat-hp'),
+                          style: numericStyle(theme.textTheme.headlineSmall),
+                          semanticsLabel: '${c.hitPointsCurrent} de $max puntos de golpe',
+                        ),
                       ),
-                      key: const Key('combat-hp'),
-                      style: numericStyle(theme.textTheme.headlineSmall),
-                      semanticsLabel: '${c.hitPointsCurrent} de $max puntos de golpe',
                     ),
                   ),
-                ),
+                  OverrideMark(character: c, field: hitPointsMaxField),
+                ],
               ),
-              OverrideMark(character: c, field: hitPointsMaxField),
-              const Spacer(),
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: AlignmentDirectional.centerEnd,
-                  child: ActionChip(
-                    key: const Key('temp-hp'),
-                    visualDensity: VisualDensity.compact,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    avatar: const AppIcon(AppIcons.shield, size: 16),
-                    label: Text(
-                      'PG temp.: ${c.temporaryHitPoints}',
-                      style: numericStyle(theme.textTheme.labelMedium),
-                    ),
-                    tooltip: 'PG temporales',
-                    onPressed: widget.canEdit ? _editTemp : null,
-                  ),
+              ActionChip(
+                key: const Key('temp-hp'),
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                avatar: const AppIcon(AppIcons.shield, size: 16),
+                label: Text(
+                  'PG temporales: ${c.temporaryHitPoints}',
+                  style: numericStyle(theme.textTheme.labelMedium),
                 ),
+                tooltip: 'PG temporales',
+                onPressed: widget.canEdit ? _editTemp : null,
               ),
             ],
           ),
@@ -400,177 +402,6 @@ class _HpMaxDialogState extends State<HpMaxDialog> {
         FilledButton(key: const Key('hp-max-save'), onPressed: _save, child: const Text('Guardar')),
       ],
     );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Armor class, initiative, speed, perception, proficiency, inspiration
-// ---------------------------------------------------------------------------
-
-/// Six equal cells in one row: armor class, initiative (with its roll),
-/// speed, passive perception, proficiency bonus and inspiration (a tap
-/// toggles it). Each value opens its breakdown ([StatValue]).
-class CombatStatsStrip extends ConsumerWidget {
-  const CombatStatsStrip({super.key, required this.character, required this.canEdit});
-
-  final CharacterDetail character;
-  final bool canEdit;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final c = character;
-    final sheet = c.sheet;
-    final tokens = context.tokens;
-    return Row(
-      key: const Key('combat-stats-grid'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (final cell in [
-          _StatCell(
-            key: const Key('combat-ac'),
-            statKey: 'armorClass',
-            label: 'CA',
-            title: 'CA',
-            value: '${sheet.armorClass}',
-            breakdown: sheet.breakdown('armorClass'),
-          ),
-          _StatCell(
-            key: const Key('combat-initiative'),
-            statKey: 'initiative',
-            label: 'Inic.',
-            title: 'Iniciativa',
-            value: formatModifier(sheet.initiative),
-            breakdown: sheet.breakdown('initiative'),
-            corner: InkResponse(
-              key: const Key('roll-initiative'),
-              radius: 16,
-              onTap: () =>
-                  rollAndShow(context, d20Expression(sheet.initiative), label: 'Iniciativa'),
-              child: Tooltip(
-                message: 'Tirar iniciativa',
-                child: AppIcon(
-                  AppIcons.d20,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-            ),
-          ),
-          _StatCell(
-            key: const Key('combat-speed'),
-            statKey: 'speed',
-            label: 'Vel.',
-            title: 'Velocidad',
-            value: '${sheet.speed}',
-            totalText: '${sheet.speed} pies',
-            breakdown: sheet.breakdown('speed'),
-          ),
-          _StatCell(
-            key: const Key('combat-perception'),
-            statKey: 'passivePerception',
-            label: 'Perc. pas.',
-            title: 'Percepción pasiva',
-            value: '${sheet.passivePerception}',
-            breakdown: sheet.breakdown('passivePerception'),
-          ),
-          _StatCell(
-            key: const Key('combat-proficiency'),
-            statKey: 'proficiencyBonus',
-            label: 'Comp.',
-            title: 'Bonificador de competencia',
-            value: formatModifier(sheet.proficiencyBonus),
-            breakdown: sheet.breakdown('proficiencyBonus'),
-          ),
-          KeyedSubtree(
-            key: const Key('inspiration'),
-            child: _StatCell(
-              key: const Key('combat-inspiration'),
-              statKey: 'inspiration',
-              label: 'Insp.',
-              title: 'Inspiración',
-              value: c.inspiration ? 'Sí' : 'No',
-              valueColor: c.inspiration ? tokens.oldGold : null,
-              onTap: canEdit
-                  ? () => runCombat(
-                      context,
-                      () =>
-                          _controller(ref, c).patchCombat(CombatPatch(inspiration: !c.inspiration)),
-                    )
-                  : null,
-            ),
-          ),
-        ])
-          Expanded(child: cell),
-      ],
-    );
-  }
-}
-
-/// A cell of [CombatStatsStrip]: a short label over the value.
-class _StatCell extends StatelessWidget {
-  const _StatCell({
-    super.key,
-    required this.statKey,
-    required this.label,
-    required this.title,
-    required this.value,
-    this.breakdown,
-    this.totalText,
-    this.corner,
-    this.onTap,
-    this.valueColor,
-  });
-
-  final String statKey;
-  final String label;
-  final String title;
-  final String value;
-  final ValueBreakdown? breakdown;
-  final String? totalText;
-  final Widget? corner;
-  final VoidCallback? onTap;
-  final Color? valueColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final style = numericStyle(theme.textTheme.titleMedium)?.copyWith(color: valueColor);
-    final body = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Flexible(
-                child: Text(
-                  label,
-                  style: theme.textTheme.labelSmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (corner != null) ...[const SizedBox(width: 2), corner!],
-            ],
-          ),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: StatValue(
-              statKey: statKey,
-              title: title,
-              text: value,
-              totalText: totalText,
-              breakdown: breakdown,
-              style: style,
-            ),
-          ),
-        ],
-      ),
-    );
-    return onTap == null
-        ? body
-        : InkWell(borderRadius: BorderRadius.circular(6), onTap: onTap, child: body);
   }
 }
 
@@ -734,8 +565,8 @@ class DeathSavesStrip extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 /// The states of the character in the status header: the spell it
-/// concentrates on (with "Perder"), its conditions and exhaustion as chips,
-/// and "+" to add one (or start concentrating).
+/// concentrates on (with "Perder", set when a concentration spell is cast),
+/// its conditions and exhaustion as chips, and "+" to add a condition.
 class ConditionsStrip extends ConsumerWidget {
   const ConditionsStrip({super.key, required this.character, required this.canEdit});
 
@@ -747,13 +578,8 @@ class ConditionsStrip extends ConsumerWidget {
       context,
       taken: {for (final k in character.conditions) k.index},
       campaignId: character.campaignId,
-      offerConcentration: character.concentratingOnSpellIndex == null,
     );
     if (picked == null || !context.mounted) return;
-    if (picked.index == concentrationPickIndex) {
-      await _startConcentration(context, ref);
-      return;
-    }
     if (picked.index == 'exhaustion') {
       await _setExhaustion(context, ref);
       return;
@@ -768,19 +594,6 @@ class ConditionsStrip extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-
-  /// Concentration is always on a spell: picks it and starts concentrating.
-  Future<void> _startConcentration(BuildContext context, WidgetRef ref) async {
-    final spell = await showConcentrationSpellPicker(context, character);
-    if (spell == null || !context.mounted) return;
-    if (!await confirmReplaceConcentration(context, ref, character, spell.index)) return;
-    if (!context.mounted) return;
-    await runCombat(
-      context,
-      () => _controller(ref, character).setConcentration(spell.index),
-      success: 'Concentrándote en ${spell.name}.',
     );
   }
 
@@ -893,7 +706,7 @@ class ConditionsStrip extends ConsumerWidget {
                 ? 'Condición'
                 : 'Añadir',
           ),
-          tooltip: 'Añadir condición o concentración',
+          tooltip: 'Añadir condición',
           onPressed: canEdit ? () => _add(context, ref) : null,
         ),
       ],
@@ -901,20 +714,12 @@ class ConditionsStrip extends ConsumerWidget {
   }
 }
 
-/// Index of the "Concentración" entry of the [ConditionPicker]: the picker
-/// returns a [Condition] with this index when it is chosen (never a catalog
-/// index, which has no `#`).
-const concentrationPickIndex = '#concentration';
-
 /// Opens the [ConditionPicker] in a draggable bottom sheet (like the other long
-/// pickers of the app) and returns the picked condition, or null. With
-/// [offerConcentration] the list starts with "Concentración" (see
-/// [concentrationPickIndex]).
+/// pickers of the app) and returns the picked condition, or null.
 Future<Condition?> showConditionPicker(
   BuildContext context, {
   required Set<String> taken,
   String? campaignId,
-  bool offerConcentration = false,
 }) {
   return showModalBottomSheet<Condition>(
     context: context,
@@ -925,12 +730,8 @@ Future<Condition?> showConditionPicker(
       initialChildSize: 0.7,
       minChildSize: 0.4,
       maxChildSize: 0.95,
-      builder: (_, controller) => ConditionPicker(
-        taken: taken,
-        campaignId: campaignId,
-        offerConcentration: offerConcentration,
-        scrollController: controller,
-      ),
+      builder: (_, controller) =>
+          ConditionPicker(taken: taken, campaignId: campaignId, scrollController: controller),
     ),
   );
 }
@@ -939,18 +740,9 @@ Future<Condition?> showConditionPicker(
 /// name in alphabetical order; every row has a [DetailInfoButton] with the
 /// rules of the condition (the picker stays open).
 class ConditionPicker extends ConsumerWidget {
-  const ConditionPicker({
-    super.key,
-    required this.taken,
-    this.campaignId,
-    this.offerConcentration = false,
-    this.scrollController,
-  });
+  const ConditionPicker({super.key, required this.taken, this.campaignId, this.scrollController});
 
   final Set<String> taken;
-
-  /// Starts the list with "Concentración" (the character is not concentrating).
-  final bool offerConcentration;
 
   /// The campaign whose catalog offers the conditions (its content packs);
   /// null for the global catalog.
@@ -982,30 +774,18 @@ class ConditionPicker extends ConsumerWidget {
             if (!taken.contains(cond.index) && seen.add(cond.index))
               (condition: cond, title: conditionTitle(cond.index, cond.name)),
         ]..sort((a, b) => foldForSort(a.title).compareTo(foldForSort(b.title)));
-        if (available.isEmpty && !offerConcentration) {
+        if (available.isEmpty) {
           return const Padding(
             padding: EdgeInsets.all(16),
             child: Text('No hay más condiciones disponibles.'),
           );
         }
-        final offset = offerConcentration ? 1 : 0;
         return ListView.builder(
           key: const Key('condition-picker-list'),
           controller: scrollController,
-          itemCount: available.length + offset,
+          itemCount: available.length,
           itemBuilder: (context, i) {
-            if (i < offset) {
-              return ListTile(
-                key: const Key('pick-concentration'),
-                leading: const AppIcon(AppIcons.anchor, size: 20),
-                title: const Text('Concentración'),
-                subtitle: const Text('Elige el conjuro en el que te concentras'),
-                onTap: () =>
-                    Navigator.of(context)
-                        .pop(const Condition(index: concentrationPickIndex, name: 'Concentración')),
-              );
-            }
-            final (:condition, :title) = available[i - offset];
+            final (:condition, :title) = available[i];
             return ListTile(
               key: Key('pick-condition-${condition.index}'),
               title: Text(title),
@@ -1058,18 +838,28 @@ class ConditionPicker extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 /// The always visible top of the combat view: hit points with the quick
-/// damage and healing, the six stats, the death saves at 0 hit points and the
-/// concentration and conditions.
+/// damage and healing, the death saves at 0 hit points and the concentration
+/// and conditions. From [wideBreakpoint] on, the hit points go on the left
+/// and the death saves and conditions on the right, in one row; narrower, it
+/// is one column.
 class CombatStatusHeader extends StatelessWidget {
   const CombatStatusHeader({super.key, required this.character, required this.canEdit});
 
   final CharacterDetail character;
   final bool canEdit;
 
+  /// Width (logical pixels) from which the header lays out as one row.
+  static const wideBreakpoint = 720.0;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final c = character;
+    final hp = HpStrip(character: c, canEdit: canEdit);
+    final states = <Widget>[
+      if (c.hitPointsCurrent == 0) DeathSavesStrip(character: c, canEdit: canEdit),
+      ConditionsStrip(character: c, canEdit: canEdit),
+    ];
     return DecoratedBox(
       key: const Key('combat-status'),
       decoration: BoxDecoration(
@@ -1077,17 +867,32 @@ class CombatStatusHeader extends StatelessWidget {
         border: Border(bottom: BorderSide(color: context.tokens.oldGold.withValues(alpha: 0.5))),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            HpStrip(character: c, canEdit: canEdit),
-            CombatStatsStrip(character: c, canEdit: canEdit),
-            if (c.hitPointsCurrent == 0) DeathSavesStrip(character: c, canEdit: canEdit),
-            ConditionsStrip(character: c, canEdit: canEdit),
-          ],
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: LayoutBuilder(
+          builder: (context, constraints) => constraints.maxWidth >= wideBreakpoint
+              ? Row(
+                  key: const Key('combat-status-wide'),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 2, child: hp),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: states,
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  key: const Key('combat-status-narrow'),
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [hp, ...states],
+                ),
         ),
       ),
     );
   }
 }
+

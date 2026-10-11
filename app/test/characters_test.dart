@@ -995,6 +995,7 @@ void main() {
     testWidgets('Combate ya no tiene habilidades', (tester) async {
       await _pumpApp(tester, characters: repo(), location: '/characters/ch1');
       await _tap(tester, find.byKey(const Key('tab-combat')));
+      await _tap(tester, find.byKey(const Key('combat-tab-status')));
       expect(find.byKey(const Key('combat-stats-grid')), findsOneWidget);
       expect(find.byKey(const Key('quick-skills')), findsNothing);
       expect(find.byKey(const Key('all-skills')), findsNothing);

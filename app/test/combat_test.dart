@@ -27,7 +27,7 @@ import 'package:opentrpg_dnd5e/characters/ui/combat/combat_support.dart' show Pi
 import 'package:opentrpg_dnd5e/characters/ui/combat/panels/critical_damage_roll.dart';
 import 'package:opentrpg_dnd5e/characters/ui/combat/resources_section.dart' show canRestoreResource;
 import 'package:opentrpg_dnd5e/characters/ui/combat/vitals_section.dart'
-    show CombatStatsStrip, ConditionsStrip;
+    show ConditionsStrip;
 import 'package:opentrpg_dnd5e/characters/ui/combat/wild_magic_surge.dart' show isWildMagicSurgeKey;
 import 'package:opentrpg_dnd5e/session/data/party_repository.dart';
 import 'package:opentrpg_dnd5e/session/party_models.dart' show PartyAdjustment;
@@ -505,7 +505,7 @@ void main() {
       // The server takes the temporary hit points first.
       expect(repo.damageCalls, [5]);
       expect(find.text('18 / 28'), findsOneWidget);
-      expect(find.text('PG temp.: 0'), findsOneWidget);
+      expect(find.text('PG temporales: 0'), findsOneWidget);
 
       await tester.enterText(find.byKey(const Key('hp-amount')), '50');
       await _tap(tester, 'hp-plus');
@@ -528,17 +528,23 @@ void main() {
       final withConcentration = FakeCharactersRepository(characters: [json]);
       await _pump(tester, characters: withConcentration);
 
+      // The chip reads in full and, with room for both, sits on the row of
+      // the hit points (a phone in landscape: the header is still a column).
+      tester.view.physicalSize = const Size(700, 7000);
+      await tester.pumpAndSettle();
+      expect(find.text('PG temporales: 3'), findsOneWidget);
+      expect(find.text('PG temp.: 3'), findsNothing);
+      final hpCenter = tester.getCenter(find.byKey(const Key('combat-hp'))).dy;
+      final chipCenter = tester.getCenter(find.byKey(const Key('temp-hp'))).dy;
+      expect((hpCenter - chipCenter).abs(), lessThan(4));
+
       await _tap(tester, 'temp-hp');
       await tester.enterText(find.byKey(const Key('number-field')), '7');
       await _tap(tester, 'number-confirm');
       expect(withConcentration.combatPatches.last.temporaryHitPoints, 7);
 
-      // La fixture arranca con inspiración: se quita.
-      await _tap(tester, 'inspiration');
-      expect(withConcentration.combatPatches.last.inspiration, isFalse);
-
       expect(find.text('Concentración: Bless'), findsOneWidget);
-      // The chip lives with the other states, not under the stats grid.
+      // The chip lives with the other states of the header.
       expect(
         find.descendant(
           of: find.byType(ConditionsStrip),
@@ -546,16 +552,16 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(
-        find.descendant(
-          of: find.byType(CombatStatsStrip),
-          matching: find.byKey(const Key('concentration-chip')),
-        ),
-        findsNothing,
-      );
       await _tap(tester, 'concentration-lose');
       expect(withConcentration.concentrationCalls, [null]);
       expect(find.byKey(const Key('concentration-chip')), findsNothing);
+
+      // The inspiration lives in the "Estado" tab, not in the header.
+      expect(find.byKey(const Key('inspiration')), findsNothing);
+      await openCombatSection(tester, 'status');
+      // La fixture arranca con inspiración: se quita.
+      await _tap(tester, 'inspiration');
+      expect(withConcentration.combatPatches.last.inspiration, isFalse);
     });
 
     FakeCharactersRepository hpMaxRepo({bool overridden = false, bool isDm = true}) =>
@@ -739,7 +745,6 @@ void main() {
         expect(inConditions('concentration-lose'), findsOneWidget);
         expect(find.text('Condición'), findsNothing);
 
-        await tester.ensureVisible(inConditions('concentration-lose'));
         await _tap(tester, inConditions('concentration-lose'));
         expect(repo.concentrationCalls, [null]);
         expect(find.byKey(const Key('concentration-chip')), findsNothing);
@@ -763,7 +768,7 @@ void main() {
       expect(titles[2] < titles[1], isTrue);
     });
 
-    testWidgets('"Concentración" ofrece los conjuros de concentración preparados', (tester) async {
+    testWidgets('el selector ofrece todas las condiciones del catálogo por igual', (tester) async {
       final repo = FakeCharactersRepository(
         characters: [
           makeCharacterJson(
@@ -771,7 +776,6 @@ void main() {
             combat: makeCombatJson(),
             spells: [
               {'spellIndex': 'bless', 'classIndex': 'cleric', 'isPrepared': true},
-              {'spellIndex': 'cure-wounds', 'classIndex': 'cleric', 'isPrepared': true},
             ],
           ),
         ],
@@ -780,53 +784,37 @@ void main() {
         conditionList: catalog.conditionList,
         spellDetails: const {
           'bless': SpellDetail(index: 'bless', name: 'Bless', level: 1, concentration: true),
-          'cure-wounds': SpellDetail(index: 'cure-wounds', name: 'Cure Wounds', level: 1),
         },
       );
       await _pump(tester, characters: repo, catalog: withSpells);
-
       await _tap(tester, 'condition-add');
-      final concentration = find.byKey(const Key('pick-concentration'));
-      final first = find.byKey(const Key('pick-condition-exhaustion'));
-      expect(tester.getTopLeft(concentration).dy < tester.getTopLeft(first).dy, isTrue);
-      await _tap(tester, concentration);
 
-      expect(find.byKey(const Key('concentration-picker')), findsOneWidget);
-      expect(find.byKey(const Key('pick-concentration-spell-cure-wounds')), findsNothing);
-      await _tap(tester, 'pick-concentration-spell-bless');
-
-      expect(repo.concentrationCalls, ['bless']);
-      expect(find.byKey(const Key('concentration-chip')), findsOneWidget);
-      expect(find.text('Concentración: Bless'), findsOneWidget);
-
-      // Ya concentrado: el selector no lo ofrece otra vez.
-      await _tap(tester, 'condition-add');
+      // No special entry: every row is a catalog condition, in alphabetical
+      // order, each with its info button.
       expect(find.byKey(const Key('pick-concentration')), findsNothing);
-    });
-
-    testWidgets('sin conjuros de concentración propios se busca en el catálogo', (tester) async {
-      final repo = _repo();
-      final withCatalog = FakeCatalogRepository(
-        conditionList: catalog.conditionList,
-        spellList: const [
-          SpellSummary(index: 'hold-person', name: 'Hold Person', level: 2, concentration: true),
-          SpellSummary(index: 'fire-bolt', name: 'Fire Bolt', level: 0),
-        ],
+      expect(find.byKey(const Key('concentration-picker')), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('condition-picker-list')),
+          matching: find.byType(ListTile),
+        ),
+        findsNWidgets(catalog.conditionList.length),
       );
-      await _pump(tester, characters: repo, catalog: withCatalog);
-
-      await _tap(tester, 'condition-add');
-      await _tap(tester, 'pick-concentration');
-      expect(find.byKey(const Key('concentration-no-own-spells')), findsOneWidget);
-      expect(find.byKey(const Key('pick-concentration-spell-fire-bolt')), findsNothing);
-
-      await tester.enterText(find.byKey(const Key('concentration-search')), 'hold');
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pumpAndSettle();
-      expect(withCatalog.spellCalls.last.search, 'hold');
-      await _tap(tester, 'pick-concentration-spell-hold-person');
-
-      expect(repo.concentrationCalls, ['hold-person']);
+      final tops = [
+        for (final key in ['exhaustion', 'prone', 'poisoned'])
+          tester.getTopLeft(find.byKey(Key('pick-condition-$key'))).dy,
+      ];
+      expect(tops[0] < tops[1] && tops[1] < tops[2], isTrue);
+      for (final cond in catalog.conditionList) {
+        expect(find.byKey(Key('condition-info-${cond.index}')), findsOneWidget, reason: cond.index);
+      }
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('condition-picker')),
+          matching: find.text('Concentración'),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('el agotamiento pide el nivel', (tester) async {
@@ -999,6 +987,7 @@ void main() {
 
     testWidgets('la iniciativa se tira con el modificador de la hoja', (tester) async {
       await _pump(tester, characters: _repo(), face: 10);
+      await openCombatSection(tester, 'status');
       await _tap(tester, 'roll-initiative');
       expect(find.text('Iniciativa'), findsWidgets);
       expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '12');
@@ -1094,43 +1083,60 @@ void main() {
     });
   });
 
-  group('fichas de combate (fase 28)', () {
-    const tiles = [
-      'combat-ac',
-      'combat-initiative',
-      'combat-speed',
-      'combat-perception',
-      'combat-proficiency',
-      'combat-inspiration',
-    ];
+  group('pestaña Estado', () {
+    const rows = {
+      'combat-ac': 'Clase de Armadura',
+      'combat-initiative': 'Iniciativa',
+      'combat-speed': 'Velocidad',
+      'combat-perception': 'Percepción pasiva',
+      'combat-proficiency': 'Bonificador de competencia',
+      'combat-inspiration': 'Inspiración',
+    };
 
-    testWidgets('las seis fichas miden lo mismo a 400 y a 800 px; sin habilidades', (tester) async {
-      await _pump(tester, characters: _repo());
+    testWidgets('lista los seis valores con su nombre completo, fuera de la cabecera', (
+      tester,
+    ) async {
+      final repo = FakeCharactersRepository(
+        characters: [
+          makeCharacterJson(
+            status: 'Active',
+            combat: makeCombatJson(),
+            breakdowns: {
+              'armorClass': makeBreakdownJson([
+                ('base', 'Armadura de cuero', 11),
+                ('ability', 'Destreza', 2),
+              ]),
+            },
+          ),
+        ],
+      );
+      await _pump(tester, characters: repo);
+      // Nothing of it in the fixed header.
+      expect(find.byKey(const Key('combat-stats-grid')), findsNothing);
+      for (final label in rows.values) {
+        expect(find.text(label), findsNothing, reason: label);
+      }
+
+      await openCombatSection(tester, 'status');
       final grid = find.byKey(const Key('combat-stats-grid'));
-      for (final key in tiles) {
-        expect(
-          find.descendant(of: grid, matching: find.byKey(Key(key))),
-          findsOneWidget,
-          reason: key,
-        );
+      expect(grid, findsOneWidget);
+      for (final MapEntry(key: key, value: label) in rows.entries) {
+        final row = find.descendant(of: grid, matching: find.byKey(Key(key)));
+        expect(row, findsOneWidget, reason: key);
+        expect(find.descendant(of: row, matching: find.text(label)), findsOneWidget, reason: key);
       }
-      Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
-      void expectEqualTiles() {
-        expect({for (final k in tiles) rect(k).width.round()}.length, 1);
-        expect({for (final k in tiles) rect(k).height.round()}.length, 1);
+      // One row each, from top to bottom in the order above.
+      final tops = [for (final key in rows.keys) tester.getTopLeft(find.byKey(Key(key))).dy];
+      for (var i = 1; i < tops.length; i++) {
+        expect(tops[i] > tops[i - 1], isTrue, reason: rows.keys.elementAt(i));
+      }
+      // No abbreviation anywhere in the tab.
+      for (final short in ['CA', 'Inic.', 'Vel.', 'Perc. pas.', 'Comp.', 'Insp.']) {
+        expect(find.text(short), findsNothing, reason: short);
       }
 
-      // 800 px: one row of six.
-      expectEqualTiles();
-      expect({for (final k in tiles) rect(k).top}.length, 1);
-
-      // 400 px: still one row of six equal cells (the header stays compact).
-      tester.view.physicalSize = const Size(400, 7000);
-      await tester.pumpAndSettle();
-      expectEqualTiles();
-      expect({for (final k in tiles) rect(k).top}.length, 1);
-
-      // The dice corner lives inside the initiative tile.
+      // The roll lives inside the initiative row; the values open their
+      // breakdown.
       expect(
         find.descendant(
           of: find.byKey(const Key('combat-initiative')),
@@ -1138,20 +1144,25 @@ void main() {
         ),
         findsOneWidget,
       );
+      await _tap(tester, 'stat-armorClass');
+      expect(find.byKey(const Key('breakdown-sheet')), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('breakdown-title'))).data, 'Clase de Armadura');
+
       // Skills are no longer in Combate.
       expect(find.byKey(const Key('quick-skills')), findsNothing);
       expect(find.byKey(const Key('all-skills')), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('la inspiración se alterna tocando su ficha', (tester) async {
+    testWidgets('la inspiración se alterna tocando su fila', (tester) async {
       final repo = _repo();
       await _pump(tester, characters: repo);
-      Finder inTile(String text) => find.descendant(
+      await openCombatSection(tester, 'status');
+      Finder inRow(String text) => find.descendant(
         of: find.byKey(const Key('combat-inspiration')),
         matching: find.text(text),
       );
-      expect(inTile('Sí'), findsOneWidget);
+      expect(inRow('Sí'), findsOneWidget);
       await _tap(tester, 'inspiration');
       expect(repo.combatPatches.last.inspiration, isFalse);
     });
@@ -2583,6 +2594,7 @@ void main() {
   group('tipo de tirada (RollKind)', () {
     testWidgets('un 1 en la iniciativa no es pifia y muestra el d20 natural', (tester) async {
       await _pump(tester, characters: _repo(), face: 1);
+      await openCombatSection(tester, 'status');
       await _tap(tester, 'roll-initiative');
       expect(tester.widget<Text>(find.byKey(const Key('dice-result-total'))).data, '3');
       expect(find.text('d20 natural: 1'), findsOneWidget);

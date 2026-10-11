@@ -227,9 +227,9 @@ class ResourcesSection extends ConsumerWidget {
   }
 }
 
-/// Opens where [resource] comes from: the class feature, the spell, the race
-/// of a racial trait (or its text), or the text of an option or a feat.
-/// Null when the resource does not say.
+/// Opens where [resource] comes from: the class feature, the spell, the text
+/// of a racial trait (the trait itself, never the whole race), or the text of
+/// an option or a feat. Null when the resource does not say.
 VoidCallback? resourceOriginOpener(
   BuildContext context,
   CharacterDetail character,
@@ -244,9 +244,10 @@ VoidCallback? resourceOriginOpener(
     case 'spell' when index != null:
       return () => openSpellDetail(context, index);
     case 'trait':
-      final race = character.raceIndex;
-      if (race != null) return () => openRaceDetail(context, race);
-      return description == null ? null : sheet;
+      // The resource is named after the trait plus its origin ("(raza)" or
+      // "(subraza)"); the sheet is titled with the trait alone.
+      final trait = resource.name.replaceFirst(RegExp(r' \((raza|subraza)\)$'), '');
+      return () => showRulesTextSheet(context, trait, description ?? 'Sin descripción.');
     case 'option' || 'feat':
       return description == null && index == null ? null : sheet;
     default:
