@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/catalog/catalog_models.dart' show Page;
 import '../../../core/network/api_error.dart';
 import '../../../core/systems/system_registry.dart';
+import '../../../core/ui/app_message.dart';
 import '../../../core/ui/infinite_scroll_list.dart';
 import '../../../core/ui/source_chip.dart';
 import '../data/campaign_items_repository.dart';
@@ -275,15 +276,9 @@ class _ShopCatalogAddPageState extends ConsumerState<ShopCatalogAddPage> {
           _selected[item.id] = _Selection(item, preset.items[item.index]);
         }
       });
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(content: Text('${preset.label}: ${page.items.length} objetos seleccionados.')),
-        );
+      showAppMessageWith(messenger, '${preset.label}: ${page.items.length} objetos seleccionados.');
     } catch (error) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(describeItemError(error))));
+      showAppMessageWith(messenger, describeItemError(error));
     }
   }
 

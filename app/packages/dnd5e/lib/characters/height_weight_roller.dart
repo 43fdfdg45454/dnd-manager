@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:opentrpg_core/core/systems/game_system_ui.dart';
+import 'package:opentrpg_core/core/ui/app_message.dart';
 import 'package:opentrpg_core/features/dice/data/dice_controller.dart' show diceRandomProvider;
 
 import '../catalog/data/catalog_controllers.dart';
@@ -58,8 +59,6 @@ class Dnd5eHeightWeightRoller extends ConsumerWidget {
     final roll = rollHeightWeight(table, ref.read(diceRandomProvider));
     if (roll == null) return;
     scope.onRolled(roll.heightInches, roll.weightPounds);
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(roll.summary)));
+    showAppMessage(context, roll.summary);
   }
 }

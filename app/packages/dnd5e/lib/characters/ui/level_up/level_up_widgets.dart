@@ -195,6 +195,11 @@ class LevelUpOptionCard extends StatelessWidget {
                     key: Key('detail-spell-${option.index}'),
                     onPressed: () => openSpellDetail(context, option.index),
                   ),
+                if (option.itemId != null)
+                  DetailInfoButton(
+                    key: Key('detail-item-${option.index}'),
+                    onPressed: () => openItemDetail(context, option.itemId!),
+                  ),
               ],
             ),
             if (option.cost != null) ...[

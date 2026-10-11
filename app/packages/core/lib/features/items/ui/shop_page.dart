@@ -9,6 +9,7 @@ import '../../../core/characters/models.dart' show CharacterSummary;
 import '../../../core/router/app_router.dart';
 import '../../../core/systems/game_system_ui.dart';
 import '../../../core/systems/system_registry.dart';
+import '../../../core/ui/app_message.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../../campaigns/data/campaigns_controller.dart';
 import '../../campaigns/ui/confirm_dialog.dart';
@@ -45,11 +46,7 @@ class _ShopPageState extends ConsumerState<ShopPage> {
 
   Future<void> _buy(Shop shop, ShopItem item, List<CharacterSummary> mine) async {
     if (mine.isEmpty) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text('No tienes personajes en esta campaña para comprar.')),
-        );
+      showAppMessage(context, 'No tienes personajes en esta campaña para comprar.');
       return;
     }
     final choice = await showDialog<BuyChoice>(
@@ -78,16 +75,11 @@ class _ShopPageState extends ConsumerState<ShopPage> {
     if (!done || !mounted) return;
     setState(() => _characterId = choice.characterId);
     final total = result?.transaction.totalCp ?? item.priceCp * choice.quantity;
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            'Compra realizada: ${item.effective.name} ×${choice.quantity} por '
-            '${ref.read(campaignSystemUiProvider(widget.campaignId)).formatPrice(total)}.',
-          ),
-        ),
-      );
+    showAppMessageWith(
+      messenger,
+      'Compra realizada: ${item.effective.name} ×${choice.quantity} por '
+      '${ref.read(campaignSystemUiProvider(widget.campaignId)).formatPrice(total)}.',
+    );
   }
 
   Future<void> _setOpen(bool open) => runItemAction(

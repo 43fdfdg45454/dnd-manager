@@ -1987,6 +1987,7 @@ class LevelUpOption {
     this.setId,
     this.removeSavingThrows,
     this.skillChoicesDelta = 0,
+    this.itemId,
   });
 
   factory LevelUpOption.fromJson(Map<String, dynamic> json) {
@@ -2015,8 +2016,13 @@ class LevelUpOption {
           ? null
           : RemoveSavingThrows.fromJson(_map(json['removeSavingThrows'])!),
       skillChoicesDelta: _int(json['skillChoicesDelta']) ?? 0,
+      itemId: _strOrNull(json['itemId']),
     );
   }
+
+  /// Catalog item template of a weapon or tool option (for its detail), or
+  /// null for options that are not items.
+  final String? itemId;
 
   /// Feats that take saving throw proficiencies away, or null.
   final RemoveSavingThrows? removeSavingThrows;

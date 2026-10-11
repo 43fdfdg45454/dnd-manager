@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:opentrpg_core/core/network/api_error.dart';
+import 'package:opentrpg_core/core/ui/app_message.dart';
 import 'package:opentrpg_core/core/ui/offline_widgets.dart';
 
 import 'campaign_rules.dart';
@@ -27,28 +28,18 @@ class _CampaignRulesSectionState extends ConsumerState<CampaignRulesSection> {
       await ref
           .read(campaignRulesControllerProvider(widget.campaignId).notifier)
           .setStarterFeats(enabled);
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(enabled ? 'Dotes iniciales activadas.' : 'Dotes iniciales desactivadas.'),
-          ),
-        );
+      showAppMessageWith(
+        messenger,
+        enabled ? 'Dotes iniciales activadas.' : 'Dotes iniciales desactivadas.',
+      );
     } catch (error) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              describeApiError(
-                error,
-                byStatus: const {
-                  403: 'Solo el dueño o un DM pueden cambiar las reglas de la campaña.',
-                },
-              ),
-            ),
-          ),
-        );
+      showAppMessageWith(
+        messenger,
+        describeApiError(
+          error,
+          byStatus: const {403: 'Solo el dueño o un DM pueden cambiar las reglas de la campaña.'},
+        ),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }

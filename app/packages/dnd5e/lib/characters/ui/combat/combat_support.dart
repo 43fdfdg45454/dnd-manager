@@ -4,6 +4,7 @@ import 'package:opentrpg_core/core/network/api_error.dart';
 import 'package:opentrpg_core/core/theme/textures.dart';
 import 'package:opentrpg_core/core/theme/tokens.dart';
 import 'package:opentrpg_core/core/theme/typography.dart';
+import 'package:opentrpg_core/core/ui/app_message.dart';
 import 'package:opentrpg_core/features/campaigns/ui/feedback.dart';
 
 import '../../../catalog/ui/catalog_detail_links.dart' show DetailInfoButton, openFeatureDetail;
@@ -30,9 +31,7 @@ Future<bool> runCombat(
 
 /// Shows a short message in a SnackBar.
 void showCombatMessage(BuildContext context, String message) {
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(message)));
+  showAppMessage(context, message);
 }
 
 /// Asks for a whole number; resolves to null when cancelled.

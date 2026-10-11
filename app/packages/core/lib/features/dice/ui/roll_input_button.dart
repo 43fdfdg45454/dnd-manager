@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_icon.dart';
 import '../../../core/theme/icons.dart';
+import '../../../core/ui/app_message.dart';
 import '../data/dice_controller.dart';
 import '../domain/dice_expression.dart';
 
@@ -57,11 +58,7 @@ class RollInputButton extends ConsumerWidget {
               onRolled(result.total, result);
               if (!announce) return;
               final name = label == null ? expression : '$label ($expression)';
-              ScaffoldMessenger.maybeOf(context)
-                ?..hideCurrentSnackBar()
-                ..showSnackBar(
-                  SnackBar(content: Text('$name: ${result.breakdown} = ${result.total}')),
-                );
+              showAppMessage(context, '$name: ${result.breakdown} = ${result.total}');
             }
           : null,
     );

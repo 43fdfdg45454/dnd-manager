@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/systems/system_registry.dart';
+import '../../../core/ui/app_message.dart';
 import '../../../core/ui/offline_widgets.dart';
 import '../data/campaign_content_packs_controller.dart';
 import '../domain/campaign_content_pack.dart';
@@ -60,13 +61,9 @@ class _CampaignContentPacksSectionState extends ConsumerState<CampaignContentPac
           .save(draft);
       if (!mounted) return;
       setState(() => _draft = null);
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('Paquetes de la campaña guardados.')));
+      showAppMessageWith(messenger, 'Paquetes de la campaña guardados.');
     } catch (error) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(describeContentPacksError(error))));
+      showAppMessageWith(messenger, describeContentPacksError(error));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

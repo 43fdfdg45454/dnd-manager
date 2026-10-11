@@ -5,6 +5,7 @@ import '../../../core/motion/motion_settings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/systems/game_system_ui.dart';
 import '../../../core/systems/system_registry.dart';
+import '../../../core/ui/app_message.dart';
 import '../../../core/ui/breakdown.dart';
 import '../../../core/ui/stat_value.dart';
 import '../data/appearance_controller.dart';
@@ -33,9 +34,7 @@ class AppearancePage extends ConsumerWidget {
             onPressed: () {
               appearance.reset();
               ref.read(motionSettingsProvider.notifier).reset();
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(const SnackBar(content: Text('Personalización restablecida.')));
+              showAppMessage(context, 'Personalización restablecida.');
             },
             child: const Text('Restablecer'),
           ),

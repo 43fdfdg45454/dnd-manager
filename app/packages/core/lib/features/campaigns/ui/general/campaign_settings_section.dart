@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/auth/auth_controller.dart';
 import '../../../../core/auth/auth_state.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/ui/app_message.dart';
 import '../../../../core/ui/offline_widgets.dart';
 import '../../../content_packs/ui/campaign_content_packs_section.dart';
 import '../../../sessions/domain/sessions_format.dart';
@@ -82,9 +83,7 @@ class CampaignSettingsSection extends ConsumerWidget {
       ),
     );
     if (data == null) return;
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('Propiedad transferida a ${data.to.displayName}.')));
+    showAppMessageWith(messenger, 'Propiedad transferida a ${data.to.displayName}.');
   }
 
   Future<void> _leave(BuildContext context, WidgetRef ref) async {

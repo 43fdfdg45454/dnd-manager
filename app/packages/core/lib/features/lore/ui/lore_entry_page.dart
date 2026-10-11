@@ -6,6 +6,7 @@ import '../../../core/cache/stale_data.dart';
 import '../../../core/files/authenticated_image.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/ui/app_message.dart';
 import '../../../core/ui/content_widgets.dart';
 import '../../../core/ui/markdown_view.dart';
 import '../../../core/ui/offline_widgets.dart';
@@ -65,9 +66,7 @@ class LoreEntryPage extends ConsumerWidget {
   void _openSlug(BuildContext context, List<LoreSummary> entries, String slug) {
     final target = findLoreBySlug(entries, slug);
     if (target == null) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text('No existe la entrada "$slug".')));
+      showAppMessage(context, 'No existe la entrada "$slug".');
       return;
     }
     context.push(AppRoutes.loreEntry(campaignId, target.id));

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/tokens.dart';
+import '../../../core/ui/app_message.dart';
 import '../data/dice_controller.dart';
 import '../domain/dice_expression.dart';
 
@@ -34,9 +35,7 @@ Future<DiceResult?> rollAndShow(
   try {
     result = DiceExpression.parse(expression).roll(container.read(diceRandomProvider));
   } on FormatException catch (error) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(error.message)));
+    showAppMessage(context, error.message);
     return null;
   }
   container.read(diceControllerProvider.notifier).record(result, label: label, kind: kind);

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:opentrpg_core/core/theme/app_theme.dart';
 import 'package:opentrpg_core/features/campaigns/domain/campaign_models.dart';
 import 'package:opentrpg_dnd5e/catalog/data/models.dart';
+import 'package:opentrpg_dnd5e/catalog/ui/item_detail_page.dart';
 import 'package:opentrpg_dnd5e/characters/data/character_wizard_controller.dart';
 import 'package:opentrpg_dnd5e/characters/models.dart';
 import 'package:opentrpg_dnd5e/characters/ui/character_tabs.dart';
@@ -49,6 +50,9 @@ FakeCatalogRepository _catalog() => FakeCatalogRepository(
       choices: OriginChoiceSpec(kinds: {'languages'}),
     ),
   ],
+  itemDetails: const {
+    'longsword': ItemDetail(id: 'longsword', name: 'Longsword', category: 'Weapon', costCp: 1500),
+  },
 );
 
 List<Map<String, dynamic>> _halfElfChoices({bool withLanguages = true}) => [
@@ -338,6 +342,41 @@ void main() {
       expect(find.textContaining('You touch one object'), findsOneWidget);
       expect(find.byKey(const Key('detail-spell-light')), findsOneWidget);
       expect(find.byKey(const Key('detail-spell-mage-hand')), findsOneWidget);
+    });
+
+    testWidgets('una opción que es un objeto del catálogo abre su detalle', (tester) async {
+      await _toBackground(
+        tester,
+        choices: [
+          makeOriginChoiceJson(
+            key: 'race.weapons',
+            name: 'Arma (raza)',
+            kind: 'Weapon',
+            options: [
+              {
+                'index': 'longsword',
+                'name': 'Longsword',
+                'eligible': true,
+                'description': <String>[],
+                'itemId': 'longsword',
+              },
+              {
+                'index': 'any-martial',
+                'name': 'Cualquier arma marcial',
+                'eligible': true,
+                'description': <String>[],
+              },
+            ],
+          ),
+        ],
+      );
+      await _next(tester);
+      expect(find.byKey(const Key('detail-item-longsword')), findsOneWidget);
+      expect(find.byKey(const Key('detail-item-any-martial')), findsNothing);
+
+      await _tap(tester, find.byKey(const Key('detail-item-longsword')));
+      expect(find.byType(ItemDetailPage), findsOneWidget);
+      expect(find.text('Longsword'), findsWidgets);
     });
 
     testWidgets('al enviar se vuelven a guardar las elecciones tras la hoja completa', (

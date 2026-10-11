@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../network/api_error.dart';
+import './app_message.dart';
 
 /// Distance to the end of the list (in logical pixels) at which the next page
 /// is requested.
@@ -106,9 +107,7 @@ class _InfiniteScrollListState extends State<InfiniteScrollList> {
     } catch (error) {
       if (!mounted) return;
       _failed = true;
-      messenger
-        ?..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(widget.describeError(error))));
+      if (messenger != null) showAppMessageWith(messenger, widget.describeError(error));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

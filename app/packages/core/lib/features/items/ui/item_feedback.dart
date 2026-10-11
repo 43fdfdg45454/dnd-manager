@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_error.dart';
+import '../../../core/ui/app_message.dart';
 import '../../campaigns/ui/feedback.dart';
 import '../data/models.dart';
 
@@ -25,9 +26,7 @@ Future<bool> runWrite(
     describe: describeItemError,
   );
   if (!done) return false;
-  messenger
-    ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(result is InventoryPending ? sentToDmMessage : applied)));
+  showAppMessageWith(messenger, result is InventoryPending ? sentToDmMessage : applied);
   return true;
 }
 

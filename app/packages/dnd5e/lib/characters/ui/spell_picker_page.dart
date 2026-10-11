@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:opentrpg_core/core/network/api_error.dart';
+import 'package:opentrpg_core/core/ui/app_message.dart';
 import 'package:opentrpg_core/core/ui/infinite_scroll_list.dart';
 
 import '../../catalog/data/catalog_repository.dart';
@@ -169,9 +170,7 @@ class _SpellPickerPageState extends ConsumerState<SpellPickerPage> {
       if (_isPicked(spell.index)) {
         _picked.removeWhere((s) => s.spellIndex == spell.index);
       } else if (widget.limit != null && _picked.length >= widget.limit!) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text('Como máximo ${widget.limit} más.')));
+        showAppMessage(context, 'Como máximo ${widget.limit} más.');
       } else {
         _picked.add(
           CharacterSpell(
